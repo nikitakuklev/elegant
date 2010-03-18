@@ -583,6 +583,8 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 {
   double amplitude[4], frequency[4], phase[4], dummy;
   long i;
+
+#if defined(DEBUG)
   static FILE *fpd = NULL;
   if (!fpd) {
     fpd = fopen("tbt.sdds", "w");
@@ -604,8 +606,8 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
             turnByTurnCoord[3][i],
             turnByTurnCoord[4][i]);
   }
-  
-  
+#endif
+
   if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
 		  &dummy, 0.0, 1.0, turnByTurnCoord[0], turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
