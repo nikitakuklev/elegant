@@ -282,6 +282,7 @@ long new_bunched_beam(
     }
     else {
       notSinglePart = 1;
+      partOnMaster = 0;
       lessPartAllowed = 0;
     }
 #endif
@@ -515,7 +516,10 @@ long track_beam(
 #if !SDDS_MPI_IO
     fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
 #else
-    fprintf(stdout, "tracking %ld particles\n", beam->n_to_track_total);
+    if (partOnMaster)
+      fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
+    else
+      fprintf(stdout, "tracking %ld particles\n", beam->n_to_track_total);
 #endif
     fflush(stdout);
   }
@@ -530,9 +534,12 @@ long track_beam(
     /*  MPI_Abort(workers, 2); */
   }
   else {  /* do tracking in parallel */ 
-    notSinglePart = 1;
     if (lessPartAllowed) { /* If less number of particles is allowed, all processors will excute the same code */
       notSinglePart = 0;
+    } else {
+      notSinglePart = 1;
+      partOnMaster = 0;
+
     }
   }
 
@@ -553,11 +560,7 @@ long track_beam(
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
-		       finalCharge, beam->lostOnPass, NULL);
-#if USE_MPI && (!SDDS_MPI_IO)
-  notSinglePart = 0; /* All the processors will do the same thing from now */
-  /* random_1(-FABS(987654321)); */
-#endif  
+		       finalCharge, beam->lostOnPass, NULL); 
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   
