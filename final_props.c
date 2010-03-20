@@ -289,7 +289,7 @@ void dump_final_properties
         abort();
       }
 #if SDDS_MPI_IO
-    MPI_Bcast (&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+      MPI_Bcast (&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
     if ((n_computed=compute_final_properties
@@ -421,12 +421,14 @@ long compute_final_properties
   
   /* compute centroids and sigmas */
 #if SDDS_MPI_IO
-  if (myid==0) /* The total number of particles survived is on the master */
-    n_part_total = sums->n_part;
-  MPI_Bcast (&n_part_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-  if (n_part_total) 
- /* We have to check the total number of particles, otherwise it will cause
-    synchronization problem as no particle left on some processors */
+  if (notSinglePart) {
+    if (myid==0) /* The total number of particles survived is on the master */
+      n_part_total = sums->n_part;
+    MPI_Bcast (&n_part_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+  }
+  if ((notSinglePart && n_part_total) || (!notSinglePart && sums->n_part)) 
+      /* We have to check the total number of particles, otherwise it will cause
+	 synchronization problem as no particle left on some processors */
 #else
   if (sums->n_part)
 #endif 
@@ -473,31 +475,32 @@ long compute_final_properties
         tmax = t;
     } 
 #if SDDS_MPI_IO
-    if (isMaster && notSinglePart) {
-      tmax = dp_max = -DBL_MAX;
-      tmin = dp_min = DBL_MAX;
-      sum = 0;
-    }
-    tmp = tmax;
-    MPI_Reduce (&tmp, &tmax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    tmp = tmin;
-    MPI_Reduce (&tmp, &tmin, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
-    tmp = dp_max;
-    MPI_Reduce (&tmp, &dp_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-    tmp = dp_min;
-    MPI_Reduce (&tmp, &dp_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
     if (notSinglePart) {
+      if (isMaster) {
+	tmax = dp_max = -DBL_MAX;
+	tmin = dp_min = DBL_MAX;
+	sum = 0;
+      }
+      tmp = tmax;
+      MPI_Reduce (&tmp, &tmax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      tmp = tmin;
+      MPI_Reduce (&tmp, &tmin, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+      tmp = dp_max;
+      MPI_Reduce (&tmp, &dp_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+      tmp = dp_min;
+      MPI_Reduce (&tmp, &dp_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
       tmp = sum; 
       MPI_Reduce (&tmp, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
     }
 #endif
-    if (isMaster) {
+    if (isMaster || !notSinglePart) {
       dt = tmax-tmin;
       Ddp = dp_max - dp_min;
       data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
     }
 #if SDDS_MPI_IO
-    MPI_Bcast (&tc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (notSinglePart)
+      MPI_Bcast (&tc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
     if (isSlave || !notSinglePart)
     for (i=sum=0; i<sums->n_part; i++)
@@ -517,10 +520,16 @@ long compute_final_properties
     approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
     approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
 #else
-    if (n_part_total) {
-      approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
-      approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
-      approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+    if (notSinglePart) {
+      if (n_part_total) {
+	approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+	approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+	approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+      } 
+    } else {
+	approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+	approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+	approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
     }
 #endif
   }
@@ -571,7 +580,7 @@ long compute_final_properties
   }
 
 #if SDDS_MPI_IO
-  if (SDDS_MPI_IO && notSinglePart) {
+  if (notSinglePart) {
     double *tmp_sum = malloc(2*sizeof(*tmp_sum)),
       *tmp = malloc(2*sizeof(*tmp_sum));
     tmp[0] = p_sum; tmp[1] = gamma_sum;
@@ -580,7 +589,7 @@ long compute_final_properties
     free (tmp); free (tmp_sum);
   }   
 #endif
-  if (isMaster) {
+  if (isMaster || !notSinglePart) {
     if (sums->n_part) {
       pAverage = data[F_T_OFFSET+2] = p_sum/sums->n_part;
       data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*particleMassMV;
@@ -595,7 +604,7 @@ long compute_final_properties
 #if !SDDS_MPI_IO
   if (coord && sums->n_part>3) {
 #else 
-  if (n_part_total>3) {  /* In the version with parallel IO, coord on master points to NULL */
+    if ((notSinglePart && n_part_total>3) || (!notSinglePart && coord && sums->n_part>3)){  /* In the version with parallel IO, coord on master points to NULL */
 #endif
 #if (!USE_MPI) || SDDS_MPI_IO    
     data[F_WIDTH_OFFSET] = approximateBeamWidth(0.6826F, coord, sums->n_part, 0L)/2.;
@@ -1088,7 +1097,7 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
   binParticleCoordinate(&hist, &maxBins, &xMin, &xMax, &dx, &bins, 
                         1.01, part, nPart, iCoord);
 #if USE_MPI
-  if (USE_MPI) {  /* Master needs to know the information to write the result */
+  if (notSinglePart) {  /* Master needs to know the information to write the result */
     buffer = malloc(sizeof(double) * bins);
     MPI_Allreduce(hist, buffer, bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     memcpy(hist, buffer, sizeof(double)*bins);

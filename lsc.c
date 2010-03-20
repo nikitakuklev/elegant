@@ -74,7 +74,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     }
   }
 #if USE_MPI
-  else if (USE_MPI) {
+  else if (USE_MPI && notSinglePart) {
       long np_total;
       if (isSlave) {
 	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
@@ -97,11 +97,13 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       tmean = computeTimeCoordinates(time, Po, part, np);
     find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
-    if(isMaster) {
-      tmin = DBL_MAX;
-      tmax = -DBL_MAX;
-    }
-    find_global_min_max(&tmin, &tmax, nb, MPI_COMM_WORLD);       
+    if (notSinglePart) {
+      if(isMaster) {
+	tmin = DBL_MAX;
+	tmax = -DBL_MAX;
+      }
+      find_global_min_max(&tmin, &tmax, nb, MPI_COMM_WORLD); 
+    }      
 #endif
     dt = (tmax-tmin)/(nb-3);
 #if DEBUG
@@ -156,11 +158,13 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     /* - find maximum current */
     find_min_max(&Imin, &Imax, Itime, nb);
 #if USE_MPI
-    if(isMaster) {
-      Imin = DBL_MAX;
-      Imax = -DBL_MAX;
-    }
-    find_global_min_max(&Imin, &Imax, nb, MPI_COMM_WORLD);      
+    if (notSinglePart) {
+      if(isMaster) {
+	Imin = DBL_MAX;
+	Imax = -DBL_MAX;
+      }
+      find_global_min_max(&Imin, &Imax, nb, MPI_COMM_WORLD);    
+    }  
 #endif
 #if DEBUG
     fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
@@ -172,7 +176,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if !USE_MPI
     rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
 #else
-    rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+    if (notSinglePart)
+      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+    else
+      rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
 #endif
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
@@ -280,7 +287,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       fprintf(fpd, "\n");
 #endif
     Zmax = 0;
-    if (isSlave) {
+    if (isSlave || !notSinglePart) {
       for (ib=1; ib<nfreq-1; ib++) {
 	k = ib*dk;
 	a1 = k*beamRadius/Po;        
@@ -307,7 +314,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     
     /* put zero voltage in Vtime[nb] for use in interpolation */
     Vtime[nb] = 0;
-    if (isSlave) {
+    if (isSlave || !notSinglePart) {
       applyLongitudinalWakeKicks(part, time, pbin, np, Po, Vtime, 
 				 nb, tmin, dt, LSC->interpolate);
       if (!kickMode) {
@@ -330,10 +337,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if defined(MINIMIZE_MEMORY)
   tfree(Itime);
   tfree(Vtime);
-  if (isSlave) {
+  if (pbin)
     tfree(pbin);
+  if (time)
     tfree(time);
-  }
   Itime = Vtime = time = NULL;
   pbin = NULL;
   max_np = max_n_bins = 0;
@@ -435,7 +442,10 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #if !USE_MPI
     rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
 #else
-    rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+    if (notSinglePart)
+      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+    else
+      rms_emittance(part, 0, 2, np, &S11, NULL, &S33);    
 #endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
     fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
@@ -452,7 +462,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   fflush(stdout);
 #endif
   length = 1/kSC;
-  if (isSlave) {
+  if (isSlave || !notSinglePart) {
     if (dgammaOverGamma) {
       double length2;
       length2 = fabs(lengthScale/dgammaOverGamma);

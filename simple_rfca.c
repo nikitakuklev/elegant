@@ -498,13 +498,14 @@ long trackRfCavityWithWakes
 #if !USE_MPI
               dgammaOverGammaAve /= dgammaOverGammaNp;           
 #else
-	    if (USE_MPI) {
+	    if (notSinglePart) {
               double t1 = dgammaOverGammaAve;
               long t2 = dgammaOverGammaNp;
 	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
               MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
               dgammaOverGammaAve /= dgammaOverGammaNp; 
-	    }
+	    } else
+	      dgammaOverGammaAve /= dgammaOverGammaNp;
     
 #endif
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
@@ -537,13 +538,14 @@ long trackRfCavityWithWakes
 #if !USE_MPI
               dgammaOverGammaAve /= dgammaOverGammaNp;           
 #else
-	    if (USE_MPI) {
+	    if (notSinglePart) {
               double t1 = dgammaOverGammaAve;
               long t2 = dgammaOverGammaNp;
 	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
               MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
               dgammaOverGammaAve /= dgammaOverGammaNp; 
-	    }
+	    } else
+	      dgammaOverGammaAve /= dgammaOverGammaNp;
 #endif
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
           }

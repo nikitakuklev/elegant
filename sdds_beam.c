@@ -599,6 +599,8 @@ long new_sdds_beam(
   }
 #if SDDS_MPI_IO
   if (!fiducializing && !partOnMaster) {
+    if (isMaster)
+      beam->n_to_track = 0;
     MPI_Allreduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     beam->n_original_total = beam->n_to_track_total;
   }
