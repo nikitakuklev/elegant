@@ -193,12 +193,21 @@ long doMomentumApertureSearch(
   char **ElementName;
   long code, outputRow, jobCounter;
   long processElements, skipElements, deltaSign, split, slot;
+  char s[1000];
 #if USE_MPI
+  FILE *fpdMpi = NULL;
   notSinglePart = 0;
+
+#if defined(DEBUG)
+  sprintf(s, "%s-debug-%02d", output, myid);
+  if (!(fpdMpi = fopen(s, "w")))
+    fpdMpi = NULL;
+  fprintf(fpdMpi, "ID = %d\n", myid);
+  fflush(fpdMpi);
 #endif
+#else
 #if defined(DEBUG)
   FILE *fpdeb = NULL;
-  char s[1000];
 
   sprintf(s, "%s-Debug", output);
   fprintf(stderr, "Debug file %s\n", s);
@@ -213,6 +222,7 @@ long doMomentumApertureSearch(
   fprintf(fpdeb, "&column name=Loss Pass type=short &end\n");
   fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
   fflush(fpdeb);
+#endif
 #endif
 
   if (control->n_passes==1)
@@ -317,15 +327,25 @@ long doMomentumApertureSearch(
       if (output_mode==0) {
 #if USE_MPI
         jobCounter++;
-        if (myid != jobCounter%n_processors)
+        if (myid != jobCounter%n_processors) {
+          elem = elem->succ;
           continue;
+        }
 #endif
         outputRow++;
       }
+#if USE_MPI
+#if defined(DEBUG)
+      fprintf(fpdMpi, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+      fprintf(fpdMpi, "jobCounter = %ld, outputRow = %ld\n", jobCounter, outputRow);
+      fflush(fpdMpi);
+#endif
+#else
       if (verbosity>0) {
         fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
       }
+#endif
       for (side=0; side<2; side++) {
         if (output_mode==1) {
 #if USE_MPI
