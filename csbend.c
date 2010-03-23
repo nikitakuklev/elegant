@@ -1009,7 +1009,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
-
+  short accumulatingAngle = 1;
+  
 #if USE_MPI
   double *buffer;  
   if (notSinglePart)
@@ -1021,7 +1022,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #endif
 
   if (!(csbend->edgeFlags&SAME_BEND_PRECEDES))
-    accumulatedAngle = 0;
+    accumulatedAngle = accumulatingAngle = 0;
   
   csrWake.valid = 0;
   if (isSlave || !notSinglePart) 
@@ -1931,7 +1932,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
     csrWake.valid = 1;
     csrWake.rho = rho_actual;
-    csrWake.bendingAngle = fabs(angle);
+    csrWake.bendingAngle = accumulatingAngle ? fabs(phiBend) : fabs(angle);
     csrWake.Po = Po;
     csrWake.SGOrder = csbend->SGOrder;
     csrWake.SGDerivOrder = csbend->SGDerivOrder;
