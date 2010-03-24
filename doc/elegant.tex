@@ -17,7 +17,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 23.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 23.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -28,11 +28,14 @@ bugs via email.
 
 \section{Highlights of What's New in Version 22.1}
 
+Version 23.1 is a major release, containing several important bug fixes and some important new features.  
 Here is a summary of what's changed since release 22.1. 
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
+\item A bug was found in \verb|CSRCSBEND| when a dipole was split into many identical pieces and followed by 
+  \verb|CSRDRIFT|.  In this case, the drift CSR was computed incorrectly.  This was reported by D. Angal-Kalinin and P. Williams (ASTeC).
 \item An uninitialized variable was found in the code for CSBEND (by R. Soliday, ANL) that would potentially give wrong results for
   EDGE\_ORDER$>$1.   We didn't see problems in tests, but it may be platform-dependent.
 \item A bug was fixed in the SCRIPT element that prevented having commands with embedded quotes.
@@ -69,18 +72,20 @@ Here is a summary of what's changed since release 22.1.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item In the past, the beam produced by the \verb|bunched_beam| command would not have {\em exactly} the twiss parameters and
-  dispersion requested by the user.  This has been dramatically improved.
+\item The \verb|modulate_element| command was added.  As the name suggests, it allows imposing time-dependent modulations
+  on parameters of elements.  This feature is somewhat experimental so please use with caution and report any problems
+  on the forum.  See the manual entry below for details.
 \item The \verb|touschek_scatter| command was added.  It allows simulation of Touschek scattering in linacs and transport lines,
   including arbitrary beam distributions.  This was the work of A. Xiao (ANL).
-\item The \verb|semaphores| command now includes the option to create a semaphore when a run fails.
+\item In the past, the beam produced by the \verb|bunched_beam| command would not have {\em exactly} the twiss parameters and
+  dispersion requested by the user.  This has been dramatically improved.
 \item The \verb|bunched_beam| command now includes the option for ``optimized'' Halton sequence generation \cite{Chi2005}.  They
   have the advantage of removing correlations between the phase space planes.  This work was done by A. Xiao and H. Shang with
   assistance from C. Wang (all ANL), using code from H. Chi.
-\item The functionality behind the \verb|use_twiss_command_values| parameter of \verb|bunched_beam|.  {\tt elegant} will now
-  update the values as twiss parameters are recomputed in multi-step runs.
 \item Computation of the cross-plane response matrix was added to \verb|correction_matrix_output|.  The cross-plane elements may
   also be optimized.
+\item The functionality behind the \verb|use_twiss_command_values| parameter of \verb|bunched_beam| was improved.  {\tt elegant} will now
+  update the values as twiss parameters are recomputed in multi-step runs.
 \item The \verb|error_elements| command now has a flag \verb|allow_missing_elements| that allows continuation of the run
   in the event that no matching elements are found.
 \item The original value of the source parameter for \verb|link_elements| is now stored in a variable named {\em ParameterValue}0.
@@ -90,6 +95,7 @@ Here is a summary of what's changed since release 22.1.
 \item The \verb|optimization_setup| command now accepts a \verb|term_log_file| parameter.  This names a file to which the
   values of the optimization terms are written at the completion of optimization, which can be convenient when large numbers
   of terms are used.
+\item The \verb|semaphores| command now includes the option to create a semaphore when a run fails.
 \item The \verb|rpn_load| command now allows a blank tag, instead of bombing.  This bug was pointed out by M. Cornacchia (SLAC).
 \end{itemize}
 
@@ -103,6 +109,7 @@ Here is a summary of what's changed since release 22.1.
 \item The ``line'' and ``shell'' beam types did not work in the parallel version.  This has been fixed (Y. Wang, ANL).
 \item The \verb|momentum_aperture| command now features an \verb|output_mode| parameter that allows use of twice as
   many simultaneous processors.
+\item Some issues with fiducialization (\verb|first_is_fiducial=1|) mode were fixed.  (Y. Wang, ANL).
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -2238,6 +2245,83 @@ is desired at every simulation step.
 from which to begin concatenation and output.
 \item \verb|start_from_occurrence| --- If \verb|start_from| is not NULL, the
 number of the occurrence of the named element from which to start.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|modulate_elements|}\end{center}
+\end{latexonly}
+\subsection{modulate\_elements\label{subsec:modulateelements}}
+
+\begin{itemize}
+\item type: setup command.
+\item function: define parameters for time-dependent modulation of elements
+\item N.B.: this feature is somewhat experimental.  Please use with caution and report any problems on the forum.
+\end{itemize}
+
+\begin{verbatim}
+&modulate_elements
+    STRING name = NULL;
+    STRING item = NULL;
+    STRING type = NULL;
+    STRING expression = NULL;
+    STRING filename = NULL;
+    STRING time_column = NULL;
+    STRING amplitude_column = NULL;
+    long differential = 1;
+    long multiplicative = 0;
+    long start_occurence = 0;
+    long end_occurence = 0;
+    double s_start = -1;
+    double s_end = -1;
+    STRING before = NULL;
+    STRING after = NULL;
+    long verbose = 0;
+&end
+\end{verbatim}
+
+N.B.: This command will produce unpredictable results when used with
+\verb|error_element|, \verb|alter_elements|, and
+\verb|load_parameters| (except when \verb|change_defined_values=1|).
+It should work properly with \verb|link_elements| in turn-by-turn mode
+when the source element is modulated, but not when the target element
+is modulated.
+
+\begin{itemize}
+\item \verb|name| --- A possibly-wildcard-containing string giving the names of the
+        elements to modulate. If not specified, then one must specify \verb|type|.
+\item \verb|item| --- The name of the parameter to modulate.
+\item \verb|type| --- A possibly-wildcard-containing string giving the names of element
+        {\em types} to modulate.  May be specified with \verb|name| or by itself.
+\item \verb|expression| --- RPN expression for the modulation amplitude $A$.  The value
+  of the time is on top of the stack. 
+\item \verb|filename| --- Name of SDDS file from which to read modulation data, if
+  \verb|expression| is not used.
+\item \verb|time_column| --- Name of column in \verb|filename| giving time data for the
+  modulation table.
+\item \verb|amplitude_column| --- Name of column in \verb|filename| giving amplitude data
+  for the modulation.  Together, \verb|time_column| and \verb|amplitude_column| define
+  a function $A(t)$.
+\item \verb|differential|, \verb|multiplicative| --- Determine how the amplitude function
+  $A(t)$ is used to obtain the new value of the parameter.  There are four cases
+  \begin{itemize}
+    \item \verb|differential=1|, \verb|multiplicative=0|: $v(t) = v_0 + A(t)$ (default).
+    \item \verb|differential=0|, \verb|multiplicative=0|: $v(t) = A(t)$.  
+    \item \verb|differential=1|, \verb|multiplicative=1|: $v(t) = v_0 + v_0 A(t)$.  
+    \item \verb|differential=0|, \verb|multiplicative=1|: $v(t) = v_0 A(t)$.  
+  \end{itemize}
+\item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
+ ending occurrence numbers of elements that will be modulated. N.B.: if wildcards are used, occurrence
+ number counting is for each set of identically-named elements separately, rather than for the sequence
+ of matched elements.
+\item \verb|s_start|, \verb|s_end| --- If non-negative, these give the gaving and ending position
+ limits for the end-of-element locations of elements to be modulated.
+\item \verb|after| --- The name of an element.  If given, the modulation is applied only to elements
+ that follow the named element in the beamline.  
+\item \verb|before| --- The name of an element.  If given, the modulation is applied only to elements
+ that precede the named element in the beamline. 
+\item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
+        made.  Use for debugging only, since otherwise it may slow the simulation.
 \end{itemize}
 
 \begin{latexonly}
