@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.16 2008-10-31 14:20:00 xiaoam Exp $
+# $Id: Makefile,v 1.17 2010-03-24 14:29:27 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.16  2008/10/31 14:20:00  xiaoam
+# Add replace_elements command to elegant
+#
 # Revision 1.15  2008/03/18 16:45:08  xiaoam
 # Add insert_elements and touschekScatter into elegant
 #
@@ -192,6 +195,11 @@ matrix_output$(OBJ): matrix_output.h
 matrix_output.h: ../matrix_output.nl
 	nlpp ../matrix_output.nl matrix_output.h
 
+modulate$(OBJ): modulate.h
+
+modulate.h: ../modulate.nl
+	nlpp ../modulate.nl modulate.h
+
 momentumAperture$(OBJ): momentumAperture.h
 
 momentumAperture.h: ../momentumAperture.nl
@@ -352,5 +360,6 @@ endif
 
 
 clean::
-	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h
+
 

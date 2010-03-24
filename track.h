@@ -341,6 +341,24 @@ typedef struct line_list {
 #define BEAMLINE_RADINT_DONE      0x00000080
     } LINE_LIST;
 
+typedef struct {
+    long nItems;
+    ELEMENT_LIST **element;      /* element to be modulated */
+    char **item;                 /* name of item to vary for each element, e.g., "K1" */
+    long *parameterNumber;       /* parameter number of varied value */
+    unsigned long *flags;        /* flag bits follow: */      
+#define DIFFERENTIAL_MOD   0x01
+#define MULTIPLICATIVE_MOD 0x02
+#define VERBOSE_MOD        0x04
+    double *unperturbedValue;    /* value without modulation */
+    char **expression;           /* rpn expression for A(t) */
+    long *dataIndex;             /* used for sharing of data tables */
+    long *nData;                 /* number of data elements */
+    double **timeData;           /* time values */
+    double **modulationData;     /* amplitude values */
+  } MODULATION_DATA;
+
+
 /* structure for passing information on run conditions */
 
 typedef struct {
@@ -351,6 +369,7 @@ typedef struct {
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
+    MODULATION_DATA modulationData;
 #if USE_MPI
     int n_processors;
 #endif
@@ -422,6 +441,9 @@ typedef struct {
     long new_data_read;          /* new data has been read for control of tracking */
     long no_errors_first_step;   /* if nonzero, first step is perfect lattice */
     } ERRORVAL;
+
+/* structure containing information for modulations */
+
 
 /* structures containing information for optimization */
 
@@ -3494,7 +3516,8 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 void finish_coupled_twiss_output();
 void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity);
 
-
+long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run);
+void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 
 #ifdef __cplusplus
 }

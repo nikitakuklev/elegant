@@ -307,7 +307,11 @@ long do_tracking(
     }
 
     ResetNoiseGroupValues();
-
+    if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run)) {
+      beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+      beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+    }
+    
     if (beamline->links) {
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
       rpn(s);

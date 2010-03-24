@@ -39,7 +39,7 @@ else
     #MPI_PATH = /share/mpich2_mpd_sock/bin/
     #MPI_PATH = /share/mpich/ch_p4/bin/
     #MPI_PATH = /data/mpich2_mpd_nemesis/bin/
-    #MPI_PATH = /data/mpich2-1.0.8p1/bin/
+    MPI_PATH = /data/mpich2-1.0.8p1/bin/
     CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
     CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
     # memory debugging with totalview
@@ -305,7 +305,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c lookupa.c recycle.c hashtab.c moments.c \
-                insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c
+                insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c modulate.c
                    
 
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c

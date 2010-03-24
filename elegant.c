@@ -70,10 +70,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.0RC2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 23.1RC2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.0RC2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 23.1RC2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -141,7 +141,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define GLOBAL_SETTINGS 56
 #define REPLACE_ELEMENTS 57
 #define APERTURE_DATAX   58
-#define N_COMMANDS      59
+#define MODULATE_ELEMENTS 59
+#define N_COMMANDS      60
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -155,7 +156,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
-    "aperture_data",
+    "aperture_data", "modulate_elements"
   } ;
 
 char *description[N_COMMANDS] = {
@@ -218,6 +219,7 @@ char *description[N_COMMANDS] = {
     "global_settings                  change various global settigs",
     "replace_elements                 remove or replace elements inside beamline",
     "aperture_input                   provide an SDDS file with the physical aperture vs s (same as aperture_data)", 
+    "modulate_elements                modulate values of elements as a function of time",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1581,6 +1583,11 @@ char **argv;
         bombElegant("run_setup must precede linear_chromatic_tracking_setup", NULL);
       setupLinearChromaticTracking(&namelist_text, beamline);
       linear_chromatic_tracking_setup_done = 1;
+      break;
+    case MODULATE_ELEMENTS:
+      if (!run_setuped)
+        bombElegant("run_setup must precede modulate_elements", NULL);
+      addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline);
       break;
     default:
       fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
