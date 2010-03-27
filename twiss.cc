@@ -106,15 +106,23 @@ VMATRIX *compute_periodic_twiss(
   double ***T, ****Q, eta2f[6];
   long i, j, k;
   MATRIX *dispR, *dispM, *dispMInv, *dispEta;
+  static short noticeCounter = 0;
   
   log_entry((char*)"compute_periodic_twiss");
 
   *unstable = 0;
 
-  if ((i = fill_in_matrices(elem, run)))
-    fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
-    fflush(stdout);
-
+  if ((i = fill_in_matrices(elem, run))) {
+    if (noticeCounter < 100) {
+      fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
+      fflush(stdout);
+      if (++noticeCounter==100) {
+        fprintf(stdout, (char*) "(Further notices discontinued)\n", i);
+        fflush(stdout);
+      }                     
+    }
+  }
+    
   if (cavities_are_drifts_if_matched) {
     if (run->always_change_p0)
       bombElegant((char*)"can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
