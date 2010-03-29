@@ -542,29 +542,12 @@ long compute_final_properties
   }
 
   /* transmission */
-#if !SDDS_MPI_IO
   if (n_original)
     data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
   else
     data[F_T_OFFSET] = 0;
-#else
-  if (notSinglePart) {
-    MPI_Reduce (&n_original, &n_original_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (n_original_total)
-      data[F_T_OFFSET] = ((double)sums->n_part)/n_original_total;
-    else
-      data[F_T_OFFSET] = 0;
-  }
-  else {
-    if (n_original)
-      data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
-    else
-      data[F_T_OFFSET] = 0;
-    n_original_total = n_original; /* This should happen on the first step for fiducial beam */
-  }
 
-#endif
-  /* lattice momentum */
+  /* lattice momentum :*/
   data[F_T_OFFSET+1] = p_central;
 
   /* compute average momentum and kinetic energy */

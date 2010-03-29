@@ -194,13 +194,12 @@ long do_tracking(
     nOriginal = beam->n_to_track;  /* used only for computing macroparticle charge */
   }
 #if SDDS_MPI_IO
-  if (notSinglePart) {
-
+  if (notSinglePart && !partOnMaster) {
     if (isMaster )
       nOriginal = 0; 
     MPI_Allreduce(&nOriginal, &total_nOriginal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   }
-  else
+  else /* single partticle case where all the processors track the same particle(s), or particles are on master when the first beam is fiducial */
     total_nOriginal = nOriginal;
 #endif
   
@@ -237,6 +236,15 @@ long do_tracking(
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
   nToTrack = nLeft = nMaximum = nOriginal;
+#if USE_MPI
+  if (!partOnMaster && notSinglePart) {
+    if (isMaster) nToTrack = 0; 
+    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  } else { /* singlePart tracking or partOnMaster */
+    if (beam)	
+      beam->n_to_track_total = nToTrack;
+  }
+#endif
   et1 = -2.0;
   elliptical = isConcat = 0;
   watch_pt_seen = feedbackDriverSeen = 0;
@@ -997,6 +1005,7 @@ long do_tracking(
 		    dump_particle_histogram(histogram, step, i_pass, coord, nToTrack, *P_central,
 					    beamline->revolution_length, 
 					    charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z);
+
 #endif
 		  }
 		}
@@ -1436,7 +1445,12 @@ long do_tracking(
                       printf("* Computing beam-based twiss transformation matrix for %s at z=%e m\n",
                              eptr->name, eptr->end_pos);
 #if SDDS_MPI_IO
-		    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+                    if (!partOnMaster && notSinglePart) {
+                      if (isMaster) nToTrack = 0;
+                      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+                    } else { /* singlePart tracking or partOnMaster */
+                      beam->n_to_track_total = nToTrack;
+                    }
 		    if (isMaster && (beam->n_to_track_total<10)) {
 #else
                     if (nToTrack<10) {
@@ -1905,7 +1919,12 @@ long do_tracking(
       exit(1);
     }
 #if SDDS_MPI_IO
-    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (!partOnMaster && notSinglePart) {
+          if (isMaster) nToTrack = 0;
+          MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  } else { /* singlePart tracking or partOnMaster */
+    beam->n_to_track_total = nToTrack;
+  }
     /* The charge is correct on master only, but it should not affect the output */
     computeSASEFELAtEnd(sasefel, coord, nToTrack, *P_central, charge->macroParticleCharge*beam->n_to_track_total);
 #else
@@ -3033,6 +3052,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     beam->n_particle = npNew+nLost;
     beam->n_to_track = npNew;
+#if USE_MPI
+    beam->n_to_track_total = SDDS_MPI_TotalRowCount(&SDDSin);	
+#endif
     /* fprintf(stdout, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
        beam->n_particle, beam->n_to_track);
     */

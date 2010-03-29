@@ -538,8 +538,7 @@ long track_beam(
       notSinglePart = 0;
     } else {
       notSinglePart = 1;
-      partOnMaster = 0;
-
+     /* partOnMaster = 0; This caused trouble in the second step when the first is fiducial beam and the beam is reused*/
     }
   }
 
@@ -727,6 +726,7 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping final properties data..."); fflush(stdout);
     fflush(stdout);
+#if !USE_MPI
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
        control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
@@ -736,6 +736,19 @@ void do_track_beam_output(RUN *run, VARY *control,
        optim->n_variables?optim->n_variables+3:0,
        control->i_step, beam->particle, beam->n_to_track, p_central, M,
        finalCharge);
+#else
+    if (notSinglePart)
+      MPI_Reduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    dump_final_properties
+      (&output->SDDS_final, output->sums_vs_z+output->n_z_points,
+       control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL,
+       control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
+       errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates, errcon->n_items,
+       optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
+       optim->n_variables?optim->n_variables+3:0,
+       control->i_step, beam->particle, beam->n_to_track_total, p_central, M,
+       finalCharge);
+#endif
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "done.\n"); 
       fflush(stdout);
@@ -890,6 +903,7 @@ void finish_output(
     VMATRIX *M;
     if (!output->final_initialized)
       bombElegant("'final' file is uninitialized (track_beam)", NULL);
+#if !USE_MPI
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
        control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
@@ -900,6 +914,21 @@ void finish_output(
        optim->n_variables?optim->n_variables+2:0,
        0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
        finalCharge);
+#else
+   if (notSinglePart)
+      MPI_Reduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);	
+    dump_final_properties
+      (&output->SDDS_final, output->sums_vs_z+output->n_z_points,
+       control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL,
+       control->n_elements_to_vary, control->indexLimitProduct*control->n_steps,
+       errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates,
+       errcon->n_items,
+       optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
+       optim->n_variables?optim->n_variables+2:0,
+       0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+       finalCharge);
+#endif
+
     free_matrices(M);
     free(M);
   }

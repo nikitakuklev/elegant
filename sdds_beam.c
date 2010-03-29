@@ -216,7 +216,7 @@ long new_sdds_beam(
     notSinglePart = 1;
     partOnMaster = 0;
     lessPartAllowed = 0; /* This flag will control if the simulation runs in single particle mode in track_beam function */
-    /*
+    /* We can consider to save some memory for the second step after the fiducial beam is tracked in the first step.
     if (isMaster && beam->n_to_track) {
       if (beam->original)
 	free_czarray_2d((void**)beam->original, beam->n_original, 7);
@@ -800,9 +800,12 @@ long get_sdds_particles(double ***particle,
 #if SDDS_MPI_IO  
       /* when first_is_fiducial flag is set, the coordinate for the first bunch 
 	 will be broadcasted to all the processors */
-      if (fiducializing && (retval==1)) {
-	np_new=np+total_rows;
-	data = (double**)resize_czarray_2d((void**)data, sizeof(double), total_rows, 7);
+      if (fiducializing) {
+	if((np_new=np+total_rows)>np_max) {
+          /* must reallocate to get more space */
+          np_max = np + total_rows;
+          data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
+	}
       }
       /* For simulation with a large number of particles, master will not be allocated memory */
       else if (isSlave)
@@ -838,7 +841,7 @@ long get_sdds_particles(double ***particle,
 	/* In the parallel version, if the first beam is fiducial, the paricles will be read in parallel. Each processor should only get the data it reads */
 	if (fiducializing) {
 	  long local_rows = SDDS_input.n_rows; /* The data is read in parallel, but np_new is the total number of rows */
-	  for (i=np; i<local_rows; i++) 
+	  for (i=np; i<np+local_rows; i++) 
 	    data[i][ic] = columnData[i-np];
 	} else {
 	  for (i=np; i<np_new; i++) 
@@ -874,7 +877,6 @@ long get_sdds_particles(double ***particle,
 	for (i=np; i<np_new; i++)
 	  data[i][6] = particleID++;
     }
-      np = np_new;
 #if SDDS_MPI_IO
       if (fiducializing) {
 	int length = SDDS_input.n_rows*COORDINATES_PER_PARTICLE*sizeof(double);
@@ -887,22 +889,24 @@ long get_sdds_particles(double ***particle,
 	  offset[i+1] = offset[i] + all_lens[i]; 
 				 
 	  /* The first bunch will be duplicated on all processors */
-	MPI_Allgatherv(&data[0][0], length, MPI_CHAR, &data[0][0], all_lens, offset, MPI_CHAR, MPI_COMM_WORLD);
+	MPI_Allgatherv(&data[np][0], length, MPI_CHAR, &data[np][0], all_lens, offset, MPI_CHAR, MPI_COMM_WORLD);
 
 	/* All the processors will do the same work for the first bunch */
 	lessPartAllowed = 1;
 	notSinglePart = 0;
-	SDDS_input.n_rows = np = total_rows;
       }
       else {
 	lessPartAllowed = 0;
 	notSinglePart = 1;
-	partOnMaster = 0;
-	if (isMaster)
-	  np = 0;
+	if (!reuse_bunch) {
+	  partOnMaster = 0;
+	  if (isMaster)
+	    np = 0;
+	}
       }
 
 #endif
+      np = np_new;
       if (one_dump && !dump_rejected)
         break;
     }
