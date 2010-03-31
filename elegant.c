@@ -361,14 +361,12 @@ char **argv;
   set_fpu (0x27F);  /* use double-precision rounding */
 #endif
 
-#if defined(UNIX) || defined(_WIN32)
   signal(SIGINT, traceback_handler);
   signal(SIGILL, traceback_handler);
   signal(SIGABRT, traceback_handler);
   signal(SIGFPE, traceback_handler);
   signal(SIGSEGV, traceback_handler);
-#endif
-#if defined(UNIX)
+#ifndef _WIN32
   signal(SIGHUP, traceback_handler);
   signal(SIGQUIT, traceback_handler);
   signal(SIGTRAP, traceback_handler);
@@ -512,7 +510,7 @@ char **argv;
   sprintf(s, "%s.ckpt", inputfile);
   init_image_with_file_name(s);
 #else
-#if defined(UNIX)
+#ifndef _WIN32
   signal(SIGUSR2, SIG_IGN);
 #endif
 #endif
