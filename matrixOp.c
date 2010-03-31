@@ -42,6 +42,10 @@
 #include "cblas.h"
 #ifdef F2C
 #include "f2c.h"
+#if defined(_WIN32)
+typedef struct { real r, i; } complex;
+typedef struct { doublereal r, i; } doublecomplex;
+#endif
 #endif
 #include "clapack.h"
 #if defined(_WIN32)
