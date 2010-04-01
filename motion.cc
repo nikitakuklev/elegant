@@ -40,10 +40,16 @@
 #endif
 #endif
 #include <complex>
+#if defined(darwin)
+#include <cmath>
+#define isinf(x) std::isinf(x)
+#define isnan(x) std::isnan(x)
+#endif
 #include "mdb.h"
 #include "match_string.h"
 #include "track.h"
 #include "matlib.h"
+
 
 #if defined(SOLARIS)
 #define isinf(x) ((x==x) && !finite(x))

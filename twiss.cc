@@ -19,6 +19,10 @@
 #endif
 #endif
 #include <complex>
+#if defined(darwin)
+#include <cmath>
+#define isnan(x) std::isnan(x)
+#endif
 #include "mdb.h"
 #include "track.h"
 #include "matlib.h"
