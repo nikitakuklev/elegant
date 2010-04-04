@@ -1,9 +1,4 @@
 &transmute_elements
-        name = *, type = WATCH, 
-        new_type = DRIF
-&end
-
-&transmute_elements
         name = *, type = MAXAMP,
         new_type = DRIF,
 	disable = <includeApertures>
@@ -61,7 +56,7 @@
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
 
 &alter_elements name=<elementName>, item=FIRE_ON_PASS, value=1 &end
-&alter_elements name=<elementName>, item=ANGLE, value=<kickValue> &end
+&alter_elements name=<elementName>, item=ANGLE, value="(<kickValue> 1e3 /)" &end
 
 ! May be needed if SREFFECTS elements are present
 &twiss_output
