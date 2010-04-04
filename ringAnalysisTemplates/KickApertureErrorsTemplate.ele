@@ -75,7 +75,7 @@ sinclude(<ERRORPARAM>)
         n_passes = <turns>,
 &end
 
-&vary_element name=<elementName>, item=ANGLE, initial=<minimumKick>, final=<maximumKick>, index_number=0, index_limit=<steps> &end
+&vary_element name=<elementName>, item=ANGLE, initial="(<minimumKick> 1e3 /)", final="(<maximumKick> 1e3 /)", index_number=0, index_limit=<steps> &end
 
 &twiss_output filename = "%s.twi",  statistics=1, radiation_integrals=1, output_at_each_step=1, &end
 
