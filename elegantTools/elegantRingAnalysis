@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.19  2010/02/23 14:22:49  borland
+# Added starting values for momentum apeture search.
+#
 # Revision 1.18  2010/02/01 01:00:49  borland
 # Allow up to 31 lines for DA line search.
 #
@@ -861,6 +864,73 @@ proc FillDynamicApertureErrorsFrame {widget args} {
 }
 
 
+proc FillKickApertureErrorsFrame {widget args} {
+    global kickApertureErrors templateDirectory
+
+    APSLabeledEntry .le1 -parent $widget \
+      -label "Minimum kick (mrad): " -width 20 -textVariable kickApertureErrors(minimumKick) \
+      -contextHelp \
+      "Enter the maximum x plane kick for the kick aperture search"
+    APSLabeledEntry .le2 -parent $widget \
+      -label "Maximum kick (mrad): " -width 20 -textVariable kickApertureErrors(maximumKick) \
+      -contextHelp \
+      "Enter the maximum x plane kick for the kick aperture search"
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Number of steps: " -width 20 -textVariable kickApertureErrors(steps) \
+      -contextHelp \
+      "Enter the number of points into which to divide the range."
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Number of turns: " -width 20 -textVariable kickApertureErrors(turns) \
+      -contextHelp \
+      "Enter the number of turns to track." 
+
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Number of particles: " -width 20 -textVariable kickApertureErrors(particles) \
+      -contextHelp \
+      "Enter the number of particles to track." 
+
+    APSLabeledEntry .le6 -parent $widget \
+      -label "Emittance ratio: " -width 20 -textVariable kickApertureErrors(emittanceRatio) \
+      -contextHelp \
+      "Enter the emittance ratio (ey/ex)"
+
+    APSLabeledEntry .le7 -parent $widget \
+      -label "Element name for kick location: " -width 20 -textVariable kickApertureErrors(elementName) \
+      -contextHelp "Enter name of the element at which to put initial kick."
+
+    APSLabeledEntry .le9 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable kickApertureErrors(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+    APSRadioButtonFrame .rb2 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable kickApertureErrors(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
+
+    APSLabeledEntry .leaf -parent $widget \
+      -label "Aperture file: " -width 80 -textVariable kickApertureErrors(apertureFile) \
+      -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.sdds \
+      -contextHelp \
+      "Enter the name of a file containing aperture data."
+
+    APSLabeledEntry .le11 -parent $widget \
+        -label "Template file: " -width 80 -textVariable kickApertureErrors(template) \
+        -contextHelp "Enter the name of the template file for the runs."
+
+    APSButton .bu1 -parent $widget \
+      -text "Run" -command "Run -computation KickApertureErrors"
+    APSButton .bu1a -parent $widget \
+      -text "Process" -command "Run -computation KickApertureErrors -processOnly 1"
+    APSButton .bu2 -parent $widget \
+      -text "Display" -command {Display -type KickApertureErrors}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantKickApertureErrorsPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+      -command "set apsAbortElegantRun(APSElegantKickApertureErrorsPP) 1" \
+      -contextHelp "click to abort any running processes."
+}
+
+
 
 proc FillFineDynamicApertureFrame {widget args} {
     global fineDynamicAperture
@@ -1154,13 +1224,13 @@ set MainTabDescList [list "Twiss parameters, chromaticities, radiation integrals
                        "Phase space tracking, plots, FFTs." \
                        "Higher order dispersion from off-momentum orbits." \
                        "Off-momentum tunes from tracking." ]
-set ApertureTabList {DA OffMmntmDA FineDA MmntmAprtr}
+set ApertureTabList {DA OffMmntmDA FineDA MmntmAprtr KckAprtr}
 set ApertureFrameList {DynamicApertureErrors OffMomentumDynamicAperture \
-                         FineDynamicAperture MomentumAperture}
+                         FineDynamicAperture MomentumAperture KickApertureErrors}
 set ApertureTabDescList [list "On-momentum dynamic aperture using a line-scan algorithm, optionally with errors." \
                            "Off-momentum dynamic apertures using a relatively coarse algorithm." \
                            "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
-                           "Momentum aperture vs s." ]
+                           "Momentum aperture vs s." "Kick aperture"]
 set FMATabList {XY XYDelta}
 set FMAFrameList {FrequencyMap FrequencyMapDelta}
 set FMATabDescList [list "Frequency map analysis (requires a cluster)." \
@@ -1194,7 +1264,7 @@ lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickO
 lappend elegantSaveVarList basicComputations momentsComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend elegantSaveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
 lappend elegantSaveVarList frequencyMap collectiveEffects dynamicApertureErrors frequencyMapDelta
-lappend elegantSaveVarList momentumAperture
+lappend elegantSaveVarList momentumAperture kickApertureErrors
 
 set args $argv
 set configuration ""

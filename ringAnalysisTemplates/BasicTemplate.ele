@@ -20,6 +20,7 @@
         rootname = <mainDirectory>/<mainPrefix>Basic<suffix>,
 	random_number_seed = <seed>,
         final = %s.fin,
+        parameters = %s.param,
         semaphore_file = %s.done,
 &end
 
