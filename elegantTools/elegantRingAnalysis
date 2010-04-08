@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.20  2010/04/04 00:12:16  borland
+# Added KickAperture computation.
+#
 # Revision 1.19  2010/02/23 14:22:49  borland
 # Added starting values for momentum apeture search.
 #
@@ -1106,36 +1109,26 @@ proc FillFrequencyMapDeltaFrame {widget args} {
 proc FillMomentumApertureFrame {widget args} {
     global momentumAperture
 
-    APSLabeledEntry .lex -parent $widget \
-      -label "Initial x coordinate (m): " -width 20 -textVariable momentumAperture(xInitial) \
+    APSLabeledEntryFrame .lexy -parent $widget \
+      -label "Initial x, y coordinates (m): " -width 20 \
+      -orientation horizontal \
+      -variableList [list momentumAperture(xInitial) momentumAperture(yInitial)] \
       -contextHelp \
-      "Enter the initial x coordinate relative to the closed orbit."
-    APSLabeledEntry .ley -parent $widget \
-      -label "Initial y coordinate (m): " -width 20 -textVariable momentumAperture(yInitial) \
-      -contextHelp \
-      "Enter the initial y coordinate relative to the closed orbit."
+      "Enter the initial x and y coordinates relative to the closed orbit."
 
-    APSLabeledEntry .lednst -parent $widget \
-      -label "Negative delta start: " -width 20 \
-      -textVariable momentumAperture(deltaNegativeStart) \
+    APSLabeledEntryFrame .lednst -parent $widget \
+      -label "Negative, positive delta start: " -width 20 \
+      -orientation horizontal \
+      -variableList [list momentumAperture(deltaNegativeStart) momentumAperture(deltaPositiveStart)] \
       -contextHelp \
-      "Enter the starting value for delta for the negative-side scan."
-    APSLabeledEntry .ledns -parent $widget \
-      -label "Negative delta limit: " -width 20 \
-      -textVariable momentumAperture(deltaNegativeLimit) \
-      -contextHelp \
-      "Enter the limiting value for delta for the negative-side scan."
+      "Enter the starting value for delta for the negative- and positive-side scan."
 
-    APSLabeledEntry .ledpst -parent $widget \
-      -label "Positive delta start: " -width 20 \
-      -textVariable momentumAperture(deltaPositiveStart) \
+    APSLabeledEntryFrame .ledps -parent $widget \
+      -label "Negative, positive delta limit: " -width 20 \
+      -orientation horizontal \
+      -variableList [list momentumAperture(deltaNegativeLimit) momentumAperture(deltaPositiveLimit)] \
       -contextHelp \
-      "Enter the starting value for delta for the positive-side scan."
-    APSLabeledEntry .ledps -parent $widget \
-      -label "Positive delta limit: " -width 20 \
-      -textVariable momentumAperture(deltaPositiveLimit) \
-      -contextHelp \
-      "Enter the limiting value for delta for the positive-side scan."
+      "Enter the limiting value for delta for the negative- and positive-side scan."
 
     APSLabeledEntry .ledp -parent $widget \
       -label "Initial delta step: " \
