@@ -19,7 +19,7 @@
 	use_beamline = <kickBeamline>
 	p_central_mev = <momentum>,
         magnets = %s.mag,
-        rootname = <mainDirectory>/<mainPrefix>KickAperture<suffix>,
+        rootname = <mainDirectory>/<mainPrefix>KickApertureErrors<suffix>,
 	random_number_seed = <seed>,
         semaphore_file = %s.done,
         tracking_updates = 0
