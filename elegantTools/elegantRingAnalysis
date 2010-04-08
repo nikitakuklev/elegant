@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.21  2010/04/08 18:08:32  borland
+# Made the momentum aperture tab more compact.
+#
 # Revision 1.20  2010/04/04 00:12:16  borland
 # Added KickAperture computation.
 #
@@ -920,10 +923,14 @@ proc FillKickApertureErrorsFrame {widget args} {
         -label "Template file: " -width 80 -textVariable kickApertureErrors(template) \
         -contextHelp "Enter the name of the template file for the runs."
 
+    APSLabeledEntry .le12 -parent $widget \
+	-label "Number of processors per job: " -width 20 -textVariable kickApertureErrors(processors) \
+	-contextHelp "Enter the number of processors per job."
+
     APSButton .bu1 -parent $widget \
       -text "Run" -command "Run -computation KickApertureErrors"
-    APSButton .bu1a -parent $widget \
-      -text "Process" -command "Run -computation KickApertureErrors -processOnly 1"
+    #APSButton .bu1a -parent $widget \
+    #  -text "Process" -command "Run -computation KickApertureErrors -processOnly 1"
     APSButton .bu2 -parent $widget \
       -text "Display" -command {Display -type KickApertureErrors}
     global apsAbortElegantRun
