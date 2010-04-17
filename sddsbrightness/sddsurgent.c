@@ -1,5 +1,3 @@
-
-
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -19,6 +17,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.16  2009/05/01 21:53:39  shang
+fixed a segmentation bug
+
 Revision 1.15  2008/09/09 18:28:51  shang
 fixed a type conversion problem in linux 64 bit machine
 
@@ -593,11 +594,16 @@ int main(int argc, char **argv) {
   } else {
     if (undulator_param.energy) {
       /* calculate the Kx value for the undulator */
-      double gamma, lambda;
+      double gamma, lambda, x1;
+      long h;
       gamma = electron_param.energy*1e3/me_mev;
       lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
       undulator_param.kx = 0;
-      undulator_param.ky = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
+      x1 = 4*gamma*gamma*lambda/undulator_param.period;
+      h = (long)(2/x1 + 0.5);
+      if (h%2==0)
+	h += 1;
+      undulator_param.ky = sqrt(h*x1-2);
     }
     if (emin==emax && emin==0) {
       double gamma, lambda;
@@ -1479,14 +1485,14 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
   
   if (isub==1 || (isub==5 && mode==1)) {    
     if (iang)
-      sprintf(desc,"Angular flux density distribution for %lf ev (ph/s/mr^2/0.1%bw).", emin);
+      sprintf(desc,"Angular flux density distribution for %lf ev (ph/s/mr^2/0.1%%bw).", emin);
     else
-      sprintf(desc, "Irradiance for %lf ev (ph/s/mm^2/0.1%bm).", emin);
+      sprintf(desc, "Irradiance for %lf ev (ph/s/mm^2/0.1%%bm).", emin);
   } else if (isub==2 || isub==3 || isub==5) { 
     if (mode==2) 
       sprintf(desc, "Angular flux density spectrum for x=%f mrad and y=%lf mrad.", xPMM[0], yPMM[0]);
     else if (mode==3)
-      sprintf(desc,"%s", "On-axis brilliance (ph/s/mrad^2/mm^2/0.1%bw).");
+      sprintf(desc,"%s", "On-axis brilliance (ph/s/mrad^2/mm^2/0.1%%bw).");
     else if (mode==4) {
       if (iang)
         sprintf(desc, "Flux through %lf mrad, %lf mrad pinhole at %lf mrad, %lf mrad.", 
