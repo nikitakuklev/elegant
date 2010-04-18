@@ -17,6 +17,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.17  2010/04/17 22:08:54  borland
+Now correctly computes K when harmonic number is not 1 and energy is given.
+
 Revision 1.16  2009/05/01 21:53:39  shang
 fixed a segmentation bug
 
@@ -299,7 +302,8 @@ int main(int argc, char **argv) {
   SDDS_DATASET sddsin, sddsout, *sddsout2=NULL, sddsout1;
   unsigned long pipeFlags=0,dummyFlags=0;
   long i_arg, tmpFileUsed, i, j, special=0, mode_index=-1, nXP0, nYP0;
-  
+  long hUndulator = 1;
+
   SCANNED_ARG *s_arg;
 
   /*input parameters */
@@ -438,6 +442,8 @@ int main(int argc, char **argv) {
           SDDS_Bomb("invalid method given for calculation, it should be -1, or 1,2,3,4,14");
         if (iharm<-1000 || iharm>1000)
           SDDS_Bomb("harmonics exceeds the range of which from -1000 to 1000.");
+	if (iharm>0)
+	  hUndulator = iharm;
         s_arg[i_arg].n_items++; 
         if (method_str) free(method_str);
         if (mode_str) free(mode_str);
@@ -595,21 +601,20 @@ int main(int argc, char **argv) {
     if (undulator_param.energy) {
       /* calculate the Kx value for the undulator */
       double gamma, lambda, x1;
-      long h;
       gamma = electron_param.energy*1e3/me_mev;
       lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
       undulator_param.kx = 0;
       x1 = 4*gamma*gamma*lambda/undulator_param.period;
-      h = (long)(2/x1 + 0.5);
-      if (h%2==0)
-	h += 1;
-      undulator_param.ky = sqrt(h*x1-2);
+      hUndulator = (long)(2/x1 + 0.5);
+      if (hUndulator%2==0)
+	hUndulator += 1;
+      undulator_param.ky = sqrt(hUndulator*x1-2);
     }
     if (emin==emax && emin==0) {
       double gamma, lambda;
       gamma = electron_param.energy*1e3/me_mev;
       lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
-      emin = emax = h_mks*c_mks/lambda/e_mks;
+      emin = emax = hUndulator*h_mks*c_mks/lambda/e_mks;
       nE = 2;
     }
   }
