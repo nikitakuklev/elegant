@@ -62,7 +62,21 @@ void ramp_momentum(
             }
 #endif
         }
+#if !USE_MPI
     t0 /= np;
+#else
+    if (notSinglePart) {
+      long np_total;
+      double t0_total;
+
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers); 
+      MPI_Allreduce(&t0, &t0_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      t0 = t0_total/np_total;
+    } else {
+      t0 /= np;
+    }
+#endif
+
     i_time = find_nearby_array_entry(rampp->t_Pf, rampp->n_pts, t0);
     P_new = rampp->Po*linear_interpolation(rampp->Pfactor, rampp->t_Pf, rampp->n_pts, t0, i_time);
 
