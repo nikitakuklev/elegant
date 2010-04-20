@@ -1084,6 +1084,7 @@ VMATRIX *compute_matrix(
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
         elem->Pref_output = run->p_central;
+	print_matrices(stdout, "LSRMDLTR: \n", elem->matrix);
         run->p_central = pSave;
         break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  

@@ -445,7 +445,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double **R, *C;
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
-  double dgamma, dP[3];
+  double dgamma, dtmp1, dP[3];
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
 
@@ -526,9 +526,13 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_LSRMDLTR:
     ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
     ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
+    dtmp1 = ((LSRMDLTR*)eptr->p_elem)->laserPeakPower;
+    ((LSRMDLTR*)eptr->p_elem)->isr = ((LSRMDLTR*)eptr->p_elem)->synchRad = 0;
+    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = 0;
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     ((LSRMDLTR*)eptr->p_elem)->isr = ltmp1;
     ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
+    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = dtmp1;
     break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
