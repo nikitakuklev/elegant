@@ -2872,7 +2872,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 #if (!USE_MPI)
       correctDistribution(ctHist, nBins, 1.0*nBinned);
 #else
-      correctDistribution(ctHist, nBins, 1.0*binned_total);
+      if (notSinglePart)
+	correctDistribution(ctHist, nBins, 1.0*binned_total);
+      else
+	correctDistribution(ctHist, nBins, 1.0*nBinned);
 #endif
     }
     for (iBin=0; iBin<nBins; iBin++)
