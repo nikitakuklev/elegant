@@ -1,12 +1,3 @@
-Some confusion may exist about the edge angles, particularly the signs.
-For a sector magnet, we have of course \verb|E1=E2=0|.  For a symmetric rectangular
-magnet, \verb|E1=E2=ANGLE/2|.  If \verb|ANGLE| is negative, then so are
-\verb|E1| and \verb|E2|.  To understand this, imagine a rectangular magnet with positive \verb|ANGLE|.
-If the magnet is flipped over, then \verb|ANGLE| becomes negative, as does the bending
-radius $\rho$.    Hence, to keep the focal length
-of the edge $1/f = -\tan E_i /\rho$ constant, we must also change the sign of
-$E_i$.
-
 When adding errors, care should be taken to choose the right
 parameters.  The \verb|FSE| and \verb|ETILT| parameters are used for
 assigning errors to the strength and alignment relative to the ideal
@@ -35,3 +26,4 @@ dipole elements directly follow one another or are separated by a MARK element.
 Third, one can use a series of dipoles with different names.  In this case, you
 must also use the \verb|EDGE1_EFFECTS| and \verb|EDGE2_EFFECTS| parameters to
 turn off interior edge effects.  
+

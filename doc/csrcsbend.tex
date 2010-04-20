@@ -62,6 +62,17 @@ radius $\rho$.    Hence, to keep the focal length
 of the edge $1/f = -\tan E_i /\rho$ constant, we must also change the sign of
 $E_i$.
 
+When adding errors, care should be taken to choose the right
+parameters.  The \verb|FSE| and \verb|ETILT| parameters are used for
+assigning errors to the strength and alignment relative to the ideal
+values given by \verb|ANGLE| and \verb|TILT|.  One can also assign 
+errors to \verb|ANGLE| and \verb|TILT|, but this has a different meaning:
+in this case, one is assigning errors to the survey itself.  The reference
+beam path changes, so there is no orbit/trajectory error. The most common
+thing is to assign errors to \verb|FSE| and \verb|ETILT|.  Note that when
+adding errors to \verb|FSE|, the error is assumed to come from the power
+supply, which means that multipole strengths also change.
+
 {\em Special note about splitting dipoles}: when dipoles are long, it is
 common to want to split them into several pieces, to get a better look
 at the interior optics.  When doing this, care must be exercised not
