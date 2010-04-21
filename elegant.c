@@ -637,6 +637,10 @@ char **argv;
       /* In the version with parallel I/O, these file names need to be known by all the processors, otherwise there
 	 will be a synchronization issue when calculated accumulated sum in do_tracking */
       run_conditions.acceptance = compose_filename(acceptance, rootname);
+#if USE_MPI
+     if (run_conditions.acceptance)
+        dumpAcceptance = 1;
+#endif
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 

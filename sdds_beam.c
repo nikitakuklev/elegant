@@ -292,6 +292,9 @@ long new_sdds_beam(
           beam->n_particle = beam->n_original;
         }
         if (run->acceptance)
+#if USE_MPI
+        if (isSlave || !notSinglePart)
+#endif
           beam->accepted = (double**)czarray_2d
             (sizeof(double), (long)(beam->n_particle*factor), 7);
         new_particle_data = 1;

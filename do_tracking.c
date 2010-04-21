@@ -3628,12 +3628,10 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     MPI_Send (&(*coord)[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD); 
   }
 
-  /* collect information for the lost particles and gather the accepted and lostOnPass arrays
-     only when some particles are lost */
+  /* collect information for the lost particles and gather the accepted and lostOnPass arrays */
   
   MPI_Bcast(&current_nLost, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  if (current_nLost>0) {
     if (myid==0) {
       /* set up the displacement array and the number of elements that are received from each processor */ 
       nLostCounts[0] = 0;
@@ -3670,7 +3668,6 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
         MPI_Send (&(*lostOnPass)[my_nToTrack], my_nLost, MPI_LONG, root, 107, MPI_COMM_WORLD);       
     }
     MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-  } 
 
   free(nToTrackCounts);
   free(nLostCounts);
