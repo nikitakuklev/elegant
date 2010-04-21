@@ -1327,7 +1327,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
 #endif
 
     log_entry("dump_phase_space");
-    if (isSlave) {
+    if ((notSinglePart&&isSlave)||(!notSinglePart&&isMaster)) {
       if (!particle)
         bombElegant("NULL coordinate pointer passed to dump_phase_space", NULL);
     
