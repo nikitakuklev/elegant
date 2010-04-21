@@ -3454,7 +3454,8 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   rateCounts = malloc(sizeof(double) * n_processors);
 
   /* The particles will be distributed to slave processors evenly for the first pass */
-  if (((balanceStatus==startMode) && (!*distributed)) || lostSinceSeqMode || *reAllocate )  { 
+  if (((balanceStatus==startMode) && (!*distributed))) {
+    /* || lostSinceSeqMode || *reAllocate )  we don't do redistribution for load balancing, as it could cause memory problem */ 
     MPI_Bcast(nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD);
     if (myid==0) 
       my_nToTrack = 0;
