@@ -189,7 +189,7 @@ GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfor
 ifeq ($(GFORTRAN), 0)
 SYS_PROD_LIBS_Linux += g2c
 else
-gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
+gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 ifeq ($(gcc-version),$(gfortran-version))
 SYS_PROD_LIBS_Linux += gfortran
