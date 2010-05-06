@@ -117,6 +117,8 @@ void setupMomentumApertureSearch(
   if (output_mode==0) {
     if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaPositiveFound", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaPositive", "$gd$R$bpos$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "lostOnPassPositive", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
@@ -138,6 +140,8 @@ void setupMomentumApertureSearch(
   } else {
     if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "direction", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaFound", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "delta", "$gd$R$bpos$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
@@ -184,13 +188,13 @@ long doMomentumApertureSearch(
   ELEMENT_LIST *elem, *elem0;
   long *lostOnPass0, side;
   short **loserFound, *direction=NULL, **survivorFound;
-  int32_t **lostOnPass;
+  int32_t **lostOnPass, *ElementOccurence;
   double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
   double deltaStart1[2];
   double **xLost, **yLost, **deltaSurvived, **sLost, deltaLost;
   double *sStart;
   double nominalTune[2], tune[2];
-  char **ElementName;
+  char **ElementName, **ElementType;
   long code, outputRow, jobCounter;
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
@@ -278,6 +282,8 @@ long doMomentumApertureSearch(
   sLost = (double**)czarray_2d(sizeof(**sLost), (output_mode?1:2), (output_mode?2:1)*nElem);
   sStart = (double*)tmalloc(sizeof(*sStart)*(output_mode?2:1)*nElem);
   ElementName = (char**)tmalloc(sizeof(*ElementName)*(output_mode?2:1)*nElem);
+  ElementType = (char**)tmalloc(sizeof(*ElementType)*(output_mode?2:1)*nElem);
+  ElementOccurence = (int32_t*)tmalloc(sizeof(*ElementOccurence)*(output_mode?2:1)*nElem);
   if (output_mode)
     direction = (short*)tmalloc(sizeof(*direction)*2*nElem);
   deltaLimit1[0] = delta_negative_limit;
@@ -360,6 +366,8 @@ long doMomentumApertureSearch(
           slot = side;
 
         ElementName[outputRow] = elem->name;
+        ElementType[outputRow] = entity_name[elem->type];
+        ElementOccurence[outputRow] = elem->occurence;
         sStart[outputRow] = elem->end_pos;
         deltaStart = deltaStart1[side];
         deltaSign = side==0 ? -1 : 1;
@@ -540,6 +548,8 @@ long doMomentumApertureSearch(
   if ((output_mode==0 && 
        (!SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, outputRow, "ElementName") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, outputRow, "s") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementType, outputRow, "ElementType") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementOccurence, outputRow, "ElementOccurence") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[1], outputRow, "deltaPositiveFound") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[1], outputRow, "deltaPositive") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[1], outputRow, "lostOnPassPositive") ||
@@ -557,6 +567,8 @@ long doMomentumApertureSearch(
       (output_mode==1 && 
        (!SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, outputRow, "ElementName") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, outputRow, "s") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementType, outputRow, "ElementType") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementOccurence, outputRow, "ElementOccurence") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, direction, outputRow, "direction") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[0], outputRow, "deltaFound") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], outputRow, "delta") ||
@@ -592,6 +604,8 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)sLost, (output_mode?1:2), (output_mode?2:1)*nElem);
   free(sStart);
   free(ElementName);
+  free(ElementType);
+  free(ElementOccurence);
   free(lostOnPass0);
   if (turnByTurnCoord) 
     free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
