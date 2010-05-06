@@ -179,8 +179,11 @@ int TouschekRate(LINE_LIST *beamline)
     B1 = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
     B2 = sqr(B1)-c0*c3;   	  
     if (B2<0) {
-      fprintf(stdout, "B2^2<0 at \"%s\" occurence %ld", eptr->name, eptr->occurence);
-      exit(1);
+      if (fabs(B2/sqr(B1))<1e-7) {
+        fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eptr->name, eptr->occurence);
+      } else {
+        B2 = 0;
+      }
     }
     B2=sqrt(B2);   	  
 

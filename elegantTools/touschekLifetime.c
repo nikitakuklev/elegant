@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  2010/02/25 03:56:42  borland
+ * Fixed problems with convergence, which would sometimes result in very
+ * long run times.
+ *
  * Revision 1.8  2010/02/23 15:30:15  borland
  * Emittance from commandline is now treated the same as ex0 from twiss file.
  *
@@ -574,8 +578,11 @@ void TouschekLifeCalc(long verbosity)
       c3 = sx2*syb2;
       B2[i] = sqr(B1[i])-sqr(c0)*c3;   
       if (B2[i]<0) {
-        fprintf(stdout, "B2^2<0 at \"%s\" occurence %ld", eName1[i], eOccur1[i]);
-        exit(1);
+        if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+          fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+        } else {
+          B2[i] = 0;
+        }
       }
       B2[i]=sqrt(B2[i]);
     }
@@ -590,8 +597,11 @@ void TouschekLifeCalc(long verbosity)
       B1[i] = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
       B2[i] = sqr(B1[i])-sqr(c0)*c3;   	  
       if (B2[i]<0) {
-        fprintf(stdout, "B2^2<0 at \"%s\" occurence %ld", eName1[i], eOccur1[i]);
-        exit(1);
+        if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+          fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+        } else {
+          B2[i] = 0;
+        }
       }
       B2[i]=sqrt(B2[i]);   	  
     }
