@@ -21,12 +21,18 @@
 #define IC_Y 1
 #define IC_XC 2
 #define IC_YC 3
-#define N_COLUMNS 4
+#define IC_SLOST 4
+#define IC_XLOST 5
+#define IC_YLOST 6
+#define N_COLUMNS 7
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
     {"xClipped", "&column name=xClipped, symbol=xClipped, units=m, type=double &end"},
     {"yClipped", "&column name=yClipped, symbol=yClipped, units=m, type=double &end"},
+    {"sLost", "&column name=sLost, units=m, type=double &end"},
+    {"xLost", "&column name=xLost, units=m, type=double &end"},
+    {"yLost", "&column name=yLost, units=m type=double &end"},
     } ;
 
 #define IP_STEP 0
@@ -116,7 +122,9 @@ void setup_aperture_search(
     SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
                             description, run->runfile, run->lattice, parameter_definition, 
                             N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
-                            column_definition, N_COLUMNS, "setup_aperture_search", SDDS_EOS_NEWFILE);
+                            column_definition, 
+			    N_COLUMNS - (mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:3),
+			    "setup_aperture_search", SDDS_EOS_NEWFILE);
     if (control->n_elements_to_vary) 
       if (!SDDS_DefineSimpleParameters(&SDDS_aperture, control->n_elements_to_vary,
                                        control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE)) {
@@ -879,6 +887,7 @@ long do_aperture_search_line(
   double orbit[6] = {0,0,0,0,0,0};
   double *dxFactor, *dyFactor;
   double *xLimit, *yLimit;
+  double xLost, yLost, sLost;
   long originStable;
 #if USE_MPI
   long break_index; /* The index for which the particle is lost on each CPU */
@@ -1004,6 +1013,7 @@ long do_aperture_search_line(
 	  
 	  p_central = run->p_central;
 	  n_trpoint = 1;
+	  xLost = yLost = sLost = DBL_MAX;
 	  if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
 			  NULL, NULL, NULL, NULL, run, control->i_step, 
 			  SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL, NULL)!=1) {
@@ -1011,6 +1021,9 @@ long do_aperture_search_line(
 	      fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
 	      fflush(stdout);
 	    }
+	    xLost = coord[0][0];
+	    yLost = coord[0][2];
+	    sLost = coord[0][4];
 #if USE_MPI
 	      break_index = index;
 #endif
@@ -1043,28 +1056,50 @@ long do_aperture_search_line(
 #if USE_MPI
       /* find the global extreme value and save it on master */
       if (USE_MPI) {
-	long * index_array = (long *) malloc (n_processors*sizeof(*index_array));
+	long * index_array;
+	double * xLost_array, *yLost_array, *sLost_array;
+
+	if (!(index_array = (long *) malloc (n_processors*sizeof(*index_array))) ||
+	    !(xLost_array = (double *) malloc (n_processors*sizeof(*xLost_array))) ||
+	    !(yLost_array = (double *) malloc (n_processors*sizeof(*yLost_array))) ||
+	    !(sLost_array = (double *) malloc (n_processors*sizeof(*sLost_array))))
+	  bombElegant("memory allocation failure gathering data from processors", NULL);
 
         MPI_Gather (&break_index, 1, MPI_LONG, index_array, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+        MPI_Gather (&xLost, 1, MPI_DOUBLE, xLost_array, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gather (&yLost, 1, MPI_DOUBLE, yLost_array, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gather (&sLost, 1, MPI_DOUBLE, sLost_array, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	if (isMaster) {
-	  qsort(index_array, n_processors, sizeof(*index_array), comp_index);  
-	  if (index_array[0]>0) {
-	    if (index_array[0] != nSteps) /* A particle is lost */
-	      last_index = index_array[0]-1; /* Get the index for the survived particle */
+	  long imin, imax;
+	  imin = 0;
+	  index_min_max_long(&imin, &imax, index_array, n_processors);
+	  if (index_array[imin]>0) {
+	    if (index_array[imin] != nSteps) /* A particle is lost */
+	      last_index = index_array[imin]-1; /* Get the index for the survived particle */
 	    else  /* The last one will be the index we need */
 	      last_index = nSteps-1;   
 	  } else /* A special case where only the first particle survived */
 	    last_index = 0;
 
+	  xLost = xLost_array[imin];
+	  yLost = yLost_array[imin];
+	  sLost = sLost_array[imin];
 	  if ((last_index != -1) && (last_index != 0)) {
 	    xSurvived = x0+last_index*dx;
 	    ySurvived = y0+last_index*dy;
 	  }
 	}
 	free (index_array);
+	free (xLost_array);
+	free (yLost_array);
+	free (sLost_array);
+
 	/* Broadcasts the last survived particle coordincates to all the processors */
 	MPI_Bcast(&xSurvived, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	MPI_Bcast(&ySurvived, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&xLost, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&yLost, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&sLost, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       }
 #endif
       if (verbosity>=1) {
@@ -1079,7 +1114,8 @@ long do_aperture_search_line(
 #endif
     if (output) {
       if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, line,
-                             IC_X, xSurvived, IC_Y, ySurvived, -1)) {
+                             IC_X, xSurvived, IC_Y, ySurvived, 
+			     IC_XLOST, xLost, IC_YLOST, yLost, IC_SLOST, sLost, -1)) {
         SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
