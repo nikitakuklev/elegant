@@ -973,6 +973,7 @@ long do_aperture_search_line(
       xSurvived = -(ySurvived = -1);
     printf("* Searching line %ld\n", line);
     fflush(stdout);
+    xLost = yLost = sLost = DBL_MAX;
     for (split=0; split<=n_splits; split++) {
       if (split==0) {
 	dx = xmax/(nx-1)*dxFactor[line];
@@ -1013,7 +1014,6 @@ long do_aperture_search_line(
 	  
 	  p_central = run->p_central;
 	  n_trpoint = 1;
-	  xLost = yLost = sLost = DBL_MAX;
 	  if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
 			  NULL, NULL, NULL, NULL, run, control->i_step, 
 			  SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL, NULL)!=1) {
