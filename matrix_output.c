@@ -67,12 +67,6 @@ void setup_matrix_output(
   long n_denom, n_numer;
   char s[100], t[100];
   char buffer[SDDS_MAXLINE];
-
-
-#if USE_MPI
-  if (!writePermitted)
-    return;
-#endif
  
   log_entry("setup_matrix_output");
 
@@ -91,9 +85,9 @@ void setup_matrix_output(
     bombElegant("printout_order is invalid", NULL);
   if (SDDS_output && !(SDDS_output_order>0 && SDDS_output_order<4))
     bombElegant("SDDS_output_order is invalid", NULL);
+
   printout   = compose_filename(printout, run->rootname);
   SDDS_output = compose_filename(SDDS_output, run->rootname);
-
   fp_printout = trealloc(fp_printout, sizeof(*fp_printout)*(n_outputs+1));
   print_full_only = trealloc(print_full_only, sizeof(*print_full_only)*(n_outputs+1));
   print_order= trealloc(print_order, sizeof(*print_order)*(n_outputs+1));
@@ -124,6 +118,11 @@ void setup_matrix_output(
   SDDS_matrix_initialized[n_outputs] = SDDS_matrix_count[n_outputs] = 0;
   SDDS_ZeroMemory(SDDS_matrix+n_outputs, sizeof(*SDDS_matrix));
 
+#if USE_MPI
+  /* This has to be here, otherwise some values will not be set correctly */
+  if (isSlave)
+    printout = SDDS_output = NULL;
+#endif
   if (printout) {
     fp_printout[n_outputs] = fopen_e(printout, "w", 0);
   }
@@ -278,9 +277,10 @@ void run_matrix_output(
   log_entry("run_matrix_output");
 
   calculate_matrices(beamline, run);
-
+  printf ("i_output=%ld\n", i_output);
   for (i_output=output_now; i_output<n_outputs; i_output++) {
     output_order= MAX(print_order[i_output], SDDS_order[i_output]);
+    printf ("output_order=%ld\n", output_order); fflush(stdout);
     initialize_matrices(M1=tmalloc(sizeof(*M1)), output_order);
     initialize_matrices(M2=tmalloc(sizeof(*M2)), output_order);
     for (i=0; i<6; i++)

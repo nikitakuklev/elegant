@@ -3463,6 +3463,7 @@ double random_1_elegant(long iseed);
 /* prototypes for media_oag.c */
 long approximate_percentiles_p(double *position, double *percent, long positions, double *x, long n, 
 			       long bins);
+long find_median_of_row_p(double *best_particle, double **x, long index, long n, long n_total);
 #endif
 
 void seedElegantRandomNumbers(long seed, long restart);

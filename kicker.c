@@ -61,7 +61,19 @@ void track_through_kicker(
                 t0 = 0;
                 for (ip=t0=0; ip<np; ip++)
                     t0 += part[ip][4]/(c_mks*beta_from_delta(p_central, part[ip][5]));
+#if (!USE_MPI)
                 t0 /= np;
+#else
+		if (notSinglePart) {
+		  double t0_sum; 
+		  long np_total;
+		  
+		  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers); 
+		  MPI_Allreduce(&t0, &t0_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
+		  t0 = t0_sum/np_total;
+		} else
+		  t0 /= np;
+#endif
                 kicker->t_fiducial = t0;
                 kicker->fiducial_seen = 1;
                 }

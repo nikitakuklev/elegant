@@ -831,7 +831,8 @@ char **argv;
 	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
 	      partOnMaster = 0;
               compute_centroids(starting_coord, beam.particle, beam.n_to_track);
-              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           partOnMaster = 1;	
+              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           
+	      partOnMaster = 1;	
 	  } 
 #else
             if (correct.start_from_centroid)

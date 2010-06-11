@@ -642,13 +642,15 @@ void uniform_distribution(
   /* To generate n particles on m processors, each processor will 
      generate myid*n/m particles, but only the last n/m will be used */
   long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
-  
-  MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
-  for (i=1; i<n_processors; i++) {
-    particle_array[i] += particle_array[i-1] ; 
+
+  if (notSinglePart) {  
+    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+    for (i=1; i<n_processors; i++) {
+      particle_array[i] += particle_array[i-1] ; 
+    }
+    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+    n_particles = particle_array[myid]; 
   }
-  start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
-  n_particles = particle_array[myid]; 
 #endif
 
   log_entry("uniform_distribution");
@@ -695,30 +697,52 @@ void uniform_distribution(
       particle[i_particle][1+offset] = -x2;
     }
 #else
-    if (i_particle>=start_particle) {
+    if (notSinglePart) {
+      if (i_particle>=start_particle) {
+	x1 = range1*rnd1;
+	x2 = range2*rnd2;
+	particle[i_particle-start_particle][0+offset] = x1;
+	particle[i_particle-start_particle][1+offset] = x2;
+	if (symmetrize) {
+	  if (++i_particle>=n_particles)
+	    break;
+	  particle[i_particle-start_particle][0+offset] = x1;
+	  particle[i_particle-start_particle][1+offset] = -x2;
+	  if (++i_particle>=n_particles)
+	    break;
+	  particle[i_particle-start_particle][0+offset] = -x1;
+	  particle[i_particle-start_particle][1+offset] = x2;
+	  if (++i_particle>=n_particles)
+	    break;
+	  particle[i_particle-start_particle][0+offset] = -x1;
+	  particle[i_particle-start_particle][1+offset] = -x2;
+	}
+      }
+    } else {
       x1 = range1*rnd1;
       x2 = range2*rnd2;
-      particle[i_particle-start_particle][0+offset] = x1;
-      particle[i_particle-start_particle][1+offset] = x2;
+      particle[i_particle][0+offset] = x1;
+      particle[i_particle][1+offset] = x2;
       if (symmetrize) {
 	if (++i_particle>=n_particles)
 	  break;
-	particle[i_particle-start_particle][0+offset] = x1;
-	particle[i_particle-start_particle][1+offset] = -x2;
-	if (++i_particle>=n_particles)
-        break;
-	particle[i_particle-start_particle][0+offset] = -x1;
-	particle[i_particle-start_particle][1+offset] = x2;
+	particle[i_particle][0+offset] = x1;
+	particle[i_particle][1+offset] = -x2;
 	if (++i_particle>=n_particles)
 	  break;
-	particle[i_particle-start_particle][0+offset] = -x1;
-	particle[i_particle-start_particle][1+offset] = -x2;
+	particle[i_particle][0+offset] = -x1;
+	particle[i_particle][1+offset] = x2;
+	if (++i_particle>=n_particles)
+	  break;
+	particle[i_particle][0+offset] = -x1;
+	particle[i_particle][1+offset] = -x2;
       }
     }
 #endif
   }
 #if SDDS_MPI_IO
-  tfree(particle_array);
+  if (notSinglePart)
+    tfree(particle_array);
 #endif
   log_exit("uniform_distribution");
 }

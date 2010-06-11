@@ -276,7 +276,7 @@ long new_bunched_beam(
     double save_emit_x, save_emit_y,
            save_sigma_dp, save_sigma_s;
 
-    if (firstIsFiducial || do_find_aperture || (beam->n_original_total==1)) {
+    if ((firstIsFiducial && beamCounter==0) || do_find_aperture || (beam->n_original_total==1)) {
       notSinglePart = 0;
       lessPartAllowed = 1;
     }
@@ -308,14 +308,6 @@ long new_bunched_beam(
         bunchGenerated = 0;
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
 #if USE_MPI
-/*    For DA search, we need set lessPartAllowed=1 (singlePart=1), even the particle number is larger
-      than 1. Need to check if deleting these lines will affect other tests. 9/2/2009 Y. Wang
-      if (beam->n_original_total != 1)
-	lessPartAllowed = 0;
-      else {
-	lessPartAllowed = 1; 
-      }
-*/
       if (isMaster) {
 	if (notSinglePart) {
 	  beam->particle = beam->original = beam->accepted = NULL;
@@ -380,7 +372,8 @@ long new_bunched_beam(
         fflush(stdout);
 #if USE_MPI
         if (firstIsFiducial && beamCounter==1) {
-          /* set emittances to zero temporarily */
+          /* Set emittances to zero temporarily. This will make sure the coordniates are same 
+	   across all the processors. */
           save_emit_x = x_plane.emit;
           save_emit_y = y_plane.emit;
           save_sigma_dp = longit.sigma_dp;
@@ -389,7 +382,7 @@ long new_bunched_beam(
         }
 #endif
 #if !SDDS_MPI_IO
-	if (run->random_sequence_No > 1 && one_random_bunch) {
+	if (run->random_sequence_No > 1 && one_random_bunch && (beam->n_to_track >=(run->random_sequence_No-1))) {
 	  /* generate the same random number sequence as the parallel version */
 	  long work_processors = run->random_sequence_No-1, my_n_actual_particles;
 	  long my_nToTrack, i;
@@ -450,7 +443,10 @@ long new_bunched_beam(
         }
 
     beam->n_to_track = n_actual_particles;
-
+#if USE_MPI
+    if (notSinglePart)
+      MPI_Allreduce(&beam->n_to_track, &beam->n_to_track_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#endif
     /* copy particles into tracking buffer, adding in the time offset 
      * and converting from deltap/p relative to bunch center (defined
      * by Po) to deltap/p relative to beamline energy (defined by
@@ -533,12 +529,11 @@ long track_beam(
     printf("*************************************************************************************\n");
     /*  MPI_Abort(workers, 2); */
   }
-  else {  /* do tracking in parallel */ 
-    if (lessPartAllowed) { /* If less number of particles is allowed, all processors will excute the same code */
+  else { /* do tracking in parallel */ 
+    if (partOnMaster) { /* all processors will excute the same code */
       notSinglePart = 0;
     } else {
       notSinglePart = 1;
-     /* partOnMaster = 0; This caused trouble in the second step when the first is fiducial beam and the beam is reused*/
     }
   }
 

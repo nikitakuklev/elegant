@@ -634,8 +634,7 @@ long do_tracking(
 	  }
 	  partOnMaster = 0;
 	}
-      } else /* singlePart case */
-	partOnMaster = 1;
+      } 
 #endif
 
       name = eptr->name;
@@ -1639,9 +1638,7 @@ long do_tracking(
       eptrPred = eptr;
       eptr = eptr->succ;
       nToTrack = nLeft;
-
     } /* end of the while loop */
-    
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
       if (notSinglePart) {
@@ -1676,7 +1673,6 @@ long do_tracking(
             cpu_time()/100.0, page_faults(), memory_count());
     fflush(stdout);
 #endif
-    
     if ((!USE_MPI || !notSinglePart) && (i_pass==0 || watch_pt_seen || feedbackDriverSeen)) {
       /* if eptr is not NULL, then all particles have been lost */
       /* some work still has to be done, however. */
@@ -1762,7 +1758,7 @@ long do_tracking(
 #endif
       i_sums++;
     }
-    
+ 
 #if USE_MPI
     if (notSinglePart) {
       if (run->load_balancing_on) {  /* User can choose if load balancing needs to be done */
@@ -1871,7 +1867,7 @@ long do_tracking(
 
   log_exit("do_tracking.2");
   log_entry("do_tracking.3");
-  
+
   if (((!USE_MPI && nLeft) || USE_MPI) && sums_vs_z && *sums_vs_z && !(flags&TEST_PARTICLES)) {
     if (flags&FINAL_SUMS_ONLY) {
       log_entry("do_tracking.3.1");
@@ -1920,8 +1916,8 @@ long do_tracking(
     }
 #if SDDS_MPI_IO
   if (!partOnMaster && notSinglePart) {
-          if (isMaster) nToTrack = 0;
-          MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (isMaster) nToTrack = 0;
+    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   } else { /* singlePart tracking or partOnMaster */
     beam->n_to_track_total = nToTrack;
   }
@@ -1970,6 +1966,7 @@ long do_tracking(
   log_exit("do_tracking.4");
 
   log_exit("do_tracking");
+ 
   if (charge && finalCharge) {
 #if !SDDS_MPI_IO
     *finalCharge = nToTrack*charge->macroParticleCharge;
@@ -2746,8 +2743,10 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
  */
 {
   long i;
+#if !USE_MPI
   if (!np)
     return;
+#endif
   if (!matr) {
     track_particles(coord, M, coord, np);
   } else {
@@ -2755,7 +2754,21 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
       double sum = 0;
       for (i=0; i<np; i++)
         sum += coord[i][4];
+#if !USE_MPI
       matr->sReference = sum/np;
+#else
+      if (notSinglePart) {
+	if (isSlave) {
+	  double sum_total;
+	  long np_total;
+
+	  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	  MPI_Allreduce(&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, workers);	      
+	  matr->sReference = sum_total/np_total;
+	}
+      } else
+	matr->sReference = sum/np;
+#endif
       matr->fiducialSeen = 1;
     }
     for (i=0; i<np; i++)
@@ -2773,8 +2786,11 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
  */
 {
   long i;
+
+#if !USE_MPI
   if (!np)
     return;
+#endif
   if (!matr) {
     fprintf(stderr, "ematrix_element_tracking: matr=NULL, tracking with M (%ld order)\n",
             M->order);
@@ -2784,7 +2800,21 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
       double sum = 0;
       for (i=0; i<np; i++)
         sum += coord[i][4];
+#if !USE_MPI
       matr->sReference = sum/np;
+#else
+      if (notSinglePart) {
+	if (isSlave) {
+	  double sum_total;
+	  long np_total;
+	
+	  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	  MPI_Allreduce(&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, workers);	      
+	  matr->sReference = sum_total/np_total;
+	}
+      } else
+	matr->sReference = sum/np;
+#endif
       matr->fiducialSeen = 1;
     }
     for (i=0; i<np; i++)
@@ -2815,7 +2845,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #if SDDS_MPI_IO
   /* As different processors will have different process names, we need
      make sure they have the same file name for parallel I/O */
-    printf ("rootname=%s, size=%d\n",rootname,strlen(rootname));
+    printf ("rootname=%s, size=%lu\n",rootname,strlen(rootname));
     MPI_Bcast(rootname, strlen(rootname), MPI_CHAR, 0, MPI_COMM_WORLD);
 #endif
   } else 
@@ -3476,7 +3506,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     if (myid==0)
       my_rate = 0.0;  /* set it back to zero */
     if (minRate==0.0) {  /* redistribute evenly when all particles are lost on any working processor */
-      MPI_Bcast(nToTrack, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD);
       if (myid==0) 
 	my_nToTrack = 0;
       else {

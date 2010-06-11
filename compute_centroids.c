@@ -291,7 +291,6 @@ void accumulate_beam_sums(
   if (!sums->n_part)
     sums->p0 = p_central;
 
-
   if ((!USE_MPI && n_part) || USE_MPI) {
     if (active) {
       /* maximum amplitudes */
@@ -351,7 +350,6 @@ void accumulate_beam_sums(
 	MPI_Allgather(centroid,6,MPI_DOUBLE,&sumMatrixCen[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD);
 	/* compute error sum over processors */
       	MPI_Allgather(errorCen,6,MPI_DOUBLE,&errorMatrixCen[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD); 
-
 	for (i=0; i<6; i++) {
 	  error_sum = 0.0;
           centroid[i] = 0.0;

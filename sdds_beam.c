@@ -67,13 +67,6 @@ static long has_been_read = 0;      /* data has been read from input file */
 
 static SDDS_TABLE SDDS_input;
 
-
-#if USE_MPI
-static long fiducializing = 0;
-static long fiducialSeen = 0;
-#endif
-
-
 void setup_sdds_beam(
                      BEAM *beam,
                      NAMELIST_TEXT *nltext,
@@ -149,9 +142,6 @@ void setup_sdds_beam(
   }
   
   inputFileIndex = input_initialized = has_been_read = 0;
-#if USE_MPI
-  fiducialSeen = 0;
-#endif
 
   if ((input_type_code=match_string(input_type, input_type_name, N_SDDS_INPUT_TYPES, 0))<0)
     bombElegant("unknown sdds input type", NULL);
@@ -206,30 +196,14 @@ long new_sdds_beam(
   log_entry("new_sdds_beam");
 
 #if USE_MPI
-  if ((control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) && !fiducialSeen) {
-    fiducializing = 1;  
-    fiducialSeen = 1;
-    notSinglePart = 0;
+  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) {
+    lessPartAllowed = 1; /* Special for the fiducial beam */
   }
   else {
-    fiducializing = 0;
-    notSinglePart = 1;
-    partOnMaster = 0;
     lessPartAllowed = 0; /* This flag will control if the simulation runs in single particle mode in track_beam function */
-    /* We can consider to save some memory for the second step after the fiducial beam is tracked in the first step.
-    if (isMaster && beam->n_to_track) {
-      if (beam->original)
-	free_czarray_2d((void**)beam->original, beam->n_original, 7);
-      if (beam->particle)
-	free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
-      if (beam->accepted)
-	free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
-      beam->particle = beam->accepted = beam->original = NULL;
-      beam->particle = beam->original = NULL;
-      beam->n_to_track = beam->n_original = beam->n_particle = 0; 
-    }
-    */
   }
+  notSinglePart = 1;  /* All CPUs will track the fiducial beam in parallel */
+  partOnMaster = 0;
 #endif
 
   if (flags&TRACK_PREVIOUS_BUNCH) {
@@ -237,10 +211,6 @@ long new_sdds_beam(
     if (!save_initial_coordinates)
       bombElegant("logic error---initial beam coordinates not saved", NULL);
 #if SDDS_MPI_IO
-    if (fiducialSeen) { /* During the fiducial beam simulation, the whole beam is available on Master, then it will be scattered to all the slave CPUs on the second step */
-      partOnMaster = 1;
-      parallelStatus = initialMode;
-    }
     if (isSlave || !notSinglePart)
 #endif
     if (beam->original==NULL)
@@ -255,13 +225,7 @@ long new_sdds_beam(
   }
   else {
     if (!prebunched) {
-#if SDDS_MPI_IO
-    if (fiducialSeen) { /* During the fiducial beam simulation, the whole beam is available on Master, then it will be scattered to all the slave CPUs on the second step */
-      partOnMaster = 1;
-      parallelStatus = initialMode;
-    }
-#endif
-     /* The beam in each input file is to be treated as a single bunch,
+      /* The beam in each input file is to be treated as a single bunch,
        * even though it may be spread over several pages.
        * Read in all the particles from the input file and allocate arrays
        * for storing initial coordinates and coordinates of accepted 
@@ -319,9 +283,6 @@ long new_sdds_beam(
       /* read the new page */
       if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
 #if SDDS_MPI_IO
-        if (fiducialSeen) { /* As the particles are read in parallel, we don't need scatter for this case */
-           partOnMaster = 0;
-        }
         if (isSlave || !notSinglePart)  
 #endif
 	{
@@ -512,7 +473,7 @@ long new_sdds_beam(
     /* use (x, x', y, x', s, dp/p) saved in beam->original[] */
     if (!(beam->n_to_track = beam->n_saved)) {
 #if SDDS_MPI_IO
-      if (! beam->n_to_track_total) { /* In the parallel version, we need check the total number of particles */
+      if (! beam->n_to_track_total) { /* Problem!!! In the parallel version, we need check the total number of particles */
 #endif
       log_exit("new_sdds_beam");
       return -1;
@@ -601,14 +562,12 @@ long new_sdds_beam(
       beam->original = NULL;
   }
 #if SDDS_MPI_IO
-  if (!fiducializing && !partOnMaster) {
+  if (notSinglePart) {
     if (isMaster)
       beam->n_to_track = 0;
     MPI_Allreduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     beam->n_original_total = beam->n_to_track_total;
   }
-  else
-    beam->n_original_total = beam->n_to_track_total = beam->n_to_track;
 #endif
   log_exit("new_sdds_beam");
   return(beam->n_to_track);
@@ -654,7 +613,7 @@ long get_sdds_particles(double ***particle,
     return -1;
   }
   
-  retval = data_seen = np = 0;
+  retval = data_seen = np = np_new = 0;
 #if SDDS_MPI_IO
   if (SDDS_input.MPI_dataset == NULL) /* For the case of one_dump, this setup should be only called once */
     SDDS_MPI_Setup(&SDDS_input, 1, n_processors, myid, MPI_COMM_WORLD, 0); /* Only slaves will read the input data */  
@@ -801,18 +760,8 @@ long get_sdds_particles(double ***particle,
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
 #if SDDS_MPI_IO  
-      /* when first_is_fiducial flag is set, the coordinate for the first bunch 
-	 will be broadcasted to all the processors */
-      if (fiducializing) {
-	if((np_new=np+total_rows)>np_max) {
-          /* must reallocate to get more space */
-          np_max = np + total_rows;
-          data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
-	}
-      }
-      /* For simulation with a large number of particles, master will not be allocated memory */
-      else if (isSlave)
-#endif 
+      if (isSlave) {
+#endif
 	if ((np_new=np+rows)>np_max) {
 	  /* must reallocate to get more space */
 	  np_max = np + rows;
@@ -820,99 +769,51 @@ long get_sdds_particles(double ***particle,
 	}
 
 #if SDDS_MPI_IO
-      if (fiducializing && (total_rows<(n_processors-1))) {
-	if ((myid>=1) && (myid<=total_rows)) 
-	  /* if fiducial particles number is less than n_processors, the first n_particle slaves will extract information */
-	  active = 1;
-      }
-      else if (isSlave)
-	active = 1;     
-      
-    if (active)
-#endif
-    {   
-      for (ic=0; ic<(input_type_code==SPIFFE_BEAM?5:6); ic++) {
-	if (!(columnData=SDDS_GetColumnInDoubles(&SDDS_input, input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic]))) {
-	  sprintf(s, "Problem getting column %s for file %s", input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic], inputFile[inputFileIndex]);
-	  SDDS_SetError(s);
-	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	if (total_rows<(n_processors-1)) {
+	  /* if the particles number is less than n_processors, the first n_particle slaves will extract information */ 
+	  if ((myid>=1) && (myid<=total_rows)) 
+	    active = 1;
 	}
-#if !SDDS_MPI_IO
-	for (i=np; i<np_new; i++) 
-	  data[i][ic] = columnData[i-np];
-#else
-	/* In the parallel version, if the first beam is fiducial, the paricles will be read in parallel. Each processor should only get the data it reads */
-	if (fiducializing) {
-	  long local_rows = SDDS_input.n_rows; /* The data is read in parallel, but np_new is the total number of rows */
-	  for (i=np; i<np+local_rows; i++) 
-	    data[i][ic] = columnData[i-np];
-	} else {
-	  for (i=np; i<np_new; i++) 
-	    data[i][ic] = columnData[i-np];
-	}
-#endif
-	free(columnData);
-      }
-      if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
-	double *index;
-	if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
-	  sprintf(s, "Problem reading particleID column for file %s", inputFile[inputFileIndex]);
-	  SDDS_SetError(s);
-	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-	}
-#if !SDDS_MPI_IO
-	for (i=np; i<np_new; i++)
-	  data[i][6] = index[i-np];
-#else
-	if (fiducializing) {
-	  long local_rows = SDDS_input.n_rows; /* The data is read in parallel, but np_new is the total number of rows */
-	  for (i=np; i<local_rows; i++) 
-	    data[i][6] = index[i-np];
-	} else {
-	  for (i=np; i<np_new; i++) 
-	    data[i][6] = index[i-np];
-	}
-#endif
-	free(index);
-      }
-      else if (input_type_code!=SPIFFE_BEAM)
-        
-	for (i=np; i<np_new; i++)
-	  data[i][6] = particleID++;
-    }
+	else if (isSlave)
+	  active = 1;     	
+	if (!active) /* Avoid to crash caused by returning a NULL pointer for fiducialization */ 
+	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
+	else
+	{
+#endif  
+	    for (ic=0; ic<(input_type_code==SPIFFE_BEAM?5:6); ic++) {
+	      if (!(columnData=SDDS_GetColumnInDoubles(&SDDS_input, input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic]))) {
+		sprintf(s, "Problem getting column %s for file %s", input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic], inputFile[inputFileIndex]);
+		SDDS_SetError(s);
+		SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	      }
+
+	      for (i=np; i<np_new; i++) 
+		data[i][ic] = columnData[i-np];
+	      free(columnData);
+	    }
+	    if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
+	      double *index;
+	      if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
+		sprintf(s, "Problem reading particleID column for file %s", inputFile[inputFileIndex]);
+		SDDS_SetError(s);
+		SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	      }
+	      for (i=np; i<np_new; i++)
+		data[i][6] = index[i-np];
+	      free(index);
+	    }
+	    else if (input_type_code!=SPIFFE_BEAM)	
+	      for (i=np; i<np_new; i++)
+		data[i][6] = particleID++;
 #if SDDS_MPI_IO
-      if (fiducializing) {
-	int length = SDDS_input.n_rows*COORDINATES_PER_PARTICLE*sizeof(double);
-        int *all_lens = tmalloc(n_processors*sizeof(*all_lens));
-        int *offset = tmalloc(n_processors*sizeof(*offset));
-       
-	MPI_Allgather(&length, 1, MPI_INT, all_lens, 1, MPI_INT, MPI_COMM_WORLD);
-	offset[0] = 0;
-	for (i=0; i<n_processors-1; i++)
-	  offset[i+1] = offset[i] + all_lens[i]; 
-				 
-	  /* The first bunch will be duplicated on all processors */
-	MPI_Allgatherv(&data[np][0], length, MPI_CHAR, &data[np][0], all_lens, offset, MPI_CHAR, MPI_COMM_WORLD);
-
-	/* All the processors will do the same work for the first bunch */
-	lessPartAllowed = 1;
-	notSinglePart = 0;
-      }
-      else {
-	lessPartAllowed = 0;
-	notSinglePart = 1;
-	if (!reuse_bunch) {
-	  partOnMaster = 0;
-	  if (isMaster)
-	    np = 0;
-	}
-      }
-
+	  }  /* End of active */
+      } /* End of isSlave */
 #endif
-      np = np_new;
-      if (one_dump && !dump_rejected)
-        break;
-    }
+    np = np_new;
+    if (one_dump && !dump_rejected)
+      break;
+      }
     if (retval==-1) {
       /* go to next file */
 #if SDDS_MPI_IO
@@ -957,7 +858,8 @@ long get_sdds_particles(double ***particle,
   fprintf(stdout, "a total of %ld data points were read\n\n", np);
 #endif
   fflush(stdout);
-  *particle = data;
+  if (particle)
+    *particle = data;
 
   log_exit("get_sdds_particles");
 

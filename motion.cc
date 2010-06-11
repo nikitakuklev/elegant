@@ -229,17 +229,18 @@ long motion(
     isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3.0))*pow5(P_central)*137.0359895);
 
     log_entry((char*)"motion");
-
+ 
     X_aperture_center = Y_aperture_center = 0;
     X_limit = Y_limit = 0; 
     X_offset = Y_offset = 0;
     radial_limit = 0;
     input_impulse = output_impulse = NULL;
+
     derivatives = set_up_derivatives(field, field_type, &kscale, z_start, &Z_end, 
                                      &tau_start, part, n_part, P_central, 
                                      &X_limit, &Y_limit, &tolerance, &n_steps);
     stochasticEffects = set_up_stochastic_effects(field_type);
-    
+
     if (n_steps<2)
         bombElegant((char*)"too few steps for integration", NULL);
 
@@ -254,7 +255,7 @@ long motion(
     xMinSeen=1e300;
     if (xMotionCenterVar<0)
       xMotionCenterVar = rpn_create_mem((char*)"xMotionCenter", 0);
-    
+   
     for (i_part=0; i_part<=i_top; i_part++) {
         tol_factor = 1;
         end_factor = 1.5;
@@ -1597,12 +1598,11 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 #if !USE_MPI
       if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0) 
         bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
-      printf ((char*)"best_value=%lf\n", best_value);
-#else
-      /*
+#else      
       if (notSinglePart) {
 	if ((i_best = find_median_of_row_p(best_particle, part, i_var, n_part, n_part_total))<0)
 	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
+
 	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
@@ -1610,11 +1610,12 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
 	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
       }
-      */
+      /*
       printf((char*)"The median fiducial mode is not available in this version of Pelegant.\n \
               Please request this feature by contacting authors\n");
       MPI_Barrier (MPI_COMM_WORLD);
       MPI_Abort(MPI_COMM_WORLD, 2);
+      */
 #endif
       break;
     case FID_MINIMUM:

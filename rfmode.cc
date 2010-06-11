@@ -137,13 +137,16 @@ void track_through_rfmode(
       }
     }
 #if USE_MPI
-    if (isSlave) {
-      double t_total;
-      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-      MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
-      tmean = t_total;
-    }
-    tmean /= np_total;      
+    if (notSinglePart) {
+      if (isSlave) {
+	double t_total;
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+	tmean = t_total;
+      }
+      tmean /= np_total;
+    } else
+      tmean /= np;
 #else
     tmean /= np;
 #endif
@@ -472,7 +475,10 @@ void runBinlessRfMode(
   double tmean;
   long deltaPass;
 #if USE_MPI
-    long np_total;
+  long np_total;
+
+  if (isSlave)
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
 #endif
 
   if (charge) {
@@ -481,8 +487,18 @@ void runBinlessRfMode(
     rfmode->mp_charge = 0;
     if (rfmode->charge<0)
       bombElegant((char*)"RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+#if !USE_MPI
     if (np)
       rfmode->mp_charge = rfmode->charge/np;
+#else
+    if (notSinglePart) {
+      if (np_total)
+	rfmode->mp_charge = rfmode->charge/np_total;
+    } else {
+      if (np)
+	rfmode->mp_charge = rfmode->charge/np;  
+    }
+#endif
   }
 
   if (pass%rfmode->pass_interval)
@@ -526,13 +542,16 @@ void runBinlessRfMode(
   qsort(tData, np, sizeof(*tData), compTimeData);
 
 #if USE_MPI
-  if (isSlave) {
-    double t_total;
-    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
-    tmean = t_total;
-  }
-  tmean /= np_total;      
+  if (notSinglePart) {
+    if (isSlave) {
+      double t_total;
+
+      MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      tmean = t_total;
+    }
+    tmean /= np_total;
+  } else
+    tmean /= np;
 #else
   tmean /= np;
 #endif
