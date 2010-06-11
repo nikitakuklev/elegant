@@ -1390,7 +1390,7 @@ long do_tracking(
 #endif
 		nToTrack = nLeft;
 		lostOnPass = beam->lostOnPass;
-		nMaximum = beam->n_particle;
+		nMaximum = beam->n_to_track;
 	      }
 	      break;
 	    case T_FLOORELEMENT:
