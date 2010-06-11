@@ -2041,6 +2041,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_X0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserX0), NULL, 0.0, 0, "laser horizontal offset at center of wiggler"},
     {"LASER_Y0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserY0), NULL, 0.0, 0, "laser vertical offset at center of wiggler"},
     {"LASER_Z0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserZ0), NULL, 0.0, 0, "offset of waist position from center of wiggler"},
+    {"LASER_TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserTilt), NULL, 0.0, 0, "laser tilt"},
     {"LASER_M", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.laserM), NULL, 0.0, 0, "laser horizontal mode number (<5)"},
     {"LASER_N", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.laserN), NULL, 0.0, 0, "laser vertical mode number (<5)"},
     {"SYNCH_RAD", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},

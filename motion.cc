@@ -2284,7 +2284,7 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *tValue, double *amplitudeValue, long profilePoints, double tForProfile,
-                       long m, long n) ;
+                       long m, long n, double laserTilt) ;
 
 #ifdef DEBUG
 FILE *fppu = NULL;
@@ -2369,7 +2369,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
                       x-lsrMdltr->laserX0, y-lsrMdltr->laserY0, z-lsrMdltr->laserZ0-Z_center/lsrMdltr->k,
                       lsrMdltr->timeValue, lsrMdltr->amplitudeValue, lsrMdltr->tProfilePoints,
                       (tau/lsrMdltr->omega-lsrMdltr->t0) - (q[2]-Z_center)/(lsrMdltr->k*c_mks),
-                      lsrMdltr->laserM, lsrMdltr->laserN);
+                      lsrMdltr->laserM, lsrMdltr->laserN, lsrMdltr->laserTilt);
     Bscale = lsrMdltr->Bscale/gamma;
     for (i=0; i<3; i++) {
       E[i] *= lsrMdltr->Escale;
@@ -2456,14 +2456,15 @@ void stochastic_laserModulator(double *q, double tau, double h)
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *timeValue, double *amplitudeValue, long profilePoints,
-                       double tForProfile, long m, long n) 
+                       double tForProfile, long m, long n, double tilt) 
 {
   /* Based on Alex Chao's "Laser Acceleration --- Focused Laser" note (unpublished) */
 
 #if DEBUG
   static FILE *fpdeb = NULL;
 #endif
-
+  double sin_tilt, cos_tilt;
+  double Vx, Vy;
   std::complex <double> Ec;
   std::complex <double> Q;
   double w, Hm, Hn, Hmp, Hnp, Hmpp;
@@ -2473,6 +2474,14 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
 
   for (i=0; i<3; i++)
     Ef[i] = Bf[i] = 0;
+  if (tilt) {
+    sin_tilt = sin(tilt);
+    cos_tilt = cos(tilt);
+    Vx = x;
+    Vy = y;
+    x =  Vx*cos_tilt + Vy*sin_tilt;
+    y = -Vx*sin_tilt + Vy*cos_tilt;
+  }
   
   if (timeValue) {
     if (tForProfile<timeValue[0] || tForProfile>timeValue[profilePoints-1])
@@ -2528,6 +2537,17 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
   Bf[0] = (Ec*(2/sqr(k*w)*Hmp*Hnp + std::complex<double>(0,1)*sqrt(2.0)*Q/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*Q*Q*Hm*Hn)).real()/c_mks;
   Bf[1] = (Ec*(-2/sqr(k*w)*Hmpp*Hn - 2*sqrt(2.0)*std::complex<double>(0,1)*Q/(k*w)*x*Hmp*Hn + (Q*Q*sqr(x) - std::complex<double>(0,1)*Q/k + 1.0)*Hm*Hn)).real()/c_mks;
   Bf[2] = (Ec*(std::complex<double>(0,1)*sqrt(2.0)/(k*w)*Hm*Hnp - Q*y*Hm*Hn)).real()/c_mks;
+
+  if (tilt) {
+    Vx = Ef[0];
+    Vy = Ef[1];
+    Ef[0] = Vx*cos_tilt - Vy*sin_tilt;
+    Ef[1] = Vx*sin_tilt + Vy*cos_tilt;
+    Vx = Bf[0];
+    Vy = Bf[1];
+    Bf[0] = Vx*cos_tilt - Vy*sin_tilt;
+    Bf[1] = Vx*sin_tilt + Vy*cos_tilt;
+  }  
 }
 
 double HermitePolynomial(double x, long n)
