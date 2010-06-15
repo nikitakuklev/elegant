@@ -26,7 +26,9 @@ static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
 void storeOptimRecord(double *value, long values, long invalid, double result);
 void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
-
+#if !USE_MPI
+long myid=0;
+#endif
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
 
@@ -104,6 +106,28 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->UijklMem = NULL;
     log_exit("do_optimization_setup");
     }
+
+void do_genetic_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+{ 
+  runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
+#if USE_MPI
+  do_optimization_setup(optimization_data, nltext, run, beamline);  
+  if (population_size < n_processors) {
+    fprintf (stderr, "The populaition size (%ld) can not be less than the number of processors (%ld).\n",
+	     population_size, n_processors);
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  } 
+#endif
+  optimization_data->n_iterations = n_iterations;
+  optimization_data->maxNoChange = maxNoChange;
+  optimization_data->population_size = population_size;
+  optimization_data->print_all_individuals = print_all_individuals;
+  if (population_log && strlen(population_log)) {
+    if (str_in(population_log, "%s"))
+      population_log = compose_filename(population_log, run->rootname);
+  }
+}
+
 
 void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -198,8 +222,8 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->upper_limit[n_variables] = upper_limit;
     rpn_store(variables->initial_value[n_variables], NULL, 
               variables->memory_number[n_variables] = 
-              rpn_create_mem(variables->varied_quan_name[n_variables], 0));
-    
+              rpn_create_mem(variables->varied_quan_name[n_variables], 0)); 
+  
     ptr = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+4));
     sprintf(ptr, "%s.%s0", name, item);
     rpn_store(variables->initial_value[n_variables], NULL, rpn_create_mem(ptr, 0));
@@ -457,6 +481,12 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
     if (optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "\nOptimization to be performed using method '%s' in mode '%s' with tolerance %e.\n", 
             optimize_method[optimization_data->method], optimize_mode[optimization_data->mode], optimization_data->tolerance);
+#if USE_MPI
+	if (runInSinglePartMode) /* For genetic optimization */
+	  fprintf(optimization_data->fp_log, "    As many as %ld generations will be performed on each of %ld passes.\n",
+             optimization_data->n_iterations, optimization_data->n_passes);
+	else
+#endif
         fprintf(optimization_data->fp_log, "    As many as %ld function evaluations will be performed on each of %ld passes.\n",
             optimization_data->n_evaluations, optimization_data->n_passes);
 
@@ -614,7 +644,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  long doFindAperture1, long doResponse1)
 {
     static long optUDFcount = 0;
-    double optimization_function(double *values, long *invalid);
     void optimization_report(double result, double *value, long pass, long n_evals, long n_dim);
     OPTIM_VARIABLES *variables;
     OPTIM_COVARIABLES *covariables;
@@ -741,7 +770,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       rpn_store(covariables->varied_quan_value[i] = rpn(covariables->equation[i]), 
 		NULL, covariables->memory_number[i]);
     }
-    
+
     final_property_values = count_final_properties();
     final_property_value = tmalloc(sizeof(*final_property_value)*final_property_values);
 
@@ -877,6 +906,21 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         if (optimAbort(0))
           stopOptimization = 1;
         break;
+#if USE_MPI
+      case OPTIM_METHOD_GENETIC:
+	fputs("Starting genetic optimization.\n", stdout);
+	n_evaluations_made = geneticMin(&result, variables->varied_quan_value, 
+					variables->lower_limit, variables->upper_limit, variables->step,
+					variables->n_variables, optimization_data->target, 
+					optimization_function, optimization_data->n_iterations,
+					optimization_data->maxNoChange,
+					optimization_data->population_size, output_sparsing_factor,
+					optimization_data->print_all_individuals, population_log,
+					optimization_data->verbose, variables);
+        if (optimAbort(0))
+          stopOptimization = 1;
+	break;
+#endif
       default:
         bombElegant("unknown optimization method code (do_optimize())", NULL);
         break;
@@ -884,7 +928,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       force_output = 1;
-      ignoreOptimRecords = 1;  /* to force re-evaluation */
+      ignoreOptimRecords = 1;  /* to force re-evaluation */ 
       result = optimization_function(variables->varied_quan_value, &i);
       ignoreOptimRecords = 0;
       force_output = 0;
@@ -1215,6 +1259,7 @@ double optimization_function(double *value, long *invalid)
                           value, variables->n_variables, beamline);
   for (i=0; i<variables->n_variables; i++)
     rpn_store(value[i], NULL, variables->memory_number[i]);
+
   /* set element flags to indicate variation of parameters */
   set_element_flags(beamline, variables->element, NULL, variables->varied_type, variables->varied_param, 
                     variables->n_variables, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
@@ -1224,6 +1269,7 @@ double optimization_function(double *value, long *invalid)
     fprintf(stdout, "optimization_function: Computing covariables\n");
     fflush(stdout);
 #endif
+
     /* calculate values of covariables and assert these as well */
     for (i=0; i<covariables->n_covariables; i++) {
       rpn_clear();
@@ -1250,8 +1296,10 @@ double optimization_function(double *value, long *invalid)
     }
     fflush(optimization_data->fp_log);
   }
-
   if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
+#if USE_MPI
+  if (!runInSinglePartMode || isMaster) /* For parallel genetic optimization, all the individuals for the first iteration are same */
+#endif
     if (recordUsedAgain>20) {
       fprintf(stdout, "record used too many times---stopping optimization\n");
       stopOptimization = 1;
@@ -1272,7 +1320,7 @@ double optimization_function(double *value, long *invalid)
   if (beamline->links && beamline->links->n_links)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
-    assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
+      assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
   if (beamline->flags&BEAMLINE_CONCAT_DONE)
     free_elements1(&(beamline->ecat));
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
@@ -1310,7 +1358,6 @@ double optimization_function(double *value, long *invalid)
     bombElegant("unknown beam type code in optimization", NULL);
     break;
   }
-
   control->i_step++;       /* to prevent automatic regeneration of beam */
   zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
 
@@ -1559,7 +1606,7 @@ double optimization_function(double *value, long *invalid)
     if (isMaster && notSinglePart)
       if (beam->n_to_track_total<(n_processors-1)) {
 	printf("*************************************************************************************************\n");
-	printf("* Warning! The number of particles (%ld) shouldn't be less than the number of processors (%ld)! *\n", beam->n_to_track, n_processors-1);
+	printf("* Warning! The number of particles (%ld) shouldn't be less than the number of processors (%d)! *\n", beam->n_to_track, n_processors-1);
 	printf("* Less number of processors are recommended!                                                    *\n");
 	printf("*************************************************************************************************\n");
 	MPI_Abort(MPI_COMM_WORLD, 2);    
@@ -1599,176 +1646,181 @@ double optimization_function(double *value, long *invalid)
         fflush(stdout);
         abort();
       }
-      if (isMaster) { /* Only the master will execute the block */
-      rpn_store_final_properties(final_property_value, final_property_values);
-      if (optimization_data->matrix_order>1)
-        rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,
-                                     &optimization_data->UijklMem,
-                                     optimization_data->matrix_order);
-      free_matrices(M); free(M); M = NULL;
+      if (isMaster || !notSinglePart) { /* Only the master will execute the block */
+	rpn_store_final_properties(final_property_value, final_property_values);
+	if (optimization_data->matrix_order>1)
+	  rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,
+				       &optimization_data->UijklMem,
+				       optimization_data->matrix_order);
+	free_matrices(M); free(M); M = NULL;
 
 #if DEBUG
-      fprintf(stdout, "optimization_function: Checking constraints\n");
-      fflush(stdout);
+	fprintf(stdout, "optimization_function: Checking constraints\n");
+	fflush(stdout);
 #endif
-      /* check constraints */
-      if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
-        fprintf(optimization_data->fp_log, "    Constraints:\n");
-        fflush(optimization_data->fp_log);
-      }
-      for (i=0; i<constraints->n_constraints; i++) {
-        if (optimization_data->verbose && optimization_data->fp_log)
-          fprintf(optimization_data->fp_log, "    %10s: %23.15e", constraints->quantity[i], 
-                  final_property_value[constraints->index[i]]);
-        if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
-            conval>constraints->upper[i]) {
-          *invalid = 1;
-          if (optimization_data->verbose && optimization_data->fp_log) {
-            fprintf(optimization_data->fp_log, " ---- invalid\n\n");
-            fflush(optimization_data->fp_log);
-          }
-          log_exit("optimization_function");
-          break;
-        }
-        if (optimization_data->verbose && optimization_data->fp_log) {
-          fputc('\n', optimization_data->fp_log);
-          fflush(optimization_data->fp_log);
-        }
-      }
+	/* check constraints */
+	if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
+	  fprintf(optimization_data->fp_log, "    Constraints:\n");
+	  fflush(optimization_data->fp_log);
+	}
+	for (i=0; i<constraints->n_constraints; i++) {
+	  if (optimization_data->verbose && optimization_data->fp_log)
+	    fprintf(optimization_data->fp_log, "    %10s: %23.15e", constraints->quantity[i], 
+		    final_property_value[constraints->index[i]]);
+	  if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
+	      conval>constraints->upper[i]) {
+	    *invalid = 1;
+	    if (optimization_data->verbose && optimization_data->fp_log) {
+	      fprintf(optimization_data->fp_log, " ---- invalid\n\n");
+	      fflush(optimization_data->fp_log);
+	    }
+	    log_exit("optimization_function");
+	    break;
+	  }
+	  if (optimization_data->verbose && optimization_data->fp_log) {
+	    fputc('\n', optimization_data->fp_log);
+	    fflush(optimization_data->fp_log);
+	  }
+	}
       
 #if DEBUG
-      fprintf(stdout, "optimization_function: Computing rpn function\n");
-      fflush(stdout);
+	fprintf(stdout, "optimization_function: Computing rpn function\n");
+	fflush(stdout);
 #endif
-      result = 0;
-      rpn_clear();
-      if (!*invalid) {
-        long i=0, terms=0;
-        double value, sum;
-        if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
-          for (i=sum=0; i<optimization_data->terms; i++) {
-            rpn_clear();
-            if ((value=rpn(optimization_data->term[i]))!=0) {
-              optimization_data->termWeight[i] = 1/fabs(value);
-              terms ++;
-            }
-            else
-              optimization_data->termWeight[i] = 0;
-            sum += fabs(value);
-	    if (rpn_check_error()) {
-	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
-              rpn_clear_error();
-              rpnError++;
+	result = 0;
+	rpn_clear();
+	if (!*invalid) {
+	  long i=0, terms=0;
+	  double value, sum;
+	  if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
+	    for (i=sum=0; i<optimization_data->terms; i++) {
+	      rpn_clear();
+	      if ((value=rpn(optimization_data->term[i]))!=0) {
+		optimization_data->termWeight[i] = 1/fabs(value);
+		terms ++;
+	      }
+	      else
+		optimization_data->termWeight[i] = 0;
+	      sum += fabs(value);
+	      if (rpn_check_error()) {
+		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+		rpn_clear_error();
+		rpnError++;
+	      }
 	    }
-          }
-          if (rpnError) {
-            printf("RPN expression errors prevent balancing terms\n");
-            exit(1);
-          }
-          if (terms)
-            for (i=0; i<optimization_data->terms; i++) {
-              if (optimization_data->termWeight[i])
-                optimization_data->termWeight[i] *= optimization_data->usersTermWeight[i]*sum/terms;
-              else
-                optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
-            }
-          balanceTerms = 0;
-          fprintf(stdout, "\nOptimization terms balanced.\n");
-          fflush(stdout);
-        }
+	    if (rpnError) {
+	      printf("RPN expression errors prevent balancing terms\n");
+	      exit(1);
+	    }
+	    if (terms)
+	      for (i=0; i<optimization_data->terms; i++) {
+		if (optimization_data->termWeight[i])
+		  optimization_data->termWeight[i] *= optimization_data->usersTermWeight[i]*sum/terms;
+		else
+		  optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
+	      }
+	    balanceTerms = 0;
+	    fprintf(stdout, "\nOptimization terms balanced.\n");
+	    fflush(stdout);
+	  }
         
-        /* compute and return quantity to be optimized */
-        if (optimization_data->terms) {
-          long i;
-          for (i=result=0; i<optimization_data->terms; i++)  {
-            rpn_clear();
-            result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+	  /* compute and return quantity to be optimized */
+	  if (optimization_data->terms) {
+	    long i;
+	    for (i=result=0; i<optimization_data->terms; i++)  {
+	      rpn_clear();
+	      result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+	      if (rpn_check_error()) {
+		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+		rpn_clear_error();
+		rpnError++;
+	      }
+	    }
+	  }
+	  else {
+	    rpn_clear();    /* clear rpn stack */
+	    result = rpn(optimization_data->UDFname);
 	    if (rpn_check_error()) {
 	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
-              rpn_clear_error();
-              rpnError++;
+	      rpnError++;
 	    }
-          }
-        }
-        else {
-          rpn_clear();    /* clear rpn stack */
-          result = rpn(optimization_data->UDFname);
-          if (rpn_check_error()) {
-            printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
-            rpnError++;
-          }
-        }
-        if (rpnError) {
-          printf("RPN expression errors prevent optimization\n");
-          exit(1);
-        }
-        if (isnan(result) || isinf(result)) {
-          *invalid = 1;
-        } else {
-          if (optimization_data->verbose && optimization_data->fp_log) {
-            fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
-            fflush(optimization_data->fp_log);
-            if (optimization_data->terms && !*invalid) {
-              fprintf(optimization_data->fp_log, "Terms of equation: \n");
-              for (i=sum=0; i<optimization_data->terms; i++) {
-                rpn_clear();
-                fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
-                        optimization_data->termWeight[i],
-                        optimization_data->term[i],
-                        optimization_data->termValue[i]);
-                sum += optimization_data->termValue[i];
-              }
-            }
-            fprintf(optimization_data->fp_log, "\n\n");
-          }
-        }
+	  }
+	  if (rpnError) {
+	    printf("RPN expression errors prevent optimization\n");
+	    exit(1);
+	  }
+	  if (isnan(result) || isinf(result)) {
+	    *invalid = 1;
+	  } else {
+	    if (optimization_data->verbose && optimization_data->fp_log) {
+	      fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
+	      fflush(optimization_data->fp_log);
+	      if (optimization_data->terms && !*invalid) {
+		fprintf(optimization_data->fp_log, "Terms of equation: \n");
+		for (i=sum=0; i<optimization_data->terms; i++) {
+		  rpn_clear();
+		  fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
+			  optimization_data->termWeight[i],
+			  optimization_data->term[i],
+			  optimization_data->termValue[i]);
+		  sum += optimization_data->termValue[i];
+		}
+	      }
+	      fprintf(optimization_data->fp_log, "\n\n");
+	    }
+	  }
+	}
+      }  /* End of Master only */
+    
+      if (*invalid) {
+	result = sqrt(DBL_MAX);
+	if (*invalid && optimization_data->verbose && optimization_data->fp_log) {
+	  fprintf(optimization_data->fp_log, "Result is invalid\n");
+	  fflush(optimization_data->fp_log);
+	}
+    }
+      
+      if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
+	result *= -1;
+      
+      /* copy the result into the "hidden" slot in the varied quantities array for output
+       * to final properties file
+       */
+      variables->varied_quan_value[variables->n_variables+1] = 
+	optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
+      if (!*invalid && bestResult>result) {
+	if (optimization_data->verbose && optimization_data->fp_log)
+	  fprintf(optimization_data->fp_log, "** Result is new best\n");
+	bestResult = result;
       }
-    }
-    
-    if (*invalid) {
-      result = sqrt(DBL_MAX);
-      if (*invalid && optimization_data->verbose && optimization_data->fp_log) {
-        fprintf(optimization_data->fp_log, "Result is invalid\n");
-        fflush(optimization_data->fp_log);
-      }
-    }
-    
-    if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
-      result *= -1;
-    
-    /* copy the result into the "hidden" slot in the varied quantities array for output
-     * to final properties file
-     */
-    variables->varied_quan_value[variables->n_variables+1] = 
-      optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
-    if (!*invalid && bestResult>result) {
-      if (optimization_data->verbose && optimization_data->fp_log)
-	fprintf(optimization_data->fp_log, "** Result is new best\n");
-      bestResult = result;
-    }
-    variables->varied_quan_value[variables->n_variables+2] = 
-      optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
+      variables->varied_quan_value[variables->n_variables+2] = 
+	optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
 
-    if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0))
-      do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
+#if USE_MPI
+      if (notSinglePart) /* Disable the beam output when all the processors track independently */
+#endif
+	if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0))
+	  do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
 			   charge);
   }
   
   
 #if DEBUG
-  fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
-  fflush(stdout);
+    fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
+    fflush(stdout);
 #endif
 
 #if USE_MPI
-  MPI_Bcast(invalid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&result, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (notSinglePart) {
+      MPI_Bcast(invalid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&result, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
 #endif
  
-  storeOptimRecord(value, variables->n_variables, *invalid, result);
-
-  log_exit("optimization_function");
-  return(result);
+    storeOptimRecord(value, variables->n_variables, *invalid, result);
+    
+    log_exit("optimization_function");
+    return(result);
 }
 
 long checkForOptimRecord(double *value, long values, long *again)
@@ -1818,10 +1870,10 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     OPTIM_CONSTRAINTS *constraints;
     long i;
 
-#if (!USE_MPI)    
+#if (!USE_MPI)
     if (!optimization_data->fp_log)
         return;
-#endif    
+#endif 
 
     /* update internal values (particularly rpn) */
     ignoreOptimRecords = 1 ;  /* force reevaluation */
@@ -1831,7 +1883,7 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
 #if (USE_MPI)    
     if (!optimization_data->fp_log)
         return;
-#endif     
+#endif  
 
     variables = &(optimization_data->variables);
     covariables = &(optimization_data->covariables);

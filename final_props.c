@@ -187,9 +187,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
 #if USE_MPI
   if (myid!=0)
     return;
-#if SDDS_MPI_IO
   SDDS_table->parallel_io = 0;
-#endif
 #endif
 
   SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, 
@@ -289,6 +287,7 @@ void dump_final_properties
         abort();
       }
 #if SDDS_MPI_IO
+/* This is required to let all the processors get right n_properties */
       MPI_Bcast (&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
@@ -426,9 +425,9 @@ long compute_final_properties
       n_part_total = sums->n_part;
     MPI_Bcast (&n_part_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
   }
-  if ((notSinglePart && n_part_total) || (!notSinglePart && sums->n_part)) 
+  if ((notSinglePart && n_part_total) || (!notSinglePart &&  sums->n_part))
       /* We have to check the total number of particles, otherwise it will cause
-	 synchronization problem as no particle left on some processors */
+	 synchronization problem as no particle left on some processors */      
 #else
   if (sums->n_part)
 #endif 
@@ -525,11 +524,11 @@ long compute_final_properties
 	approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
 	approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
 	approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
-      } 
+      }
     } else {
-	approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
-	approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
-	approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+      approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+      approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+      approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
     }
 #endif
   }
@@ -1257,11 +1256,11 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
   double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6];
   long i, j, iPart;
   double sum;
-#if USE_MPI 
+#if USE_MPI
   long particles_total, index=0;
   double S_p[21], S_p_sum[21], Sbeta_p[21], Sbeta_p_sum[21];  
-
-  MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+  if (notSinglePart)
+    MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);	
 #endif 
 
   compute_centroids(C, data, particles);
@@ -1275,17 +1274,22 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
 #if (!USE_MPI)
       S[j][i] = S[i][j] = sum/particles;
 #else
-      S_p[index++] = sum;
+      if (notSinglePart)
+        S_p[index++] = sum;
+      else
+        S[j][i] = S[i][j] = sum/particles;
 #endif
     }
   }
 
 #if USE_MPI
-  MPI_Allreduce(S_p, S_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  index = 0; 
-  for (i=0; i<6; i++) {
-    for (j=0; j<=i; j++) {
-      S[i][j] = S[j][i] = S_p_sum[index++]/particles_total;
+  if (notSinglePart) {
+    MPI_Allreduce(S_p, S_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    index = 0; 
+    for (i=0; i<6; i++) {
+      for (j=0; j<=i; j++) {
+	S[i][j] = S[j][i] = S_p_sum[index++]/particles_total;
+      }
     }
   }
 #endif
@@ -1302,7 +1306,8 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
   memcpy(twiss->eta, eta, sizeof(*(twiss->eta))*4);
   
 #if USE_MPI
-  index = 0;
+  if (notSinglePart)   
+    index = 0;
 #endif
   for (i=0; i<6; i++) {
     for (j=0; j<=i; j++) {
@@ -1311,16 +1316,21 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
 #if (!USE_MPI)
       Sbeta[j][i] = Sbeta[i][j] = sum/particles;
 #else
-      Sbeta_p[index++] = sum; 
+  if (notSinglePart) 
+    Sbeta_p[index++] = sum;
+  else
+    Sbeta[j][i] = Sbeta[i][j] = sum/particles;
 #endif
     }
   }
 #if USE_MPI
-  MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  index = 0; 
-  for (i=0; i<6; i++) {
-    for (j=0; j<=i; j++) {
-      Sbeta[i][j] = Sbeta[j][i] = Sbeta_p_sum[index++]/particles_total;
+  if (notSinglePart) {
+    MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    index = 0; 
+    for (i=0; i<6; i++) {
+      for (j=0; j<=i; j++) {
+	Sbeta[i][j] = Sbeta[j][i] = Sbeta_p_sum[index++]/particles_total;
+      }
     }
   }
 #endif

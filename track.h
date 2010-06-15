@@ -26,6 +26,7 @@
 
 #if USE_MPI 
 #include "mpi.h" /* Defines the interface to MPI allowing the use of all MPI functions. */
+#include "pgapack.h"
 #if USE_MPE
 #include "mpe.h" /* Defines the MPE library */ 
 #endif
@@ -78,6 +79,7 @@ extern long isMaster;
 extern long isSlave;
 /* flag used to indicate if the same particle will be tracked on all the processors, or all the processor will track independently (e.g., in dynamic aperture optimization) */
 extern long notSinglePart;     
+extern long runInSinglePartMode;
 
 /* A hash table for loading parameters effectively */
 extern htab *load_hash;
@@ -494,7 +496,8 @@ typedef struct {
 #define OPTIM_METHOD_POWELL    3
 #define OPTIM_METHOD_RANSAMPLE 4
 #define OPTIM_METHOD_RANWALK   5
-#define N_OPTIM_METHODS        6
+#define OPTIM_METHOD_GENETIC   6
+#define N_OPTIM_METHODS        7
 
 typedef struct {
     long mode, method;
@@ -520,6 +523,11 @@ typedef struct {
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
     long includeSimplex1dScans, startFromSimplexVertex1;
+    /* For genetic optimization only */
+    long n_iterations;            /* The maximal number of iterations allowed */
+    long maxNoChange;             /* The number of iterations to stop when no change in the best solution found */
+    long population_size;
+    long print_all_individuals;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
@@ -3133,6 +3141,7 @@ extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 /* prototypes for routines in optimize.c */
 
 void do_optimization_setup(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void do_genetic_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void add_optimization_variable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
                            LINE_LIST *beamline);
@@ -3144,7 +3153,13 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  void *correct, long correctMode, void *tuneData, long doTuneCorr, long doFindAperture,
                  long doResponse);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-
+double optimization_function(double *values, long *invalid);
+#if USE_MPI
+  long geneticMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep,
+                long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
+		long maxNoChange, long populationSize, long printFrequency, long pirntAllPopulations,
+		char *populations_log, long verbose, OPTIM_VARIABLES *optim);
+#endif
 /* prototype for sample.c */
 long sample_particles(double **initial, SAMPLE *samp, long np, double **accepted, double z, double p0);
 

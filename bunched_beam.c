@@ -93,19 +93,21 @@ void setup_bunched_beam(
   if (n_particles_per_bunch<=0)
     bombElegant("n_particles_per_bunch is invalid", NULL);
 #if SDDS_MPI_IO
-  beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
-  if (n_particles_per_bunch == 1) /* a special case for single particle tracking */
-    notSinglePart = 0;
-  else {
-    if (isSlave) {
-      long work_processors = n_processors-1;
-      long my_nToTrack = n_particles_per_bunch/work_processors; 
-      if (myid<=(n_particles_per_bunch%work_processors)) 
-	my_nToTrack++;
-      n_particles_per_bunch = my_nToTrack;
-    }
+    beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
+  if (!runInSinglePartMode) {
+    if (n_particles_per_bunch == 1) /* a special case for single particle tracking */
+      notSinglePart = 0;
     else {
-      n_particles_per_bunch = 0;
+      if (isSlave) {
+        long work_processors = n_processors-1;
+        long my_nToTrack = n_particles_per_bunch/work_processors; 
+        if (myid<=(n_particles_per_bunch%work_processors)) 
+	  my_nToTrack++;
+        n_particles_per_bunch = my_nToTrack;
+      }
+      else {
+        n_particles_per_bunch = 0;
+      }
     }
   }
 #endif
@@ -212,8 +214,6 @@ void setup_bunched_beam(
 #if SDDS_MPI_IO
   else
     beam->accepted = NULL;
-  if (run->acceptance)
-    dumpAcceptance = 1; /* indicate if the initial coordinates of transmitted particles will be dumped */
 #endif
   beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
   beam->n_accepted = beam->n_saved = 0;
@@ -276,7 +276,7 @@ long new_bunched_beam(
     double save_emit_x, save_emit_y,
            save_sigma_dp, save_sigma_s;
 
-    if ((firstIsFiducial && beamCounter==0) || do_find_aperture || (beam->n_original_total==1)) {
+    if ((firstIsFiducial && beamCounter==0) || do_find_aperture || runInSinglePartMode || (beam->n_original_total==1)) {
       notSinglePart = 0;
       lessPartAllowed = 1;
     }
@@ -316,7 +316,7 @@ long new_bunched_beam(
 	  beam->particle=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
 	  if (!save_initial_coordinates)
 	    beam->original = beam->particle;
-	  else
+	  else if (!bunchGenerated)
 	    beam->original=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
 	  if (run->acceptance)
 	    beam->accepted=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
@@ -545,7 +545,6 @@ long track_beam(
   if (control->bunch_frequency) {
     makeBucketAssignments(beam, p_central, control->bunch_frequency);
   }
-  
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
@@ -597,6 +596,12 @@ long track_beam(
 #endif
   }
 
+#if USE_MPI
+  /*  if (!runInSinglePartMode) */
+    /* Disable the beam output when all the processors track independently, especially for
+       genetic optimization.  Using runInSinglePartMode flag instead of notSinglePart as 
+       we do need output when first is fiducial beam and it does not satisfy notSinglePart */
+#endif
   if (!delayOutput)
     do_track_beam_output(run, control, errcon, optim,
                          beamline, beam, output, flags, 
@@ -776,6 +781,16 @@ void setup_output(
     LINE_LIST *beamline
     )
 {
+#if USE_MPI
+  if (runInSinglePartMode) {
+    if (run->acceptance || run->centroid || run->sigma || run->final || run->output || run->losses ) {
+      printf ("\nWarning: Traking will be done independently on each processor for this simulation\n");
+      printf ("Pelegant does not provide intermediate output for optimization now.\n\n");
+	run->acceptance = run->centroid = run->sigma = run->final = run->output = run->losses = NULL;
+    }
+    return;
+  }
+#endif
     long n_elements;
     n_elements = beamline->n_elems;
 
@@ -920,7 +935,7 @@ void finish_output(
        errcon->n_items,
        optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
        optim->n_variables?optim->n_variables+2:0,
-       0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+       0, beam->particle, beam->n_to_track_total, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
        finalCharge);
 #endif
 

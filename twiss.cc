@@ -132,7 +132,7 @@ VMATRIX *compute_periodic_twiss(
       bombElegant((char*)"can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
     modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
   }
-  
+ 
   if (clorb) {
     /* use the closed orbit to compute the on-orbit R matrix */
     M1 = (VMATRIX*)tmalloc(sizeof(*M1));
@@ -1345,11 +1345,6 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &twiss_output);
   
-#if USE_MPI
-    if (!writePermitted)
-      filename = NULL;
-#endif 
-
   if (filename)
     filename = compose_filename(filename, run->rootname);
   twissConcatOrder = concat_order;
@@ -1385,6 +1380,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       bombElegant((char*)"invalid initial beta-functions given in twiss_output namelist", NULL);
   }
 
+#if USE_MPI
+  if (writePermitted)
+#endif 
   if (filename) {
 #if SDDS_MPI_IO
     SDDS_twiss.parallel_io = 0;
@@ -1442,7 +1440,6 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   fprintf(stdout, (char*)"now in run_twiss_output\n");
   fflush(stdout);
 #endif
-
   if (tune_corrected==0 && !output_before_tune_correction) {
     log_exit((char*)"run_twiss_output");
     return 1;
@@ -1459,7 +1456,6 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     n_elem --;
   }
   n_elem = last_n_elem;
-  
   compute_twiss_parameters(run, beamline, starting_coord, matched, radiation_integrals,
                            beta_x, alpha_x, eta_x, etap_x,
                            beta_y, alpha_y, eta_y, etap_y, &unstable);
@@ -1604,7 +1600,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->twiss0 = (TWISS*)tmalloc(sizeof(*beamline->twiss0));
 
   eptr = beamline->elem_twiss = &(beamline->elem);
-
   elast = eptr;
   while (eptr) {
     if (eptr->type==T_RECIRC && matched)
@@ -1619,6 +1614,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       free_matrices(beamline->matrix);
       free(beamline->matrix);
     }
+
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
                                               &betay, &alphay, &etay, &etapy, beamline->tune+1, 
                                               beamline->elem_twiss, starting_coord, run,

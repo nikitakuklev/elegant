@@ -10,7 +10,7 @@ static char *optimize_mode[N_OPTIM_MODES] = {
     } ;
 
 static char *optimize_method[N_OPTIM_METHODS] = {
-    "simplex", "grid", "sample", "powell", "randomsample", "randomwalk",
+    "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic"
     } ;
 
 #namelist optimization_term,struct
@@ -48,6 +48,11 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long include_simplex_1d_scans = 1;
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
+    long n_iterations = 10000;
+    long maxNoChange = 10000;
+    long population_size = 100;
+    long print_all_individuals = 0;	
+    STRING population_log = NULL;	
 #end
 
 #namelist optimization_variable static

@@ -411,9 +411,15 @@ long doMomentumApertureSearch(
           delta = deltaStart;
           
 #if defined(DEBUG)
+#if !USE_MPI
           fprintf(fpdeb, "%s\n%s\n",
                   elem->name, side==0?"negative":"positive");
           fflush(fpdeb);
+#else
+          fprintf(fpdMpi, "%s\n%s\n",
+                  elem->name, side==0?"negative":"positive");
+          fflush(fpdMpi);
+#endif
 #endif
 
           while (fabs(delta) <= fabs(deltaLimit)) {
@@ -512,8 +518,13 @@ long doMomentumApertureSearch(
             deltaStart = 0;
         } /* split loop */
 #if defined(DEBUG)
+#if !USE_MPI
         fprintf(fpdeb, "\n");
         fflush(fpdeb);
+#else
+        fprintf(fpdMpi, "\n");
+        fflush(fpdMpi);
+#endif
 #endif
         if (verbosity>0) {
           fprintf(stdout, "Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
