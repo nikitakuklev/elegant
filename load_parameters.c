@@ -251,6 +251,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   int32_t numberChanged, totalNumberChanged = 0;
   long lastMissingOccurence = 0;
   int32_t *occurence;
+  char elem_param[1024];
+  htab *hash_table = hcreate(12); /* create a hash table with the size of 2^12, it can grow automatically if necessary */
 
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
@@ -361,6 +363,16 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     lastMissingElement[0] = 0;
     lastMissingOccurence = 0;
     for (j=0; j<rows; j++) {
+      /* When occurence is not available, to avoid an element to be processed multiple times, we
+	 add an element with parameter name to the hash_table at its first appearance. For the 
+	 following occurences hadd returns False if the element_parameter is already in the 
+	 hash_table and continue to process next row */ 
+      if (!occurence){
+	strcpy(elem_param, element[j]);
+	strcat(elem_param, parameter[j]);
+	if(!hadd(hash_table, elem_param, strlen(elem_param), NULL))
+	  continue;
+      }
       eptr = NULL;
       if (occurence) {
         if (occurence[j]<=lastMissingOccurence &&
@@ -641,6 +653,11 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
     }
   }
+
+  if (hash_table) { 
+    hdestroy(hash_table);                         /* destroy hash table */  
+    hash_table = NULL;
+  } 
   if (!allFilesRead || allFilesIgnored) {
     compute_end_positions(beamline);
     fprintf(stdout, "%" PRId32 "  parameter values loaded\n", totalNumberChanged);
