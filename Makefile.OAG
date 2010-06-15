@@ -81,7 +81,7 @@ PROD_HOST = $(PRODOAG)
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib
+		-DIEEE_MATH -DzLib -DWL=32
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
@@ -118,7 +118,7 @@ else
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		rpnlib mdbmth namelist mdblib \
-		meschach gsl
+		meschach gsl pgapack 
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
@@ -285,6 +285,7 @@ mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
+pgapack_DIR = $(EPICS_EXTENSIONS_LIB)
 
 elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
 		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \
@@ -306,8 +307,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		coupled_twiss.c drand_oag.c lookupa.c recycle.c hashtab.c moments.c \
                 insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c modulate.c
                    
-
-Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c
+Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c
 
 madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
