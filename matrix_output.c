@@ -277,10 +277,10 @@ void run_matrix_output(
   log_entry("run_matrix_output");
 
   calculate_matrices(beamline, run);
-  printf ("i_output=%ld\n", i_output);
+
   for (i_output=output_now; i_output<n_outputs; i_output++) {
     output_order= MAX(print_order[i_output], SDDS_order[i_output]);
-    printf ("output_order=%ld\n", output_order); fflush(stdout);
+
     initialize_matrices(M1=tmalloc(sizeof(*M1)), output_order);
     initialize_matrices(M2=tmalloc(sizeof(*M2)), output_order);
     for (i=0; i<6; i++)
