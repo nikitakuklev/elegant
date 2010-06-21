@@ -238,7 +238,8 @@ PARAMETER sbend_param[N_BEND_PARAMS] = {
     };
 
 BEND rbend_example;
-/* bending magnet physical parameters */
+/* rectangular bending magnet physical parameters */
+/* The only difference between this and S-bend is in the description of L */
 PARAMETER rbend_param[N_BEND_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&rbend_example.length), NULL, 0.0, 0, "magnet (straight) length"},
     {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&rbend_example.angle), NULL, 0.0, 0, "bend angle"},
