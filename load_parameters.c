@@ -28,6 +28,7 @@ typedef struct {
 #define COMMAND_FLAG_CHANGE_DEFINITIONS 0x0001UL
 #define COMMAND_FLAG_IGNORE             0x0002UL
 #define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
+#define COMMAND_FLAG_USE_FIRST          0x0008UL
     char *includeNamePattern, *includeItemPattern, *includeTypePattern;
     char *excludeNamePattern, *excludeItemPattern, *excludeTypePattern;
     long last_code;          /* return code from SDDS_ReadTable */
@@ -75,6 +76,9 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &load_parameters);
 
+  if (force_occurence_data && use_first)
+    bombElegant("Error: force_occurence_data=1 and use_first=1 not meaningful\n", NULL);
+  
   if (filename_list && strlen(filename_list)) {
     fprintf(stdout, "Using list of filenames for parameter loading\n");
   }
@@ -114,6 +118,8 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].filename = compose_filename(filename, run->rootname);
   if (change_defined_values && !force_occurence_data)
     load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
+  if (use_first)
+    load_request[load_requests].flags |= COMMAND_FLAG_USE_FIRST;
   load_request[load_requests].includeNamePattern = include_name_pattern;
   load_request[load_requests].includeItemPattern = include_item_pattern;
   load_request[load_requests].includeTypePattern = include_type_pattern;
@@ -366,8 +372,10 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       /* When occurence is not available, to avoid an element to be processed multiple times, we
 	 add an element with parameter name to the hash_table at its first appearance. For the 
 	 following occurences hadd returns False if the element_parameter is already in the 
-	 hash_table and continue to process next row */ 
-      if (!occurence){
+	 hash_table and continue to process next row.  However, we do this only if the user
+         gives the use_first flag, because the default behavior of elegant has been to assert
+         all values (so that last value is the one actually used) */ 
+      if (!occurence && load_request[i].flags&COMMAND_FLAG_USE_FIRST){
 	strcpy(elem_param, element[j]);
 	strcat(elem_param, parameter[j]);
 	if(!hadd(hash_table, elem_param, strlen(elem_param), NULL))
