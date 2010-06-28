@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2010/06/28 21:29:54  soliday
+# Updated the code for purify on Linux.
+#
 # Revision 1.5  2009/04/21 15:22:37  shang
 # added sddsws
 #
@@ -36,6 +39,7 @@ CMPLR = ANSI
 #RATIONAL = purecov
 ifdef RATIONAL
 HOST_OPT = NO
+STATIC_BUILD=NO
 CC := $(RATIONAL) -best-effort $(CC)
 CCC := $(RATIONAL) -best-effort $(CCC)
 endif
