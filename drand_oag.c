@@ -21,16 +21,9 @@ double random_1_elegant(long iseed)
         random_3(-(iseed+4));
 	random_4(-(iseed+6));
 #else
-	if (notSinglePart) {
-	  /* Pelegant should give the same result as elegant if running on 2 processors. */
-	  random_2(-(iseed+2*myid)); 
-	  random_3(-(iseed+2*myid+2));
-	  random_4(-(iseed+2*myid+4));
-	} else {
-	  random_2(-(iseed+2));
-	  random_3(-(iseed+4));
-	  random_4(-(iseed+6));
-	}
+	random_2(-(iseed+2*myid)); 
+	random_3(-(iseed+2*myid+2));
+	random_4(-(iseed+2*myid+4));
 #endif
 
         seed[3] = ((iseed & 4095)/2)*2+1;
