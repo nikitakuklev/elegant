@@ -335,6 +335,31 @@ void track_through_trfmode(
     }
   }
 
+  if (trfmode->record) {
+#if USE_MPI
+    if (myid == 1) {/* first slave will do output */
+#endif
+      if ((pass%trfmode->sample_interval)==0 && 
+          (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			      (pass/trfmode->sample_interval),
+			      (char*)"Pass", pass, 
+			      (char*)"t", trfmode->last_t,
+			      (char*)"Vx", sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi)),
+			      (char*)"Vy", sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi)),
+			      NULL) ||
+	   !SDDS_UpdatePage(&trfmode->SDDSrec, 0))) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem setting up data for TRFMODE record file");
+      }
+    if (pass==n_passes-1 && !SDDS_Terminate(&trfmode->SDDSrec)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb((char*)"problem writing data for TRFMODE record file");
+    }
+#if USE_MPI
+    }
+#endif
+  }
+
 #if defined(MINIMIZE_MEMORY)
   free(xsum);
   free(ysum);
@@ -400,6 +425,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     if (myid == 1) /* We let the first slave to dump the parameter */
 #endif
   if (trfmode->record && !trfmode->fileInitialized) {
+    long n = n_passes/trfmode->sample_interval;
     trfmode->record = compose_filename(trfmode->record, run->rootname);
     if (!trfmode->perParticleOutput && trfmode->binless) {
       if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
@@ -409,7 +435,8 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxRealMax", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyMax", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyRealMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+	  !SDDS_WriteLayout(&trfmode->SDDSrec) ||
+	  !SDDS_StartPage(&trfmode->SDDSrec, n+1)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       } 
@@ -418,10 +445,9 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxReal", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyReal", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+	  !SDDS_WriteLayout(&trfmode->SDDSrec) ||
+	  !SDDS_StartPage(&trfmode->SDDSrec, n+1)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       }
