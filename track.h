@@ -777,7 +777,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MKICKER 101
 #define T_EMITTANCE 102
 #define T_MHISTOGRAM 103
-#define N_TYPES   104
+#define T_FTABLE 104
+#define N_TYPES   105
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -888,6 +889,7 @@ extern char *entity_text[N_TYPES];
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
+#define N_FTABLE_PARAMS 7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2540,6 +2542,19 @@ typedef struct {
   double radiusInternal;
 } UKICKMAP;  
 
+/* names and storage structure for field table parameters */
+extern PARAMETER ftable_param[N_FTABLE_PARAMS];
+
+typedef struct {
+  double tilt, dx, dy, dz;
+  char *inputFile;
+  long nKicks, verbose;
+  /* for internal use only */
+  long initialized;
+  double length;
+  ntuple *Bx, *By, *Bz;
+} FTABLE;  
+
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 #define SAME_BEND_PRECEDES 1 
@@ -3442,7 +3457,7 @@ long replaceElem(char *name, long type, long *skip, long occurPosition);
 long getDelElemFlag();
 char *getElemDefinition1();
 
-void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
+void TouschekEffect(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, NAMELIST_TEXT *nltext); 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                            char *command_file, char *lattice_file, char *caller);
 void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 

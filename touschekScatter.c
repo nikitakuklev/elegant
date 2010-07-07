@@ -34,7 +34,7 @@ void FIntegral(double tm, double b1, double b2, double *F);
 double Fvalue (double t, double tm, double b1, double b2);
 
 /* Monte Carlo simulation of Touschek scattering */
-void TouschekDistribution (RUN *run, LINE_LIST *beamline);
+void TouschekDistribution (RUN *run, VARY *control, LINE_LIST *beamline);
 
 void selectPartGauss(TSCATTER *tsptr, double *p1, double *p2, 
                 double *dens1, double *dens2, double *ran1);
@@ -48,7 +48,11 @@ double moeller(double beta0, double theta);
 void pickPart(double *weight, long *index, long start, long end, 
               long *iTotal, double *wTotal, double weight_limit, double weight_ave);
 
-void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
+void TouschekEffect(RUN *run,
+                    VARY *control,
+                    ERRORVAL *errcon,
+                    LINE_LIST *beamline,
+                    NAMELIST_TEXT *nltext) 
 {
   ELEMENT_LIST *eptr;
   long flag, nElement;
@@ -104,7 +108,7 @@ void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     bombElegant("Touschek scattering rate calculation error", NULL);
   /* Generate scattered particles at TScatter. 
      And track the scattered particles down to beamline. */
-  TouschekDistribution(run, beamline);
+  TouschekDistribution(run, control, beamline);
     
   return;
 }
@@ -268,7 +272,7 @@ static SDDS_DEFINITION part_dist_para[PART_DIST_PARAMETERS] = {
 };
 static void *part_dist_paraValue[PART_DIST_PARAMETERS];
 
-void TouschekDistribution(RUN *run, LINE_LIST *beamline)
+void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 {
   long i, j, total_event, n_left, iElement=0;
   ELEMENT_LIST *eptr;
@@ -514,8 +518,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 
       if (do_track) {
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
-                             &beam->p0, NULL, NULL, NULL, NULL, run, 1,
-                             0, 1, 0, NULL,
+                             &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
+                             0, control->n_passes, 0, NULL,
                              NULL, NULL, beam->lostOnPass, eptr);
         if (loss) {
           dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
