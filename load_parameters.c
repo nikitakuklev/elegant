@@ -237,6 +237,8 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 #ifdef  USE_MPE
   MPE_Log_event(event1b, 0, "end load_parameters");
 #endif
+    /* No reason to keep this, so just decrement the counter */
+    load_requests --;
     return 1;
   }
 #ifdef  USE_MPE
@@ -258,7 +260,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   long lastMissingOccurence = 0;
   int32_t *occurence;
   char elem_param[1024];
-  htab *hash_table = hcreate(12); /* create a hash table with the size of 2^12, it can grow automatically if necessary */
+  htab *hash_table;
 
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
@@ -268,8 +270,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   for (i=0; i<load_requests; i++) {
     if (load_request[i].flags&COMMAND_FLAG_IGNORE)
       continue;
-    if (change_definitions && !(load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS))
-      continue;
+
+    hash_table = hcreate(12); /* create a hash table with the size of 2^12, it can grow automatically if necessary */
 
     allFilesIgnored = 0;
     if (load_request[i].last_code) {
@@ -351,7 +353,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     }
 
     occurence = NULL;
-    if (!change_definitions || !(load_request[i].flags&COMMAND_FLAG_IGNORE_OCCURENCE)) {
+    if (!(load_request[i].flags&COMMAND_FLAG_IGNORE_OCCURENCE)) {
       if (verbose)
 	fprintf(stdout, "Using occurence data.\n");
       if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0) {
@@ -369,17 +371,22 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     lastMissingElement[0] = 0;
     lastMissingOccurence = 0;
     for (j=0; j<rows; j++) {
-      /* When occurence is not available, to avoid an element to be processed multiple times, we
-	 add an element with parameter name to the hash_table at its first appearance. For the 
-	 following occurences hadd returns False if the element_parameter is already in the 
-	 hash_table and continue to process next row.  However, we do this only if the user
-         gives the use_first flag, because the default behavior of elegant has been to assert
-         all values (so that last value is the one actually used) */ 
-      if (!occurence && load_request[i].flags&COMMAND_FLAG_USE_FIRST){
-	strcpy(elem_param, element[j]);
-	strcat(elem_param, parameter[j]);
-	if(!hadd(hash_table, elem_param, strlen(elem_param), NULL))
-	  continue;
+      /* If the user gives the use_first flag, then we load only the first instance for
+       * any parameter.   If occurence data is present, then we load the first instance
+       * for each occurence.  Otherwise, we load the first instance ignoring occurrence
+       * (this would happen in change_defined_values mode).
+       * If use_first is not given, then we load all values, which is the slowest option
+       * but also the original default behavior.
+       */
+      if (load_request[i].flags&COMMAND_FLAG_USE_FIRST){
+        if (!occurence) {
+          strcpy(elem_param, element[j]);
+          strcat(elem_param, parameter[j]);
+        } else {
+          sprintf(elem_param, "%s%s%"PRId32, element[j], parameter[j], occurence[j]);
+        }
+        if (!hadd(hash_table, elem_param, strlen(elem_param), NULL))
+          continue;
       }
       eptr = NULL;
       if (occurence) {
@@ -660,12 +667,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       load_request[i].element = NULL;
       load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
     }
-  }
 
-  if (hash_table) { 
-    hdestroy(hash_table);                         /* destroy hash table */  
-    hash_table = NULL;
-  } 
+    if (hash_table) { 
+      hdestroy(hash_table);                         /* destroy hash table */  
+      hash_table = NULL;
+    } 
+  }
+  
   if (!allFilesRead || allFilesIgnored) {
     compute_end_positions(beamline);
     fprintf(stdout, "%" PRId32 "  parameter values loaded\n", totalNumberChanged);
