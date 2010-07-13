@@ -11,6 +11,9 @@
    Hairong Shang, Oct 2005
    *
    $Log: not supported by cvs2svn $
+   Revision 1.1  2007/03/30 16:50:29  soliday
+   Moved from directory above.
+
    Revision 1.4  2006/10/23 19:49:43  soliday
    Updated to fix an issue with linux-x86_64
 
@@ -49,11 +52,12 @@ char *option[N_OPTIONS] = {
 #define USE_SKEW_TYPE 0x0002U
 
 char *USAGE="sddsfindresonances [-pipe=[input][,output]] [<inputFile>] [<outputfile>]\n\
- -multipoles=[all]|[dipole,][quadrupole,][sextupole,][octupole,] \n\
+ -multipoles=[all=<integer>]|[dipole,][quadrupole,][sextupole,][octupole,] \n\
  [-type=[normal,][skew]] [-variables=<firstColumn>,<secondColumn>]\n\
 -multipoles    for user to choose which multipoles (dipole, quadrupole, \n\
                sextupole, and/or octupole) to use or compute all multipoles by choosing all.\n\
-               By default, all multipoles will be computed.\n\
+               By default, all multipoles will be computed up to octupole order (4).\n\
+               For multipoles up to 2*n-pole, use all=<n>\n\
 -type          for user to choose to use normal and/or skew for each \n\
                multipoles. default is normal and skew. \n\
 -variables     Give names for the variable columns.  The defaults are x and y.\n\n\
@@ -145,9 +149,12 @@ int main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   char *inputFile, *outputFile;
   SDDS_DATASET inData, outData;
-  long i_arg, tmpFileUsed, rows, i, k, sign, signs, multx, multy, start, end, offset,count,datapoints=0, outputpoints=0, **sortIndex, plane, index, index1, *pole=NULL, i_pole, poles;
+  long i_arg, tmpFileUsed, rows, i, k, sign, signs, multx, multy, start, end, offset;
+  long count, datapoints=0, outputpoints=0, **sortIndex, plane, index, index1, *pole=NULL, i_pole, poles;
+  long maximumOrder;
   char *columnName[4] = {NULL, NULL, "nux", "nuy"};  
-  char *multipole[4]={"dipole", "quadrupole", "sextupole", "octupole"};
+  char *multipole0[4]={"dipole", "quadrupole", "sextupole", "octupole"};
+  char **multipole = NULL;
   double **outputData, *tmpData, **indepData, slope, delta, delta1;  
   unsigned long multipoleFlags, typeFlags, pipeFlags;
   char label[1024];
@@ -180,12 +187,13 @@ int main(int argc, char **argv)
          break;
        case SET_MULTIPOLES:
          s_arg[i_arg].n_items--;
+         maximumOrder = 4;
          if (!scanItemList(&multipoleFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                            "dipole", -1, NULL, 0, USE_DIPOLE,
                            "quadrupole", -1, NULL, 0, USE_QUADRUPOLE,
                            "sextupole", -1, NULL, 0, USE_SEXTUPOLE,
                            "octupole", -1, NULL, 0, USE_OCTUPOLE,
-                           "all", -1, NULL, 0, USE_ALL_MULTIPOLES,
+                           "all", SDDS_LONG, &maximumOrder, 1, USE_ALL_MULTIPOLES,
                            NULL))
            SDDS_Bomb("Invalid -multipoles syntax");
          s_arg[i_arg].n_items++;
@@ -224,9 +232,12 @@ int main(int argc, char **argv)
     multipoleFlags |= USE_DIPOLE | USE_QUADRUPOLE | USE_SEXTUPOLE | USE_OCTUPOLE;
   if (columnName[0]==NULL && (!SDDS_CopyString(columnName+0, "x") || !SDDS_CopyString(columnName+1, "y")))
     SDDS_Bomb("Problem copying column name strings");
-  
-  poles=4;
-  pole=calloc(sizeof(*pole), poles);
+
+  poles = maximumOrder < 4 ? 4 : maximumOrder ;
+  pole = calloc(sizeof(*pole), poles);
+  multipole = calloc(sizeof(*multipole), poles);
+  for (i=0; i<4; i++)
+    multipole[i] = multipole0[i];
   /* pole[i] i=0,1,2,3 represents dipole, quadrupole, sextupole and octupole respectively,
      if it is 0, means the corresponding multipole is not chosen and will not be processed.
      if it is not zero, the resonance for the corresponding multipole will be found and write
@@ -240,6 +251,14 @@ int main(int argc, char **argv)
     pole[2]=3;
   if (multipoleFlags&USE_OCTUPOLE)
     pole[3]=4;
+  if (maximumOrder>4) {
+    char s[1024];
+    for (i=4; i<maximumOrder; i++) {
+      pole[i] = i+1;
+      sprintf(s, "%ld-pole", 2*(i+1));
+      cp_str(multipole+i, s);
+    }
+  }
   
   processFilenames("sddsfindresonances", &inputFile, &outputFile, pipeFlags, 0, &tmpFileUsed);
   if (tmpFileUsed)
