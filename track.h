@@ -802,7 +802,7 @@ extern char *entity_text[N_TYPES];
 #define N_VMON_PARAMS 9
 #define N_MONI_PARAMS 11
 #define N_RCOL_PARAMS 6
-#define N_ECOL_PARAMS 7
+#define N_ECOL_PARAMS 8
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
@@ -817,7 +817,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
-#define N_MAXAMP_PARAMS 5
+#define N_MAXAMP_PARAMS 6
 #define N_ROTATE_PARAMS 1
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
@@ -1154,7 +1154,7 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
-    long exponent;
+    long exponent, yExponent;
     } ECOL;
 
 /* storage structure for beam cleaner */
@@ -1527,7 +1527,7 @@ extern PARAMETER maxamp_param[N_MAXAMP_PARAMS];
 
 typedef struct {
     double x_max, y_max;
-    long elliptical, exponent;
+    long elliptical, exponent, yExponent;
     char *openSide;
     } MAXAMP;
 
@@ -2975,7 +2975,7 @@ extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, 
                                    long extrapolate_z, long openCode);
 extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central);
 extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z,
-    double P_central, long extrapolate_z, long openCode, long exponent);
+    double P_central, long extrapolate_z, long openCode, long exponent, long yexponent);
 extern long remove_outlier_particles(double **initial, CLEAN *clean, long np, 
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,

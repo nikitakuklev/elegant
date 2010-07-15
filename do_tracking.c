@@ -126,7 +126,7 @@ long do_tracking(
   long nLeft;     /* number of those that are left after a tracking routine returns */
   long nLost=0;     /* accumulated number lost */
   long nMaximum=0;  /* maximum number of particles seen */
-  long show_dE, maxampOpenCode=0, maxampExponent=0;
+  long show_dE, maxampOpenCode=0, maxampExponent=0, maxampYExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
@@ -483,6 +483,7 @@ long do_tracking(
           elliptical = maxamp->elliptical;
           maxampOpenCode = determineOpenSideCode(maxamp->openSide);
           maxampExponent = maxamp->exponent;
+          maxampYExponent = maxamp->yExponent;
         }
         eptr = eptr->succ;
       }
@@ -1086,6 +1087,7 @@ long do_tracking(
 	      elliptical = maxamp->elliptical;
 	      maxampOpenCode = determineOpenSideCode(maxamp->openSide);
 	      maxampExponent = maxamp->exponent;
+	      maxampYExponent = maxamp->yExponent;
 	      break;
 	    case T_TRCOUNT:
 	      /* >>>>> Needs to be updated */
@@ -1529,7 +1531,7 @@ long do_tracking(
               else
                 nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
                                           eptr->type==T_DRIF || eptr->type==T_STRAY,
-                                          maxampOpenCode, maxampExponent);
+                                          maxampOpenCode, maxampExponent, maxampYExponent);
             }
             if (run->apertureData.initialized) 
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 

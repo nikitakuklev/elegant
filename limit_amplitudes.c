@@ -250,17 +250,28 @@ long elliptical_collimator(
   double a2, b2;
   double dx, dy, xo, yo, xsize, ysize;
   TRACKING_CONTEXT context;
-
+  long xe, ye;
+  
   xsize = ecol->x_max;
   ysize = ecol->y_max;
-  if (ecol->exponent<2 || ecol->exponent%2) {
+  if ((xe=ecol->exponent)<2 || xe%2) {
     getTrackingContext(&context);
     fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
-            context.elementName, ecol->exponent);
+            context.elementName, xe);
     exit(1);
   }
-  a2 = ipow(ecol->x_max, ecol->exponent);
-  b2 = ipow(ecol->y_max, ecol->exponent);
+  ye = xe;
+  if (ecol->yExponent) {
+    if ((ye=ecol->yExponent)<2 || ye%2) {
+      getTrackingContext(&context);
+      fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
+              context.elementName, ye);
+      exit(1);
+    }
+  }
+  
+  a2 = ipow(ecol->x_max, xe);
+  b2 = ipow(ecol->y_max, ye);
   dx = ecol->dx;
   dy = ecol->dy;
 
@@ -288,7 +299,7 @@ long elliptical_collimator(
     lost = 0;
     xo = ini[0] - dx;
     yo = ini[2] - dy;
-    if ((ipow(xo, ecol->exponent)/a2 + ipow(yo, ecol->exponent)/b2)>1)
+    if ((ipow(xo, xe)/a2 + ipow(yo, ye)/b2)>1)
       lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, xsize, ysize) : 1;
     else if (isinf(ini[0]) || isinf(ini[2]) ||
              isnan(ini[0]) || isnan(ini[2]) )
@@ -357,20 +368,32 @@ long elimit_amplitudes(
     double Po,
     long extrapolate_z,
     long openCode,
-    long exponent                       
+    long exponent,
+    long yexponent
     )
 {
     long ip, itop, lost;
     double *part;
     double a2, b2, c1, c2, c0, dz, det;
     TRACKING_CONTEXT context;
-
-    if (exponent<2 || exponent%2) {
+    long xe, ye;
+    
+    if ((xe=exponent)<2 || xe%2) {
       getTrackingContext(&context);
       fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
-              context.elementName, exponent);
+              context.elementName, xe);
       exit(1);
     }
+    ye = xe;
+    if (yexponent) {
+      if ((ye=yexponent)<2 || ye%2) {
+        getTrackingContext(&context);
+        fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
+                context.elementName, ye);
+        exit(1);
+      }
+    }
+
     if (xmax<=0 || ymax<=0) {
       /* At least one of the dimensions is non-positive and therefore ignored */
       if (xmax>0 || ymax>0) 
@@ -378,8 +401,8 @@ long elimit_amplitudes(
       return(np);
     }
 
-    a2 = ipow(xmax, exponent);
-    b2 = ipow(ymax, exponent);
+    a2 = ipow(xmax, xe);
+    b2 = ipow(ymax, ye);
     itop = np-1;
 
     for (ip=0; ip<np; ip++) {
@@ -396,7 +419,7 @@ long elimit_amplitudes(
             continue;
             }
         lost = 0;
-        if ((ipow(part[0], exponent)/a2 + ipow(part[2], exponent)/b2) > 1)
+        if ((ipow(part[0], xe)/a2 + ipow(part[2], ye)/b2) > 1)
           lost = 1;
         else
           continue;
@@ -404,7 +427,7 @@ long elimit_amplitudes(
           lost *= evaluateLostWithOpenSides(openCode, part[0], part[2], xmax, ymax);
         if (lost) {
           dz = 0;
-          if (extrapolate_z && !openCode && exponent==2) {
+          if (extrapolate_z && !openCode && xe==2 && ye==2) {
             c0 = sqr(part[0])/a2 + sqr(part[2])/b2 - 1;
             c1 = 2*(part[0]*part[1]/a2 + part[2]*part[3]/b2);
             c2 = sqr(part[1])/a2 + sqr(part[3])/b2;

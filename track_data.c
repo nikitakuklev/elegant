@@ -52,6 +52,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
+    "FTABLE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -455,6 +456,7 @@ PARAMETER ecol_param[N_ECOL_PARAMS] = {
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dy), NULL, 0.0, 0, "misalignment"},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&ecol_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
     {"EXPONENT", "", IS_LONG, 0, (long)((char *)&ecol_example.exponent), NULL, 0.0, 2, "Exponent for boundary equation.  2 is ellipse."},
+    {"YEXPONENT", "", IS_LONG, 0, (long)((char *)&ecol_example.yExponent), NULL, 0.0, 0, "y exponent for boundary equation.  2 is ellipse.  If 0, defaults to EXPONENT"},
     } ;
 
 CLEAN clean_example;
@@ -761,6 +763,7 @@ PARAMETER maxamp_param[N_MAXAMP_PARAMS] = {
     {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&maxamp_example.y_max), NULL, 0.0, 0, "y half-aperture"},
     {"ELLIPTICAL", "", IS_LONG, 0, (long)((char *)&maxamp_example.elliptical), NULL, 0.0, 0, "is aperture elliptical?"},
     {"EXPONENT", "", IS_LONG, 0, (long)((char *)&maxamp_example.exponent), NULL, 0.0, 2, "exponent for boundary equation in elliptical mode.  2 is a true ellipse."},
+    {"YEXPONENT", "", IS_LONG, 0, (long)((char *)&maxamp_example.yExponent), NULL, 0.0, 0, "y exponent for boundary equation in elliptical mode.  If zero, defaults to EXPONENT."},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&maxamp_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
     } ;
 
@@ -2181,6 +2184,18 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"ISR", "", IS_LONG, 0, (long)((char *)&ukickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     };
 
+FTABLE ftable_example;
+
+/* field table physical parameters */
+PARAMETER ftable_param[N_FTABLE_PARAMS] = {
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with field table."},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
+    {"VERBOSE", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "used for debugging code."},
+    };
 
 /* emittance scaling element physical parameters */
 
@@ -2317,6 +2332,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_MKICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(MKICKER),    mkicker_param   },
     {  N_EMITTANCEELEMENT_PARAMS,  0,    sizeof(EMITTANCEELEMENT),    emittanceElement_param   },
     { N_MHISTOGRAM_PARAMS, UNIPROCESSOR, sizeof(MHISTOGRAM), mhistogram_param},
+    { N_FTABLE_PARAMS, UNIPROCESSOR, sizeof(FTABLE), ftable_param},
 } ;
 
 void compute_offsets()
