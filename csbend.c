@@ -2122,7 +2122,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   static char *wavelengthMode[3] = {"sigmaz", "bunchlength", "peak-to-peak"};
   static char *bunchlengthMode[3] = {"rms", "68-percentile", "90-percentile"};
   unsigned long mode;
-  static long warned = 0;
+  static long warned = 0, incrementWarningsLeft=100;
   long nBins1;
   TRACKING_CONTEXT tContext;
 #if USE_MPI 
@@ -2168,7 +2168,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
           (csrDrift->attenuationLength>0?CSRDRIFT_ATTENUATIONLENGTH:0) +
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
   while (zStart<csrWake.zLast) {
-    /* fprintf(stdout, "Note: incrementing zStart by revolution length for CSRDRIFT.\n"); */
+    if (incrementWarningsLeft) {
+      fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT.\n");
+      fprintf(stdout, "    If you are not simulating a ring, this could be a problem!\n");
+      incrementWarningsLeft --;
+    }
     zStart += revolutionLength;
   }
   if (bitsSet(mode)>1) {
