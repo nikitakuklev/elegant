@@ -2169,7 +2169,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
   while (zStart<csrWake.zLast) {
     if (incrementWarningsLeft) {
-      fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT.\n");
+      fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
+              tContext.elementName, tContext.elementOccurrence);
       fprintf(stdout, "    If you are not simulating a ring, this could be a problem!\n");
       incrementWarningsLeft --;
     }
