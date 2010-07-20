@@ -119,7 +119,7 @@ void do_genetic_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIS
   } 
 #endif
   optimization_data->n_iterations = n_iterations;
-  optimization_data->maxNoChange = maxNoChange;
+  optimization_data->max_no_change = max_no_change;
   optimization_data->population_size = population_size;
   optimization_data->print_all_individuals = print_all_individuals;
   if (population_log && strlen(population_log)) {
@@ -913,7 +913,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 					variables->lower_limit, variables->upper_limit, variables->step,
 					variables->n_variables, optimization_data->target, 
 					optimization_function, optimization_data->n_iterations,
-					optimization_data->maxNoChange,
+					optimization_data->max_no_change,
 					optimization_data->population_size, output_sparsing_factor,
 					optimization_data->print_all_individuals, population_log,
 					optimization_data->verbose, variables);

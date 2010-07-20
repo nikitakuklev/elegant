@@ -525,7 +525,7 @@ typedef struct {
     long includeSimplex1dScans, startFromSimplexVertex1;
     /* For genetic optimization only */
     long n_iterations;            /* The maximal number of iterations allowed */
-    long maxNoChange;             /* The number of iterations to stop when no change in the best solution found */
+    long max_no_change;           /* The number of iterations to stop when no change in the best solution found */
     long population_size;
     long print_all_individuals;
     } OPTIMIZATION_DATA;
