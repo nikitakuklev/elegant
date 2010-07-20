@@ -85,6 +85,26 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         R[3][2] = k*sinh_kl;
         
         if (M->order>=2) {
+          double k2,k3,k4,l2,l3,l4,cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
+          k2 = pow(k,2) ;
+          k3 = pow(k,3) ;
+          k4 = pow(k,4) ;
+          l2 = pow(lHC,2) ;
+          l3 = pow(lHC,3) ;
+          l4 = pow(lHC,4) ;
+          cos_kl = cos(k*lHC) ;
+          cos_2kl = cos(2*k*lHC) ;
+          cos_3kl = cos(3*k*lHC) ;
+          sin_kl = sin(k*lHC) ;
+          sin_2kl = sin(2*k*lHC) ;
+          sin_3kl = sin(3*k*lHC) ;
+          cosh_kl = cosh(k*lHC) ;
+          cosh_2kl = cosh(2*k*lHC) ;
+          cosh_3kl = cosh(3*k*lHC) ;
+          sinh_kl = sinh(k*lHC) ;
+          sinh_2kl = sinh(2*k*lHC) ;
+          sinh_3kl = sinh(3*k*lHC) ;
+
           T = M->T;
           T[0][5][0] = T[1][5][1] = kl*sin_kl/2;
           T[0][5][1] = sin_kl/(2*k) - lHC*cos_kl/2;
@@ -99,16 +119,45 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           T[4][2][2] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
           T[4][3][2] = sqr(sinh_kl)/2;
           T[4][3][3] = (lHC + sinh_kl/k*cosh_kl)/4;
+          
           if (M->order>=3) {
             U = M->Q;
-            U[0][5][5][0] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
-            U[0][5][5][1] = -k*pow(lHC,2)*sin_kl/8.0-pow(k,-1)*sin_kl/8.0+lHC*cos_kl/8.0 ;
-            U[1][5][5][0] = pow(k,3)*pow(lHC,2)*sin_kl/8.0+(-3.0)*k*sin_kl/8.0+(-5.0)*pow(k,2)*lHC*cos_kl/8.0 ;
-            U[1][5][5][1] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
-            U[2][5][5][2] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
-            U[2][5][5][3] = k*pow(lHC,2)*sinh_kl/8.0-pow(k,-1)*sinh_kl/8.0+lHC*cosh_kl/8.0 ;
-            U[3][5][5][2] = pow(k,3)*pow(lHC,2)*sinh_kl/8.0+3.0*k*sinh_kl/8.0+5.0*pow(k,2)*lHC*cosh_kl/8.0 ;
-            U[3][5][5][3] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
+            U[0][0][0][0] = (-3*k3*lHC*sin_kl)/16. + (3*k2*sin_kl*sin_2kl)/32. ;
+            U[0][1][0][0] = (-3*k2*lHC*cos_kl)/16. + (21*k*sin_kl)/64. - (3*k*sin_3kl)/64. ;
+            U[0][1][1][0] = (-9*k*lHC*sin_kl)/16. - (3*sin_kl*sin_2kl)/32. ;
+            U[0][1][1][1] = (3*lHC*cos_kl)/16. - (21*sin_kl)/(64.*k) + (3*sin_3kl)/(64.*k) ;
+            U[0][2][2][0] = (k3*lHC*sin_kl)/8. + (k2*cos_kl*pow(sinh_kl,2))/16. - (3*k2*sin_kl*sinh_2kl)/32. ;
+            U[0][2][2][1] = -(k2*lHC*cos_kl)/8. - (3*k*sin_kl)/32. + (k*cosh_2kl*sin_kl)/32. + (3*k*cos_kl*sinh_2kl)/32. ;
+            U[0][3][2][0] = -(k2*lHC*cos_kl)/4. + (9*k*sin_kl)/32. - (3*k*cosh_2kl*sin_kl)/32. + (k*cos_kl*sinh_2kl)/32. ;
+            U[0][3][2][1] = -(k*lHC*sin_kl)/4. + (3*cos_kl*pow(sinh_kl,2))/16. + (sin_kl*sinh_2kl)/32. ;
+            U[0][3][3][0] = -(k*lHC*sin_kl)/8. + (cos_kl*pow(sinh_kl,2))/16. - (3*sin_kl*sinh_2kl)/32. ;
+            U[0][3][3][1] = (lHC*cos_kl)/8. - (11*sin_kl)/(32.*k) + (cosh_2kl*sin_kl)/(32.*k) + (3*cos_kl*sinh_2kl)/(32.*k) ;
+            U[0][5][5][0] = -(k2*l2*cos_kl)/8. - (3*k*lHC*sin_kl)/8. ;
+            U[0][5][5][1] = (lHC*cos_kl)/8. - sin_kl/(8.*k) - (k*l2*sin_kl)/8. ;
+            U[1][0][0][0] = (-3*k4*lHC*cos_kl)/16. - (3*k3*sin_kl)/16. + (3*k3*cos_2kl*sin_kl)/16. + (3*k3*cos_kl*sin_2kl)/32. ;
+            U[1][1][0][0] = (9*k2*cos_kl)/64. - (9*k2*cos_3kl)/64. + (3*k3*lHC*sin_kl)/16. ;
+            U[1][1][1][0] = (-9*k2*lHC*cos_kl)/16. - (9*k*sin_kl)/16. - (3*k*cos_2kl*sin_kl)/16. - (3*k*cos_kl*sin_2kl)/32. ;
+            U[1][1][1][1] = (-9*cos_kl)/64. + (9*cos_3kl)/64. - (3*k*lHC*sin_kl)/16. ;
+            U[1][2][2][0] = (k4*lHC*cos_kl)/8. + (k3*sin_kl)/8. - (3*k3*cosh_2kl*sin_kl)/16. + (k3*cos_kl*cosh_kl*sinh_kl)/8. - (k3*sin_kl*pow(sinh_kl,2))/16. - (3*k3*cos_kl*sinh_2kl)/32. ;
+            U[1][2][2][1] = (-7*k2*cos_kl)/32. + (7*k2*cos_kl*cosh_2kl)/32. + (k3*lHC*sin_kl)/8. - (k2*sin_kl*sinh_2kl)/32. ;
+            U[1][3][2][0] = (k2*cos_kl)/32. - (k2*cos_kl*cosh_2kl)/32. + (k3*lHC*sin_kl)/4. - (7*k2*sin_kl*sinh_2kl)/32. ;
+            U[1][3][2][1] = -(k2*lHC*cos_kl)/4. - (k*sin_kl)/4. + (k*cosh_2kl*sin_kl)/16. + (3*k*cos_kl*cosh_kl*sinh_kl)/8. - (3*k*sin_kl*pow(sinh_kl,2))/16. + (k*cos_kl*sinh_2kl)/32. ;
+            U[1][3][3][0] = -(k2*lHC*cos_kl)/8. - (k*sin_kl)/8. - (3*k*cosh_2kl*sin_kl)/16. + (k*cos_kl*cosh_kl*sinh_kl)/8. - (k*sin_kl*pow(sinh_kl,2))/16. - (3*k*cos_kl*sinh_2kl)/32. ;
+            U[1][3][3][1] = (-7*cos_kl)/32. + (7*cos_kl*cosh_2kl)/32. - (k*lHC*sin_kl)/8. - (sin_kl*sinh_2kl)/32. ;
+            U[1][5][5][0] = (-5*k2*lHC*cos_kl)/8. - (3*k*sin_kl)/8. + (k3*l2*sin_kl)/8. ;
+            U[1][5][5][1] = -(k2*l2*cos_kl)/8. - (3*k*lHC*sin_kl)/8. ;
+            U[2][2][2][2] = (-3*k3*lHC*sinh_kl)/16. + (3*k2*sinh_kl*sinh_2kl)/32. ;
+            U[2][3][2][2] = (3*k2*lHC*cosh_kl)/16. - (21*k*sinh_kl)/64. + (3*k*sinh_3kl)/64. ;
+            U[2][3][3][2] = (9*k*lHC*sinh_kl)/16. + (3*sinh_kl*sinh_2kl)/32. ;
+            U[2][3][3][3] = (3*lHC*cosh_kl)/16. - (21*sinh_kl)/(64.*k) + (3*sinh_3kl)/(64.*k) ;
+            U[2][5][5][2] = (k2*l2*cosh_kl)/8. + (3*k*lHC*sinh_kl)/8. ;
+            U[2][5][5][3] = (lHC*cosh_kl)/8. - sinh_kl/(8.*k) + (k*l2*sinh_kl)/8. ;
+            U[3][2][2][2] = (-3*k4*lHC*cosh_kl)/16. - (3*k3*sinh_kl)/16. + (3*k3*cosh_2kl*sinh_kl)/16. + (3*k3*cosh_kl*sinh_2kl)/32. ;
+            U[3][3][2][2] = (-9*k2*cosh_kl)/64. + (9*k2*cosh_3kl)/64. + (3*k3*lHC*sinh_kl)/16. ;
+            U[3][3][3][2] = (9*k2*lHC*cosh_kl)/16. + (9*k*sinh_kl)/16. + (3*k*cosh_2kl*sinh_kl)/16. + (3*k*cosh_kl*sinh_2kl)/32. ;
+            U[3][3][3][3] = (-9*cosh_kl)/64. + (9*cosh_3kl)/64. + (3*k*lHC*sinh_kl)/16. ;
+            U[3][5][5][2] = (5*k2*lHC*cosh_kl)/8. + (3*k*sinh_kl)/8. + (k3*l2*sinh_kl)/8. ;
+            U[3][5][5][3] = (k2*l2*cosh_kl)/8. + (3*k*lHC*sinh_kl)/8.  ;
           }
         }
       } else {
@@ -121,6 +170,26 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         R[1][0] = k*sinh_kl;
         
         if (M->order>=2) {
+          double k2,k3,k4,l2,l3,l4,cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
+          k2 = pow(k,2) ;
+          k3 = pow(k,3) ;
+          k4 = pow(k,4) ;
+          l2 = pow(lHC,2) ;
+          l3 = pow(lHC,3) ;
+          l4 = pow(lHC,4) ;
+          cos_kl = cos(k*lHC) ;
+          cos_2kl = cos(2*k*lHC) ;
+          cos_3kl = cos(3*k*lHC) ;
+          sin_kl = sin(k*lHC) ;
+          sin_2kl = sin(2*k*lHC) ;
+          sin_3kl = sin(3*k*lHC) ;
+          cosh_kl = cosh(k*lHC) ;
+          cosh_2kl = cosh(2*k*lHC) ;
+          cosh_3kl = cosh(3*k*lHC) ;
+          sinh_kl = sinh(k*lHC) ;
+          sinh_2kl = sinh(2*k*lHC) ;
+          sinh_3kl = sinh(3*k*lHC) ;
+
           T = M->T;
           T[2][5][2] = T[3][5][3] = kl*sin_kl/2;
           T[2][5][3] = sin_kl/(2*k) - lHC*cos_kl/2;
@@ -134,16 +203,45 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           T[4][2][2] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
           T[4][3][2] = -sqr(sin_kl)/2;
           T[4][3][3] = (lHC + sin_kl/k*cos_kl)/4;
+
           if (M->order>=3) {
             U = M->Q;
-            U[0][5][5][0] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
-            U[0][5][5][1] = k*pow(lHC,2)*sinh_kl/8.0-pow(k,-1)*sinh_kl/8.0+lHC*cosh_kl/8.0 ;
-            U[1][5][5][0] = pow(k,3)*pow(lHC,2)*sinh_kl/8.0+3.0*k*sinh_kl/8.0+5.0*pow(k,2)*lHC*cosh_kl/8.0 ;
-            U[1][5][5][1] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
-            U[2][5][5][2] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
-            U[2][5][5][3] = -k*pow(lHC,2)*sin_kl/8.0-pow(k,-1)*sin_kl/8.0+lHC*cos_kl/8.0 ;
-            U[3][5][5][2] = pow(k,3)*pow(lHC,2)*sin_kl/8.0+(-3.0)*k*sin_kl/8.0+(-5.0)*pow(k,2)*lHC*cos_kl/8.0 ;
-            U[3][5][5][3] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
+            U[0][0][0][0] = (-3*k3*lHC*sinh_kl)/16. + (3*k2*sinh_kl*sinh_2kl)/32. ;
+            U[0][1][0][0] = (3*k2*lHC*cosh_kl)/16. - (21*k*sinh_kl)/64. + (3*k*sinh_3kl)/64. ;
+            U[0][1][1][0] = (9*k*lHC*sinh_kl)/16. + (3*sinh_kl*sinh_2kl)/32. ;
+            U[0][1][1][1] = (3*lHC*cosh_kl)/16. - (21*sinh_kl)/(64.*k) + (3*sinh_3kl)/(64.*k) ;
+            U[0][2][2][0] = (k2*cosh_kl*pow(sin_kl,2))/16. + (k3*lHC*sinh_kl)/8. - (3*k2*sin_2kl*sinh_kl)/32. ;
+            U[0][2][2][1] = (k2*lHC*cosh_kl)/8. - (3*k*cosh_kl*sin_2kl)/32. + (3*k*sinh_kl)/32. - (k*cos_2kl*sinh_kl)/32. ;
+            U[0][3][2][0] = (k2*lHC*cosh_kl)/4. - (k*cosh_kl*sin_2kl)/32. - (9*k*sinh_kl)/32. + (3*k*cos_2kl*sinh_kl)/32. ;
+            U[0][3][2][1] = (-3*cosh_kl)/32. + (3*cos_2kl*cosh_kl)/32. + (k*lHC*sinh_kl)/4. - (sin_2kl*sinh_kl)/32. ;
+            U[0][3][3][0] = -(cosh_kl*pow(sin_kl,2))/16. + (k*lHC*sinh_kl)/8. + (3*sin_2kl*sinh_kl)/32. ;
+            U[0][3][3][1] = (lHC*cosh_kl)/8. + (3*cosh_kl*sin_2kl)/(32.*k) - (11*sinh_kl)/(32.*k) + (cos_2kl*sinh_kl)/(32.*k) ;
+            U[0][5][5][0] = (k2*l2*cosh_kl)/8. + (3*k*lHC*sinh_kl)/8. ;
+            U[0][5][5][1] = (lHC*cosh_kl)/8. - sinh_kl/(8.*k) + (k*l2*sinh_kl)/8. ;
+            U[1][0][0][0] = (-3*k4*lHC*cosh_kl)/16. - (3*k3*sinh_kl)/16. + (3*k3*cosh_2kl*sinh_kl)/16. + (3*k3*cosh_kl*sinh_2kl)/32. ;
+            U[1][1][0][0] = (-9*k2*cosh_kl)/64. + (9*k2*cosh_3kl)/64. + (3*k3*lHC*sinh_kl)/16. ;
+            U[1][1][1][0] = (9*k2*lHC*cosh_kl)/16. + (9*k*sinh_kl)/16. + (3*k*cosh_2kl*sinh_kl)/16. + (3*k*cosh_kl*sinh_2kl)/32. ;
+            U[1][1][1][1] = (-9*cosh_kl)/64. + (9*cosh_3kl)/64. + (3*k*lHC*sinh_kl)/16. ;
+            U[1][2][2][0] = (k4*lHC*cosh_kl)/8. + (k3*cos_kl*cosh_kl*sin_kl)/8. - (3*k3*cosh_kl*sin_2kl)/32. + (k3*sinh_kl)/8. - (3*k3*cos_2kl*sinh_kl)/16. + (k3*pow(sin_kl,2)*sinh_kl)/16. ;
+            U[1][2][2][1] = (7*k2*cosh_kl)/32. - (7*k2*cos_2kl*cosh_kl)/32. + (k3*lHC*sinh_kl)/8. - (k2*sin_2kl*sinh_kl)/32. ;
+            U[1][3][2][0] = -(k2*cosh_kl)/32. + (k2*cos_2kl*cosh_kl)/32. + (k3*lHC*sinh_kl)/4. - (7*k2*sin_2kl*sinh_kl)/32. ;
+            U[1][3][2][1] = (k2*lHC*cosh_kl)/4. - (7*k*cosh_kl*sin_2kl)/32. + (5*k*sinh_kl)/32. + (k*cos_2kl*sinh_kl)/32. ;
+            U[1][3][3][0] = (k2*lHC*cosh_kl)/8. - (k*cos_kl*cosh_kl*sin_kl)/8. + (3*k*cosh_kl*sin_2kl)/32. + (k*sinh_kl)/8. + (3*k*cos_2kl*sinh_kl)/16. - (k*pow(sin_kl,2)*sinh_kl)/16. ;
+            U[1][3][3][1] = (-7*cosh_kl)/32. + (7*cos_2kl*cosh_kl)/32. + (k*lHC*sinh_kl)/8. + (sin_2kl*sinh_kl)/32. ;
+            U[1][5][5][0] = (5*k2*lHC*cosh_kl)/8. + (3*k*sinh_kl)/8. + (k3*l2*sinh_kl)/8. ;
+            U[1][5][5][1] = (k2*l2*cosh_kl)/8. + (3*k*lHC*sinh_kl)/8. ;
+            U[2][2][2][2] = (-3*k3*lHC*sin_kl)/16. + (3*k2*sin_kl*sin_2kl)/32. ;
+            U[2][3][2][2] = (-3*k2*lHC*cos_kl)/16. + (21*k*sin_kl)/64. - (3*k*sin_3kl)/64. ;
+            U[2][3][3][2] = (-9*k*lHC*sin_kl)/16. - (3*sin_kl*sin_2kl)/32. ;
+            U[2][3][3][3] = (3*lHC*cos_kl)/16. - (21*sin_kl)/(64.*k) + (3*sin_3kl)/(64.*k) ;
+            U[2][5][5][2] = -(k2*l2*cos_kl)/8. - (3*k*lHC*sin_kl)/8. ;
+            U[2][5][5][3] = (lHC*cos_kl)/8. - sin_kl/(8.*k) - (k*l2*sin_kl)/8. ;
+            U[3][2][2][2] = (-3*k4*lHC*cos_kl)/16. - (3*k3*sin_kl)/16. + (3*k3*cos_2kl*sin_kl)/16. + (3*k3*cos_kl*sin_2kl)/32. ;
+            U[3][3][2][2] = (9*k2*cos_kl)/64. - (9*k2*cos_3kl)/64. + (3*k3*lHC*sin_kl)/16. ;
+            U[3][3][3][2] = (-9*k2*lHC*cos_kl)/16. - (9*k*sin_kl)/16. - (3*k*cos_2kl*sin_kl)/16. - (3*k*cos_kl*sin_2kl)/32. ;
+            U[3][3][3][3] = (-9*cos_kl)/64. + (9*cos_3kl)/64. - (3*k*lHC*sin_kl)/16. ;
+            U[3][5][5][2] = (-5*k2*lHC*cos_kl)/8. - (3*k*sin_kl)/8. + (k3*l2*sin_kl)/8. ;
+            U[3][5][5][3] = -(k2*l2*cos_kl)/8. - (3*k*lHC*sin_kl)/8.  ;
           }
         }
       }
