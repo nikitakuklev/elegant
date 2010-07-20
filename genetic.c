@@ -245,9 +245,11 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
 
     if (print_all) {
       for(j=0; j<pop_size; j++) {
+	if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, 0, PGAGetEvaluation (ctx, j, PGA_OLDPOP), -1))
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	string = (double*) PGAGetIndividual(ctx, j, PGA_OLDPOP)->chrom;
 	for(i=0; i<dimensions; i++) {
-	  if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, i, string[i], -1))
+	  if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, i+1, string[i], -1))
 	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	}
       }
@@ -273,12 +275,12 @@ void N_EndOfGen(PGAContext *ctx) {
 	}
       }
     }
-    /* If the best value is unchanged for 3000 iterations, the step size will be reduced */
-    if((ctx->ga.ItersOfSame % 3000 == 0) && (!current_iter)) {
+    /* If the best value is unchanged for 300 iterations, the step size will be reduced */
+    if((ctx->ga.ItersOfSame % 300 == 0) && (!current_iter)) {
       PGASetMutationRealValue(ctx, 0.618*PGAGetMutationRealValue(ctx));
       last_reduced_iter = PGAGetGAIterValue(ctx);
     }
-    if(((current_iter-last_reduced_iter)%3000 == 0) && !current_iter) {
+    if(((current_iter-last_reduced_iter)%300 == 0) && !current_iter) {
       PGASetMutationRealValue(ctx, PGAGetMutationRealValue(ctx)/0.618);
     }
 #if MPI_DEBUG
@@ -301,6 +303,7 @@ void SDDS_PopulationSetup(char *population_log, OPTIM_VARIABLES *optim) {
 	  !SDDS_DefineSimpleParameter(&popLog, "OptimizationValue", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameters(&popLog, optim->n_variables, optim->varied_quan_name, 
 				    optim->varied_quan_unit, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&popLog, "OptimizationValue", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumns(&popLog, optim->n_variables, optim->varied_quan_name, 
 				    optim->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_WriteLayout(&popLog)) {
