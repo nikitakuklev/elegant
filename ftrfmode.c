@@ -196,12 +196,13 @@ void track_through_ftrfmode(
         if (i>1)
 	  offset += nonEmptyArray[i-1];
 	MPI_Recv (&subHis[offset], nonEmptyArray[i]*sizeof(*subHis), MPI_BYTE, i, 108, MPI_COMM_WORLD, &status); 
-	for (j=offset; j<nonEmptyArray[i]; j++)
+	for (j=offset; j<nonEmptyArray[i]+offset; j++) {
           #define current subHis[j]
           map_j = current.index;
           count[map_j] += current.count;
           xsum[map_j] += current.xsum;
 	  ysum[map_j] += current.ysum; 
+	}
       }
 #ifdef  USE_MPE
       MPE_Log_event(event1a, 0, "start initialize");
@@ -260,10 +261,10 @@ void track_through_ftrfmode(
 	  ib = i;
 	  t = tmin+(subHis[i].index+0.5)*dt;           /* middle arrival time for this bin */
 #else
-    for (ib=0; ib<=lastBin; ib++) {
-      if (!count[ib] || (!xsum[ib] && !ysum[ib]))
-	continue;
-      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+	for (ib=0; ib<=lastBin; ib++) {
+	  if (!count[ib] || (!xsum[ib] && !ysum[ib]))
+	    continue;
+	  t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
 #endif
       if (t<trfmode->last_t) {
         trfmode->last_t = t;
@@ -463,6 +464,9 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   
   if (rfmode->initialized)
     return;
+#if SDDS_MPI_IO
+  if (isSlave)
+#endif
   if (n_particles<1)
     bombElegant("too few particles in set_up_ftrfmode()", NULL);
   if (rfmode->n_bins<2)
