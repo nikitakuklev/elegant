@@ -29,7 +29,7 @@
         STRING output = NULL;
         long nbins = 100;
         long n_simulated = 5E6;
-        double ignored_portion = 0.05;
+        double ignored_portion = 0.01;
         long i_start = 0;
         long i_end = 1;
         long do_track = 0;
