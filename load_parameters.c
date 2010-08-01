@@ -454,9 +454,18 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       lastMissingOccurence = 0;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
         if (missingParameterWarningsLeft || !allow_missing_parameters) {
+#if !USE_MPI
           fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
                   allow_missing_parameters?"Warning":"Error",
                   eptr->name, parameter[j]);
+#else
+	  if (allow_missing_parameters)
+	    fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
+		    "Warning", eptr->name, parameter[j]);
+	  else
+	    fprintf(stderr, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
+		    "Error", eptr->name, parameter[j]);
+#endif
           if (allow_missing_parameters && --missingParameterWarningsLeft==0)
             fprintf(stdout, "Further missing parameters warnings suppressed\n");
           fflush(stdout);
