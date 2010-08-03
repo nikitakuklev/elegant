@@ -391,50 +391,55 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           (elem->pred && elem->pred->Pref_output!=elem->Pref_input) ||
           elem->type==T_TWISSELEMENT) {
         if (elem->type==T_TWISSELEMENT) {
-          if (!((TWISSELEMENT*)elem->p_elem)->computeOnce || !((TWISSELEMENT*)elem->p_elem)->transformComputed) {
-            TWISS twissInput;
-            twissInput.betax = beta[0];
-            twissInput.betay = beta[1];
-            twissInput.alphax = alpha[0];
-            twissInput.alphay = alpha[1];
-            twissInput.etax   = eta[0];
-            twissInput.etapx  = etap[0];
-            twissInput.etay   = eta[1];
-            twissInput.etapy  = etap[1];
-            if (elem->matrix) {
-              free_matrices(elem->matrix);
-              free(elem->matrix);
-            }
-            if (((TWISSELEMENT*)elem->p_elem)->verbose) {
-              printf((char*)"Computing twiss transformation matrix for %s at z=%e m from lattice twiss parameters\n", elem->name, elem->end_pos);
-              printf((char*)"  * Initial twiss parameters:\n");
-              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
-                     twissInput.betax, twissInput.alphax, twissInput.etax, twissInput.etapx);
-              printf((char*)"  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
-                     twissInput.betay, twissInput.alphay, twissInput.etay, twissInput.etapy);
-              printf((char*)"  * Final twiss parameters:\n");
-              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.betax,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.alphax,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.etax,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.etapx);
-              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.betay,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.alphay,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.etay,
-                     ((TWISSELEMENT*)elem->p_elem)->twiss.etapy);
-            }
-            elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem,
-                                                &twissInput);
-            if (((TWISSELEMENT*)elem->p_elem)->fromBeam) 
-              /* If user wants the transform from the beam, we don't regard the transform as having
-               * been computed in final form.  Hence, we set this flag to zero.  This allows twiss and moments
-               * computations to be done with a possibly valid matrix prior to tracking
-               */
-              ((TWISSELEMENT*)elem->p_elem)->transformComputed = 0;
-            else 
-              ((TWISSELEMENT*)elem->p_elem)->transformComputed = 1;
-          }
+	  if (((TWISSELEMENT*)elem->p_elem)->disable) {
+	      if (!elem->matrix)
+		elem->matrix = drift_matrix(0.0, 1);
+	  } else {
+	    if (!((TWISSELEMENT*)elem->p_elem)->computeOnce || !((TWISSELEMENT*)elem->p_elem)->transformComputed) {
+	      TWISS twissInput;
+	      twissInput.betax = beta[0];
+	      twissInput.betay = beta[1];
+	      twissInput.alphax = alpha[0];
+	      twissInput.alphay = alpha[1];
+	      twissInput.etax   = eta[0];
+	      twissInput.etapx  = etap[0];
+	      twissInput.etay   = eta[1];
+	      twissInput.etapy  = etap[1];
+	      if (elem->matrix) {
+		free_matrices(elem->matrix);
+		free(elem->matrix);
+	      }
+	      if (((TWISSELEMENT*)elem->p_elem)->verbose) {
+		printf((char*)"Computing twiss transformation matrix for %s at z=%e m from lattice twiss parameters\n", elem->name, elem->end_pos);
+		printf((char*)"  * Initial twiss parameters:\n");
+		printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+		       twissInput.betax, twissInput.alphax, twissInput.etax, twissInput.etapx);
+		printf((char*)"  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
+		       twissInput.betay, twissInput.alphay, twissInput.etay, twissInput.etapy);
+		printf((char*)"  * Final twiss parameters:\n");
+		printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.betax,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.alphax,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.etax,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.etapx);
+		printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.betay,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.alphay,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.etay,
+		       ((TWISSELEMENT*)elem->p_elem)->twiss.etapy);
+	      }
+	      elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem,
+						  &twissInput);
+	      if (((TWISSELEMENT*)elem->p_elem)->fromBeam) 
+		/* If user wants the transform from the beam, we don't regard the transform as having
+		 * been computed in final form.  Hence, we set this flag to zero.  This allows twiss and moments
+		 * computations to be done with a possibly valid matrix prior to tracking
+		 */
+		((TWISSELEMENT*)elem->p_elem)->transformComputed = 0;
+	      else 
+		((TWISSELEMENT*)elem->p_elem)->transformComputed = 1;
+	    }
+	  }
         } else {
           if (elem->matrix) {
             free_matrices(elem->matrix);

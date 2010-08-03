@@ -1050,7 +1050,10 @@ VMATRIX *compute_matrix(
         elem->matrix = drift_matrix(edrift->length, run->default_order);
         break;
       case T_TWISSELEMENT:
-        elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);
+	if (((TWISSELEMENT*)elem->p_elem)->disable) 
+	  elem->matrix = drift_matrix(0.0, 1);
+	else 
+	  elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);
         break;
       case T_REFLECT:
         elem->matrix = tmalloc(sizeof(*(elem->matrix)));

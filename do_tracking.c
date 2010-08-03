@@ -1435,6 +1435,8 @@ long do_tracking(
                                             last_z);
               break;
             case T_TWISSELEMENT:
+	      if (((TWISSELEMENT*)eptr->p_elem)->disable)
+		break;
               if ( ((TWISSELEMENT*)eptr->p_elem)->applyOnce==0 || i_pass==passOffset) {
                 /* If applying once, do so on the first pass through only */
                 if ( ((TWISSELEMENT*)eptr->p_elem)->fromBeam ) {
@@ -3815,7 +3817,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
   double emit, emitc, factor, pAverage, eta, etap;
   long i, j;
   BEAM_SUMS sums;
-  
+
 #if SDDS_MPI_IO
   long npTotal;
   MPI_Reduce (&np, &npTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);

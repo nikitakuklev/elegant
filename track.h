@@ -863,7 +863,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFCW_PARAMS 38
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
-#define N_TWISSELEMENT_PARAMS 12
+#define N_TWISSELEMENT_PARAMS 13
 #define N_WIGGLER_PARAMS 8
 #define N_SCRIPT_PARAMS 32
 #define N_FLOORELEMENT_PARAMS 6
@@ -1169,6 +1169,7 @@ typedef struct {
 typedef struct {
   TWISS twiss;
   long fromBeam, computeOnce, applyOnce, verbose;
+  long disable;
   /* internal variables */
   long transformComputed;
 } TWISSELEMENT;
