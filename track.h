@@ -794,8 +794,8 @@ extern char *entity_text[N_TYPES];
 #define N_OCTU_PARAMS 0
 #define N_MULT_PARAMS 12
 #define N_SOLE_PARAMS 7
-#define N_HCOR_PARAMS 8
-#define N_VCOR_PARAMS 8
+#define N_HCOR_PARAMS 11
+#define N_VCOR_PARAMS 11
 #define N_RFCA_PARAMS 17
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 9
@@ -830,7 +830,7 @@ extern char *entity_text[N_TYPES];
 #define N_KQUAD_PARAMS 24
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
-#define N_HVCOR_PARAMS 10
+#define N_HVCOR_PARAMS 13
 #define N_SCATTER_PARAMS 6
 #define N_NIBEND_PARAMS 22
 #define N_KPOLY_PARAMS 8
@@ -1056,14 +1056,19 @@ extern PARAMETER hcor_param[N_HCOR_PARAMS] ;
 typedef struct {
     double length, kick, tilt, b2, calibration;
     long edge_effects, order, steering;
+    long synchRad, isr;
+    double lEffRad;
     } HCOR;
+
 
 /* names and storage structure for vertical corrector physical parameters */
 extern PARAMETER vcor_param[N_VCOR_PARAMS] ;
-   
+
 typedef struct {
     double length, kick, tilt, b2, calibration;
     long edge_effects, order, steering;
+    long synchRad, isr;
+    double lEffRad;
     } VCOR;
 
 /* names and storage structure for RF cavity physical parameters */
@@ -1712,6 +1717,8 @@ extern PARAMETER hvcor_param[N_HVCOR_PARAMS] ;
 typedef struct {
     double length, xkick, ykick, tilt, b2, xcalibration, ycalibration;
     long edge_effects, order, steering;
+    long synchRad, isr;
+    double lEffRad;
     } HVCOR;
 
 /* names and storage structure for explicit matrix input from a file */
@@ -2567,7 +2574,8 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 
 #define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND)
 #define IS_RADIATOR(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_CSRCSBEND || \
-                           (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || (type)==T_WIGGLER || (type)==T_CWIGGLER)
+                           (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || (type)==T_WIGGLER || (type)==T_CWIGGLER || \
+			   (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -3297,6 +3305,8 @@ VMATRIX *srEffectsMatrix(SREFFECTS *SReffects);
 void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
                ELEMENT_LIST *element, CHARGE *charge, long i_pass, long n_passes, RUN *run);
 
+void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long type, double Po, double *sigmaDelta2, 
+			       long disableISR);
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start, double z_end, CHARGE *charge, char *rootname);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,

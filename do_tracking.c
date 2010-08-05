@@ -1507,6 +1507,36 @@ long do_tracking(
             case T_EMITTANCE:
               transformEmittances(coord, nToTrack, *P_central, (EMITTANCEELEMENT*)eptr->p_elem);
               break;
+            case T_HCOR:
+            case T_VCOR:
+            case T_HVCOR:
+              if (!(entity_description[eptr->type].flags&HAS_MATRIX))
+		bombElegant("attempt to matrix-multiply for element with no matrix!",  NULL);
+	      if (!eptr->matrix) {
+		if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
+		  bombElegant("no matrix for element that must have matrix", NULL);
+	      }
+	      /* Only the slave CPUs will track */ 
+	      if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) 
+		track_particles(coord, eptr->matrix, coord, nToTrack);
+	      switch (type) {
+	      case T_HCOR:
+		if (((HCOR*)(eptr->p_elem))->synchRad)
+		  addCorrectorRadiationKick(coord, nToTrack, eptr, type, *P_central, NULL, 
+					    flags&(CLOSED_ORBIT_TRACKING+TEST_PARTICLES));
+		break;
+	      case T_VCOR:
+		if (((VCOR*)(eptr->p_elem))->synchRad)
+		  addCorrectorRadiationKick(coord, nToTrack, eptr, type, *P_central, NULL, 
+					    flags&(CLOSED_ORBIT_TRACKING+TEST_PARTICLES));
+		break;
+	      case T_HVCOR:
+		if (((HVCOR*)(eptr->p_elem))->synchRad)
+		  addCorrectorRadiationKick(coord, nToTrack, eptr, type, *P_central, NULL,
+					    flags&(CLOSED_ORBIT_TRACKING+TEST_PARTICLES));
+		break;
+	      }
+	      break;
 	    default:
 	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);

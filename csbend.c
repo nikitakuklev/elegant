@@ -3779,3 +3779,76 @@ double pickNormalizedPhotonEnergy(double RN)
     return ksiTable[0];
   return value;
 }
+
+void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long type, double Po, double *sigmaDelta2, long disableISR)
+{
+  double F2;
+  double kick, length;
+  double isrCoef, radCoef, dp, p, beta0, beta1, deltaFactor;
+  short isr, sr;
+  long i;
+
+  if (!np)
+    return;
+
+  isr = sr = 0;
+
+  switch (type) {
+  case T_HCOR:
+    kick = ((HCOR*)elem->p_elem)->kick;
+    if ((length = ((HCOR*)elem->p_elem)->length)==0) 
+      length = ((HCOR*)elem->p_elem)->lEffRad;
+    if (((HCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((HCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
+  case T_VCOR:
+    kick = ((VCOR*)elem->p_elem)->kick;
+    if ((length = ((VCOR*)elem->p_elem)->length)==0) 
+      length = ((VCOR*)elem->p_elem)->lEffRad;
+    if (((VCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((VCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
+  case T_HVCOR:
+    kick = sqrt(sqr(((HVCOR*)elem->p_elem)->xkick)+sqr(((HVCOR*)elem->p_elem)->ykick));
+    if ((length = ((HVCOR*)elem->p_elem)->length)==0) 
+      length = ((HVCOR*)elem->p_elem)->lEffRad;
+    if (((HVCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((HVCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
+  }
+  if (sr==0 || length==0) 
+    return ;
+  if (disableISR)
+    isr = 0;
+  radCoef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+  isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+
+  F2 = sqr(kick/length);
+  for (i=0; i<np; i++) {
+    dp = coord[i][5];
+    p = Po*(1+dp);
+    beta0 = p/sqrt(sqr(p)+1);
+    deltaFactor = sqr(1+dp);
+    dp -= radCoef*deltaFactor*F2*length;
+    if (isr)
+      dp += isrCoef*deltaFactor*pow(F2, 0.75)*sqrt(length)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    if (sigmaDelta2)
+      *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2, 1.5)*length;
+    p = Po*(1+dp);
+    beta1 = p/sqrt(sqr(p)+1);
+    coord[i][5] = dp;
+    coord[i][4] = beta1*coord[i][4]/beta0;
+  }
+  if (sigmaDelta2)
+    *sigmaDelta2 /= np;
+}
+  

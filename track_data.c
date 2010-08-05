@@ -354,6 +354,9 @@ PARAMETER hcor_param[N_HCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&hcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&hcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&hcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&hcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&hcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
 VCOR vcor_example;
@@ -367,6 +370,9 @@ PARAMETER vcor_param[N_VCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&vcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&vcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&vcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&vcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&vcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
 RFCA rfca_example;
@@ -981,6 +987,9 @@ PARAMETER hvcor_param[N_HVCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&hvcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&hvcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&hvcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&hvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&hvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
 SCATTER scatter_example;
@@ -2225,8 +2234,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_MULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(MULT),    mult_param     }, 
     {    N_SOLE_PARAMS,     MAT_LEN|IS_MAGNET|MAT_CHW_ENERGY,
            sizeof(SOLE),    sole_param     }, 
-    {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET|MATRIX_TRACKING,       sizeof(HCOR),    hcor_param     }, 
-    {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET|MATRIX_TRACKING,       sizeof(VCOR),    vcor_param     }, 
+    {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET,        sizeof(HCOR),    hcor_param     }, 
+    {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET,        sizeof(VCOR),    vcor_param     }, 
     {    N_RFCA_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM|DIVIDE_OK,       sizeof(RFCA),    rfca_param     }, 
     {                0,           0,                  0,    NULL           },
     {    N_HMON_PARAMS,     MAT_LEN_NCAT|MATRIX_TRACKING,       sizeof(HMON),    hmon_param     }, 
@@ -2266,7 +2275,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                           sizeof(KQUAD),    kquad_param    },
     { N_MAGNIFY_PARAMS, HAS_MATRIX|MATRIX_TRACKING,     sizeof(MAGNIFY),    magnify_param  },
     {  N_SAMPLE_PARAMS,          0,      sizeof(SAMPLE),    sample_param   },
-    {   N_HVCOR_PARAMS,    MAT_LEN|IS_MAGNET|MATRIX_TRACKING,       sizeof(HVCOR),    hvcor_param    }, 
+    {   N_HVCOR_PARAMS,    MAT_LEN|IS_MAGNET,        sizeof(HVCOR),    hvcor_param    }, 
     { N_SCATTER_PARAMS,          0,     sizeof(SCATTER),    scatter_param  },
     {  N_NIBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
                                          sizeof(NIBEND),    nibend_param   },
