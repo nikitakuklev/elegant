@@ -62,6 +62,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     double upper_limit = 0;
     double step_size = 1;
     long disable = 0;
+    long force_inside = 0;
 #end
 
 #namelist optimization_constraint static

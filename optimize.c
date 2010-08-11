@@ -208,12 +208,22 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
 
     variables->initial_value[n_variables] = variables->varied_quan_value[n_variables];
     if (variables->initial_value[n_variables]>upper_limit) {
-      fprintf(stdout, "Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
-      exit(1);
+      if (force_inside) {
+	fprintf(stdout, "Warning: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = upper_limit;
+      } else {
+	fprintf(stdout, "Error: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+	exit(1);
+      }
     }
     if (variables->initial_value[n_variables]<lower_limit) {
-      fprintf(stdout, "Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
-      exit(1);
+      if (force_inside) {
+	fprintf(stdout, "Warning: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
+	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = lower_limit;
+      } else {
+	fprintf(stdout, "Error: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
+	exit(1);
+      }
     }
     variables->orig_step[n_variables]     = step_size;
     variables->varied_quan_name[n_variables]  = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+3));
@@ -730,23 +740,31 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 				 variables->varied_type[i], beamline))
             bombElegant("unable to get initial value for parameter", NULL);
 	variables->initial_value[i] = variables->varied_quan_value[i];
+	if (variables->initial_value[i]>variables->upper_limit[i]) {
+	  if (force_inside) 
+	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->upper_limit[i];
+	  else {
+	    fprintf(stdout, "Initial value (%e) is greater than upper limit for %s.%s\n", 
+		    variables->initial_value[i],
+		    variables->element[i], variables->item[i]);
+	    exit(1);
+	  }
+	}
+	if (variables->initial_value[i]<variables->lower_limit[i]) {
+	  if (force_inside) 
+	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->lower_limit[i];
+	  else {
+	    fprintf(stdout, "Initial value (%e) is smaller than lower limit for %s.%s\n", 
+		    variables->initial_value[i],
+		    variables->element[i], variables->item[i]);
+	    exit(1);
+	  }
+	}
 	fprintf(stdout, "Initial value for %s.%s is %e\n", 
 		variables->element[i], variables->item[i],
 		variables->initial_value[i]);
 	rpn_store(variables->initial_value[i], NULL, variables->memory_number[i]);
-	if (variables->initial_value[i]>variables->upper_limit[i]) {
-	  fprintf(stdout, "Initial value (%e) is greater than upper limit for %s.%s\n", 
-		  variables->initial_value[i],
-		  variables->element[i], variables->item[i]);
-	  exit(1);
-	}
-	if (variables->initial_value[i]<variables->lower_limit[i]) {
-	  fprintf(stdout, "Initial value (%e) is smaller than lower limit for %s.%s\n", 
-		  variables->initial_value[i],
-		  variables->element[i], variables->item[i]);
-	  exit(1);
-	}
-        variables->step[i] = variables->orig_step[i];
+	variables->step[i] = variables->orig_step[i];
         if (variables->step[i]==0) {
 	  if (variables->lower_limit[i]==variables->upper_limit[i])
 	      fprintf(stdout, "Note: step size for %s set to %e.\n", 
