@@ -778,6 +778,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 	elem.p_elem = &hcor;
 	memcpy(&hcor, eptr->p_elem, sizeof(hcor));
 	length = (hcor.length /= nSlices);
+	hcor.lEffRad /= nSlices;
 	hcor.kick /= nSlices;
 	hcor.isr = 0;
 	break;
@@ -786,6 +787,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 	elem.p_elem = &vcor;
 	memcpy(&vcor, eptr->p_elem, sizeof(vcor));
 	length = (vcor.length /= nSlices);
+	vcor.lEffRad /= nSlices;
 	vcor.kick /= nSlices;
 	vcor.isr = 0;
 	break;
@@ -794,6 +796,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 	elem.p_elem = &hvcor;
 	memcpy(&hvcor, eptr->p_elem, sizeof(hvcor));
 	length = (hvcor.length /= nSlices);
+	hvcor.lEffRad /= nSlices;
 	hvcor.xkick /= nSlices;
 	hvcor.ykick /= nSlices;
 	hvcor.isr = 0;
