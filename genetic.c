@@ -310,7 +310,7 @@ void SDDS_PopulationSetup(char *population_log, OPTIM_VARIABLES *optim) {
 	    fprintf(stdout, "Problem setting up population output file %s\n", population_log);
 	    fflush(stdout);
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	    exit(1);
+	    exitElegant(1);
       }
     }
   }

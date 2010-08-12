@@ -58,7 +58,7 @@ void print_line(FILE *fp, LINE_LIST *lptr)
         eptr = eptr->succ;
         if (eptr==NULL && (i+1)!=lptr->n_elems) {
             fputs("line list ends prematurely", stdout);
-            exit(1);
+            exitElegant(1);
             }
         }
     log_exit("print_line");

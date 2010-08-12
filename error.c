@@ -167,12 +167,12 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     if (after && strlen(after)) {
       if (!(context=find_element(after, &context, &(beamline->elem)))) {
         fprintf(stdout, "Element %s not found in beamline.\n", after);
-        exit(1);
+        exitElegant(1);
       }
       sMin = context->end_pos;
       if (find_element(after, &context, &(beamline->elem))) {
         fprintf(stdout, "Element %s found in beamline more than once.\n", after);
-        exit(1);
+        exitElegant(1);
       }
       fprintf(stdout, "%s found at s = %le m\n", after, sMin);
       fflush(stdout);
@@ -181,12 +181,12 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     if (before && strlen(before)) {
       if (!(context=find_element(before, &context, &(beamline->elem)))) {
         fprintf(stdout, "Element %s not found in beamline.\n", before);
-        exit(1);
+        exitElegant(1);
       }
       sMax = context->end_pos;
       if (find_element(before, &context, &(beamline->elem))) {
         fprintf(stdout, "Element %s found in beamline more than once.\n", after);
-        exit(1);
+        exitElegant(1);
       }
       fprintf(stdout, "%s found at s = %le m\n", before, sMax);
       fflush(stdout);
@@ -194,7 +194,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     if (after && before && sMin>sMax) {
       fprintf(stdout, "Element %s is not upstream of %s!\n",
               before, after);
-      exit(1);
+      exitElegant(1);
     }
     if (element_type && has_wildcards(element_type) && strchr(element_type, '-'))
       element_type = expand_ranges(element_type);
@@ -263,7 +263,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
                 fprintf(stdout, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             cp_str(&errcon->quan_unit[n_items], 
                 errcon->flags[n_items]&FRACTIONAL_ERRORS?"fr":
@@ -291,7 +291,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         if (!(context=find_element(name, &context, &(beamline->elem)))) {
             fprintf(stdout, "error: cannot add errors to element %s--not in beamline\n", name);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
         errcon->item              = trealloc(errcon->item, sizeof(*errcon->item)*(n_items+1));
@@ -332,7 +332,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
             fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         cp_str(&errcon->quan_unit[n_items], 
             errcon->flags[n_items]&FRACTIONAL_ERRORS?"fr":
@@ -357,7 +357,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     if (!n_added && !allow_missing_elements) {
         fprintf(stdout, "error: no match for name %s\n", name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     log_exit("add_error_element");
     }
@@ -388,13 +388,13 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
             case IS_STRING:
             default:
                 bombElegant("unknown/invalid variable quantity", NULL);
-                exit(1);
+                exitElegant(1);
             }
         }
     fprintf(stdout, "error: unable to find value of parameter %ld for element %s of type %ld\n",
         param, pname, elem_type);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
     return(0.0);
     }
 
@@ -410,7 +410,7 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
             return(xamplitude*(random_1_elegant(0)>0.5?1.0:-1.0));
         default:
             bombElegant("unknown error type in perturbation()", NULL);
-            exit(1);
+            exitElegant(1);
             break;
         }
     return(0.0);

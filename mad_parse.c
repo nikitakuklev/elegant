@@ -75,7 +75,7 @@ void fill_line(
     if ((ptr = strchr(s, ','))==NULL) {
         fprintf(stdout, "error parsing LINE: %s\n", s);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     *ptr = 0;
     lptr->name = get_token_t(s, " ,\011");
@@ -245,7 +245,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         fflush(stdout);
         fprintf(stdout, "remainder of line is: \n%s\n", s);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
 
     eptr->name = get_token_t(s, " ,\011");
@@ -287,7 +287,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         FILE *fpm;
         if (!(filename=findFileInSearchPath(matr->filename))) {
           fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
-          exit(1);
+          exitElegant(1);
         }
         fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
         fpm = fopen_e(filename, "r", 0);
@@ -365,7 +365,7 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
         fprintf(stdout, "unable to define %s as copy of %s--source element does not exist\n",
                 name, match);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
 #ifdef DEBUG
     fprintf(stdout, "match found for %s: %s\n", name, match);
@@ -483,7 +483,7 @@ long expand_phys(
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 #endif
-  exit(1);
+  exitElegant(1);
   return(0);
 }
 
@@ -563,7 +563,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         default:
           printf("Internal error: Attempt to divide angle for element that is not supported (type=%ld)\n",
                  e1->type);
-          exit(1);
+          exitElegant(1);
           break;
         }
       }
@@ -674,7 +674,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             if (match_found) {
                 fprintf(stdout, "error: item %s is ambiguous--specify more of the item name\n", ptr);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             if (l==entity_name_length[i]) {
                 log_exit("tell_type");
@@ -697,7 +697,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             if (match_found) {
                 fprintf(stdout, "error: item %s is ambiguous--specify more of the item name\n", ptr);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             if (l==((long)strlen(madcom_name[i]))) {
                 log_exit("tell_type");
@@ -771,7 +771,7 @@ char *get_param_name(char *s)
     if ((ptr=strchr(s, '='))==NULL) {
         fprintf(stdout, "get_param_name(): no parameter name found in string %s\n", s);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     *ptr = 0;
     cp_str(&ptr1, s);
@@ -817,7 +817,7 @@ void unknown_parameter(char *parameter,
     fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
             parameter, type_name, element, caller);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
     }
 
 void parse_element(
@@ -838,14 +838,14 @@ void parse_element(
     if (parameter[0].offset<0) {
       fprintf(stdout, "error: bad initial parameter offset for element type %s\n", type_name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     for (i=1; i<n_params; i++) {
       if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
         fprintf(stdout, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
                 type_name, i, parameter[i].name?parameter[i].name:"NULL");
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
     }
     entity_description[eptr->type].flags |= OFFSETS_CHECKED;
@@ -876,7 +876,7 @@ void parse_element(
     ptr1 = get_param_name(ptr);
     if (!ptr1) {
       fprintf(stdout, "error getting parameter name for element %s\n", eptr->name);
-      exit(1);
+      exitElegant(1);
     }
     isGroup = 0;
     if (strcmp(ptr1, "GROUP")==0) {
@@ -924,12 +924,12 @@ void parse_element(
           break;
         }
       }
-      exit(1);
+      exitElegant(1);
     }
     if (!*ptr) {
       fprintf(stdout, "Error: missing value for parameter %s of %s\n",
               parameter[i].name, eptr->name);
-      exit(1);
+      exitElegant(1);
     }
     switch (pType) {
     case IS_DOUBLE:
@@ -937,7 +937,7 @@ void parse_element(
         rpn_token = get_token(ptr);
         SDDS_UnescapeQuotes(rpn_token, '"');
         *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
-        if (rpn_check_error()) exit(1);
+        if (rpn_check_error()) exitElegant(1);
         fprintf(stdout, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
                 *((double*)(p_elem+parameter[i].offset)));
         fflush(stdout);
@@ -946,7 +946,7 @@ void parse_element(
         if (sscanf(ptr, "%lf", (double*)(p_elem+parameter[i].offset))!=1) {
           printf("Error scanning token %s for double value for parameter %s of %s.  Please check syntax.\n", 
                  ptr, parameter[i].name, eptr->name);
-          exit(1);
+          exitElegant(1);
         }
       }
       break;
@@ -955,7 +955,7 @@ void parse_element(
         rpn_token = get_token(ptr);
         SDDS_UnescapeQuotes(rpn_token, '"');
         *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
-        if (rpn_check_error()) exit(1);
+        if (rpn_check_error()) exitElegant(1);
         fprintf(stdout, "computed value for %s.%s is %ld\n", 
                 eptr->name, parameter[i].name, 
                 *((long*)(p_elem+parameter[i].offset)));
@@ -965,7 +965,7 @@ void parse_element(
         if (sscanf(ptr, "%ld", (long*)(p_elem+parameter[i].offset))!=1) {
           printf("Error scanning token %s for integer value for parameter %s of %s.  Please check syntax.\n", 
                  ptr, parameter[i].name, eptr->name);
-          exit(1);
+          exitElegant(1);
         }
       }
       break;
@@ -1009,7 +1009,7 @@ void parse_pepper_pot(
             fprintf(stdout, "error: data missing for pepper-pot plate %s\n",
                 name);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         xc[i_hole] =  x*cos_tilt + y*sin_tilt;
         yc[i_hole] = -x*sin_tilt + y*cos_tilt;

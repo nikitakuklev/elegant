@@ -158,7 +158,7 @@ void setup_aperture_search(
     if (search_output) {
       if (mode_code!=SP_MODE) {
         fprintf(stdout, "Error: search_output field can only be used with single-particle mode\n");
-        exit(1);
+        exitElegant(1);
       }
       search_output = compose_filename(search_output, run->rootname);
       fpSearchOutput = fopen_e(search_output, "w", 0);

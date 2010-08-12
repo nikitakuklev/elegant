@@ -48,7 +48,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
     fprintf(stdout, "Problem opening file %s\n", multFile);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
@@ -56,7 +56,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
       SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
     fprintf(stdout, "Problems with data in multipole file %s\n", multFile);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if (steering && SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
     fprintf(stdout, "Warning: Steering multipole file %s should not have bn.\n",
@@ -69,7 +69,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     sprintf(buffer, "Problem reading multipole file %s\n", multFile);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
     fprintf(stdout, "Warning: no data in multipole file %s\n", multFile);
@@ -83,12 +83,12 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }    
   if (steering &&
       !(multData->bn=SDDS_Malloc(sizeof(*(multData->bn))*multData->orders))) {
     fprintf(stdout, "Memory allocation failure (readErrorMultipoleData)\n");
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_ReadPage(&SDDSin)==2) {
     fprintf(stdout, "Warning: multipole file %s has multiple pages, which are ignored\n",
@@ -103,7 +103,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
       if (ODD(multData->order[i])) {
         fprintf(stdout, "Error: steering multipole file %s has disallowed odd orders.\n",
                 multFile);
-        exit(1);
+        exitElegant(1);
       }
     }
     /* normalize to n=0 if present */
@@ -117,7 +117,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
       if (!multData->an[i]) {
         fprintf(stdout, "Steering multipole data in %s is invalid: an is zero for order=0\n",
                 multFile);
-        exit(1);
+        exitElegant(1);
       }
       /* normalize to dipole for normal and skew separately */
       for (j=0; j<multData->orders; j++)
@@ -157,7 +157,7 @@ void initialize_fmultipole(FMULT *multipole)
     sprintf(buffer, "Problem opening file %s (FMULT)\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
@@ -167,7 +167,7 @@ void initialize_fmultipole(FMULT *multipole)
     sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
     fprintf(stdout, "Warning: no data in FMULT file %s\n", multipole->filename);
@@ -182,7 +182,7 @@ void initialize_fmultipole(FMULT *multipole)
     sprintf(buffer, "Unable to read data for FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }    
   if (SDDS_ReadPage(&SDDSin)==2) {
     fprintf(stdout, "Warning: FMULT file %s has multiple pages, which are ignored\n",
@@ -341,7 +341,7 @@ long multipole_tracking(
       TRACKING_CONTEXT tc;
       getTrackingContext(&tc);
       fprintf(stderr, "error: n_kicks<=0 in multipole() for %s #%ld\n", tc.elementName, tc.elementOccurrence);
-      exit(1);
+      exitElegant(1);
     }
 
     if ((order=multipole->order)<0)
@@ -714,7 +714,7 @@ long multipole_tracking2(
   default:
     fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
     break;
   }
   if (multData && !multData->initialized)

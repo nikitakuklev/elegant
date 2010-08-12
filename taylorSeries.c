@@ -15,6 +15,9 @@
 
 /*
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010/02/05 17:48:07  soliday
+ Fixed minor issues related to compiler warnings.
+
  Revision 1.2  2010/02/04 15:17:27  borland
  No longer use the bomb() routine.  Instead, use bombElegant(), which allows
  better control of what happens when exiting.  Added "failed" semaphore option.
@@ -52,7 +55,7 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
     sprintf(buffer, "Problem opening file %s (TAYLORSERIES)\n", taylorSeries->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckParameter(&SDDSin, "Coordinate", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK )
     bombElegant("problems with Coordinate parameter data in TAYLORSERIES input file", NULL);
@@ -71,14 +74,14 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
       sprintf(buffer, "problem reading Coordinate parameter data for TAYLORSERIES file %s\n", taylorSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     /* index is the index of the map array in element definition */
     if (0>(index = match_string(Coordinate, mapCoordinateList, N_MAPCOORDINATES, 0))) {
       sprintf(buffer, "invalid Coordinate parameter data for TAYLORSERIES file %s\n", taylorSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     data = &taylorSeries->coord[index];
     if ((data->terms = SDDS_RowCount(&SDDSin))<=0) {
@@ -101,7 +104,7 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
       sprintf(buffer, "Unable to read data for TAYLORSERIES file %s\n", taylorSeries->filename);
       SDDS_SetError(buffer);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     data->mapInitialized = 1;
   }
@@ -117,7 +120,7 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
     }
   }
   if (problem) {
-    exit(1);
+    exitElegant(1);
   }
   taylorSeries->elementInitialized = 1;
 }

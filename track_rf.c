@@ -391,7 +391,7 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   } else if (rf_param->groupVoltageNoise) {
     printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);
-    exit(1);
+    exitElegant(1);
   }
 
   if (rf_param->phaseNoiseGroup) {
@@ -399,7 +399,7 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   } else if (rf_param->groupPhaseNoise) {
     printf("Error: GROUP_PHASE_NOISE is nonzero but PHASE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);
-    exit(1);
+    exitElegant(1);
   }
 
   rf_param->initialized = 1;
@@ -493,7 +493,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
   } else if (rf_param->groupVoltageNoise) {
     printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);
-    exit(1);
+    exitElegant(1);
   }
 
   if (rf_param->phaseNoiseGroup) {
@@ -501,7 +501,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
   } else if (rf_param->groupPhaseNoise) {
     printf("Error: GROUP_PHASE_NOISE is nonzero but PHASE_NOISE_GROUP is zero for %s\n",
 	   tContext.elementName);
-    exit(1);
+    exitElegant(1);
   }
 
   rf_param->initialized = 1;

@@ -255,7 +255,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
         } else {
           printf("Error: ENERGY element with MATCH_BEAMLINE not set encountered in moments analysis.\n");
           printf("ENERGY element can only be included in MATCH_BEAMLINE mode at present.\n");
-          exit(1);
+          exitElegant(1);
         }
       }
     }
@@ -812,7 +812,7 @@ VMATRIX *compute_matrix(
           FILE *fpm;
           if (!(filename=findFileInSearchPath(matr->filename))) {
             fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
-            exit(1);
+            exitElegant(1);
           }
           fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
           fpm = fopen_e(filename, "r", 0);
@@ -1418,7 +1418,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
         break;
       default:
         fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", bodyFocusModel);
-        exit(1);
+        exitElegant(1);
         break;
       }
     }

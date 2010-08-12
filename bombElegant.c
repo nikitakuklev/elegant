@@ -14,3 +14,9 @@ void bombElegant(char *error, char *usage)
   exit(1);
 }
 
+void exitElegant(long status)
+{
+  exit(status);
+}
+
+

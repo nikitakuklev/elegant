@@ -122,7 +122,7 @@ void track_through_kicker(
                 fprintf(stdout, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
                         time, kicker->tmin, kicker->tmax);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             i--;
             angle *= (amplitude=INTERPOLATE(kicker->amp_wf[i], kicker->amp_wf[i+1],
@@ -342,7 +342,7 @@ void track_through_mkicker(
         fprintf(stdout, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
                 time, kicker->tmin, kicker->tmax);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       i--;
       strength *= (amplitude=INTERPOLATE(kicker->amp_wf[i], kicker->amp_wf[i+1],

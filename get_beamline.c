@@ -101,7 +101,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 #endif
     if (!(filename=findFileInSearchPath(madfile))) {
       fprintf(stderr, "Unable to find file %s\n", madfile);
-      exit(1);
+      exitElegant(1);
     }
     fp_mad[0] = fopen_e(filename, "r", 0);
     free(filename);
@@ -143,7 +143,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           }
           if (!(filename=findFileInSearchPath(ptr))) {
             fprintf(stderr, "Unable to find file %s\n", ptr);
-            exit(1);
+            exitElegant(1);
           }
           fp_mad[iMad] = fopen_e(filename, "r", 0);
           free(filename);
@@ -180,11 +180,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           addToInputObjectList((void*)lptr, 1);
           if (strchr(lptr->name, '#')) {
             fprintf(stdout, "The name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
-            exit(1);
+            exitElegant(1);
           }
           if (check_duplic_elem(&elem, NULL, lptr->name, n_elems)) {
             fprintf(stdout, "line definition %s conflicts with element of same name\n", lptr->name);
-            exit(1);
+            exitElegant(1);
           }
           check_duplic_line(line, lptr->name, n_lines+1, 0);
 #ifdef DEBUG 
@@ -205,7 +205,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             copy_named_element(eptr, s, elem);
             if (strchr(eptr->name, '#')) {
               fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
-              exit(1);
+              exitElegant(1);
             }
           }
           else {
@@ -219,7 +219,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             addToInputObjectList((void*)eptr, 0);
             if (strchr(eptr->name, '#')) {
               fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
-              exit(1);
+              exitElegant(1);
             }
             length = 0;
             if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
@@ -230,7 +230,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                   fprintf(stderr, "error: can't transmute %s %s into %s---would change length of beamline\n",
                           entity_name[eptr->type], eptr->name, 
                           entity_name[newType]);
-                  exit(1);
+                  exitElegant(1);
                 }
               }
               free(eptr->p_elem);
@@ -242,7 +242,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
               fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
-              exit(1);
+              exitElegant(1);
             }
             check_duplic_elem(&elem, &eptr, NULL, n_elems);
           }
@@ -259,7 +259,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (n_elems==0 || n_lines==0) {
       fprintf(stdout, "Insufficient (recognizable) data in file.\n");
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
 
     if (getSCMULTSpecCount()) {
@@ -300,12 +300,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       fill_elem(eptr, s, type, NULL);
       if (strchr(eptr->name, '#')) {
         fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
-        exit(1);
+        exitElegant(1);
       }
       eptr_add = eptr;
       if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
         fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
-        exit(1);
+        exitElegant(1);
       }
       check_duplic_elem(&elem, &eptr, NULL, n_elems);
       n_elems++;  	
@@ -328,13 +328,13 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       fill_elem(eptr, s, type, NULL);
       if (strchr(eptr->name, '#')) {
         fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
-        exit(1);
+        exitElegant(1);
       }
       /* This is mis spelled. Should be eptr_replace. */
       eptr_del = eptr;
       if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
         fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
-        exit(1);
+        exitElegant(1);
       }
       check_duplic_elem(&elem, &eptr, NULL, n_elems);
       n_elems++;  	
@@ -364,7 +364,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (lptr==NULL) {
       fprintf(stdout, "no definition of beam-line %s\n", ptr);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
   }
 
@@ -1058,7 +1058,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
       case IS_STRING:
       default:
         bombElegant("unknown/invalid variable quantity", NULL);
-        exit(1);
+        exitElegant(1);
       }
     }
   }
@@ -1091,7 +1091,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
         if (!sscanf(valueString, "%lf", &value)) {
           fprintf(stdout, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
       }
       if (checkDiv && eptr->divisions>1 &&
@@ -1124,7 +1124,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
         if (!sscanf(valueString, "%lf", &value)) {
           fprintf(stdout, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
       }
       if (mode&LOAD_FLAG_VERBOSE)
@@ -1162,12 +1162,12 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
                            valueString)) {
         fprintf(stdout, "Error (change_defined_parameter): unable to copy string parameter value\n");
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       break;
     default:
       bombElegant("unknown/invalid variable quantity", NULL);
-      exit(1);
+      exitElegant(1);
     }
   }
   log_exit("change_defined_parameter");
@@ -1197,12 +1197,12 @@ void process_rename_request(char *s, char **name, long n_names)
   if (match_string(new, name, n_names, EXACT_MATCH)>=0) {
     fprintf(stdout, "error: can't rename to name %s--already exists\n", new);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if ((i=match_string(old, name, n_names, EXACT_MATCH))<0) {
     fprintf(stdout, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   fprintf(stdout, "warning: element %s now known as %s\n", old, new);
   fflush(stdout);

@@ -201,7 +201,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     fprintf(stdout, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   for (i=0; i<error_elements; i++) {
     if (!SDDS_DefineSimpleParameter(SDDS_table, error_element_name[i], 
@@ -216,7 +216,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
                 filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
       duplicates++;
     }
@@ -226,7 +226,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
               filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
   }
   *error_element_duplicates = duplicates;
@@ -235,7 +235,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
 }
 

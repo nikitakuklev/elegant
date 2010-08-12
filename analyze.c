@@ -371,7 +371,7 @@ void do_transport_analysis(
         fprintf(stdout, "Unable to start SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
         }
     if (!SDDS_SetParameters(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
                             IP_STEP, control->i_step, IP_SUBSTEP, control->i_vary, -1)) {
@@ -385,13 +385,13 @@ void do_transport_analysis(
                     analysis_column[i].name);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            exit(1);
+            exitElegant(1);
             }
     if (!SDDS_WriteTable(&SDDS_analyze)) {
         fprintf(stdout, "Unable to write SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
         }
     if (!inhibitFileSync)
       SDDS_DoFSync(&SDDS_analyze);
@@ -511,7 +511,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((UKICKMAP*)eptr->p_elem)->isr = ((UKICKMAP*)eptr->p_elem)->synchRad = 0;
     if (trackUndulatorKickMap(coord, NULL, n_track, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=n_track) {
       printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
-      exit(1);
+      exitElegant(1);
     }
     ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
     ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
@@ -537,7 +537,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
     printf("***        Seek professional help!\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   
@@ -930,7 +930,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
     printf("***        Seek professional help!\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   

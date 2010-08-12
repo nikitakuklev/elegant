@@ -56,12 +56,12 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (after && strlen(after)) {
         if (!(context=find_element(after, &context, &(beamline->elem)))) {
           fprintf(stdout, "Element %s not found in beamline.\n", after);
-          exit(1);
+          exitElegant(1);
         }
         s_start = context->end_pos;
         if (find_element(after, &context, &(beamline->elem))) {
           fprintf(stdout, "Element %s found in beamline more than once.\n", after);
-          exit(1);
+          exitElegant(1);
         }
         fprintf(stdout, "%s found at s = %le m\n", after, s_start);
         fflush(stdout);
@@ -70,12 +70,12 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (before && strlen(before)) {
         if (!(context=find_element(before, &context, &(beamline->elem)))) {
           fprintf(stdout, "Element %s not found in beamline.\n", before);
-          exit(1);
+          exitElegant(1);
         }
         s_end = context->end_pos;
         if (find_element(before, &context, &(beamline->elem))) {
           fprintf(stdout, "Element %s found in beamline more than once.\n", before);
-          exit(1);
+          exitElegant(1);
         }
         fprintf(stdout, "%s found at s = %le m\n", before, s_end);
         fflush(stdout);
@@ -122,7 +122,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 		allow_missing_parameters?"Warning":"Error",
 		eptr->name, item);
 	if (!allow_missing_parameters)
-	  exit(1);
+	  exitElegant(1);
 	continue;
       }
       nMatches++;
@@ -205,7 +205,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         if (string_value==NULL) {
           fprintf(stderr, "Error: string_value is NULL for alter_elements, but parameter %s of %s is a string parameter\n",
                   entity_description[eptr->type].parameter[iParam].name, eptr->name);
-          exit(1);
+          exitElegant(1);
         }
         /* unfortunately, can't free the existing pointer as I can't be sure that it isn't
          * pointing to static memory
@@ -250,7 +250,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         fprintf(stdout, "Warning: no matches for %s\n", name);
       else {
         fprintf(stdout, "Error: no matches for %s\n", name);
-        exit(1);
+        exitElegant(1);
       }
     } else 
       compute_end_positions(beamline);

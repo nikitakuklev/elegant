@@ -160,7 +160,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
                 if (context->type!=T_QUAD && context->type!=T_KQUAD) {
                     fprintf(stdout, "%s is not a QUAD or KQUAD element!\n", context->name);
                     fflush(stdout);
-                    exit(1);
+                    exitElegant(1);
                     }
                 }
             betax_L_sum += context->twiss->betax*((QUAD*)context->p_elem)->length;
@@ -170,7 +170,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         if (count==0) {
             fprintf(stdout, "error: element %s is not part of the beamline\n", tune->name[i]);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         if (printout)
           fprintf(stdout, "%ld instances of %s found\n", count, tune->name[i]); 
@@ -181,7 +181,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         if (C->a[0][i]==0 || C->a[1][i]==0) {
             fprintf(stdout, "error: element %s does not change the tune!\n", tune->name[i]);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         }
 

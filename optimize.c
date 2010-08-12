@@ -185,7 +185,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     if (!find_element(name, &context, &(beamline->elem))) {
         fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&variables->element[n_variables], name);
     variables->varied_type[n_variables] = context->type;
@@ -195,7 +195,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     if ((variables->varied_param[n_variables] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&variables->item[n_variables], item);
     cp_str(&variables->varied_quan_unit[n_variables], 
@@ -288,7 +288,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     }
     if (SDDS_GetNamedColumnType(&SDDSin, optimization_term_struct.input_column)!=SDDS_STRING) {
       printf("Error: column %s is nonexistent or not string type.\n", optimization_term_struct.input_column);
-      exit(1);
+      exitElegant(1);
     }
     if (!(fileTerm = SDDS_GetColumn(&SDDSin, optimization_term_struct.input_column))) 
       SDDS_Bomb("error getting optimization term column from file");
@@ -387,7 +387,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     if (!find_element(name, &context, &(beamline->elem))) {
         fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&covariables->element[n_covariables], name);
     covariables->varied_type[n_covariables] = context->type;
@@ -397,7 +397,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     if ((covariables->varied_param[n_covariables] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&covariables->item[n_covariables], item);
     cp_str(&covariables->varied_quan_unit[n_covariables], 
@@ -417,7 +417,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     cp_str(&covariables->equation[n_covariables], equation);
     rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation), NULL,
               covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables], 0) );
-    if (rpn_check_error()) exit(1);
+    if (rpn_check_error()) exitElegant(1);
     fprintf(stdout, "Initial value of %s is %e %s\n", 
             covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
             covariables->varied_quan_unit[n_covariables]);
@@ -747,7 +747,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	    fprintf(stdout, "Initial value (%e) is greater than upper limit for %s.%s\n", 
 		    variables->initial_value[i],
 		    variables->element[i], variables->item[i]);
-	    exit(1);
+	    exitElegant(1);
 	  }
 	}
 	if (variables->initial_value[i]<variables->lower_limit[i]) {
@@ -757,7 +757,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	    fprintf(stdout, "Initial value (%e) is smaller than lower limit for %s.%s\n", 
 		    variables->initial_value[i],
 		    variables->element[i], variables->item[i]);
-	    exit(1);
+	    exitElegant(1);
 	  }
 	}
 	fprintf(stdout, "Initial value for %s.%s is %e\n", 
@@ -1103,7 +1103,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             !SDDS_StartPage(&termLog, optimization_data->terms)) {
           fprintf(stdout, "Problem writing optimization term log\n");
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          exit(1);
+          exitElegant(1);
         }
         for (i=0; i<optimization_data->terms; i++) {
           if (!SDDS_SetRowValues(&termLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
@@ -1112,13 +1112,13 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                                  -1)) {
             fprintf(stdout, "Problem writing optimization term log\n");
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-            exit(1);          
+            exitElegant(1);          
           }
         }
         if (!SDDS_WritePage(&termLog) || !SDDS_Terminate(&termLog)) {
           fprintf(stdout, "Problem writing optimization term log\n");
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          exit(1);          
+          exitElegant(1);          
         }
       }
     }
@@ -1292,7 +1292,7 @@ double optimization_function(double *value, long *invalid)
     for (i=0; i<covariables->n_covariables; i++) {
       rpn_clear();
       rpn_store(covariables->varied_quan_value[i]=rpn(covariables->pcode[i]), NULL, covariables->memory_number[i]);
-      if (rpn_check_error()) exit(1);
+      if (rpn_check_error()) exitElegant(1);
     }
     assert_parameter_values(covariables->element, covariables->varied_param, covariables->varied_type,
                             covariables->varied_quan_value, covariables->n_covariables, beamline);
@@ -1728,7 +1728,7 @@ double optimization_function(double *value, long *invalid)
 	    }
 	    if (rpnError) {
 	      printf("RPN expression errors prevent balancing terms\n");
-	      exit(1);
+	      exitElegant(1);
 	    }
 	    if (terms)
 	      for (i=0; i<optimization_data->terms; i++) {
@@ -1765,7 +1765,7 @@ double optimization_function(double *value, long *invalid)
 	  }
 	  if (rpnError) {
 	    printf("RPN expression errors prevent optimization\n");
-	    exit(1);
+	    exitElegant(1);
 	  }
 	  if (isnan(result) || isinf(result)) {
 	    *invalid = 1;

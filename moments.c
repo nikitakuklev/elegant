@@ -682,13 +682,13 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
          (int*)&lwork, (int*)&info);
 #else
   fprintf(stderr, "Error calling dgeev. You will need to install LAPACK and rebuild elegant\n");
-  exit(1);
+  exitElegant(1);
 #endif
 
   if (info != 0) {
     if (info < 0) { printf("Error calling dgeev, argument %d.\n", abs(info)); }
     if (info > 0) { printf("Error running dgeev, calculation of eigenvalue number %d failed.\n", info); }
-    exit(1);
+    exitElegant(1);
   }
 
   /*--- Sorting of eigenvalues and eigenvectors according to (x,y,z)... */
@@ -787,7 +787,7 @@ double *MatrixProduct1 (int rows1, int cols1, double *T1, int rows2, int cols2, 
   T3 = malloc(sizeof(*T3)*rows1*cols2);
   if (cols1 != rows2) {
     printf("Wrong matrix dimension!\n");
-    exit(1);
+    exitElegant(1);
   }
   for (i=0; i<rows1; i++) {
     for (j=0; j<cols2; j++) {

@@ -52,7 +52,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   nb = LSC->bins;
   if (nb%2==1) {
     fprintf(stdout, "Error: LSC must have an even number of bins\n");
-    exit(1);
+    exitElegant(1);
   }
   
 #if DEBUG
@@ -184,7 +184,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
       fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
-      exit(1);
+      exitElegant(1);
     }
     /* - compute kSC */
     kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
@@ -372,7 +372,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   nb = LSC->bins;
   if (nb%2==1) {
     fprintf(stdout, "Error: LSC must have an even number of bins\n");
-    exit(1);
+    exitElegant(1);
   }
   
 #if DEBUG
@@ -449,7 +449,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
     fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
-    exit(1);
+    exitElegant(1);
   }
   /* - compute kSC */
   kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
@@ -486,7 +486,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #if USE_MPI
       MPI_Abort (workers, 1);
 #else
-      exit(1);
+      exitElegant(1);
 #endif
     }    
   }

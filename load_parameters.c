@@ -151,7 +151,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     fflush(stdout);
     if (!allow_missing_files) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     return 1;
   }
@@ -160,14 +160,14 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName,
             load_request[load_requests].filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Parameter_ColumnName))<0 ||
       SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
     fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, 
             load_request[load_requests].filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   load_request[load_requests].string_data = 0;
   if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
@@ -175,7 +175,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
       fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", 
               Value_ColumnName, load_request[load_requests].filename);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     } 
   } else {
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
@@ -183,7 +183,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
       fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n",
               ValueString_ColumnName, load_request[load_requests].filename);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     load_request[load_requests].string_data = 1;
   }
@@ -194,7 +194,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     fprintf(stdout, "column \"%s\" is not in file %s or is not of string type.\n",
             ElementType_ColumnName, load_request[load_requests].filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
 
   /* The Mode column is optional: */
@@ -203,7 +203,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", 
             Mode_ColumnName, load_request[load_requests].filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   /* The Occurence column is optional: */ 
   if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Occurence_ColumnName))>=0 && 
@@ -211,14 +211,14 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", 
             Occurence_ColumnName, load_request[load_requests].filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   
   if (SDDS_NumberOfErrors()) {
     fprintf(stdout, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
 
   load_request[load_requests].last_code = 0;
@@ -287,7 +287,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         default:
           fprintf(stdout, "internal error: invalid value type for load request value restoration\n");
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
           break;
         }
       }
@@ -330,7 +330,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     type = NULL;
     if ((load_request[i].includeTypePattern || load_request[i].excludeTypePattern) &&
@@ -338,7 +338,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     valueString = NULL;
     value = NULL;
@@ -349,7 +349,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
 
     occurence = NULL;
@@ -361,7 +361,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
           fflush(stdout);
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          exit(1);
+          exitElegant(1);
         }
       }
     }
@@ -440,7 +440,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	  }
 	}
 	if (!allow_missing_elements)
-	  exit(1);
+	  exitElegant(1);
 	element_missing = 1;
       }
   
@@ -471,7 +471,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           fflush(stdout);
         }
         if (!allow_missing_parameters)
-          exit(1);
+          exitElegant(1);
         continue;
       }
       mode_flags = 0;
@@ -485,7 +485,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             for (k=0; k<LOAD_MODES; k++)
               fprintf(stdout, "    %s\n", load_mode[k]);
               fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           mode_flags |= 1<<k;
           free(ptr);
@@ -531,7 +531,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             if (!sscanf(valueString[j], "%lf", &newValue)) {
               fprintf(stdout, "Error: unable to scan double from \"%s\"\n", valueString[j]);
               fflush(stdout);
-              exit(1);
+              exitElegant(1);
             }
           } else {
             newValue = value[j];
@@ -573,7 +573,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             if (!sscanf(valueString[j], "%lf", &newValue)) {
               fprintf(stdout, "Error: unable to scan double from \"%s\"\n", valueString[j]);
               fflush(stdout);
-              exit(1);
+              exitElegant(1);
             }
           } else {
             newValue = value[j];
@@ -621,14 +621,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
                                valueString[j])) {
             fprintf(stdout, "Error (do_load_parameters): unable to copy value string\n");
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
 	  if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
 	    if (!SDDS_CopyString((char**)(p_elem0+entity_description[eptr->type].parameter[param].offset),
 				 valueString[j])) {
 	      fprintf(stdout, "Error (do_load_parameters): unable to copy value string\n");
 	      fflush(stdout);
-	      exit(1);
+	      exitElegant(1);
 	    }
 	  }
           if (verbose)
@@ -699,7 +699,7 @@ void finish_load_parameters()
       fprintf(stdout, "Error: unable to terminate load_parameters SDDS file %s\n", load_request[i].filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     free(load_request[i].filename);
   }
@@ -734,7 +734,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
       fprintf(stdout, "Problem setting up parameter output file\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     dumpingLatticeParameters = 1;
   }

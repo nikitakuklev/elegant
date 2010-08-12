@@ -84,7 +84,7 @@ void GWigInit(struct gwig *Wig,
   tmppr = pBy;
   if (NHharm>WHmax || NVharm>WHmax) {
     printf("*** Error: too many harmonics for CWIGGLER. Maximum is %ld.\n", (long)WHmax);
-    exit(1);
+    exitElegant(1);
   }
   for (i = 0; i < NHharm; i++){
     tmppr++;
@@ -165,7 +165,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 /*
   if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
     printf("Error: Can't presently include synchrotron radiation effects for fourth-order integration of CWIGGLER\n");
-    exit(1);
+    exitElegant(1);
   }
 */
 
@@ -268,7 +268,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
 
   if (cwiggler->BMax && (cwiggler->BxMax || cwiggler->ByMax)) {
     printf("*** Error: Non-zero BMAX for CWIGGLER when BXMAX or BYMAX also non-zero\n");
-    exit(1);
+    exitElegant(1);
   }
   if (!cwiggler->initialized) {
     if (cwiggler->fieldOutput) {
@@ -317,11 +317,11 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
     } else {
       if (cwiggler->helical) {
         printf("*** Error: CWIGGLER element has HELICAL=1, but doesn't have SINUSOIDAL=1\n");
-        exit(1);
+        exitElegant(1);
       }
       if (cwiggler->vertical) {
         printf("*** Error: CWIGGLER element has VERTICAL=1, but doesn't have SINUSOIDAL=1\n");
-        exit(1);
+        exitElegant(1);
       }
       ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
                             cwiggler->ByFile, "By", 0, cwiggler->BySplitPole, cwiggler);
@@ -401,11 +401,11 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
   }
   if (!SDDS_InitializeInput(&SDDSin, file) || !SDDS_ReadPage(&SDDSin)) {
     printf("Error: problem initializing file %s\n", file);
-    exit(1);
+    exitElegant(1);
   }
   if (!(rows=SDDS_RowCount(&SDDSin))) {
     printf("Error: no rows in file %s\n", file);
-    exit(1);
+    exitElegant(1);
   }
   if (!(Cmn=SDDS_GetColumnInDoubles(&SDDSin, "Cmn")) ||
       !(kx=SDDS_GetColumnInDoubles(&SDDSin, "KxOverKw")) ||
@@ -414,52 +414,52 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
       !(phase=SDDS_GetColumnInDoubles(&SDDSin, "Phase"))) {
     printf("Error: problem reading file %s\n", file);
     printf("Check for existence of Cmn, KxOverKw, KyOverKw, KzOverKw, and Phase\n");
-    exit(1);
+    exitElegant(1);
   }
   
   *harmonics = rows;
   if (!(*BData = calloc(rows*6, sizeof(**BData)))) {
     printf("ReadCWigglerHarmonics: memory allocation failure (%ld harmonics)\n",
 	   rows);
-    exit(1);
+    exitElegant(1);
   }
 
   for (row=0; row<rows; row++) {
     if (kz[row]<=0) {
       printf("*** Error: Problem with KzOverKw in %s: value %e is not positive\n", file, kz[row]);
-      exit(1);
+      exitElegant(1);
     }
     if ((!verticalWiggler && !splitPole) || (verticalWiggler && splitPole)) {
       if (ky[row]<kz[row]) {
         printf("*** Error: Problem with KyOverKw<KzOverKw in %s\n", file);
-        exit(1);
+        exitElegant(1);
       }
       if (!fabs(kx[row]) && verticalWiggler) {
         printf("*** Error: KxOverKw = 0 is not supported for vertical split pole wigglers\n");
-        exit(1);
+        exitElegant(1);
       }
       if ( fabs(sqrt(sqr(kx[row])+sqr(kz[row]))/ky[row]-1)>1e-6 ) {
         printf("*** Error: KyOverKw == sqrt(KxOverKw^2+KzOverKw^2) not satisfied to sufficient accuracy (1e-6) in %s\n", file);
-        exit(1);
+        exitElegant(1);
       }
     } else {
       if (kx[row]<kz[row]) {
         printf("*** Error: Problem with KxOverKw<KzOverKw in %s\n", file);
-        exit(1);
+        exitElegant(1);
       } 
       if (!fabs(ky[row]) && !verticalWiggler) {
         printf("*** Error: KyOverKw = 0 is not supported for horizontal split pole wigglers\n");
-        exit(1);
+        exitElegant(1);
       }
       if ( fabs(sqrt(sqr(ky[row])+sqr(kz[row]))/kx[row]-1)>1e-6 ) {
         printf("*** Error: KxOverKw == sqrt(KyOverKw^2+KzOverKw^2) not satisfied to sufficient accuracy (1e-6) in %s\n", file);
-        exit(1);
+        exitElegant(1);
       }
     }
     if (PIx2*kz[row] > 2*cwiggler->stepsPerPeriod) {
       printf("*** Error: KzOverKw = %le is too large for only %ld steps per period\n",
              kz[row], cwiggler->stepsPerPeriod);
-      exit(1);
+      exitElegant(1);
     }
     (*BData)[row*6]   = row;
     (*BData)[row*6+1] = Cmn[row];
@@ -470,7 +470,7 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
   }
   if (phase[0]<0) {
     printf("Error: Phase value for CWIGGLER first harmonic is negative.  This isn't allowed.\n");
-    exit(1);
+    exitElegant(1);
   }    
   if (!SDDS_Terminate(&SDDSin))
     printf("*** Warning: problem terminating CWIGGLER input file\n");

@@ -147,7 +147,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
                 fprintf(stdout, "Unable to set row %ld values (dump_cormon_stats)\n", j);
                 fflush(stdout);
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                exit(1);
+                exitElegant(1);
                 }
             }
         if (!SDDS_WriteTable(&SDDS_cormon)) {
@@ -194,7 +194,7 @@ void finish_cormon_stats()
         fprintf(stdout, "Unable to terminate SDDS output for correctors (finish_cormon_stats)\n");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
         }
     SDDS_cormon_initialized = 0;
     }

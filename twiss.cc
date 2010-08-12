@@ -2621,7 +2621,7 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 	      tune_shift_with_amplitude_struct.tune_output);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     if (filename_inner_scope!=tune_shift_with_amplitude_struct.tune_output)
       free(filename_inner_scope);
@@ -2672,14 +2672,14 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
     gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
     fprintf(stdout, (char*)"Error: grid_size for TSWA is limited to %ld\n", gridSize);
-    exit(1);
+    exitElegant(1);
   }
   
   if (tune_shift_with_amplitude_struct.tune_output &&
       !SDDS_StartPage(&SDDSTswaTunes, gridSize*gridSize)) {
     fprintf(stdout, (char*)"Problem starting SDDS page for TSWA tune output\n");
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
 
   /* use tracking and NAFF */
@@ -2810,7 +2810,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 			       NULL)) {
 	  fprintf(stdout, (char*)"Problem filling SDDS page for TSWA tune output\n");
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	  exit(1);
+	  exitElegant(1);
 	}
         j++;
       }
@@ -2818,7 +2818,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     if (!SDDS_WritePage(&SDDSTswaTunes)) {
       fprintf(stdout, (char*)"Problem writing SDDS page for TSWA tune output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
   }
 
@@ -3568,7 +3568,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
     if (!count) {
       fprintf(stdout, (char*)"error: twiss analysis conditions never satisfied for request with tag %s\n",
               twissAnalysisRequest[i].tag);
-      exit(1);
+      exitElegant(1);
     }
     for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
       twissData[TWISS_ANALYSIS_AVE][iq] /= count;

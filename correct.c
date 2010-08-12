@@ -462,7 +462,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
         (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->corr_type[SL->n_corr_types]))<0) {
       fprintf(stderr, "No such floating-point parameter (%s) for %s (add_steer_elem_to_lists)\n", 
               item, context->name);
-      exit(1);
+      exitElegant(1);
     }
     
     SL->n_corr_types += 1;    
@@ -523,7 +523,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
       fprintf(stdout, "error: element %s does not have a matrix--can't be used for steering.\n",
               elem->name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     break;
   }
@@ -1310,7 +1310,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
         break;
       default:
         printf("Error: Unknown method in one_to_one_trajcor_plane: %ld---This shouldn't happen!\n", method);
-        exit(1);
+        exitElegant(1);
         break;
       }
       
@@ -1629,7 +1629,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
   default:
     fprintf(stdout, "error: invalid coordinate for correction: %ld\n", plane);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
     break;
   }
 
@@ -1674,7 +1674,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
         fprintf(stdout, "error: changing %s.%s does not kick the beam--can't use for steering.\n",
                 corr->name, SL->corr_param[index]);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       
       if (!recircs) {
@@ -2486,7 +2486,7 @@ double noise_value(double xamplitude, double xcutoff, long xerror_type)
             return(xamplitude*(random_3(0)>0.5?1.0:-1.0) - 1);
         default:
             bombElegant("unknown error type in perturbation()", NULL);
-            exit(1);
+            exitElegant(1);
             break;
         }
     return(0.0);
@@ -2559,7 +2559,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
     rpn_store(x, NULL, rpn_x_mem);
     rpn_store(y, NULL, rpn_y_mem);
     reading = rpn(equation)*calibration;
-    if (rpn_check_error()) exit(1);
+    if (rpn_check_error()) exitElegant(1);
   }
   else {
     switch (coord) {

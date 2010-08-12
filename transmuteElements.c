@@ -122,7 +122,7 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
 	break;
     if (i==N_TYPES) {
       fprintf(stderr, "type pattern %s does not match any known type", type);
-      exit(1);
+      exitElegant(1);
     }
   }
   if (exclude) {

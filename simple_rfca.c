@@ -221,7 +221,7 @@ long trackRfCavityWithWakes
         break;
       default:
         fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", rfca->bodyFocusModel);
-        exit(1);
+        exitElegant(1);
         break;
       }
     }

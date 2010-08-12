@@ -1146,7 +1146,7 @@ void makeBucketAssignments(BEAM *beam, double Po, double frequency)
   /* Determine how many buckets we will span.  Assumes that the bunch length is << bucket spacing */
   if ((buckets = (tmax-tmin)*frequency)>(MAX_BUCKETS-1)) {
     printf("Error: Can't have more than %d buckets at present.", MAX_BUCKETS-1);
-    exit(1);
+    exitElegant(1);
   }
   /* Determine offset to the center of the first bucket. Assumes that the bunch length is << bucket spacing and that
    * bunches have about the same length

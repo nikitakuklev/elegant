@@ -346,7 +346,7 @@ long new_sdds_beam(
         if (!beam->original[i]) {
           fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam-2)\n", i);;
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         if (sample_fraction!=1 && random_4(1)>sample_fraction)
           continue;
@@ -369,7 +369,7 @@ long new_sdds_beam(
           if (!beam->particle[i_store]) {
             fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam-2)\n", i_store);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           beam->particle[i_store][0] = r*cos_theta;
           beam->particle[i_store][1] = (pr*cos_theta - pphi*sin_theta)/pz;
@@ -387,12 +387,12 @@ long new_sdds_beam(
           if (!beam->particle[i_store]) {
             fprintf(stdout, "error: beam->particle[%ld] is NULL\n", i_store);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
             fprintf(stdout, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
         }
       }
@@ -423,7 +423,7 @@ long new_sdds_beam(
         if (!beam->original[i]) {
           fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.2)\n", i);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         gamma = sqrt(sqr(p=beam->original[i][IEC_P])+1);
         if (p_lower && (p_lower>p || p_upper<p)) {
@@ -433,7 +433,7 @@ long new_sdds_beam(
         if (!beam->particle[i_store]) {
           fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.2)\n", i_store);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         for (j=0; j<4; j++)
           beam->particle[i_store][j] = beam->original[i][j];
@@ -450,7 +450,7 @@ long new_sdds_beam(
           if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
             fprintf(stdout, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
         }
       }
@@ -490,12 +490,12 @@ long new_sdds_beam(
       if (!beam->original[i]) {
         fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.3)\n", i);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       if (!beam->particle[i]) {
         fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.3)\n", i);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       for (j=0; j<7; j++) 
         beam->particle[i][j] = beam->original[i][j];
@@ -527,12 +527,12 @@ long new_sdds_beam(
       if (!beam->original[i]) {
         fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.4)\n", i);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       if (!beam->particle[i]) {
         fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.4)\n", i);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       for (j=0; j<7; j++)
         beam->original[i][j] = beam->particle[i][j];
@@ -655,7 +655,7 @@ long get_sdds_particles(double ***particle,
                   "necessary data quantities (r, pr, pz, t) have the wrong units or are not present in %s", 
                   inputFile[inputFileIndex]);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
       }
       else {
@@ -668,7 +668,7 @@ long get_sdds_particles(double ***particle,
                   "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s\n", 
                   inputFile[inputFileIndex]);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         if (!check_sdds_column(&SDDS_input, "p", "m$be$nc")) {
           if (check_sdds_column(&SDDS_input, "p", NULL)) {

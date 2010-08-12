@@ -190,18 +190,18 @@ ntuple *readbookn(char *inputfile, long i_page)
   switch(SDDS_CheckParameter(&mhist, "ND", NULL, SDDS_LONG, stderr)) {
   case SDDS_CHECK_NONEXISTENT:
     fprintf(stdout, "\tParameter ND not found in file %s.\n", inputfile);
-    exit(1);
+    exitElegant(1);
     break;
   case SDDS_CHECK_WRONGTYPE:
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
+    exitElegant(1);
     break;
   case SDDS_CHECK_OKAY:
     break;
   default:
     fprintf(stdout, "Unexpected result from SDDS_CheckParameter routine while checking parameter ND in file %s.\n", inputfile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
+    exitElegant(1);
     break;
   }
 
@@ -441,7 +441,7 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
       if (index!=(last_index+1))
         fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
@@ -539,7 +539,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
       if (index!=(last_index+1))
         fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
@@ -651,7 +651,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
       if (index!=(last_index+1))
         fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
@@ -774,7 +774,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
       if (index!=(last_index+1))
         fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);

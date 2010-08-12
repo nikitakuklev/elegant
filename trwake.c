@@ -79,7 +79,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
       fprintf(stderr, "The beam is longer than the transverse wake function.\nThis would produce unphysical results.\n");
       fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
 	      tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-      exit(1);
+      exitElegant(1);
     }
 
     dt = wakeData->dt;
@@ -103,7 +103,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 
     if (tmin>tmax || nb<=0) {
       fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
-      exit(1);
+      exitElegant(1);
     }
   
     if (nb>max_n_bins) {
@@ -177,7 +177,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 		    wakeData->inputFile);
 	    fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
 		    nb, wakeData->SGOrder, wakeData->SGHalfWidth);
-	    exit(1);
+	    exitElegant(1);
 	  }
       
 	}
@@ -309,17 +309,17 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
         (wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0 ||
         wakeData->wakePoints<2) {
       fprintf(stderr, "Error: TRWAKE file %s is unreadable, or has insufficient data.\n", wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
                          stdout)!=SDDS_CHECK_OK) {
       fprintf(stderr, "Error: problem with time column for TRWAKE file %s---check existence, units, and type", 
               wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn))) {
       fprintf(stderr, "Error: unable to retrieve time data from TRWAKE file %s\n", wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
 
     wakeData->W[0] = wakeData->W[1] = NULL;
@@ -329,7 +329,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem (1) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
-          exit(1);
+          exitElegant(1);
         }
       } 
       else if (wakeData->xPower==0) {
@@ -337,12 +337,12 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem (2) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
-          exit(1);
+          exitElegant(1);
         }
       }
       if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wx data from TRWAKE file %s\n", wakeData->inputFile);
-        exit(1);
+        exitElegant(1);
       }
     }
     if (wakeData->WyColumn) {
@@ -351,7 +351,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
-          exit(1);
+          exitElegant(1);
         }
       }
       else if (wakeData->yPower==0) {
@@ -359,12 +359,12 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
-          exit(1);
+          exitElegant(1);
         }
       }
       if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wy data from TRWAKE file %s\n", wakeData->inputFile);
-        exit(1);
+        exitElegant(1);
       }
     }
 

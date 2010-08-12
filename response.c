@@ -49,7 +49,7 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     if (correct->mode==-1) {
       printf("Error: you must request orbit/trajectory correction before requesting response matrix output.\n");
       printf("Otherwise, elegant doesn't have the needed information about correctors and monitors.\n");
-      exit(1);  
+      exitElegant(1);  
     }
     
 
@@ -160,7 +160,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
 
     if (!SDDS_InitializeOutput(&respOutput->SDDSout, SDDS_BINARY, 0, s, t, filename)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
         }
 #if RW_ASSOCIATES
     SDDS_DefineAssociate(&respOutput->SDDSout, "elegantInput",
@@ -247,11 +247,11 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
         }
     if (SDDS_NumberOfErrors()) {
         SDDS_PrintErrors(stderr, 1);
-        exit(1);
+        exitElegant(1);
         }
     if (!SDDS_WriteLayout(&respOutput->SDDSout)) {
         SDDS_PrintErrors(stderr, 1);
-        exit(1);
+        exitElegant(1);
         }
 
     unique_name = trealloc(unique_name, sizeof(*unique_name)*(CM->nmon));

@@ -141,12 +141,12 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     if (!(t_context=wfind_element(target, &t_context, &(beamline->elem)))) {
       fprintf(stdout, "error: cannot make link with target element %s--not in beamline\n", target);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
       fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
 
     targets = 0;
@@ -203,7 +203,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       if ((links->target_param[n_links] = confirm_parameter(item, t_context->type))<0) {
         fprintf(stdout, "error: element %s does not have a parameter %s\n", target, item);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       n_targets = 1;
       while ((t_context=find_element(target, &t_context, &(beamline->elem)))) {
@@ -237,7 +237,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
           fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
       }
       eptr = tmalloc(sizeof(*eptr)*(n_targets));
@@ -256,7 +256,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
         }
@@ -277,7 +277,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element is found near the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
         }
@@ -298,7 +298,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
         }
@@ -308,7 +308,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           fprintf(stdout, "error: there is no %s element before the first %s element--can't link as requested\n",
                   source, target);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         eptr[0] = s_context;
         n_sources = 0;
@@ -328,7 +328,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element is found before the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
           s_context = eptr[n_sources-1];
@@ -345,7 +345,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element after the first %s element--can't link as requested\n",
                     source, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
         }
         eptr[0] = s_context;
@@ -360,7 +360,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             fprintf(stdout, "error: no %s element is found after the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           eptr[n_sources++] = s_context;
         }
@@ -466,7 +466,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                         targ[i_elem]->end_pos);
             push_num(links->baseline_value[i_link][i_elem]);
             value = rpn(links->equation[i_link]);
-            if (rpn_check_error()) exit(1);
+            if (rpn_check_error()) exitElegant(1);
             rpn_clear();
             if (value>links->maximum[i_link])
               value = links->maximum[i_link];
@@ -490,7 +490,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             if (flags&LINK_ELEMENT_DEFINITION) 
                 change_defined_parameter_values(&targ[i_elem]->name, &param, &targ[i_elem]->type, &value, 1);
@@ -549,7 +549,7 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity (reset_element_links)", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
                 free_matrices(targ[i_elem]->matrix);
@@ -596,7 +596,7 @@ void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamlin
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity (reset_element_links)", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             }
         }

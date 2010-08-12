@@ -258,7 +258,7 @@ long elliptical_collimator(
     getTrackingContext(&context);
     fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
             context.elementName, xe);
-    exit(1);
+    exitElegant(1);
   }
   ye = xe;
   if (ecol->yExponent) {
@@ -266,7 +266,7 @@ long elliptical_collimator(
       getTrackingContext(&context);
       fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
               context.elementName, ye);
-      exit(1);
+      exitElegant(1);
     }
   }
   
@@ -382,7 +382,7 @@ long elimit_amplitudes(
       getTrackingContext(&context);
       fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
               context.elementName, xe);
-      exit(1);
+      exitElegant(1);
     }
     ye = xe;
     if (yexponent) {
@@ -390,7 +390,7 @@ long elimit_amplitudes(
         getTrackingContext(&context);
         fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
                 context.elementName, ye);
-        exit(1);
+        exitElegant(1);
       }
     }
 
@@ -729,7 +729,7 @@ long remove_outlier_particles(
     for (j=0; j<CLEAN_MODES; j++)
       fprintf(stderr, "%s  ", modeName[j]);
     fprintf(stderr, "\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   
@@ -837,7 +837,7 @@ long remove_outlier_particles(
         break;
       default:
         fprintf(stderr, "invalid mode in remove_outlier_particles---programming error!\n");
-        exit(1);
+        exitElegant(1);
         break;
       }
       if (is_out)
@@ -922,7 +922,7 @@ long determineOpenSideCode(char *openSide)
     getTrackingContext(&context);
     fprintf(stderr, "Error for %s: open_side=%s is not valid\n",
             context.elementName, openSide);
-    exit(1);
+    exitElegant(1);
   }
   return value;
 }

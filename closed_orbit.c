@@ -237,7 +237,7 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
             fprintf(stdout, "Unable to set row %ld values (dump_closed_orbit)\n", i);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            exit(1);
+            exitElegant(1);
             }
         }
 

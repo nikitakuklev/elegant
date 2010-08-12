@@ -188,7 +188,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                 bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
@@ -205,7 +205,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         if (count==0) {
           fprintf(stdout, "error: element %s is not in the beamline.\n",  chrom->name[i]);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         if (beamline->links) {
           /* rebaseline_element_links(beamline->links, run, beamline); */
@@ -224,7 +224,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         if (C->a[0][i]==0 || C->a[1][i]==0) {
             fprintf(stdout, "error: element %s does not change the chromaticity!\n", chrom->name[i]);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         count = 0;
         context = NULL;
@@ -233,7 +233,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
                 fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                 bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
@@ -403,7 +403,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                     fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
                             context->name);
                     fflush(stdout);
-                    exit(1);
+                    exitElegant(1);
                     }
                 if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                     bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
@@ -501,7 +501,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         (chrom->tolerance<fabs(dchromx) || chrom->tolerance<fabs(dchromy))
         && chrom->exit_on_failure) {
       fprintf(stdout, "Chromaticity correction failure---exiting!\n");
-      exit(1);
+      exitElegant(1);
     }
 
     return 1;

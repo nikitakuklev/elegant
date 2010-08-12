@@ -78,7 +78,7 @@ long check_duplic_elem(
       fprintf(stdout, "error: multiple definitions of element %s\n",
               new_name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     else if (comparison<0)
       insertionPoint = elemArray[lo];
@@ -94,7 +94,7 @@ long check_duplic_elem(
         fprintf(stdout, "error: multiple definitions of element %s\n",
                 new_name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       else if (comparison<0) {
         do {
@@ -110,7 +110,7 @@ long check_duplic_elem(
             fprintf(stdout, "error: multiple definitions of element %s\n",
                     new_name);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           else if (comparison<0)
             hi = mid;
@@ -185,7 +185,7 @@ long check_duplic_line(
       fprintf(stdout, "error: multiple definitions of line %s\n", 
              new_name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     line = line->succ;
   }

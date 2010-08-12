@@ -196,7 +196,7 @@ void track_through_rfmode(
     if (Q<0.5) {
       fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
 #else
     if (myid == 1) { /* Let the first slave processor write the output */
@@ -576,7 +576,7 @@ void runBinlessRfMode(
   if (Q<0.5) {
     fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   tau = 2*Q/omega;
   k = omega/4*(rfmode->RaInternal)/rfmode->Q;

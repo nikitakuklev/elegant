@@ -94,7 +94,7 @@ void log_entry(char *routine)
         fflush(stdout);
         fprintf(stdout, "calling routine is %s\n", routine);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
 
     if (trace_mode&TRACE_MEMORY_LEVEL)
@@ -158,7 +158,7 @@ void log_exit(char *routine)
             fflush(stdout);
             fprintf(stdout, "calling routine is %s\n", routine);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             }
         fseek(fp, file_pos[trace_level-1], 0);
         fwrite(blank, sizeof(*blank), MAX_LENGTH, fp);
@@ -201,5 +201,5 @@ void traceback_handler(int sig)
     else if (in_trace_routine==2)
         fprintf(stdout, "log_exit\n");
     fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
-    exit(1);
+    exitElegant(1);
     }

@@ -85,7 +85,7 @@ void setup_coupled_twiss_output(
       fprintf(stdout, "Unable to set up file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
   
     if (output_sigma_matrix) {
@@ -109,7 +109,7 @@ void setup_coupled_twiss_output(
             fprintf(stdout, "Unable to set up file %s\n", filename);
             fflush(stdout);
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-            exit(1);
+            exitElegant(1);
           }
         }
     }
@@ -118,7 +118,7 @@ void setup_coupled_twiss_output(
       fprintf(stdout, "Unable to set up file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     SDDScoupledInitialized = 1;
   }
@@ -539,7 +539,7 @@ int GetMaxIndex (double *V, int N)
   }
   if (maxIndex == -1) {
     printf("Error finding maximum number.\n");
-    exit(1);
+    exitElegant(1);
   }
   return maxIndex;
 }
@@ -604,7 +604,7 @@ void MatrixProduct (int *N1, int *M1, double *T1, int *N2, int *M2, double *T2, 
 
   if (nCols1 != nRows2) {
     printf("Wrong matrix dimension!\n");
-    exit(1);
+    exitElegant(1);
   }
 
   for (i=0; i<nRows1; i++) {

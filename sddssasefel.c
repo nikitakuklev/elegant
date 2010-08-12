@@ -16,6 +16,9 @@
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.11  2010/02/05 22:05:38  soliday
+ Made some changes to reduce the number or compiler warnings on Linux.
+
  Revision 1.10  2003/01/21 18:49:04  borland
  Added simplexMin() arguments.
 
@@ -205,7 +208,7 @@ int main(int argc, char **argv)
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         break;
       }
     }
@@ -237,7 +240,7 @@ int main(int argc, char **argv)
           fprintf(stdout, "Error (sddssasefel): %s is required to be in the input file\n",
                   ValueName[i]->name);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         ValueName[i]->inFile = 0;
         if (!SDDS_DefineSimpleColumn(&SDDSout, ValueName[i]->name, 
@@ -248,7 +251,7 @@ int main(int argc, char **argv)
         ValueName[i]->inFile = 1;
         if (SDDS_CheckColumn(&SDDSin, ValueName[i]->name, ValueName[i]->units, 
                              SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
-          exit(1);
+          exitElegant(1);
         if (!SDDS_TransferColumnDefinition(&SDDSout, &SDDSin, ValueName[i]->name, NULL))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -259,7 +262,7 @@ int main(int argc, char **argv)
           fprintf(stdout, "Error (sddssasefel): %s is required to be in the input file\n",
                   ValueName[i]->name);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         ValueName[i]->inFile = 0;
         if (!SDDS_DefineSimpleParameter(&SDDSout, ValueName[i]->elegantName, 
@@ -269,7 +272,7 @@ int main(int argc, char **argv)
         ValueName[i]->inFile = 1;
         if (SDDS_CheckParameter(&SDDSin, ValueName[i]->elegantName, ValueName[i]->units, 
                                 SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
-          exit(1);
+          exitElegant(1);
         if (!SDDS_TransferParameterDefinition(&SDDSout, &SDDSin, ValueName[i]->elegantName, NULL))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -282,7 +285,7 @@ int main(int argc, char **argv)
   if (elegantInput) {
     if (SDDS_GetParameterIndex(&SDDSin, "ey")>=0) {
       if (SDDS_CheckParameter(&SDDSin, "ey", "$gp$rm", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
-        exit(1);
+        exitElegant(1);
       if (!SDDS_TransferParameterDefinition(&SDDSout, &SDDSin, "ey", NULL))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       eyPresent = 1;

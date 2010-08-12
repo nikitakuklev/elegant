@@ -52,12 +52,12 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   if (after && strlen(after)) {
     if (!(context=find_element(after, &context, &(beamline->elem)))) {
       fprintf(stdout, "Element %s not found in beamline.\n", after);
-      exit(1);
+      exitElegant(1);
     }
     sMin = context->end_pos;
     if (find_element(after, &context, &(beamline->elem))) {
       fprintf(stdout, "Element %s found in beamline more than once.\n", after);
-      exit(1);
+      exitElegant(1);
     }
     fprintf(stdout, "%s found at s = %le m\n", after, sMin);
     fflush(stdout);
@@ -66,12 +66,12 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   if (before && strlen(before)) {
     if (!(context=find_element(before, &context, &(beamline->elem)))) {
       fprintf(stdout, "Element %s not found in beamline.\n", before);
-      exit(1);
+      exitElegant(1);
     }
     sMax = context->end_pos;
     if (find_element(before, &context, &(beamline->elem))) {
       fprintf(stdout, "Element %s found in beamline more than once.\n", after);
-      exit(1);
+      exitElegant(1);
     }
     fprintf(stdout, "%s found at s = %le m\n", before, sMax);
     fflush(stdout);
@@ -79,7 +79,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   if (after && before && sMin>sMax) {
     fprintf(stdout, "Element %s is not upstream of %s!\n",
             before, after);
-    exit(1);
+    exitElegant(1);
   }
   if (type && has_wildcards(type) && strchr(type, '-'))
     type = expand_ranges(type);
@@ -127,7 +127,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       if ((modData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot modulate %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
 
       modData->unperturbedValue[n_items] 
@@ -149,7 +149,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     if (!(context=find_element(name, &context, &(beamline->elem)))) {
       fprintf(stdout, "error: cannot modulate element %s--not in beamline\n", name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     modData->element          = SDDS_Realloc(modData->element, sizeof(*modData->element)*(n_items+1));
     modData->expression       = SDDS_Realloc(modData->expression, sizeof(*modData->expression)*(n_items+1));
@@ -179,7 +179,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     if ((modData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
       fprintf(stdout, "error: cannot modulate %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     modData->unperturbedValue[n_items] 
       = parameter_value(context->name, context->type, modData->parameterNumber[n_items], beamline);
@@ -196,7 +196,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   if (!n_added) {
     fprintf(stdout, "error: no match given modulation\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
 }
 
@@ -246,7 +246,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
           fprintf(stderr, "Error: interpolation outside of modulation table for element %s, parameter %s\n",
                   modData->element[iMod]->name,
                   entity_description[type].parameter[param].name);
-          exit(1);
+          exitElegant(1);
         }
         modulationValid = 1;
       } else {
@@ -254,7 +254,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
           fprintf(stderr, "Error: no valid modulation value for element %s, parameter %s\n",
                   modData->element[iMod]->name,
                   entity_description[type].parameter[param].name);
-          exit(1);
+          exitElegant(1);
         }
       }
     } else {

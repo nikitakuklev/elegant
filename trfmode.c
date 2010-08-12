@@ -103,7 +103,7 @@ void track_through_trfmode(
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
     fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
@@ -510,7 +510,7 @@ void runBinlessTrfMode(
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
     fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);

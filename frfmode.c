@@ -246,17 +246,17 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
 			 stdout)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
 			 stdout)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
 			 stdout)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with Q column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
 			 NULL)!=SDDS_CHECK_NONEXISTENT) {
@@ -289,7 +289,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       SDDS_Bomb("unable to read page from file for FRFMODE element");
     if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
       fprintf(stdout, "Error: no data in FRFMODE file %s\n", rfmode->filename);
-      exit(1);
+      exitElegant(1);
     }
     if (!(rfmode->omega = SDDS_GetColumnInDoubles(&SDDSin, "Frequency")) ||
 	!(rfmode->Q = SDDS_GetColumnInDoubles(&SDDSin, "Q")) ||
@@ -333,7 +333,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
   for (imode=0; imode<rfmode->modes; imode++) {
     if (rfmode->bin_size*rfmode->omega[imode]/PIx2>0.1) {
       fprintf(stdout, "Error: FRFMODE bin size adjustment failed\n");
-      exit(1);
+      exitElegant(1);
     }
   }
 
@@ -353,11 +353,11 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
         !SDDS_DefineSimpleColumn(&rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
       fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     if (!(rfmode->modeIndex = malloc(sizeof(*(rfmode->modeIndex))*rfmode->modes))) {
       fprintf(stderr, "Memory allocation failure for FRFMODE element\n");
-      exit(1);
+      exitElegant(1);
     }
     for (imode=0; imode<rfmode->modes; imode++) {
       char s[100];
@@ -367,13 +367,13 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
                               SDDS_DOUBLE, 0))<0) {
         fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+        exitElegant(1);
       }
     }
     if (!SDDS_WriteLayout(&rfmode->SDDSout)) {
       fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     if (filename!=rfmode->outputFile)
       free(filename);

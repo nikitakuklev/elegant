@@ -177,7 +177,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
                 tcontext.elementName, tmax-tmin, nb*dt);
         fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
         fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
-        exit(1);
+        exitElegant(1);
       }
       
       if (zlongit->n_bins>max_n_bins) {

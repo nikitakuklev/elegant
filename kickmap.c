@@ -193,23 +193,23 @@ void initializeUndulatorKickMap(UKICKMAP *map)
   if (!check_sdds_column(&SDDSin, "x", "m") ||
       !check_sdds_column(&SDDSin, "y", "m")) {
     fprintf(stderr, "UKICKMAP input file must have x and y in m (meters)\n");
-    exit(1);
+    exitElegant(1);
   }
 
   if (!(xpFactor=SDDS_GetColumnInDoubles(&SDDSin, "xpFactor")) || !(ypFactor=SDDS_GetColumnInDoubles(&SDDSin, "ypFactor"))) {
     fprintf(stderr, "UKICKMAP input file must have both (xpFactor, ypFactor)\n");
-    exit(1);
+    exitElegant(1);
   }
   if (!check_sdds_column(&SDDSin, "xpFactor", "(T*m)$a2$n") ||
       !check_sdds_column(&SDDSin, "ypFactor", "(T*m)$a2$n")) {
     fprintf(stderr, "UKICKMAP input file must have xpFactor and ypFactor with units of (T*m)$a2$n\n");
-    exit(1);
+    exitElegant(1);
   }
   
   if (!(map->points=SDDS_CountRowsOfInterest(&SDDSin)) || map->points<2) {
     fprintf(stdout, "file %s for UKICKMAP element has insufficient data\n", map->inputFile);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   SDDS_Terminate(&SDDSin);
 
@@ -238,7 +238,7 @@ void initializeUndulatorKickMap(UKICKMAP *map)
     fflush(stdout);
     fprintf(stdout, "nx = %ld, ny=%ld\n", map->nx, map->ny);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   map->nx = nx;
   map->xmax = x[nx-1];

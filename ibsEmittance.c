@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.30  2010/02/23 20:15:10  borland
+ * Emittance given on commandline is treated in same way as emittance from input file.
+ *
  * Revision 1.29  2010/02/05 22:05:38  soliday
  * Made some changes to reduce the number or compiler warnings on Linux.
  *
@@ -407,14 +410,14 @@ int main( int argc, char **argv)
     break;
   case SDDS_CHECK_WRONGTYPE:
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
+    exitElegant(1);
     break;
   case SDDS_CHECK_OKAY:
     break;
   default:
     fprintf( stdout, "Unexpected result from SDDS_CheckParameter routine while checking parameter Type.\n");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
+    exitElegant(1);
     break;
   }
   if (verbosity)

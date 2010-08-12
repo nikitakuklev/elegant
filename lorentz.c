@@ -350,7 +350,7 @@ long do_lorentz_integration(double *coord, void *field)
                 for (i=0; i<6; i++) 
                     fprintf(stdout, "%11.4e  ", coord[i]);
                     fflush(stdout);
-                exit(1);
+                exitElegant(1);
                 break;
             case DIFFEQ_END_OF_INTERVAL:
                 log_exit("do_lorentz_integration");
@@ -386,7 +386,7 @@ long do_lorentz_integration(double *coord, void *field)
                 default:
                     fprintf(stdout, "error: unknown non-adaptive integration method code: %ld\n", method_code);
                     fflush(stdout);
-                    exit(1);
+                    exitElegant(1);
                     break;
                 }
             if ((exvalue = (*exit_function)(NULL, qout, central_length))>0)
@@ -760,7 +760,7 @@ void select_lorentz_integrator(char *desired_method)
             for (i=0; i<N_METHODS; i++)
                 fprintf(stdout, "    %s\n", method[i]);
                 fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     log_exit("select_lorentz_integrator");
@@ -1418,7 +1418,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   if (!fexists(bmapxy->filename)) {
     fprintf(stdout, "file %s not found for BMAPXY element\n", bmapxy->filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxy->filename) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
@@ -1428,32 +1428,32 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   if (!check_sdds_column(&SDDSin, "x", "m") ||
       !check_sdds_column(&SDDSin, "y", "m")) {
     fprintf(stderr, "BMAPXY input file must have x and y in m (meters)\n");
-    exit(1);
+    exitElegant(1);
   }
   bmapxy->BGiven = 0;
   if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy"))) {
     if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By"))) {
       fprintf(stderr, "BMAPXY input file must have both (Fx, Fy) or both (Bx, By)\n");
-      exit(1);
+      exitElegant(1);
     }
     bmapxy->BGiven = 1;
     if (!check_sdds_column(&SDDSin, "Bx", "T") ||
         !check_sdds_column(&SDDSin, "By", "T")) {
       fprintf(stderr, "BMAPXY input file must have Bx and By in T (Tesla)\n");
-      exit(1);
+      exitElegant(1);
     }
   } else {
     if (!check_sdds_column(&SDDSin, "Fx", "") ||
         !check_sdds_column(&SDDSin, "Fy", "")) {
       fprintf(stderr, "BMAPXY input file must have Fx and Fy with no units\n");
-      exit(1);
+      exitElegant(1);
     }
   }
   
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
     fprintf(stdout, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   SDDS_Terminate(&SDDSin);
   
@@ -1476,7 +1476,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
     fflush(stdout);
     fprintf(stdout, "nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   bmapxy->ymin = y[0];
   bmapxy->ymax = y[bmapxy->points-1];

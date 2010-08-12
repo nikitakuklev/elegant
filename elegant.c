@@ -381,7 +381,7 @@ char **argv;
   if (!SDDS_CheckTableStructureSize(sizeof(SDDS_TABLE))) {
     fprintf(stderr, "table structure size is inconsistent\n");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   load_hash = NULL;     
   compute_offsets();
@@ -412,7 +412,7 @@ char **argv;
     showUsageOrGreeting(SHOW_USAGE|SHOW_GREETING);
     fflush(stdout);
     link_date();
-    exit(1);
+    exitElegant(1);
   }
   
   showUsageOrGreeting(SHOW_GREETING);
@@ -420,7 +420,7 @@ char **argv;
   link_date();
   if (getenv("RPN_DEFNS")) {
     rpn(getenv("RPN_DEFNS"));
-    if (rpn_check_error()) exit(1);
+    if (rpn_check_error()) exitElegant(1);
   }
 
   inputfile = NULL;
@@ -430,13 +430,13 @@ char **argv;
       case DESCRIBE_INPUT:
         show_namelists_fields(stdout, namelist_pointer, namelist_name, n_namelists);
         if (argc==2)
-          exit(0);
+          exitElegant(0);
         break;
       case DEFINE_MACRO:
         if ((scanned[i].n_items-=1)<1) {
           fprintf(stdout, "Invalid -macro syntax\n");
           showUsageOrGreeting(SHOW_USAGE);
-          exit(1);
+          exitElegant(1);
         }
         if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*(macros+scanned[i].n_items))) ||
             !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*(macros+scanned[i].n_items))))
@@ -448,7 +448,7 @@ char **argv;
             if (!(macroValue[macros] = strchr(macroTag[macros], '='))) {
               fprintf(stdout, "Invalid -macro syntax\n");
               showUsageOrGreeting(SHOW_USAGE);
-              exit(1);
+              exitElegant(1);
             }
             macroValue[macros][0] = 0;
             macroValue[macros] += 1;
@@ -462,7 +462,7 @@ char **argv;
         if (scanned[i].n_items<2) {
           fprintf(stdout, "Invalid -cpuList syntax\n");
           showUsageOrGreeting(SHOW_USAGE);
-          exit(1);
+          exitElegant(1);
         }
         else {
           long j, k;
@@ -471,7 +471,7 @@ char **argv;
             if (sscanf(scanned[i].list[j], "%ld", &k)!=1 && k<0)  {
               fprintf(stdout, "Invalid -cpuList syntax\n");
               showUsageOrGreeting(SHOW_USAGE);
-              exit(1);
+              exitElegant(1);
             }
             processorMask |= (unsigned long)(ipow(2, k)+0.5);
           }
@@ -498,7 +498,7 @@ char **argv;
       else {
         fprintf(stdout, "Too many file names listed.\n");
         showUsageOrGreeting(SHOW_USAGE);
-        exit(1);
+        exitElegant(1);
       }
     }
   }
@@ -506,7 +506,7 @@ char **argv;
   if (!inputfile) {
     fprintf(stdout, "No input file was given.\n");
     showUsageOrGreeting(SHOW_USAGE);
-    exit(1);
+    exitElegant(1);
   }
   cp_str(&macroValue[0], inputfile);
   
@@ -1104,7 +1104,7 @@ char **argv;
       close(fd); 
       MPI_Finalize();
 #endif
-      exit(0);
+      exitElegant(0);
       break;
     case OPTIMIZATION_SETUP:
       if (beam_type!=-1)
@@ -1614,7 +1614,7 @@ char **argv;
       for (i=0; i<N_COMMANDS; i++)
         fprintf(stdout, "%s\n", description[i]);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
       break;
     }
 #ifdef SUNOS4
@@ -1967,7 +1967,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
                 PRINTABLE_NULL(entity_description[type].parameter[j].name),
                 entity_name[type]);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
     } else {
       fprintf(fp, "NULL");
@@ -2194,7 +2194,7 @@ void createSemaphoreFile(char *filename)
     return;
   if (!(fp = fopen(filename, "w"))) {
     fprintf(stdout, "Problem creating semaphore file %s\n", filename);
-    exit(1);
+    exitElegant(1);
   }
   fclose(fp);
 }
@@ -2235,7 +2235,7 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
             input);
     fprintf(stdout, "Note that units must be \"m\" on all quantities\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
 
   if (!SDDS_ReadPage(&SDDSin)) {
@@ -2260,16 +2260,16 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   }
   if (run->apertureData.s[0]!=0) {
     fprintf(stdout, "The first value of s in %s is not zero.\n", input);
-    exit(1);
+    exitElegant(1);
   }
   for (i=0; i<run->apertureData.points; i++) {
     if (i && run->apertureData.s[i]<run->apertureData.s[i-1]) {
       fprintf(stdout, "s values in %s are not monotonically increasing.\n", input);
-      exit(1);
+      exitElegant(1);
     }
     if (run->apertureData.xMax[i]<0 || run->apertureData.yMax[i]<0) {
       fprintf(stdout, "One or more xHalfAperture and yHalfAperture values in %s are negative.\n", input);
-      exit(1);
+      exitElegant(1);
     }
   }
   run->apertureData.periodic = periodic;
@@ -2466,7 +2466,7 @@ void process_particle_command(NAMELIST_TEXT *nltext)
       fprintf(stderr, "Unknown particle type.  Known types are \n");
       for (i=0; i<N_PARTICLE_TYPES; i++)
         fprintf(stderr, "%s%c", particleTypeName[i], i==(N_PARTICLE_TYPES-1)?'\n':' ');
-      exit(1);
+      exitElegant(1);
       break;
     }
     particleRelSign = -SIGN(particleCharge)/SIGN(charge[TYPE_ELECTRON]);
@@ -2512,3 +2512,13 @@ void bombElegant(char *error, char *usage)
   exit(1);
 }
 
+void exitElegant(long status)
+{
+  if (status && semaphoreFile[2]) 
+    createSemaphoreFile(semaphoreFile[2]);
+  if (!status && semaphoreFile[1])
+    createSemaphoreFile(semaphoreFile[1]);
+  if (!status && semaphore_file)
+    createSemaphoreFile(semaphore_file);
+  exit(status);
+}

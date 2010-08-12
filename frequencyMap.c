@@ -169,7 +169,7 @@ long doFrequencyMap(
                    NULL, run, 0, TEST_PARTICLES, 1, 0,
                    NULL, NULL, NULL, NULL, NULL)) {
     printf("Error: lost particle when fiducializing\n");
-    exit(1);
+    exitElegant(1);
   }
   
   if (nx>1)

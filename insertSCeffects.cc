@@ -133,7 +133,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	break;
     if (i==N_TYPES) {
       fprintf(stderr, (char*)"type pattern %s does not match any known type", type);
-      exit(1);
+      exitElegant(1);
     }
   }
   if (exclude) {

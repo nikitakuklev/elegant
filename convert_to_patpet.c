@@ -76,12 +76,12 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                      */
                     if (eptr->type==T_RBEN) {
                         printf("error: rectangular bends must have zero edge angles\n");
-                        exit(1);
+                        exitElegant(1);
                         }
                     if (!nearly_equal(bend->e1, bend->e2, angle_tolerance)) {
                         printf("error: bend %s has unequal edge angles\n",
                             eptr->name);
-                        exit(1);
+                        exitElegant(1);
                         }
                     if (!nearly_equal(bend->e1*2, bend->angle, angle_tolerance)) {
                         printf("error: sector bend %s has edge angles of %.4e and  bending angle %.4e.\n",
@@ -90,7 +90,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                         printf("rectangular magnets (to within a tolerance of %e).\n", 
                                 angle_tolerance);
                         puts("You may change this edge-angle tolerance with the -tolerance switch.");
-                        exit(1);
+                        exitElegant(1);
                         }
                     else {
                         bend->e1 = bend->e2 = 0;

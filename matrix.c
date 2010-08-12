@@ -148,7 +148,7 @@ void initialize_matrices(VMATRIX *M, long order)
             fprintf(stdout, "invalid order: %ld  (initialize_matrices)\n", 
                 order);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     log_exit("initialize_matrices");
@@ -343,7 +343,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
         fprintf(stdout, "invalid order: %ld  (track_particle)\n", 
                M->order);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         break;
         }
     
@@ -433,7 +433,7 @@ void free_matrices(VMATRIX *M)
             fprintf(stdout, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     M->C = NULL;
@@ -486,7 +486,7 @@ void free_nonlinear_matrices(VMATRIX *M)
             fprintf(stdout, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     M->T = NULL;
@@ -640,7 +640,7 @@ void filter_matrices(VMATRIX *M, double threshold)
             fprintf(stdout, "invalid order: %ld  (filter_matrices)\n", 
                 M->order);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     log_exit("filter_matrices");
@@ -697,7 +697,7 @@ void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0)
             fprintf(stdout, "invalid order: %ld  (null_matrices)\n", 
                 M->order);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
             break;
         }
     log_exit("random_matrices");

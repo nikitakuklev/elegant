@@ -111,7 +111,7 @@ void setupMomentumApertureSearch(
 
 
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
 
   if (output_mode==0) {
@@ -135,7 +135,7 @@ void setupMomentumApertureSearch(
         SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
   } else {
     if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
@@ -152,14 +152,14 @@ void setupMomentumApertureSearch(
         SDDS_DefineColumn(&SDDSma, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
   } 
 #if !SDDS_MPI_IO
   /* In the version with parallel IO, the layout will be written later */
   if(!SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)){
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
 #endif
   
@@ -313,7 +313,7 @@ long doMomentumApertureSearch(
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostOnPass0, NULL);
     if (!code) {
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
-      exit(1);
+      exitElegant(1);
     }
   }
 
@@ -400,7 +400,7 @@ long doMomentumApertureSearch(
                              SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             fprintf(stdout, "Fiducial particle tune is undefined.\n");
-            exit(1);
+            exitElegant(1);
           }
           if (verbosity>3)
             fprintf(stdout, "  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
@@ -504,7 +504,7 @@ long doMomentumApertureSearch(
             if (!loserFound[slot][outputRow]) {
               if (!soft_failure) {
                 fprintf(stdout, "Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-                exit(1);
+                exitElegant(1);
               }
 	      loserFound[slot][outputRow] = 1;
 	      split = splits;

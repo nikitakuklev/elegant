@@ -295,33 +295,33 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     /* read in a new wake */
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
       fprintf(stderr, "Error: unable to open or read WAKE file %s\n", wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0) {
       fprintf(stderr, "Error: no data in WAKE file %s\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (wakeData->wakePoints<2) {
       fprintf(stderr, "Error: too little data in WAKE file %s\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
                          stdout)!=SDDS_CHECK_OK) {
       fprintf(stderr, "Error: problem with time column in WAKE file %s.  Check existence, type, and units.\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn))) {
       fprintf(stderr, "Error: problem retrieving time data from WAKE file %s\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (SDDS_CheckColumn(&SDDSin, wakeData->WColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
                          stdout)!=SDDS_CHECK_OK) {
       fprintf(stderr, "Error: problem with wake column in WAKE file %s.  Check existence, type, and units.\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn))) {
       fprintf(stderr, "Error: problem retrieving wake data from WAKE file %s\n",  wakeData->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     SDDS_Terminate(&SDDSin);
 
@@ -349,11 +349,11 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
 #endif
   if (tmin>=tmax) {
     fprintf(stderr, "Error: zero or negative time span in WAKE file %s\n",  wakeData->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (tmin!=0) {
     fprintf(stderr, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }

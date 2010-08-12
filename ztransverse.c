@@ -160,7 +160,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
               tmax-tmin, nb*dt);
       fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
       fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
-      exit(1);
+      exitElegant(1);
     }
 
     if (nb>max_n_bins) {
@@ -421,12 +421,12 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
       fprintf(stdout, "unable to read file %s\n", ztransverse->inputFile);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors); 
-      exit(1);
+      exitElegant(1);
     }
     if ((n_spect=SDDS_RowCount(&SDDSin))<4) {
       fprintf(stdout, "too little data in %s\n", ztransverse->inputFile);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     if (!power_of_2(n_spect-1))
       bombElegant("number of spectrum points must be 2^n+1, n>1 (ZTRANSVERSE)", NULL);
@@ -437,18 +437,18 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     if (!(freqData=SDDS_GetColumnInDoubles(&SDDSin, ztransverse->freqColumn))) {
       fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     if (!checkPointSpacing(freqData, n_spect, 1e-6)) {
       fprintf(stdout, "Frequency values are not equispaced (ZTRANSVERSE)\n");
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     if ((df_spect = (freqData[n_spect-1]-freqData[0])/(n_spect-1))<=0) {
       fprintf(stdout, "Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
               ztransverse->inputFile);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
     df = df_spect;
     nfreq = n_spect;
@@ -459,7 +459,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
               ztransverse->inputFile);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     if (!(ztransverse->iZ[0] =
           calloc(sizeof(*ztransverse->iZ[0]), n_spect*2)) ||
@@ -552,7 +552,7 @@ double *getTransverseImpedance(SDDS_DATASET *SDDSin,
     fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n",
             ZName);
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   return Z;
 }
@@ -594,7 +594,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
                  (long)(log(2*timeSpan*1.05/bin_size)/log(2)+1));
     if (maxBins2<n_bins) {
       fprintf(stderr, "  Maximum number of bins does not allow sufficient time span!\n");
-      exit(1);
+      exitElegant(1);
     }
     fprintf(stdout, "  Number of bins adjusted to %ld\n",
             n_bins);
@@ -620,7 +620,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
         fprintf(stdout, " It isn't possible to model this situation accurately with %ld bins.  Consider the RFMODE or TRFMODE element.\n",
                 maxBins2);
         fprintf(stdout, " Alternatively, consider increasing your bin size or maximum number of bins\n");
-        exit(1);
+        exitElegant(1);
       }
       n_bins = maxBins2;
       fprintf(stdout, "  Number of bins adjusted to %ld\n", n_bins);

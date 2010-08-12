@@ -2178,11 +2178,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   }
   if (bitsSet(mode)>1) {
     fprintf(stdout, "Error: Too many modes set for CSRDRIFT.\n");
-    exit(1);
+    exitElegant(1);
   }
   if (csrWake.lastMode && csrWake.lastMode!=mode) {
     fprintf(stdout, "Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
-    exit(1);
+    exitElegant(1);
   }
   csrWake.lastMode = mode;
   
@@ -2573,7 +2573,7 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
     break;
   default:
     fprintf(stderr, "Error: unknown Saldin-54 normalization mode: %s\n", normMode);
-    exit(1);
+    exitElegant(1);
     break;
   }
   if (f)
@@ -3521,44 +3521,44 @@ void readWakeFilterFile(long *values,
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename) || !SDDS_ReadPage(&SDDSin)) {
     fprintf(stderr, "Error: unable to open or read CSRCSBEND wake filter file %s\n", filename);
-    exit(1);
+    exitElegant(1);
   }
   if ((*values = SDDS_RowCount(&SDDSin))<2) {
     fprintf(stderr, "Error: too little data in CSRCSBEND wake filter file %s\n", filename);
-    exit(1);
+    exitElegant(1);
   }
   if (!freqName || !strlen(freqName))
     SDDS_Bomb("WFF_FREQ_COLUMN is blank in CSRCSBEND");
   if (SDDS_CheckColumn(&SDDSin, freqName, "Hz", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence, type, and units (Hz).\n", 
             freqName, filename);
-    exit(1);
+    exitElegant(1);
   }
   if (!realName || !strlen(realName))
     SDDS_Bomb("WFF_REAL_COLUMN is blank in CSRCSBEND");
   if (SDDS_CheckColumn(&SDDSin, realName, NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence and type.\n", 
             realName, filename);
-    exit(1);
+    exitElegant(1);
   }
   if (!imagName || !strlen(imagName))
     SDDS_Bomb("WFF_IMAG_COLUMN is blank in CSRCSBEND");
   if (SDDS_CheckColumn(&SDDSin, imagName, NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence and type.\n", 
             imagName, filename);
-    exit(1);
+    exitElegant(1);
   }
   if (!(*freq=SDDS_GetColumnInDoubles(&SDDSin, freqName)) ||
       !(*real=SDDS_GetColumnInDoubles(&SDDSin, realName)) ||
       !(*imag=SDDS_GetColumnInDoubles(&SDDSin, imagName))) {
     fprintf(stderr, "Problem getting data from CSRCSBEND wake filter file %s.\n", filename);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   for (i=1; i<*values; i++) {
     if ((*freq)[i-1]>=(*freq)[i]) {
       fprintf(stderr, "Error: frequency data is not monotonically increasing in CSRCSBEND wake filter file %s.\n", filename);
-      exit(1);
+      exitElegant(1);
     }
   }
 }

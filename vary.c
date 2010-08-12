@@ -172,7 +172,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     if (!find_element(name, &context, &(beamline->elem))) {
         fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&_control->element[n_elements_to_vary], name);
     _control->varied_type[n_elements_to_vary] = context->type;
@@ -180,14 +180,14 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     if ((_control->varied_param[n_elements_to_vary] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
         }
     cp_str(&_control->item[n_elements_to_vary], item);
     cp_str(&_control->varied_quan_unit[n_elements_to_vary], 
         entity_description[_control->varied_type[n_elements_to_vary]].parameter[_control->varied_param[n_elements_to_vary]].unit);
     if (geometric && (multiplicative || differential)) {
       fprintf(stdout, "error: geometric is incompatible with multiplicative and differential modes\n");
-      exit(1);
+      exitElegant(1);
     }
 
     if (multiplicative) {
@@ -269,7 +269,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     if ((_control->indexLimitProduct *= _control->index_limit[i])<=0) {
       fprintf(stdout, "index %ld has a limit of <= 0", i);
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
   }
   
@@ -618,7 +618,7 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             }
         }
@@ -672,7 +672,7 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             }
         }
@@ -711,7 +711,7 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
                 return(0);
             default:
                 bombElegant("unknown/invalid variable quantity", NULL);
-                exit(1);
+                exitElegant(1);
                 break;
             }
         }
@@ -843,7 +843,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity", NULL);
-                    exit(1);
+                    exitElegant(1);
                 }
             if (i_group++==0) 
               /* save value if this is the first from a group */

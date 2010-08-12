@@ -324,7 +324,7 @@ long do_tracking(
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
       rpn(s);
       rpn_clear();
-      if (rpn_check_error()) exit(1);
+      if (rpn_check_error()) exitElegant(1);
       if (assert_element_links(beamline->links, run, beamline, TURN_BY_TURN_LINK)) {
         beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
         beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
@@ -362,7 +362,7 @@ long do_tracking(
           fflush(stdout);
           fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         eptrCLMatrix = findBeamlineMatrixElement(eptr);
       }
@@ -372,7 +372,7 @@ long do_tracking(
           fflush(stdout);
           fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         eptrCLMatrix = findBeamlineMatrixElement(eptr);
       }
@@ -514,12 +514,12 @@ long do_tracking(
       if (!eptr->p_elem && !run->concat_order) {
         fprintf(stdout, "element %s has NULL p_elem pointer", eptr->name);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       if (eptr->type<=0 || eptr->type>=N_TYPES) {
         fprintf(stdout, "element %s has type %ld--not recognized/not allowed\n", eptr->name, eptr->type);
         fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
       log_exit("do_tracking.2.2.0");
 
@@ -771,7 +771,7 @@ long do_tracking(
 		if (charge!=NULL) {
 		  fprintf(stdout, "Fatal error: multipole CHARGE elements in one beamline.\n");
 		  fflush(stdout);
-		  exit(1);
+		  exitElegant(1);
 		}
 		charge = (CHARGE*)eptr->p_elem;
 		charge->macroParticleCharge = 0;
@@ -1375,7 +1375,7 @@ long do_tracking(
 		    fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
 			    nLost, beam->n_particle, nLeft);
 #if (!USE_MPI)
-		    exit(1);
+		    exitElegant(1);
 #else
          	    MPI_Abort(MPI_COMM_WORLD, 2);                      
 #endif
@@ -1459,7 +1459,7 @@ long do_tracking(
                     if (nToTrack<10) {
 #endif		     
                       printf("*** Error: too few particles (<10) for computation of twiss parameters from beam\n");
-                      exit(1);
+                      exitElegant(1);
                     }
                     computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
                     if (eptr->matrix)
@@ -1472,13 +1472,13 @@ long do_tracking(
                   printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
                          eptr->name, eptr->end_pos);
                   printf("This means you set FROM_BEAM=0 but didn't issue a twiss_output command.\n");
-                  exit(1);
+                  exitElegant(1);
                 }
                 if (eptr->matrix==NULL) {
                   printf("Error: twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
                          eptr->name, eptr->end_pos);
                   printf("and this wasn't properly detected.  Please send your input files to borland@aps.anl.gov.\n");
-                  exit(1);
+                  exitElegant(1);
                 }
                 if (((TWISSELEMENT*)eptr->p_elem)->verbose) {
                   TWISS beamTwiss;
@@ -1541,7 +1541,7 @@ long do_tracking(
 	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);
 	      fflush(stdout);
-	      exit(1);
+	      exitElegant(1);
 	      break;
 	    }
 	  }
@@ -1606,7 +1606,7 @@ long do_tracking(
           fprintf(stdout, "error: the trajectory centroid array for %s is NULL (do_tracking)",
                   eptr->name);
           fflush(stdout);
-          exit(1);
+          exitElegant(1);
         }
         traj_vs_z[i_traj].elem = eptr;
         if (!(traj_vs_z[i_traj].n_part=nLeft)) {
@@ -1767,7 +1767,7 @@ long do_tracking(
             fprintf(stdout, "error: the trajectory centroid array for %s is NULL (do_tracking)",
                     eptr->name);
             fflush(stdout);
-            exit(1);
+            exitElegant(1);
           }
           traj_vs_z[i_traj].elem = eptr;
           traj_vs_z[i_traj].n_part = 0;
@@ -1946,7 +1946,7 @@ long do_tracking(
     if (!charge) {
       fprintf(stdout, "Can't compute SASE FEL---no CHARGE element seen");
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
 #if SDDS_MPI_IO
   if (!partOnMaster && notSinglePart) {
@@ -3040,7 +3040,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       fprintf(stdout, 
               "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
       fflush(stdout);
-      exit(1);
+      exitElegant(1);
     }
   }
 
@@ -3074,13 +3074,13 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
               np, npNew);
       fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
       fprintf(stderr, "in this version of elegant.\n");
-      exit(1);
+      exitElegant(1);
     }
     if ((np+nLost)!=beam->n_particle) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
       fprintf(stderr, "np = %ld, nLost = %ld, n_particle = %ld\n",
               np, nLost, beam->n_particle);
-      exit(1);
+      exitElegant(1);
     }
     
     if (beam->original==beam->particle) {
@@ -3099,7 +3099,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         !(beam->lostOnPass = realloc(beam->lostOnPass, sizeof(beam->lostOnPass)*(npNew+nLost)))) {
       fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
               npNew+nLost);
-      exit(1);
+      exitElegant(1);
     }
     /* move lost particles into the upper part of the arrays */
     /* fprintf(stdout, "Moving %ld lost particles higher into buffer\n",
@@ -3203,30 +3203,30 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     if ((i=match_string(scat->plane, planeName, 3, MATCH_WHOLE_STRING))<0) {
       fprintf(stderr, "Error for %s: plane is not valid.  Give xp, yp, or dp\n",
               context.elementName);
-      exit(1);
+      exitElegant(1);
     }
     scat->iPlane = planeIndex[i];
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, scat->fileName) ||
         SDDS_ReadPage(&SDDSin)!=1) {
       fprintf(stderr, "Error for %s: file is not valid.\n", context.elementName);
-      exit(1);
+      exitElegant(1);
     }
     if ((scat->nData=SDDS_RowCount(&SDDSin))<2) {
       fprintf(stderr, "Error for %s: file contains insufficient data.\n", context.elementName);
-      exit(1);
+      exitElegant(1);
     }
     /* Get independent data */
     if (!(scat->indepData=SDDS_GetColumnInDoubles(&SDDSin, scat->valueName))) {
       fprintf(stderr, "Error for %s: independent variable data is invalid.\n",
               context.elementName);
-      exit(1);
+      exitElegant(1);
     }
     /* Check that independent data is monotonically increasing */
     for (i=1; i<scat->nData; i++)
       if (scat->indepData[i]<=scat->indepData[i-1]) {
         fprintf(stderr, "Error for %s: independent variable data is not monotonically increasing.\n",
                 context.elementName);
-        exit(1);
+        exitElegant(1);
       }
     /* Get CDF or PDF data */
     if (!(scat->cdfData=SDDS_GetColumnInDoubles(&SDDSin, 
@@ -3234,7 +3234,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       fprintf(stderr, "Error for %s: CDF/PDF data is invalid.\n",
               context.elementName);
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      exitElegant(1);
     }
     SDDS_Terminate(&SDDSin);
     if (!(scat->cdfName)) {
@@ -3242,7 +3242,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       double *integral, *ptr;
       if (!(integral=malloc(sizeof(*integral)*scat->nData))) {
         fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
-        exit(1);
+        exitElegant(1);
       }
       trapazoidIntegration1(scat->indepData, scat->cdfData, scat->nData, integral);
       ptr = scat->cdfData;
@@ -3257,7 +3257,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
                 i);
         for (j=0; j<=i+1 && j<scat->nData; j++)
           fprintf(stderr, "%ld %21.15e\n", j, scat->cdfData[i]);
-        exit(1);
+        exitElegant(1);
       }
     }
     /* Normalize CDF to 1 */
@@ -3279,7 +3279,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
                 i, scat->group, context.elementName, context.elementOccurrence);
         if (!(dscatterGroup = SDDS_Realloc(dscatterGroup, sizeof(*dscatterGroup)*(dscatterGroups+1)))) {
           fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
-          exit(1);
+          exitElegant(1);
         }
         dscatterGroup[i].particleIDScattered = NULL;
         dscatterGroup[i].nParticles = 0;
@@ -3306,7 +3306,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     if (!(dscatterGroup[scat->groupIndex].particleIDScattered 
           = malloc(sizeof(*(dscatterGroup[scat->groupIndex].particleIDScattered))*np))) {
       fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
-      exit(1);
+      exitElegant(1);
     }
     dscatterGroup[scat->groupIndex].nScattered = 0;
     dscatterGroup[scat->groupIndex].allScattered = 0;
@@ -3337,7 +3337,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
   if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].nParticles<np) {
     fprintf(stderr, "Error for %s: number of particles is greater than the size of the particle ID array.\n",
             context.elementName);
-    exit(1);
+    exitElegant(1);
   }
 
   nScattered = 0;
@@ -3853,7 +3853,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
   MPI_Reduce (&np, &npTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   if (isMaster && npTotal<10) {
     printf("*** Error: too few particles (<10) for emittance modification\n");
-    exit(1);
+    exitElegant(1);
   }
 #endif
 

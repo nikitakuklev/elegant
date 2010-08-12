@@ -499,7 +499,7 @@ void (*set_up_derivatives(
       fputs((char*)"Error: field expansion for LSRMDLTR elements must be one of:\n", stdout);
       for (i=0; i<N_LSRMDLTR_FIELD_EXPANSIONS; i++)
         fprintf(stdout, (char*)"    %s\n", lsrMdltrFieldExpansion[i]);
-      exit(1);
+      exitElegant(1);
     }
     if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
       bombElegant((char*)"LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
@@ -858,7 +858,7 @@ void (*set_up_derivatives(
     bombElegant((char*)"invalid mode type (set_up_derivatives", NULL);
     break;
   }
-  exit(1);
+  exitElegant(1);
 }
 
 void (*set_up_stochastic_effects(long field_type))(double *, double, double)
@@ -1555,14 +1555,14 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
         for (i=0; i<N_KNOWN_MODES; i++)
           fprintf(stdout, (char*)"    %s\n", known_mode[i]);
           fflush(stdout);
-        exit(1);
+        exitElegant(1);
       }
     }
   }
   if (i_var==-1 && fid_mode!=FID_AVERAGE) {
     fprintf(stdout, (char*)"unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
     fflush(stdout);
-    exit(1);
+    exitElegant(1);
   }
   if (i_var==-1) {
     double deltaAve, tAve;
@@ -1775,7 +1775,7 @@ void select_integrator(char *desired_method)
         for (i=0; i<N_METHODS; i++)
             fprintf(stdout, (char*)"    %s\n", method[i]);
             fflush(stdout);
-        exit(1);
+        exitElegant(1);
         break;
         }
     log_exit((char*)"select_integrator");
@@ -1804,24 +1804,24 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
     fprintf(stderr, (char*)"Error: unable to open or read RFTMEZ0 file %s\n", 
             rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if ((rftmEz0->nz=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nz<2) {
     fprintf(stderr, (char*)"Error: no data or insufficient data in RFTMEZ0 file %s\n", 
             rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 file %s.  Check existence, type, and units.\n",
             rftmEz0->zColumn, rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->EzColumn, NULL, SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 file %s.  Check existence and type.\n",
             rftmEz0->EzColumn, rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->zColumn)) ||
       !(rftmEz0->Ez=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->EzColumn))) {
@@ -1839,20 +1839,20 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
     
     fprintf(stderr, (char*)"Error: memory allocation failure setting up RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
 
   /* compute dEz/dz for use in computing Er(z) */
   if (!analyzeSpacing(z, rftmEz0->nz, &rftmEz0->dz, stderr)) {
     fprintf(stderr, (char*)"Error: problem with z points from RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   
   if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-4) {
     fprintf(stderr, (char*)"Error: declared length (%le) and length from fields (%le) from RFTMEZ0 file %s do not agree to 1/10^4 tolerance\n",
             length, z[rftmEz0->nz-1]-z[0], rftmEz0->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   free(z);
 
@@ -1908,34 +1908,34 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->solenoidFile)) {
     fprintf(stderr, (char*)"Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
             rftmEz0->solenoidFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoid_zColumn, rftmEz0->solenoidFile);
-    exit(1);
+    exitElegant(1);
   }
   if (rftmEz0->solenoid_rColumn &&
       SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoid_rColumn, rftmEz0->solenoidFile);
-    exit(1);
+    exitElegant(1);
   }
 
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBzColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
-    exit(1);
+    exitElegant(1);
   }
   if (rftmEz0->solenoidBrColumn &&
       SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
-    exit(1);
+    exitElegant(1);
   }
 
   z = NULL;
@@ -1945,35 +1945,35 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       if ((rftmEz0->nzSol=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nzSol<2) {
         fprintf(stderr, (char*)"Error: no data or insufficient data in RFTMEZ0 solenoid file %s\n", 
                 rftmEz0->solenoidFile);
-        exit(1);
+        exitElegant(1);
       }
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_zColumn))) {
         fprintf(stderr, (char*)"Error: problem getting z data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
-        exit(1);
+        exitElegant(1);
       }
       if (!analyzeSpacing(z, rftmEz0->nzSol, &dz, stderr)) {
         fprintf(stderr, (char*)"Problem with z spacing of solenoid data from RFTMEZ0 file %s (page %ld)\n",
                 rftmEz0->solenoidFile, page);
-        exit(1);
+        exitElegant(1);
       }
       z0 = z[0];
       if (fabs((length-(z[rftmEz0->nzSol-1]-z[0]))/dz)>1e-4) {
         fprintf(stderr, (char*)"Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^4 tolerance\n",
                 rftmEz0->solenoidFile);
         
-        exit(1);
+        exitElegant(1);
       }
       free(z);
     } else {
       if (!rftmEz0->solenoidBrColumn) {
         fprintf(stderr, (char*)"Error: multi-page file for RFTMEZ0 solenoid, but no BrColumn or rColumn\n");
-        exit(1);
+        exitElegant(1);
       }
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
         fprintf(stderr, (char*)"Error: page %ld of RFTMEZ0 file %s has only %d rows (%ld expected)\n",
                 page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
-        exit(1);
+        exitElegant(1);
       }
     }
 
@@ -1981,7 +1981,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_rColumn))) {
         fprintf(stderr, (char*)"Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
-        exit(1);
+        exitElegant(1);
       }
       if (!(r = (double*)SDDS_Realloc(r, sizeof(*r)*page)))
         SDDS_Bomb((char*)"memory allocation failure (setupRftmEz0SolenoidFromFile)");
@@ -1993,7 +1993,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
             SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBrColumn)) )  {
         fprintf(stderr, (char*)"Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
-        exit(1);
+        exitElegant(1);
       }
     }
     
@@ -2003,7 +2003,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
           SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBzColumn))) {
       fprintf(stderr, (char*)"Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
               rftmEz0->solenoidFile);
-      exit(1);
+      exitElegant(1);
     }
     rftmEz0->nrSol = page;
   }
@@ -2016,7 +2016,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
               rftmEz0->solenoidFile);
       for (ir=0; ir<rftmEz0->nrSol; ir++)
         fprintf(stderr, (char*)"%le\n", r[ir]);
-      exit(1);
+      exitElegant(1);
     }
     free(r);
   } else
@@ -2042,7 +2042,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
     if (!(rftmEz0->dBzdZSol=(double*)SDDS_Malloc(sizeof(*(rftmEz0->dBzdZSol))*rftmEz0->nzSol))) {
       fprintf(stderr, (char*)"Error: memory allocation failure setting up RFTMEZ0 file %s\n",
               rftmEz0->solenoidFile);
-      exit(1);
+      exitElegant(1);
     }
     /* take derivative except at endpoints */
     for (iz=1; iz<rftmEz0->nzSol-1; iz++)
@@ -2112,32 +2112,32 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mapSol->inputFile)) {
     fprintf(stderr, (char*)"Error: unable to open or read MAPSOLENOID file %s\n", 
             mapSol->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, mapSol->zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->zColumn, mapSol->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, mapSol->rColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->rColumn, mapSol->inputFile);
-    exit(1);
+    exitElegant(1);
   }
 
   if (SDDS_CheckColumn(&SDDSin, mapSol->BzColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->BzColumn, mapSol->inputFile);
-    exit(1);
+    exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, mapSol->BrColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->BzColumn, mapSol->inputFile);
-    exit(1);
+    exitElegant(1);
   }
 
   z = NULL;
@@ -2147,37 +2147,37 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
       if ((mapSol->nz=SDDS_RowCount(&SDDSin))<0 || mapSol->nz<2) {
         fprintf(stderr, (char*)"Error: no data or insufficient data in MAPSOLENOID file %s\n", 
                 mapSol->inputFile);
-        exit(1);
+        exitElegant(1);
       }
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, mapSol->zColumn))) {
         fprintf(stderr, (char*)"Error: problem getting z data from MAPSOLENOID file %s\n",
                 mapSol->inputFile);
-        exit(1);
+        exitElegant(1);
       }
       if (!analyzeSpacing(z, mapSol->nz, &dz, stderr)) {
         fprintf(stderr, (char*)"Problem with z spacing of solenoid data from MAPSOLENOID file %s (page %ld)\n",
                 mapSol->inputFile, page);
-        exit(1);
+        exitElegant(1);
       }
       if (fabs((length-(z[mapSol->nz-1]-z[0]))/dz)>1e-4) {
         fprintf(stderr, (char*)"Error: declared length (%le) and length from fields (%le) from MAP_SOLENOID file %s do not agree to 1/10^4 tolerance (in units of dz=%le)\nDiscrepancy is %le\n",
                 length, z[mapSol->nz-1]-z[0], mapSol->inputFile, dz,
                 fabs((length-(z[mapSol->nz-1]-z[0]))/dz));
-        exit(1);
+        exitElegant(1);
       }
       free(z);
     } else {
       if (mapSol->nz!=SDDS_RowCount(&SDDSin)) {
         fprintf(stderr, (char*)"Error: page %ld of MAPSOLENOID file %s has only %d rows (%ld expected)\n",
                 page, mapSol->inputFile, SDDS_RowCount(&SDDSin), mapSol->nz);
-        exit(1);
+        exitElegant(1);
       }
     }
 
     if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, mapSol->rColumn))) {
       fprintf(stderr, (char*)"Error: problem getting r data from MAPSOLENOID file %s\n",
               mapSol->inputFile);
-      exit(1);
+      exitElegant(1);
     }
     if (!(r = (double*)SDDS_Realloc(r, sizeof(*r)*page)))
       SDDS_Bomb((char*)"memory allocation failure (setupmapSolSolenoidFromFile)");
@@ -2193,7 +2193,7 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
           SDDS_GetColumnInDoubles(&SDDSin, mapSol->BrColumn)) )  {
        fprintf(stderr, (char*)"Error: problem getting field data from MAPSOLENOID file %s\n",
                mapSol->inputFile);
-       exit(1);
+       exitElegant(1);
     }
     mapSol->nr = page;
   }
@@ -2205,7 +2205,7 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
             mapSol->inputFile);
     for (ir=0; ir<mapSol->nr; ir++)
       fprintf(stderr, (char*)"%le\n", r[ir]);
-    exit(1);
+    exitElegant(1);
   }
   free(r);
   
@@ -2248,7 +2248,7 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
       !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BzSol", (char*)"T", SDDS_DOUBLE) ||
       !SDDS_WriteLayout(&SDDSout)  || !SDDS_StartPage(&SDDSout, nz)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    exitElegant(1);
   }
   dX = dY = 1e-3*rftmEz0->k/sqrt(2.0);
   ERFscale = 1/(sin(PI/2.0)*particleCharge/(particleMass*c_mks*PIx2*rftmEz0->frequency));
@@ -2573,7 +2573,7 @@ double HermitePolynomial(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   return result;
@@ -2601,7 +2601,7 @@ double HermitePolynomialDeriv(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   return result;
@@ -2629,7 +2629,7 @@ double HermitePolynomial2ndDeriv(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
-    exit(1);
+    exitElegant(1);
     break;
   }
   return result;
