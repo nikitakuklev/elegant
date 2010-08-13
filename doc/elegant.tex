@@ -17,7 +17,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 23.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 23.X\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -26,105 +26,50 @@ Users are encouraged to join and participate.  At minimum, users should subscrib
 since this is where bug notifications are posted.  Contrary to previous practise, we will no longer announce
 bugs via email.
 
-\section{Highlights of What's New in Version 23.1}
+\section{Highlights of What's New in Version 23.X}
 
-Version 23.1 is a major release, containing several important bug fixes and some important new features.  
-Here is a summary of what's changed since release 22.1. 
+Here is a summary of what's changed since release 23.1
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A bug was found in \verb|CSRCSBEND| when a dipole was split into many identical pieces and followed by 
-  \verb|CSRDRIFT|.  In this case, the drift CSR was computed incorrectly.  This was reported by D. Angal-Kalinin and P. Williams (ASTeC).
-\item An uninitialized variable was found in the code for CSBEND (by R. Soliday, ANL) that would potentially give wrong results for
-  EDGE\_ORDER$>$1.   We didn't see problems in tests, but it may be platform-dependent.
-\item A bug was fixed in the SCRIPT element that prevented having commands with embedded quotes.
-\item A bug was fixed in subdivision of QUAD and KQUAD elements, that resulted in incorrect steering from the embedded steering
-  correctors.  This was reported by A. Petrenko (BINP).
+\item The third-order matrix for quadrupoles (used by the {\tt QUAD} element for tracking or by
+  {\tt KQUAD} for analysis) was improved to include all the terms.  The previous version had only
+  the most obvious terms.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item When including an element, e.g., a deflecting cavity matrix, that includes coupling between time and transverse coordinates,
-  the dispersion from \verb|twiss_output| would disagree with the $R_{16}$ element from the \verb|matrix_output|.  This was
-  reported by P. Piot (NIU).  An additional, related problem is that {\tt elegant} would ignore acceleration in computing the
-  dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
-  was the local fractional momentum deviation.  In a linac, one might also be interested in the ``global'' dispersion
-  $\frac{\partial x}{\partial \delta_0}$, where $\delta_0$ is the energy deviation at the beginning of the system.
-  To resolve this, a parameter \verb|local_dispersion| was added to \verb|twiss_output|.  The default value is 1, which
-  gives the previous behavior.
-\item The line-search dynamic aperture method would previously return a large non-zero area if no stable particles were found.
-  It now returns zero.  This was reported by L. Yang (BNL).
+\item In some cases, the {\tt failed} semaphore file would not be created when a run failed.  This
+  has been rectified.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|MHISTOGRAM| element was added, allowing compilation of multi-dimensional histograms.  This was the work 
-  of A. Xiao (ANL).
-\item The \verb|LSRMDLTR| element now has a transfer matrix determined from tracking, which will be used in 
-  \verb|twiss_output|, \verb|matrix_output|, and related computations.
-\item The implementation of KQUAD, KSEXT, FMULT, and MULT elements was improved to reduce running time by about 20\%.
-\item A new parameter, \verb|CROSS_RESONANCE|, was added to \verb|ILMATRIX|, which allows controlling whether crossing
-  the integer and half-integer resonances results in forced particle loss.  By default, the value is 0.  This was requested
-  by Y. Chae (ANL).
-\item The \verb|BMAPXY| element now supports specifying the fields using \verb|rpn| expressions.
+\item Radiation from steering correctors ({\tt HKICK}, {\tt VKICK},
+  and {\tt HVKICK}) are now included in computation of beam moments
+  ({\tt moments\_output} command) and in element-by-element tracking
+  (if requested).  However, they are not yet included in radiation integral computations.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|modulate_element| command was added.  As the name suggests, it allows imposing time-dependent modulations
-  on parameters of elements.  This feature is somewhat experimental so please use with caution and report any problems
-  on the forum.  See the manual entry below for details.
-\item The \verb|touschek_scatter| command was added.  It allows simulation of Touschek scattering in linacs and transport lines,
-  including arbitrary beam distributions.  This was the work of A. Xiao (ANL).
-\item In the past, the beam produced by the \verb|bunched_beam| command would not have {\em exactly} the twiss parameters and
-  dispersion requested by the user.  This has been dramatically improved.
-\item The \verb|bunched_beam| command now includes the option for ``optimized'' Halton sequence generation \cite{Chi2005}.  They
-  have the advantage of removing correlations between the phase space planes.  This work was done by A. Xiao and H. Shang with
-  assistance from C. Wang (all ANL), using code from H. Chi.
-\item Computation of the cross-plane response matrix was added to \verb|correction_matrix_output|.  The cross-plane elements may
-  also be optimized.
-\item The functionality behind the \verb|use_twiss_command_values| parameter of \verb|bunched_beam| was improved.  {\tt elegant} will now
-  update the values as twiss parameters are recomputed in multi-step runs.
-\item The \verb|error_elements| command now has a flag \verb|allow_missing_elements| that allows continuation of the run
-  in the event that no matching elements are found.
-\item The original value of the source parameter for \verb|link_elements| is now stored in a variable named {\em ParameterValue}0.
-  Also added minimum and maximum limits on the values placed in the target parameter.
-\item The \verb|momentum_aperture| command now accepts starting values for the positive- and negative-going aperture search, which
-  can speed up simulations.  Resonance detection was added to forbid crossing integer and half-integer resonances.
-\item The \verb|optimization_setup| command now accepts a \verb|term_log_file| parameter.  This names a file to which the
-  values of the optimization terms are written at the completion of optimization, which can be convenient when large numbers
-  of terms are used.
-\item The \verb|semaphores| command now includes the option to create a semaphore when a run fails.
-\item The \verb|rpn_load| command now allows a blank tag, instead of bombing.  This bug was pointed out by M. Cornacchia (SLAC).
+\item The {\tt optimization\_variable} command has a new parameter, {\tt force\_inside}, which 
+  allows forcing the initial value of the variable inside the boundaries set by the 
+  {\tt lower\_limit} and {\tt upper\_limit} parameters.
 \end{itemize}
 
 \subsection{Other Changes}
 \begin{itemize}
-\item The matrix concatenation code was reorganized to improve performance.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 \begin{itemize}
-\item The ``line'' and ``shell'' beam types did not work in the parallel version.  This has been fixed (Y. Wang, ANL).
-\item The \verb|momentum_aperture| command now features an \verb|output_mode| parameter that allows use of twice as
-  many simultaneous processors.
-\item Some issues with fiducialization (\verb|first_is_fiducial=1|) mode were fixed.  (Y. Wang, ANL).
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item When emittance is given on the commandline for {\tt ibsEmittance} and {\tt touschekLifetime}, it is now treated the same as
-  the emittance \verb|ex0| read from an input file would be.  Previously, the meaning of the coupling parameter was different in these
-  cases.
-\item The script \verb|spiffe2elegant| was added, which allows converting the output of the PIC code \verb|spiffe| to the same form
-  as output by \verb|elegant|.  Note that \verb|elegant| will read \verb|spiffe| output directly. This script just allows converting the
-  data for use with related programs, such as \verb|sddsanalyzebeam|.
-\item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| were added.  These can be used to compute the cross-plane response
-  matrices for skew quadrupoles and to perform coupling correction using those matrices.
-\item Problems with convergence in \verb|touschekLifetime| would sometimes result in very long run times.  This was fixed.  Several additional
-  options were added.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -143,6 +88,7 @@ Here is a summary of what's changed since release 22.1.
  Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
  \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
  V. Sajaev (ANL).
+\item Computation of radiation integrals does not include the effect of steering magnets.
 \end{itemize}
 
 \section{Credits}
