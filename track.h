@@ -2227,7 +2227,7 @@ typedef struct {
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
     long xDriveExponent, yDriveExponent;
-    long xTestExponent, yTestExponent;
+    long xProbeExponent, yProbeExponent;
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
@@ -2268,7 +2268,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy, tilt;
     long xDriveExponent, yDriveExponent;
-    long xTestExponent, yTestExponent;
+    long xProbeExponent, yProbeExponent;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */

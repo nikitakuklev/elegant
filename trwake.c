@@ -200,7 +200,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 	applyTransverseWakeKicks(part, time, pz, pbin, np, 
 				 Po, plane, 
 				 Vtime, nb, tmin, dt, wakeData->interpolate, 
-                                 plane==0?wakeData->xTestExponent:wakeData->yTestExponent);
+                                 plane==0?wakeData->xProbeExponent:wakeData->yProbeExponent);
       }
 
       if (wakeData->tilt)
@@ -335,9 +335,9 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 
     wakeData->W[0] = wakeData->W[1] = NULL;
     if (wakeData->WxColumn) {
-      if (wakeData->xDriveExponent<0 || wakeData->xTestExponent<0)
-        bombElegant("Can't have xDriveExponent or xTestExponent negative", NULL);
-      switch (wakeData->xDriveExponent+wakeData->xTestExponent) {
+      if (wakeData->xDriveExponent<0 || wakeData->xProbeExponent<0)
+        bombElegant("Can't have xDriveExponent or xProbeExponent negative", NULL);
+      switch (wakeData->xDriveExponent+wakeData->xProbeExponent) {
       case 1:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
@@ -364,9 +364,9 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       }
     }
     if (wakeData->WyColumn) {
-      if (wakeData->yDriveExponent<0 || wakeData->yTestExponent<0)
-        bombElegant("Can't have yDriveExponent or yTestExponent negative", NULL);
-      switch (wakeData->yDriveExponent+wakeData->yTestExponent) {
+      if (wakeData->yDriveExponent<0 || wakeData->yProbeExponent<0)
+        bombElegant("Can't have yDriveExponent or yProbeExponent negative", NULL);
+      switch (wakeData->yDriveExponent+wakeData->yProbeExponent) {
       case 1:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {

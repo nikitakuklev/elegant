@@ -275,7 +275,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
         applyTransverseWakeKicks(part+ip1, time+ip1, pz, pbin, npb, 
                                  Po, plane, 
                                  Vtime, nb, tmin, dt, ztransverse->interpolate,
-                                 plane==0?ztransverse->xTestExponent:ztransverse->yTestExponent);
+                                 plane==0?ztransverse->xProbeExponent:ztransverse->yProbeExponent);
       }
 
       if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {

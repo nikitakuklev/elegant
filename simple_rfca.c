@@ -767,7 +767,7 @@ long track_through_rfcw
   rfcw->trwake.dx = 0;
   rfcw->trwake.dy = 0;
   rfcw->trwake.xDriveExponent = rfcw->trwake.yDriveExponent = 1;
-  rfcw->trwake.xTestExponent = rfcw->trwake.yTestExponent = 0;
+  rfcw->trwake.xProbeExponent = rfcw->trwake.yProbeExponent = 0;
   if (!rfcw->initialized) {
     rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
