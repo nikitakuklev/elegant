@@ -177,7 +177,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     /* make arrays of I(t)*x and I(t)*y */
     n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, 
                                              time+ip1, part+ip1, Po, npb,
-                                             ztransverse->dx, ztransverse->dy, 1, 1);
+                                             ztransverse->dx, ztransverse->dy,
+                                             ztransverse->xDriveExponent, ztransverse->yDriveExponent);
 #if (!USE_MPI)
     if (n_binned!=npb) {
       fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZTRANSVERSE)!\n", n_binned, npb);
@@ -273,7 +274,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
         /* change particle transverse momenta to reflect voltage in relevant bin */
         applyTransverseWakeKicks(part+ip1, time+ip1, pz, pbin, npb, 
                                  Po, plane, 
-                                 Vtime, nb, tmin, dt, ztransverse->interpolate);
+                                 Vtime, nb, tmin, dt, ztransverse->interpolate,
+                                 plane==0?ztransverse->xTestExponent:ztransverse->yTestExponent);
       }
 
       if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {

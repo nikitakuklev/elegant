@@ -117,7 +117,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   
     n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
 					     wakeData->dx, wakeData->dy,
-					     wakeData->xPower, wakeData->yPower);
+					     wakeData->xDriveExponent, wakeData->yDriveExponent);
   }
 #if (!USE_MPI)
   if (n_binned!=np) {
@@ -199,7 +199,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 	/* change particle transverse momenta to reflect voltage in relevant bin */
 	applyTransverseWakeKicks(part, time, pz, pbin, np, 
 				 Po, plane, 
-				 Vtime, nb, tmin, dt, wakeData->interpolate);
+				 Vtime, nb, tmin, dt, wakeData->interpolate, 
+                                 plane==0?wakeData->xTestExponent:wakeData->yTestExponent);
       }
 
       if (wakeData->tilt)
@@ -221,7 +222,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,
                               double Po, long plane,
                               double *Vtime, long nb, double tmin, double dt, 
-                              long interpolate)
+                              long interpolate, long exponent)
 {
   long ip, ib, offset;
   double dt1, Vinterp;
@@ -238,6 +239,8 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
         Vinterp = Vtime[ib]+(Vtime[ib+1]-Vtime[ib])/dt*dt1;
       } else
         Vinterp = Vtime[ib];
+      if (exponent)
+        Vinterp *= ipow(part[ip][offset-1], exponent);
       if (Vinterp)
         part[ip][offset] += Vinterp/(1e6*particleMassMV*particleRelSign)/pz[ip];
     }
@@ -245,7 +248,7 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
 }
 
 typedef struct {
-  char *filename;
+  char *key;
   long points;
   double *t, *Wx, *Wy;
 } WAKE_DATA;
@@ -263,7 +266,8 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
    Zero the Memory when call  SDDS_InitializeInput */
   SDDSin.parallel_io = 0; 
 #endif  
-
+  char *key;
+  
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {
@@ -299,9 +303,16 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     bombElegant("supply valid column name for WxColumn for TRWAKE element", NULL);
   if (wakeData->WyColumn && !strlen(wakeData->WyColumn))
     bombElegant("supply valid column name for WyColumn for TRWAKE element", NULL);
-  
+
+  key = tmalloc(sizeof(*key)*(strlen(wakeData->inputFile)+strlen(wakeData->tColumn)+
+                              (wakeData->WxColumn ? strlen(wakeData->WxColumn) : 4) +
+                              (wakeData->WyColumn ? strlen(wakeData->WyColumn) : 4) +
+                              10));
+  sprintf(key, "%s.%s.%s.%s", wakeData->inputFile, wakeData->tColumn, 
+          wakeData->WxColumn ? wakeData->WxColumn : "NULL",
+          wakeData->WyColumn ? wakeData->WyColumn : "NULL");
   for (iw=0; iw<storedWakes; iw++) {
-    if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0)
+    if (strcmp(storedWake[iw].key, key)==0)
       break;
   }
   if (iw==storedWakes) {
@@ -324,21 +335,28 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 
     wakeData->W[0] = wakeData->W[1] = NULL;
     if (wakeData->WxColumn) {
-      if (wakeData->xPower==1) {
+      if (wakeData->xDriveExponent<0 || wakeData->xTestExponent<0)
+        bombElegant("Can't have xDriveExponent or xTestExponent negative", NULL);
+      switch (wakeData->xDriveExponent+wakeData->xTestExponent) {
+      case 1:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem (1) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exitElegant(1);
         }
-      } 
-      else if (wakeData->xPower==0) {
+        break;
+      case 0:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
           fprintf(stderr, "Error: problem (2) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exitElegant(1);
         }
+        break;
+      default:
+        /* Would be nice to be smarter here. */
+        break;
       }
       if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wx data from TRWAKE file %s\n", wakeData->inputFile);
@@ -346,21 +364,28 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       }
     }
     if (wakeData->WyColumn) {
-      if (wakeData->yPower==1) {
+      if (wakeData->yDriveExponent<0 || wakeData->yTestExponent<0)
+        bombElegant("Can't have yDriveExponent or yTestExponent negative", NULL);
+      switch (wakeData->yDriveExponent+wakeData->yTestExponent) {
+      case 1:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
-          fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
+          fprintf(stderr, "Error: problem (1) with Wy wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exitElegant(1);
         }
-      }
-      else if (wakeData->yPower==0) {
+        break;
+      case 0:
         if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
-          fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
+          fprintf(stderr, "Error: problem (2) with Wy wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exitElegant(1);
         }
+        break;
+      default:
+        /* Would be nice to be smarter here. */
+        break;
       }
       if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wy data from TRWAKE file %s\n", wakeData->inputFile);
@@ -371,9 +396,9 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     SDDS_Terminate(&SDDSin);
 
     /* record in wake storage */
-    if (!(storedWake=SDDS_Realloc(storedWake, sizeof(*storedWake)*(storedWakes+1))) || 
-        !SDDS_CopyString(&storedWake[storedWakes].filename, wakeData->inputFile))
+    if (!(storedWake=SDDS_Realloc(storedWake, sizeof(*storedWake)*(storedWakes+1))))
       SDDS_Bomb("Memory allocation failure (WAKE)");
+    storedWake[storedWakes].key = key;
     storedWake[storedWakes].t = wakeData->t;
     storedWake[storedWakes].Wx = wakeData->W[0];
     storedWake[storedWakes].Wy = wakeData->W[1];

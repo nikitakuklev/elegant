@@ -846,12 +846,12 @@ extern char *entity_text[N_TYPES];
 #define N_ZLONGIT_PARAMS 24
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
-#define N_ZTRANSVERSE_PARAMS 29
+#define N_ZTRANSVERSE_PARAMS 33
 #define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 13
-#define N_TRWAKE_PARAMS 19
+#define N_TRWAKE_PARAMS 21
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 6
@@ -2226,6 +2226,8 @@ typedef struct {
     long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
+    long xDriveExponent, yDriveExponent;
+    long xTestExponent, yTestExponent;
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
@@ -2265,7 +2267,8 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy, tilt;
-    long xPower, yPower;
+    long xDriveExponent, yDriveExponent;
+    long xTestExponent, yTestExponent;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
@@ -3283,7 +3286,7 @@ void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np
 void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,
                               double Po, long plane,
                               double *Vtime, long nb, double tmin, double dt, 
-                              long interpolate);
+                              long interpolate, long exponent);
 void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,

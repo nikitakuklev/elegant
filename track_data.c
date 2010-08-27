@@ -1477,6 +1477,10 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&ztransverse_example.rampPasses), NULL, 1.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&ztransverse_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&ztransverse_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
+    {"X_DRIVE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.xDriveExponent), NULL, 0.0, 1, "Exponent applied to x coordinates of drive particles"},
+    {"Y_DRIVE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yDriveExponent), NULL, 0.0, 1, "Exponent applied to y coordinates of drive particles"},
+    {"X_TEST_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.xTestExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of test particles"},
+    {"Y_TEST_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yTestExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of drive particles"},
 };
 
 IBSCATTER ibs_example;
@@ -1531,8 +1535,10 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dy), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&trwake_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"XPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.xPower), NULL, 0.0, 1, "Power of x that x kick depends on."},
-    {"YPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.yPower), NULL, 0.0, 1, "Power of y that y kick depends on."},
+    {"X_DRIVE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.xDriveExponent), NULL, 0.0, 1, "Exponent applied to x coordinates of drive particles"},
+    {"Y_DRIVE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.yDriveExponent), NULL, 0.0, 1, "Exponent applied to y coordinates of drive particles"},
+    {"X_TEST_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.xTestExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of test particles"},
+    {"Y_TEST_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.yTestExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of drive particles"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     };
 

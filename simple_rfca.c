@@ -766,7 +766,8 @@ long track_through_rfcw
   /* misalignment is taken care of by code before and after wake call */
   rfcw->trwake.dx = 0;
   rfcw->trwake.dy = 0;
-  rfcw->trwake.xPower = rfcw->trwake.yPower = 1;
+  rfcw->trwake.xDriveExponent = rfcw->trwake.yDriveExponent = 1;
+  rfcw->trwake.xTestExponent = rfcw->trwake.yTestExponent = 0;
   if (!rfcw->initialized) {
     rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
