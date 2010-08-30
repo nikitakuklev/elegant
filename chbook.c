@@ -242,8 +242,7 @@ ntuple *readbookn(char *inputfile, long i_page)
   }
 
   book->value = (double*) calloc(sizeof(*book->value), book->length);
-  if (!(book->value = SDDS_GetColumnInDoubles(&mhist, "Frequency")) ||
-      !(SDDS_GetParameter(&mhist, "Total_count", &book->count)))
+  if (!(book->value = SDDS_GetColumnInDoubles(&mhist, "Frequency")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (book->total=0, i=0; i<book->length; i++)
     book->total += book->value[i];
@@ -463,8 +462,6 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
                                NULL, NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&outPage, "VariableDimension", NULL, NULL, 
                                NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
-                               NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
                                "n_Dimension Table", NULL, SDDS_LONG, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -491,7 +488,6 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
                           "VariableMinimum", bName->xmin,
                           "VariableMaximum", bName->xmax,
                           "VariableDimension", bName->length,
-                          "Total_count", bName->count, 
                           "ND", 1, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -571,8 +567,6 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
                                NULL, NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&outPage, "Variable2Dimension", NULL, NULL, 
                                NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
-                               NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
                                "n_Dimension Table", NULL, SDDS_LONG, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -602,7 +596,6 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
                           "Variable2Minimum", bName->ymin,
                           "Variable2Maximum", bName->ymax,
                           "Variable2Dimension", bName->ybins,
-                          "Total_count", bName->count, 
                           "ND", 2, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
@@ -692,9 +685,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
-    if (0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
-                               NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
+    if (0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
                                "n_Dimension Table", NULL, SDDS_LONG, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (0>SDDS_DefineColumn(&outPage, "Index", NULL, NULL, 
@@ -733,7 +724,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!SDDS_SetParameters(&outPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                          "Total_count", bName->count, "ND", bName->nD, NULL))
+                          "ND", bName->nD, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (i=0; i<bName->length; i++) {
     if (normalize) {
@@ -815,9 +806,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
-    if (0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
-                               NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
+    if (0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
                                "n_Dimension Table", NULL, SDDS_LONG, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     for (i=0; i< bName->nD; i++) {
@@ -859,7 +848,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!SDDS_SetParameters(&outPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                          "Total_count", bName->count, "ND", bName->nD, NULL))
+                          "ND", bName->nD, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   Index[1] = -1;
