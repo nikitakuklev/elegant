@@ -177,6 +177,7 @@ ntuple *readbookn(char *inputfile, long i_page)
   long i, iPage;
   SDDS_DATASET mhist;
   PARAMETER_DEFINITION *para;
+  int32_t nD;
   char buffer[100], dimensionString[10];
 
   if (!SDDS_InitializeInput(&mhist, inputfile))
@@ -206,9 +207,10 @@ ntuple *readbookn(char *inputfile, long i_page)
   }
 
   book = (ntuple *)malloc(sizeof(*book));
-  if (!SDDS_GetParameter(&mhist, "ND", &book->nD))
+  if (!SDDS_GetParameter(&mhist, "ND", &nD))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
+  book->nD = (long)nD;
+  
   book->vname = calloc(sizeof(*book->vname), book->nD);
   book->units = calloc(sizeof(*book->units), book->nD);
   book->xmin = calloc(sizeof(*book->xmin), book->nD);
@@ -282,9 +284,11 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long
     }
     
     grid[i][0] = (long)(x0[i+offset]*bName->xbins[i]-0.5);
-    if ((x0[i+offset]*bName->xbins[i]-0.5)<0)
-      grid[i][0] = -1;
     Coef[i][1] = (x[i+offset] - bName->xmin[i])/bName->dx[i]-grid[i][0]-0.5; 
+    if (Coef[i][1]<0) {
+      grid[i][0] -= 1;
+      Coef[i][1] += 1;
+    }
     Coef[i][0] = 1. - Coef[i][1];    
 
     grid[i][1] = grid[i][0]+1;
