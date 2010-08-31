@@ -46,6 +46,10 @@ void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, 
                 double Po, double length, double charge, double z);
 void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence);
 void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
+void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
+void initializeFTable(FTABLE *ftable);
+void interpolateTField(double *B, double *xyz, FTABLE *ftable);
+void rotate_coordinate(double **A, double *x, long inverse);
 
 #if USE_MPI
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
@@ -118,6 +122,7 @@ long do_tracking(
   STRAY *stray;
   HISTOGRAM *histogram;
   MHISTOGRAM *mhist;
+  FTABLE *ftable;
   ENERGY *energy;
   MAXAMP *maxamp;
   MALIGN *malign;
@@ -1011,43 +1016,47 @@ long do_tracking(
 		}
 	      }
 	      break;
-       case T_MHISTOGRAM:
-         if (!eptr->pred)
-           bombElegant("MHISTOGRAM should not be the first element of the beamline.", NULL);
+            case T_MHISTOGRAM:
+              if (!eptr->pred)
+                bombElegant("MHISTOGRAM should not be the first element of the beamline.", NULL);
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
-           mhist = (MHISTOGRAM*)eptr->p_elem;
-           if (!mhist->disable) {
-             watch_pt_seen = 1;   /* yes, this should be here */
-             if (i_pass==0 && (n_passes/mhist->interval)==0)
-               fprintf(stdout, "warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
-                       n_passes, mhist->interval);
-             fflush(stdout);
-             if (i_pass>=mhist->startPass && (i_pass-mhist->startPass)%mhist->interval==0) {
+                mhist = (MHISTOGRAM*)eptr->p_elem;
+                if (!mhist->disable) {
+                  watch_pt_seen = 1;   /* yes, this should be here */
+                  if (i_pass==0 && (n_passes/mhist->interval)==0)
+                    fprintf(stdout, "warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
+                            n_passes, mhist->interval);
+                  fflush(stdout);
+                  if (i_pass>=mhist->startPass && (i_pass-mhist->startPass)%mhist->interval==0) {
 
-               ELEMENT_LIST *eptr0;
-               if (mhist->lumped) {
-                 if (!mhist->initialized && eptr->occurence==1)
-                   set_up_mhist(mhist, run, 0); 
-                 eptr0 = &(beamline->elem);
-                 while (eptr0) {
-                   if (eptr0->type == eptr->type && strcmp(eptr0->name, eptr->name)==0)
-                     break;
-                   eptr0 = eptr0->succ;
-                 }
-               }
-               else {
-                 if (!mhist->initialized) 
-                   set_up_mhist(mhist, run, eptr->occurence);
-                 eptr0 = NULL;
-               }
+                    ELEMENT_LIST *eptr0;
+                    if (mhist->lumped) {
+                      if (!mhist->initialized && eptr->occurence==1)
+                        set_up_mhist(mhist, run, 0); 
+                      eptr0 = &(beamline->elem);
+                      while (eptr0) {
+                        if (eptr0->type == eptr->type && strcmp(eptr0->name, eptr->name)==0)
+                          break;
+                        eptr0 = eptr0->succ;
+                      }
+                    }
+                    else {
+                      if (!mhist->initialized) 
+                        set_up_mhist(mhist, run, eptr->occurence);
+                      eptr0 = NULL;
+                    }
 
-               mhist_table(eptr0, eptr, step, i_pass, coord, nToTrack, *P_central,
-                          beamline->revolution_length, 
-                          charge?charge->macroParticleCharge*nToTrack:0.0, z);
-             }
-           }
+                    mhist_table(eptr0, eptr, step, i_pass, coord, nToTrack, *P_central,
+                                beamline->revolution_length, 
+                                charge?charge->macroParticleCharge*nToTrack:0.0, z);
+                  }
+                }
 	      }
 	      break;
+            case T_FTABLE:
+              ftable = (FTABLE*)eptr->p_elem;
+              field_table_tracking(coord, nToTrack, ftable, *P_central, run);
+              break;       
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
 	      if (malign->on_pass==-1 || malign->on_pass==i_pass)
@@ -3789,7 +3798,7 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
     return goodBalance;
   else
     return badBalance;
-}   
+}
 
 int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)  
 {
@@ -4114,5 +4123,182 @@ void findMinMax (double **coord, long np, double *min, double *max, double *c0, 
     }
     c0[j] /= (double)np; 
   }
+  return;
+}
+
+void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po, RUN *run)
+{
+  long ip, ik, nKicks, debug = ftable->verbose;
+  double *coord, p0, factor;
+  double xyz[3], p[3], B[3], BA, pA, **A, pz0;
+  double rho, theta, temp;
+  double s, ds, eomc;
+  char *rootname;
+
+  static SDDS_TABLE test_output;
+  static long initial = 0;
+  
+  if (!initial && debug) {
+    rootname = compose_filename("%s.phase", run->rootname);
+    SDDS_PhaseSpaceSetup(&test_output, rootname, SDDS_BINARY, 1, "output phase space", run->runfile,
+                         run->lattice, "setup_output");
+    initial =1 ;
+  }
+  
+  if (!ftable->initialized)
+    initializeFTable(ftable);
+
+  if ((nKicks=ftable->nKicks)<1)
+    bombElegant("N_KICKS must be >=1 for FTABLE", NULL);
+  ds = ftable->length/nKicks;
+
+  if (ftable->dx || ftable->dy || ftable->dz)
+    offsetBeamCoordinates(particle, np, ftable->dx, ftable->dy, ftable->dz);
+  if (ftable->tilt)
+    rotateBeamCoordinates(particle, np, ftable->tilt);
+
+  s =ds/2.;
+  eomc = particleCharge/particleMass/c_mks;
+  A = (double**)czarray_2d(sizeof(double), 3, 3);
+  for (ik=0; ik<nKicks; ik++) {
+    if (debug) 
+      dump_phase_space(&test_output, particle, np, ik, Po, 0);
+    for (ip=0; ip<np; ip++) {
+      /* 1. get particle's coordinates */
+      coord = particle[ip];
+      factor = sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      p0 = (1.+coord[5])*Po;
+      p[2] = p0/factor;
+      p[0] = coord[1]*p[2];
+      p[1] = coord[3]*p[2];
+      if (debug && ip) 
+        fprintf(stdout, "ik=%ld, x=%g, y=%g, z=%g, px=%g, py=%g, pz=%g \n", ik, coord[0], coord[2], coord[4], p[0], p[1], p[2]);
+
+      /* 2. get field at the middle point */
+      xyz[0] = coord[0] + coord[1]*ds/2.0;
+      xyz[1] = coord[2] + coord[3]*ds/2.0;
+      xyz[2] = s; 
+      interpolateTField(B, xyz, ftable);
+      if (debug && ip) {
+        if (B[1]-sin(xyz[2]/.125*PIx2)>5e-4)
+          fprintf(stdout, "ik=%ld, x=%g,y=%g,z=%g, Bx=%g, By=%g, Bz=%g, delta=%g \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], B[1]-sin(xyz[2]/.125*PIx2));
+      }
+      
+      BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
+      if (BA) {
+        /* 3. calculate the rotation matrix */
+        A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
+        A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
+        A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
+        pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
+        A[0][0] /= pA;
+        A[0][1] /= pA;
+        A[0][2] /= pA;
+        A[1][0] = B[0]/BA;
+        A[1][1] = B[1]/BA;
+        A[1][2] = B[2]/BA;
+        A[2][0] = A[0][1]*A[1][2]-A[0][2]*A[1][1];
+        A[2][1] = A[0][2]*A[1][0]-A[0][0]*A[1][2];
+        A[2][2] = A[0][0]*A[1][1]-A[0][1]*A[1][0];
+        
+        /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
+        pz0 = p[2];
+        rotate_coordinate(A, p, 0);
+        rotate_coordinate(A, B, 0);
+
+        /* 5. apply kick */
+        rho = p[2]/(eomc*B[1]);
+        if (rho <= 0)
+          bombElegant("Table function doesn't support particle going backward", NULL);
+        temp = A[1][2]*p[1]/p[2]+A[2][2];
+        if (A[0][2]) {
+          theta =  (temp-sqrt(sqr(temp)-2.*A[0][2]*ds/rho))/A[0][2];
+        } else {
+          if (!temp)  
+            bombElegant("This should never happen. Send message to the developer.", NULL);
+          theta = fabs(ds/rho/temp);
+        }
+        p[0] = -p[2]*sin(theta);
+        p[2] *= cos(theta);
+        xyz[0] = rho*(cos(theta)-1);
+        xyz[1] = (p[1]/p[2])*rho*theta;
+        xyz[2] = rho*sin(theta);
+
+        /* 6. rotate back to (x,y,z) */
+        rotate_coordinate(A, xyz, 1);
+        rotate_coordinate(A, p, 1);
+        coord[0] += xyz[0];
+        coord[2] += xyz[1];
+        coord[4] += sqrt(sqr(rho*theta)+sqr(xyz[1]));
+        coord[1] = p[0]/p[2];
+        coord[3] = p[1]/p[2];
+      } else {
+        coord[0] += coord[1]*ds;
+        coord[2] += coord[3]*ds;
+        coord[4] += ds*factor;         
+      }
+    }
+    s += ds;
+  }
+  free_czarray_2d((void**)A,3,3);
+
+  if (ftable->tilt)
+    rotateBeamCoordinates(particle, np, -ftable->tilt);
+  if (ftable->dx || ftable->dy || ftable->dz)
+    offsetBeamCoordinates(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
+
+  return;  
+}
+
+void initializeFTable(FTABLE *ftable)
+{
+  long i;
+  
+  ftable->Bx = readbookn(ftable->inputFile, 1);
+  ftable->By = readbookn(ftable->inputFile, 2);
+  ftable->Bz = readbookn(ftable->inputFile, 3);
+
+  i = ftable->Bz->nD-1;
+  ftable->length = ftable->Bz->xmax[i] - ftable->Bz->xmin[i];
+  for (i=0; i<ftable->Bz->nD; i++) {
+    ftable->Bx->xmin[i] -= ftable->Bx->dx[i]/2;
+    ftable->By->xmin[i] -= ftable->By->dx[i]/2;
+    ftable->Bz->xmin[i] -= ftable->Bz->dx[i]/2;
+    ftable->Bx->xmax[i] += ftable->Bx->dx[i]/2;
+    ftable->By->xmax[i] += ftable->By->dx[i]/2;
+    ftable->Bz->xmax[i] += ftable->Bz->dx[i]/2;
+  }
+  ftable->initialized = 1;
+  return;
+}
+
+void interpolateTField(double *B, double *xyz, FTABLE *ftable) 
+{
+  double dummy[3];
+
+  B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0);
+  B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0);
+  B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0);
+  
+  return;
+}
+
+void rotate_coordinate(double **A, double *x, long inverse) {
+  long i, j;
+  double temp[3];
+
+  for (i=0; i<3; i++) {
+    temp[i] = 0;
+    for (j=0; j<3; j++) {
+      if (!inverse)
+        temp[i] += A[i][j]*x[j];
+      else
+        temp[i] += A[j][i]*x[j];
+    }
+  }
+
+  for (i=0; i<3; i++)
+    x[i] =  temp[i];
+
   return;
 }
