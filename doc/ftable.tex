@@ -1,0 +1,24 @@
+This element is used for tracking through an arbitrary magnetic field
+when its values are known at regularly spaced grid points. The field
+data are saved in 3 ($B_x$, $B_y$, $B_z$) 3-dimensional
+\verb|MHISTOGRAM| kind of table (see \verb|MHISTOGRAM| for detail),
+and they are combined into a 3 pages SDDS file. This SDDS file must
+have one column \verb|Frequency| to store the field data table, and
+following parameters:
+
+\begin{itemize} 
+\item \verb|ND| --- Type ``long''; Value ``3''.
+\item \verb|Variable00Name|, \verb|Variable01Name|,\verb|Variable02Name| 
+      --- Type ``string''; Value ``x'', ``y'', ``z''.
+\item \verb|Variable00Min|, \verb|Variable01Min|, \verb|Variable02Min|
+      --- Type ``double''; Value: the minimum boundary coordinates of
+      ``x'', ``y'', ``z'' in meter.
+\item \verb|Variable00Max|,\verb|Variable01Max|, \verb|Variable02Max| 
+      --- Type ``double''; Value: the maximum boundary coordinates of 
+      ``x'', ``y'', ``z'' in meter.
+\item \verb|Variable00Interval|, \verb|Variable01Interval|,\verb|Variable02Interval|
+      --- Type ``double''; Value: the grid size of ``x'', ``y'', ``z'' in meter.  
+\item \verb|Variable00Dimension|,\verb|Variable01Dimension|, \verb|Variable02Dimension|
+      --- Type ``long''; Value: total number of grid points in ``x'', ``y'', ``z''. 
+      For example: Variable00Dimension =(Variable00Max-Variable00Min)/Variable00Interval + 1.  
+\end{itemize}

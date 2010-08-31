@@ -186,6 +186,7 @@ and phase modulation.",
     "A time-dependent multipole kicker magnet. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
     "Applies a linear transformation to the beam to force the emittance to given values.",
     "Request for multiple dimensions (1, 2, 4 or 6) histogram output of particle coordinates.",
+    "Tracks through a magnetic field which is expressed in a SDDS data table.",
     } ;
 
 QUAD quad_example;
@@ -2208,7 +2209,7 @@ PARAMETER ftable_param[N_FTABLE_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with field table."},
+    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file which contains field data."},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
     {"VERBOSE", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "used for debugging code."},
     };
