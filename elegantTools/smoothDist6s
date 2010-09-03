@@ -68,17 +68,46 @@ set smoothPasses 500
 set factor 0
 set betaSlices 1
 set energyMod 0
-if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices debug}] \
-      || ![string length $input] || ![string length $output] || $factor<1 \
-      || $rippleAmplitude<0 || $rippleWavelength<=0 || $smoothPasses<=0 || $betaSlices<=0} {
-    return -code error "$usage"
+if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices debug}]} {
+    puts stderr "$usage"
+    exit
+}
+if {![string length $input]} {
+    puts stderr "Error: missing -input option\n$usage"
+    exit
+}
+if {![string length $output]} {
+    puts stderr "Error: missing -output option\n$usage"
+    exit
+}
+if {$factor<1} {
+    puts stderr "Error: -factor option < 1\n$usage"
+    exit
+}
+if {$rippleAmplitude<0} {
+    puts stderr "Error: -rippleAmplitude option < 0\n$usage"
+    exit
+}
+if {$rippleWavelength<=0} {
+    puts stderr "Error: -rippleWavelength option <= 0\n$usage"
+    exit
+}
+if {$smoothPasses<=0} {
+    puts stderr "Error: -smoothPasses option <= 0\n$usage"
+    exit
+}
+if {$betaSlices<=0} {
+    puts stderr "Error: -betaSlices option <= 0\n$usage"
+    exit
 }
 
 if ![file exists $input] {
-    return -code error "$input: not found"
+    puts stderr "$input: not found"
+    exit
 }
 if [file exists $output] {
-    return -code error "$output: already exists"
+    puts stderr "$output: already exists"
+    exit
 }
 set factor [expr int($factor)]
 
@@ -135,7 +164,8 @@ if [catch {exec sddssort $input -pipe=out -column=t \
                     | sddsanalyzebeam -pipe \
                     | sddsprocess -pipe -process=en?,median,%sMedian \
                     | sdds2stream -pipe -parameter=enxMedian,enyMedian} emitList] {
-    return -code error "$emitList"
+    puts stderr "$emitList"
+    exit
 }
 if $debug {
     puts stdout "Mean slice emittances: $emitList"
