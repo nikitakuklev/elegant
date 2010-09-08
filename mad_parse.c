@@ -512,6 +512,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       BEND *bptr;
       KSBEND *ksbptr;
       CSBEND *csbptr;
+      CSRCSBEND *csrbptr;
       NIBEND *nibptr;
       switch (e1->type) {
       case T_SBEN:
@@ -532,6 +533,11 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         csbptr = (CSBEND*)e1->p_elem;
         SWAP_DOUBLE(csbptr->e1, csbptr->e2);
         SWAP_LONG(csbptr->edge1_effects, csbptr->edge2_effects);
+        break;
+      case T_CSRCSBEND:
+        csrbptr = (CSRCSBEND*)e1->p_elem;
+        SWAP_DOUBLE(csrbptr->e1, csrbptr->e2);
+        SWAP_LONG(csrbptr->edge1_effects, csrbptr->edge2_effects);
         break;
       default:
         break;
