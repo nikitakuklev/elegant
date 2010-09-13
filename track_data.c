@@ -2253,7 +2253,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_MARK_PARAMS,  0|MPALGORITHM,       sizeof(MARK),    mark_param     }, 
     {    N_MATR_PARAMS,  MAT_LEN|HAS_RF_MATRIX,  sizeof(MATR),    matr_param     }, 
     {    N_ALPH_PARAMS,  HAS_MATRIX|IS_MAGNET|MAT_CHW_ENERGY,  sizeof(ALPH),    alph_param     }, 
-    {    N_RFDF_PARAMS,  MAT_LEN_NCAT|MPALGORITHM,       sizeof(RFDF),    rfdf_param     }, 
+    {    N_RFDF_PARAMS,  MAT_LEN_NCAT|HAS_RF_MATRIX|MPALGORITHM,       sizeof(RFDF),    rfdf_param     }, 
     {    N_RFTMEZ0_PARAMS,  MAT_LEN_NCAT|MAY_CHANGE_ENERGY|MPALGORITHM,    sizeof(RFTMEZ0),    rftmez0_param     }, 
     {    N_RMDF_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,       sizeof(RMDF),    rmdf_param     }, 
     {    N_TMCF_PARAMS,  MAT_LEN_NCAT|MPALGORITHM,  sizeof(TMCF_MODE),    tmcf_param     }, 

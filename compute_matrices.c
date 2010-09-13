@@ -20,6 +20,7 @@
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
 VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
+VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
@@ -1089,7 +1090,10 @@ VMATRIX *compute_matrix(
         elem->Pref_output = run->p_central;
         run->p_central = pSave;
         break;
-      case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
+      case T_RFDF:
+	elem->matrix = rfdf_matrix((RFDF*)elem->p_elem, Pref_output);
+        break;
+      case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
       case T_ECOL: case T_TRCOUNT: case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
       case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
@@ -1806,5 +1810,77 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
     tilt_matrices(M1, ilmat->tilt);
   
   return M1;
+}
+
+VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
+{
+  VMATRIX *M;
+  double *C, **R;
+  double k, theta, omega, L, phi;
+
+  if (rfdf->voltage==0)
+    return drift_matrix(rfdf->length, 1);
+
+  M = tmalloc(sizeof(*M));
+  M->order = 1;
+  initialize_matrices(M, M->order);
+    
+  theta = (particleCharge*rfdf->voltage)/(particleMass*sqr(c_mks)*pReference);
+  omega = rfdf->frequency*PIx2;
+  k = omega/c_mks;
+  L = rfdf->length;
+
+  if (L==0) {
+    phi = rfdf->phase*PI/180.;
+    R = M->R;
+    C = M->C;
+    C[1] = theta*cos(phi);
+    R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
+    R[1][4] = -k*theta*sin(phi);
+    R[1][0] = C[1]*R[1][4];
+    R[5][4] = R[1][0];
+    R[5][0] = -R[1][4];
+    R[1][5] = -C[1];
+    R[5][1] = -R[1][5];
+    return(M);
+  } else {
+    VMATRIX *Mt, *Mc, *Md, *Ms, *Mtmp;
+    double dphi;
+    long i, n=100;
+
+    Md = drift_matrix(rfdf->length/(2*n), 1);
+    Mt = drift_matrix(0, 1);
+    Ms = drift_matrix(0, 1);
+    Mc = drift_matrix(0, 1);
+    R = Mc->R;
+    C = Mc->C;
+
+    phi = rfdf->phase*PI/180. - k*rfdf->length/2 + k*rfdf->length/(2*n);
+    dphi = k*rfdf->length/n;
+    theta /= n;
+
+    for (i=0; i<n; i++) {
+      C[1] = theta*cos(phi);
+      R[1][4] = -k*theta*sin(phi);
+      R[1][0] = C[1]*R[1][4];
+      R[5][4] = R[1][0];
+      R[5][0] = -R[1][4];
+      R[1][5] = -C[1];
+      R[5][1] = -R[1][5]; 
+
+      concat_matrices(Ms, Md, Mt, 0);
+      concat_matrices(Mt, Mc, Ms, 0);
+      concat_matrices(Ms, Md, Mt, 0);
+      Mtmp = Ms;
+      Ms = Mt;
+      Mt = Mtmp;
+      phi += dphi;
+    }
+    free_matrices(Mc);
+    free_matrices(Ms);
+    free_matrices(Md);
+    return(Mt);
+  }
+
 }
 

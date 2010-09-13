@@ -397,6 +397,10 @@ void do_transport_analysis(
       SDDS_DoFSync(&SDDS_analyze);
     
     if (verbosity>0) {
+        fprintf(stdout, "C : ");
+	for (i=0; i<6; i++) 
+  	    fprintf(stdout, "%20.13e ", coord[n_track-1][i]);
+        fputc('\n', stdout);
         for (i=0; i<6; i++) {
             fprintf(stdout, "R%ld: ", i+1);
             fflush(stdout);
