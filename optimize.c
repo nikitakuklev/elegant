@@ -643,6 +643,13 @@ void optimizationInterruptHandler(int signal)
 }
 #endif
 
+int variableAtLimit(double value, double lower, double upper)
+{
+  double range = upper-lower;
+  if (range==0 || (value-lower)/range<0.01 || (upper-value)/range<0.01)
+    return 1;
+  return 0;
+}
 
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, 
                  LINE_LIST *beamline1, BEAM *beam1, OUTPUT_FILES *output1, 
@@ -1052,9 +1059,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	}
         fprintf(optimization_data->fp_log, "Optimum values of variables and changes from initial values:\n");
         for (i=0; i<variables->n_variables; i++)
-	  fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e (was %23.15e)\n", variables->varied_quan_name[i], 
+	  fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e (was %23.15e) %s\n", variables->varied_quan_name[i], 
 		  variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i],
-		  variables->initial_value[i]);
+		  variables->initial_value[i],
+		  variableAtLimit(variables->varied_quan_value[i], variables->lower_limit[i],
+				  variables->upper_limit[i]) ? "(near limit)" : "");
         for (i=0; i<covariables->n_covariables; i++)
 	  fprintf(optimization_data->fp_log, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         fflush(optimization_data->fp_log);
@@ -1615,7 +1624,7 @@ double optimization_function(double *value, long *invalid)
     }
     M = accumulate_matrices(&(beamline->elem), run, NULL,
                             optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
-    
+
     if (optimization_data->verbose && optimization_data->fp_log) {
       fprintf(optimization_data->fp_log, "Tracking for optimization\n");
       fflush(optimization_data->fp_log);
@@ -1931,7 +1940,8 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
 
     fprintf(optimization_data->fp_log, "    Values of variables:\n");
     for (i=0; i<n_dim; i++)
-        fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], value[i]);
+      fprintf(optimization_data->fp_log, "    %10s: %23.15e %s\n", variables->varied_quan_name[i], value[i],
+	      variableAtLimit(value[i], variables->lower_limit[i], variables->upper_limit[i]) ? "(near limit)" : "");
     fflush(optimization_data->fp_log);
   }
 
