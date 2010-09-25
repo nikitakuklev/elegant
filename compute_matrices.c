@@ -1091,6 +1091,7 @@ VMATRIX *compute_matrix(
         run->p_central = pSave;
         break;
       case T_RFDF:
+	/* elem->matrix = determineMatrix(run, elem, NULL, NULL); */
 	elem->matrix = rfdf_matrix((RFDF*)elem->p_elem, Pref_output);
         break;
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
@@ -1815,16 +1816,13 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
 VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
 {
   VMATRIX *M;
-  double *C, **R;
+  double *C, **R, ***T;
   double k, theta, omega, L, phi;
+  double cphi, sphi;
 
   if (rfdf->voltage==0)
     return drift_matrix(rfdf->length, 1);
 
-  M = tmalloc(sizeof(*M));
-  M->order = 1;
-  initialize_matrices(M, M->order);
-    
   theta = (particleCharge*rfdf->voltage)/(particleMass*sqr(c_mks)*pReference);
   omega = rfdf->frequency*PIx2;
   k = omega/c_mks;
@@ -1832,53 +1830,107 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
 
   if (L==0) {
     phi = rfdf->phase*PI/180.;
+    cphi = cos(phi);
+    sphi = sin(phi);
+    M = tmalloc(sizeof(*M));
+    M->order = 1;
+    initialize_matrices(M, M->order);
+    
     R = M->R;
     C = M->C;
-    C[1] = theta*cos(phi);
+    C[1] = theta*cphi;
+    C[5] = sqrt(sqr(C[1])+1)-1;
     R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
-    R[1][4] = -k*theta*sin(phi);
-    R[1][0] = C[1]*R[1][4];
-    R[5][4] = R[1][0];
-    R[5][0] = -R[1][4];
-    R[1][5] = -C[1];
-    R[5][1] = -R[1][5];
+    R[1][0] = -cphi*sphi*k*sqr(theta);
+    R[1][4] = -k*sphi*theta;
+    R[1][5] = -theta*cphi;
+    R[5][5] = 1/sqrt(1 + sqr(cphi*theta));
+    R[5][0] = k*sphi*theta*R[5][5];
+    R[5][1] = theta*cphi*R[5][5];
+    R[5][4] = -k*cphi*sphi*sqr(theta)*R[5][5];
     return(M);
   } else {
     VMATRIX *Mt, *Mc, *Md, *Ms, *Mtmp;
-    double dphi;
-    long i, n=100;
+    double dz, z, phase;
+    long i, n;
+    double cphi2, sphi2, k2, theta2;
+    double theta3;
+    double theta4;
 
-    Md = drift_matrix(rfdf->length/(2*n), 1);
-    Mt = drift_matrix(0, 1);
-    Ms = drift_matrix(0, 1);
-    Mc = drift_matrix(0, 1);
-    R = Mc->R;
+    if ((n = (rfdf->length/(PIx2/k))*100)<10)
+      n = 10;
+    dz = rfdf->length/(2*n);
+    Md = drift_matrix(dz, 2);
+    Mt = drift_matrix(0, 2);
+    Ms = drift_matrix(0, 2);
+    Mc = drift_matrix(0, 2);
     C = Mc->C;
+    R = Mc->R;
+    T = Mc->T;
 
-    phi = rfdf->phase*PI/180. - k*rfdf->length/2 + k*rfdf->length/(2*n);
-    dphi = k*rfdf->length/n;
     theta /= n;
-
+    theta2 = theta*theta;
+    theta3 = theta*theta2;
+    theta4 = theta2*theta2;
+    k2 = k*k;
+    z = -rfdf->length/2+dz;
+    Mt->C[4] = -rfdf->length/2;
     for (i=0; i<n; i++) {
-      C[1] = theta*cos(phi);
-      R[1][4] = -k*theta*sin(phi);
-      R[1][0] = C[1]*R[1][4];
-      R[5][4] = R[1][0];
-      R[5][0] = -R[1][4];
-      R[1][5] = -C[1];
-      R[5][1] = -R[1][5]; 
+      phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz);
+      cphi = cos(phase);
+      sphi = sin(phase);
+      cphi2 = cphi*cphi;
+      sphi2 = sphi*sphi;
+      
+      C[1] = cphi*theta;
+      C[5] = sqrt(cphi2*theta2+1)-1;
+
+      R[1][0] = -k*cphi*sphi*theta2;
+      R[1][4] = -k*sphi*theta;
+      R[1][5] = -cphi*theta;
+
+      R[5][0] = k*sphi*theta/sqrt(cphi2*theta2+1);
+      R[5][1] = cphi*theta/sqrt(cphi2*theta2+1);
+
+      R[5][4] = -k*cphi*sphi*theta2/sqrt(cphi2*theta2+1);
+
+      R[5][5] = 1/sqrt(cphi2*theta2+1);
+
+      T[1][0][0] = 2*k2*cphi*sphi2*theta3;
+      T[1][1][0] = -k*sphi*theta;
+      T[1][1][1] = cphi*theta;
+      T[1][4][0] = k2*sphi2*theta2-k2*cphi2*theta2;
+      T[1][4][4] = -k2*cphi*theta;
+      T[1][5][0] = 2*k*cphi*sphi*theta2;
+      T[1][5][4] = k*sphi*theta;
+      T[1][5][5] = 2*cphi*theta;
+      T[5][0][0] = k2*sphi2*theta2/sqrt(cphi2*theta2+1)-k2*sphi2*theta2/pow(cphi2*theta2+1, 1.5);
+      T[5][1][0] = -k*cphi*sphi*theta2/pow(cphi2*theta2+1, 1.5);
+      T[5][1][1] = -cphi2*theta2/pow(cphi2*theta2+1, 1.5);
+      T[5][4][0] = k2*cphi*theta/sqrt(cphi2*theta2+1)+k2*cphi*sphi2*theta3/pow(cphi2*theta2+1, 1.5);
+      T[5][4][1] = k*cphi2*sphi*theta3/pow(cphi2*theta2+1, 1.5)-k*sphi*theta/sqrt(cphi2*theta2+1);
+      T[5][4][4] = (2*k2*sphi2*theta2-2*k2*cphi2*theta2)/(2*sqrt(cphi2*theta2+1))-k2*cphi2*sphi2*theta4/pow(cphi2*theta2+1, 1.5);
+      T[5][5][0] = k*sphi*theta/sqrt(cphi2*theta2+1)-k*sphi*theta/pow(cphi2*theta2+1, 1.5);
+      T[5][5][1] = cphi*theta/sqrt(cphi2*theta2+1)-cphi*theta/pow(cphi2*theta2+1, 1.5);
+      T[5][5][4] = k*cphi*sphi*theta2/pow(cphi2*theta2+1, 1.5);
+      T[5][5][5] = 1/sqrt(cphi2*theta2+1)-1/pow(cphi2*theta2+1, 1.5);
 
       concat_matrices(Ms, Md, Mt, 0);
+      Ms->C[4] -= z;
       concat_matrices(Mt, Mc, Ms, 0);
+      Mt->C[4] += z;
       concat_matrices(Ms, Md, Mt, 0);
       Mtmp = Ms;
       Ms = Mt;
       Mt = Mtmp;
-      phi += dphi;
+      z += 2*dz;
     }
     free_matrices(Mc);
     free_matrices(Ms);
     free_matrices(Md);
+    Mt->C[4] += rfdf->length/2;
+    null_matrices(Mt, EXCLUDE_R+EXCLUDE_C);
+    Mt->order = 1;
     return(Mt);
   }
 

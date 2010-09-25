@@ -527,6 +527,11 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_TWLA:
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
+  case T_RFDF:
+    /* Don't actually use this */
+    track_through_rf_deflector(coord, (RFDF*)eptr->p_elem,
+			       coord, n_track, run->p_central, 0, eptr->end_pos, 0);
+    break;
   case T_LSRMDLTR:
     ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
     ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
