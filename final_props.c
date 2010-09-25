@@ -29,7 +29,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9+4)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4+6)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -50,7 +50,7 @@ static double tmp_safe_sqrt;
 #define F_PERC_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_PERC_QUANS 9
 #define F_RMAT_OFFSET F_PERC_OFFSET+F_PERC_QUANS
-#define F_RMAT_QUANS 31
+#define F_RMAT_QUANS 37
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
 #define F_STATS_QUANS 5
 #define F_N_OFFSET F_STATS_OFFSET+F_STATS_QUANS
@@ -163,6 +163,12 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"R54", "&parameter name=R54, type=double, units=m, symbol=\"R$b54$n\", description=\"Transport matrix element from start of system\" &end"},
     {"R55", "&parameter name=R55, type=double, symbol=\"R$b55$n\", description=\"Transport matrix element from start of system\" &end"},
     {"R56", "&parameter name=R56, type=double, units=m, symbol=\"R$b56$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R61", "&parameter name=R61, type=double, units=1/m, symbol=\"R$b61$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R62", "&parameter name=R62, type=double, symbol=\"R$b62$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R63", "&parameter name=R63, type=double, units=1/m, symbol=\"R$b63$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R64", "&parameter name=R64, type=double, symbol=\"R$b64$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R65", "&parameter name=R65, units=1/m, type=double, symbol=\"R$b65$n\", description=\"Transport matrix element from start of system\" &end"},
+    {"R66", "&parameter name=R66, type=double, symbol=\"R$b66$n\", description=\"Transport matrix element from start of system\" &end"},
     {"detR", "&parameter name=detR, type=double, symbol=\"det R\", description=\"Determinant of transport matrix from start of system\" &end"},
     {"CPU", "&parameter name=CPU, type=double, units=s &end"},
 /* beginning of type=long parameters */
@@ -656,7 +662,7 @@ long compute_final_properties
 
   R = M->R;
   i_data = F_RMAT_OFFSET;
-  for (i=0; i<5; i++) 
+  for (i=0; i<6; i++) 
     for (j=0; j<6; j++)
       data[i_data++] = R[i][j];
   Rmat.a = R;
