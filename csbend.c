@@ -340,8 +340,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     meanPhotonsPerMeter0 = (5*c_mks*Po*particleMass*particleRadius)/(2*sqrt(3)*hbar_mks*rho_actual);
     /* Critical energy normalized to beam energy, Sands 5.9 */
     normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*particleMass*sqr(c_mks));
-    fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
+    /* fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
             meanPhotonsPerRadian0, normalizedCriticalEnergy0);
+    */
     includeOpeningAngle = csbend->includeOpeningAngle;
   }
   
@@ -541,8 +542,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   if (distributionBasedRadiation) {
     radiansTotal += fabs(csbend->angle);
-    fprintf(stderr, "%e radians, photons/particle=%e, photons/radian = %e, mean y = %e\n",
-            radiansTotal, photonCount/(1.0*i_top), photonCount/radiansTotal/(1.0*i_top), energyCount/photonCount);
+    /*
+      fprintf(stderr, "%e radians, photons/particle=%e, photons/radian = %e, mean y = %e\n",
+      radiansTotal, photonCount/(1.0*i_top), photonCount/radiansTotal/(1.0*i_top), energyCount/photonCount);
+    */
     distributionBasedRadiation = 0;
   }
 
