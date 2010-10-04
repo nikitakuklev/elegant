@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.Pelegant,v 1.12 2010-03-24 14:29:27 borland Exp $
+# $Id: Makefile.Pelegant,v 1.13 2010-10-04 22:28:06 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.12  2010/03/24 14:29:27  borland
+# Added modulate_elements command.
+#
 # Revision 1.11  2008/10/31 14:20:00  xiaoam
 # Add replace_elements command to elegant
 #
@@ -240,6 +243,11 @@ optimize$(OBJ): optimize.h optim_covariable.h
 
 optimize.h: ../optimize.nl
 	nlpp ../optimize.nl optimize.h
+
+ramp$(OBJ): ramp.h
+
+ramp.h: ../ramp.nl
+	nlpp ../ramp.nl ramp.h
 
 response$(OBJ): response.h
 

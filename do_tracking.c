@@ -324,6 +324,10 @@ long do_tracking(
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }
+    if (applyElementRamps(&(run->rampData), *P_central, run, i_pass)) {
+      beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+      beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+    }
     
     if (beamline->links) {
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);

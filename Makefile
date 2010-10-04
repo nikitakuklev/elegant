@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.17 2010-03-24 14:29:27 borland Exp $
+# $Id: Makefile,v 1.18 2010-10-04 22:28:06 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.17  2010/03/24 14:29:27  borland
+# Added modulate_elements command.
+#
 # Revision 1.16  2008/10/31 14:20:00  xiaoam
 # Add replace_elements command to elegant
 #
@@ -220,6 +223,11 @@ optimize$(OBJ): optimize.h optim_covariable.h
 optimize.h: ../optimize.nl
 	nlpp ../optimize.nl optimize.h
 
+ramp$(OBJ): ramp.h
+
+ramp.h: ../ramp.nl
+	nlpp ../ramp.nl ramp.h
+
 recycle$(OBJ) : recycle.c standard.h recycle.h
 
 response$(OBJ): response.h
@@ -360,6 +368,7 @@ endif
 
 
 clean::
-	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h ramp.h
+
 
 

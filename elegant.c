@@ -143,7 +143,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define APERTURE_DATAX   58
 #define MODULATE_ELEMENTS 59
 #define GENETIC_OPTIMIZATION_SETUP 60
-#define N_COMMANDS      61
+#define RAMP_ELEMENTS 61
+#define N_COMMANDS      62
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -157,7 +158,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
-    "aperture_data", "modulate_elements", "genetic_optimization_setup"
+    "aperture_data", "modulate_elements", "genetic_optimization_setup", "ramp_elements",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -222,6 +223,7 @@ char *description[N_COMMANDS] = {
     "aperture_input                   provide an SDDS file with the physical aperture vs s (same as aperture_data)", 
     "modulate_elements                modulate values of elements as a function of time",
     "genetic_optimization_setup       requests running of genetic optimization mode and sets it up",
+    "ramp_elements                    ramp values of elements as a function of pass",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1607,6 +1609,11 @@ char **argv;
       if (!run_setuped)
         bombElegant("run_setup must precede modulate_elements", NULL);
       addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline);
+      break;
+    case RAMP_ELEMENTS:
+      if (!run_setuped)
+        bombElegant("run_setup must precede ramp_elements", NULL);
+      addRampElements(&(run_conditions.rampData), &namelist_text, beamline);
       break;
     default:
       fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

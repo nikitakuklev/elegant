@@ -124,6 +124,11 @@ optimize$(OBJ): optimize.h optim_covariable.h
 optimize.h: ../optimize.nl
 	nlpp ../optimize.nl optimize.h
 
+ramp$(OBJ): ramp.h
+
+ramp.h: ../ramp.nl
+	nlpp ../ramp.nl ramp.h
+
 response$(OBJ): response.h
 
 response.h: ../response.nl

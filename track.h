@@ -360,6 +360,20 @@ typedef struct {
     double **modulationData;     /* amplitude values */
   } MODULATION_DATA;
 
+typedef struct {
+    long nItems;
+    ELEMENT_LIST **element;      /* element to be modulated */
+    char **item;                 /* name of item to vary for each element, e.g., "K1" */
+    long *parameterNumber;       /* parameter number of varied value */
+    unsigned long *flags;        /* flag bits follow: */      
+#define DIFFERENTIAL_RAMP   0x01
+#define MULTIPLICATIVE_RAMP 0x02
+#define VERBOSE_RAMP        0x04
+    double *unperturbedValue;    /* value without modulation */
+    long *startPass, *endPass;
+    double *startValue, *endValue, *exponent;
+  } RAMP_DATA;
+
 
 /* structure for passing information on run conditions */
 
@@ -372,6 +386,7 @@ typedef struct {
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
     MODULATION_DATA modulationData;
+    RAMP_DATA rampData;
 #if USE_MPI
     int n_processors;
 #endif
@@ -3564,6 +3579,9 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
 
 long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run);
 void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+
+void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass);
 
 #ifdef __cplusplus
 }
