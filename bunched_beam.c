@@ -329,6 +329,9 @@ long new_bunched_beam(
 
     p_central = beam->p0_original = run->p_central;
 
+#if USE_MPI
+    if (!notSinglePart || isSlave) /* Master has NULL pointer for both beam->original and beam->particle */
+#endif
     if (flags&TRACK_PREVIOUS_BUNCH && beam->original==beam->particle)
       bombElegant("programming error: original beam coordinates needed but not saved", NULL);
     
