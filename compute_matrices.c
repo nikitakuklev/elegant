@@ -1150,7 +1150,7 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
         free(watch->label);
         watch->label = buffer;
         }
-    watch->filename = compose_filename_occurence(watch->filename, run->rootname, occurence);
+    watch->filename = compose_filename_occurence(watch->filename, run->rootname, occurence+watch->indexOffset);
     SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier, previousElementName);
     watch->initialized = 1;
     watch->count = 0;
