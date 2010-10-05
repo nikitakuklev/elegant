@@ -2967,6 +2967,85 @@ equal, the range of the parameter is unlimited.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|ramp_elements|}\end{center}
+\end{latexonly}
+\subsection{ramp\_elements\label{subsec:rampelements}}
+
+\begin{itemize}
+\item type: setup command.
+\item function: define parameters for time-dependent ramping of elements
+\item N.B.: this feature is somewhat experimental.  Please use with caution and report any problems on the forum.
+\end{itemize}
+
+\begin{verbatim}
+&modulate_elements
+    STRING name = NULL;
+    STRING item = NULL;
+    STRING type = NULL;
+    long start_pass = 0;
+    long end_pass = LONG_MAX;
+    double start_value = 0;
+    double end_value = 0;
+    long differential = 1;
+    long multiplicative = 0;
+    long start_occurence = 0;
+    long end_occurence = 0;
+    double s_start = -1;
+    double s_end = -1;
+    STRING before = NULL;
+    STRING after = NULL;
+    long verbose = 0;
+&end
+\end{verbatim}
+
+N.B.: This command will produce unpredictable results when used with
+\verb|error_element|, \verb|alter_elements|, \verb|modulate_elements|, and
+\verb|load_parameters| (except when \verb|change_defined_values=1|).
+It should work properly with \verb|link_elements| in turn-by-turn mode
+when the source element is ramped, but not when the target element
+is ramped.
+
+\begin{itemize}
+\item \verb|name| --- A possibly-wildcard-containing string giving the names of the
+        elements to modulate. If not specified, then one must specify \verb|type|.
+\item \verb|item| --- The name of the parameter to modulate.
+\item \verb|type| --- A possibly-wildcard-containing string giving the names of element
+        {\em types} to modulate.  May be specified with \verb|name| or by itself.
+\item \verb|start_pass|, \verb|end_pass| --- The starting and ending pass, 
+  $i_{\rm start}$ and $i_{\rm end}$ for the ramp.
+ For passes less than \verb|start_pass|, the ramp value is \verb|start_value|.
+ For passes greater than \verb|end_pass|, the ramp value is \verb|end_value|.
+\item \verb|start_value|, \verb|end_value| --- The end-point values $S$ (start) and $E$ (end) of the ramp.
+\item \verb|exponent| --- The exponent $p$ for the variation of values between the start and end
+  of the ramp.  The ramp function $R(i)$ is 
+\begin{equation}
+  R(i) = S + (E-S)*\left(\frac{i-i_{\rm start}}{i_{\rm end}-i_{\rm start}}\right)^p.
+\end{equation}
+Note that $i=0$ on the first pass.
+\item \verb|differential|, \verb|multiplicative| --- Determine how the amplitude function
+  $A(t)$ is used to obtain the new value of the parameter.  There are four cases
+  \begin{itemize}
+    \item \verb|differential=1|, \verb|multiplicative=0|: $v(t) = v_0 + R(i)$ (default).
+    \item \verb|differential=0|, \verb|multiplicative=0|: $v(t) = R(i)$.  
+    \item \verb|differential=1|, \verb|multiplicative=1|: $v(t) = v_0 + v_0 R(i)$.  
+    \item \verb|differential=0|, \verb|multiplicative=1|: $v(t) = v_0 R(i)$.  
+  \end{itemize}
+\item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
+ ending occurrence numbers of elements that will be modulated. N.B.: if wildcards are used, occurrence
+ number counting is for each set of identically-named elements separately, rather than for the sequence
+ of matched elements.
+\item \verb|s_start|, \verb|s_end| --- If non-negative, these give the gaving and ending position
+ limits for the end-of-element locations of elements to be modulated.
+\item \verb|after| --- The name of an element.  If given, the modulation is applied only to elements
+ that follow the named element in the beamline.  
+\item \verb|before| --- The name of an element.  If given, the modulation is applied only to elements
+ that precede the named element in the beamline. 
+\item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
+        made.  Use for debugging only, since otherwise it may slow the simulation.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|replace_elements|}\end{center}
 \end{latexonly}
 \subsection{replace\_elements \label{subsec:replaceelements}}
