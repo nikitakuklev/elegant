@@ -1396,6 +1396,11 @@ char **argv;
           if (correction_iterations>1)
             fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
           fflush(stdout);
+          if (beam_type==SET_SDDS_BEAM) {
+            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+              break;
+          } else if (beam_type==SET_BUNCHED_BEAM)
+            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
           if (fl_do_tune_correction) {
             if (do_closed_orbit)
               run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0);
@@ -1427,6 +1432,8 @@ char **argv;
                               (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
       }
       finish_transport_analysis(&run_conditions, &run_control, &error_control, beamline);
+      if (beam_type!=-1)
+        free_beamdata(&beam);
       if (do_closed_orbit)
         finish_clorb_output();
       if (do_twiss_output)
