@@ -4,6 +4,7 @@
 %
 \documentclass[11pt]{article}
 \usepackage{html}
+\usepackage{longtable}
 \pagestyle{plain}
 %\voffset=-0.75in
 \newenvironment{req}{\begin{equation} \rm}{\end{equation}}
@@ -54,6 +55,9 @@ Here is a summary of what's changed since release 23.1
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The {\tt ramp\_elements} command was added.  It allows simplified ramping of essentially
+ any numerical parameter of any element on a turn-by-turn basis.  This functionality was
+ already provided by {\tt modulate\_elements}, but was more difficult to use in that form.
 \item The {\tt optimization\_variable} command has a new parameter, {\tt force\_inside}, which 
   allows forcing the initial value of the variable inside the boundaries set by the 
   {\tt lower\_limit} and {\tt upper\_limit} parameters.
@@ -571,10 +575,9 @@ evaluation of the optimization penalty function.
 \end{latexonly}
 \subsection{Table of {\tt elegant} commands and their functions}
 
-\begin{table}[h]\caption{Table of {\tt elegant} commands and their functions.}
-\begin{center}
-\begin{tabular}{|l|l|l|}\hline
-Command name & Type & Description \\
+\begin{longtable}{|p{2.75in}|p{0.75in}|p{2.75in}|}
+\hline
+Command name & Type & Description \\\hline 
 \hyperref{{\tt alter\_elements}}{{\tt alter\_elements}}{}{subsec:alterelements} & action & Change an element parameter from the command file. \\ \hline
 \hyperref{{\tt amplification\_factors}}{{\tt amplification\_factors}}{}{subsec:amplificationfactors} & action & Compute orbit amplification functions. \\ \hline
 \hyperref{{\tt analyze\_map}}{{\tt analyze\_map}}{}{subsec:analyzemap} & major action & Determine first-order matrix from tracking. \\ \hline
@@ -601,24 +604,17 @@ Command name & Type & Description \\
 \hyperref{{\tt link\_elements}}{{\tt link\_elements}}{}{subsec:linkelements} & setup & Define link between parameters of two elements. \\ \hline
 \hyperref{{\tt load\_parameters}}{{\tt load\_parameters}}{}{subsec:loadparameters} & setup/action & Load element parameters from SDDS file. \\ \hline
 \hyperref{{\tt matrix\_output}}{{\tt matrix\_output}}{}{subsec:matrixoutput} & setup/action & Output transfer matrix along beamline. \\ \hline
+\hyperref{{\tt modulate\_elements}}{{\tt modulate\_elements}}{}{subsec:modulateelements} & setup & Set up time-dependent modulation of elements. \\ \hline
+
 \hyperref{{\tt moments\_output}}{{\tt moments\_output}}{}{subsec:momentsoutput} & setup/action & Compute coupled beam moments, with radiation option. \\ \hline
 \hyperref{{\tt momentum\_aperture}}{{\tt momentum\_aperture}}{}{subsec:momentumaperture} & major action & Determine s-dependent momentum aperture. \\ \hline
-%begin{latexonly}
-\end{tabular}
-\end{center}
-\end{table}
-
-\begin{table}[h]\caption{Table of {\tt elegant} commands and their functions.}
-\begin{center}
-\begin{tabular}{|l|l|l|}\hline
-%end{latexonly}
-
 \hyperref{{\tt optimize}}{{\tt optimize}}{}{subsec:optimize} & major action & Execute an optimization. \\ \hline
 \hyperref{{\tt optimization\_covariable}}{{\tt optimization\_covariable}}{}{subsec:optimizationcovariable} & setup & Define a dependent parameter for optimization. \\ \hline
 \hyperref{{\tt optimization\_setup}}{{\tt optimization\_setup}}{}{subsec:optimizationsetup} & setup & Perform initial optimization setup. \\ \hline
 \hyperref{{\tt optimization\_term}}{{\tt optimization\_term}}{}{subsec:optimizationterm} & setup & Define a term of penalty function. \\ \hline
 \hyperref{{\tt optimization\_variable}}{{\tt optimization\_variable}}{}{subsec:optimizationvariable} & setup & Define an optimization variable. \\ \hline
 \hyperref{{\tt print\_dictionary}}{{\tt print\_dictionary}}{}{subsec:printdictionary} & action & Print the element dictionary. \\ \hline
+\hyperref{{\tt ramp\_elements}}{{\tt ramp\_elements}}{}{subsec:rampelements} & setup & Set up turn-by-turn ramping of elements. \\ \hline
 \hyperref{{\tt rpn\_expression}}{{\tt rpn\_expression}}{}{subsec:rpnexpression} & action & Execute an expression in the rpn interpreter. \\ \hline
 \hyperref{{\tt rpn\_load}}{{\tt rpn\_load}}{}{subsec:rpnload} & action & Load values from SDDS file into rpn interpreter. \\ \hline
 \hyperref{{\tt run\_control}}{{\tt run\_control}}{}{subsec:runcontrol} & setup & Set up simulation steps and passes. \\ \hline
@@ -636,9 +632,10 @@ Command name & Type & Description \\
 \hyperref{{\tt track}}{{\tt track}}{}{subsec:track} & major action & Execute tracking of particles and other operations. \\ \hline
 \hyperref{{\tt tune\_shift\_with\_amplitude}}{{\tt tune\_shift\_with\_amplitude}}{}{subsec:tuneshiftwithamplitude} & setup & Compute tune shifts with amplitude. \\ \hline
 \hyperref{{\tt vary\_element}}{{\tt vary\_element}}{}{subsec:varyelement} & setup & Vary element parameters in loops. \\ \hline
-\end{tabular}
-\end{center}
-\end{table}
+%\end{tabular}
+%\end{center}
+\caption{Table of {\tt elegant} commands and their functions.}
+\end{longtable}
 
 \clearpage
 
