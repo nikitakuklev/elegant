@@ -126,8 +126,7 @@ random sampling.",
     "A numerically-integrated dipole magnet with various extended-fringe-field models.",
     "A thin kick element with polynomial dependence on the coordinates in one plane.",
     "A numerically-integrated dipole magnet with a Cartesian gradient.",
-    "A voltage-ramped RF cavity, implemented like RFCA.  The voltage ramp pattern is\n\
-given by an SDDS-format file of the voltage factor vs time in seconds.",
+    "A voltage-, phase-, and/or frequency-ramped RF cavity, implemented like RFCA.",
     "A momentum-ramping element that changes the central momentum according to an SDDS-\n\
 format file of the momentum factor vs time in seconds.",
     "A stray field element with local and global components.  Global components are\n\
