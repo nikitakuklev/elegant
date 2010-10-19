@@ -11,8 +11,11 @@
     double xmax =  0.1;
     double ymin =  1e-6;
     double ymax =  0.1;
+    double delta_min = 0;
+    double delta_max = 0;
     long nx = 20;
     long ny = 21;
+    long ndelta = 1;
     long verbosity = 1;
     long include_changes = 0;
 #end

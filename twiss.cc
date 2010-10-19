@@ -2726,7 +2726,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  tuneUpperLimit[1] = yTune[ix1][iy1] + tune_shift_with_amplitude_struct.nux_roi_width/2;
 	}
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
-                                      x, y,
+                                      x, y, 0,
                                       tune_shift_with_amplitude_struct.turns, 0, NULL,
 				      tuneLowerLimit, tuneUpperLimit, 0)) {
 	  lost[ix][iy] = 1;
@@ -3040,7 +3040,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, long turns,
+			      double xAmplitude, double yAmplitude, double deltaOffset, long turns,
                               long useMatrix,
                               double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit,
 			      long allowLosses)
@@ -3093,6 +3093,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   }
   oneParticle[0][0] += xAmplitude;
   oneParticle[0][2] += yAmplitude;
+  oneParticle[0][5] += deltaOffset;
 
 #ifdef DEBUG
   fprintf(stdout, (char*)"Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",

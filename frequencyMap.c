@@ -19,19 +19,21 @@
 
 #define IC_X 0
 #define IC_Y 1
-#define IC_NUX 2
-#define IC_NUY 3
-#define N_NOCHANGE_COLUMNS 4
-#define IC_DNUX 4
-#define IC_DNUY 5
-#define IC_DNU 6
-#define IC_DX 7
-#define IC_DY 8
-#define IC_DIFFUSION 9
-#define N_COLUMNS 10
+#define IC_DELTA 2
+#define IC_NUX 3
+#define IC_NUY 4
+#define N_NOCHANGE_COLUMNS 5
+#define IC_DNUX 5
+#define IC_DNUY 6
+#define IC_DNU 7
+#define IC_DX 8
+#define IC_DY 9
+#define IC_DIFFUSION 10
+#define N_COLUMNS 11
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
+    {"delta", "&column name=delta, type=double &end"},
     {"nux", "&column name=nux, symbol=$gn$r$bx$n, type=double &end"},
     {"nuy", "&column name=nuy, symbol=$gn$r$by$n, type=double &end"},
     {"dnux", "&column name=dnux, symbol=$gDn$r$bx$n, type=double &end"},
@@ -70,10 +72,14 @@ void setupFrequencyMap(
     bombElegant("xmin > xmax", NULL);
   if (ymin>ymax)
     bombElegant("ymin > ymax", NULL);
+  if (delta_min>delta_max)
+    bombElegant("delta_min > delta_max", NULL);
   if (nx<1)
     nx = 1;
   if (ny<1)
     ny = 1;
+  if (ndelta<1)
+    ndelta = 1;
 
   output = compose_filename(output, run->rootname);
  #if SDDS_MPI_IO
@@ -111,8 +117,8 @@ long doFrequencyMap(
 {
   double firstTune[2], secondTune[2], startingCoord[6], endingCoord[6];
   double firstAmplitude[2], secondAmplitude[2];
-  double dx, dy, x, y;
-  long ix, iy, ip, turns;
+  double dx, dy, ddelta, x, y, delta;
+  long ix, iy, idelta, ip, turns;
   static double **one_part;
   double p;
   long n_part;
@@ -125,8 +131,8 @@ long doFrequencyMap(
   if (!SDDS_MPI_WriteLayout(&SDDS_fmap))  
     SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_fmap.MPI_dataset->MPI_file);
 
-  particles = nx*ny/n_processors;
-  if (myid < nx*ny%n_processors) 
+  particles = ndelta*nx*ny/n_processors;
+  if (myid < ndelta*nx*ny%n_processors) 
     particles++;
   if (!SDDS_StartPage(&SDDS_fmap, particles) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
@@ -139,7 +145,7 @@ long doFrequencyMap(
     printf ("Warning: In parallel version, no intermediate particle tracking information will be provided\n");
   }
 #else
-  if (!SDDS_StartPage(&SDDS_fmap, nx*ny) || 
+  if (!SDDS_StartPage(&SDDS_fmap, ndelta*nx*ny) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
     SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -180,70 +186,77 @@ long doFrequencyMap(
     dy = (ymax-ymin)/(ny-1);
   else
     dy = 0;
+  if (ndelta>1)
+    ddelta = (delta_max-delta_min)/(ndelta-1);
+  else
+    ddelta = 0;
   ip = 0;
   if (include_changes==0)
     turns = control->n_passes;
   else
     turns = control->n_passes/2;
-  for (ix=0; ix<nx; ix++) {
-    x = xmin + ix*dx;
-    for (iy=0; iy<ny; iy++) {
-      y = ymin + iy*dy;
-      memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
+  for (idelta=0; idelta<ndelta; idelta++) {
+    delta = delta_min + idelta*ddelta;
+    for (ix=0; ix<nx; ix++) {
+      x = xmin + ix*dx;
+      for (iy=0; iy<ny; iy++) {
+	y = ymin + iy*dy;
+	memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
-      if (myid == (ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
+	if (myid == (idelta*nx*ny+ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
 #endif
-      {
-      if (!computeTunesFromTracking(firstTune, firstAmplitude,
-				    beamline->matrix, beamline, run,
-                                    startingCoord, x, y, turns,
-                                    0, endingCoord, NULL, NULL, 1) ||
-	  firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
-	if (verbosity) 
-	  fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
-        continue;
-      }
-      if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
-                             IC_X, x, IC_Y, y, 
-                             IC_NUX, firstTune[0], 
-                             IC_NUY, firstTune[1], 
-			     -1)) {
-        SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      if (include_changes) {
-	memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
-	if (!computeTunesFromTracking(secondTune, secondAmplitude,
-				      beamline->matrix, beamline, run,
-				      startingCoord, 0.0, 0.0, turns,
-				      0, endingCoord, NULL, NULL, 1) || 
-	    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
-	  if (verbosity)
-	    fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
-	  if (SDDS_fmap.n_rows) /* If the particle is lost, it will not show in the frequency map */ 
-	    SDDS_fmap.n_rows--;
-	  continue;
-	}
-	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
-			       IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
-			       IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
-			       IC_DNU, 
-			       sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
-			       IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
-			       IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
-                               IC_DIFFUSION, 
-                               log10(sqr(secondTune[0]-firstTune[0])+SQR(secondTune[1]-firstTune[1])),
-			       -1)) {
-	  SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-      }
-      ip++;
-      if (verbosity) {
-        fprintf(stdout, "Done with particle %ld of %ld\n",
-                ix*ny+iy+1, nx*ny);
-        fflush(stdout);
-      }
+	  {
+	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
+					  beamline->matrix, beamline, run,
+					  startingCoord, x, y, delta, turns,
+					  0, endingCoord, NULL, NULL, 1) ||
+		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
+	      if (verbosity) 
+		fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+	      continue;
+	    }
+	    if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+				   IC_X, x, IC_Y, y, IC_DELTA, delta,
+				   IC_NUX, firstTune[0], 
+				   IC_NUY, firstTune[1], 
+				   -1)) {
+	      SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
+	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	    }
+	    if (include_changes) {
+	      memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
+	      if (!computeTunesFromTracking(secondTune, secondAmplitude,
+					    beamline->matrix, beamline, run,
+					    startingCoord, 0.0, 0.0, 0.0, turns,
+					    0, endingCoord, NULL, NULL, 1) || 
+		  secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
+		if (verbosity)
+		  fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+		if (SDDS_fmap.n_rows) /* If the particle is lost, it will not show in the frequency map */ 
+		  SDDS_fmap.n_rows--;
+		continue;
+	      }
+	      if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+				     IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
+				     IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
+				     IC_DNU, 
+				     sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
+				     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
+				     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
+				     IC_DIFFUSION, 
+				     log10(sqr(secondTune[0]-firstTune[0])+SQR(secondTune[1]-firstTune[1])),
+				     -1)) {
+		SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      }
+	    }
+	    ip++;
+	    if (verbosity) {
+	      fprintf(stdout, "Done with particle %ld of %ld\n",
+		      ix*ny*ndelta+iy*ndelta+idelta+1, nx*ny*ndelta);
+	      fflush(stdout);
+	    }
+	  }
       }
     }
   }

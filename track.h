@@ -2941,7 +2941,7 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
                                LINE_LIST *beamline);
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, long turns,
+			      double xAmplitude, double yAmplitude, double deltaOffset, long turns,
                               long useMatrix, double *endingCoord,
 			      double *lowerLimit, double *upperLimit,
 			      long allowLosses);
