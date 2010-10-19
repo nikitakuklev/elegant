@@ -11,6 +11,9 @@
    Hairong Shang, Oct 2005
    *
    $Log: not supported by cvs2svn $
+   Revision 1.2  2010/07/13 21:37:07  borland
+   Added ability to increase the number of multipoles using all=<number> syntax.
+
    Revision 1.1  2007/03/30 16:50:29  soliday
    Moved from directory above.
 
@@ -158,7 +161,8 @@ int main(int argc, char **argv)
   double **outputData, *tmpData, **indepData, slope, delta, delta1;  
   unsigned long multipoleFlags, typeFlags, pipeFlags;
   char label[1024];
-  
+  long inputPage;
+
   tmpFileUsed=rows=0;
   inputFile=outputFile=NULL;
   multipoleFlags = typeFlags = pipeFlags = 0;
@@ -166,7 +170,7 @@ int main(int argc, char **argv)
   indepData = (double**)malloc(sizeof(*indepData)*4);
   /* indepData[i] i=0,1,2,3 is the input data of x, y, nux, and nuy respectively */
   /* outputData[i] i=0,1,2,3 is the interpolated values of x, y, nux, and nuy respectively */
-  outputData[0] = outputData[1] = outputData[2] = outputData[3]=NULL;
+  outputData[0] = outputData[1] = outputData[2] = outputData[3]= NULL;
   indepData[0] = indepData[1] = indepData[2] = indepData[3] = NULL;
   tmpData=NULL;
   /*sortIndex is for sorting x (and then y) or y (and then y) data*/
@@ -275,22 +279,6 @@ int main(int argc, char **argv)
     }
   }
   
-  /* read indepData (x, y, nux, and nuy) */
-  while (SDDS_ReadPage(&inData)>0) {
-    rows=0;
-    if (!(rows=SDDS_RowCount(&inData)))
-      continue;
-    for (i=0; i<4; i++) {
-      indepData[i] = SDDS_Realloc(indepData[i], sizeof(**indepData)*(datapoints + rows));
-      if (!(tmpData=SDDS_GetColumnInDoubles(&inData, columnName[i])))
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      memcpy(indepData[i]+datapoints, tmpData, sizeof(**indepData)*rows);
-      free(tmpData);
-      tmpData=NULL;
-    }
-    datapoints += rows;
-  }
-  
   if (!SDDS_InitializeOutput(&outData, SDDS_BINARY, 1, NULL, NULL, outputFile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineParameter(&outData,"multipole",NULL, NULL, NULL,NULL,SDDS_STRING, 0)<0)
@@ -305,155 +293,177 @@ int main(int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineParameter(&outData,"offset",NULL, NULL, NULL,NULL,SDDS_LONG, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (SDDS_DefineParameter(&outData,"inputPage",NULL, NULL, NULL,NULL,SDDS_LONG, 0)<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (i=0; i<4; i++) {
     if (!SDDS_TransferColumnDefinition(&outData, &inData, columnName[i], NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  if (!SDDS_Terminate(&inData) || !SDDS_WriteLayout(&outData))
+  if (!SDDS_WriteLayout(&outData))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
-  for (i=0; i<2; i++) {
-    if (!i) {
-      /* sort by x first and then sort by y; the sorted index is represented by sortIndex[0]*/
-      sortData[0] = indepData[0];
-      sortData[1] = indepData[1];
-    } else {
-      /* sort by y first and then sort by x; the sorted index is represented by sortIndex[1]*/
-      sortData[0] = indepData[1];
-      sortData[1] = indepData[0];
-    }
-    sortIndex[i] = malloc(sizeof(**sortIndex)*datapoints);
-    for (k=0;k<datapoints;k++)
-      sortIndex[i][k]=k;
-    qsort((void*)sortIndex[i], datapoints, sizeof(**sortIndex), SDDS_CompareDoubleRows);
-  }
-  
-  for (i_pole=0; i_pole<poles; i_pole++) {
-    /* process each selected multipole */
-    if (!pole[i_pole])
+  /* read indepData (x, y, nux, and nuy) */
+  inputPage = 0;
+  while (SDDS_ReadPage(&inData)>0) {
+    inputPage ++;
+    rows=0;
+    if (!(rows=SDDS_RowCount(&inData)))
       continue;
-    /* multx (M) starts from pole[i_pole] (i.e., Q/2) and 
-       loop with -1 interval until multx reaches 0 */
-    multx=pole[i_pole];
-    count=0;
-    outputpoints=0;
-    while (multx>=0) {
-      /* multy (N) = Q/2 - multx */
-      multy = pole[i_pole] - multx;
-      if ((count%2==0 && typeFlags&USE_NORMAL_TYPE) ||
-          (count%2 && typeFlags&USE_SKEW_TYPE)) {
-        /* if multy==0, no need to change the sign, just find resonances for multx*nux = offset
-           otherwise, find resonances for both multx*nux + multy *nuy = offset and
-           multx*nux - multy *nuy = offset */
-        if (!multy) {
-	  /* multy is zero */
-	  if (multx<0)
-	    signs = 0; /* skip multx<0 as it is the same as |multx| */
-	  else
-	    signs = 1;
-	} else {
-	  /* multy is nonzero */
-	  if (multx)
-	    signs = 2;
-	  else {
-	    signs = 1;
-	    multy = abs(multy);
-	  }
-	}
-        for (sign=0; sign<signs; sign++) {
-          if (sign)
-            /* change sign of multy */
-            multy = -multy;
-          start=multx<multy?multx:multy;
-          if (start>0)
-            start=0;
-          end=multx>multy?multx:multy;
-	  rows = 0;
-          /* find the resonances for each offset*/
-          for (offset=start; offset<=end; offset++) {
-            /* process two sets of data, first set is the data sorted by x and then y (plane=0),
-               second set is the data sorted by y and then x (plane=1)*/
-            for (plane=0; plane<2; plane++) {
-              for (i=0; i<datapoints-1; i++) {
-                index = sortIndex[plane][i];
-                index1 = sortIndex[plane][i+1];
-		if (indepData[plane][index]!=indepData[plane][index1])
-		  continue;
-                delta = multx * indepData[2][index] + multy * indepData[3][index] - offset * 1.0;
-                delta1 = multx * indepData[2][index1] + multy * indepData[3][index1] - offset * 1.0;
-                if ((delta<=0 && delta1>=0) || (delta>=0 && delta1<=0)) {
-                  if (!outputpoints) {
-                    outputpoints=20;
-                    for (k=0; k<4; k++) 
-                      outputData[k]=SDDS_Realloc(outputData[k], sizeof(**outputData)*outputpoints);
-                  }
-                  if (rows>=outputpoints) {
-                    outputpoints +=rows+10;
-                    for (k=0; k<4; k++) 
-                      outputData[k]=SDDS_Realloc(outputData[k], sizeof(**outputData)*outputpoints);
-                  }
-                  for (k=0; k<4; k++) {
-                    if (indepData[k][index] == indepData[k][index1])
-                      outputData[k][rows] = indepData[k][index];
-                    else {
-                      slope = (delta1 - delta)/(indepData[k][index1] - indepData[k][index]);
-                      if (slope) 
-                        outputData[k][rows] = indepData[k][index] - delta/slope;
-                      else
-                        outputData[k][rows] = (indepData[k][index] + indepData[k][index1])/2;
-                    }
-                  }
-                  rows++;
-                } /*end of if deltaTune[i] [i+1] cross zero */
-              } /*end of for i=o to datapoints loop */
-            } /*end of for plane loop */
-	  } /* end of for offset loop */
-	  if (rows) {
-	    sprintf(label, "%ld*$gn$r$bx$n + %ld*$gn$r$by$n", multx, multy);
-	    if (!SDDS_StartPage(&outData, rows))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				    "resonanceLabel", label, NULL))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				    "multipole", multipole[i_pole], NULL))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				    "multx", multx, NULL))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				    "multy", multy, NULL))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    if (count%2==0) {
-	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				      "type", "normal", NULL))
-		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    } else {
-	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				      "type", "skew", NULL))
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    }
-	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
-				    "offset", offset, NULL))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    for (k=0; k<4; k++) {
-	      if (!SDDS_SetColumn(&outData,  SDDS_SET_BY_NAME, outputData[k], rows, columnName[k]))
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    }
-	    if (!SDDS_WritePage(&outData))
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-        } /*end of for sign  loop */
-      } /*end of if */
-      count++;
-      multx --;
+    for (i=0; i<4; i++) {
+      if (indepData[i])
+	free(indepData[i]);
+      if (!(indepData[i] = SDDS_GetColumnInDoubles(&inData, columnName[i])))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-  } /*end of for i_pole */
-  
-  if (outputpoints) {
-    for (k=0;k<4;k++)
-      free(outputData[k]);
+    datapoints = rows;
+
+    for (i=0; i<2; i++) {
+      if (!i) {
+	/* sort by x first and then sort by y; the sorted index is represented by sortIndex[0]*/
+	sortData[0] = indepData[0];
+	sortData[1] = indepData[1];
+      } else {
+	/* sort by y first and then sort by x; the sorted index is represented by sortIndex[1]*/
+	sortData[0] = indepData[1];
+	sortData[1] = indepData[0];
+      }
+      sortIndex[i] = malloc(sizeof(**sortIndex)*datapoints);
+      for (k=0;k<datapoints;k++)
+	sortIndex[i][k]=k;
+      qsort((void*)sortIndex[i], datapoints, sizeof(**sortIndex), SDDS_CompareDoubleRows);
+    }
+    
+    for (i_pole=0; i_pole<poles; i_pole++) {
+      /* process each selected multipole */
+      if (!pole[i_pole])
+	continue;
+      /* multx (M) starts from pole[i_pole] (i.e., Q/2) and 
+	 loop with -1 interval until multx reaches 0 */
+      multx=pole[i_pole];
+      count=0;
+      outputpoints=0;
+      while (multx>=0) {
+	/* multy (N) = Q/2 - multx */
+	multy = pole[i_pole] - multx;
+	if ((count%2==0 && typeFlags&USE_NORMAL_TYPE) ||
+	    (count%2 && typeFlags&USE_SKEW_TYPE)) {
+	  /* if multy==0, no need to change the sign, just find resonances for multx*nux = offset
+	     otherwise, find resonances for both multx*nux + multy *nuy = offset and
+	     multx*nux - multy *nuy = offset */
+	  if (!multy) {
+	    /* multy is zero */
+	    if (multx<0)
+	      signs = 0; /* skip multx<0 as it is the same as |multx| */
+	    else
+	      signs = 1;
+	  } else {
+	    /* multy is nonzero */
+	    if (multx)
+	      signs = 2;
+	    else {
+	      signs = 1;
+	      multy = abs(multy);
+	    }
+	  }
+	  for (sign=0; sign<signs; sign++) {
+	    if (sign)
+	      /* change sign of multy */
+	      multy = -multy;
+	    start=multx<multy?multx:multy;
+	    if (start>0)
+	      start=0;
+	    end=multx>multy?multx:multy;
+	    rows = 0;
+	    /* find the resonances for each offset*/
+	    for (offset=start; offset<=end; offset++) {
+	      /* process two sets of data, first set is the data sorted by x and then y (plane=0),
+		 second set is the data sorted by y and then x (plane=1)*/
+	      for (plane=0; plane<2; plane++) {
+		for (i=0; i<datapoints-1; i++) {
+		  index = sortIndex[plane][i];
+		  index1 = sortIndex[plane][i+1];
+		  if (indepData[plane][index]!=indepData[plane][index1])
+		    continue;
+		  delta = multx * indepData[2][index] + multy * indepData[3][index] - offset * 1.0;
+		  delta1 = multx * indepData[2][index1] + multy * indepData[3][index1] - offset * 1.0;
+		  if ((delta<=0 && delta1>=0) || (delta>=0 && delta1<=0)) {
+		    if (!outputpoints) {
+		      outputpoints=20;
+		      for (k=0; k<4; k++) 
+			outputData[k]=SDDS_Realloc(outputData[k], sizeof(**outputData)*outputpoints);
+		    }
+		    if (rows>=outputpoints) {
+		      outputpoints +=rows+10;
+		      for (k=0; k<4; k++) 
+			outputData[k]=SDDS_Realloc(outputData[k], sizeof(**outputData)*outputpoints);
+		    }
+		    for (k=0; k<4; k++) {
+		      if (indepData[k][index] == indepData[k][index1])
+			outputData[k][rows] = indepData[k][index];
+		      else {
+			slope = (delta1 - delta)/(indepData[k][index1] - indepData[k][index]);
+			if (slope) 
+			  outputData[k][rows] = indepData[k][index] - delta/slope;
+			else
+			  outputData[k][rows] = (indepData[k][index] + indepData[k][index1])/2;
+		      }
+		    }
+		    rows++;
+		  } /*end of if deltaTune[i] [i+1] cross zero */
+		} /*end of for i=o to datapoints loop */
+	      } /*end of for plane loop */
+	    } /* end of for offset loop */
+	    if (rows) {
+	      sprintf(label, "%ld*$gn$r$bx$n + %ld*$gn$r$by$n", multx, multy);
+	      if (!SDDS_StartPage(&outData, rows))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "resonanceLabel", label, NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "multipole", multipole[i_pole], NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "multx", multx, NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "multy", multy, NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (count%2==0) {
+		if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+					"type", "normal", NULL))
+		  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      } else {
+		if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+					"type", "skew", NULL))
+		  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      }
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "offset", offset, NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
+				      "inputPage", inputPage, NULL))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      for (k=0; k<4; k++) {
+		if (!SDDS_SetColumn(&outData,  SDDS_SET_BY_NAME, outputData[k], rows, columnName[k]))
+		  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	      }
+	      if (!SDDS_WritePage(&outData))
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	    }
+	  } /*end of for sign  loop */
+	} /*end of if */
+	count++;
+	multx --;
+      }
+    } /*end of for i_pole */
   }
+
+
+  for (k=0;k<4;k++)
+    if (outputData[k])
+      free(outputData[k]);
+
   if (!SDDS_Terminate(&outData))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (i=0; i<2; i++)
