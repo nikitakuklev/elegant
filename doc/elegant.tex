@@ -61,6 +61,8 @@ Here is a summary of what's changed since release 23.1
 \item The {\tt optimization\_variable} command has a new parameter, {\tt force\_inside}, which 
   allows forcing the initial value of the variable inside the boundaries set by the 
   {\tt lower\_limit} and {\tt upper\_limit} parameters.
+\item The \verb|frequency_map| command now directly supports frequency maps that are a function of 
+  $x$, $y$, and $\delta$.  (In the past, variation of $\delta$ could be done using \verb|vary_elements|.)
 \end{itemize}
 
 \subsection{Other Changes}
@@ -483,7 +485,7 @@ discouraged.
 {\tt elegant} supports substitution of fields in namelists using the
 commandline {\tt macro} option.  This permits making runs with altered
 parameters without editing the input file.  Macros inside the input
-file have one of two forms: \verb|<tag>| or \verb|$tag|.  To perform
+file have one of two forms: \verb|<tag>| or \verb|\$tag|.  To perform
 substitution, use the syntax
 \begin{flushleft}{\tt
 elegant {\em inputfile} -macro={\em tag1}={\em value1}[,{\em
@@ -1748,8 +1750,11 @@ end are given.
     double xmax = 0.1;
     double ymin = 1e-6;
     double ymax = 0.1;
+    double delta_min = 0;
+    double delta_max = 0;
     long nx = 21;
     long ny = 21;
+    long ndelta = 1;
     long verbosity = 1;
     long include_changes = 0;
 &end
@@ -1757,13 +1762,18 @@ end are given.
 
 \begin{itemize}
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
- Recommended value: ``\%s.fma''.
+ Recommended value: ``\%s.fma''.  For the parallel version, particles will be listed in essentially
+ random order.  If needed, \verb|sddssort| can be used to sort particles by initial coordinates.
 \item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.             
 \item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.             
  \verb|ymin| should typically be a small, positive value so that there                               
- is some betatron oscillation from which to get the tune.                       
+ is some betatron oscillation from which to get the tune.                      
+\item \verb|delta_min|, \verb|delta_max| --- Limits of grid of initial $\delta$ coordinates
+for tracking.  Not that particles are not centered around the dispersive closed orbit.  Hence,
+the tracking is appropriate to simulation of dynamics from a touschek scattering event.
 \item \verb|nx| --- Number of values of x coordinate in the grid.
 \item \verb|ny| --- Number of values of y coordinate in the grid.
+\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid.
 \item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
 \item \verb|include_changes| --- If nonzero, then computes not only the tunes, but also
         the changes in the tunes.  This is expressed in terms of the diffusion, which is defined
@@ -1771,6 +1781,7 @@ end are given.
 \begin{equation}
   d = \log \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)
 \end{equation}
+Use of this feature results in a doubling of the number of turns tracked.
 \end{itemize}
 
 \begin{latexonly}
