@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.22  2010/04/08 22:28:53  borland
+# Added ability to run kick aperture with multiple processors per job.
+#
 # Revision 1.21  2010/04/08 18:08:32  borland
 # Made the momentum aperture tab more compact.
 #
@@ -1025,9 +1028,13 @@ proc FillFrequencyMapFrame {widget args} {
       -label "Number of turns: " -width 20 -textVariable frequencyMap(turns) \
       -contextHelp \
       "Enter the number of turns to track."
+    APSLabeledEntry .le6a -parent $widget \
+	-label "Number of processors per job: " -width 20 -textVariable frequencyMap(processors) \
+	-contextHelp "Enter the number of processors per job."
     APSLabeledEntry .le7 -parent $widget \
       -label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
       -contextHelp "Enter the fractional momentum offset" 
+
 
     APSRadioButtonFrame .rb0 -parent $widget \
       -label "Compute diffusion: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
