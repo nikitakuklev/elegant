@@ -200,6 +200,7 @@ long trackRfCavityWithWakes
     static long been_warned = 0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
+    long lockPhase;
 #ifdef USE_KAHAN
     double error = 0.0; 
 #endif   
@@ -369,23 +370,23 @@ long trackRfCavityWithWakes
         }
 
     timeOffset = 0;
-    if(isSlave || !notSinglePart) {
-    if (omega && rfca->change_t) {
-      coord = part[0];
-      P     = *P_central*(1+coord[5]);
-      beta_i = P/(gamma=sqrt(sqr(P)+1));
-      t     = coord[4]/(c_mks*beta_i);
-      if (omega!=0 && t>(0.9*To) && rfca->change_t)
-        timeOffset = ((long)(t/To+0.5))*To;
-    }
+    if (isSlave || !notSinglePart) {
+      if (omega && rfca->change_t) {
+	coord = part[0];
+	P     = *P_central*(1+coord[5]);
+	beta_i = P/(gamma=sqrt(sqr(P)+1));
+	t     = coord[4]/(c_mks*beta_i);
+	if (omega!=0 && t>(0.9*To) && rfca->change_t)
+	  timeOffset = ((long)(t/To+0.5))*To;
+      }
     }
 
-    if ((linearize = rfca->linearize)) {
+    if ((linearize = rfca->linearize) || (lockPhase=rfca->lockPhase)) {
       tAve = 0;
       if (nKicks!=1)
         bombElegant("Must use n_kicks=1 for linearized rf cavity", NULL);
 
-      if(isSlave || !notSinglePart) {
+      if (isSlave || !notSinglePart) {
 	for (ip=0; ip<np; ip++) {
 	  coord = part[ip];
 	  P     = *P_central*(1+coord[5]);
@@ -428,15 +429,21 @@ long trackRfCavityWithWakes
       else
         tAve /= np;
 #endif
-      dgammaAve = volt*sin(omega*tAve+phase);
+      if (lockPhase) {
+	phase = PI/180*rfca->phase;
+	dgammaAve = volt*sin(phase);
+      }
+      else 
+	dgammaAve = volt*sin(omega*(tAve-timeOffset)+phase);
     }
-    if(isSlave || !notSinglePart) {
+    if (isSlave || !notSinglePart) {
       for (ip=0; ip<np; ip++) {
 	coord = part[ip];
 	coord[0] -= rfca->dx;
 	coord[2] -= rfca->dy;
       }
     }
+
     if (!matrixMethod) {
       double *inverseF;
       inverseF = tmalloc(sizeof(*inverseF)*np);
@@ -457,16 +464,16 @@ long trackRfCavityWithWakes
 	    /* compute energy kick */
 	    P     = *P_central*(1+coord[5]);
 	    beta_i = P/(gamma=sqrt(sqr(P)+1));
-	    t     = (coord[4]+dc4)/(c_mks*beta_i)-timeOffset;
+	    t     = (coord[4]+dc4)/(c_mks*beta_i) - timeOffset;
 	    if (ik==0 && timeOffset && rfca->change_t) 
 	      coord[4] = t*c_mks*beta_i-dc4;
 	    if ((dt = t-t0)<0)
 	      dt = 0;
 	    if  (!same_dgamma) {
 	      if (!linearize)
-		dgamma = volt*sin(omega*(t-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+		dgamma = volt*sin(omega*(t-(lockPhase?tAve:0)-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
 	      else
-		dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
+		dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*(tAve-timeOffset)+phase);
 	    }
 	    if (gamma) {
 	      dgammaOverGammaNp ++;
@@ -583,8 +590,8 @@ long trackRfCavityWithWakes
               dt = 0;
             if  (!same_dgamma) {
               if (!linearize) {
-                sin_phase = sin(omega*(t-ik*dtLight)+phase);
-                cos_phase = cos(omega*(t-ik*dtLight)+phase);
+                sin_phase = sin(omega*(t-(lockPhase?tAve:0)-ik*dtLight)+phase);
+                cos_phase = cos(omega*(t-(lockPhase?tAve:0)-ik*dtLight)+phase);
                 dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
               } else {
                 cos_phase = cos(omega*tAve+phase);

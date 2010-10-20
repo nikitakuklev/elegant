@@ -395,6 +395,7 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.dy), NULL, 0.0, 0, "misalignment"},
     {"T_REFERENCE", "S", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfca_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
+    {"LOCK_PHASE", "", IS_LONG, 0, (long)((char *)&rfca_example.lockPhase), NULL, 0.0, 0, "Lock phase to given value regardless of bunch centroid motion?"},
     };
    
 HMON hmon_example;

@@ -811,7 +811,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 11
 #define N_VCOR_PARAMS 11
-#define N_RFCA_PARAMS 17
+#define N_RFCA_PARAMS 18
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 9
 #define N_VMON_PARAMS 9
@@ -1098,7 +1098,7 @@ typedef struct {
     long nKicks;
     double dx, dy;
     double tReference;
-    long linearize;
+    long linearize, lockPhase;
     /* for internal use only: */
     long fiducial_seen;
     double phase_fiducial;
