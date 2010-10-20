@@ -120,7 +120,7 @@ long doFrequencyMap(
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip, turns;
   static double **one_part;
-  double p;
+  double p, oldPercentage;
   long n_part;
 
 #if SDDS_MPI_IO
@@ -139,17 +139,17 @@ long doFrequencyMap(
     SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  if (verbosity) {
-    verbosity = 0;
-  if (myid == 0)
-    printf ("Warning: In parallel version, no intermediate particle tracking information will be provided\n");
-  }
 #else
   if (!SDDS_StartPage(&SDDS_fmap, ndelta*nx*ny) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
     SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+#endif
+
+#if USE_MPI
+  if (verbosity && myid == 1)
+    dup2(fd, fileno(stdout));  /* slave will provide warnings etc */
 #endif
 
   if (control->n_elements_to_vary) {
@@ -211,7 +211,7 @@ long doFrequencyMap(
 					  startingCoord, x, y, delta, turns,
 					  0, endingCoord, NULL, NULL, 1) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
-	      if (verbosity) 
+	      if (verbosity && !USE_MPI) 
 		fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
 	      continue;
 	    }
@@ -230,7 +230,7 @@ long doFrequencyMap(
 					    startingCoord, 0.0, 0.0, 0.0, turns,
 					    0, endingCoord, NULL, NULL, 1) || 
 		  secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
-		if (verbosity)
+		if (verbosity && !USE_MPI)
 		  fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
 		if (SDDS_fmap.n_rows) /* If the particle is lost, it will not show in the frequency map */ 
 		  SDDS_fmap.n_rows--;
@@ -252,9 +252,20 @@ long doFrequencyMap(
 	    }
 	    ip++;
 	    if (verbosity) {
+#if USE_MPI
+	      if (myid==1) {
+		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
+		if ((newPercentage-oldPercentage)>=1) {
+		  fprintf(stdout, "About %.1f%% done\n", newPercentage);
+		  newPercentage = oldPercentage;
+		  fflush(stdout);
+		}
+	      }
+#else
 	      fprintf(stdout, "Done with particle %ld of %ld\n",
 		      ix*ny*ndelta+iy*ndelta+idelta+1, nx*ny*ndelta);
 	      fflush(stdout);
+#endif
 	    }
 	  }
       }
@@ -272,6 +283,17 @@ long doFrequencyMap(
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   
+#if USE_MPI
+  /* disable output from first slave */
+  if (myid==1) {
+#if defined(_WIN32)
+    freopen("NUL","w",stdout);
+#else
+    freopen("/dev/null","w",stdout);
+#endif
+  }
+#endif
+
   return(1);
 }
 
