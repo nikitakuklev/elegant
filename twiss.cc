@@ -2094,7 +2094,7 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
    Used prior to periodic twiss parameter computations. */
 {
   while (eptr) {
-    if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW) {
+    if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW || eptr->type==T_RFDF) {
       if (eptr->matrix) {
         free_matrices(eptr->matrix);
         tfree(eptr->matrix);
@@ -2113,6 +2113,9 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       case T_MODRF:
         eptr->matrix = drift_matrix(((MODRF*)eptr->p_elem)->length, order);
         break;
+      case T_RFDF:
+        eptr->matrix = drift_matrix(((RFDF*)eptr->p_elem)->length, order);
+	break;
       }
     }
     eptr = eptr->succ;
@@ -2124,7 +2127,7 @@ void reset_rfca_matrices(ELEMENT_LIST *eptr, long order)
 /* Delete the rf cavity matrices so they'll get updated */
 {
   while (eptr) {
-    if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW) {
+    if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW || eptr->type==T_RFDF) {
       if (eptr->matrix) {
         free_matrices(eptr->matrix);
         tfree(eptr->matrix);
