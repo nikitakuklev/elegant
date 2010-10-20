@@ -2401,7 +2401,12 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
+#if USE_MPI
+  if (myid==1)
+    fprintf(stderr, "%ld H correctors set to zero\n", nz);
+#else
   fprintf(stderr, "%ld H correctors set to zero\n", nz);
+#endif
   return nz;
 }
 
@@ -2409,7 +2414,12 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
+#if USE_MPI
+  if (myid==1)
+    fprintf(stderr, "%ld V correctors set to zero\n", nz);
+#else
   fprintf(stderr, "%ld V correctors set to zero\n", nz);
+#endif
   return nz;
 }
 
