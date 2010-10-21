@@ -2826,7 +2826,7 @@ void drift_beam(double **part, long np, double length, long order);
 void exactDrift(double **part, long np, double length);
 void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle, double etilt, double tilt);
 void scatter(double **part, long np, double Po, SCATTER *scatter);
-void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss);
+void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);
 void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
                               ELEMENT_LIST *eptr);

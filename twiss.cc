@@ -121,7 +121,7 @@ VMATRIX *compute_periodic_twiss(
       fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
       fflush(stdout);
       if (++noticeCounter==100) {
-        fprintf(stdout, (char*) "(Further notices discontinued)\n", i);
+        fprintf(stdout, (char*) "(Further notices discontinued)\n");
         fflush(stdout);
       }                     
     }
@@ -674,7 +674,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint)
       store_fitpoint_twiss_parameters((MARK*)elem->p_elem, elem->name, elem->occurence,
-                                      elem->twiss);
+                                      elem->twiss, radIntegrals);
 
     sTotal = elem->end_pos;
     elem = elem->succ;
@@ -3385,21 +3385,26 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
   free_matrices(&M1);
 }
 
-void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss)
+void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss, RADIATION_INTEGRALS *radIntegrals)
 {
-  long i;
+  long i, j;
   static char *twiss_name_suffix[12] = {
     (char*)"betax", (char*)"alphax", (char*)"nux", (char*)"etax", (char*)"etapx", (char*)"etaxp",
     (char*)"betay", (char*)"alphay", (char*)"nuy", (char*)"etay", (char*)"etapy", (char*)"etayp",
     } ;
   static char s[200];
   if (!(fpt->init_flags&1)) {
-    fpt->twiss_mem = (long*)tmalloc(sizeof(*(fpt->twiss_mem))*12);
+    fpt->twiss_mem = (long*)tmalloc(sizeof(*(fpt->twiss_mem))*18);
     fpt->init_flags |= 1;
     for (i=0; i<12; i++) {
       sprintf(s, (char*)"%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
       fpt->twiss_mem[i] = rpn_create_mem(s, 0);
     }
+    if (radIntegrals) 
+      for (j=0; j<6; j++, i++) {
+	sprintf(s, (char*)"%s#%ld.I%ld", name, occurence, j+1);
+	fpt->twiss_mem[i] = rpn_create_mem(s, 0);
+      }
   }
   if (!twiss) {
     fprintf(stdout, (char*)"twiss parameter pointer unexpectedly NULL\n");
@@ -3414,6 +3419,11 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
   i = 4;
   rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i+1]);
   rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
+  if (radIntegrals) {
+    i = 12;
+    for (j=0; j<6; j++, i++)
+      rpn_store(radIntegrals->RI[j], NULL, fpt->twiss_mem[i]);
+  }
 }
 
 
