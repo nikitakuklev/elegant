@@ -1834,7 +1834,12 @@ EMATRIX ematrix_example;
 PARAMETER ematrix_param[N_EMATRIX_PARAMS]={
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&ematrix_example.length), NULL, 0.0, 0, "Length (used only for position computation)"},
     {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.angle), NULL, 0.0, 0, "Angle (used only for position computation)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.dz), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.tilt), NULL, 0.0, 0, "Tilt angle"},
+    {"YAW", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.yaw), NULL, 0.0, 0, "Yaw angle"},
+    {"PITCH", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.pitch), NULL, 0.0, 0, "Pitch angle"},
     {"ORDER", "", IS_LONG, 0, (long)((char *)&ematrix_example.order), NULL, 0.0, 0, ""},
     {"C1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.C[0]), NULL, 0.0, 0, ""},
     {"C2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.C[1]), NULL, 0.0, 0, ""},

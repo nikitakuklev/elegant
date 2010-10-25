@@ -884,7 +884,7 @@ extern char *entity_text[N_TYPES];
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
-#define N_EMATRIX_PARAMS (1+6+6*6+6*21+4)
+#define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  10
 #define N_FTRFMODE_PARAMS 13
 #define N_TFBPICKUP_PARAMS 18
@@ -1751,7 +1751,9 @@ typedef struct {
 /* names and storage structure for explicit matrix input */
 extern PARAMETER ematrix_param[N_EMATRIX_PARAMS] ;
 typedef struct {
-    double length, angle, tilt;
+    double length, angle;
+    double dx, dy, dz;
+    double tilt, yaw, pitch;
     long order;
     double C[6];
     double deltaP;

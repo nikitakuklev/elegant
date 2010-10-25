@@ -1756,6 +1756,12 @@ VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order)
 
   if (emat->tilt)
     tilt_matrices(M, emat->tilt);
+  if (emat->pitch)
+    pitch_matrices(M, emat->pitch);
+  if (emat->yaw)
+    yaw_matrices(M, emat->yaw);
+  if (emat->dx || emat->dy || emat->dz) 
+    misalign_matrix(M, emat->dx, emat->dy, emat->dz, emat->angle);
   
   return M;
 }
