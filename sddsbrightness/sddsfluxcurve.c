@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.9  2010/03/08 03:02:59  borland
+ Fixed units in "current" parameter.
+
  Revision 1.8  2009/05/01 21:31:40  borland
  Default distance is now 100 m.
 
@@ -198,6 +201,7 @@ int main(int argc, char **argv)
 
   electron_param.flags = 0;
   electron_param.current = 0.1;
+  electron_param.coupling = electron_param.emittanceRatio = 0;
   
   undulator_param.flags = 0;
   undulator_param.nPeriods = 0;
@@ -260,7 +264,7 @@ int main(int argc, char **argv)
         if (!scanItemList(&electron_param.flags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "current", SDDS_DOUBLE, &electron_param.current, 1, ELECTRON_CURRENT_GIVEN,
                           "coupling", SDDS_DOUBLE, &electron_param.coupling, 1, ELECTRON_COUPLING_GIVEN,
-                          "emittanceratio", SDDS_DOUBLE, &electron_param, 1, ELECTRON_ERATIO_GIVEN,
+                          "emittanceratio", SDDS_DOUBLE, &electron_param.emittanceRatio, 1, ELECTRON_ERATIO_GIVEN,
                           NULL))
           SDDS_Bomb("invalid -electronBeam syntax.");
         if (electron_param.flags&ELECTRON_COUPLING_GIVEN && electron_param.flags&ELECTRON_ERATIO_GIVEN)
