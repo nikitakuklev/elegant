@@ -142,7 +142,7 @@ void showUsageOrGreeting (unsigned long mode)
 #define REPLACE_ELEMENTS 57
 #define APERTURE_DATAX   58
 #define MODULATE_ELEMENTS 59
-#define GENETIC_OPTIMIZATION_SETUP 60
+#define PARALLEL_OPTIMIZATION_SETUP 60
 #define RAMP_ELEMENTS 61
 #define N_COMMANDS      62
 
@@ -158,7 +158,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
-    "aperture_data", "modulate_elements", "genetic_optimization_setup", "ramp_elements",
+    "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -222,7 +222,7 @@ char *description[N_COMMANDS] = {
     "replace_elements                 remove or replace elements inside beamline",
     "aperture_input                   provide an SDDS file with the physical aperture vs s (same as aperture_data)", 
     "modulate_elements                modulate values of elements as a function of time",
-    "genetic_optimization_setup       requests running of genetic optimization mode and sets it up",
+    "parallel_optimization_setup      requests running of parallel optimization mode and sets it up",
     "ramp_elements                    ramp values of elements as a function of pass",
   } ;
 
@@ -252,6 +252,8 @@ long watch_not_allowed = 0;
 long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
 MPI_Comm workers;
 int fd; /* save the duplicated file descriptor stdout to use it latter */
+long last_optimize_function_call = 0;
+int min_value_location = 0;
 #endif
 
 #ifdef SET_DOUBLE
@@ -1113,11 +1115,13 @@ char **argv;
         bombElegant("optimization statements must come before beam definition", NULL);
       do_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
       break;
-    case GENETIC_OPTIMIZATION_SETUP:
+#if USE_MPI
+    case PARALLEL_OPTIMIZATION_SETUP:
       if (beam_type!=-1)
         bombElegant("optimization statements must come before beam definition", NULL);
-      do_genetic_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
+      do_parallel_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
       break;
+#endif
     case OPTIMIZE:
       if (beam_type==-1)
         bombElegant("beam definition must come before optimize command", NULL);
@@ -1145,7 +1149,7 @@ char **argv;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
 #if USE_MPI
-      runInSinglePartMode = 0; /* We should set the flag to the normal parallel tracking after genetic optimization */
+      runInSinglePartMode = 0; /* We should set the flag to the normal parallel tracking after parallel optimization */
 #endif
       break;
     case OPTIMIZATION_VARIABLE:

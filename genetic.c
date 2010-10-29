@@ -21,6 +21,7 @@ static char *log_file = NULL;
 static SDDS_TABLE popLog;
 static long print_all = 0;
 static int last_reduced_iter = 0;
+static long sparsing_factor = 1000000;
 
 void   N_InitString(PGAContext *ctx, int p, int pop);
 int    N_StopCond(PGAContext *ctx);
@@ -63,6 +64,7 @@ long geneticMin(
   log_file = population_log;
   print_all = printAllPopulations;
   last_reduced_iter = 0;
+  sparsing_factor = printFrequency;
 
   if (population_log)
     SDDS_PopulationSetup(population_log, optim);
@@ -76,8 +78,8 @@ long geneticMin(
   PGASetMaxGAIterValue(ctx, maxIterations);
 
   /* Set the frequency of statistics printing with the number of iterations as the interval*/
-  if (verbose > 1)
-    PGASetPrintFrequencyValue(ctx, printFrequency); 
+  if (verbose > 0)
+    PGASetPrintFrequencyValue(ctx, 1); 
   else  /* No intermediate result will be printed */
     PGASetPrintFrequencyValue(ctx, 1000000); 
 
@@ -131,9 +133,9 @@ long geneticMin(
 
   /* Get the best string from genetic optimizer */
   if (isMaster) {
-    best_p = PGAGetBestIndex(ctx, PGA_OLDPOP);
-    PGARealGetString (ctx, xGuess, best_p, PGA_OLDPOP);
-    *yReturn = PGAGetEvaluation (ctx, best_p, PGA_OLDPOP);
+    best_p = PGAGetBestIndex(ctx, PGA_NEWPOP);
+    PGARealGetString (ctx, xGuess, best_p, PGA_NEWPOP);
+    *yReturn = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
   }	
 #if USE_MPI
   MPI_Bcast(xGuess, dimensions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -165,6 +167,9 @@ double evaluate (PGAContext *ctx, int p, int pop)
 
   for (direction=0; direction<dimensions; direction++) {
     GAVector[direction] = string[direction]; 
+#if MPI_DEBUG
+    printf ("GAVector[%ld]=%.15lf\n", direction, GAVector[direction]);
+#endif
   } 
 
   result = optimization_function(GAVector, &isInvalid);
@@ -178,24 +183,22 @@ double evaluate (PGAContext *ctx, int p, int pop)
     initialized = 1;
   }
 
-  random_offset = PGARandomInterval(ctx, 1, 10*PGAGetPopSize(ctx));
 #if MPI_DEBUG
-  fprintf (stdout, "Iter: %d, result:%g, isInvalid:%ld, yStart+random:%g on %d\n", PGAGetGAIterValue(ctx), result, isInvalid, yStart+random_offset, myid);
-  PGAPrintIndividual(ctx, stdout, p, pop);
+  fprintf (stdout, "Iter: %d, result:%g, isInvalid:%ld, fabs(yStart)*100:%g on %d\n", PGAGetGAIterValue(ctx), result, isInvalid, fabs(yStart)*100, myid);
   fflush (stdout);
 #endif
-  if (isInvalid)
-     /* There is a problem for GA package if DBL_MAX is used. So we use yStart, which 
-	is the evaluation result at the initial point. All evaluation results should be 
+  if (isInvalid || (result > 100*yStart))
+     /* There is a problem for PGA package if the returned number is too big. So we return fabs(yStart)*100 ,
+	where ystart  is the evaluation result at the initial point. The optimal result should be 
 	less than or equal to the initial value for minimization */
-    return yStart+random_offset;
+    return 100*fabs(yStart);
   else
     return result;
 }
 
 void N_InitString(PGAContext *ctx, int p, int pop) {
   int i, dimensions;
- 
+
   dimensions = PGAGetStringLength(ctx);
   for(i=0; i<dimensions; i++)
     PGASetRealAllele(ctx, p, pop, i, initial_guess[i]);
@@ -228,8 +231,8 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   if (isMaster && log_file) {
-    best_string = (double*) PGAGetIndividual(ctx, best_p, PGA_OLDPOP)->chrom;
-    best_value = PGAGetEvaluation (ctx, best_p, PGA_OLDPOP);
+    best_string = (double*) PGAGetIndividual(ctx, best_p, PGA_NEWPOP)->chrom;
+    best_value = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
 
     if (!SDDS_SetParameters(&popLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "Generation", PGAGetGAIterValue(ctx), NULL) ||
@@ -245,9 +248,9 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
 
     if (print_all) {
       for(j=0; j<pop_size; j++) {
-	if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, 0, PGAGetEvaluation (ctx, j, PGA_OLDPOP), -1))
+	if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, 0, PGAGetEvaluation (ctx, j, PGA_NEWPOP), -1))
 	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-	string = (double*) PGAGetIndividual(ctx, j, PGA_OLDPOP)->chrom;
+	string = (double*) PGAGetIndividual(ctx, j, PGA_NEWPOP)->chrom;
 	for(i=0; i<dimensions; i++) {
 	  if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, i+1, string[i], -1))
 	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -269,7 +272,7 @@ void N_EndOfGen(PGAContext *ctx) {
 
     if (isMaster) {
       if (log_file) {
-	if ((ctx->rep.PrintFreq >0) && !(current_iter % ctx->rep.PrintFreq)) {
+	if ((sparsing_factor >0) && !(current_iter % sparsing_factor)) {
 	  best = PGAGetBestIndex(ctx, PGA_NEWPOP);
 	  N_PrintString(ctx, stdout, best, PGA_NEWPOP);
 	}
@@ -287,7 +290,7 @@ void N_EndOfGen(PGAContext *ctx) {
     if (MPI_DEBUG) {
       int i;
       for (i=0; i<PGAGetPopSize(ctx); i++) {
-	printf ("Result for %dth individual: %lf, update:%d\n", i, PGAGetFitness(ctx, i, PGA_NEWPOP),PGAGetEvaluationUpToDateFlag (ctx, i, PGA_OLDPOP));
+	printf ("Result for %dth individual: %lf, update:%d\n", i, PGAGetFitness(ctx, i, PGA_NEWPOP),PGAGetEvaluationUpToDateFlag (ctx, i, PGA_NEWPOP));
 	PGAPrintIndividual (ctx, stdout, i, PGA_NEWPOP);
       }
       printf ("Best index: %d\n\n", PGAGetBestIndex(ctx, PGA_NEWPOP));

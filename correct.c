@@ -69,6 +69,12 @@ long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, 
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
+#if USE_MPI
+long sync_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
+long sync_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
+long sync_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
+long sync_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
+#endif
 double rms_value(double *data, long n_data);
 long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane);
 void zero_closed_orbit(TRAJECTORY *clorb, long n);
@@ -566,9 +572,17 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       free_matrices(beamline->matrix);
       tfree(beamline->matrix);
       beamline->matrix = NULL;
-    }
+    } 
   }
 
+#if USE_MPI
+  if (last_optimize_function_call) { /* Synchronize corrector's values after exiting optimization loop across all the processors to reproduce the optimal result */
+    if (beamline->elem_recirc)
+      sync_correctors(beamline->elem_recirc, run, correct);
+    else
+      sync_correctors(&(beamline->elem), run, correct);
+  }
+#endif
   correct->CMx->n_cycles_done = correct->CMy->n_cycles_done = 0;
   final_traj = 1;
   switch (correct->mode) {
@@ -714,6 +728,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
                                 !correct->response_only, fixedLengthMatrix, correct->verbose);
     }
+
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
       if (!x_failed && correct->CMx->ncor && correct->CMx->nmon) {
@@ -2082,7 +2097,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   double last_rms_pos, best_rms_pos, rms_pos, corr_fraction;
   double fraction, minFraction, param, change;
   MAT *Qo, *dK=NULL;
-  
+
   log_entry("orbcor_plane");
 
   if (!CM)
@@ -2141,6 +2156,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       fflush(stdout);
       return(-1);
     }
+
     if (Cdp)
       Cdp[iteration] = clorb[0].centroid[5];
     if (closed_orbit) {
@@ -2166,7 +2182,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       y = clorb[i].centroid[2];
       eptr = clorb[i].elem;
       reading = computeMonitorReading(eptr, coord, x, y, 0);
-
+ 
       Mij(Qo, i_moni, 0) = CM->posi[iteration][i_moni] = reading + 
         (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0.0);
       rms_pos += sqr(Mij(Qo, i_moni, 0));
@@ -2246,16 +2262,17 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       }
     }
     fraction = minFraction*corr_fraction;
-    
+
     /* step through beamline and change correctors */
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
       corr = CM->ucorr[i_corr];
       sl_index = CM->sl_index[i_corr];
       kick_offset = SL->param_offset[sl_index];
-      if (iteration==0) 
+      if (iteration==0)
         CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
       *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)/CM->kick_coef[i_corr]*fraction;
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
+
       if (corr->matrix) {
         free_matrices(corr->matrix);
         tfree(corr->matrix);
@@ -2370,7 +2387,7 @@ long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 }
 
 long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane)
-{  
+{
   long n_zeroed = 0, i;
   long paramOffset;
 
@@ -2378,18 +2395,18 @@ long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, 
     paramOffset = -1;
     if (steering_corrector(elem, SL, plane)) {
       for (i=0; i<SL->n_corr_types; i++)
-	if (strcmp(elem->name, SL->corr_name[i])==0)
-	  break;
+        if (strcmp(elem->name, SL->corr_name[i])==0)
+          break;
       if (i!=SL->n_corr_types) {
-	paramOffset = SL->param_offset[i];
-	*((double*)(elem->p_elem+paramOffset)) = 0;
-	if (elem->matrix) {
-	  free_matrices(elem->matrix);
-	  tfree(elem->matrix);
-	  elem->matrix = NULL;
-	}
-	compute_matrix(elem, run, NULL);
-	n_zeroed++;
+        paramOffset = SL->param_offset[i];
+        *((double*)(elem->p_elem+paramOffset)) = 0;
+        if (elem->matrix) {
+          free_matrices(elem->matrix);
+          tfree(elem->matrix);
+          elem->matrix = NULL;
+        }
+        compute_matrix(elem, run, NULL);
+        n_zeroed++;
       }
     }
     elem = elem->succ;
@@ -2401,12 +2418,7 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
-#if USE_MPI
-  if (myid==1)
-    fprintf(stderr, "%ld H correctors set to zero\n", nz);
-#else
   fprintf(stderr, "%ld H correctors set to zero\n", nz);
-#endif
   return nz;
 }
 
@@ -2414,14 +2426,69 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
-#if USE_MPI
-  if (myid==1)
-    fprintf(stderr, "%ld V correctors set to zero\n", nz);
-#else
   fprintf(stderr, "%ld V correctors set to zero\n", nz);
-#endif
   return nz;
 }
+
+#if USE_MPI
+long sync_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
+{
+  return 
+    sync_hcorrectors(elem, run, correct) +
+      sync_vcorrectors(elem, run, correct);
+}
+
+long sync_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane)
+{  
+  long n_synced = 0, i;
+  long paramOffset;
+
+  while (elem) {
+    paramOffset = -1;
+    if (steering_corrector(elem, SL, plane)) {
+      for (i=0; i<SL->n_corr_types; i++)
+	if (strcmp(elem->name, SL->corr_name[i])==0)
+	  break;
+      if (i!=SL->n_corr_types) {
+	paramOffset = SL->param_offset[i];
+       
+	if (last_optimize_function_call)
+	  MPI_Bcast (elem->p_elem+paramOffset, 1, MPI_DOUBLE, min_value_location, MPI_COMM_WORLD);
+
+	if (elem->matrix) {
+	  free_matrices(elem->matrix);
+	  tfree(elem->matrix);
+	  elem->matrix = NULL;
+	}
+	compute_matrix(elem, run, NULL); 
+	n_synced++;
+      }
+    }
+    elem = elem->succ;
+  }
+
+  return(n_synced);
+}
+
+long sync_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
+{
+  long nz;
+
+  nz = sync_correctors_one_plane(elem, run, &(correct->SLx), 0);
+
+  return nz;
+}
+
+long sync_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
+{
+  long nz;
+
+  nz = sync_correctors_one_plane(elem, run, &(correct->SLy), 1);
+
+  return nz;
+}
+
+#endif
 
 void rotate_xy(double *x, double *y, double angle)
 {
@@ -2581,6 +2648,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
       break;
     }
   }
+
   return reading;
 }
 

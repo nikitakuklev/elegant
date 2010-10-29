@@ -32,7 +32,7 @@ else
     #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
     #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
     #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
-    #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
+    #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
     MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin/ /share/mpich2_smpd_nemesis/bin/ /act/mvapich2/gnu/bin/ /data/mpich2-1.1.1p1/bin/)
@@ -84,7 +84,7 @@ PROD_HOST = $(PRODOAG)
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -DWL=32
+		-I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DIEEE_MATH -DzLib -DWL=32
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
@@ -149,6 +149,11 @@ ifeq ($(EPICS_HOST_ARCH),solaris-x86-gnu)
 MAKE = gmake
 endif
 
+# On Intrepid, we need build our own lapack and blas libraries
+ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
+OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
+endif
+
 LAPACK = 0
 #Use LAPACK on Linux by default.
 #This is available as an RPM package.
@@ -197,7 +202,9 @@ gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{prin
 ifeq ($(gcc-version),$(gfortran-version))
 SYS_PROD_LIBS_Linux += gfortran
 else
-SYS_PROD_LIBS_Linux += g2c
+  ifneq ($(HOST_ARCH),linux-ppc-bgp-ibm)
+    SYS_PROD_LIBS_Linux += g2c
+  endif
 endif
 endif
 #gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
@@ -311,7 +318,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
                 insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c modulate.c \
                 ramp.c 
                    
-Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c
+Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 
 madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \

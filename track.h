@@ -80,7 +80,6 @@ extern long isSlave;
 /* flag used to indicate if the same particle will be tracked on all the processors, or all the processor will track independently (e.g., in dynamic aperture optimization) */
 extern long notSinglePart;     
 extern long runInSinglePartMode;
-
 /* A hash table for loading parameters effectively */
 extern htab *load_hash;
 /* A factor used for distibuting memory on slave processors */
@@ -99,6 +98,8 @@ extern int fd;
 extern int dumpAcceptance; /* A flag to indicate if the initial coordinates of transmitted particles will be dumped */
 extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic aperture optimization for Pelegant */
 extern long watch_not_allowed; /* A flag to indicate the watch point is not allowed for aperture searching for Pelegant */
+extern long last_optimize_function_call; /* A flag used to indicate if it is the last optimization function call (after exiting the optimization loop)  */
+extern int min_value_location; /* The location (which processor) of the optimization value */
 #endif
 
 #ifndef __cplusplus
@@ -501,18 +502,20 @@ typedef struct {
     long n_constraints;
     } OPTIM_CONSTRAINTS ;
 
-#define OPTIM_MODE_MINIMUM     0
-#define OPTIM_MODE_MAXIMUM     1
-#define N_OPTIM_MODES          2
+#define OPTIM_MODE_MINIMUM      0
+#define OPTIM_MODE_MAXIMUM      1
+#define N_OPTIM_MODES           2
 
-#define OPTIM_METHOD_SIMPLEX   0
-#define OPTIM_METHOD_GRID      1
-#define OPTIM_METHOD_SAMPLE    2
-#define OPTIM_METHOD_POWELL    3
-#define OPTIM_METHOD_RANSAMPLE 4
-#define OPTIM_METHOD_RANWALK   5
-#define OPTIM_METHOD_GENETIC   6
-#define N_OPTIM_METHODS        7
+#define OPTIM_METHOD_SIMPLEX    0
+#define OPTIM_METHOD_GRID       1
+#define OPTIM_METHOD_SAMPLE     2
+#define OPTIM_METHOD_POWELL     3
+#define OPTIM_METHOD_RANSAMPLE  4
+#define OPTIM_METHOD_RANWALK    5
+#define OPTIM_METHOD_GENETIC    6
+#define OPTIM_METHOD_HYBSIMPLEX 7
+#define OPTIM_METHOD_SWARM      8
+#define N_OPTIM_METHODS         9
 
 typedef struct {
     long mode, method;
@@ -537,8 +540,9 @@ typedef struct {
     long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
+    double random_factor;
     long includeSimplex1dScans, startFromSimplexVertex1;
-    /* For genetic optimization only */
+    /* For parallel optimization only */
     long n_iterations;            /* The maximal number of iterations allowed */
     long max_no_change;           /* The number of iterations to stop when no change in the best solution found */
     long population_size;
@@ -3186,7 +3190,9 @@ extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 /* prototypes for routines in optimize.c */
 
 void do_optimization_setup(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-void do_genetic_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+#if USE_MPI
+void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+#endif
 void add_optimization_variable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
                            LINE_LIST *beamline);
@@ -3204,6 +3210,9 @@ double optimization_function(double *values, long *invalid);
                 long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
 		long maxNoChange, long populationSize, long printFrequency, long pirntAllPopulations,
 		char *populations_log, long verbose, OPTIM_VARIABLES *optim);
+  
+  long swarmMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep, long dimensions, 
+		double target,double (*func)(double *x, long *invalid), long populationSize, long n_iterations, long max_iterations);
 #endif
 /* prototype for sample.c */
 long sample_particles(double **initial, SAMPLE *samp, long np, double **accepted, double z, double p0);
