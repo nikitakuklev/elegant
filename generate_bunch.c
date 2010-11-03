@@ -473,8 +473,6 @@ long generate_bunch(
     /* This should be involved after both centroid and sigma have been forced */
   if(remaining_sequence_No<=1) {
     for (i_particle=0; i_particle<total_n_particles; i_particle++) {
-      if (longit->chirp)
-        first_particle_address[i_particle][5] += longit->chirp*first_particle_address[i_particle][4];
       first_particle_address[i_particle][4] += longit->cent_s;
       first_particle_address[i_particle][5] += longit->cent_dp;
       delta_p = first_particle_address[i_particle][5];
@@ -483,14 +481,20 @@ long generate_bunch(
       first_particle_address[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
       first_particle_address[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       first_particle_address[i_particle][6] = particleID++;
+      if (longit->chirp) {
+        delta_p = longit->chirp*particle[i_particle][4];
+        particle[i_particle][5] += delta_p;
+        particle[i_particle][0] += delta_p*x_plane->eta;
+        particle[i_particle][1] += delta_p*x_plane->etap;
+        particle[i_particle][2] += delta_p*y_plane->eta;
+        particle[i_particle][3] += delta_p*y_plane->etap;
+      }
     }
     initial_saved = 0; /* Prepare for next bunch */
     total_n_particles = 0;
   }
 #else
     for (i_particle=0; i_particle<n_particles; i_particle++) {
-      if (longit->chirp)
-        particle[i_particle][5] += longit->chirp*particle[i_particle][4];
       particle[i_particle][4] += longit->cent_s;
       particle[i_particle][5] += longit->cent_dp;
       delta_p = particle[i_particle][5];
@@ -499,7 +503,16 @@ long generate_bunch(
       particle[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
       particle[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       particle[i_particle][6] = particleID++;
+      if (longit->chirp) {
+        delta_p = longit->chirp*particle[i_particle][4];
+        particle[i_particle][5] += delta_p;
+        particle[i_particle][0] += delta_p*x_plane->eta;
+        particle[i_particle][1] += delta_p*x_plane->etap;
+        particle[i_particle][2] += delta_p*y_plane->eta;
+        particle[i_particle][3] += delta_p*y_plane->etap;
+      }
     }
+
     /* prepare for the next bunch */
     particleID += (total_particles - n_particles - my_offset);
 #endif
