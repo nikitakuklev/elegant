@@ -987,18 +987,30 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* compute coefficients of array C that are driven by this corrector */
     corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/(2*corr_tweek);
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      char memName[1024];
       i = CM->mon_index[i_moni];
       Mij(CM->C, i_moni, i_corr) = moniCalibration[i_moni]*corrCalibration*
         (traj1[i].centroid[coord] - traj0[i].centroid[coord]);
+      sprintf(memName, "%cR_%s#%ld_%s#%ld.%s", coord==0?'H':'V',
+              CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
+              CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
+              SL->corr_param[CM->sl_index[i_corr]]);
+      rpn_store(Mij(CM->C, i_moni, i_corr), NULL, rpn_create_mem(memName, 0));
     }
 #else
 
     /* compute coefficients of array C that are driven by this corrector */
     corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/corr_tweek;
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      char memName[1024];
       i = CM->mon_index[i_moni];
       Mij(CM->C, i_moni, i_corr) = moniCalibration[i_moni]*corrCalibration*
         (traj1[i].centroid[coord] - traj0[i].centroid[coord]);
+      sprintf(memName, "%cR_%s#%ld_%s#%ld.%s", coord==0?'H':'V',
+              CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
+              CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
+              SL->corr_param[CM->sl_index[i_corr]]);
+      rpn_store(Mij(CM->C, i_moni, i_corr), NULL, rpn_create_mem(memName, 0));
     }
 #endif
 

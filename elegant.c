@@ -70,10 +70,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta4, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 23.2Beta5, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta4, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 23.2Beta5, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -869,8 +869,7 @@ char **argv;
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
           }
           if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                             run_control.i_step, 
-                             (fl_do_tune_correction || do_chromatic_correction)) ) {
+                             run_control.i_step, !correctionDone)) {
             fputs("warning: orbit correction failed--continuing with next step\n", stdout);
             continue;
           }
@@ -906,7 +905,6 @@ char **argv;
         run_matrix_output(&run_conditions, beamline);
         if (fl_do_tune_correction || do_chromatic_correction) {
           for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
-            correctionDone = 0;
             if (correction_iterations>1) {
               fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
@@ -953,7 +951,7 @@ char **argv;
         }
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (correct.mode!=-1 && !correctionDone &&
-            !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
+            !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, !correctionDone) &&
             !soft_failure) {
           fputs("warning: orbit correction failed--continuing with next step\n", stdout);
           continue;
