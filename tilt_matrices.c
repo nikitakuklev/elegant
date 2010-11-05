@@ -273,10 +273,13 @@ void yaw_matrices(VMATRIX *M, double yaw)
     return;
 
   if (!initialized) {
+    long i;
     initialized = 1;
     initialize_matrices(&input, 1);
     initialize_matrices(&output, 1);
     initialize_matrices(&Mr, M->order);
+    for (i=0; i<6; i++)
+      input.R[i][i] = output.R[i][i] = 1;
   }
   
   input.C[1] = yaw;
@@ -298,14 +301,18 @@ void pitch_matrices(VMATRIX *M, double pitch)
     return;
 
   if (!initialized) {
+    long i;
     initialized = 1;
     initialize_matrices(&input, 1);
     initialize_matrices(&output, 1);
     initialize_matrices(&Mr, M->order);
+    for (i=0; i<6; i++)
+      input.R[i][i] = output.R[i][i] = 1;
   }
   
   input.C[3] = pitch;
   output.C[3] = -pitch;
+
   concat_matrices(&Mr, M, &input, 0);
   concat_matrices(M, &output, &Mr, 0);
 }
