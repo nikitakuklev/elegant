@@ -1560,7 +1560,8 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
   }
   if (!*invalid && orbitCorrMode!=-1 && 
-      !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 0)) {
+      !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 
+                     INITIAL_CORRECTION+NO_OUTPUT_CORRECTION)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to perform orbit correction\n");
     fflush(stdout);

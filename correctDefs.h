@@ -83,7 +83,10 @@ extern void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *corre
 extern void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct) ;
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
-        BEAM *beam, long sim_step, long initial_correction);
+        BEAM *beam, long sim_step, unsigned long correctionStepFlag);
+#define INITIAL_CORRECTION   0x0001UL
+#define FINAL_CORRECTION     0x0002UL
+#define NO_OUTPUT_CORRECTION 0x0004UL
 extern void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NAMELIST_TEXT *nltext);
 void compute_amplification_factors(NAMELIST_TEXT *nltext, RUN *run, CORRECTION *correct,
     long closed_orbit, LINE_LIST *beamline);

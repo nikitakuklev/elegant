@@ -70,10 +70,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta5, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 23.2Beta6, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta5, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 23.2Beta6, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -824,75 +824,49 @@ char **argv;
       new_beam_flags = 0;
       firstPass = 1;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
+        /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
         fill_double_array(starting_coord, 6, 0.0);
         correctionDone = 0;
-        if (correct.mode!= -1) {
-          if (correct.track_before_and_after || correct.start_from_centroid) {
-            if (beam_type==SET_AWE_BEAM) {
-              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-            }
-            else if (beam_type==SET_SDDS_BEAM) {
-              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-                break;
-            }
-            else
-              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-            new_beam_flags = TRACK_PREVIOUS_BUNCH;
+        if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
+          if (beam_type==SET_AWE_BEAM) {
+            bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
+          }
+          else if (beam_type==SET_SDDS_BEAM) {
+            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+              break;
+          }
+          else
+            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+          new_beam_flags = TRACK_PREVIOUS_BUNCH;
 #if SDDS_MPI_IO
-	   if (correct.start_from_centroid) {
-	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
-	      partOnMaster = 0;
-              compute_centroids(starting_coord, beam.particle, beam.n_to_track);
-              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           
-	      partOnMaster = 1;	
+          if (correct.start_from_centroid) {
+            notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
+            partOnMaster = 0;
+            compute_centroids(starting_coord, beam.particle, beam.n_to_track);
+            notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           
+            partOnMaster = 1;	
 	  } 
 #else
-            if (correct.start_from_centroid)
-              compute_centroids(starting_coord, beam.particle, beam.n_to_track);
+          if (correct.start_from_centroid)
+            compute_centroids(starting_coord, beam.particle, beam.n_to_track);
 #endif
-            if (correct.track_before_and_after) {
-              track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                         beamline, &beam, &output_data, 
-                         PRECORRECTION_BEAM, 0, &finalCharge);
-            }
+          if (correct.track_before_and_after) {
+            track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
+                       beamline, &beam, &output_data, 
+                       PRECORRECTION_BEAM, 0, &finalCharge);
           }
-          else if (correct.use_actual_beam) {
-            if (beam_type==SET_AWE_BEAM) {
-              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-            }
-            else if (beam_type==SET_SDDS_BEAM) {
-              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-                break;
-            }
-            else
-              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-            new_beam_flags = TRACK_PREVIOUS_BUNCH;
-          }
-          if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                             run_control.i_step, !correctionDone)) {
-            fputs("warning: orbit correction failed--continuing with next step\n", stdout);
-            continue;
-          }
-          correctionDone = 1;
         }
-        if (beam_type==SET_AWE_BEAM) {
-          bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-        }
-        else if (beam_type==SET_SDDS_BEAM) {
-          if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
-            break;
-        }
-        else
-          new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
-        if (do_closed_orbit && (fl_do_tune_correction || do_chromatic_correction) &&
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+
+        /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't do
+         * any output unless requested to do so "pre-correction"
+         */
+        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
-        if (do_twiss_output && 
-            !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
+        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
             !soft_failure) {
           fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
           fflush(stdout);
@@ -902,12 +876,31 @@ char **argv;
           runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
-        run_matrix_output(&run_conditions, beamline);
-        if (fl_do_tune_correction || do_chromatic_correction) {
-          for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
+
+        if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
+          if (correct.use_actual_beam) {
+            if (beam_type==SET_AWE_BEAM) {
+              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
+            }
+            else if (beam_type==SET_SDDS_BEAM) {
+              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+                break;
+            }
+            else
+              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+            new_beam_flags = TRACK_PREVIOUS_BUNCH;
+          }
+          for (i=failed=0; i<correction_iterations; i++) {
             if (correction_iterations>1) {
-              fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
+              fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
+            }
+            if (correct.mode!=-1 && 
+                !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
+                               run_control.i_step, 
+                               (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
+              fputs("warning: orbit correction failed--continuing with next step\n", stdout);
+              continue;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
@@ -945,26 +938,32 @@ char **argv;
                 break;
               }
             }
+            correctionDone = 1;
           }
           if (failed)
             continue;
         }
-        perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
-        if (correct.mode!=-1 && !correctionDone &&
-            !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, !correctionDone) &&
-            !soft_failure) {
-          fputs("warning: orbit correction failed--continuing with next step\n", stdout);
-          continue;
+        if (beam_type==SET_AWE_BEAM) {
+          bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
         }
-        if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
+        else if (beam_type==SET_SDDS_BEAM) {
+          if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
+            break;
+        }
+        else
+          new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
+
+        /* Assert post-correction perturbations */
+        perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
+
+        /* Do post-correction output */
+        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
-        if (do_twiss_output && 
-            !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
+        if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
             !soft_failure) {
           fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
           fflush(stdout);
@@ -984,6 +983,7 @@ char **argv;
           center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
 	else if (offset_by_orbit)
           offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
+        run_matrix_output(&run_conditions, beamline);
         if (firstPass) {
           /* prevent fiducialization of RF etc. by correction etc. */
           delete_phase_references();
@@ -991,6 +991,7 @@ char **argv;
           reset_driftCSR();
         }
         firstPass = 0;
+        /* Finally, do tracking */
         track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                    beamline, &beam, &output_data, 
                    (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
@@ -1200,6 +1201,7 @@ char **argv;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
+    case ANALYZE_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
@@ -1211,86 +1213,71 @@ char **argv;
       case MOMENTUM_APERTURE:
         setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
         break;
+      case ANALYZE_MAP:
+        setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
+        break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
 #if DEBUG
 	fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  
         fill_double_array(starting_coord, 6, 0.0);
-        if (correct.mode!= -1) {
-          if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                             run_control.i_step, 1) ) {
-            fputs("warning: orbit correction failed--continuing with next step\n", stdout);
+        if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
+          for (i=failed=0; i<correction_iterations; i++) {
+            if (correction_iterations>1) {
+              fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
+              fflush(stdout);
+            }
+            if (correct.mode!=-1 && 
+                !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
+                               run_control.i_step, 
+                               (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
+              fputs("warning: orbit correction failed--continuing with next step\n", stdout);
+              continue;
+            }
+            if (fl_do_tune_correction) {
+              if (do_closed_orbit && 
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !soft_failure) {
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
+                                      run_control.i_step, i==correction_iterations-1) &&
+                  !soft_failure) {
+                fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+            }
+            if (do_chromatic_correction) {
+              if (do_closed_orbit && 
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !soft_failure) {
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+              if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
+                                              run_control.i_step, i==correction_iterations-1) &&
+                  !soft_failure) {
+                fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+            }
+            correctionDone = 1;
+          }
+          if (failed)
             continue;
-          }
         }
-        if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
-            !soft_failure) {
-          fprintf(stdout, "Closed orbit not found---continuing to next step\n");
-          fflush(stdout);
-          continue;
-        }
-        if (do_twiss_output && 
-            !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
-            !soft_failure) {
-          fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
-          fflush(stdout);
-          continue;
-        }
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 0);
-        run_matrix_output(&run_conditions, beamline);
-        for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
-          if (correction_iterations>1)
-            fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
-          fflush(stdout);
-          if (fl_do_tune_correction) {
-            if (do_closed_orbit && 
-                !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
-                !soft_failure) {
-              fprintf(stdout, "Closed orbit not found---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-            if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
-                                    run_control.i_step, i==correction_iterations-1) &&
-                !soft_failure) {
-              fprintf(stdout, "Tune correction failed---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-          }
-          if (do_chromatic_correction) {
-            if (do_closed_orbit && 
-                !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
-                !soft_failure) {
-              fprintf(stdout, "Closed orbit not found---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-            if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
-                                            run_control.i_step, i==correction_iterations-1) &&
-                !soft_failure) {
-              fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-          }
-        }
-        if (failed)
-          continue;
+        
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
-        if (correct.mode!=-1 &&
-            !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
-            !soft_failure) {
-          fputs("warning: orbit correction failed--continuing with next step\n", stdout);
-          continue;
-        }
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
             !soft_failure) {
@@ -1311,6 +1298,7 @@ char **argv;
           fprintf(stdout, "Coupled twiss parameters calculation failed.\n");
           fflush(stdout);
         }
+        run_matrix_output(&run_conditions, beamline);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
         if (parameters)
@@ -1327,6 +1315,10 @@ char **argv;
           doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
                                    (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
+        case ANALYZE_MAP:
+          do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
+                                (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
+          break;
         }
       }
       fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
@@ -1341,11 +1333,22 @@ char **argv;
       case MOMENTUM_APERTURE:
         finishMomentumApertureSearch();
         break;
+      case ANALYZE_MAP:
+        finish_transport_analysis(&run_conditions, &run_control, &error_control, beamline);
+        break;
       }
       if (do_closed_orbit)
         finish_clorb_output();
       if (parameters)
         finishLatticeParametersFile();
+      if (beam_type!=-1)
+        free_beamdata(&beam);
+      if (do_closed_orbit)
+        finish_clorb_output();
+      if (do_twiss_output)
+        finish_twiss_output();
+      if (do_response_output)
+        finish_response_output();
 #ifdef SUNOS4
       check_heap();
 #endif
@@ -1358,6 +1361,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
 	fprintf(stdout, "Finished momentum aperture search.\n");
+        break;
+      case ANALYZE_MAP:
+        fprintf(stdout, "Finished transport analysis.\n");
         break;
       }
 #if DEBUG
@@ -1377,89 +1383,6 @@ char **argv;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
-      break;
-    case ANALYZE_MAP:
-      setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
-      while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
-        if (run_control.i_vary<=1) {
-          fill_double_array(starting_coord, 6, 0.0);
-          if (correct.mode!= -1) {
-            if (!do_correction(&correct, &run_conditions, beamline, starting_coord, NULL, run_control.i_step, 1)) {
-              fputs("warning: correction failed--continuing with next step", stdout);
-              continue;
-            }
-          }
-        }
-        if (do_twiss_output)
-          run_twiss_output(&run_conditions, beamline, starting_coord, 0);
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 0);
-        for (i=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
-          if (correction_iterations>1)
-            fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
-          fflush(stdout);
-          if (beam_type==SET_SDDS_BEAM) {
-            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-              break;
-          } else if (beam_type==SET_BUNCHED_BEAM)
-            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-          if (fl_do_tune_correction) {
-            if (do_closed_orbit)
-              run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0);
-            do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
-                               run_control.i_step, i==correction_iterations-1);
-          }
-          if (do_chromatic_correction) {
-            if (do_closed_orbit)
-              run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0);
-            do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
-                                       run_control.i_step, i==correction_iterations-1);
-          }
-        }
-        perturb_beamline(&run_control, &error_control, &run_conditions, beamline);
-        if (correct.mode!=-1 &&
-            !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0)) {
-          fputs("warning: orbit correction failed--continuing with next step\n", stdout);
-          continue;
-        }
-        if (do_closed_orbit)
-          run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1);
-        if (do_twiss_output)
-          run_twiss_output(&run_conditions, beamline, starting_coord, 1);
-        if (do_coupled_twiss_output)
-          run_coupled_twiss_output(&run_conditions, beamline, starting_coord);
-        if (do_response_output)
-          run_response_output(&run_conditions, beamline, &correct, 1);
-        do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
-                              (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
-      }
-      finish_transport_analysis(&run_conditions, &run_control, &error_control, beamline);
-      if (beam_type!=-1)
-        free_beamdata(&beam);
-      if (do_closed_orbit)
-        finish_clorb_output();
-      if (do_twiss_output)
-        finish_twiss_output();
-      if (do_response_output)
-        finish_response_output();
-#ifdef SUNOS4
-      check_heap();
-#endif
-      fprintf(stdout, "Finished transport analysis.\n");
-      fflush(stdout);
-      /* reassert defaults for namelist run_setup */
-      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = 
-        parameters = NULL;
-      combine_bunch_statistics = 0;
-      random_number_seed = 987654321;
-      wrap_around = 1;
-      final_pass = 0;
-      default_order = 2;
-      concat_order = 0;
-      tracking_updates = 1;
-      concat_order = print_statistics = p_central = 0;
-      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_matrix_output = do_twiss_output = do_coupled_twiss_output = 0;
       break;
     case LINK_CONTROL:
       if (!run_setuped || !run_controled)
