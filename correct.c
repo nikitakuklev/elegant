@@ -547,6 +547,18 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   if (correct->response_only)
     return 1;
 
+  if (correct->start_from_centroid && starting_coord && beam && beam->n_to_track && flags&INITIAL_CORRECTION) {
+#if SDDS_MPI_IO
+    notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
+    partOnMaster = 0;
+    compute_centroids(starting_coord, beam->particle, beam->n_to_track);
+    notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           
+    partOnMaster = 1;	
+#else
+    compute_centroids(starting_coord, beam->particle, beam->n_to_track);
+#endif
+  }
+  
   closed_orbit = starting_coord;   /* for return of closed orbit at starting point */
 
   if (correct->verbose && correct->n_iterations>=1 && correct->n_xy_cycles>0 && !(flags&NO_OUTPUT_CORRECTION)) {

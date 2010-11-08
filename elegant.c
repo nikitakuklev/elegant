@@ -70,10 +70,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta6, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 23.2Beta7, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 23.2Beta6, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 23.2Beta7, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -802,25 +802,33 @@ char **argv;
       beam_type = SET_SDDS_BEAM;
       break;
     case TRACK:
-      set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-      set_print_namelist_flags(0);
-      if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
-        bombElegant(NULL, NULL);
-      if (echoNamelists) print_namelist(stdout, &track);
-      run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
+    case ANALYZE_MAP:
+      switch (commandCode) {
+      case TRACK:
+        set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+        set_print_namelist_flags(0);
+        if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
+          bombElegant(NULL, NULL);
+        if (echoNamelists) print_namelist(stdout, &track);
+        run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
 #if USE_MPI
-      if (stop_tracking_particle_limit!=-1)
-        bombElegant("stop_tracking_particle_limit feature not supported in Pelegant", NULL);
+        if (stop_tracking_particle_limit!=-1)
+          bombElegant("stop_tracking_particle_limit feature not supported in Pelegant", NULL);
 #endif
-      if (use_linear_chromatic_matrix && 
-          !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
-        bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
-      if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
-        bombElegant("you must compute twiss parameters to do longitudinal ring tracking", NULL);
-      if (use_linear_chromatic_matrix && longitudinal_ring_only)
-        bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
-      if (beam_type==-1)
-        bombElegant("beam must be defined prior to tracking", NULL);
+        if (use_linear_chromatic_matrix && 
+            !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
+          bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
+        if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
+          bombElegant("you must compute twiss parameters to do longitudinal ring tracking", NULL);
+        if (use_linear_chromatic_matrix && longitudinal_ring_only)
+          bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
+        if (beam_type==-1)
+          bombElegant("beam must be defined prior to tracking", NULL);
+        break;
+      case ANALYZE_MAP:
+        setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
+        break;
+      }
       new_beam_flags = 0;
       firstPass = 1;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -838,23 +846,10 @@ char **argv;
           else
             new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
           new_beam_flags = TRACK_PREVIOUS_BUNCH;
-#if SDDS_MPI_IO
-          if (correct.start_from_centroid) {
-            notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
-            partOnMaster = 0;
-            compute_centroids(starting_coord, beam.particle, beam.n_to_track);
-            notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           
-            partOnMaster = 1;	
-	  } 
-#else
-          if (correct.start_from_centroid)
-            compute_centroids(starting_coord, beam.particle, beam.n_to_track);
-#endif
-          if (correct.track_before_and_after) {
+          if (commandCode==TRACK && correct.track_before_and_after)
             track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                        beamline, &beam, &output_data, 
                        PRECORRECTION_BEAM, 0, &finalCharge);
-          }
         }
 
         /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't do
@@ -950,7 +945,7 @@ char **argv;
           if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
             break;
         }
-        else
+        else if (beam_type==SET_BUNCHED_BEAM)
           new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
 
         /* Assert post-correction perturbations */
@@ -991,18 +986,28 @@ char **argv;
           reset_driftCSR();
         }
         firstPass = 0;
-        /* Finally, do tracking */
-        track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                   beamline, &beam, &output_data, 
-                   (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
-                   (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0)+
-                   (ibs_only?IBS_ONLY_TRACKING:0), 0, &finalCharge);
+        switch (commandCode) {
+        case TRACK:
+          /* Finally, do tracking */
+          track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
+                     beamline, &beam, &output_data, 
+                     (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
+                     (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0)+
+                     (ibs_only?IBS_ONLY_TRACKING:0), 0, &finalCharge);
+          break;
+        case ANALYZE_MAP:
+          do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
+                                (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
+          break;
+        }
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
       }
-      finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
-                    beamline, beamline->n_elems, &beam, finalCharge);
-      free_beamdata(&beam);
+      if (commandCode==TRACK)
+        finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
+                      beamline, beamline->n_elems, &beam, finalCharge);
+      if (beam_type)
+        free_beamdata(&beam);
       if (do_closed_orbit)
         finish_clorb_output();
       if (do_twiss_output)
@@ -1018,7 +1023,14 @@ char **argv;
 #ifdef SUNOS4
       check_heap();
 #endif
-      fprintf(stdout, "Finished tracking.\n");
+      switch (commandCode) {
+      case TRACK:
+        fprintf(stdout, "Finished tracking.\n");
+        break;
+      case ANALYZE_MAP:
+        fprintf(stdout, "Finished transport analysis.\n");
+        break;
+      }
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
       lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = 
@@ -1201,7 +1213,6 @@ char **argv;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
-    case ANALYZE_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
@@ -1212,9 +1223,6 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
-        break;
-      case ANALYZE_MAP:
-        setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
         break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -1315,10 +1323,6 @@ char **argv;
           doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
                                    (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
-        case ANALYZE_MAP:
-          do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
-                                (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
-          break;
         }
       }
       fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
@@ -1332,9 +1336,6 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         finishMomentumApertureSearch();
-        break;
-      case ANALYZE_MAP:
-        finish_transport_analysis(&run_conditions, &run_control, &error_control, beamline);
         break;
       }
       if (do_closed_orbit)
@@ -1361,9 +1362,6 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
 	fprintf(stdout, "Finished momentum aperture search.\n");
-        break;
-      case ANALYZE_MAP:
-        fprintf(stdout, "Finished transport analysis.\n");
         break;
       }
 #if DEBUG
