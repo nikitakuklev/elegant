@@ -127,7 +127,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     } else
       dp = 0;
 
-    if (verbosity) {
+    if (verbosity && do_output) {
       fprintf(stdout, "Starting point for closed orbit\n");
       for (i=0; i<6; i++) 
         fprintf(stdout, "%e%s", starting_coord[i], i==5?"\n":", ");
@@ -153,7 +153,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
         starting_coord[i] = clorb[0].centroid[i];
 
     /* do output, if required */
-    if (verbosity && !bad_orbit) {
+    if (verbosity && !bad_orbit && do_output) {
         fprintf(stdout, "closed orbit: \n");
         fflush(stdout);
         for (i=0; i<6; i++)

@@ -1554,7 +1554,7 @@ double optimization_function(double *value, long *invalid)
   zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
 
   if (doClosedOrbit &&
-      !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+      !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to find closed orbit\n");
     fflush(stdout);
@@ -1581,7 +1581,7 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
   }
   if (!*invalid && doClosedOrbit &&
-      !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+      !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to find closed orbit\n");
     fflush(stdout);
