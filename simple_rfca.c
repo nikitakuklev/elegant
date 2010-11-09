@@ -200,7 +200,7 @@ long trackRfCavityWithWakes
     static long been_warned = 0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
-    long lockPhase;
+    long lockPhase = 0;
 #ifdef USE_KAHAN
     double error = 0.0; 
 #endif   
@@ -381,7 +381,10 @@ long trackRfCavityWithWakes
       }
     }
 
-    if ((linearize = rfca->linearize) || (lockPhase=rfca->lockPhase)) {
+    linearize = rfca->linearize;
+    lockPhase = rfca->lockPhase;
+
+    if (linearize || lockPhase) {
       tAve = 0;
       if (nKicks!=1)
         bombElegant("Must use n_kicks=1 for linearized rf cavity", NULL);
