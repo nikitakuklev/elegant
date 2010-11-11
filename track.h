@@ -547,6 +547,7 @@ typedef struct {
     long max_no_change;           /* The number of iterations to stop when no change in the best solution found */
     long population_size;
     long print_all_individuals;
+    SDDS_TABLE popLog;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
@@ -3192,6 +3193,7 @@ extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 void do_optimization_setup(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 #if USE_MPI
 void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+  void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim);
 #endif
 void add_optimization_variable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
@@ -3209,7 +3211,7 @@ double optimization_function(double *values, long *invalid);
   long geneticMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep,
                 long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
 		long maxNoChange, long populationSize, long printFrequency, long pirntAllPopulations,
-		char *populations_log, long verbose, OPTIM_VARIABLES *optim);
+		  char *populations_log, SDDS_TABLE *logPtr, long verbose, OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim);
   
   long swarmMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep, long dimensions, 
 		double target,double (*func)(double *x, long *invalid), long populationSize, long n_iterations, long max_iterations);

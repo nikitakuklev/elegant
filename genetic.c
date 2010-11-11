@@ -18,7 +18,7 @@
 static double target_value;
 static double *initial_guess = NULL;
 static char *log_file = NULL;
-static SDDS_TABLE popLog;
+static SDDS_TABLE *popLogPtr = NULL;
 static long print_all = 0;
 static int last_reduced_iter = 0;
 static long sparsing_factor = 1000000;
@@ -28,7 +28,6 @@ int    N_StopCond(PGAContext *ctx);
 void   N_PrintString(PGAContext *, FILE *, int, int);
 void   N_EndOfGen   (PGAContext *);
 double evaluate (PGAContext *ctx, int p, int pop);
-void   SDDS_PopulationSetup(char *population_log, OPTIM_VARIABLES *optim);
 
 long geneticMin(
                 double *yReturn, 
@@ -45,8 +44,10 @@ long geneticMin(
 		long printFrequency,
 		long printAllPopulations,
 		char *population_log,
+		SDDS_TABLE *logPtr,
 		long verbose,
-		OPTIM_VARIABLES *optim
+		OPTIM_VARIABLES *optim,
+		OPTIM_COVARIABLES *co_optim
 		)
 {
   /* argc and argv are not used. They are provided here to make the interface consistent with pgapack */
@@ -65,9 +66,10 @@ long geneticMin(
   print_all = printAllPopulations;
   last_reduced_iter = 0;
   sparsing_factor = printFrequency;
+  popLogPtr = logPtr;
 
   if (population_log)
-    SDDS_PopulationSetup(population_log, optim);
+    SDDS_PopulationSetup(population_log, popLogPtr, optim, co_optim);
 
   ctx = PGACreate(&argc, argv, PGA_DATATYPE_REAL, dimensions, PGA_MINIMIZE);
 
@@ -227,41 +229,41 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
     pop_size = PGAGetPopSize(ctx);
   else
     pop_size = 1;
-  if (!SDDS_StartPage(&popLog, pop_size))
+  if (!SDDS_StartPage(popLogPtr, pop_size))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   if (isMaster && log_file) {
     best_string = (double*) PGAGetIndividual(ctx, best_p, PGA_NEWPOP)->chrom;
     best_value = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
 
-    if (!SDDS_SetParameters(&popLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+    if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "Generation", PGAGetGAIterValue(ctx), NULL) ||
-	!SDDS_SetParameters(&popLog, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "OptimizationValue", best_value, NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
     dimensions = PGAGetStringLength(ctx);
     for(i=0; i<dimensions; i++) {
-      if (!SDDS_SetParameters(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, offset+i, best_string[i], -1))
+      if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, offset+i, best_string[i], -1))
 	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
 
     if (print_all) {
       for(j=0; j<pop_size; j++) {
-	if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, 0, PGAGetEvaluation (ctx, j, PGA_NEWPOP), -1))
+	if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, 0, PGAGetEvaluation (ctx, j, PGA_NEWPOP), -1))
 	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	string = (double*) PGAGetIndividual(ctx, j, PGA_NEWPOP)->chrom;
 	for(i=0; i<dimensions; i++) {
-	  if (!SDDS_SetRowValues(&popLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, i+1, string[i], -1))
+	  if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, j, i+1, string[i], -1))
 	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	}
       }
     }
 
-    if (!SDDS_WritePage(&popLog))
+    if (!SDDS_WritePage(popLogPtr))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
-    SDDS_DoFSync(&popLog);
+    SDDS_DoFSync(popLogPtr);
   }
 }
 
@@ -296,25 +298,4 @@ void N_EndOfGen(PGAContext *ctx) {
       printf ("Best index: %d\n\n", PGAGetBestIndex(ctx, PGA_NEWPOP));
     }
 #endif
-}
-
-void SDDS_PopulationSetup(char *population_log, OPTIM_VARIABLES *optim) {
-  if (isMaster) {
-    if (population_log && strlen(population_log)) {
-      if (!SDDS_InitializeOutput(&popLog, SDDS_BINARY, 1, NULL, NULL, population_log) ||
-	  !SDDS_DefineSimpleParameter(&popLog, "Generation", NULL, SDDS_LONG) ||
-	  !SDDS_DefineSimpleParameter(&popLog, "OptimizationValue", NULL, SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleParameters(&popLog, optim->n_variables, optim->varied_quan_name, 
-				    optim->varied_quan_unit, SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&popLog, "OptimizationValue", NULL, SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumns(&popLog, optim->n_variables, optim->varied_quan_name, 
-				    optim->varied_quan_unit, SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&popLog)) {
-	    fprintf(stdout, "Problem setting up population output file %s\n", population_log);
-	    fflush(stdout);
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	    exitElegant(1);
-      }
-    }
-  }
 }

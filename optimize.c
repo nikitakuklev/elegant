@@ -30,6 +30,8 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
 #if USE_MPI
 /* Find the global minimal value and its location across all the processors */
 void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
+/* Print out the best individual and value after each iteration */
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double *variable, long n_variables, double *covariable, long n_covariables);
 #endif
 
 #if !USE_MPI
@@ -688,6 +690,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     long n_total_evaluations_made = 0;
     double scale_factor = optimization_data1->random_factor;
     int min_location = 0;
+    static double *covariables_global = NULL;
 #endif
     
     log_entry("do_optimize");
@@ -809,7 +812,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 
 #if USE_MPI
     if (scale_factor != 1.0)
-      variables->step[i] *= scale_factor;
+      for (i=0; i<variables->n_variables; i++) {
+	variables->step[i] *= scale_factor;
+      }
 #endif 
 
     for (i=0; i<covariables->n_covariables; i++) {
@@ -850,6 +855,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if defined(UNIX)
     if (optimization_data->method!=OPTIM_METHOD_POWELL)
       signal(SIGINT, optimizationInterruptHandler);
+#endif
+#if USE_MPI
+    SDDS_PopulationSetup (population_log, &(optimization_data->popLog), &(optimization_data->variables), &(optimization_data->covariables));
 #endif
     while (startsLeft-- && !stopOptimization) {
       lastResult = result;
@@ -895,7 +903,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
    	  find_global_min_index (&result, &min_location, MPI_COMM_WORLD);
 	  MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
-	  if (optimization_data->fp_log)
+	  if (optimization_data->fp_log && optimization_data->verbose >1)
 	    optimization_report (result, variables->varied_quan_value, optimization_data->n_restarts+1-startsLeft, n_evaluations_made, variables->n_variables);
 	} 
 #endif
@@ -991,7 +999,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 					optimization_data->max_no_change,
 					optimization_data->population_size, output_sparsing_factor,
 					optimization_data->print_all_individuals, population_log,
-					optimization_data->verbose, variables);
+					      &(optimization_data->popLog), optimization_data->verbose, variables, covariables);
         if (optimAbort(0))
           stopOptimization = 1;
 	break;
@@ -1006,7 +1014,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 
       /* check if the result meets the requirement for each point across all the processors here */
         if (USE_MPI) {
-	  static double *covariables_global = NULL;
 #if MPI_DEBUG
           fprintf (stdout, "minimal value is %g for iteration %ld on %d\n", result, optimization_data->n_restarts+1-startsLeft, myid);
 #endif
@@ -1015,11 +1022,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  fprintf (stdout, "min_location=%d\n", min_location);
 #endif
           MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
-
-          /* The covariables are updated locally after each optimization_function call no matter if a better result is achieved, which might not match
-             the optimal variables for current iteration. We keep the global best covariable values in a separate array. */
-          if (covariables->n_covariables && (optimization_data->verbose>1) && (result<lastResult || (optimization_data->n_restarts==startsLeft))) 
-            MPI_Bcast(covariables->varied_quan_value, covariables->n_covariables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
 #if MPI_DEBUG 
 	  if (isSlave) {
@@ -1079,8 +1081,26 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         bombElegant("unknown optimization method code (do_optimize())", NULL);
         break;
       }
-
-#if !USE_MPI
+#if USE_MPI
+      if ((optimization_data->method==OPTIM_METHOD_SWARM) || (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX)) { 
+	/* The covariables are updated locally after each optimization_function call no matter if a better result 
+	   is achieved, which might not match the optimal variables for current iteration. So we keep the global best 
+	   covariable values in a separate array. */
+	if (covariables->n_covariables && (optimization_data->verbose>1) && (result<lastResult || (optimization_data->n_restarts==startsLeft))) 
+	  MPI_Bcast(covariables->varied_quan_value, covariables->n_covariables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+	
+	if (covariables->n_covariables) {
+	  if (optimization_data->n_restarts==startsLeft)
+	    covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
+	  if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
+	    for (i=0; i<covariables->n_covariables; i++)
+	      covariables_global[i] = covariables->varied_quan_value[i];	
+	  }
+	}
+	if (population_log)
+	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
+      }
+#else
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       force_output = 1;
@@ -2192,5 +2212,59 @@ void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm) {
     MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
     *min = out.val;
     *processor_ID = out.rank;
+}
+
+void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim) {
+  if (isMaster) {
+    if (population_log && strlen(population_log)) {
+      if (!SDDS_InitializeOutput(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "Iteration", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "OptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameters(popLogPtr, optim->n_variables, optim->varied_quan_name, 
+				    optim->varied_quan_unit, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameters(popLogPtr, co_optim->n_covariables,co_optim->varied_quan_name, 
+				    co_optim->varied_quan_unit, SDDS_DOUBLE) ||
+	  !SDDS_WriteLayout(popLogPtr)) {
+	    fprintf(stdout, "Problem setting up population output file %s\n", population_log);
+	    fflush(stdout);
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	    exitElegant(1);
+      }
+    }
+  }
+}
+
+/* Function to print populations */
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double *best_individual, long dimensions, double *covariable, long n_covariables) {
+  int i;
+  long offset = 2;
+  
+  if (isMaster && log_file) {
+    if (!SDDS_StartPage(popLogPtr, 1))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "Iteration", iteration , NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "OptimizationValue", best_value, NULL))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
+    for(i=0; i<dimensions; i++) {
+      if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, offset+i, best_individual[i], -1))
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+
+    if (n_covariables) {
+      for (i=0; i<n_covariables; i++) {
+	if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, offset+dimensions+i, covariable[i], -1))
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+
+    if (!SDDS_WritePage(popLogPtr))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    SDDS_DoFSync(popLogPtr);
+  }
 }
 #endif
