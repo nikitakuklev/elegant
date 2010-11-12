@@ -541,6 +541,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 {
   long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed=0, final_traj;
   double *closed_orbit, rms_before, rms_after, *Cdp;
+#if USE_MPI
+  /* do_correction may need differnt tracking mode, but it should not change the tracking mode */	
+  long notSinglePart_orig = notSinglePart;
+  long partOnMaster_orig = partOnMaster;		
+#endif
 
   log_entry("do_correction");
 
@@ -548,8 +553,14 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     return 1;
 
 #if SDDS_MPI_IO
+  /* We need choose different modes depending on different beams */	
+  if (!correct->use_actual_beam) {
+    notSinglePart = 0;
+    partOnMaster = 1;
+  }
+
   if (correct->start_from_centroid && starting_coord && beam && beam->n_to_track_total && flags&INITIAL_CORRECTION) {
-    compute_centroids(starting_coord, beam->particle, beam->n_to_track);	
+    compute_centroids(starting_coord, beam->particle, beam->n_to_track);
 #else
   if (correct->start_from_centroid && starting_coord && beam && beam->n_to_track && flags&INITIAL_CORRECTION) {
     compute_centroids(starting_coord, beam->particle, beam->n_to_track);
@@ -841,6 +852,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   }
 
   beamline->closed_orbit = correct->traj[final_traj];
+
+#if USE_MPI
+  notSinglePart = notSinglePart_orig;
+  partOnMaster = partOnMaster_orig;  
+#endif
 
   log_exit("do_correction");
   return(!bombed);
