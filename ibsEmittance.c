@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.31  2010/08/12 15:32:20  borland
+ * Added exitElegant() routine so that any exit will result in creation of
+ * semaphore files if requested.
+ *
  * Revision 1.30  2010/02/23 20:15:10  borland
  * Emittance given on commandline is treated in same way as emittance from input file.
  *
@@ -143,7 +147,7 @@
 static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
  [-emitxInput=<value>] [-deltaInput=<value>] \n\
- [-superperiods=<value>] [-isRing=1|0] \n\
+ [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] \n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
@@ -165,7 +169,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define SET_INTEGRATE 13
 #define NO_WARNING 14
 #define ISRING 15
-#define N_OPTIONS 16
+#define FORCECOUPLING 16
+#define N_OPTIONS 17
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -183,6 +188,7 @@ char *option[N_OPTIONS] = {
   "integrate",
   "noWarning",
   "isRing",
+  "forceCoupling",
   };
 
 #include "zibs.h"
@@ -201,7 +207,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp, long elements, 
-                  long superperiods, long verbosity, long isRing);
+                  long superperiods, long verbosity, long isRing, long force);
 
 /* global variables */
 double *s, *pCentral, *betax, *alphax, *betay, *alphay, *etax, *etaxp, *etay, *etayp;
@@ -213,7 +219,7 @@ int main( int argc, char **argv)
   char *inputfile, *outputfile;
   SDDS_DATASET twissPage, resultsPage;
   double particles, charge, length;
-  long verbosity, noWarning, i, elements, superperiods, growthRatesOnly;
+  long verbosity, noWarning, i, elements, superperiods, growthRatesOnly, force;
   double pCentral0, I1, I2, I3, I4, I5, taux, taudelta;
   double EMeV;
   double emitx0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
@@ -250,6 +256,7 @@ int main( int argc, char **argv)
   particles = 0;
   charge = 0;
   coupling = 0;
+  force = 1;
   length = 0;
   superperiods=1;
   method = 0;
@@ -292,6 +299,9 @@ int main( int argc, char **argv)
         break;
       case COUPLING:
         get_double(&coupling, scanned[i].list[1]);
+        break;
+      case FORCECOUPLING:
+        get_double(&force, scanned[i].list[1]);
         break;
       case PARTICLES:
         get_double(&particles, scanned[i].list[1]);
@@ -587,7 +597,7 @@ int main( int argc, char **argv)
                    pCentral0, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
                    s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp, elements,
-                   superperiods, verbosity, isRing);
+                   superperiods, verbosity, isRing, force);
     } else {
       if (!(xRateVsS = SDDS_Realloc(xRateVsS, sizeof(*xRateVsS)*elements)) ||
           !(yRateVsS = SDDS_Realloc(yRateVsS, sizeof(*yRateVsS)*elements)) ||
@@ -884,7 +894,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp,long elements, 
-                  long superperiods, long verbosity, long isRing)
+                  long superperiods, long verbosity, long isRing, long force)
 {
   long turn, slot;
   double dT, gamma, vz, emitz, zRatio;
@@ -915,6 +925,10 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
     emitx += (xGrowthRate-transSRdampRate)*emitx*dT+transSRdampRate*emitx0*dT/(1+coupling);
     emity += (yGrowthRate-transSRdampRate)*emity*dT+transSRdampRate*emitx0*coupling*dT/(1+coupling);
     emitz += (zGrowthRate-longitSRdampRate)*emitz*dT+longitSRdampRate*emitz0*dT;
+    if (force) {
+      emitx = (emitx+emity)/(1+coupling);
+      emity = emitx;
+    }
     sigmaDelta = sqrt(emitz*zRatio);
     sigmaz = emitz/sigmaDelta;
   }
