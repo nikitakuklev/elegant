@@ -20,10 +20,10 @@
 #define WAKE_COLUMNS 5
 static SDDS_DEFINITION wake_column[WAKE_COLUMNS] = {
     {"Deltat", "&column name=Deltat, symbol=\"$gD$rt\", units=s, type=double, description=\"Time after head of bunch\" &end"},
-    {"Ix", "&column name=Ix, symbol=\"<I*x>\", units=C*m/s, type=double, description=\"Transverse horizontal moment\" &end"},
-    {"Wx", "&column name=Wx, symbol=\"W$bx$n\", units=V/m, type=double, description=\"Transverse horizontal wake\" &end"},
-    {"Iy", "&column name=Iy, symbol=\"<I*y>\", units=C*m/s, type=double, description=\"Transverse vertical moment\" &end"},
-    {"Wy", "&column name=Wy, symbol=\"W$by$n\", units=V/m, type=double, description=\"Transverse vertical wake\" &end"},
+    {"Ix", "&column name=Ix, symbol=\"<I$bx$n>\", units=C*m$ad$n/s, type=double, description=\"Transverse horizontal moment\" &end"},
+    {"Wx", "&column name=Wx, symbol=\"W$bx$n\", units=V/m$ap$n, type=double, description=\"Transverse horizontal wake\" &end"},
+    {"Iy", "&column name=Iy, symbol=\"<I$by$n>\", units=C*m$ad$n/s, type=double, description=\"Transverse vertical moment\" &end"},
+    {"Wy", "&column name=Wy, symbol=\"W$by$n\", units=V/m$ap$n, type=double, description=\"Transverse vertical wake\" &end"},
     };
 
 #define WAKE_PARAMETERS 5
