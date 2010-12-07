@@ -1637,6 +1637,8 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"END2_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
     {"BODY_FOCUS_MODEL", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfcw_example.nKicks), NULL, 0.0, 1, "number of kicks to use.  Set to zero for matrix method."},
+    {"ZWAKE", "", IS_LONG, 0, (long)((char *)&rfcw_example.includeZWake), NULL, 0.0, 1, "If zero, longitudinal wake is turned off."},
+    {"TRWAKE", "", IS_LONG, 0, (long)((char *)&rfcw_example.includeTrWake), NULL, 0.0, 1, "If zero, transverse wakes are turned off."},
     {"WAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.wakeFile), NULL, 0.0, 0, "name of file containing Green functions"},
     {"ZWAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.zWakeFile), NULL, 0.0, 0, "if WAKEFILE=NULL, optional name of file containing longitudinal Green function"},
     {"TRWAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.trWakeFile), NULL, 0.0, 0, "if WAKEFILE=NULL, optional name of file containing transverse Green functions"},

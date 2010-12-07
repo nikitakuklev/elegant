@@ -778,7 +778,7 @@ long track_through_rfcw
   rfcw->trwake.dy = 0;
   rfcw->trwake.xDriveExponent = rfcw->trwake.yDriveExponent = 1;
   rfcw->trwake.xProbeExponent = rfcw->trwake.yProbeExponent = 0;
-  if (!rfcw->initialized) {
+  if (!rfcw->initialized && rfcw->includeTrWake) {
     rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
       if (rfcw->trWakeFile || rfcw->zWakeFile)
@@ -809,7 +809,7 @@ long track_through_rfcw
   rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
   rfcw->wake.SGOrder = rfcw->SGOrder;
   rfcw->wake.change_p0 = rfcw->change_p0;
-  if (!rfcw->initialized) {
+  if (!rfcw->initialized && rfcw->includeZWake) {
     if (rfcw->WzColumn) {
       if (!rfcw->zWakeFile)
         SDDS_Bomb("no input file for z wake for RFCW element");
@@ -833,15 +833,15 @@ long track_through_rfcw
   
   rfcw->initialized = 1;
 
-  if (rfcw->WzColumn)
+  if (rfcw->WzColumn && rfcw->includeZWake)
     rfcw->wake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
-  if (rfcw->WxColumn || rfcw->WyColumn)
+  if ((rfcw->WxColumn || rfcw->WyColumn) && rfcw->includeTrWake)
     rfcw->trwake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
   np = trackRfCavityWithWakes(part, np, &rfcw->rfca, accepted, P_central, zEnd,
                               i_pass, run, charge, 
-                              rfcw->WzColumn?&rfcw->wake:NULL,
-                              (rfcw->WxColumn || rfcw->WyColumn)?&rfcw->trwake:NULL,
-                              rfcw->doLSC?&rfcw->LSCKick:NULL,
+                              (rfcw->WzColumn && rfcw->includeZWake) ? &rfcw->wake : NULL,
+                              ((rfcw->WxColumn || rfcw->WyColumn) && rfcw->includeTrWake) ? &rfcw->trwake : NULL,
+                              rfcw->doLSC ? &rfcw->LSCKick : NULL,
                               rfcw->wakesAtEnd);
   return np;
 }
