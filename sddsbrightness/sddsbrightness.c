@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.16  2010/01/04 23:22:08  borland
+ Resolved some issues on 64 bit operating systems.  Was getting segmentation faults.
+
  Revision 1.15  2009/06/02 17:56:50  borland
  Fixed units for brightness.
 
@@ -908,7 +911,7 @@ void Dejus_CalculateBrightness(double current,long nE,
 {
   double lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc,fc2,de,smax;
   int32_t ih,i,j,je,errorFlag=0;
-  int32_t nSigma=3,nppSigma=6,nek,ns,exitLoop=0;
+  int32_t nSigma=3,nppSigma=6,nek,ns,exitLoop=0,badPoint=0;
   double JArg,sigmaEE,gk,dek,ek;
   double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb;
   double e,k;
@@ -1026,6 +1029,7 @@ void Dejus_CalculateBrightness(double current,long nE,
     smax=0;
     je=nE;
     nek=neks;
+    badPoint = exitLoop = 0;
     do {
       je--;
       ek=eMin+je*de;
@@ -1074,78 +1078,83 @@ void Dejus_CalculateBrightness(double current,long nE,
       sb[je][ih]=0.0;
       
     } while (smax<minB && je>0);
-    if (exitLoop)
-      break;
-    if (smax < minB ) {
-      fprintf(stderr,"Warning, Harmonic intensity too small, for harmonic number %ld\n",i);
-      break;
-    }
-    FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
-    /*define fc */
-    fc=0.985*ep/ek/i;
-    if (i > 1/(1-fc) ) {
-      fprintf(stderr,"Warning: overlapping range for peak search for harmonics %ld\n",i);
-      break;
+    if (exitLoop) {
+      badPoint = 1;
+    } else if (smax < minB ) {
+      badPoint = 1;
+    } else {
+      FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+      /*define fc */
+      fc=0.985*ep/ek/i;
+      if (i > 1/(1-fc) ) {
+	badPoint = 1;
+      }
     }
     je=nE-1;
     for (j=0;j<=je;j++) {
       ek=eMin+j*de;
-      ky=sqrt(2.0*(reducedE/ek-1.0));
-      if (device==HELICAL) {
-        ky=ky/sqrt(2.0);
-        kx=ky;
-      }
-      if (ih==0) {
-        kyb[j]=ky;
-        ptot[j]=ptot_fac*nP*(kx*kx+ky*ky)*(ENERGY*ENERGY)*current*1.0e-3/(period*1.0e-2);
-        if (device==HELICAL)
-          gk=HELICAK(ky);
-        else
-          gk=PLANARK(ky);
-        pd[j]=pd_fac*nP*ky*gk*pow(ENERGY,4)*current*1.0e-3/(period*1.0e-2);
-      }
+      if (!badPoint) {
+	ky=sqrt(2.0*(reducedE/ek-1.0));
+	if (device==HELICAL) {
+	  ky=ky/sqrt(2.0);
+	  kx=ky;
+	}
+	if (ih==0) {
+	  kyb[j]=ky;
+	  ptot[j]=ptot_fac*nP*(kx*kx+ky*ky)*(ENERGY*ENERGY)*current*1.0e-3/(period*1.0e-2);
+	  if (device==HELICAL)
+	    gk=HELICAK(ky);
+	  else
+	    gk=PLANARK(ky);
+	  pd[j]=pd_fac*nP*ky*gk*pow(ENERGY,4)*current*1.0e-3/(period*1.0e-2);
+	}
       
-      if (i%2) 
-        fc2=1.002;
-      else
-        fc2=1.000;
-      ekMin=fc*i*ek;
-      ekMax=fc2*i*ek;
-      /* adjust ekmin, ekmax, and number of points if beam energy spread applied */
-      if (sigmaE > 0) {
-        nek=neks;
-        dek=(ekMax-ekMin)/nek;
-        sigmaEE=2.0*sigmaE*i*ek; /*  estimated width (eV) */
-        ekMin=ekMin-sigmaEE*nSigma; /* adjust for convolution */
-        ekMax=ekMax+sigmaEE*nSigma;  /* adjust for convolution */
-        if (sigmaEE/nppSigma < dek) dek=sigmaEE/nppSigma;
-        nek=(ekMax-ekMin)/dek+1; /*number of points */
-        if (nek>MAXIMUM_E) {
-          fprintf(stderr,"Energy points out of boundary (constrainted by FORTRAN usb subroutine).\n");
-          exit(1);
-        }
-      }
-      /* get undulator on-axis brilliance for given K value in energy range ekmin to ekmax
-         returns energy array e (eV) and spec (ph/s/mrad^2/mm^2/0.1%bw) */
-      usb_(&ENERGY,&current,&sigmaX,&sigmaY,&sigmaX1,&sigmaY1,&period,
-          &nP,&kx,&ky,&ekMin,&ekMax,&nek,&method,tmpE,tmpSpec,&ns,&errorFlag);
-      if (errorFlag) {
-        fprintf(stderr,"error occurred in calling fortran subroutine usb\n");
-        exit(1);
-      } 
-      FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
-     /* fprintf(stderr,"j=%d,points %d,maxE %e,minE %e,peakE %e,peakB %e\n",j,nek,ekMax,ekMin,ep,sp); */
-      if (sigmaE>0) {
-        /* gauss convolve */
-        if (Gauss_Convolve(tmpE,tmpSpec,&ns,sigmaE))
-          exit(1);
-      }
-      FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
-     /* fprintf(stderr,"after gauss convolve, peakE %e, peakB %e\n",ep,sp); */
+	if (i%2) 
+	  fc2=1.002;
+	else
+	  fc2=1.000;
+	ekMin=fc*i*ek;
+	ekMax=fc2*i*ek;
+	/* adjust ekmin, ekmax, and number of points if beam energy spread applied */
+	if (sigmaE > 0) {
+	  nek=neks;
+	  dek=(ekMax-ekMin)/nek;
+	  sigmaEE=2.0*sigmaE*i*ek; /*  estimated width (eV) */
+	  ekMin=ekMin-sigmaEE*nSigma; /* adjust for convolution */
+	  ekMax=ekMax+sigmaEE*nSigma;  /* adjust for convolution */
+	  if (sigmaEE/nppSigma < dek) dek=sigmaEE/nppSigma;
+	  nek=(ekMax-ekMin)/dek+1; /*number of points */
+	  if (nek>MAXIMUM_E) {
+	    fprintf(stderr,"Energy points out of boundary (constrainted by FORTRAN usb subroutine).\n");
+	    exit(1);
+	  }
+	}
+	/* get undulator on-axis brilliance for given K value in energy range ekmin to ekmax
+	   returns energy array e (eV) and spec (ph/s/mrad^2/mm^2/0.1%bw) */
+	usb_(&ENERGY,&current,&sigmaX,&sigmaY,&sigmaX1,&sigmaY1,&period,
+	     &nP,&kx,&ky,&ekMin,&ekMax,&nek,&method,tmpE,tmpSpec,&ns,&errorFlag);
+	if (errorFlag) {
+	  fprintf(stderr,"error occurred in calling fortran subroutine usb\n");
+	  exit(1);
+	} 
+	FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+	/* fprintf(stderr,"j=%d,points %d,maxE %e,minE %e,peakE %e,peakB %e\n",j,nek,ekMax,ekMin,ep,sp); */
+	if (sigmaE>0) {
+	  /* gauss convolve */
+	  if (Gauss_Convolve(tmpE,tmpSpec,&ns,sigmaE))
+	    exit(1);
+	}
+	FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+	/* fprintf(stderr,"after gauss convolve, peakE %e, peakB %e\n",ep,sp); */
       
-      ei[j][ih]=i*ek;
-      eb[j][ih]=ep;
-      sb[j][ih]=sp;
+	ei[j][ih]=i*ek;
+	eb[j][ih]=ep;
+	sb[j][ih]=sp;
+      } else {
+	ei[j][ih]=i*ek;
+	eb[j][ih]=0;
+	sb[j][ih]=0;
+      }
     }
    /* fprintf(stderr,"Harmonics %d completed.\n",i); */
     ih++;
