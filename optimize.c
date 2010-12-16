@@ -72,11 +72,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       output_sparsing_factor = 1;
 #if USE_MPI
     if (!writePermitted)
-      log_file = NULL;  
-    if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
-      runInSinglePartMode = 1;  /* For hybrid simplex method only. All the processors will track the same particles with different parameters */
-      optimization_data->random_factor = random_factor;
-    } 
+      log_file = NULL; 
+    optimization_data->random_factor = random_factor; 
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
