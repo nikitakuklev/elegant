@@ -230,6 +230,17 @@ void setup_bunched_beam(
 #endif
     random_4(-beamRepeatSeed);
   }
+#if !SDDS_MPI_IO
+  else if ((run->random_sequence_No>1) && (control->n_steps==1)) { /* This part will take effect for regression test when random_sequence_No>1 */
+    beamRepeatSeed = 1e8*random_4(1);
+    random_4(-beamRepeatSeed);
+  }
+#else
+  else if (control->n_steps==1) {
+    beamRepeatSeed = 1e8*random_4(1);
+    MPI_Bcast(&beamRepeatSeed, 1, MPI_LONG, 1, MPI_COMM_WORLD);
+  }
+#endif
   bunchGenerated = 0;
   
   haltonOpt = optimized_halton;
@@ -269,6 +280,7 @@ long new_bunched_beam(
     unsigned long unstable;
     double s_offset, beta;
     double p_central, dummy, p, gamma;
+    long i, offset;
 #ifdef VAX_VMS
     char s[100];
 #endif
@@ -348,7 +360,35 @@ long new_bunched_beam(
 #else
 	random_4(-beamRepeatSeed);
 #endif
+	/* For the Halton sequence, we need reset the start point */
+	for (i=0; i<3; i++) {
+	  for (offset=0; offset<2; offset++) {   
+	    if (halton_sequence[i]) {
+	      if (haltonOpt) {
+		if (restartModHaltonSequence(haltonID[2*i+offset], 0.5)<0)
+		   bombElegant("problem restarting Halton sequence", NULL);
+	      }
+	      else {
+		if (restartHaltonSequence(haltonID[2*i+offset], 0.5)<0)
+		   bombElegant("problem restarting Halton sequence", NULL);
+	      }
+	    }
+	  }
+	}
       }
+ /* This part will take effect for regression test */
+#if SDDS_MPI_IO
+      else if (control->n_steps==1) {
+	if (notSinglePart)
+	  random_4(-(beamRepeatSeed+2*(myid-1)));  
+	else
+	  random_4(-beamRepeatSeed);
+      }
+#else
+      else if ((run->random_sequence_No>1) && (control->n_steps==1)) {
+	random_4(-beamRepeatSeed);
+      }
+#endif
         if (control->cell) {
             VMATRIX *M;
 	    unsigned long savedFlags;
@@ -385,7 +425,9 @@ long new_bunched_beam(
         }
 #endif
 #if !SDDS_MPI_IO
-	if (run->random_sequence_No > 1 && one_random_bunch && (beam->n_to_track >=(run->random_sequence_No-1))) {
+	/* This part will take effect for regression test only where random_sequence_No >1 */
+	if (run->random_sequence_No > 1 && (one_random_bunch || (!one_random_bunch && (control->n_steps==1)))
+	    && (beam->n_to_track >=(run->random_sequence_No-1))) {
 	  /* generate the same random number sequence as the parallel version */
 	  long work_processors = run->random_sequence_No-1, my_n_actual_particles;
 	  long my_nToTrack, i;
@@ -469,6 +511,7 @@ long new_bunched_beam(
         }
 
     bunchGenerated = 1;
+
     return(beam->n_to_track);
     }
 

@@ -93,7 +93,7 @@ long generate_bunch(
       remaining_sequence_No--;
     total_n_particles += n_particles;
 #else
-    long sum=0, tmp, my_offset, *offset = tmalloc(n_processors*sizeof(*offset)), total_particles=0;
+    long sum=0, tmp, my_offset=0, *offset = tmalloc(n_processors*sizeof(*offset)), total_particles=0;
     if (isSlave) {
       MPI_Allgather (&n_particles, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
       tmp = offset[0];
@@ -452,8 +452,23 @@ long generate_bunch(
       }
     }
 
-    
     /* Enforce desired twiss parameters and (optionally) rms values */
+#if !USE_MPI  
+    if(remaining_sequence_No<=1) {
+      computeBeamTwissParameters3(&twissBeam, first_particle_address, total_n_particles);
+      if (x_plane->beam_type!=LINE_BEAM)
+	enforceTwissValues(first_particle_address, total_n_particles, &twissBeam, 0, x_plane->beta, x_plane->alpha, x_plane->emit, enforce_rms_params[0]);
+      if (y_plane->beam_type!=LINE_BEAM)
+	enforceTwissValues(first_particle_address, total_n_particles, &twissBeam, 2, y_plane->beta, y_plane->alpha, y_plane->emit, enforce_rms_params[1]);
+      if (longit->beam_type!=LINE_BEAM)
+	enforceTwissValues(first_particle_address, total_n_particles, &twissBeam, 4, beta, alpha, emit, enforce_rms_params[2]);
+      /* This allows getting the dispersion right since it gives us the spurious dispersion (due to random correlations) */
+      if (!((x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type==LINE_BEAM))
+	computeBeamTwissParameters3(&twissBeam, first_particle_address, total_n_particles);
+      else 
+	memset(twissBeam.eta, 0, 4*sizeof(twissBeam.eta[0]));
+    }
+#else
     computeBeamTwissParameters3(&twissBeam, particle, n_particles);
     if (x_plane->beam_type!=LINE_BEAM)
       enforceTwissValues(particle, n_particles, &twissBeam, 0, x_plane->beta, x_plane->alpha, x_plane->emit, enforce_rms_params[0]);
@@ -466,7 +481,7 @@ long generate_bunch(
       computeBeamTwissParameters3(&twissBeam, particle, n_particles);
     else 
       memset(twissBeam.eta, 0, 4*sizeof(twissBeam.eta[0]));
-
+#endif
     /* incorporate dispersion and centroid shifts into (x, x', y, y') */
     /* also add particle ID */
 #if !SDDS_MPI_IO
@@ -482,12 +497,12 @@ long generate_bunch(
       first_particle_address[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       first_particle_address[i_particle][6] = particleID++;
       if (longit->chirp) {
-        delta_p = longit->chirp*particle[i_particle][4];
-        particle[i_particle][5] += delta_p;
-        particle[i_particle][0] += delta_p*x_plane->eta;
-        particle[i_particle][1] += delta_p*x_plane->etap;
-        particle[i_particle][2] += delta_p*y_plane->eta;
-        particle[i_particle][3] += delta_p*y_plane->etap;
+        delta_p = longit->chirp*first_particle_address[i_particle][4];
+        first_particle_address[i_particle][5] += delta_p;
+        first_particle_address[i_particle][0] += delta_p*x_plane->eta;
+        first_particle_address[i_particle][1] += delta_p*x_plane->etap;
+        first_particle_address[i_particle][2] += delta_p*y_plane->eta;
+        first_particle_address[i_particle][3] += delta_p*y_plane->etap;
       }
     }
     initial_saved = 0; /* Prepare for next bunch */
@@ -558,16 +573,21 @@ void gaussian_distribution(
     double s12[2], buffer[2];
     long dim;
 #if SDDS_MPI_IO
-    /* To generate n particles on m processors, each processor will 
-       generate myid*n/m particles, but only the last n/m will be used */
-    long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+    /* To generate n particles with Halton sequence on m processors, each processor will 
+       generate all particles, but only n/m particles will be used for each of the processors */
+    long i, start_particle=0, end_particle=n_particles, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
 
-    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
-    for (i=1; i<n_processors; i++) {
-      particle_array[i] += particle_array[i-1] ; 
-    }
-    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
-    n_particles = particle_array[myid]; 
+    if (notSinglePart) {
+      MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+      for (i=1; i<n_processors; i++) {
+	particle_array[i] += particle_array[i-1] ; 
+      }
+      end_particle = particle_array[myid];
+      start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+      /* We need generate the whole beam to make the Pelegant and elegant have the same beam, 
+	 especially for the  multi-step beam generation */
+      n_particles = particle_array[n_processors-1];
+    } 
 #endif
     s12[0] = s1;
     s12[1] = s2;
@@ -592,7 +612,7 @@ void gaussian_distribution(
           break;
       } while (1);
 #if SDDS_MPI_IO
-      if (i_particle>=start_particle) {
+      if ((i_particle>=start_particle) && (i_particle<end_particle)) {
 	for (dim=0; dim<2; dim++)
 	  particle[i_particle-start_particle][offset+dim] = buffer[dim];
       }
@@ -652,24 +672,34 @@ void uniform_distribution(
   double range1, range2; 
   double rnd1, rnd2=0.0;
 #if SDDS_MPI_IO
-  /* To generate n particles on m processors, each processor will 
-     generate myid*n/m particles, but only the last n/m will be used */
-  long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
-
-  if (notSinglePart) {  
-    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
-    for (i=1; i<n_processors; i++) {
-      particle_array[i] += particle_array[i-1] ; 
-    }
-    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
-    n_particles = particle_array[myid]; 
-  }
+  long i, start_particle=0, end_particle=n_particles, *particle_array;
 #endif
 
   log_entry("uniform_distribution");
 
   range1 = 2*max1*cutoff;
   range2 = 2*max2*cutoff;
+
+#if SDDS_MPI_IO
+  if (notSinglePart) {
+    if (haltonID[offset] && haltonID[offset+1]) {
+      /* To generate n particles with Halton sequence on m processors, each processor will 
+	 generate all particles, but only n/m particles will be used for each of the processors */
+      particle_array = tmalloc(n_processors*sizeof(*particle_array));
+      MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+      for (i=1; i<n_processors; i++) {
+	particle_array[i] += particle_array[i-1] ; 
+      }
+      end_particle = particle_array[myid];
+      start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+      /* We need generate the whole beam to make the Pelegant and elegant have the same beam, 
+	 especially for the  multi-step beam generation */
+      if (isSlave)
+	n_particles = particle_array[n_processors-1]; 
+      tfree(particle_array);
+    }
+  }
+#endif
 
   for (i_particle=0; i_particle<n_particles; i_particle++) {
     do {
@@ -711,26 +741,34 @@ void uniform_distribution(
     }
 #else
     if (notSinglePart) {
-      if (i_particle>=start_particle) {
+      if ((i_particle>=start_particle) && (i_particle<end_particle)) {
 	x1 = range1*rnd1;
 	x2 = range2*rnd2;
 	particle[i_particle-start_particle][0+offset] = x1;
 	particle[i_particle-start_particle][1+offset] = x2;
 	if (symmetrize) {
-	  if (++i_particle>=n_particles)
-	    break;
-	  particle[i_particle-start_particle][0+offset] = x1;
-	  particle[i_particle-start_particle][1+offset] = -x2;
-	  if (++i_particle>=n_particles)
-	    break;
-	  particle[i_particle-start_particle][0+offset] = -x1;
-	  particle[i_particle-start_particle][1+offset] = x2;
-	  if (++i_particle>=n_particles)
-	    break;
-	  particle[i_particle-start_particle][0+offset] = -x1;
-	  particle[i_particle-start_particle][1+offset] = -x2;
+	  if (++i_particle<end_particle) {
+	    particle[i_particle-start_particle][0+offset] = x1;
+	    particle[i_particle-start_particle][1+offset] = -x2;
+	  }
+	  if (++i_particle<end_particle) {
+	    particle[i_particle-start_particle][0+offset] = -x1;
+	    particle[i_particle-start_particle][1+offset] = x2;
+	  }
+	  if (++i_particle<end_particle) {
+	    particle[i_particle-start_particle][0+offset] = -x1;
+	    particle[i_particle-start_particle][1+offset] = -x2;
+	  }
 	}
-      }
+      }  
+      else if (symmetrize) { /* To get the same sequence as the serial version */
+	if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	  i_particle ++ ;
+	if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	  i_particle ++ ;
+	if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	  i_particle ++ ;
+    }
     } else {
       x1 = range1*rnd1;
       x2 = range2*rnd2;
@@ -753,10 +791,7 @@ void uniform_distribution(
     }
 #endif
   }
-#if SDDS_MPI_IO
-  if (notSinglePart)
-    tfree(particle_array);
-#endif
+
   log_exit("uniform_distribution");
 }
 
@@ -841,16 +876,7 @@ void hard_edge_distribution(
   double range2; 
   double rnd1, rnd2;
 #if SDDS_MPI_IO
-    /* To generate n particles on m processors, each processor will 
-       generate myid*n/m particles, but only the last n/m will be used */
-    long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
-
-    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
-    for (i=1; i<n_processors; i++) {
-      particle_array[i] += particle_array[i-1] ; 
-    }
-    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
-    n_particles = particle_array[myid]; 
+  long i, start_particle=0, end_particle=n_particles, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
 #endif
 
   log_entry("hard_edge_distribution");
@@ -858,6 +884,25 @@ void hard_edge_distribution(
   range1 = 2*max1*cutoff;
   range2 = 2*max2*cutoff;
 
+#if SDDS_MPI_IO
+  if (notSinglePart) {
+    if (haltonID[offset] && haltonID[offset+1]) {
+      /* To generate n particles with Halton sequence on m processors, each processor will 
+	 generate all particles, but only n/m particles will be used for each of the processors */
+
+      MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+      for (i=1; i<n_processors; i++) {
+	particle_array[i] += particle_array[i-1] ; 
+      }
+      end_particle = particle_array[myid];
+      start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+      /* We need generate the whole beam to make the Pelegant and elegant have the same beam, 
+	 especially for the  multi-step beam generation */
+      if (isSlave)
+	n_particles = particle_array[n_processors-1]; 
+    }
+  }
+#endif
   for (i_particle=0; i_particle<n_particles; i_particle++) {
     if (haltonID[offset] && haltonID[offset+1]) {
       if (haltonOpt) {
@@ -874,25 +919,32 @@ void hard_edge_distribution(
       rnd2 = random_4(1)-.5;
     }
 #if SDDS_MPI_IO
-    if (i_particle<start_particle)
-      continue;
-    x1 = range1*rnd1;
-    x2 = range2*rnd2;
-    particle[i_particle-start_particle][0+offset] = x1;
-    particle[i_particle-start_particle][1+offset] = x2;
-    if (symmetrize) {
-      if (++i_particle>=n_particles)
-        break;
+    if ((i_particle>=start_particle) && (i_particle<end_particle)) {
+      x1 = range1*rnd1;
+      x2 = range2*rnd2;
       particle[i_particle-start_particle][0+offset] = x1;
-      particle[i_particle-start_particle][1+offset] = -x2;
-      if (++i_particle>=n_particles)
-        break;
-      particle[i_particle-start_particle][0+offset] = -x1;
       particle[i_particle-start_particle][1+offset] = x2;
-      if (++i_particle>=n_particles)
-        break;
-      particle[i_particle-start_particle][0+offset] = -x1;
-      particle[i_particle-start_particle][1+offset] = -x2;
+      if (symmetrize) {
+	if (++i_particle<end_particle) {
+	  particle[i_particle-start_particle][0+offset] = x1;
+	  particle[i_particle-start_particle][1+offset] = -x2;
+	}
+	if (++i_particle<end_particle) {
+	  particle[i_particle-start_particle][0+offset] = -x1;
+	  particle[i_particle-start_particle][1+offset] = x2;
+	}
+	if (++i_particle<end_particle) {
+	  particle[i_particle-start_particle][0+offset] = -x1;
+	  particle[i_particle-start_particle][1+offset] = -x2;
+	}
+      }
+    } else if (symmetrize) { /* To get the same sequence as the serial version */
+      if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	i_particle ++ ;
+      if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	i_particle ++ ;
+      if ((i_particle < (start_particle-1)) || (i_particle>= end_particle)) 
+	i_particle ++ ;
     }
 #else
     x1 = range1*rnd1;
