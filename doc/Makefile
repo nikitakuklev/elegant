@@ -1,5 +1,5 @@
 
-all:: elegant.ps elegant.pdf overview.ps introductin.pdf
+all:: elegant.ps elegant.pdf overview.ps overview.pdf
 
 elegant.ps:
 	rm -f elegant.aux elegant.dvi elegant.log elegant.toc dictionary.tex
