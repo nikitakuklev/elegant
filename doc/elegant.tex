@@ -873,7 +873,7 @@ Recommended value: ``\%s.kaf''.
     long symmetrize = 0;
     long halton_sequence[3] = {0, 0, 0};
     long halton_radix[6] = {0, 0, 0, 0, 0, 0};
-    long halton_optimized = 1;
+    long optimized_halton = 0;
     long randomize_order[3] = {0, 0, 0};
     long limit_invariants = 0;
     long limit_in_4d = 0;
@@ -978,7 +978,7 @@ example, if you want to make a cylindrically symmetric beam.
 under changes of sign in the coordinates.  Automatically results in a
 zero centroid for all coordinates.
 
-\item \verb|halton_sequence[3]| and \verb|halton_radix[6]| and \verb|halton_optimized|
+\item \verb|halton_sequence[3]| and \verb|halton_radix[6]| and \verb|optimized_halton|
 --- This provides a ``quiet-start'' feature by choosing Halton sequences in
 place of random number generation.  There are three new variables that
 control this feature.  \verb|halton_sequence| is an array of three
@@ -1004,7 +1004,7 @@ to set
 \verb|randomize_order[0] = 2, 2, 2,|.  This avoids banding that may
 result from choosing larger radix values.
 
-\verb|halton_optimized| uses the improved halton sequence \cite{Chi2005}.
+\verb|optimized_halton| uses the improved halton sequence \cite{Chi2005}.
 (Algorithm 659, Collected Algorithm from ACM. Derandom Algorithm is added
 by Hongmei CHI (CS/FSU)). It avoids the banding problem automatically and
 the \verb|halton_radix| values are ignored.
