@@ -1,6 +1,8 @@
 #!/bin/sh
-platform=`uname -i`
+# platform=`uname -i`
+platform=`echo $HOST_ARCH | cut -d\- -f2-100`
 linkname=`readlink O.linux-${platform}`
+
 if [ -n "$linkname" ]; then {
   echo O.linux-${platform} is linked with "$linkname"
 
