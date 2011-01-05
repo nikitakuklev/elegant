@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.17  2010/12/15 15:02:31  borland
+ In the event that the brightness can't be computed, the corresponding rows are now filled in with 0.
+
  Revision 1.16  2010/01/04 23:22:08  borland
  Resolved some issues on 64 bit operating systems.  Was getting segmentation faults.
 
@@ -112,23 +115,29 @@
 #define SET_COUPLING 7
 #define SET_NOSPECTRALBROADENING 8
 #define SET_METHOD 9
-#define N_OPTIONS 10
+#define SET_ERRORFACTORS 10
+#define N_OPTIONS 11
 
 char *option[N_OPTIONS] = {
   "pipe", "harmonics", "krange", "current", "totallength", "periodlength", 
-  "emittanceratio", "coupling", "nospectralbroadening","method",
+  "emittanceratio", "coupling", "nospectralbroadening", "method", "errorFactors"
 } ;
 
 char *USAGE1="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
  -harmonics=<integer> -Krange=start=<value>,end=<value>,points=<integer>\n\
  -current=<Amps> -totalLength=<meters> -periodLength=<meters>\n\
+ [-errorFactors=<filename>,<columnName>] \n\
  [-emittanceRatio=<value> | -coupling=<value>] [-noSpectralBroadening]\n\
  [-method=<string value>,device=<string value>,neks=<value>]] \n\n\
 harmonics        number of harmonics to compute\n\
 Krange           range and number of undulator K parameter to evaluate\n\
 current          beam current in amperes\n\
 totalLength      total length of the undulator in meters\n\
-periodLength     length of the undulator period in meters\n";
+periodLength     length of the undulator period in meters\n\
+errorFactors     Specify SDDS file and column for factors by which to multiply\n\
+                 the brightness for each harmonic, as a way of accounting for\n\
+                 the effect of field errors.  Row 0 gives h=1 data, Row 1 gives h=3\n\
+                 data, etc.";
 char *USAGE2="emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
@@ -152,6 +161,7 @@ the Twiss parameters for which are in the input file.  You should generate the\n
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
 Program by Michael Borland.  (This is version 2, April 2002.)\n";
 
+void getErrorFactorData(double **errorFactor, long *errorFactors, char *filename, char *columnName);
 long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics);
 double ComputeBrightness(double period, long Nu, double K, long n,
                          double gamma, double ex, double ey, double Sdelta0, 
@@ -203,7 +213,7 @@ int main(int argc, char **argv)
   unsigned long pipeFlags;
   double current, totalLength, periodLength, KStart, KEnd, coupling, emittanceRatio, dK;
   int32_t KPoints;
-  long harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
+  long harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, ij, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
   double pCentral, ex0, ey0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
@@ -215,6 +225,9 @@ int main(int argc, char **argv)
   int32_t neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
   char *deviceOption, *Units=NULL;
+  double *errorFactor = NULL;
+  long errorFactors = 0;
+
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) {
@@ -293,6 +306,11 @@ int main(int argc, char **argv)
       case SET_NOSPECTRALBROADENING:
         spectralBroadening = 0;
         break;
+      case SET_ERRORFACTORS:
+        if (s_arg[i_arg].n_items!=3)
+          SDDS_Bomb("invaliud -errorFactors syntax/values");
+        getErrorFactorData(&errorFactor, &errorFactors, s_arg[i_arg].list[1], s_arg[i_arg].list[2]);
+        break;
       case SET_METHOD:
         if (s_arg[i_arg].n_items<2) 
           SDDS_Bomb("invalid -dejus syntax/values");
@@ -355,6 +373,8 @@ int main(int argc, char **argv)
   fprintf(stderr, "Argument parsing done.\n");
 #endif
 
+  if (errorFactor && errorFactors<harmonics)
+    SDDS_Bomb("too few error factors for requested number of harmonics");
   if (coupling && emittanceRatio)
     SDDS_Bomb("give only one of -coupling or -emittanceRatio");
   if (!harmonics)
@@ -468,6 +488,13 @@ int main(int argc, char **argv)
 #ifdef DEBUG
       fprintf(stderr, "Returned from Dejus_CalculateBrightness\n");
 #endif
+      if (errorFactor) {
+        for (ih=0; ih<harmonics; ih++) {
+          long i;
+          for (i=0; i<nE; i++)
+            Brightness[ih][i] *= errorFactor[ih];
+        }
+      }
       for (ih=0; ih<harmonics; ih++) {
         h = ih*2+1;
         if (h==1 && !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,KK,nE,0))
@@ -1218,3 +1245,20 @@ void Dejus_CalculateBrightness(double current,long nE,
 #endif
   return;
 }
+
+void getErrorFactorData(double **errorFactor, long *errorFactors, char *filename, char *columnName)
+{
+  SDDS_DATASET SDDSin;
+  
+  if (!SDDS_InitializeInput(&SDDSin, filename))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (SDDS_CheckColumn(&SDDSin, columnName, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    fprintf(stderr, "Something wrong with column %s in %s\n", columnName, filename);
+    exit(1);
+  }
+  if (SDDS_ReadPage(&SDDSin)<1 || (*errorFactors = SDDS_RowCount(&SDDSin))<1 || 
+      !(*errorFactor=SDDS_GetColumnInDoubles(&SDDSin, columnName)))
+    SDDS_Bomb("unable to read error factor file");
+}
+
