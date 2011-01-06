@@ -278,17 +278,21 @@ void correction_setup(
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
       compute_trajcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 
-                               _correct->method==THREAD_CORRECTION,
-                               !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
+                               (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
+                               ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
       compute_trajcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 
-                               _correct->method==THREAD_CORRECTION,
-                               !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
+                               (_correct->method==THREAD_CORRECTION ? COMPUTE_RESPONSE_FINDONLY : 0) |
+                               ((!_correct->response_only && _correct->method==GLOBAL_CORRECTION) ? COMPUTE_RESPONSE_INVERT : 0));
     }
     else if (_correct->mode==ORBIT_CORRECTION) {
-      compute_orbcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0, 
-                              !_correct->response_only, fixed_length_matrix, verbose);
-      compute_orbcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 0, 
-                              !_correct->response_only, fixed_length_matrix, verbose);
+      compute_orbcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 
+                              (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                              (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                              (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
+      compute_orbcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 
+                              (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                              (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                              (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
     }
     else
       bombElegant("something impossible happened (correction_setup)", NULL);
@@ -610,11 +614,13 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     x_failed = y_failed = 0;
     if (usePerturbedMatrix) {
       if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0))
-        compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                               !correct->response_only);
+        compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 
+                                 (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                 (flags&NO_OUTPUT_CORRECTION? COMPUTE_RESPONSE_SILENT : 0));
       if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0))
-        compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                                 !correct->response_only);
+        compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline,
+                                 (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                 (flags&NO_OUTPUT_CORRECTION ? COMPUTE_RESPONSE_SILENT : 0));
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
@@ -748,11 +754,15 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
         fprintf(stdout, "Computing orbit correction matrices\n"); 
       if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0))
-        compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 
-                                !correct->response_only, fixedLengthMatrix, correct->verbose);
+        compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline,
+                                (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                (fixedLengthMatrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT));
       if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0))
-        compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
-                                !correct->response_only, fixedLengthMatrix, correct->verbose);
+        compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline,
+                                (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
+                                (fixedLengthMatrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
+                                (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT));
     }
 
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
@@ -862,7 +872,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   return(!bombed);
 }
 
-void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert)
+void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags)
 {
 #ifdef DEBUG
   long i_debug;
@@ -897,13 +907,15 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     return;
   }
 
-  if (find_only)
+  if (flags&COMPUTE_RESPONSE_FINDONLY)
     return;
 
-  fprintf(stdout, "computing response matrix...\n");
-  fflush(stdout);
-  report_stats(stdout, "start");
-
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+    fprintf(stdout, "computing response matrix...\n");
+    fflush(stdout);
+    report_stats(stdout, "start");
+  }
+  
   /* allocate matrices for this plane */
   if (CM->C)
     matrix_free(CM->C);
@@ -1071,12 +1083,16 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 #ifdef DEBUG
   matrix_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
-  report_stats(stdout, "done");
-
-  if (invert) {
-    report_stats(stdout, "Computing correction matrix ");
-    fflush(stdout);
-
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+    report_stats(stdout, "done");
+  }
+  
+  if (flags&COMPUTE_RESPONSE_INVERT) {
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+      report_stats(stdout, "Computing correction matrix ");
+      fflush(stdout);
+    }
+    
     /* compute correction matrix T */
     if (CM->auto_limit_SVs && (CM->C->m < CM->C->n) && CM->remove_smallest_SVs < (CM->C->n - CM->C->m)) {
       CM->remove_smallest_SVs = CM->C->n - CM->C->m;
@@ -1090,9 +1106,11 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (weight)
       free(weight);
 
-    report_stats(stdout, "\ndone.");
-    printf("Condition number is %e\n", conditionNumber);
-    fflush(stdout);
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+      report_stats(stdout, "\ndone.");
+      printf("Condition number is %e\n", conditionNumber);
+      fflush(stdout);
+    }
   }
   
   
@@ -1803,7 +1821,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
 }
 
 void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
-                             long find_only, long invert, long fixed_length, long verbose)
+                             unsigned long flags)
 {
   ELEMENT_LIST *start;
   long i_corr, i_moni, equalW;
@@ -1819,7 +1837,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   fflush(stdout);
 #endif
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
-    if (verbose) {
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
       fprintf(stdout, "updating twiss parameters...");
       fflush(stdout);
     }
@@ -1835,7 +1853,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
             beamline->elast->twiss->etay);
     fflush(stdout);
 #endif
-    if (verbose)
+    if (!(flags&COMPUTE_RESPONSE_SILENT))
       report_stats(stdout, "\ndone: ");
   }
 
@@ -1878,7 +1896,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
     matrix_free(CM->T);
   CM->T  = NULL;
 
-  if (find_only)
+  if (flags&COMPUTE_RESPONSE_FINDONLY)
     return;
 
   /* set up weight matrix */
@@ -1899,7 +1917,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   
   corrFactor   = tmalloc(sizeof(*corrFactor)*CM->ncor);
   corrFactorFL = tmalloc(sizeof(*corrFactorFL)*CM->ncor);
-  if (verbose) {
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
     fprintf(stdout, "computing orbit response matrix...");
     fflush(stdout);
   }
@@ -1930,7 +1948,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
         Mij(CM->C, i_moni, i_corr)
           = moniFactor*corrFactor[i_corr]*
             cos(htune-fabs(CM->umoni[i_moni]->twiss->phix - phi));
-        if (fixed_length)
+        if (flags&COMPUTE_RESPONSE_FIXEDLENGTH)
           Mij(CM->C, i_moni, i_corr) -= CM->umoni[i_moni]->twiss->etax*corrFactorFL[i_corr];
         sprintf(memName, "HR_%s#%ld_%s#%ld.%s",
                 CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
@@ -1969,7 +1987,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
     }
   }
   free(corrFactor);
-  if (verbose) {
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
     report_stats(stdout, "\ndone");
     fflush(stdout);
   }
@@ -1977,9 +1995,9 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   matrix_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
 
-  if (invert) {
-    /* compute correction matrix T */
-    if (verbose) {
+  if (flags&COMPUTE_RESPONSE_INVERT) {
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+      /* compute correction matrix T */
       fprintf(stdout, "computing correction matrix...");
       fflush(stdout);
     }
@@ -1993,7 +2011,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 
     if (weight)
       free(weight);
-    if (verbose) {
+    if (!(flags&COMPUTE_RESPONSE_SILENT)) {
       report_stats(stdout, "\ndone.");
       printf("Condition number is %e\n", conditionNumber);
       fflush(stdout);
@@ -2006,8 +2024,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 }
 
 /* Compute orbit response matrix from closed orbit, rather than using beta functions etc */
-void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
-                             long find_only, long invert, long verbose)
+void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags)
 {
   ELEMENT_LIST *corr, *start;
   TRAJECTORY *clorb0, *clorb1;
@@ -2041,19 +2058,14 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     matrix_free(CM->T);
   CM->T  = NULL;
 
-  if (find_only)
+  if (flags&COMPUTE_RESPONSE_FINDONLY)
     return;
 
-  if (verbose) {
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
     fprintf(stdout, "computing orbit response matrix...");
     fflush(stdout);
   }
   
-  if (verbose) {
-    report_stats(stdout, "\ndone");
-    fflush(stdout);
-  }
-
   clorb0 = tmalloc(sizeof(*clorb0)*(beamline->n_elems+1));
   clorb1 = tmalloc(sizeof(*clorb1)*(beamline->n_elems+1));
 
@@ -2132,6 +2144,12 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     else 
       compute_matrix(corr, run, NULL);
   } 
+
+  if (!(flags&COMPUTE_RESPONSE_SILENT)) {
+    report_stats(stdout, "\ndone");
+    fflush(stdout);
+  }
+
 }
 
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
@@ -2467,7 +2485,8 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
-  fprintf(stderr, "%ld H correctors set to zero\n", nz);
+  if (correct->verbose)
+    fprintf(stderr, "%ld H correctors set to zero\n", nz);
   return nz;
 }
 
@@ -2475,7 +2494,8 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
-  fprintf(stderr, "%ld V correctors set to zero\n", nz);
+  if (correct->verbose)
+    fprintf(stderr, "%ld V correctors set to zero\n", nz);
   return nz;
 }
 

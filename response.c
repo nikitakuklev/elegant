@@ -301,23 +301,19 @@ void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct)
     correct->CMy->C = correct->CMy->T = NULL;
 
     if (correct->mode==TRAJECTORY_CORRECTION) {
-      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 0);
-      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 0);
+      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
       if (coupled) {
-        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, 0, 0);
-        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, 0, 0);
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
       }
     }
     else if (correct->mode==ORBIT_CORRECTION) {
-      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 0,
-                              fixed_length, 0);
-      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 0,
-                              fixed_length, 0);
+      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, COMPUTE_RESPONSE_SILENT|(fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
+      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, COMPUTE_RESPONSE_SILENT|(fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
       if (coupled) {
-        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
-                                0);
-        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
-                                0);
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT|(fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT|(fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
       }
     }
     else
@@ -362,31 +358,30 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
 
     if (correct->mode==TRAJECTORY_CORRECTION) {
       printf("Computing trajectory correction matrices for output.\n");
-      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                               !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])));
-
-      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                               !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
+      fflush(stdout);
+      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 
+                               (!(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0)|COMPUTE_RESPONSE_SILENT);
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 
+                               (!(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0)|COMPUTE_RESPONSE_SILENT);
 
       if (coupled) {
-        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, 0, 0);
-        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, 0, 0);
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
       }
     }
     else if (correct->mode==ORBIT_CORRECTION) {
       printf("Computing orbit correction matrices for output, with %s length.\n",
              fixed_length?"fixed":"variable");
-      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                              !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
-                              fixed_length, 1);
-      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                              !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
-                              fixed_length, 1);
+      fflush(stdout);
+      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 
+                              (!(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])) ? COMPUTE_RESPONSE_INVERT : 0)|COMPUTE_RESPONSE_SILENT|
+                              (fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
+      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 
+                              (!(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])) ? COMPUTE_RESPONSE_INVERT : 0)|COMPUTE_RESPONSE_SILENT|
+                              (fixed_length?COMPUTE_RESPONSE_FIXEDLENGTH:0));
       if (coupled) {
-        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
-                                 1);
-        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
-                                 1);
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, COMPUTE_RESPONSE_SILENT);
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, COMPUTE_RESPONSE_SILENT);
       }
     }
     else
