@@ -548,7 +548,7 @@ long do_tracking(
           }   
         }
 #endif   
-      if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
+      if (sums_vs_z && *sums_vs_z && (!run->final_pass || i_pass==n_passes-1) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bombElegant("attempt to accumulate beam sums with negative index!", NULL);
         accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
