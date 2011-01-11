@@ -101,7 +101,7 @@ ifdef WIN32
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		rpnlib mdbmth namelist mdblib \
-		meschach z fdlibm gsl
+		meschach z fdlibm gsl pgapack
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
