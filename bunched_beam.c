@@ -827,6 +827,8 @@ void setup_output(
     LINE_LIST *beamline
     )
 {
+    long n_elements;
+    n_elements = beamline->n_elems;
 #if USE_MPI
   if (runInSinglePartMode) {
     if (run->acceptance || run->centroid || run->sigma || run->final || run->output || run->losses ) {
@@ -837,8 +839,6 @@ void setup_output(
     return;
   }
 #endif
-    long n_elements;
-    n_elements = beamline->n_elems;
 
     if (run->acceptance) {
         /* prepare dump of accepted particles */
