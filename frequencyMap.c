@@ -120,7 +120,7 @@ long doFrequencyMap(
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip, turns;
   static double **one_part;
-  double p, oldPercentage;
+  double p, oldPercentage=0;
   long n_part;
 
 #if SDDS_MPI_IO
@@ -257,7 +257,7 @@ long doFrequencyMap(
 		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
 		if ((newPercentage-oldPercentage)>=1) {
 		  fprintf(stdout, "About %.1f%% done\n", newPercentage);
-		  newPercentage = oldPercentage;
+		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}
 	      }
