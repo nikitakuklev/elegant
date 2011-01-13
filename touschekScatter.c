@@ -891,22 +891,22 @@ void selectPartReal(TSCATTER *tsptr, double *p1, double *p2,
   x20[5] = ran1[8];
 
   if (tsSpec->distIn==1) {
-    *dens1 = interpolate_bookn(tsptr->fullhis, x10, x1, 0, 1, 1);
-    *dens2 = interpolate_bookn(tsptr->fullhis, x20, x2, 0, 1, 1);
+    *dens1 = interpolate_bookn(tsptr->fullhis, x10, x1, 0, 1, 1, 1, 0);
+    *dens2 = interpolate_bookn(tsptr->fullhis, x20, x2, 0, 1, 1, 1, 0);
   }
   if (tsSpec->distIn==2) {
-    *dens1  = interpolate_bookn(tsptr->thist, x10, x1, 0, 1, 1);
-    *dens2  = interpolate_bookn(tsptr->thist, x20, x2, 0, 1, 1);
-    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1, 1);
-    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1, 1);
+    *dens1  = interpolate_bookn(tsptr->thist, x10, x1, 0, 1, 1, 1, 0);
+    *dens2  = interpolate_bookn(tsptr->thist, x20, x2, 0, 1, 1, 1, 0);
+    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1, 1, 1, 0);
+    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1, 1, 1, 0);
   }
   if (tsSpec->distIn==3) {
-    *dens1  = interpolate_bookn(tsptr->xhis, x10, x1, 0, 1, 1);
-    *dens2  = interpolate_bookn(tsptr->xhis, x20, x2, 0, 1, 1);
-    *dens1 *= interpolate_bookn(tsptr->yhis, x10, x1, 2, 1, 1);
-    *dens2 *= interpolate_bookn(tsptr->yhis, x20, x2, 2, 1, 1);
-    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1, 1);
-    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1, 1);
+    *dens1  = interpolate_bookn(tsptr->xhis, x10, x1, 0, 1, 1, 1, 0);
+    *dens2  = interpolate_bookn(tsptr->xhis, x20, x2, 0, 1, 1, 1, 0);
+    *dens1 *= interpolate_bookn(tsptr->yhis, x10, x1, 2, 1, 1, 1, 0);
+    *dens2 *= interpolate_bookn(tsptr->yhis, x20, x2, 2, 1, 1, 1, 0);
+    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1, 1, 1, 0);
+    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1, 1, 1, 0);
   }
 
   for (i=0; i<3; i++) {
