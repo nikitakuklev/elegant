@@ -2213,13 +2213,19 @@ FTABLE ftable_example;
 
 /* field table physical parameters */
 PARAMETER ftable_param[N_FTABLE_PARAMS] = {
-    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.l0), NULL, 0.0, 0, "The designed length of magnet, always measured along straight line."},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.angle), NULL, 0.0, 0, "The designed bending angle"},
+    {"L1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.l1), NULL, 0.0, 0, "The left fringe field length."},
+    {"L2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.l2), NULL, 0.0, 0, "The right fringe field length. L1+L+L2=Total z span in the input field table."},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.e1), NULL, 0.0, 0, "The designed entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.e2), NULL, 0.0, 0, "The designed exit edge angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file which contains field data."},
+    {"INPUT_FILE", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file which contains field data."},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
-    {"VERBOSE", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "used for debugging code."},
+    {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "used for debugging code."},
     };
 
 /* emittance scaling element physical parameters */
@@ -2357,7 +2363,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_MKICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(MKICKER),    mkicker_param   },
     {  N_EMITTANCEELEMENT_PARAMS,  MPALGORITHM,    sizeof(EMITTANCEELEMENT),    emittanceElement_param   },
     { N_MHISTOGRAM_PARAMS, UNIPROCESSOR, sizeof(MHISTOGRAM), mhistogram_param},
-    { N_FTABLE_PARAMS, UNIPROCESSOR, sizeof(FTABLE), ftable_param},
+    { N_FTABLE_PARAMS, MAT_LEN_NCAT|IS_MAGNET|UNIPROCESSOR, sizeof(FTABLE), ftable_param},
 } ;
 
 void compute_offsets()

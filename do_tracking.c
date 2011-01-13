@@ -15,6 +15,7 @@
 #include "mdb.h"
 #include "mdbsun.h"
 #include "track.h"
+#include "gsl_poly.h"
 /* #include "smath.h" */
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd);
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
@@ -46,10 +47,12 @@ void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, 
                 double Po, double length, double charge, double z);
 void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence);
 void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
-void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
+
 void initializeFTable(FTABLE *ftable);
-void interpolateTField(double *B, double *xyz, FTABLE *ftable);
+void interpolateFTable(double *B, double *xyz, FTABLE *ftable);
 void rotate_coordinate(double **A, double *x, long inverse);
+void ftable_frame_converter(double **coord, long np, FTABLE *ftable, long entrance_exit);
+double choose_theta(double rho, double x0, double x1, double x2);
 
 #if USE_MPI
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
@@ -4135,33 +4138,36 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   long ip, ik, nKicks, debug = ftable->verbose;
   double *coord, p0, factor;
   double xyz[3], p[3], B[3], BA, pA, **A, pz0;
-  double rho, theta, temp;
-  double s, ds, eomc;
+  double rho, theta0, theta1, theta2, theta, tm_a, tm_b, tm_c;
+  double step, eomc, s_location;
   char *rootname;
 
   static SDDS_TABLE test_output;
-  static long initial = 0;
+  static long first_time = 1;
   
-  if (!initial && debug) {
+  if (first_time && debug) {
     rootname = compose_filename("%s.phase", run->rootname);
     SDDS_PhaseSpaceSetup(&test_output, rootname, SDDS_BINARY, 1, "output phase space", run->runfile,
                          run->lattice, "setup_output");
-    initial =1 ;
+    first_time =0 ;
   }
   
-  if (!ftable->initialized)
-    initializeFTable(ftable);
-
   if ((nKicks=ftable->nKicks)<1)
     bombElegant("N_KICKS must be >=1 for FTABLE", NULL);
-  ds = ftable->length/nKicks;
+  if (!ftable->initialized)
+    initializeFTable(ftable);
+  step = ftable->length/nKicks;
 
+  /* convert coordinate frame from local to ftable element frame. Before misalignment.*/
+  if (ftable->e1 || ftable->l1)
+    ftable_frame_converter(particle, np, ftable, 0);
+  
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, ftable->dx, ftable->dy, ftable->dz);
   if (ftable->tilt)
     rotateBeamCoordinates(particle, np, ftable->tilt);
 
-  s =ds/2.;
+  s_location =step/2.;
   eomc = particleCharge/particleMass/c_mks;
   A = (double**)czarray_2d(sizeof(double), 3, 3);
   for (ik=0; ik<nKicks; ik++) {
@@ -4179,22 +4185,19 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         fprintf(stdout, "ik=%ld, x=%g, y=%g, z=%g, px=%g, py=%g, pz=%g \n", ik, coord[0], coord[2], coord[4], p[0], p[1], p[2]);
 
       /* 2. get field at the middle point */
-      xyz[0] = coord[0] + coord[1]*ds/2.0;
-      xyz[1] = coord[2] + coord[3]*ds/2.0;
-      xyz[2] = s; 
-      interpolateTField(B, xyz, ftable);
-      if (debug && ip) {
-        if (B[1]-sin(xyz[2]/.125*PIx2)>5e-4)
-          fprintf(stdout, "ik=%ld, x=%g,y=%g,z=%g, Bx=%g, By=%g, Bz=%g, delta=%g \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], B[1]-sin(xyz[2]/.125*PIx2));
-      }
+      xyz[0] = coord[0] + coord[1]*step/2.0;
+      xyz[1] = coord[2] + coord[3]*step/2.0;
+      xyz[2] = s_location; 
+      interpolateFTable(B, xyz, ftable);
       
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
-      if (BA) {
-        /* 3. calculate the rotation matrix */
-        A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
-        A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
-        A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
-        pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
+      /* 3. calculate the rotation matrix */
+      A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
+      A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
+      A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
+      pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
+      /* When field not equal to zero or not parallel to the particles motion */
+      if (BA && pA) {
         A[0][0] /= pA;
         A[0][1] /= pA;
         A[0][2] /= pA;
@@ -4208,20 +4211,28 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
         pz0 = p[2];
         rotate_coordinate(A, p, 0);
+        if (p[2] < 0)
+          bombElegant("Table function doesn't support particle going backward", NULL);
         rotate_coordinate(A, B, 0);
 
         /* 5. apply kick */
         rho = p[2]/(eomc*B[1]);
-        if (rho <= 0)
-          bombElegant("Table function doesn't support particle going backward", NULL);
-        temp = A[1][2]*p[1]/p[2]+A[2][2];
-        if (A[0][2]) {
-          theta =  (temp-sqrt(sqr(temp)-2.*A[0][2]*ds/rho))/A[0][2];
+        theta0=theta1=theta2=0.;
+        if (A[2][2]) {
+          tm_a =  3.0*A[0][2]/A[2][2];
+          tm_b = -6.0*A[1][2]*p[1]/p[2]/A[2][2]-6.0;
+          tm_c =  6.0*step/rho/A[2][2];
+          gsl_poly_solve_cubic (tm_a, tm_b, tm_c, &theta0, &theta1, &theta2);
+        } else if (A[0][2]) {
+          tm_a = A[1][2]*p[1]/p[2]+A[2][2];
+          theta0 = (tm_a-sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
+          theta1 = (tm_a+sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
         } else {
-          if (!temp)  
-            bombElegant("This should never happen. Send message to the developer.", NULL);
-          theta = fabs(ds/rho/temp);
+          tm_a = A[1][2]*p[1]/p[2]+A[2][2];          
+          theta0 = step/rho/tm_a;
         }
+        theta=choose_theta(rho, theta0, theta1, theta2);
+
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
         xyz[0] = rho*(cos(theta)-1);
@@ -4237,19 +4248,25 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         coord[1] = p[0]/p[2];
         coord[3] = p[1]/p[2];
       } else {
-        coord[0] += coord[1]*ds;
-        coord[2] += coord[3]*ds;
-        coord[4] += ds*factor;         
+        coord[0] += coord[1]*step;
+        coord[2] += coord[3]*step;
+        coord[4] += step*factor;         
       }
     }
-    s += ds;
+    s_location += step;
   }
+  if (debug) 
+    dump_phase_space(&test_output, particle, np, nKicks, Po, 0);
   free_czarray_2d((void**)A,3,3);
 
   if (ftable->tilt)
     rotateBeamCoordinates(particle, np, -ftable->tilt);
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
+
+  /* convert coordinate frame from ftable element frame to local frame. After misalignment.*/
+  if (ftable->e2 || ftable->l2)
+    ftable_frame_converter(particle, np, ftable, 1);
 
   return;  
 }
@@ -4262,8 +4279,12 @@ void initializeFTable(FTABLE *ftable)
   ftable->By = readbookn(ftable->inputFile, 2);
   ftable->Bz = readbookn(ftable->inputFile, 3);
 
-  i = ftable->Bz->nD-1;
-  ftable->length = ftable->Bz->xmax[i] - ftable->Bz->xmin[i];
+  if ((ftable->Bx->nD !=3)||(ftable->By->nD !=3)||(ftable->Bz->nD !=3))
+    bombElegant("ND must be 3 for field table %s.", ftable->inputFile);
+  ftable->length = ftable->Bz->xmax[2] - ftable->Bz->xmin[2];
+  if ((ftable->l0 + ftable->l1 + ftable->l2)!=ftable->length)
+    bombElegant("L+L1+L2 != field length in file %s.", ftable->inputFile);
+
   for (i=0; i<ftable->Bz->nD; i++) {
     ftable->Bx->xmin[i] -= ftable->Bx->dx[i]/2;
     ftable->By->xmin[i] -= ftable->By->dx[i]/2;
@@ -4276,13 +4297,80 @@ void initializeFTable(FTABLE *ftable)
   return;
 }
 
-void interpolateTField(double *B, double *xyz, FTABLE *ftable) 
+/* 0: entrance; 1: exit */
+void ftable_frame_converter(double **particle, long np, FTABLE *ftable, long entrance_exit)
+{
+  double *coord, x0, xp0, y0, yp0;
+  double s, c, temp, dx, length;
+  long ip, entrance=0, exit=1;
+  
+  if (entrance_exit==entrance) {
+    if (!ftable->e1) {
+      exactDrift(particle, np, -ftable->l1);
+      return;
+    }
+    
+    /* rotate to ftable element frame */
+    s = sin(ftable->e1);
+    c = cos(ftable->e1);
+    for (ip=0; ip<np; ip++) {
+      coord = particle[ip];
+      x0  = coord[0];
+      xp0 = coord[1];
+      y0  = coord[2];
+      yp0 = coord[3];
+      length = ftable->l1-s*x0;
+      temp = c-s*xp0;
+      if (temp==0) 
+        bombElegant("ftable_frame_converter: Particle will never get into Element.", NULL);
+
+      coord[1] = (c*xp0+s)/temp;
+      coord[3] = yp0/temp;
+      coord[4] -= length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      coord[0] = c*x0-coord[1]*length;
+      coord[2] = y0-coord[3]*length;
+    }
+  }
+  
+  if (entrance_exit==exit) {
+    if (!ftable->e2) {
+      exactDrift(particle, np, -ftable->l2);
+      return;
+    }
+
+    /* rotate to normal local frame */
+    s = sin(ftable->e2);
+    c = cos(ftable->e2);
+    dx = ftable->l2*s;
+    for (ip=0; ip<np; ip++) {
+      coord = particle[ip];
+      x0  = coord[0];
+      xp0 = coord[1];
+      y0  = coord[2];
+      yp0 = coord[3];
+      length = c*ftable->l2-s*x0;
+      temp = c-s*xp0;
+      if (temp==0) 
+        bombElegant("ftable_frame_converter: Particle will never get into Element.", NULL);
+
+      coord[1] = (c*xp0+s)/temp;
+      coord[3] = yp0/temp;
+      coord[4] -= length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      coord[0] = c*x0+dx-coord[1]*length;
+      coord[2] = y0-coord[3]*length;
+    }
+  }
+  
+  return;
+}
+
+void interpolateFTable(double *B, double *xyz, FTABLE *ftable) 
 {
   double dummy[3];
 
-  B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0);
-  B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0);
-  B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0);
+  B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
+  B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
+  B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
   
   return;
 }
@@ -4306,3 +4394,24 @@ void rotate_coordinate(double **A, double *x, long inverse) {
 
   return;
 }
+
+/* choose suitable value from cubic solver */
+double choose_theta(double rho, double x0, double x1, double x2)
+{
+  double temp;
+
+  if (rho<0) {
+    temp = -DBL_MAX;
+    if (x0<0 && x0>temp) temp = x0;
+    if (x1<0 && x1>temp) temp = x1;
+    if (x2<0 && x2>temp) temp = x2;
+  }
+  if (rho>0) {
+    temp = DBL_MAX;
+    if (x0>0 && x0<temp) temp = x0;
+    if (x1>0 && x1<temp) temp = x1;
+    if (x2>0 && x2<temp) temp = x2;
+  }
+  return temp;
+}
+

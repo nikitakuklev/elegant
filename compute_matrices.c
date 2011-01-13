@@ -600,7 +600,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
-    UKICKMAP *ukmap; SCRIPT *script;
+    UKICKMAP *ukmap; SCRIPT *script; FTABLE *ftable;
     double ks, Pref_output, pSave;
     VARY rcContext;
     long fiducialize;
@@ -701,6 +701,13 @@ VMATRIX *compute_matrix(
           run->p_central = pSave;
         }
 	break;
+      case T_FTABLE:
+        ftable = ((FTABLE*)elem->p_elem);
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        run->p_central = pSave;
+        break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
         bend->edgeFlags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);

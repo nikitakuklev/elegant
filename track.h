@@ -909,7 +909,7 @@ extern char *entity_text[N_TYPES];
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
-#define N_FTABLE_PARAMS 7
+#define N_FTABLE_PARAMS 13
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2581,6 +2581,7 @@ typedef struct {
 extern PARAMETER ftable_param[N_FTABLE_PARAMS];
 
 typedef struct {
+  double l0, angle, l1, l2, e1, e2;
   double tilt, dx, dy, dz;
   char *inputFile;
   long nKicks, verbose;
@@ -2844,6 +2845,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BE
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
+void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
 void track_through_mkicker(double **part, long np, MKICKER *kicker, double p_central, long pass, long default_order);
 
 extern long simple_rf_cavity(double **part, long np, RFCA *rfca, double **accepted, double *P_central,

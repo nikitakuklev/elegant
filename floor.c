@@ -129,6 +129,10 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
       case T_CSRCSBEND:
         n_points ++;
         break;
+      case T_FTABLE:
+        if (((FTABLE*)elem->p_elem)->angle)
+          n_points ++;
+        break;
       default:
         break;
       }
@@ -204,7 +208,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
   long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha, is_mirror;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
-  ROTATE *rotate; ALPH *alpha;
+  ROTATE *rotate; ALPH *alpha; FTABLE *ftable;
   char label[200];
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
@@ -250,6 +254,16 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     angle = csrbend->angle;
     rho = (length=csrbend->length)/angle;
     tilt = csrbend->tilt;
+    break;
+  case T_FTABLE:
+    ftable = (FTABLE*)elem->p_elem;
+    if (ftable->angle) {
+      is_bend = 1;
+      angle = ftable->angle;
+      rho = ftable->l0/2./sin(angle/2.);      
+      length = rho * angle;
+      tilt = ftable->tilt;
+    }
     break;
   case T_MALIGN:
     malign = (MALIGN*)elem->p_elem;

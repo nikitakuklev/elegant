@@ -543,6 +543,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
     ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = dtmp1;
     break;
+  case T_FTABLE:
+    field_table_tracking(coord, n_track, (FTABLE*)eptr->p_elem, run->p_central, run);
+    break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
     printf("***        Seek professional help!\n");
