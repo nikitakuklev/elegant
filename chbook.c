@@ -254,11 +254,12 @@ ntuple *readbookn(char *inputfile, long i_page)
 }
 
 /* The x0 is normalized input [0-1]; x is actual input [xmin, xmax]. */
-double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize, long normalInput)
+double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, 
+                         long normalize, long normalInput, long zero_Edge, long verbose)
 {
   double **Coef, value, result;
   long **grid, *Bit;
-  long i, j, np, vIndex, temp;
+  long i, j, np, vIndex, temp, flag=0;
 
   np = (long)ipow(2, bName->nD); 
   Coef = (double**)czarray_2d(sizeof(double), bName->nD, 2);
@@ -270,17 +271,33 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long
       x[i+offset] = x0[i+offset]*(bName->xmax[i] - bName->xmin[i]) + bName->xmin[i];
     } else {
       if (x[i+offset]>bName->xmax[i]) {
-        fprintf(stdout, "warning: interpolate_bookn - x value is out of up boundary, set it to xmax. \n Name=%s, i=%ld, xmax=%g, x=%g\n", 
-                bName->vname[i], i, bName->xmax[i], x[i+offset]);
-        x[i+offset] = bName->xmax[i];
+        if (verbose)           
+          fprintf(stdout, "warning: interpolate_bookn - %s value is out of up boundary. xmax=%g, x=%g\n", 
+                  bName->vname[i], bName->xmax[i], x[i+offset]);
+        if (zero_Edge) {
+          flag=1;
+          if (verbose) fprintf(stdout, "set output to zero\n");
+        } else { 
+          x[i+offset] = bName->xmax[i];
+          if (verbose) fprintf(stdout, "set output to xmax\n");
+        }
       }
       if (x[i+offset]<bName->xmin[i]) {
-        fprintf(stdout, "warning: interpolate_bookn - x value is out of lower boundary, set it to xmin. \n Name=%s, i=%ld, xmin=%g, x=%g\n", 
-                bName->vname[i], i, bName->xmin[i], x[i+offset]);
-        x[i+offset] = bName->xmin[i];
+        if (verbose)           
+          fprintf(stdout, "warning: interpolate_bookn - %s value is out of lower boundary. xmin=%g, x=%g\n", 
+                  bName->vname[i], bName->xmin[i], x[i+offset]);
+        if (zero_Edge) {
+          flag=1;
+          if (verbose) fprintf(stdout, "set output to zero\n");
+        } else { 
+          x[i+offset] = bName->xmin[i];
+          if (verbose) fprintf(stdout, "set output to xmin\n");
+        }
       }
       x0[i+offset] = (x[i+offset] - bName->xmin[i])/(bName->xmax[i] - bName->xmin[i]);
     }
+    if (flag) 
+      return 0;
     
     grid[i][0] = (long)(x0[i+offset]*bName->xbins[i]-0.5);
     Coef[i][1] = (x[i+offset] - bName->xmin[i])/bName->dx[i]-grid[i][0]-0.5; 
