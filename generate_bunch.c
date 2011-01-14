@@ -398,6 +398,10 @@ long generate_bunch(
 	enforce_sigma_values(first_particle_address, total_n_particles, 4, s1, s2);
       if (emit)
 	transform_from_normalized_coordinates(first_particle_address, total_n_particles, 4, beta, alpha);
+      if (x_plane->beam_type==DYNAP_BEAM) { /* The DYNAP_BEAM returns earlier, so we need handle it specially */
+	initial_saved = 0; /* Prepare for next bunch */
+	total_n_particles = 0;
+      }
     }
 #else
     zero_centroid(particle, n_particles, 4);
