@@ -48,7 +48,6 @@ void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, 
 void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence);
 void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
 
-void initializeFTable(FTABLE *ftable);
 void interpolateFTable(double *B, double *xyz, FTABLE *ftable);
 void rotate_coordinate(double **A, double *x, long inverse);
 void ftable_frame_converter(double **coord, long np, FTABLE *ftable, long entrance_exit);
@@ -4155,7 +4154,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   if ((nKicks=ftable->nKicks)<1)
     bombElegant("N_KICKS must be >=1 for FTABLE", NULL);
   if (!ftable->initialized)
-    initializeFTable(ftable);
+    bombElegant("Initialize FTABLE: This shouldn't happen.", NULL);
   step = ftable->length/nKicks;
 
   /* convert coordinate frame from local to ftable element frame. Before misalignment.*/
@@ -4269,32 +4268,6 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
     ftable_frame_converter(particle, np, ftable, 1);
 
   return;  
-}
-
-void initializeFTable(FTABLE *ftable)
-{
-  long i;
-  
-  ftable->Bx = readbookn(ftable->inputFile, 1);
-  ftable->By = readbookn(ftable->inputFile, 2);
-  ftable->Bz = readbookn(ftable->inputFile, 3);
-
-  if ((ftable->Bx->nD !=3)||(ftable->By->nD !=3)||(ftable->Bz->nD !=3))
-    bombElegant("ND must be 3 for field table %s.", ftable->inputFile);
-  ftable->length = ftable->Bz->xmax[2] - ftable->Bz->xmin[2];
-  if ((ftable->l0 + ftable->l1 + ftable->l2)!=ftable->length)
-    bombElegant("L+L1+L2 != field length in file %s.", ftable->inputFile);
-
-  for (i=0; i<ftable->Bz->nD; i++) {
-    ftable->Bx->xmin[i] -= ftable->Bx->dx[i]/2;
-    ftable->By->xmin[i] -= ftable->By->dx[i]/2;
-    ftable->Bz->xmin[i] -= ftable->Bz->dx[i]/2;
-    ftable->Bx->xmax[i] += ftable->Bx->dx[i]/2;
-    ftable->By->xmax[i] += ftable->By->dx[i]/2;
-    ftable->Bz->xmax[i] += ftable->Bz->dx[i]/2;
-  }
-  ftable->initialized = 1;
-  return;
 }
 
 /* 0: entrance; 1: exit */

@@ -2845,6 +2845,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BE
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
+void initializeFTable(FTABLE *ftable);
 void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
 void track_through_mkicker(double **part, long np, MKICKER *kicker, double p_central, long pass, long default_order);
 

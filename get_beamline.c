@@ -85,7 +85,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   FILE *fp_mad[MAX_FILE_NESTING];
   char *s, *t=NULL, *ptr;
   char occurence_s[8], eptr_name[1024];
-
+  ntuple *nBx, *nBy, *nBz;
+  
   log_entry("get_beamline");
 
   if (!(s=malloc(sizeof(*s)*MAX_LINE_LENGTH)) ||
@@ -452,11 +453,25 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptr->Pref_input = eptr->Pref_output = p_central;
     if (eptr->occurence==0) {
       /* this is the first occurence of this element--go through and find any others */
+      if (eptr->type==T_FTABLE)  {
+        initializeFTable((FTABLE*)eptr->p_elem);
+        nBx = ((FTABLE*)eptr->p_elem)->Bx;
+        nBy = ((FTABLE*)eptr->p_elem)->By;
+        nBz = ((FTABLE*)eptr->p_elem)->Bz;
+      }        
+
       eptr->occurence = occurence = 1;
       eptr1 = eptr->succ;
       while (eptr1) {
-        if (strcmp(eptr->name, eptr1->name)==0)
+        if (strcmp(eptr->name, eptr1->name)==0) {
+          if (eptr1->type==T_FTABLE)  {
+            ((FTABLE*)eptr1->p_elem)->initialized=1;
+            ((FTABLE*)eptr1->p_elem)->Bx = nBx;
+            ((FTABLE*)eptr1->p_elem)->By = nBy;
+            ((FTABLE*)eptr1->p_elem)->Bz = nBz;
+          }
           eptr1->occurence = ++occurence;
+        }
         eptr1 = eptr1->succ;
       }
     }
@@ -1259,5 +1274,30 @@ ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
   eptr->succ = elem0->succ;
   return (eptr);
 }
+/* This is called at beginning to avoid multiple calls for same element at different locations */
+void initializeFTable(FTABLE *ftable)
+{
+  long i;
+  
+  ftable->Bx = readbookn(ftable->inputFile, 1);
+  ftable->By = readbookn(ftable->inputFile, 2);
+  ftable->Bz = readbookn(ftable->inputFile, 3);
 
+  if ((ftable->Bx->nD !=3)||(ftable->By->nD !=3)||(ftable->Bz->nD !=3))
+    bombElegant("ND must be 3 for field table %s.", ftable->inputFile);
+  ftable->length = ftable->Bz->xmax[2] - ftable->Bz->xmin[2];
+  if ((ftable->l0 + ftable->l1 + ftable->l2)!=ftable->length)
+    bombElegant("L+L1+L2 != field length in file %s.", ftable->inputFile);
+
+  for (i=0; i<ftable->Bz->nD; i++) {
+    ftable->Bx->xmin[i] -= ftable->Bx->dx[i]/2;
+    ftable->By->xmin[i] -= ftable->By->dx[i]/2;
+    ftable->Bz->xmin[i] -= ftable->Bz->dx[i]/2;
+    ftable->Bx->xmax[i] += ftable->Bx->dx[i]/2;
+    ftable->By->xmax[i] += ftable->By->dx[i]/2;
+    ftable->Bz->xmax[i] += ftable->Bz->dx[i]/2;
+  }
+  ftable->initialized = 1;
+  return;
+}
 
