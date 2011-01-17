@@ -2225,7 +2225,7 @@ PARAMETER ftable_param[N_FTABLE_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dz), NULL, 0.0, 0, "misalignment"},
     {"INPUT_FILE", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file which contains field data."},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
-    {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "Used for debugging code."},
+    {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "Used for debugging code. Not applicable to Pelegant"},
     };
 
 /* emittance scaling element physical parameters */
