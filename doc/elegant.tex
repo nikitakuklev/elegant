@@ -620,6 +620,7 @@ Command name & Type & Description \\\hline
 \hyperref{{\tt optimization\_setup}}{{\tt optimization\_setup}}{}{subsec:optimizationsetup} & setup & Perform initial optimization setup. \\ \hline
 \hyperref{{\tt optimization\_term}}{{\tt optimization\_term}}{}{subsec:optimizationterm} & setup & Define a term of penalty function. \\ \hline
 \hyperref{{\tt optimization\_variable}}{{\tt optimization\_variable}}{}{subsec:optimizationvariable} & setup & Define an optimization variable. \\ \hline
+\hyperref{{\tt parallel\_optimization\_setup}}{{\tt parallel\_optimization\_setup}}{}{subsec:paralleloptimizationsetup} & setup & Perform initial parallel optimization setup. \\ \hline
 \hyperref{{\tt print\_dictionary}}{{\tt print\_dictionary}}{}{subsec:printdictionary} & action & Print the element dictionary. \\ \hline
 \hyperref{{\tt ramp\_elements}}{{\tt ramp\_elements}}{}{subsec:rampelements} & setup & Set up turn-by-turn ramping of elements. \\ \hline
 \hyperref{{\tt rpn\_expression}}{{\tt rpn\_expression}}{}{subsec:rpnexpression} & action & Execute an expression in the rpn interpreter. \\ \hline
@@ -2849,6 +2850,74 @@ a significant difference in the optimization speed.
 \item \verb|restart_random_numbers| --- If nonzero, the random number generators used by {\tt elegant} are
  reset for each evaluation of the optimization function.  This is valuable if one is optimizing tracking
  results that involve random processes (e.g., ISR or scattering).
+
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|parallel_optimization_setup|}\end{center}
+\end{latexonly}
+\subsection{parallel\_optimization\_setup \label{subsec:paralleloptimizationsetup}}
+
+\begin{itemize}
+\item type: setup command (for {\tt Pelegant} only).
+\item function: define overall parallel optimization parameters and methods.
+\item N.B.: In addition to the optimization parameters used in the optimization\_setup command, 	    
+      several new parameters are added for parallel optimization. User should replace 
+      optimization\_setup with parallel\_optimization\_setup and append necessary parameters. 
+\end{itemize}
+
+\begin{verbatim}
+&parallel_optimization_setup
+    STRING method = "simplex";
+    double random_factor = 1
+    long n_iterations = 10000;
+    long max_no_change = 10000;
+    long population_size = 100;
+    STRING population_log = NULL;
+    long print_all_individuals = 0;
+    long output_sparsing_factor = 1;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|method| --- May be one of "genetic", "hybridsimplex" or "swarm". If the default "simplex" method is chosen, all the processors will do the same optimization as the serial version and then track in parallel. All algorithms can be used for global optimization. "swarm" is recommended when there is sufficient computation resource available, so it can reach the optimization target fast. "hybridsimplex" is recommended when the initial point is close to the optimal result. "genetic" can be chosen for a global optimizer with a random start point (0 should be avoided for any initial coordinate). 
+
+\item \verb|random_factor| --- The factor to scale the step size for both parallel swarm and genetic methods.
+
+\item \verb|n_restarts| --- For the parallel "hybridsimplex" method, this number should be set larger than 1, so the the best result across all processors can be used for the next restart. The parameter is not used for the swarm method.
+
+\item \verb|n_iterations| --- The maximal number of generations/iterations for the parallel genetic and particle swarm optimization. 
+
+\item \verb|population_size| --- The number of individuals to be generated for each generation/iteration for the swarm and genetic method. For the hybridsimplex method, the number of individuals is equal to the number of processors used.
+
+\item \verb|max_no_change| --- The maximal number of generations in which no change in the best evaluation is allowed before the genetic method stops (genetic method only).
+
+\item \verb|n_evaluations| --- This is not used as a stop condition in the genetic optimization. The n\_iterations or max\_no\_change can be used instead. For the hybridsimplex method, this is the number of allowed evaluations per restart. 
+
+\item \verb|population_log| --- An SDDS file to which the best individual in a population can be written after each iteration as optimization proceeds. Recommended value: ``\%s.pop''. For the parallel genetic method, user can choose to print out all the individuals (See print\_all\_individuals).
+
+\item \verb|print_all_individuals| --- If nonzero, all the strings in a population will be recorded in the population\_log file. This is supported for the genetic method only.
+
+\item \verb|output_sparsing_factor| --- For genetic optimization, this is used to set the frequency of printing strings in the log file with the number of generations as the interval.
+
+\end{itemize}
+
+Note:
+\begin{itemize}
+\item Genetic optimization in {\tt Pelegant} terminates when at least one of the stopping rules specified has been met. 
+The two stopping rules are: 
+
+\begin{itemize}
+\item generation limit (n\_iterations) exceeded
+\item no change in the best solution found in a given number of generations. 
+The default is to stop when the generation limit (10000 is the default value) is reached. While the max\_no\_change is more favorite to use, as it will stop until the result can not be improved after a certain number of iterations (10000 is the default value). The n\_iterations can be set 
+to a very large number to use this rule as the stop condition alone.
+\end{itemize}
+
+\item step size control -- The mutation step size in the genetic optimization is selected from a Gaussian distribution with mean 0 and standard deviation step\_size, where step\_size is provided by user. All the dimensions will use the same standard deviation for an iteration. The step\_size of the first dimension provided by user will be used as the original step size for all the dimensions. The step size will be reduced by the golden ratio (1.618) if the best value is unchanged after every 3000 iterations. After every 3000 iterations since the last time the step size is reduced, the step size will be increased by the golden ratio.
+
+\item As the genetic optimization implementation in {\tt Pelegant} internally updates individuals with a relative change of the current value for a variable, 0 should be avoided to use as an initial value.
 
 \end{itemize}
 
