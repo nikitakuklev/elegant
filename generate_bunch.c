@@ -134,7 +134,7 @@ long generate_bunch(
       }
 #if SDDS_MPI_IO
       /* prepare for the next bunch */
-      particleID += (total_particles - n_particles - my_offset + 1);
+      particleID += (total_particles - n_particles - my_offset);
 #endif
       first_call = 0;
     }
