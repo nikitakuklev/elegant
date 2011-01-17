@@ -86,6 +86,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   char *s, *t=NULL, *ptr;
   char occurence_s[8], eptr_name[1024];
   ntuple *nBx, *nBy, *nBz;
+  double ftable_length;
   
   log_entry("get_beamline");
 
@@ -458,6 +459,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         nBx = ((FTABLE*)eptr->p_elem)->Bx;
         nBy = ((FTABLE*)eptr->p_elem)->By;
         nBz = ((FTABLE*)eptr->p_elem)->Bz;
+        ftable_length = ((FTABLE*)eptr->p_elem)->length;
       }        
 
       eptr->occurence = occurence = 1;
@@ -466,6 +468,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         if (strcmp(eptr->name, eptr1->name)==0) {
           if (eptr1->type==T_FTABLE)  {
             ((FTABLE*)eptr1->p_elem)->initialized=1;
+            ((FTABLE*)eptr1->p_elem)->length=ftable_length;
             ((FTABLE*)eptr1->p_elem)->Bx = nBx;
             ((FTABLE*)eptr1->p_elem)->By = nBy;
             ((FTABLE*)eptr1->p_elem)->Bz = nBz;
