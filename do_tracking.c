@@ -4158,6 +4158,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   step = ftable->length/nKicks;
 
   /* convert coordinate frame from local to ftable element frame. Before misalignment.*/
+  if (debug) 
+    dump_phase_space(&test_output, particle, np, -1, Po, 0);
   if (ftable->e1 || ftable->l1)
     ftable_frame_converter(particle, np, ftable, 0);
   
@@ -4167,7 +4169,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
     rotateBeamCoordinates(particle, np, ftable->tilt);
 
   s_location =step/2.;
-  eomc = particleCharge/particleMass/c_mks;
+  eomc = -particleCharge/particleMass/c_mks;
   A = (double**)czarray_2d(sizeof(double), 3, 3);
   for (ik=0; ik<nKicks; ik++) {
     if (debug) 
@@ -4266,6 +4268,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   /* convert coordinate frame from ftable element frame to local frame. After misalignment.*/
   if (ftable->e2 || ftable->l2)
     ftable_frame_converter(particle, np, ftable, 1);
+  if (debug) 
+    dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0);
 
   return;  
 }
