@@ -22,10 +22,11 @@ form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the followi
 \item If Twiss parameter calculations are being performed (via {\tt twiss\_output} with {\tt output\_at\_each\_step=1}), then the quantities
   {\tt alphax}, {\tt betax}, {\tt nux}, {\tt etax}, {\tt etapx}, and {\tt etaxp}, along with similarly-named
   quantities for the vertical plane, will be available, giving twiss parameter values at the marker location.
-  Note that {\tt etapx} and {\tt etaxp} are the same, being alternate names for $\eta_x^\prime$.
+  Note that {\tt etapx} and {\tt etaxp} are the same, being alternate names for $\eta_x^\prime$.  If radiation integrals are requested,
+  the values of the radiation integrals are available in the quantities {\tt I1}, {\tt I2}, etc.
 \item If coupled Twiss parameter calculations are being performed (via {\tt coupled\_twiss\_output} with {\tt output\_at\_each\_step=1}),
   then the quantities  \verb|betax1|, \verb|betax2|, \verb|betay1|, \verb|betay2|, \verb|cetax|, \verb|cetay|, and \verb|tilt| will be available.
-  (These are the two beta functions for x and y, the coupled dispersion values for x and y, and the beam tilt).
+  (These are the two beta functions for x and y, the coupled dispersion values for x and y, and the beam tilt). 
 \item If moments calculations are being performed (via {\tt moments\_output} with  {\tt output\_at\_each\_step=1}), then the quantities 
  {\tt s{\em i}{\em j}m}, $1 \leq i\leq j\leq 6$, giving the 21 unique elements of the sigma matrix.  The quantities {\tt c{\em i}m}, $1\leq i \leq 6$,
  are also created, giving the 6 centroids from the moments computation.  The

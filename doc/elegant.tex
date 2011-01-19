@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 23.X\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 23.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,9 +32,9 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 23.X}
+\section{Highlights of What's New in Version 24.0}
 
-Here is a summary of what's changed since release 23.1
+Here is a summary of what's changed since release 23.1:
 
 \subsection{Bug Fixes for Elements}
 
@@ -42,20 +42,48 @@ Here is a summary of what's changed since release 23.1
 \item The third-order matrix for quadrupoles (used by the {\tt QUAD} element for tracking or by
   {\tt KQUAD} for analysis) was improved to include all the terms.  The previous version had only
   the most obvious terms.
+\item Parallel elegant: The fiducial time wasn't computed correctly for the {\tt MBUMPER} element, but is now fixed.
+\item Fixed a bug in {\tt CSRCSBEND} elements that resulted in incorrect edge angles when reflection was used.  This was reported
+ by R. Hajima (JAEA).
+\item Fixed the fact that the {\tt TRFMODE} element ignored the {\tt RECORD} parameter (which was supposed to provide output
+  of the mode voltages).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item In some cases, the {\tt failed} semaphore file would not be created when a run failed.  This
-  has been rectified.
+\item Optimization now allows access to the response matrix elements for a transport line.  This deficiency was pointed
+  out by C. Tennant (TJNAF).
+\item In some cases, the {\tt failed} semaphore file would not be created when a run failed.  This has been rectified.
+\item Fixed some problems with output from orbit correction.  In particular, there was no output of the orbit before
+  correction.  It is uncertain when this bug was introduced.
+\item The \verb|final_pass| parameter of the \verb|run_setup| command is more efficient, in that only the required
+  moments computations are performed.  This has a significant impact run time.
+\item The \verb|bunched_beam| command was generating incorrect results when \verb|momentum_chirp| was non-zero and
+  the dispersion parameters were non-zero.  This was fixed.
+\item The performance of the \verb|load_parameters| command was improved in that the user can now control what is
+  done in the case of duplicate settings for a given parameter.  This was done by Y. Wang (ANL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The {\tt ZTRANSVERSE} and {\tt TRWAKE} now have independent control of the 
+  exponents for the drive and witness beam coordinates.  This allows, for example,
+  simulation of quadrupole wakes, and was requested by Y.-C. Chae (ANL).
+  The {\tt XPOWER} amd {\tt YPOWER} parameters were removed, which may break old
+  input files.
 \item Radiation from steering correctors ({\tt HKICK}, {\tt VKICK},
   and {\tt HVKICK}) are now included in computation of beam moments
   ({\tt moments\_output} command) and in element-by-element tracking
   (if requested).  However, they are not yet included in radiation integral computations.
+\item The {\tt RFDF} element now has a matrix that is used for single-pass Twiss parameter computations and the like. This
+  might be useful, for example, in designing an emittance exchange system.
+\item The {\tt ECOL} and {\tt MAXAMP} elements now have a {\tt YEXPONENT} parameter. If non-zero, it overrides the {\tt EXPONENT}
+  command and allows specifying a more general aperture shape. This was suggested by L. Emery (ANL).
+\item The {\tt EMATRIX} element now has misalignment parameters.
+\item The {\tt TWISS} element now has a {\tt DISABLE} parameter.
+\item The {\tt LSRMDLTR} element now has a {\tt TILT} parameter.
+\item The {\tt RFCW} element now has {\tt ZWAKE} and {\tt TRWAKE} parameters, which allow disabling the respective wakes.
+\item The \verb|LOCK_PHASE| parameter was added to the {\tt RFCA} element, allowing locking the phase of a cavity to the beam.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -63,25 +91,53 @@ Here is a summary of what's changed since release 23.1
 \item The {\tt ramp\_elements} command was added.  It allows simplified ramping of essentially
  any numerical parameter of any element on a turn-by-turn basis.  This functionality was
  already provided by {\tt modulate\_elements}, but was more difficult to use in that form.
+\item The \verb|frequency_map| command now directly supports frequency maps that are a function of 
+  $x$, $y$, and $\delta$.  (In the past, variation of $\delta$ could be done using \verb|vary_elements|.)
+\item The \verb|touschek_scatter| command now supports multi-pass tracking.  This was implemented by A. Xiao (ANL).
+\item The $R_{6i}$ matrix elements now appear in the \verb|run_setup/final| output file, and can also be
+  optimized.
+\item The line-search mode for dynamic aperture determination now records the coordinates at which the boundary
+  particles are lost.
 \item The {\tt optimization\_variable} command has a new parameter, {\tt force\_inside}, which 
   allows forcing the initial value of the variable inside the boundaries set by the 
   {\tt lower\_limit} and {\tt upper\_limit} parameters.
-\item The \verb|frequency_map| command now directly supports frequency maps that are a function of 
-  $x$, $y$, and $\delta$.  (In the past, variation of $\delta$ could be done using \verb|vary_elements|.)
+\item The printed output from optimization now flags any variables that are close to the
+  limits of the allowed range.
+\item The logic of elegant was improved so that the correction loop cycles over orbit/trajectory, tune, and chromaticity in a more
+  sensible way.  In the past, orbit/trajectory correction was not included in the tune/chromaticity loop, which could lead to
+  convergence problems.
+\item The output of the \verb|momentum_aperture| command now includes the element name and occurrence number.  This was
+  implemented by A. Xiao (ANL).
+\item It is now possible to optimize the values of radiation integrals at {\tt MARK} elements.
 \end{itemize}
 
-\subsection{Other Changes}
+%\subsection{Other Changes}
 %\begin{itemize}
 %\end{itemize}
 
 \subsection{Changes for Parallel Version Only}
-%\begin{itemize}
-%\end{itemize}
+
+This work was performed by Y. Wang (ANL).
+\begin{itemize}
+\item A new command, \verb|parallel_optimization_setup|, was added that provides access to parallel optimization. The methods include
+  a single-objective genetic algorithm, parallel hybrid simplex optimization, and particle swarm optimization.  See the
+  manual entry below for details.  
+\item The {\tt RAMPP} element was parallelized.
+\end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
-%\begin{itemize}
-%\end{itemize}
+\begin{itemize}
+\item {\tt sddsfindresonances}: The program now processes each page separately, so multi-page FMA files can be handled.
+  Also added the ability to increase the number of multipoles.
+\item {\tt sddsbrightness}: Added ability to take error factors from a file and multiply each harmonic by the specified factor.
+  In the event that the brightness can't be computed, the corresponding rows are now filled in with 0, instead of crashing.
+\item {\tt sddsfluxcurve}: Bugs were fixed related to use of the emittanceRatio parameter.
+\item {\tt sddsurgent}: Fixed bugs in computation of spatial distribution for harmonic greater than 1.  Now correctly 
+  computes K when the harmonic number is not 1 and the photon energy is given.
+\item {\tt elegantRingAnalysis}: Added control over the number of processors used for FMA.  Added the ability to compute
+  the kick aperture (kicker scan to find aperture) using parallel elegant.
+\end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
