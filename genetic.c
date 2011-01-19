@@ -237,7 +237,7 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
     best_value = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
 
     if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "Generation", PGAGetGAIterValue(ctx), NULL) ||
+			    "Iteration", PGAGetGAIterValue(ctx), NULL) ||
 	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "OptimizationValue", best_value, NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
