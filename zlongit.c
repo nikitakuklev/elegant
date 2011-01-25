@@ -68,7 +68,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
-    long ip1, ip2, bunches, bunch, npb;
+    long ip1, ip2, bunches, bunch, npb, i_pass0;
     long bucketEnd[MAX_BUCKETS];
     static long not_first_call = -1;
 #if USE_MPI
@@ -86,7 +86,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
   MPE_Describe_state(event1a, event1b, "SavitzyGolaySmooth", "red");
   MPE_Describe_state(event2a, event2b, "fft_inverse", "yellow");
 #endif
- 
+
+    i_pass0 = i_pass;
     if ((i_pass -= zlongit->startOnPass)<0)
       return;
 
@@ -311,7 +312,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
         factor = zlongit->macroParticleCharge*particleRelSign/dt;
-        if (zlongit->wake_interval<=0 || (i_pass%zlongit->wake_interval)==0) {
+        if ((zlongit->wake_interval<=0 || ((i_pass0-zlongit->wake_start)%zlongit->wake_interval)==0) &&
+            i_pass0>=zlongit->wake_start && i_pass0<=zlongit->wake_end) {
           if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
             SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -324,7 +326,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
             }
           }
           if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                  "Pass", i_pass, "q", zlongit->macroParticleCharge*particleRelSign*np, NULL)) {
+                                  "Pass", i_pass0, "q", zlongit->macroParticleCharge*particleRelSign*np, NULL)) {
             SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }

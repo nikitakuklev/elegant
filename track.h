@@ -863,10 +863,10 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 23
 #define N_TRFMODE_PARAMS 20
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 24
+#define N_ZLONGIT_PARAMS 26
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
-#define N_ZTRANSVERSE_PARAMS 33
+#define N_ZTRANSVERSE_PARAMS 35
 #define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
@@ -2205,7 +2205,8 @@ typedef struct {
     long n_bins;               /* number of charge bins--must be 2^n */
     long max_n_bins;
     char *wakes;               /* name of file to save wake potentials in */
-    long wake_interval;        /* interval (in turns) between outupt of wakes */
+    long wake_interval;        /* interval (in turns) between output of wakes */
+    long wake_start, wake_end; /* pass on which to start, end output of wakes */
     long area_weight;          /* flag to turn on area-weighting */
     long interpolate;          /* flag to turn on interpolation */
     long smoothing;            /* flag to turn on smoothing */
@@ -2245,6 +2246,7 @@ typedef struct {
     double factor, xfactor, yfactor;  /* multiply impedance by these factors */
     char *wakes;               /* name of file to save wake potentials to */
     long wake_interval;        /* interval (in turns) between output of wakes */
+    long wake_start, wake_end; /* pass on which to start, end output of wakes */
     long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */

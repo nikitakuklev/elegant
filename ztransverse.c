@@ -61,7 +61,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
-  long ip, ip1, ip2, bunches, bunch, npb;
+  long ip, ip1, ip2, bunches, bunch, npb, i_pass0;
   long bucketEnd[MAX_BUCKETS];
 #if USE_MPI
   float *buffer_send, *buffer_recv;
@@ -69,9 +69,10 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 #if defined(DEBUG)
   FILE *fp;
 #endif
+  i_pass0 = i_pass;
   if ((i_pass -= ztransverse->startOnPass)<0)
     return;
-
+  
   if (i_pass>=(ztransverse->rampPasses-1))
     rampFactor = 1;
   else
@@ -281,7 +282,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
       if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
         /* wake potential output */
         factor = ztransverse->macroParticleCharge*particleRelSign/dt;
-        if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
+        if ((ztransverse->wake_interval<=0 || ((i_pass0-ztransverse->wake_start)%ztransverse->wake_interval)==0) &&
+            i_pass0>=ztransverse->wake_start && i_pass0<=ztransverse->wake_end) {
           if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
             SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -296,7 +298,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
             }
           }
           if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                  "Pass", i_pass, "q", ztransverse->macroParticleCharge*particleRelSign*np, NULL)) {
+                                  "Pass", i_pass0, "q", ztransverse->macroParticleCharge*particleRelSign*np, NULL)) {
             SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
