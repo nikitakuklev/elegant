@@ -150,7 +150,7 @@ MAKE = gmake
 endif
 
 # On Intrepid, we need build our own lapack and blas libraries
-ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
+ifeq (intrepid, $(findstring intrepid, $(HOSTNAME)))
 OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
 endif
 
@@ -202,7 +202,7 @@ gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{prin
 ifeq ($(gcc-version),$(gfortran-version))
 SYS_PROD_LIBS_Linux += gfortran
 else
-  ifneq ($(HOST_ARCH),linux-ppc-bgp-ibm)
+  ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
     SYS_PROD_LIBS_Linux += g2c
   endif
 endif
