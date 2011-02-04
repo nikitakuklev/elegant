@@ -772,6 +772,17 @@ long multipole_tracking2(
   if (tilt)
     rotateBeamCoordinates(particle, n_part, tilt);
 
+  /* Fringe treatment, if any */
+  switch (elem->type) {
+  case T_KQUAD:
+    if (kquad->fringe)
+      quadFringe(particle, n_part, kquad->k1, 1, kquad->fringe-1);
+    break;
+  default:
+    break;
+  }
+  
+
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -810,6 +821,16 @@ long multipole_tracking2(
   }
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
+
+  /* Fringe treatment, if any */
+  switch (elem->type) {
+  case T_KQUAD:
+    if (kquad->fringe)
+      quadFringe(particle, n_part, kquad->k1, 0, kquad->fringe-1);
+    break;
+  default:
+    break;
+  }
   
   if (tilt)
     rotateBeamCoordinates(particle, n_part, -tilt);

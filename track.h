@@ -847,7 +847,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 13
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 24
+#define N_KQUAD_PARAMS 25
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -858,7 +858,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 47
+#define N_CSBEND_PARAMS 48
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 23
 #define N_TRFMODE_PARAMS 20
@@ -1712,6 +1712,7 @@ typedef struct {
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder, isr, isr1Particle;
+    long fringe;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1939,7 +1940,7 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects, edge_order;
+    long edge1_effects, edge2_effects, edge_order, fringe;
     long integration_order;
     double edge1_kick_limit, edge2_kick_limit;
     long kick_limit_scaling;
@@ -3150,6 +3151,10 @@ extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T
     double *T511, double *T512, double *T522, double dk_dz, double l, long reverse);
 extern VMATRIX *qfringe_matrix(double K1, double l, double tilt, long direction, long order, double fse);
 extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
+
+/* prototypes for fringe.c */
+void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrder);
+void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrder);
 
 /* prototypes for tilt_matrices.c: */
 extern void tilt_matrices0(VMATRIX *M, double tilt);

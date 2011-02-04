@@ -956,6 +956,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    {"FRINGE", "", IS_LONG, 0, (long)((char *)&kquad_example.fringe), NULL, 0.0, 0, "Included fringe effects (1=linear, 2=higher order)"},
     };
 
 MAGNIFY magnify_example;
@@ -1140,6 +1141,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE1_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge1_effects), NULL, 0.0, 1, "include entrace edge effects?"},
     {"EDGE2_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
+    {"FRINGE", "", IS_LONG, 0, (long)((char *)&csbend_example.fringe), NULL, 0.0, 0, "Include fringe effects (1=linear, 2=higher order)"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge1_kick_limit), NULL, -1., 0, "maximum kick entrance edge can deliver"},
     {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1., 0, "maximum kick exit edge can deliver"},
