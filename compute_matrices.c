@@ -1889,7 +1889,11 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     z = -rfdf->length/2+dz;
     Mt->C[4] = -rfdf->length/2;
     for (i=0; i<n; i++) {
-      phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz);
+      if (rfdf->standingWave)
+        phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz);
+      else
+        phase = rfdf->phase*PI/180;
+      
       cphi = cos(phase);
       sphi = sin(phase);
       cphi2 = cphi*cphi;
