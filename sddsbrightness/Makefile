@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.13 2010-03-09 21:29:52 oag Exp $
+# $Id: Makefile,v 1.14 2011-02-08 03:24:07 soliday Exp $
 #
 #
 #
@@ -87,12 +87,24 @@ ifeq ($(EPICS_HOST_ARCH),linux-x86)
 F77 = gfortran -m32 -ffixed-line-length-132
 endif
 
+#RATIONAL = purify
+#RATIONAL = quantify
+#RATIONAL = purecov
+ifdef RATIONAL
+HOST_OPT = NO
+STATIC_BUILD=NO
+F77 := $(RATIONAL) -best-effort $(F77)
+endif
+
+
 ifeq ($(OS_CLASS),Linux)
 ifeq ($(STATIC_BUILD),YES)
 static_flags = -Wl,-Bstatic -static-libgcc
 linux_libs = -lc
 endif
 endif
+
+
 
 usb$(OBJ) : 
 	$(F77) ../usb.f -c -o usb$(OBJ)	
