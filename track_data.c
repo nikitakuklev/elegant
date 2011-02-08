@@ -1708,19 +1708,28 @@ PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] = {
 TWISSELEMENT twissElem_example;
 
 PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
-  {"BETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.betax), NULL, 1.0, 0, "horizontal beta function"},
-  {"ALPHAX", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.alphax), NULL, 0.0, 0, "horizontal alpha function"},
-  {"ETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etax), NULL, 0.0, 0, "horizontal eta function"},
-  {"ETAXP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etapx), NULL, 0.0, 0, "slope of horizontal eta function"},
-  {"BETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.betay), NULL, 1.0, 0, "vertical beta function"},
-  {"ALPHAY", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.alphay), NULL, 0.0, 0, "vertical alpha function"},
-  {"ETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etay), NULL, 0.0, 0, "vertical eta function"},
-  {"ETAYP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etapy), NULL, 0.0, 0, "slope of vertical eta function"},
+  {"BETAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.betax), NULL, 1.0, 0, "horizontal beta function"},
+  {"ALPHAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.alphax), NULL, 0.0, 0, "horizontal alpha function"},
+  {"ETAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.etax), NULL, 0.0, 0, "horizontal eta function"},
+  {"ETAXP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.etapx), NULL, 0.0, 0, "slope of horizontal eta function"},
+  {"BETAY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.betay), NULL, 1.0, 0, "vertical beta function"},
+  {"ALPHAY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.alphay), NULL, 0.0, 0, "vertical alpha function"},
+  {"ETAY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.etay), NULL, 0.0, 0, "vertical eta function"},
+  {"ETAYP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss.etapy), NULL, 0.0, 0, "slope of vertical eta function"},
   {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute transformation from tracked beam properties instead of Twiss parameters?"},
+  {"FROM_0VALUES", "", IS_LONG, 0, (long)((char *)&twissElem_example.from0Values), NULL, 0.0, 0, "if non-zero, transformation is from the \"0\" values provided in the element definition"},
   {"COMPUTE_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.computeOnce), NULL, 0.0, 0, "compute transformation only for first beam or lattice functions?"},
   {"APPLY_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.applyOnce), NULL, 0.0, 1, "apply correction only on first pass through for each beam?"},
   {"VERBOSE", "", IS_LONG, 0, (long)((char *)&twissElem_example.verbose), NULL, 0.0, 0, "if non-zero, print extra information about transformations"},
   {"DISABLE", "", IS_LONG, 0, (long)((char *)&twissElem_example.disable), NULL, 0.0, 0, "if non-zero, element is ignored"},
+  {"BETAX0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.betax), NULL, 1.0, 0, "initial horizontal beta function (if FROM_0VALUES nonzero)"},
+  {"ALPHAX0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.alphax), NULL, 0.0, 0, "initial horizontal alpha function (if FROM_0VALUES nonzero)"},
+  {"ETAX0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.etax), NULL, 0.0, 0, "initial horizontal eta function (if FROM_0VALUES nonzero)"},
+  {"ETAXP0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.etapx), NULL, 0.0, 0, "initial slope of horizontal eta function (if FROM_0VALUES nonzero)"},
+  {"BETAY0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.betay), NULL, 1.0, 0, "initial vertical beta function (if FROM_0VALUES nonzero)"},
+  {"ALPHAY0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.alphay), NULL, 0.0, 0, "initial vertical alpha function (if FROM_0VALUES nonzero)"},
+  {"ETAY0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.etay), NULL, 0.0, 0, "initial vertical eta function (if FROM_0VALUES nonzero)"},
+  {"ETAYP0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&twissElem_example.twiss0.etapy), NULL, 0.0, 0, "initial slope of vertical eta function (if FROM_0VALUES nonzero)"},
 };
 
 WIGGLER wiggler_example;

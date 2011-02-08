@@ -1060,6 +1060,8 @@ VMATRIX *compute_matrix(
       case T_TWISSELEMENT:
 	if (((TWISSELEMENT*)elem->p_elem)->disable) 
 	  elem->matrix = drift_matrix(0.0, 1);
+	else if (((TWISSELEMENT*)elem->p_elem)->from0Values)
+	  elem->matrix = twissTransformMatrix1(&(((TWISSELEMENT*)elem->p_elem)->twiss), &(((TWISSELEMENT*)elem->p_elem)->twiss0));
 	else 
 	  elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);
         break;

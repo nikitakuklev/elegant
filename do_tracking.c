@@ -1482,12 +1482,18 @@ long do_tracking(
                     eptr->matrix = twissTransformMatrix((TWISSELEMENT*)eptr->p_elem, &beamTwiss);
                     ((TWISSELEMENT*)eptr->p_elem)->transformComputed = 1;
                   }
-                }
+		}
                 if (((TWISSELEMENT*)eptr->p_elem)->transformComputed==0) {
-                  printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
-                         eptr->name, eptr->end_pos);
-                  printf("This means you set FROM_BEAM=0 but didn't issue a twiss_output command.\n");
-                  exitElegant(1);
+                  if (((TWISSELEMENT*)eptr->p_elem)->from0Values) {
+		    if (eptr->matrix)
+		      free_matrices(eptr->matrix);
+		    eptr->matrix = twissTransformMatrix1(&(((TWISSELEMENT*)eptr->p_elem)->twiss), &(((TWISSELEMENT*)eptr->p_elem)->twiss0));
+		  } else {
+		    printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
+			   eptr->name, eptr->end_pos);
+		    printf("This means you set FROM_BEAM=0 but didn't issue a twiss_output command.\n");
+		    exitElegant(1);
+		  }
                 }
                 if (eptr->matrix==NULL) {
                   printf("Error: twiss parameter transformation matrix was not computed for element %s at z=%e m\n",

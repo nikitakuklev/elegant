@@ -397,14 +397,18 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 	  } else {
 	    if (!((TWISSELEMENT*)elem->p_elem)->computeOnce || !((TWISSELEMENT*)elem->p_elem)->transformComputed) {
 	      TWISS twissInput;
-	      twissInput.betax = beta[0];
-	      twissInput.betay = beta[1];
-	      twissInput.alphax = alpha[0];
-	      twissInput.alphay = alpha[1];
-	      twissInput.etax   = eta[0];
-	      twissInput.etapx  = etap[0];
-	      twissInput.etay   = eta[1];
-	      twissInput.etapy  = etap[1];
+              if (((TWISSELEMENT*)elem->p_elem)->from0Values) {
+                twissInput = ((TWISSELEMENT*)elem->p_elem)->twiss0;
+              } else {
+                twissInput.betax = beta[0];       
+                twissInput.betay = beta[1];       
+                twissInput.alphax = alpha[0];
+                twissInput.alphay = alpha[1];
+                twissInput.etax   = eta[0];
+                twissInput.etapx  = etap[0];
+                twissInput.etay   = eta[1];
+                twissInput.etapy  = etap[1];
+              }
 	      if (elem->matrix) {
 		free_matrices(elem->matrix);
 		free(elem->matrix);
