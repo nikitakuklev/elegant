@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.18  2011/01/05 22:24:48  borland
+ Added ability to take error factors from a file and multiply each harmonic by the specified factor.
+
  Revision 1.17  2010/12/15 15:02:31  borland
  In the event that the brightness can't be computed, the corresponding rows are now filled in with 0.
 
@@ -832,6 +835,7 @@ int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE)
     return 1;
   }
   FindPeak(E,spec,&ep,&sp,ns1);
+  
   /*generate Gaussian with correct sigma in units of x-axis */
   de=E[1]-E[0];
   sigp=2.0*sigmaE*ep/de; /*sigma in x-axis units */
@@ -940,7 +944,7 @@ void Dejus_CalculateBrightness(double current,long nE,
   int32_t ih,i,j,je,errorFlag=0;
   int32_t nSigma=3,nppSigma=6,nek,ns,exitLoop=0,badPoint=0;
   double JArg,sigmaEE,gk,dek,ek;
-  double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb;
+  double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb, eiz;
   double e,k;
   double sigmaX,sigmaX1,sigmaY,sigmaY1,period;
   double ENERGY;
@@ -961,7 +965,6 @@ void Dejus_CalculateBrightness(double current,long nE,
   *FnOut=*Energy=*Brightness=*LamdarOut=NULL;
   
   if (neks<=nE) neks=nE+50;
-
 
 #ifdef DEBUG
   fprintf(stderr, "Allocating memory...\n");
@@ -1002,8 +1005,8 @@ void Dejus_CalculateBrightness(double current,long nE,
   /*determin peak shifts for first and second harmonics at kMin */
   ky=kMin;
   nek=maxNEKS;
-
-
+  
+ 
   /*compute electron beam size */
 #ifdef DEBUG
   fprintf(stderr, "Computing beam sizes...\n");
@@ -1018,9 +1021,9 @@ void Dejus_CalculateBrightness(double current,long nE,
 #ifdef DEBUG
   fprintf(stderr, "Done.\n");
 #endif
-
   dep1 = dep2 = 0;
   for (i=1;i<3;i++) {
+    eiz = i * eMax;
     if (i==1) {
       ekMin=0.95*i*eMax;
       ekMax=1.01*i*eMax;
@@ -1037,6 +1040,7 @@ void Dejus_CalculateBrightness(double current,long nE,
     }
     /*find the peak */
     FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
+    if (ep> 0.9995*eiz) ep = 0.9995*eiz;
     if (i==1)
       dep1=eMax*i-ep;
     else
