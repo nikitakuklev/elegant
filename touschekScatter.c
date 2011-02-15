@@ -784,12 +784,14 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
   if (SDDS_ReadPage(&input) <=0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   iTotal = SDDS_CountRowsOfInterest(&input);
-  s = SDDS_GetColumnInDoubles(&input, "s");
-  dpp = SDDS_GetColumnInDoubles(&input, "deltaPositive");
-  dpm = SDDS_GetColumnInDoubles(&input, "deltaNegative");
-  Occurence = SDDS_GetColumnInLong(&input, "ElementOccurence");
-  Name = (char **)SDDS_GetColumn(&input, "ElementName");
-  Type = (char **)SDDS_GetColumn(&input, "ElementType");
+  if (!(s = SDDS_GetColumnInDoubles(&input, "s")) ||
+      !(dpp = SDDS_GetColumnInDoubles(&input, "deltaPositive")) ||
+      !(dpm = SDDS_GetColumnInDoubles(&input, "deltaNegative")) ||
+      !(Occurence = SDDS_GetColumnInLong(&input, "ElementOccurence")) ||
+      !(Name = (char **)SDDS_GetColumn(&input, "ElementName")) ||
+      !(Type = (char **)SDDS_GetColumn(&input, "ElementType"))) {
+    bombElegant("Momentum aperture file lacks required columns (s, deltaPositive, deltaNegative, ElementOccurence, ElementName, ElementType)", NULL);
+  }
 
   i = 0;
   result = -nElement;
@@ -799,9 +801,10 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
     if (eptr->type == T_TSCATTER) {
       while (1) {
         if (fabs(*s - eptr->end_pos) < eps &&
-            *Occurence == eptr->occurence &&
-            strcmp(*Name,eptr->name) == 0 &&
-            strcmp(*Type,entity_name[eptr->type]) == 0) {
+	    (match_position_only || 
+	     (*Occurence == eptr->occurence &&
+	      strcmp(*Name,eptr->name) == 0 &&
+	      strcmp(*Type,entity_name[eptr->type]) == 0))) {
           ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))
             * Momentum_Aperture_scale;
           i++;
@@ -809,8 +812,9 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
           break;
         }
         s++; dpp++; dpm++; Name++; Type++; Occurence++;
-        if (i++ > iTotal)
-          bombElegant("Momentum aperture file end earlier than required", NULL);
+        if (i++ > iTotal) {
+          bombElegant("Momentum aperture file ends earlier than required", NULL);
+	}
       }
       result++;
     }
