@@ -291,7 +291,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   double ran1[11];
   long *index, iTotal, sTotal;
   double weight_limit, weight_ave, wTotal;
- 
+  double **fiducialParticle, pCentral;
+
+  fiducialParticle = (double**)czarray_2d(sizeof(**fiducialParticle), 1, 7);
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
@@ -306,6 +308,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
       if(iElement > i_end)
         break;
+      if (verbosity)
+	printf("Working on %s#%ld at s=%le\n",
+	       eptr->name, eptr->occurence, eptr->end_pos);
 
       tsptr = initTSCATTER (eptr, iElement);
       weight = (double*)malloc(sizeof(double)*n_simulated);
@@ -469,7 +474,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         pickPart(weight, index, 0, tsptr->simuCount,  
                  &iTotal, &wTotal, weight_limit, weight_ave);
       }
-        
+      if (verbosity)
+	printf("%ld of %ld particles selected for tracking\n", iTotal, tsptr->simuCount);
+
       beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
       beam->original = (double**)czarray_2d(sizeof(double), iTotal, 7);
       beam->accepted = NULL;
@@ -517,9 +524,18 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
 
       if (do_track) {
+	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*7);
+	delete_phase_references();
+	reset_special_elements(beamline, 1);
+	pCentral = run->p_central;
+	if (!do_tracking(NULL, fiducialParticle, 1, NULL, beamline, 
+			 &pCentral, NULL, NULL, NULL, NULL, run, control->i_step,
+			 FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
+	  bombElegant("Fiducial particle was lost", NULL);
+	}
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
-                             0, control->n_passes, 0, NULL,
+                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
                              NULL, NULL, beam->lostOnPass, eptr);
         if (loss) {
           dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
