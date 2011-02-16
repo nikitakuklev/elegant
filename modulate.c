@@ -243,8 +243,8 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       if (modData->dataIndex[iMod]!=-1) {
         modulation = interp(modData->modulationData[iMod], modData->timeData[iMod], modData->nData[iMod], t, 0, 1, &code);
         if (code==0) {
-          fprintf(stderr, "Error: interpolation outside of modulation table for element %s, parameter %s\n",
-                  modData->element[iMod]->name,
+          fprintf(stderr, "Error: interpolation at %21.15le outside of modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+                  t, modData->timeData[iMod][0], modData->timeData[iMod][modData->nData[iMod]-1], modData->element[iMod]->name,
                   entity_description[type].parameter[param].name);
           exitElegant(1);
         }
