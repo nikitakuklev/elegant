@@ -1,3 +1,4 @@
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -56,12 +57,14 @@ void freeInputObjects();
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
 #define DEFINE_CPU_LIST 2
-#define N_OPTIONS 3
+#define DEFINE_PIPE 3
+#define N_OPTIONS 4
 char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
     "cpulist",
-        };
+    "pipe",
+  };
 
 #define SHOW_USAGE    0x0001
 #define SHOW_GREETING 0x0002
@@ -70,10 +73,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 24.1Beta1, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 24.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
-  char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 24.1Beta1, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]]";
+  char *GREETING="This is elegant 24.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -304,6 +307,7 @@ char **argv;
   long correctionDone, linear_chromatic_tracking_setup_done = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
+  unsigned long pipeFlags = 0;
   double apertureReturn;
 #if USE_MPI
 #ifdef MPI_DEBUG
@@ -436,6 +440,10 @@ char **argv;
         if (argc==2)
           exitElegant(0);
         break;
+      case DEFINE_PIPE:
+        if (!processPipeOption(scanned[i].list+1, scanned[i].n_items-1, &pipeFlags))
+          bombElegant("invalid -pipe syntax", NULL);
+        break;
       case DEFINE_MACRO:
         if ((scanned[i].n_items-=1)<1) {
           fprintf(stdout, "Invalid -macro syntax\n");
@@ -506,13 +514,25 @@ char **argv;
       }
     }
   }
-  
-  if (!inputfile) {
-    fprintf(stdout, "No input file was given.\n");
-    showUsageOrGreeting(SHOW_USAGE);
-    exitElegant(1);
+
+  if (pipeFlags&USE_STDIN) {
+    if (inputfile)
+      bombElegant("both -pipe=input and input file given", NULL);
+#if defined(_WIN32)
+    if (_setmode(_fileno(stdin), _O_BINARY) == -1)
+      bombElegant("unable to set stdin to binary mode");
+#endif
+    fp_in = stdin;
+    inputfile = "stdin";
+  } else {
+    if (!inputfile) {
+      fprintf(stdout, "No input file was given.\n");
+      showUsageOrGreeting(SHOW_USAGE);
+      exitElegant(1);
+    }
   }
-  cp_str(&macroValue[0], inputfile);
+  
+  cp_str(&macroValue[0], "stdin");
   
 #if defined(CONDOR_COMPILE)
   sprintf(s, "%s.ckpt", inputfile);

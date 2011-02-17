@@ -244,6 +244,10 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       eptr->flags |= 
         PARAMETERS_ARE_PERTURBED |
           ((entity_description[eptr->type].parameter[iParam].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
+      if ((eptr->flags&PARAMETERS_ARE_PERTURBED) && (entity_description[eptr->type].flags&HAS_MATRIX) && eptr->matrix) {
+        free_matrices(eptr->matrix);
+        eptr->matrix = NULL;
+      }
     }
     if (nMatches==0)  {
       if (allow_missing_elements)

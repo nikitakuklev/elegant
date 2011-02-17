@@ -182,11 +182,11 @@ typedef struct {
 #define DO_NORMEMIT_SUMS 0
 
 typedef struct {
-    double centroid[6];  /* centroid[i] = Sum(x[i]/n) */
-    double sigma[6][6];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
-    double maxabs[6];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p */
-    double min[6];
-    double max[6];
+    double centroid[7];  /* centroid[i] = Sum(x[i]/n), i=6 is time */
+    double sigma[7][7];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
+    double maxabs[7];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p, max deviation for t */
+    double min[7];
+    double max[7];
     long n_part;         /* number of particles */
     double z;            /* z location */
     double p0;           /* reference momentum (beta*gamma) */
@@ -3423,7 +3423,7 @@ extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long par
                              double charge);
 extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central);
-void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[6][6], long plane);
+void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[7][7], long plane);
 extern void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step);
 extern void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long particles, 
                          double Po, double charge);

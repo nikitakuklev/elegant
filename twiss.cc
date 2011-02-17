@@ -1408,6 +1408,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     SDDS_twiss_initialized = 0;
   twiss_initialized = 1;
 
+  beamline->flags = 0;
   beamline->flags |= BEAMLINE_TWISS_WANTED;
   if (radiation_integrals)
     beamline->flags |= BEAMLINE_RADINT_WANTED;
