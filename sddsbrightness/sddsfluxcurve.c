@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.10  2010/10/26 17:32:38  borland
+ Fixed bugs in parsing the emittanceRatio parameter.
+
  Revision 1.9  2010/03/08 03:02:59  borland
  Fixed units in "current" parameter.
 
@@ -196,7 +199,8 @@ int main(int argc, char **argv)
 
   pinhole_param.flags = 0;
   pinhole_param.distance = 30;
-  pinhole_param.xPC = pinhole_param.yPC = pinhole_param.xPS = pinhole_param.yPS = 0;
+  pinhole_param.xPC = pinhole_param.yPC = 0;
+  pinhole_param.xPS = pinhole_param.yPS = 2.0;
   pinhole_param.nXP = pinhole_param.nYP = 20;
 
   electron_param.flags = 0;
@@ -842,7 +846,6 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
         spec1, /* flux or flux density */
         EE /* photon energy */
         );
-
     /*find the peak */
     FindPeak(EE, spec1, &ep, &sp, nE);
 #ifdef DEBUG
