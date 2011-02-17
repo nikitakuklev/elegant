@@ -17,6 +17,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.18  2010/04/18 02:35:25  borland
+Correctly computes spatial distribution for harmonic > 1.
+
 Revision 1.17  2010/04/17 22:08:54  borland
 Now correctly computes K when harmonic number is not 1 and energy is given.
 
@@ -346,7 +349,7 @@ int main(int argc, char **argv) {
   electron_param.current=0.1;
   electron_param.energy = 7.0;
   electron_param.energySpread = 0.0;
-  electron_param.nsigma = 4;
+  electron_param.nsigma = 3;
   electron_param.sigmaxp = electron_param.sigmayp = 0.0;
   electron_param.sigmax = electron_param.sigmay =0.0;
   undulator_param.itype=1;
@@ -723,7 +726,6 @@ int main(int argc, char **argv) {
       /*in us, current is in mA units, while urgent is in A units */
       period=undulator_param.period*100;
       current=electron_param.current*1000;
-      
       us_(&electron_param.energy, &current, &electron_param.sigmax,
           &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
           &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
