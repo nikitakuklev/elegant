@@ -238,6 +238,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   MPE_Log_event(event1b, 0, "end load_parameters");
 #endif
     /* No reason to keep this, so just decrement the counter */
+    SDDS_Terminate(&load_request[load_requests-1].table);
     load_requests --;
     return 1;
   }
@@ -646,6 +647,10 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         eptr->flags |= 
           PARAMETERS_ARE_PERTURBED |
             ((entity_description[eptr->type].parameter[param].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
+        if ((eptr->flags&PARAMETERS_ARE_PERTURBED) && (entity_description[eptr->type].flags&HAS_MATRIX) && eptr->matrix) {
+          free_matrices(eptr->matrix);
+          eptr->matrix = NULL;
+        }
         load_request[i].element_flags[load_request[i].values] = eptr->flags;
         load_request[i].values++;
       } while (!occurence && find_element_hash(element[j], numberChanged+1, &eptr, &(beamline->elem)));
