@@ -864,7 +864,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       case OPTIM_METHOD_HYBSIMPLEX:
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
 	  for (i=0; i<variables->n_variables; i++)
-	    variables->step[i] += (random_2(0)-0.5)*variables->orig_step[i];
+	    variables->step[i] = (random_2(0)-0.5)*variables->orig_step[i]*scale_factor; 	
 	  /* Disabling the report from simplexMin routine, as it will print result from the Master only.
 	     We print the best result across all the processor in a higher level routine */
 	  optimization_report_ptr = NULL;
