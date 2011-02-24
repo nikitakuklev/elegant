@@ -26,7 +26,7 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
      need paramenters K1, R11, R12, R21, R33, R34, R43, r11, r12, r21, r33, r34, r43
      */
   long ip;
-  double ks=inFringe*K1/0.75563;   /* scaling factor based on the field used for computing the fringe matrices, may need better treatment */
+  double ks=inFringe*K1/(-0.75563);   /* scaling factor based on the field used for computing the fringe matrices, may need better treatment */
   double R11, R12, R21, R33, R34, R43;
   double r11, r12, r21, r33, r34, r43;
   double R22, R44, r22, r44;
@@ -36,11 +36,11 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
 
   if (inFringe<0){
     /* Entrance fringe */
-    r11=1.00022; r12=-0.0000121256; r21=0.00985779; r33=0.999781; r34=0.0000121256; r43=-0.00987381;
-    R11=1.00032; R12=0.0000216824; R21=-0.00948671; R33=0.999684; R34=-0.0000216824; R43=0.00948972;
-  } else {
-    R11=1.00022, R12=-0.0000121256, R21=0.00985779, R33=0.999781, R34=0.0000121256, R43=-0.00987381;
-    r11=1.00032, r12=0.0000216824, r21=-0.00948671, r33=0.999684, r34=-0.0000216824, r43=0.00948972;
+    R11=0.999684, R12=-0.0000216824, R21=0.00948972, R33=1.00032, R34=0.0000216824, R43=-0.00948671;
+    r11=0.999781, r12=0.0000121256, r21=-0.00987381, r33=1.00022, r34=-0.0000121256, r43=0.00985779; 
+   } else {
+    R11=0.999781, R12=0.0000121256, R21=-0.00987381, R33=1.00022, R34=-0.0000121256, R43=0.00985779; 
+    r11=0.999684, r12=-0.0000216824, r21=0.00948972, r33=1.00032, r34=0.0000216824, r43=-0.00948671;
   }
 
 
