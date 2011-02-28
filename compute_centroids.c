@@ -265,7 +265,7 @@ void accumulate_beam_sums(
 #endif
 
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
-  double buffer[6], Sij_p[28], Sij_total[28];
+  double buffer[7], Sij_p[28], Sij_total[28];
   long n_total, offset=0, index;  
 #ifdef USE_KAHAN
   double error_sum=0.0, error_total=0.0,
@@ -482,24 +482,24 @@ void accumulate_beam_sums(
     if (notSinglePart) {
       if (parallelStatus==trueParallel) {
 	if (isMaster) {
-	  memset(Sij_p, 0.0,  sizeof(double)*21);
+	  memset(Sij_p, 0.0,  sizeof(double)*28);
 #ifdef USE_KAHAN
-          memset(errorSig, 0.0,  sizeof(double)*21);
+          memset(errorSig, 0.0,  sizeof(double)*28);
 #endif
 	}
 	/* compute Sij sum over processors */
 #ifndef USE_KAHAN
 	MPI_Allreduce(Sij_p, Sij_total, 28, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-        MPI_Allgather(Sij_p, 28, MPI_DOUBLE, &sumMatrixSig[0][0], 21, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Allgather(Sij_p, 28, MPI_DOUBLE, &sumMatrixSig[0][0], 28, MPI_DOUBLE, MPI_COMM_WORLD);
 	/* compute error sum over processors */
-	MPI_Allgather(errorSig, 28, MPI_DOUBLE, &errorMatrixSig[0][0], 21, MPI_DOUBLE,MPI_COMM_WORLD);
+	MPI_Allgather(errorSig, 28, MPI_DOUBLE, &errorMatrixSig[0][0], 28, MPI_DOUBLE,MPI_COMM_WORLD);
         offset = 0;
 	for (i=0; i<7; i++) {
 	  if (i>=1)        
 	    offset += i-1;
 	  for (j=i; j<7; j++) {
-	    index = 5*i+j-offset;
+	    index = 6*i+j-offset;
 	    error_sum = 0.0;
 	    /* extract the columnwise array from the matrix */
 	    for (k=0; k<n_processors; k++) {         
