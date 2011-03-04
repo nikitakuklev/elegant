@@ -449,7 +449,7 @@ long trackRfCavityWithWakes
 
     if (!matrixMethod) {
       double *inverseF;
-      inverseF = tmalloc(sizeof(*inverseF)*np);
+      inverseF = calloc(sizeof(*inverseF), np);
       
       for (ik=0; ik<nKicks; ik++) {
         dgammaOverGammaAve = dgammaOverGammaNp = 0;
@@ -483,11 +483,10 @@ long trackRfCavityWithWakes
 	      dgammaOverGammaAve += dgamma/gamma;
 	    }
           
-	    inverseF[ip] = 0;
 	    if (length) {
-	      if (rfca->end1Focus) {
+	      if (rfca->end1Focus && ik==0) {
 		/* apply focus kick */
-		inverseF[ip] = dgamma/(2*gamma*length);
+                inverseF[ip] = dgamma/(2*gamma*length);
 		coord[1] -= coord[0]*inverseF[ip];
 		coord[3] -= coord[2]*inverseF[ip];
 	      } 
@@ -503,7 +502,7 @@ long trackRfCavityWithWakes
 	      coord[5] = -1;
 	    else 
 	      /* compute inverse focal length for exit kick */
-	      inverseF[ip] *= -1*gamma/gamma1;
+	      inverseF[ip] = -dgamma/(2*gamma1*length);
 	  }
 	}
         if (!wakesAtEnd) {
@@ -538,7 +537,7 @@ long trackRfCavityWithWakes
 	      coord[0] += coord[1]*length/2;
 	      coord[2] += coord[3]*length/2;
 	      coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-	      if (rfca->end2Focus) {
+	      if (rfca->end2Focus && (ik==nKicks-1)) {
 		coord[1] -= coord[0]*inverseF[ip];
 		coord[3] -= coord[2]*inverseF[ip];
 	      }
@@ -570,7 +569,7 @@ long trackRfCavityWithWakes
           }
         }
       }
-      free(inverseF); 
+      free(inverseF);
     } else {
       double sin_phase=0.0, cos_phase, inverseF;
       double R11=1, R21=0, R22, R12, dP, ds1;
@@ -604,7 +603,7 @@ long trackRfCavityWithWakes
               }
             }
             
-            if (rfca->end1Focus && length) {
+            if (rfca->end1Focus && length && ik==0) {
               /* apply end focus kick */
               inverseF = dgamma/(2*gamma*length);
               coord[1] -= coord[0]*inverseF;
@@ -657,7 +656,7 @@ long trackRfCavityWithWakes
             
             if ((gamma += dgamma)<=1)
               coord[5] = -1;
-            if (rfca->end2Focus && length) {
+            if (rfca->end2Focus && length && ik==(nKicks-1)) {
               inverseF = -dgamma/(2*gamma*length);
               coord[1] -= coord[0]*inverseF;
               coord[3] -= coord[2]*inverseF;
