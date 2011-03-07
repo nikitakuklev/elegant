@@ -908,7 +908,7 @@ long do_tracking(
 					      accepted, z, *P_central);
 	      break;
 	    case T_CENTER:
-	      center_beam(coord, (CENTER*)eptr->p_elem, nToTrack, i_pass);
+	      center_beam(coord, (CENTER*)eptr->p_elem, nToTrack, i_pass, *P_central);
 	      break;
 	    case T_REMCOR:
 	      remove_correlations(coord, (REMCOR*)eptr->p_elem, nToTrack);
@@ -2359,11 +2359,10 @@ void remove_correlations(double **part, REMCOR *remcor, long np)
 }
 
 
-void center_beam(double **part, CENTER *center, long np, long iPass)
+void center_beam(double **part, CENTER *center, long np, long iPass, double p0)
 {
   double sum, offset;
   long i, ic;
-  long centerCoord[4];
 
   if (!np) {
     return;
@@ -2372,13 +2371,8 @@ void center_beam(double **part, CENTER *center, long np, long iPass)
   if (center->onPass>=0 && iPass!=center->onPass)
     return;
 
-  centerCoord[0] = center->x;
-  centerCoord[1] = center->xp;
-  centerCoord[2] = center->y;
-  centerCoord[3] = center->yp;
-
-  for (ic=0; ic<4; ic++) {
-    if (centerCoord[ic]) {
+  for (ic=0; ic<6; ic++) {
+    if (center->doCoord[ic]) {
       if (!center->deltaSet[ic]) {
         for (i=sum=0; i<np; i++)
           sum += part[i][ic];
@@ -2400,8 +2394,25 @@ void center_beam(double **part, CENTER *center, long np, long iPass)
           center->deltaSet[ic] = 1;
       } else 
         offset = center->delta[ic];
+      printf("centering coordinate %ld by subtracting %le\n", ic, offset);
       for (i=0; i<np; i++)
         part[i][ic] -= offset;
+    }
+  }
+
+  if (center->doCoord[ic=6]) {
+    /* Special treatment for time coordinate */
+    double *timeCoord;
+    timeCoord = tmalloc(sizeof(*timeCoord)*np);
+    offset = computeTimeCoordinates(timeCoord, p0, part, np);
+    if (center->deltaSet[ic])
+      offset = center->delta[ic];
+    for (i=0; i<np; i++)
+      timeCoord[i] -= offset;
+    computeDistanceCoordinates(timeCoord, p0, part, np);
+    if (center->onceOnly && !center->deltaSet[ic]) {
+      center->delta[ic] = offset;
+      center->deltaSet[ic] = 1;
     }
   }
 }

@@ -831,10 +831,13 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
 CENTER center_example;
 /* beam centering physical parameters */
 PARAMETER center_param[N_CENTER_PARAMS]={
-    {"X" , "", IS_LONG, 0, (long)((char *)&center_example.x), NULL, 0.0, 1, "center x coordinates?"},
-    {"XP", "", IS_LONG, 0, (long)((char *)&center_example.xp), NULL, 0.0, 1, "center x' coordinates?"},
-    {"Y" , "", IS_LONG, 0, (long)((char *)&center_example.y), NULL, 0.0, 1, "center y coordinates?" },
-    {"YP", "", IS_LONG, 0, (long)((char *)&center_example.yp), NULL, 0.0, 1, "center y' coordinates?"},
+    {"X" , "", IS_LONG, 0, (long)((char *)&center_example.doCoord[0]), NULL, 0.0, 1, "center x coordinates?"},
+    {"XP", "", IS_LONG, 0, (long)((char *)&center_example.doCoord[1]), NULL, 0.0, 1, "center x' coordinates?"},
+    {"Y" , "", IS_LONG, 0, (long)((char *)&center_example.doCoord[2]), NULL, 0.0, 1, "center y coordinates?" },
+    {"YP", "", IS_LONG, 0, (long)((char *)&center_example.doCoord[3]), NULL, 0.0, 1, "center y' coordinates?"},
+    {"S" , "", IS_LONG, 0, (long)((char *)&center_example.doCoord[4]), NULL, 0.0, 1, "center s coordinates?" },
+    {"DELTA", "", IS_LONG, 0, (long)((char *)&center_example.doCoord[5]), NULL, 0.0, 1, "center delta coordinates?"},
+    {"T", "", IS_LONG, 0, (long)((char *)&center_example.doCoord[6]), NULL, 0.0, 0, "center t coordinates?"},
     {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&center_example.onceOnly), NULL, 0.0, 0, "compute centering offsets for first beam only, apply to all?"},
     {"ON_PASS", "", IS_LONG, 0, (long)((char *)&center_example.onPass), NULL, 0.0, -1, "If nonnegative, do centering on the nth pass only."},
     };
