@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2010/06/28 21:34:13  soliday
+# One more change for purify on linux
+#
 # Revision 1.6  2010/06/28 21:29:54  soliday
 # Updated the code for purify on Linux.
 #
@@ -46,9 +49,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws
+PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs
 else
-PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
@@ -90,6 +93,8 @@ sddsfluxcurve$(EXE)_SRCS =	sddsfluxcurve.c
 sddsurgent$(EXE)_SRCS = sddsurgent.c
 
 sddsws$(EXE)_SRCS = sddsws.c
+
+sddsbs$(EXE)_SRCS = sddsbs.c
 
 OBJNAMES = sddsbrightness$(OBJ) usb$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
