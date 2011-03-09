@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2009/06/05 15:03:21  shang
+added warning message for possible inaccurate results.
+
 Revision 1.9  2009/05/01 20:53:50  shang
 fixed a bug in compute gk
 
@@ -103,20 +106,24 @@ pinhole          Specifies pinhole parameters: \n\
                  pinhole parameters are not needed for computing on-axis brilliance (i.e., mode=3). \n\
 calculationMode specifies calculation mode: \n\
                 1 | fluxDistribution:        Angular/spatial flux density distribution \n\
+                                             Flux distribution at the energy chosen as minimum energy. \n\
                 2 | fluxSpectrum:            Angular/spatial flux density spectrum \n\
+                                             Spectrum at any given point in space as selected by the X and Y \n\
+                                             coordinate for the center of the pinhole. X is horizontal and Y is vertical.\n\
                 3 | brightness | brilliance: On-axis brilliance spectrum (not implemented) \n\
                 4 | pinholeSpectrum:         Flux spectrum through a pinhole \n\
+                                             Spectrum through a pinhole centered at X-center and Y-center with \n\
+                                             size X-size and Y-size.  The energy range is from the minimum to the \n\
+                                             maximum energy. \n\
                 5 | integratedSpectrum:      Flux spectrum integrated over all angles \n\
+                                             The pinhole parameters have no significance here. \n\
                 6 | powerDensity:            Power density and integrated power \n\
+                                             Integrated over all energies, thus the energy parameters have no significance here.\n\
 transformed from ws.f by Roger Dejus, Hairong Shang (April, 2009).\n\n\
 NOTE: THE POLARIZATION PARAMETERS ARE PROVIDED (P1, P2, P3 and P4 in the output file.) \n\
 ALTHOUGH NOT THOROUGHLY TESTED - USE WITH CAUTION.\n\
-For a bending magnet source:  set N=0.5, and make Ky large and adjust the period length accordingly. \n\
-For example, put Ky=9.34 and alculate the period length from, Period (cm) = 10.0/B0(T), where B0 is \n\
-strength of the magnetic field (in Tesla) for the bending magnet.  The calculated power density (pd) is correct,\n\
-but the total power (ptot) is irrelevant. Typically make the extend of the pinhole small in the horizontal direction\n\
-(theta << Ky/gamma) as the intensity should not depend on the horizontal offset. Check value of B0 (and critcal energy EC0)\n\
-in the output file.\n\n";
+sddsws calculates wiggler spectra using the Bessel function approximation. \n\
+The input parameters are divided into sections related to the storage ring, the wiggler device, and the quantity to be calculated.\n\n";
          
 void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysize, long nE, double kx, double ky, 
                   long bendingMagnet, long *isAngular, double *pdistance,

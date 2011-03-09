@@ -10,6 +10,9 @@
    by Hairong Shang
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2011/03/09 02:21:25  lemery
+First installation, per Shang.
+
 
 */
 
@@ -45,8 +48,8 @@ electronBeam     Specifies the electron beam (storage ring) parameters: \n\
 photonEnergy     specifies the maximum and minimum photon energy in eV, \n\
                  and the number of energy points to be computed.\n\
 angle            provided the observation angle range in mrad unit, it is not need for brightness.\n\
-magnetField      specifies the magnetic field of bending magnet in Tesla unit. \n\
-for computing bending magnet specral flux distribution.\n\n";
+magnetField      specifies the magnetic field of bending magnet in Tesla unit. \n\n\
+sddsbs  computes bending magnet specral flux distribution.\n\n";
 
 void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout);
 void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE, 
