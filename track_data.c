@@ -198,7 +198,7 @@ PARAMETER quad_param[N_QUAD_PARAMS]={
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&quad_example.xkick), NULL, 0.0, 0, "horizontal correction kick"},
     {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&quad_example.ykick), NULL, 0.0, 0, "vertical correction kick"},
     {"HCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.xKickCalibration), NULL, 1.0, 0, "calibration factor for horizontal correction kick"},
@@ -284,7 +284,7 @@ PARAMETER sext_param[N_SEXT_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.order), NULL, 0.0, 0, "matrix order"}
     };
    
@@ -390,7 +390,7 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"END1_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
     {"END2_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
     {"BODY_FOCUS_MODEL", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfca_example.nKicks), NULL, 0.0, 1, "number of kicks to use.  Set to zero for matrix method."},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfca_example.nKicks), NULL, 0.0, 0, "Number of kicks to use for kick method.  Set to zero for matrix method."},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.dy), NULL, 0.0, 0, "misalignment"},
     {"T_REFERENCE", "S", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
@@ -805,7 +805,7 @@ PARAMETER qfring_param[N_QFRING_PARAMS]={
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"DIRECTION", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.direction), NULL, 0.0, 0, "1=entrance, -1=exit"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.order), NULL, 0.0, 0, "matrix order"}
     };
@@ -889,7 +889,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
@@ -943,7 +943,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquad_example.xkick), NULL, 0.0, 0, "horizontal correction kick"},
     {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquad_example.ykick), NULL, 0.0, 0, "vertical correction kick"},
     {"HCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.xKickCalibration), NULL, 1.0, 0, "calibration factor for horizontal correction kick"},
@@ -1645,7 +1645,7 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"END1_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
     {"END2_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
     {"BODY_FOCUS_MODEL", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfcw_example.nKicks), NULL, 0.0, 1, "number of kicks to use.  Set to zero for matrix method."},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfcw_example.nKicks), NULL, 0.0, 0, "Number of kicks to use for kick method.  Set to zero for matrix method."},
     {"ZWAKE", "", IS_LONG, 0, (long)((char *)&rfcw_example.includeZWake), NULL, 0.0, 1, "If zero, longitudinal wake is turned off."},
     {"TRWAKE", "", IS_LONG, 0, (long)((char *)&rfcw_example.includeTrWake), NULL, 0.0, 1, "If zero, transverse wakes are turned off."},
     {"WAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.wakeFile), NULL, 0.0, 0, "name of file containing Green functions"},
