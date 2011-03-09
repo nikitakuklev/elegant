@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2011/03/09 20:44:36  shang
+added description
+
 Revision 1.10  2009/06/05 15:03:21  shang
 added warning message for possible inaccurate results.
 
@@ -123,7 +126,12 @@ transformed from ws.f by Roger Dejus, Hairong Shang (April, 2009).\n\n\
 NOTE: THE POLARIZATION PARAMETERS ARE PROVIDED (P1, P2, P3 and P4 in the output file.) \n\
 ALTHOUGH NOT THOROUGHLY TESTED - USE WITH CAUTION.\n\
 sddsws calculates wiggler spectra using the Bessel function approximation. \n\
-The input parameters are divided into sections related to the storage ring, the wiggler device, and the quantity to be calculated.\n\n";
+The input parameters are divided into sections related to the storage ring, the wiggler device, and the quantity to be calculated.\n\n\
+Note: For a bending magnet source: set N=0.5, and make Ky large and adjust the period length accordingly. \n\
+For example, put Ky=9.34 and calculate the period length from, Period (cm) = 10.0/B0(T), where B0 is the known\n\
+strength of the magnetic field (in Tesla) for the bending magnet.  The calculated power density (pd) is \n\
+correct, but the total power (ptot) is irrelevant. Typically make the extend of the pinhole small in the\n\
+horizontal direction (theta << Ky/gamma) as the intensity should not depend on the horizontal offset.\n\n";
          
 void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysize, long nE, double kx, double ky, 
                   long bendingMagnet, long *isAngular, double *pdistance,
