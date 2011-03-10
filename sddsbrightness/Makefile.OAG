@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.9  2011/03/09 20:46:04  shang
+# added sddssyncflux
+#
 # Revision 1.8  2011/03/09 02:21:50  lemery
 # Added sddsbs
 #
@@ -58,6 +61,7 @@ PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
+                -I$(EPICS_EXTENSIONS)/src/SDDS/gsl \
 		-DIEEE_MATH -DzLib
 
 USR_CFLAGS_DEFAULT = 	-DUNIX 
