@@ -10,6 +10,9 @@
    by Hairong Shang
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2011/03/10 01:37:35  lemery
+Added integrated flux computation using the obscure function gy which I found in mdb library, also used by sddsws. Verified by actual angle integration of sddsbs results for different angles.
+
 Revision 1.2  2011/03/09 20:44:37  shang
 added description
 
@@ -39,7 +42,7 @@ static char *option[N_OPTIONS] = {
 #define SPECTRA_MODES 2
 static char *spectra_options[SPECTRA_MODES]={"frequency", "spatial"};
 
-char *USAGE="sddsws <outputFile> [-pipe[=out]] [-nowarnings] \n\
+char *USAGE="sddsbs <outputFile> [-pipe[=out]] [-nowarnings] \n\
      [-electronBeam=current=<value>(mA),energy=<value>(GeV)[,xemittance=<value>][,yemittance=<value>]] \n\
      [-photonEnergy=minimum=<value>(eV),maximum=<value>(eV),points=<number>] \n\
      [-angle=start=<value>,end=<value>,steps=<value>] \n\
@@ -52,7 +55,8 @@ photonEnergy     specifies the maximum and minimum photon energy in eV, \n\
                  and the number of energy points to be computed.\n\
 angle            provided the observation angle range in mrad unit, it is not need for brightness.\n\
 magnetField      specifies the magnetic field of bending magnet in Tesla unit. \n\n\
-sddsbs  computes bending magnet specral flux distribution.\n\n";
+sddsbs  computes bending magnet specral flux distribution for a specified \n\
+        vertical angle plus the same flux integrated over all vertical angles.\n\n";
 
 void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout);
 void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE, 
