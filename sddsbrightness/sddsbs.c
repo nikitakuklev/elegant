@@ -10,6 +10,9 @@
    by Hairong Shang
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2011/03/09 20:44:37  shang
+added description
+
 Revision 1.1  2011/03/09 02:21:25  lemery
 First installation, per Shang.
 
@@ -54,11 +57,13 @@ sddsbs  computes bending magnet specral flux distribution.\n\n";
 void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout);
 void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE, 
                           double energy, double current, double gamma, double *flux);
+void compute_integratedFlux_spectra(double *photonE, long nE, double cE, double energy, double current, double *integratedFlux);
+
 int main(int argc, char **argv)
 {
   char  *outputFile=NULL;
   double energy=7.0, current=100.0, xemittance=0, yemittance=0, startAngle, endAngle, emax, emin, bField;
-  double *photonE, *flux, deltaE, deltaA, cE=0, cLamda, ptot=0, angle, gamma;
+  double *photonE, *flux, *integratedFlux, deltaE, deltaA, cE=0, cLamda, ptot=0, angle, gamma;
   long nE, nAngles, i_arg, noWarnings=0, i, tmpFileUsed=0;
   SDDS_DATASET  SDDSout;
   SCANNED_ARG *s_arg;
@@ -178,6 +183,7 @@ int main(int argc, char **argv)
   current *= 1.0e-3; /*the input current is in mA, change it to A units */
   photonE = malloc(sizeof(*photonE)*nE);
   flux = malloc(sizeof(*flux)*nE);
+  integratedFlux = malloc(sizeof(*integratedFlux)*nE);
   for (i=0; i<nE; i++)
     photonE[i] = emin + deltaE*i;
   gamma = energy/me_mev*1.0e3;
@@ -186,6 +192,8 @@ int main(int argc, char **argv)
   for (i=0; i<nAngles; i++) {
     angle = startAngle + deltaA * i;
     compute_flux_spectra(photonE, nE, angle, cE,  energy, current, gamma, flux);
+    compute_integratedFlux_spectra(photonE, nE, cE,  energy, current, integratedFlux);
+
     if (!SDDS_StartPage(&SDDSout, nE) ||
         !SDDS_SetParameters(&SDDSout, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Description", desc, 
@@ -202,6 +210,7 @@ int main(int argc, char **argv)
                             "Gamma", gamma, NULL) ||
         !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, photonE, nE, "Energy") ||
         !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, flux, nE, "Flux") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, integratedFlux, nE, "IntegratedFlux") ||
         !SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);  
   }
@@ -232,7 +241,8 @@ void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout)
       SDDS_DefineParameter(SDDSout, "Gamma",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", "photon energy",NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDSout, "Flux", NULL, "ph/s/0.1%bw/mrad$a2$n", NULL,NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_DefineColumn(SDDSout, "Flux", NULL, "ph/s/0.1%bw/mrad$a2$n", NULL,NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "IntegratedFlux", NULL, "ph/s/0.1%bw/mrad", NULL,NULL, SDDS_DOUBLE, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_WriteLayout(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -256,5 +266,19 @@ void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE
     KI23 = k23(eta);
     Ftheta = k1 * k1 * (1 + gamma * gamma * angle * angle * KI13 * KI13 / (k1 * KI23 * KI23)); 
     flux[i] = Cr * energy * energy * current * ratio * ratio * KI23 * KI23 * Ftheta; 
+  }
+}
+
+/* formula taken from Xray data booklet p2-3. */
+void compute_integratedFlux_spectra(double *photonEnergy, long nE, double cE, 
+	double energy, double current, double *flux)
+{
+  double  C, ratio;
+  long i;
+
+  C = 2.457e13;
+  for (i=0; i<nE; i++) {
+    ratio = photonEnergy[i]/cE;
+    flux[i] = C * energy * current * gy(1, ratio);
   }
 }
