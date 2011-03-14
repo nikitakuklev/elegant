@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.12  2011/03/09 20:51:54  shang
+added the description for computing bending magnet spectra.
+
 Revision 1.11  2011/03/09 20:44:36  shang
 added description
 
@@ -441,7 +444,7 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineParameter(SDDSout, "Description", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "eBeamEnergy", NULL, "Gev", "Electron Beam Energy", NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "eBeamCurrent", NULL, "A", "Electron Beam Current", NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout, "eBeamCurrent", NULL, "mA", "Electron Beam Current", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "MinEnergy", NULL, "eV", "minimum photon energy", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "MaxEnergy", NULL, "eV", "maximum photon energy", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "EnergyStep", NULL, NULL, "number of points of photon energy", NULL, SDDS_LONG, 0)<0 ||
