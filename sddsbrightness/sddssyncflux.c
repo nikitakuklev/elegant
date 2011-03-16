@@ -1,6 +1,10 @@
 /*
  *
  *  $Log: not supported by cvs2svn $
+ *  Revision 1.2  2011/03/16 19:09:10  borland
+ *  Fixed calculation of total flux for dipole.  Cf. Attwood, 5.8 (multiply by
+ *  2*pi since we want the flux in a full circle, not per mrad).
+ *
  *  Revision 1.1  2011/03/09 20:44:37  shang
  *  added description
  *
@@ -375,7 +379,7 @@ int main(int argc, char **argv)
       SDDS_DefineColumn(&SDDSout, "Wavelength", NULL, "nm", "Photon Wavelength",NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSout, "TotalFlux", NULL, "photons/second/0.1%BW", 
                         "angle-integrated photon flux",NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(&SDDSout, "OnAxisFlux", NULL, "photons/mrad^2/second/0.1%BW", 
+      SDDS_DefineColumn(&SDDSout, "OnAxisFlux", NULL, "photons/mrad$a2$n/second/0.1%BW", 
                         "on-axis angular photon flux density",NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSout, "XWidth", NULL, "mrad", 
                         "horizontal rms width of the x-ray beam",NULL, SDDS_DOUBLE, 0)<0 ||
