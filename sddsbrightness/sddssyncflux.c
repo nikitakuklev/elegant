@@ -1,6 +1,9 @@
 /*
  *
  *  $Log: not supported by cvs2svn $
+ *  Revision 1.1  2011/03/09 20:44:37  shang
+ *  added description
+ *
  *  Revision 1.7  2011/03/08 16:25:48  shang
  *  fixed -pipe option bug which did not work.
  *
@@ -541,7 +544,7 @@ long CalculateTotalPhotonFluxOfBendMagnet(char *g1ValueFile, double *energy, dou
   *totalFlux=(double*)malloc(sizeof(**totalFlux)*n);
   for (i=0;i<n;i++) {
     g1=interpolate(yGy,y,rows,energy[i]/criticalEnergy,&belowRange,&aboveRange,1,&interpCode,1);
-    (*totalFlux)[i]=1.0e-6*sqrt(3)*ALPHA/2.0/PI/ECHARGE*eGamma*eCurrent*g1;
+    (*totalFlux)[i]=1.0e-6*sqrt(3)*ALPHA/ECHARGE*eGamma*eCurrent*g1;
   }
   return 1;
 }
