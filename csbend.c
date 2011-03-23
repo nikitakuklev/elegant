@@ -1693,7 +1693,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         if (!inhibitFileSync)
           SDDS_DoFSync(&csbend->SDDSpart);
-	  printf ("Pelegant does not support dumping particle data inside an element now.");
 	}
       }
 
