@@ -1679,6 +1679,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                 "Pass", -1, "Kick", kick, "pCentral", Po, "Angle", phiBend, 
                                 NULL))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	convertFromCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
         for (ip=0; ip<n_part; ip++) {
           if (!SDDS_SetRowValues(&csbend->SDDSpart, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                                  ip, 
@@ -1689,6 +1690,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                  -1)) 
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
+	convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
         if (!SDDS_WritePage(&csbend->SDDSpart))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         if (!inhibitFileSync)
