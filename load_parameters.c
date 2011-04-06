@@ -269,7 +269,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   allFilesIgnored = 1;
   
   for (i=0; i<load_requests; i++) {
-    if (load_request[i].flags&COMMAND_FLAG_IGNORE)
+    if ((load_request[i].flags&COMMAND_FLAG_IGNORE) || 
+        (!(load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) && change_definitions) ||
+        ((load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) && !change_definitions) )
       continue;
 
     hash_table = hcreate(12); /* create a hash table with the size of 2^12, it can grow automatically if necessary */
