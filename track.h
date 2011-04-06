@@ -3552,7 +3552,12 @@ long approximate_percentiles_p(double *position, double *percent, long positions
 long find_median_of_row_p(double *best_particle, double **x, long index, long n, long n_total);
 #endif
 
-void seedElegantRandomNumbers(long seed, long restart);
+#define RESTART_RN_BEAMLINE 0x0001
+#define RESTART_RN_SCATTER  0x0002
+#define RESTART_RN_BPMNOISE 0x0004
+#define RESTART_RN_BEAMGEN  0x0008
+#define RESTART_RN_ALL      (RESTART_RN_BEAMLINE|RESTART_RN_SCATTER|RESTART_RN_BPMNOISE|RESTART_RN_BEAMGEN)
+void seedElegantRandomNumbers(long seed, unsigned long restart);
 
 /* compute long sum with Kahan's algorithm */
 double Kahan (long length, double a[], double *error);

@@ -1446,7 +1446,7 @@ double optimization_function(double *value, long *invalid)
 #endif
 
   if (restart_random_numbers)
-    seedElegantRandomNumbers(0, 1);
+    seedElegantRandomNumbers(0, RESTART_RN_ALL);
   
   *invalid = 0;
   unstable = 0;

@@ -73,10 +73,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 24.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 24.1Beta3, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 24.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 24.1Beta3, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -2256,25 +2256,6 @@ void resetApertureData(APERTURE_DATA *apData)
   }
 }
 
-
-static long savedRandomNumberSeed ;
-
-void seedElegantRandomNumbers(long seed, long restart)
-{
-  if (restart)
-    seed = savedRandomNumberSeed;
-  else
-    savedRandomNumberSeed = seed;
-  
-  /* seed random number generators.  Note that random_1_elegant seeds random_2, random_3,
-   * and random_4.
-   * random_1_elegant is used for beamline errors.  
-   * random_4 is used for beam generation 
-   * random_2 is used for random scraping/sampling/scattering.  
-   * random_3 is used for BPM noise.
-   */
-  random_1_elegant(-FABS(seed));
-}
 
 /* Routine to close output files that are associated with beamline elements
  */

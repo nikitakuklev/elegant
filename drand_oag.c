@@ -7,6 +7,44 @@
 
 double dlaran_OAG(long int *iseed);
 
+static long initialized = 0;
+static long savedRandomNumberSeed[4] = {0,0,0,0};
+
+void seedElegantRandomNumbers(long iseed, unsigned long restart)
+{
+  if (restart) {
+    if (!initialized)
+      bombElegant("seedElegantRandomNumbers called for restart but not initialized", NULL);
+  } else {
+    initialized = 1;
+    savedRandomNumberSeed[0] = FABS(iseed);
+#if (!USE_MPI)
+    savedRandomNumberSeed[1] = FABS(iseed+2);
+    savedRandomNumberSeed[3] = FABS(iseed+6);
+#else
+    savedRandomNumberSeed[1] = FABS(iseed+2*myid); 
+    savedRandomNumberSeed[3] = FABS(iseed+2*myid+4);
+#endif
+    savedRandomNumberSeed[2] = FABS(iseed+4);
+  }
+
+  /* seed random number generators.  
+   * random_1_elegant is used for beamline errors, same on all processors
+   * random_2 is used for random scraping/sampling/scattering
+   * random_3 is used for BPM noise, same on all processors
+   * random_4 is used for beam generation 
+   */
+
+  if (!restart || restart&RESTART_RN_BEAMLINE) 
+    random_1_elegant(-savedRandomNumberSeed[0]);
+  if (!restart || restart&RESTART_RN_SCATTER)
+    random_2(-savedRandomNumberSeed[1]);
+  if (!restart || restart&RESTART_RN_BPMNOISE)
+    random_3(-savedRandomNumberSeed[2]);
+  if (!restart || restart&RESTART_RN_BEAMGEN)
+    random_4(-savedRandomNumberSeed[3]);
+}
+
 double random_1_elegant(long iseed)
 {
 
@@ -16,16 +54,7 @@ double random_1_elegant(long iseed)
     if (!initialized || iseed<0) {
         if (iseed<0)
           iseed = -iseed;
-#if (!USE_MPI)
-        random_2(-(iseed+2));
-        random_3(-(iseed+4));
-	random_4(-(iseed+6));
-#else
-	random_2(-(iseed+2*myid)); 
-	random_3(-(iseed+2*myid+2));
-	random_4(-(iseed+2*myid+4));
-#endif
-
+	/* random_1_elegant() is used for beamline errors, same on all processors */
         seed[3] = ((iseed & 4095)/2)*2+1;
         seed[2] = (iseed >>= 12) & 4095;
         seed[1] = (iseed >>= 12) & 4095;
