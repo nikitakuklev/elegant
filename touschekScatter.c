@@ -347,13 +347,16 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
                                   "lost particle coordinates", run->runfile,
                                   run->lattice, "touschek_scatter");
       }
+#if USE_MPI
+      if (isMaster)
+#endif
       if (bunch) {
         tsptr->bunFile = compose_filename_occurence(bunch, run->rootname, eptr->occurence);
         SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
                               "scattered-beam phase space", run->runfile,
                               run->lattice, "touschek_scatter");
       }
-
+      report_stats(stdout, "Before particle generation: "); 
       i = 0; j=0; total_event=0;
       while(1) {
         if(i>=n_simulated)
@@ -362,7 +365,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         for (j=0; j<11; j++) {
           ran1[j] = random_1_elegant(1);
         }
-        randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
+	randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
           
         total_event++;
         if (!tsSpec->distIn)
@@ -450,6 +453,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           break;
         }
       }
+      report_stats(stdout, "After particle generation: ");
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
           fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
@@ -471,12 +475,30 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         wTotal =0.;
         weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
         weight_ave = tsptr->totalWeight/tsptr->simuCount;
-        pickPart(weight, index, 0, tsptr->simuCount,  
-                 &iTotal, &wTotal, weight_limit, weight_ave);
+#if USE_MPI
+	if (isMaster)
+#endif
+	  pickPart(weight, index, 0, tsptr->simuCount,  
+		   &iTotal, &wTotal, weight_limit, weight_ave);
       }
       if (verbosity)
 	printf("%ld of %ld particles selected for tracking\n", iTotal, tsptr->simuCount);
 
+      report_stats(stdout, "After particle selection: ");
+#if USE_MPI
+      if (USE_MPI) {
+	long iTotal_orig;
+	long work_processors = n_processors-1;
+	
+	MPI_Bcast(&iTotal, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+	iTotal_orig = iTotal;
+	if (isSlave) {
+	  iTotal = iTotal_orig/work_processors;
+	  if (myid <= iTotal_orig%work_processors)
+	    iTotal++;
+	}
+      }
+#endif
       beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
       beam->original = (double**)czarray_2d(sizeof(double), iTotal, 7);
       beam->accepted = NULL;
@@ -498,7 +520,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
       if (tsSpec->distIn)
         tsptr->total_scatter *= tsptr->s_rate/tsptr->p_rate;
-
+#if USE_MPI
+      if (isMaster)
+#endif
       if (bunch)
         dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
                                  weight, tsptr);
@@ -510,19 +534,27 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         part_dist_paraValue[4] = (void*)(&tsptr->s_rate);
         part_dist_paraValue[5] = (void*)(&tsptr->i_rate);
         part_dist_paraValue[6] = (void*)(&bookBins[0]);
-        
+#if USE_MPI
+	if (isMaster)
+#endif        
         if (distribution) {
           chprint1m(disBook, tsptr->disFile, "Simulated scattered particle final distribution", part_dist_para, 
                     part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
           free_hbook1m(disBook);
         }
+#if USE_MPI
+	if (isMaster)
+#endif
         if (initial) {
           chprint1m(iniBook, tsptr->iniFile, "Simulated scattered particle original distribution", part_dist_para, 
                     part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
           free_hbook1m(iniBook);
         }
       }
-
+#if USE_MPI
+      notSinglePart = 0;
+      parallelStatus = notParallel;
+#endif
       if (do_track) {
 	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*7);
 	delete_phase_references();
@@ -533,10 +565,48 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 			 FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
 	  bombElegant("Fiducial particle was lost", NULL);
 	}
+#if USE_MPI
+      notSinglePart = 1;
+      parallelStatus = notParallel;
+#endif
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
                              NULL, NULL, beam->lostOnPass, eptr);
+#if USE_MPI
+	if (USE_MPI) {
+	  MPI_Status status;
+	  long nLost, n_left_total; 
+	  int *displs = (int *)tmalloc(n_processors*sizeof(*displs));
+	  long *nLostCounts = (long *)tmalloc(n_processors*sizeof(*nLostCounts));
+
+	  /* Gather the lost particles to let the Master dump the results */
+	  MPI_Reduce(&n_left, &n_left_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	  if (isMaster) {
+	    nLost = 0;
+	    n_left = n_left_total;
+	  }
+	  else
+	    nLost = beam->n_to_track-n_left;
+
+	  MPI_Gather(&nLost, 1, MPI_LONG, nLostCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD); 
+	  if (isMaster) {
+	    for (i=1; i<n_processors; i++) {
+	      MPI_Recv (&(beam->particle+n_left)[nLost][0],nLostCounts[i]*COORDINATES_PER_PARTICLE, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status);
+	      MPI_Recv (&(beam->lostOnPass+n_left)[nLost],nLostCounts[i], MPI_DOUBLE, i, 101, MPI_COMM_WORLD, &status);
+	      nLost += nLostCounts[i];
+	    }
+	  }
+	  else {
+	    MPI_Send (&(beam->particle[n_left][0]), nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+	    MPI_Send (&(beam->lostOnPass[n_left]), nLost, MPI_DOUBLE, 0, 101, MPI_COMM_WORLD);
+	  }
+	}	
+
+#endif
+#if USE_MPI
+	if (isMaster)
+#endif
         if (loss) {
           dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
                                         beam->lostOnPass+n_left, beam->n_to_track-n_left, weight, tsptr);
@@ -545,6 +615,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
         }
+#if USE_MPI
+	if (isMaster)
+#endif
         if (output) {
           for (i=0; i< beam->n_to_track-n_left; i++) {
             j = (beam->particle+n_left)[i][6]-1;
