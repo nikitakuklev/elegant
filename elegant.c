@@ -532,8 +532,9 @@ char **argv;
     }
   }
   
-  cp_str(&macroValue[0], "stdin");
-  
+  /*cp_str(&macroValue[0], "stdin");*/
+  macroValue[0] = "stdin";
+
 #if defined(CONDOR_COMPILE)
   sprintf(s, "%s.ckpt", inputfile);
   init_image_with_file_name(s);
@@ -1590,6 +1591,9 @@ char **argv;
   if (semaphoreFile[1])
     createSemaphoreFile(semaphoreFile[1]);
   free_beamdata(&beam);
+  free(macroTag);
+  free(macroValue);
+  free(starting_coord);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
   report_stats(stdout, "statistics: ");
   fflush(stdout);
@@ -1602,6 +1606,7 @@ char **argv;
 #endif
   if (load_hash)
     hdestroy(load_hash);                         /* destroy hash table */
+  free_scanargs(&scanned, argc);
   return(0);
 }
 
