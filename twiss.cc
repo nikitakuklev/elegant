@@ -1429,6 +1429,7 @@ void finish_twiss_output(void)
   if (doTuneShiftWithAmplitude && tune_shift_with_amplitude_struct.tune_output)
     SDDS_Terminate(&SDDSTswaTunes);
   doTuneShiftWithAmplitude = 0;
+  free_namelist(&twiss_output);
   log_exit((char*)"finish_twiss_output");
 }
 
@@ -1582,6 +1583,8 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
       isnan(elast->twiss->betay) ||
       isnan(elast->twiss->etay))
     return 0;
+  if (beamline->acc_limit_name[0]) free(beamline->acc_limit_name[0]);
+  if (beamline->acc_limit_name[1]) free(beamline->acc_limit_name[1]);
 
   log_exit((char*)"run_twiss_output");
   return 1;
