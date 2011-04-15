@@ -628,6 +628,10 @@ VMATRIX *compute_matrix(
      */
     elem->Pref_output = elem->Pref_input;
 
+    if (elem->matrix) {
+      free_matrices(elem->matrix);
+      free(elem->matrix);
+    }
     elem->matrix = NULL;
     
     switch (elem->type) {
