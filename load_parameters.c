@@ -651,6 +651,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             ((entity_description[eptr->type].parameter[param].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
         if ((eptr->flags&PARAMETERS_ARE_PERTURBED) && (entity_description[eptr->type].flags&HAS_MATRIX) && eptr->matrix) {
           free_matrices(eptr->matrix);
+          free(eptr->matrix);
           eptr->matrix = NULL;
         }
         load_request[i].element_flags[load_request[i].values] = eptr->flags;
