@@ -628,10 +628,12 @@ VMATRIX *compute_matrix(
      */
     elem->Pref_output = elem->Pref_input;
 
+/* Remove this because it causes problems with orbit correction
     if (elem->matrix) {
       free_matrices(elem->matrix);
       free(elem->matrix);
     }
+*/
     elem->matrix = NULL;
     
     switch (elem->type) {
