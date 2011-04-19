@@ -532,8 +532,7 @@ char **argv;
     }
   }
   
-  /*cp_str(&macroValue[0], "stdin");*/
-  macroValue[0] = "stdin";
+  cp_str(&macroValue[0], inputfile);
 
 #if defined(CONDOR_COMPILE)
   sprintf(s, "%s.ckpt", inputfile);
