@@ -671,12 +671,12 @@ long track_through_pfilter(
     }
 #if USE_MPI
     if (notSinglePart) {
-      if (isMaster)
-	itop = 0; 
       if (USE_MPI) {
 	long itop_total;
-	MPI_Allreduce(&itop, &itop_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
-	reference /= (itop_total+1);
+	double reference_total;
+	MPI_Allreduce(&itop, &itop_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&reference, &reference_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	reference = reference_total/(itop_total+n_processors);
       }
     } else
       reference /= (itop+1);
