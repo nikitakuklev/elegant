@@ -1374,6 +1374,9 @@ long do_tracking(
 	      break;
 	    case T_SCRIPT:
                {
+		if (((SCRIPT*)eptr->p_elem)->verbosity>1)
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+			  nLost, beam->n_particle, nLeft, nToTrack, nMaximum);
          	nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
 						beam, coord, nToTrack, nLost, 
 						run->rootname, i_pass, run->default_order);
@@ -1407,7 +1410,11 @@ long do_tracking(
 #endif
 		nToTrack = nLeft;
 		lostOnPass = beam->lostOnPass;
-		nMaximum = beam->n_to_track;
+		if (nMaximum<beam->n_particle)
+		  nMaximum = beam->n_particle;
+		if (((SCRIPT*)eptr->p_elem)->verbosity>1)
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+			  nLost, beam->n_particle, nLeft, nToTrack, nMaximum);
 	      }
 	      break;
 	    case T_FLOORELEMENT:
@@ -3087,7 +3094,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   
   npNew = SDDS_RowCount(&SDDSin);
   if (script->verbosity>0) {
-    fprintf(stdout, "%ld particles in script output file\n", npNew);
+    fprintf(stdout, "%ld particles in script output file (was %ld)\n", npNew, np);
     fflush(stdout);
   }
 #if !SDDS_MPI_IO
@@ -3105,7 +3112,6 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
               np, npNew);
       fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
-      fprintf(stderr, "in this version of elegant.\n");
       exitElegant(1);
     }
     if ((np+nLost)!=beam->n_particle) {
