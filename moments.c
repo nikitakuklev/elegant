@@ -350,6 +350,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
     beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, M1, 1, radiation, n_slices);
     free_matrices(M1);
     free(M1);
+    M1 = NULL;
   }
   else {
     if (verbosity>1) 
@@ -518,8 +519,8 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
       storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix, elem->Mld->C);
     elem = elem->succ;
   }
-  free_matrices(M1); free(M1);
-  free_matrices(M2); free(M2);
+  free_matrices(M1); free(M1); M1 = NULL;
+  free_matrices(M2); free(M2); M2 = NULL;
   free(S1);
   free(S2);
   m_free(&Ms);

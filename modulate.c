@@ -300,6 +300,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       if (modData->element[iMod]->matrix) {
         free_matrices(modData->element[iMod]->matrix);
         tfree(modData->element[iMod]->matrix);
+        modData->element[iMod]->matrix = NULL;
         compute_matrix(modData->element[iMod], run, NULL);
         matricesUpdated ++;
       }

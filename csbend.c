@@ -1950,6 +1950,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       free_matrices(Msection);
       free_matrices(Me1);
       free_matrices(Me2);
+      free(Msection);
+      free(Me1);
+      free(Me2);
+      Msection = Me1 = Me2 = NULL;
     }
   }
 

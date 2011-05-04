@@ -509,11 +509,16 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
     if (entity_description[elem->type].flags&HAS_MATRIX) {
       VMATRIX *M1, *M2, *M0;
       M0 = elem->matrix;
+      elem->matrix = NULL;
+
       value = *((double*)(elem->p_elem+param_offset));
       *((double*)(elem->p_elem+param_offset)) += corr_tweek;
       M1 = compute_matrix(elem, run, NULL);
+      elem->matrix = NULL;
+      
       *((double*)(elem->p_elem+param_offset)) -= 2*corr_tweek;
       M2 = compute_matrix(elem, run, NULL);
+
       if (plane==0) 
         coef = (M1->C[1]-M2->C[1])/(2*corr_tweek);
       else
@@ -982,9 +987,10 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     fflush(stdout);
 #endif
 
-    if (corr->matrix)
+    if (corr->matrix) {
       save = corr->matrix;
-    else
+      corr->matrix = NULL;
+    } else
       save = NULL;
     compute_matrix(corr, run, NULL);
 #ifdef DEBUG
@@ -1019,7 +1025,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     fprintf(stdout, "corrector %s tweeked to %e\n", corr->name, *((double*)(corr->p_elem+kick_offset)));
     fflush(stdout);
 #endif
-    free_matrices(corr->matrix); corr->matrix = NULL;
+    free_matrices(corr->matrix); free(corr->matrix); corr->matrix = NULL;
     compute_matrix(corr, run, NULL);
 #ifdef DEBUG
     print_matrices(stdout, "*** corrector matrix:", corr->matrix);
@@ -1069,11 +1075,13 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
     if (corr->matrix) {
       free_matrices(corr->matrix);
+      free(corr->matrix);
       corr->matrix = NULL;
     }
-    if (save)
+    if (save) {
       corr->matrix = save;
-    else 
+      save = NULL;
+    } else 
       compute_matrix(corr, run, NULL);
   } 
   free(moniCalibration);
@@ -2091,9 +2099,10 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 
-    if (corr->matrix)
+    if (corr->matrix) {
       save = corr->matrix;
-    else
+      corr->matrix = NULL;
+    } else
       save = NULL;
     compute_matrix(corr, run, NULL);
 
@@ -2137,10 +2146,13 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
     if (corr->matrix) {
       free_matrices(corr->matrix);
+      free(corr->matrix);
       corr->matrix = NULL;
     }
-    if (save)
+    if (save) {
       corr->matrix = save;
+      save = NULL;
+    }
     else 
       compute_matrix(corr, run, NULL);
   } 

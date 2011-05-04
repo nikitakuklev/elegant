@@ -786,6 +786,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_HCOR:
       memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
       elem.p_elem = &hcor;
       memcpy(&hcor, eptr->p_elem, sizeof(hcor));
       length = (hcor.length /= nSlices);
@@ -795,6 +796,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_VCOR:
       memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
       elem.p_elem = &vcor;
       memcpy(&vcor, eptr->p_elem, sizeof(vcor));
       length = (vcor.length /= nSlices);
@@ -804,6 +806,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_HVCOR:
       memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
       elem.p_elem = &hvcor;
       memcpy(&hvcor, eptr->p_elem, sizeof(hvcor));
       length = (hvcor.length /= nSlices);
@@ -865,6 +868,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   free_matrices(M2); tfree(M2);
   free_matrices(M1); tfree(M1);
   free_matrices(Ml1); tfree(Ml1);
+  M1 = M2 = Ml1 = NULL;
   m_free(&Ms);
 }
 
@@ -934,7 +938,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     matrix = compute_matrix(elem, run, NULL);
     track_particles(coord, matrix, coord, n_track);
     addCorrectorRadiationKick(coord, n_track, elem, elem->type, run->p_central, &sigmaDelta2, 1);
-    free_matrices(matrix); free(matrix);
+    free_matrices(matrix); free(matrix); matrix = NULL;
     break;
   case T_TWLA:
     pCentral = run->p_central;

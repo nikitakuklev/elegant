@@ -156,6 +156,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       if (member->matrix) {
         free_matrices(member->matrix);
         free(member->matrix);
+        member->matrix = NULL;
       }
       compute_matrix(member, run, NULL);
     }
@@ -263,13 +264,13 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
     member = member->succ;
   }
   if (M2) {
-    free_matrices(M2); tfree(M2);
+    free_matrices(M2); tfree(M2); M2 = NULL;
   }
   if (Ml1) {
-    free_matrices(Ml1); tfree(Ml1);
+    free_matrices(Ml1); tfree(Ml1); Ml1 = NULL;
   }
   if (Ml2) {
-    free_matrices(Ml2); tfree(Ml2);
+    free_matrices(Ml2); tfree(Ml2); Ml2 = NULL;
   }
   m_free(&Ms);
   return M1;
@@ -628,12 +629,10 @@ VMATRIX *compute_matrix(
      */
     elem->Pref_output = elem->Pref_input;
 
-/* Remove this because it causes problems with orbit correction
     if (elem->matrix) {
       free_matrices(elem->matrix);
       free(elem->matrix);
     }
-*/
     elem->matrix = NULL;
     
     switch (elem->type) {
@@ -1571,8 +1570,10 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       }
       free_matrices(Medge);
       tfree(Medge);
+      Medge = NULL;
       free_matrices(Mtot);
       tfree(Mtot);
+      Mtot = NULL;
     }
 
     if (change_p0)
@@ -1598,6 +1599,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       free_matrices(Mtot);
       tfree(Medge);
       tfree(Mtot);
+      Medge = Mtot = NULL;
     }
 
     *P_central = Preference;
@@ -1665,6 +1667,7 @@ VMATRIX *twissTransformMatrix1(TWISS *twissWanted, TWISS *twissInput)
   free(Mtot);
   free(M2);
   free(M3);
+  Mtot = M2 = M3 = NULL;
   
   return M1;
 }
@@ -1953,6 +1956,10 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     free_matrices(Mc);
     free_matrices(Ms);
     free_matrices(Md);
+    free(Mc);
+    free(Ms);
+    free(Md);
+    Mc = Ms = Md = NULL;
     Mt->C[4] += rfdf->length/2;
     null_matrices(Mt, EXCLUDE_R+EXCLUDE_C);
     Mt->order = 1;

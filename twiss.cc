@@ -143,6 +143,8 @@ VMATRIX *compute_periodic_twiss(
     }
     M = append_full_matrix(elem, run, M1, twissConcatOrder);
     free_matrices(M1);
+    free(M1);
+    M1 = NULL;
 /*
     fprintf(stdout, "Computed revolution matrix on closed orbit to %ld order\n",
             twissConcatOrder);
@@ -412,6 +414,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 	      if (elem->matrix) {
 		free_matrices(elem->matrix);
 		free(elem->matrix);
+                elem->matrix = NULL;
 	      }
 	      if (((TWISSELEMENT*)elem->p_elem)->verbose) {
 		printf((char*)"Computing twiss transformation matrix for %s at z=%e m from lattice twiss parameters\n", elem->name, elem->end_pos);
@@ -448,6 +451,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           if (elem->matrix) {
             free_matrices(elem->matrix);
             free(elem->matrix);
+            elem->matrix = NULL;
           }
           elem->matrix = compute_matrix(elem, run, NULL);
         }
@@ -811,13 +815,13 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     m_free(&dispOld);
   }
   else {
-    free_matrices(dispM1); tfree(dispM1);
-    free_matrices(dispM2); tfree(dispM2);
+    free_matrices(dispM1); tfree(dispM1); dispM1 = NULL;
+    free_matrices(dispM2); tfree(dispM2); dispM2 = NULL;
     /* fprintf(stderr, "*** Using global dispersion algorithm \n"); */
   }
   
-  free_matrices(M1); tfree(M1);
-  free_matrices(M2); tfree(M2);
+  free_matrices(M1); tfree(M1); M1 = NULL;
+  free_matrices(M2); tfree(M2); M2 = NULL;
 
   processTwissAnalysisRequests(elemOrig);
 }
@@ -1626,6 +1630,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     if (beamline->matrix) {
       free_matrices(beamline->matrix);
       free(beamline->matrix);
+      beamline->matrix = NULL;
     }
 
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
@@ -2106,6 +2111,7 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       if (eptr->matrix) {
         free_matrices(eptr->matrix);
         tfree(eptr->matrix);
+        eptr->matrix = NULL;
       }
       switch (eptr->type) {
       case T_RFCA:

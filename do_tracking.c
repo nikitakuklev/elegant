@@ -1293,8 +1293,11 @@ long do_tracking(
 		sptr = (SOLE*)eptr->p_elem;
 		if ((ks = -sptr->B/(*P_central*particleMass*c_mks/particleCharge))!=sptr->ks) {
 		  sptr->ks = ks;
-		  if (eptr->matrix)
+		  if (eptr->matrix) {
 		    free_matrices(eptr->matrix);
+                    free(eptr->matrix);
+                    eptr->matrix = NULL;
+                  }
 		  if (!(eptr->matrix = compute_matrix(eptr, run, NULL)))
 		    bombElegant("no matrix for element that must have matrix", NULL);
 		}
@@ -1424,8 +1427,11 @@ long do_tracking(
 		transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, nToTrack, i_pass);
 	      break;
 	    case T_STRAY:
-	      if (eptr->matrix)
+	      if (eptr->matrix) {
 		free_matrices(eptr->matrix);
+                free(eptr->matrix);
+                eptr->matrix = NULL;
+              }
 	      stray = (STRAY*)eptr->p_elem;
 	      eptr->matrix = stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, 
 						eptr->end_theta, stray->order?stray->order:run->default_order,
@@ -1484,16 +1490,22 @@ long do_tracking(
                       exitElegant(1);
                     }
                     computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
-                    if (eptr->matrix)
+                    if (eptr->matrix) {
                       free_matrices(eptr->matrix);
+                      free(eptr->matrix);
+                      eptr->matrix = NULL;
+                    }
                     eptr->matrix = twissTransformMatrix((TWISSELEMENT*)eptr->p_elem, &beamTwiss);
                     ((TWISSELEMENT*)eptr->p_elem)->transformComputed = 1;
                   }
 		}
                 if (((TWISSELEMENT*)eptr->p_elem)->transformComputed==0) {
                   if (((TWISSELEMENT*)eptr->p_elem)->from0Values) {
-		    if (eptr->matrix)
+		    if (eptr->matrix) {
 		      free_matrices(eptr->matrix);
+                      free(eptr->matrix);
+                      eptr->matrix = NULL;
+                    }
 		    eptr->matrix = twissTransformMatrix1(&(((TWISSELEMENT*)eptr->p_elem)->twiss), &(((TWISSELEMENT*)eptr->p_elem)->twiss0));
 		  } else {
 		    printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
@@ -2401,7 +2413,7 @@ void center_beam(double **part, CENTER *center, long np, long iPass, double p0)
           center->deltaSet[ic] = 1;
       } else 
         offset = center->delta[ic];
-      printf("centering coordinate %ld by subtracting %le\n", ic, offset);
+/*      printf("centering coordinate %ld by subtracting %le\n", ic, offset); */
       for (i=0; i<np; i++)
         part[i][ic] -= offset;
     }
