@@ -20,6 +20,10 @@ typedef struct {
 static ADD_ELEM addElem;
 static long add_elem_flag = 0;
 
+#define COPYLEN 1024
+static char elementDefCopy[COPYLEN+1];
+static long insertCount = 0;
+
 long getAddElemFlag() 
 {
   return (add_elem_flag);
@@ -98,14 +102,18 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   addElem.exclude = exclude;
   addElem.elemDef = element_def;
   delete_spaces(addElem.elemDef);
+  strncpy(elementDefCopy, element_def, COPYLEN);
 
   addElem.total = total_occurrences;
   for (i=0; i< addElem.total; i++) {
     addElem.occur[i] =  occurrence[i];
   }
 
+  insertCount = 0;
   beamline = get_beamline(NULL, beamline->name, run->p_central, 0);
   add_elem_flag = 0;
+  if (verbose)
+    printf("%ld elements inserted in total\n", insertCount);
 
   return;
 }
@@ -123,8 +131,13 @@ long insertElem(char *name, long type, long *skip, long occurPosition)
 
   if (addElem.total) {
     for (i=0; i<addElem.total; i++) {
-      if (occurPosition == addElem.occur[i])
-        return(1);
+      if (occurPosition == addElem.occur[i]) {
+	if (verbose)
+	  printf("Adding \"%s\" after occurrence %ld of %s\n",
+		 elementDefCopy, occurPosition, name);
+	insertCount ++;
+	return(1);
+      }
     }
     return(0);
   }
@@ -134,6 +147,10 @@ long insertElem(char *name, long type, long *skip, long occurPosition)
     if (*skip < addElem.nskip)
       return(0);
     *skip = 0;
+    if (verbose)
+      printf("Adding \"%s\" after occurrence %ld of %s\n",
+	     elementDefCopy, occurPosition, name);
+    insertCount ++;
     return(1);
   }
   return(0);
