@@ -173,7 +173,6 @@ void finishMomentumApertureSearch()
   }
 }
 
-
 long doMomentumApertureSearch(
                               RUN *run,
                               VARY *control,
@@ -264,8 +263,8 @@ long doMomentumApertureSearch(
   }    
   if (verbosity) {
     verbosity = 0;
-  if (myid == 0)
-    printf ("Warning: In parallel version, no intermediate information will be provided\n");
+    if (myid == 0)
+      printf ("Warning: In parallel version, limited intermediate information will be provided\n");
   }
 #endif
   /* allocate arrays for tracking */
@@ -319,7 +318,11 @@ long doMomentumApertureSearch(
 
   outputRow = -1;
   jobCounter = -1;
-  
+
+#if USE_MPI
+  verbosity = 0;  
+#endif
+
   while (elem && processElements>0) {
     if ((!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern))) {
@@ -340,13 +343,7 @@ long doMomentumApertureSearch(
 #endif
         outputRow++;
       }
-#if USE_MPI
-#if defined(DEBUG)
-      fprintf(fpdMpi, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-      fprintf(fpdMpi, "jobCounter = %ld, outputRow = %ld\n", jobCounter, outputRow);
-      fflush(fpdMpi);
-#endif
-#else
+#if !USE_MPI
       if (verbosity>0) {
         fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
@@ -358,12 +355,27 @@ long doMomentumApertureSearch(
           jobCounter++;
           if (myid!=jobCounter%n_processors)
             continue;
-#endif
           outputRow++;
           slot = 0;
+#if defined(DEBUG)
+          fprintf(fpdMpi, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+          fprintf(fpdMpi, "jobCounter = %ld, outputRow = %ld, side = %ld\n", jobCounter, outputRow, side);
+          fflush(fpdMpi);
+#endif
+#endif
           direction[outputRow] = (side==0?-1:1);
         } else
           slot = side;
+
+#if USE_MPI
+        if (myid==0) {
+          if (output_mode==1)
+            fprintf(stdout, "About %.15f%% done\n", (jobCounter*50.0)/nElem);
+          else if (side==0)
+            fprintf(stdout, "About %.15f%% done\n", (jobCounter*100.0)/nElem);
+          fflush(stdout);
+        }
+#endif
 
         ElementName[outputRow] = elem->name;
         ElementType[outputRow] = entity_name[elem->type];
