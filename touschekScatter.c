@@ -888,6 +888,9 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
+      if (verbosity>1)
+	printf("Looking for data for TSCATTER %s#%ld at s=%21.15e\n",
+	       eptr->name, eptr->occurence, eptr->end_pos);
       while (1) {
         if (fabs(*s - eptr->end_pos) < eps &&
 	    (match_position_only || 
@@ -896,6 +899,9 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 	      strcmp(*Type,entity_name[eptr->type]) == 0))) {
           ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))
             * Momentum_Aperture_scale;
+	  if (verbosity>1)
+	    printf("Matched by \"%s\"#%ld at s=%21.15e\n",
+		   *Name, (long)*Occurence, *s);
           i++;
           s++; dpp++; dpm++; Name++; Type++; Occurence++;
           break;
