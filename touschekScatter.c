@@ -456,9 +456,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       report_stats(stdout, "After particle generation: ");
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-          fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
+          fprintf(stdout, "warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
         else
-          fprintf(stdout, "waring: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+          fprintf(stdout, "warning: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
       }
       tsptr->factor = tsptr->factor / (double)(total_event);
       tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
