@@ -355,14 +355,9 @@ long doMomentumApertureSearch(
           jobCounter++;
           if (myid!=jobCounter%n_processors)
             continue;
+#endif
           outputRow++;
           slot = 0;
-#if defined(DEBUG)
-          fprintf(fpdMpi, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-          fprintf(fpdMpi, "jobCounter = %ld, outputRow = %ld, side = %ld\n", jobCounter, outputRow, side);
-          fflush(fpdMpi);
-#endif
-#endif
           direction[outputRow] = (side==0?-1:1);
         } else
           slot = side;
