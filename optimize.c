@@ -1325,7 +1325,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 88
+#define N_TWISS_QUANS (88+18)
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -1354,7 +1354,13 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "dnux/dJx", "dnux/dJy", "dnuy/dJy",
     "h11001", "h00111", "h20001", "h00201", "h10002",
     "h22000", "h11110", "h00220", "h31000", "h40000",
-    "h20110", "h11200", "h20020", "h20200", "h00310", "h00400"
+    "h20110", "h11200", "h20020", "h20200", "h00310", "h00400",
+    "p99.betax", "p99.etax", "p99.etapx", 
+    "p99.betay", "p99.etay", "p99.etapy",
+    "p98.betax", "p98.etax", "p98.etapx", 
+    "p98.betay", "p98.etay", "p98.etapy",
+    "p96.betax", "p96.etax", "p96.etapx", 
+    "p96.betay", "p96.etay", "p96.etapy",
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -1382,6 +1388,12 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,
   -1, -1, -1,
   -1, -1, -1, -1, -1,
+  -1, -1, -1,  
+  -1, -1, -1, 
+  -1, -1, -1,  
+  -1, -1, -1, 
+  -1, -1, -1,  
+  -1, -1, -1, 
     };
 
 static char *radint_name[13] = {
@@ -1433,6 +1445,7 @@ double optimization_function(double *value, long *invalid)
   unsigned long unstable;
   VMATRIX *M;
   TWISS twiss_ave, twiss_min, twiss_max;
+  TWISS twiss_p99, twiss_p98, twiss_p96;
   double XYZ[3], Angle[3], XYZMin[3], XYZMax[3];
   double startingOrbitCoord[6] = {0,0,0,0,0,0};
   long rpnError = 0;
@@ -1746,6 +1759,26 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->drivingTerms.h20200, NULL, twiss_mem[85]);
     rpn_store(beamline->drivingTerms.h00310, NULL, twiss_mem[86]); 
     rpn_store(beamline->drivingTerms.h00400, NULL, twiss_mem[87]);
+
+    compute_twiss_percentiles(beamline, &twiss_p99, &twiss_p98, &twiss_p96);
+    rpn_store(twiss_p99.betax, NULL, twiss_mem[88]);
+    rpn_store(twiss_p99.etax, NULL,  twiss_mem[89]);
+    rpn_store(twiss_p99.etapx, NULL, twiss_mem[90]);
+    rpn_store(twiss_p99.betay, NULL, twiss_mem[91]);
+    rpn_store(twiss_p99.etay, NULL,  twiss_mem[92]);
+    rpn_store(twiss_p99.etapy, NULL, twiss_mem[93]);
+    rpn_store(twiss_p98.betax, NULL, twiss_mem[94]);
+    rpn_store(twiss_p98.etax, NULL,  twiss_mem[95]);
+    rpn_store(twiss_p98.etapx, NULL, twiss_mem[96]);
+    rpn_store(twiss_p98.betay, NULL, twiss_mem[97]);
+    rpn_store(twiss_p98.etay, NULL,  twiss_mem[98]);
+    rpn_store(twiss_p98.etapy, NULL, twiss_mem[99]);
+    rpn_store(twiss_p96.betax, NULL, twiss_mem[100]);
+    rpn_store(twiss_p96.etax, NULL,  twiss_mem[101]);
+    rpn_store(twiss_p96.etapx, NULL, twiss_mem[102]);
+    rpn_store(twiss_p96.betay, NULL, twiss_mem[103]);
+    rpn_store(twiss_p96.etay, NULL,  twiss_mem[104]);
+    rpn_store(twiss_p96.etapy, NULL, twiss_mem[105]);
 
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");

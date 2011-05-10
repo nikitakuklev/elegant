@@ -2230,6 +2230,121 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   }
 }
 
+void compute_twiss_percentiles(LINE_LIST *beamline, TWISS *twiss_p99, TWISS *twiss_p98, TWISS *twiss_p96)
+{
+  ELEMENT_LIST *eptr;
+  long iElem, i;
+  double **data;
+  TWISS *twiss_pXX[3];
+  double percent[3] = {99, 98, 96};
+  double value[3];
+    
+  if (!twiss_p99) {
+    fprintf(stdout, (char*)"error: NULL twiss_p99 pointer in compute_twiss_percentiles\n");
+    fflush(stdout);
+    abort();
+  }
+  if (!twiss_p98) {
+    fprintf(stdout, (char*)"error: NULL twiss_min pointer in compute_twiss_percentiles\n");
+    fflush(stdout);
+    abort();
+  }
+  if (!twiss_p96) {
+    fprintf(stdout, (char*)"error: NULL twiss_max pointer in compute_twiss_percentiles\n");
+    fflush(stdout);
+    abort();
+  }
+  
+  data = (double**)czarray_2d(sizeof(double), 8, beamline->n_elems);
+  eptr = beamline->elem_twiss;
+  iElem = 0;
+  while (eptr) {
+    if (iElem>=beamline->n_elems)
+      bombElegant("element counting error (compute_twiss_percentiles)", NULL);
+    data[0][iElem] = eptr->twiss->betax;
+    data[1][iElem] = eptr->twiss->alphax;
+    data[2][iElem] = eptr->twiss->etax;
+    data[3][iElem] = eptr->twiss->etapx;
+    data[4][iElem] = eptr->twiss->betay;
+    data[5][iElem] = eptr->twiss->alphay;
+    data[6][iElem] = eptr->twiss->etay;
+    data[7][iElem] = eptr->twiss->etapy;
+    iElem++;
+    eptr = eptr->succ;
+  }
+
+  twiss_pXX[0] = twiss_p99;
+  twiss_pXX[1] = twiss_p98;
+  twiss_pXX[2] = twiss_p96;
+  
+  compute_percentiles(value, percent, 3, data[0], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->betax = value[i];
+#ifdef DEBUG
+    printf("betax %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[1], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->alphax = value[i];
+#ifdef DEBUG
+    printf("alphax %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[2], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->etax = value[i];
+#ifdef DEBUG
+    printf("etax %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[3], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->etapx = value[i];
+#ifdef DEBUG
+    printf("etaxp %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[4], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->betay = value[i];
+#ifdef DEBUG
+    printf("betay %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[5], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->alphay = value[i];
+#ifdef DEBUG
+    printf("alphay %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[6], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->etay = value[i];
+#ifdef DEBUG
+    printf("etay %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+  
+  compute_percentiles(value, percent, 3, data[7], beamline->n_elems);
+  for (i=0; i<3; i++) {
+    twiss_pXX[i]->etapy = value[i];
+#ifdef DEBUG
+    printf("etayp %.0f %% = %g\n", percent[i], value[i]);
+#endif
+  }
+
+  free_czarray_2d((void**)data, 8, beamline->n_elems); 
+}
+
+
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0, double eta0, double etap0, 

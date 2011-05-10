@@ -266,7 +266,7 @@ typedef struct {
 /* radiation integrals and related values.  See SLAC 1193. */
 typedef struct {
   short computed;
-  double RI[5];
+  double RI[6];
   double Jx, Jy, Jdelta;
   double taux, tauy, taudelta;
   double ex0, sigmadelta, Uo;
@@ -2942,6 +2942,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                               unsigned long *unstable);
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable);
 void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max);
+void compute_twiss_percentiles(LINE_LIST *beamline, TWISS *twiss_p99, TWISS *twiss_p98, TWISS *twiss_p96);
 void dump_twiss_parameters(LINE_LIST *beamline, long n_elem, 
                            double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, 
                            double *dbeta, double *acceptance, double *alphac,
