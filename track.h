@@ -596,15 +596,15 @@ typedef struct {
 } SASEFEL_OUTPUT;
 
 typedef struct {
-	char *name;
-	long nskip;
-	long horizontal, vertical, longitudinal;
-	long nonlinear;
-	double sigmax, sigmay, sigmaz, sigmap; 
-	double c0;   			/* c0=re*np/(2*Pi)^(3/2) -> calculate once.  */
-	double c1;	 			/* c1=c0/p0^3/sigmaz -> calculate every turn */
-	double dmux, dmuy;
-        double length;
+  char *name;
+  long nskip;
+  long horizontal, vertical, longitudinal, uniform;
+  long nonlinear;
+  double sigmax, sigmay, sigmaz, sigmap; 
+  double c0;   			/* c0=re*np/(2*Pi)^(3/2) -> calculate once.  */
+  double c1;	 			/* c1=c0/p0^3/sigmaz -> calculate every turn */
+  double dmux, dmuy;
+  double length;
 } SPACE_CHARGE;
 
 typedef struct {

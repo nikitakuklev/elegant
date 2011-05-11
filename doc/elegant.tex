@@ -1959,6 +1959,7 @@ rings. }
         long vertical = 0;
         long horizontal = 0;
         long nonlinear = 0;
+	long uniform_distribution = 0;
 &end
 \end{verbatim}
 
@@ -1976,6 +1977,7 @@ rings. }
         If zero, only one space charge kick is inserted at the end of beamline. 
 \item \verb|vertical|, \verb|horizontal|, \verb|nonlinear| --- If non-zero, then space charge is
 included in the plane in question.
+\item \verb|uniform_distribution| --- Used for bi-Gaussian distributed beam (coarsting beam). 
 \end{itemize}
 
 Note: Some users use \verb|matched_to_cell| or
