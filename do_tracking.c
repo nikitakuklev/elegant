@@ -1378,8 +1378,8 @@ long do_tracking(
 	    case T_SCRIPT:
                {
 		if (((SCRIPT*)eptr->p_elem)->verbosity>1)
-		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
-			  nLost, beam->n_particle, nLeft, nToTrack, nMaximum);
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+			  nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
          	nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
 						beam, coord, nToTrack, nLost, 
 						run->rootname, i_pass, run->default_order);
@@ -1391,7 +1391,7 @@ long do_tracking(
 		if (beam && coord!=beam->particle) {
 		  /* particles were created and so the particle array was changed */
 		  coord = beam->particle;
-		  if (nLost != (beam->n_particle - nLeft)) {
+		  if (nLost != (beam->n_to_track - nLeft)) {
 		    fprintf(stderr, "Particle accounting problem after return from script.\n");
 		    fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
 			    nLost, beam->n_particle, nLeft);
@@ -1413,11 +1413,11 @@ long do_tracking(
 #endif
 		nToTrack = nLeft;
 		lostOnPass = beam->lostOnPass;
-		if (nMaximum<beam->n_particle)
-		  nMaximum = beam->n_particle;
+		if (nMaximum<beam->n_to_track)
+		  nMaximum = beam->n_to_track;
 		if (((SCRIPT*)eptr->p_elem)->verbosity>1)
-		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
-			  nLost, beam->n_particle, nLeft, nToTrack, nMaximum);
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+			  nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
 	      }
 	      break;
 	    case T_FLOORELEMENT:
@@ -3116,10 +3116,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   if (npNew>np) {
     /* We have to resize the arrays in the BEAM structure */
-    /*
+
       fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
       np+nLost, np, npNew+nLost, npNew);
-    */
+
     if (!beam) {
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
               np, npNew);
@@ -3164,7 +3164,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       free_czarray_2d((void**)beam->accepted, np+nLost, 7);
       beam->accepted = NULL;
     }
-    beam->n_particle = npNew+nLost;
+    beam->n_to_track = npNew+nLost;
     beam->n_to_track = npNew;
 #if USE_MPI
     beam->n_to_track_total = SDDS_MPI_TotalRowCount(&SDDSin);	
