@@ -1383,11 +1383,9 @@ long do_tracking(
          	nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
 						beam, coord, nToTrack, nLost, 
 						run->rootname, i_pass, run->default_order);
-
-		/* 
-		   fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
-		   nLost, beam->n_particle, nLeft);
-		*/
+		if (((SCRIPT*)eptr->p_elem)->verbosity>2)
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+			  nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
 		if (beam && coord!=beam->particle) {
 		  /* particles were created and so the particle array was changed */
 		  coord = beam->particle;
@@ -1416,7 +1414,7 @@ long do_tracking(
 		if (nMaximum<beam->n_to_track)
 		  nMaximum = beam->n_to_track;
 		if (((SCRIPT*)eptr->p_elem)->verbosity>1)
-		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+		  fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n\n",
 			  nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
 	      }
 	      break;
@@ -2922,7 +2920,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   double *data;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
   long i, j, npNew, nameLength, doDrift;
-
+  char passString[20];
+  
   if (!script->rootname || !strlen(script->rootname)) {
     /* generate random rootname */
     if (!(rootname = tmpname(NULL)))
@@ -2972,12 +2971,16 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (rootname!=script->rootname)
     free(rootname);
 
-  if (!(cmdBuffer0=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))) ||
-      !(cmdBuffer1=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))))
+  if (!(cmdBuffer0=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)+strlen(passString)))) ||
+      !(cmdBuffer1=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)+strlen(passString)))))
     bombElegant("memory allocation failure making command buffer for script", NULL);
   replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
   replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
-
+ 
+  sprintf(passString, "%ld", iPass);
+  replaceString(cmdBuffer0, cmdBuffer1, "%p", passString, 9, 0);
+  strcpy_ss(cmdBuffer1, cmdBuffer0);
+  
   /* substitute numerical parameters */
   for (i=0; i<10; i++) {
     long count = 0;
@@ -3128,8 +3131,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     if ((np+nLost)!=beam->n_to_track) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
-      fprintf(stderr, "np = %ld, nLost = %ld, beam->n_to_track = %ld\n",
-              np, nLost, beam->n_particle);
+      fprintf(stderr, "np = %ld, nLost = %ld, beam->n_to_track = %ld, beam->n_particle=%ld\n",
+              np, nLost, beam->n_to_track, beam->n_particle);
       exitElegant(1);
     }
 
@@ -3170,7 +3173,6 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       beam->accepted = NULL;
     }
     beam->n_to_track = npNew+nLost;
-    beam->n_to_track = npNew;
 #if USE_MPI
     beam->n_to_track_total = SDDS_MPI_TotalRowCount(&SDDSin);	
 #endif
