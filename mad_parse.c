@@ -160,7 +160,7 @@ extern ELEMENT_LIST *expand_line(
             bombElegant("improper element multiplication", NULL);
           }
           ptr1 = ptr+1;
-          if (*ptr1=='(')
+          if (*ptr1=='(' || *ptr1=='"')
             ptr1++;
         }
       }
