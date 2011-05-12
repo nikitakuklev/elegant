@@ -3115,50 +3115,55 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 #endif
   if (npNew>np) {
-    /* We have to resize the arrays in the BEAM structure */
-
-      fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
-      np+nLost, np, npNew+nLost, npNew);
-
+    /* We may have to resize the arrays in the BEAM structure */
+    
+    fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
+            np+nLost, np, npNew+nLost, npNew);
+    
     if (!beam) {
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
               np, npNew);
       fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
       exitElegant(1);
     }
-    if ((np+nLost)!=beam->n_particle) {
+    if ((np+nLost)!=beam->n_to_track) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
-      fprintf(stderr, "np = %ld, nLost = %ld, n_particle = %ld\n",
+      fprintf(stderr, "np = %ld, nLost = %ld, beam->n_to_track = %ld\n",
               np, nLost, beam->n_particle);
       exitElegant(1);
     }
+
+    if (npNew>beam->n_particle) {
+      if (beam->original==beam->particle) {
+        /* This means, oddly enough, that the particle array and original array are the same because the
+         * separate original array wasn't needed.  n_original gives the size of both arrays (including
+         * live and lost particles).  To avoid confusion, we'll copy the data to a new array before
+         * doing anything else, even though it means the original array is not used for anything and
+         * contains a useless frozen copy of the present beam.
+         * Use n_original since that's the size of the array, including lost particles. 
+         */
+        beam->particle = (double**)czarray_2d(sizeof(double), beam->n_original, 7);
+        copy_particles(beam->particle, beam->original, beam->n_original);
+      }
+      /* resize the particle array, leaving space for the lost particle data at the top */
+      if (!(beam->particle =  (double**)resize_czarray_2d((void**)beam->particle,sizeof(double), npNew+nLost, 7)) ||
+          !(beam->lostOnPass = realloc(beam->lostOnPass, sizeof(beam->lostOnPass)*(npNew+nLost)))) {
+        fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
+                npNew+nLost);
+        exitElegant(1);
+      }
+      beam->n_particle = npNew+nLost;
+
+      /* move lost particles into the upper part of the arrays */
+      /* fprintf(stdout, "Moving %ld lost particles higher into buffer\n",
+         nLost);
+         */
+      for (i=nLost-1; i>=0; i--) {
+        swapParticles(beam->particle[np+i], beam->particle[npNew+i]);
+        SWAP_LONG(beam->lostOnPass[np+i], beam->lostOnPass[npNew+i]);
+      }
+    }
     
-    if (beam->original==beam->particle) {
-      /* This means, oddly enough, that the particle array and original array are the same because the
-       * separate original array wasn't needed.  n_original gives the size of both arrays (including
-       * live and lost particles).  To avoid confusion, we'll copy the data to a new array before
-       * doing anything else, even though it means the original array is not used for anything and
-       * contains a useless frozen copy of the present beam.
-       * Use n_original since that's the size of the array, including lost particles. 
-       */
-      beam->particle = (double**)czarray_2d(sizeof(double), beam->n_original, 7);
-      copy_particles(beam->particle, beam->original, beam->n_original);
-    }
-    /* resize the particle array, leaving space for the lost particle data at the top */
-    if (!(beam->particle =  (double**)resize_czarray_2d((void**)beam->particle,sizeof(double), npNew+nLost, 7)) ||
-        !(beam->lostOnPass = realloc(beam->lostOnPass, sizeof(beam->lostOnPass)*(npNew+nLost)))) {
-      fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
-              npNew+nLost);
-      exitElegant(1);
-    }
-    /* move lost particles into the upper part of the arrays */
-    /* fprintf(stdout, "Moving %ld lost particles higher into buffer\n",
-       nLost);
-    */
-    for (i=nLost-1; i>=0; i--) {
-      swapParticles(beam->particle[np+i], beam->particle[npNew+i]);
-      SWAP_LONG(beam->lostOnPass[np+i], beam->lostOnPass[npNew+i]);
-    }
     if (beam->accepted)  {
       /* this data is invalid when particles are added */
       free_czarray_2d((void**)beam->accepted, np+nLost, 7);
