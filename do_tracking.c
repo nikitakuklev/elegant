@@ -3129,6 +3129,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
       exitElegant(1);
     }
+    /* Check that previous particle counts are correct */
     if ((np+nLost)!=beam->n_to_track) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
       fprintf(stderr, "np = %ld, nLost = %ld, beam->n_to_track = %ld, beam->n_particle=%ld\n",
@@ -3136,7 +3137,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       exitElegant(1);
     }
 
-    if (npNew>beam->n_particle) {
+    if ((npNew+nLost) > beam->n_particle) {
       if (beam->original==beam->particle) {
         /* This means, oddly enough, that the particle array and original array are the same because the
          * separate original array wasn't needed.  n_original gives the size of both arrays (including
