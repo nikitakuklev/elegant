@@ -2356,7 +2356,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|DONT_CONCAT|MPALGORITHM,  sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
-    { N_SCRIPT_PARAMS,  MAT_LEN|DONT_CONCAT, sizeof(SCRIPT),    script_param     }, 
+    { N_SCRIPT_PARAMS,  MAT_LEN|DONT_CONCAT|MPALGORITHM, sizeof(SCRIPT),    script_param     }, 
     { N_FLOORELEMENT_PARAMS,  0, sizeof(FLOORELEMENT),    floor_param     }, 
     { N_LTHINLENS_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LTHINLENS),    lthinlens_param     },
     {  N_LMIRROR_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LMIRROR),    lmirror_param     },
