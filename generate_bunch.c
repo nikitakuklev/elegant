@@ -94,7 +94,7 @@ long generate_bunch(
     total_n_particles += n_particles;
 #else
     long sum=0, tmp, my_offset=0, *offset = tmalloc(n_processors*sizeof(*offset)), total_particles=0;
-    if (isSlave) {
+    if (isSlave && notSinglePart) {
       MPI_Allgather (&n_particles, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
       tmp = offset[0];
       for (i=1; i<n_processors; i++) {
@@ -1108,7 +1108,7 @@ void zero_centroid(double **particle, long n_particles, long coord)
 #if !SDDS_MPI_IO
     sum /= n_particles;
 #else
-    if (isSlave) {
+    if (isSlave && notSinglePart) {
       double total_sum; 
       long total_particles;
       MPI_Allreduce (&sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
