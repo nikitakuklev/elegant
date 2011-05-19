@@ -2490,7 +2490,7 @@ void scatter(double **part, long np, double Po, SCATTER *scat)
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M)
 {
   char buffer[1000];
-  long i, j, k, count;
+  long i, j, k, l, count;
 
   if (!M) 
     return;
@@ -2499,13 +2499,19 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
 
   if (!(fpt->init_flags&8)) {
     if (M->order==1) {
-      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*36)))
+      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(6+36))))
         bombElegant("memory allocation failure (store_fitpoint_matrix_values)", NULL);
-    } else {
-      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(36+126))))
+    } else if (M->order==2) {
+      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(6+36+126))))
         bombElegant("memory allocation failure (store_fitpoint_matrix_values)", NULL);
-    }
+    } else
+      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(6+36+126+336))))
+        bombElegant("memory allocation failure (store_fitpoint_matrix_values)", NULL);
     for (i=count=0; i<6; i++) {
+      sprintf(buffer, "%s#%ld.C%ld", name, occurence, i+1);
+      fpt->matrix_mem[count++] = rpn_create_mem(buffer, 0);
+    }
+    for (i=0; i<6; i++) {
       for (j=0; j<6; j++) {
         sprintf(buffer, "%s#%ld.R%ld%ld", name, occurence, i+1, j+1);
         fpt->matrix_mem[count++] = rpn_create_mem(buffer, 0);
@@ -2521,10 +2527,24 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
         }
       }
     }
+    if (M->order>2) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
+          for (k=0; k<=j; k++) {
+            for (l=0; l<=k; l++) {
+              sprintf(buffer, "%s#%ld.U%ld%ld%ld%ld", name, occurence, i+1, j+1, k+1, l+1);
+              fpt->matrix_mem[count++] = rpn_create_mem(buffer, 0);
+            }
+          }
+        }
+      }
+    }    
     fpt->init_flags |= 8;
   }
   
   for (i=count=0; i<6; i++)
+    rpn_store(M->C[i], NULL, fpt->matrix_mem[count++]);
+  for (i=0; i<6; i++)
     for (j=0; j<6; j++)
       rpn_store(M->R[i][j], NULL, fpt->matrix_mem[count++]);
   if (M->order>1)
@@ -2532,6 +2552,12 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++) 
           rpn_store(M->T[i][j][k], NULL, fpt->matrix_mem[count++]);
+  if (M->order>2)
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++) 
+            for (l=0; l<=k; l++) 
+              rpn_store(M->Q[i][j][k][l], NULL, fpt->matrix_mem[count++]);
 }
 
 
