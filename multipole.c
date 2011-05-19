@@ -582,6 +582,8 @@ long multipole_tracking2(
   KQUAD *kquad;
   KSEXT *ksext;
   KQUSE *kquse;
+  KOCT *koct;
+  
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
   long sqrtOrder;
   MULT_APERTURE_DATA apertureData;
@@ -679,6 +681,43 @@ long multipole_tracking2(
                                      NULL,
                                      KnL, 2);
     multData = &(ksext->totalMultipoleData);
+    break;
+  case T_KOCT:
+    koct = ((KOCT*)elem->p_elem);
+    n_kicks = koct->n_kicks;
+    order = 3;
+    if (koct->bore)
+      /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
+      KnL = 6*koct->B/ipow(koct->bore, 3)*(particleCharge/(particleMass*c_mks*Po))*koct->length*(1+koct->fse);
+    else
+      KnL = koct->k3*koct->length*(1+koct->fse);
+    drift = koct->length;
+    tilt = koct->tilt;
+    dx = koct->dx;
+    dy = koct->dy;
+    dz = koct->dz;
+    integ_order = koct->integration_order;
+    sqrtOrder = koct->sqrtOrder?1:0;
+    if (koct->synch_rad)
+      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    if (!koct->isr || (koct->isr1Particle==0 && n_part==1))
+      /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
+      isr_coef *= -1;
+    if (!koct->multipolesInitialized) {
+      /* read the data files for the error multipoles */
+      readErrorMultipoleData(&(koct->systematicMultipoleData),
+                             koct->systematic_multipoles, 0);
+      readErrorMultipoleData(&(koct->randomMultipoleData),
+                             koct->random_multipoles, 0);
+      koct->multipolesInitialized = 1;
+    }
+    computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
+                                     &(koct->systematicMultipoleData),
+                                     &(koct->randomMultipoleData),
+                                     NULL,
+                                     KnL, 3);
+    multData = &(koct->totalMultipoleData);
     break;
   case T_KQUSE:
     /* Implemented as a quadrupole with sextupole as a secondary multipole */

@@ -798,7 +798,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EMITTANCE 102
 #define T_MHISTOGRAM 103
 #define T_FTABLE 104
-#define N_TYPES   105
+#define T_KOCT 105
+#define N_TYPES   106
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -811,7 +812,7 @@ extern char *entity_text[N_TYPES];
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 8
-#define N_OCTU_PARAMS 0
+#define N_OCTU_PARAMS 8
 #define N_MULT_PARAMS 12
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 11
@@ -910,6 +911,7 @@ extern char *entity_text[N_TYPES];
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
 #define N_FTABLE_PARAMS 13
+#define N_KOCT_PARAMS 17
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1039,6 +1041,15 @@ typedef struct {
     double dx, dy, dz, fse;
     long order;
     } SEXT;
+
+/* names and storage structure for octupole physical parameters */
+extern PARAMETER octu_param[N_OCTU_PARAMS];
+
+typedef struct {
+    double length, k3, tilt;
+    double dx, dy, dz, fse;
+    long order;
+    } OCTU;
 
 /* names and storage structure for solenoid */
 extern PARAMETER sole_param[N_SOLE_PARAMS] ;
@@ -1686,6 +1697,22 @@ typedef struct {
     MULTIPOLE_DATA randomMultipoleData;      
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KSEXT;
+
+/* names and storage structure for kick octupole physical parameters */
+extern PARAMETER koct_param[N_KOCT_PARAMS];
+
+typedef struct {
+    double length, k3, tilt, bore, B;
+    double dx, dy, dz, fse;
+    long n_kicks, synch_rad;
+    char *systematic_multipoles, *random_multipoles;
+    long integration_order, sqrtOrder, isr, isr1Particle;
+    /* for internal use */
+    long multipolesInitialized;
+    MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA randomMultipoleData;      
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
+    } KOCT;
 
 /* names and storage structure for symplectic bending magnet physical parameters */
 extern PARAMETER ksbend_param[N_KSBEND_PARAMS];

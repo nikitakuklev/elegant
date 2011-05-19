@@ -512,6 +512,79 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
     return(M);
   }
 
+VMATRIX *octupole_matrix(double K3, double length, long maximum_order, double tilt, double fse)
+{
+    VMATRIX *M;
+    double *C, **R, ***T, ****U;
+    
+    K3 *= (1+fse);
+
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, M->order=MIN(3,maximum_order));
+    R = M->R;
+    C = M->C;
+    
+    R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
+    C[4] = R[0][1] = R[2][3] = length;
+    if (M->order>=2) {
+      /* path length terms--same as for drift */
+      T = M->T;
+      T[4][1][1] = T[4][3][3] = length/2;
+    }
+    if (M->order >= 3) {
+      double L, L2, L3, L4, L5;
+      U = M->Q;
+      L = length;
+      L2 = L*L;
+      L3 = L2*L;
+      L4 = L3*L;
+      L5 = L4*L;
+      U[0][0][0][0] = -(K3*L2)/12.;
+      U[0][1][0][0] = -(K3*L3)/36.;
+      U[0][1][1][0] = -(K3*L4)/72.;
+      U[0][1][1][1] = -(K3*L5)/120.;
+      U[0][2][2][0] = (K3*L2)/4.;
+      U[0][2][2][1] = (K3*L3)/12.;
+      U[0][3][2][0] = (K3*L3)/12.;
+      U[0][3][2][1] = (K3*L4)/24.;
+      U[0][3][3][0] = (K3*L4)/24.;
+      U[0][3][3][1] = (K3*L5)/40.;
+      U[1][0][0][0] = -(K3*L)/6.;
+      U[1][1][0][0] = -(K3*L2)/12.;
+      U[1][1][1][0] = -(K3*L3)/18.;
+      U[1][1][1][1] = -(K3*L4)/24.;
+      U[1][2][2][0] = (K3*L)/2.;
+      U[1][2][2][1] = (K3*L2)/4.;
+      U[1][3][2][0] = (K3*L2)/4.;
+      U[1][3][2][1] = (K3*L3)/6.;
+      U[1][3][3][0] = (K3*L3)/6.;
+      U[1][3][3][1] = (K3*L4)/8.;
+      U[2][2][0][0] = (K3*L2)/4.;
+      U[2][2][1][0] = (K3*L3)/12.;
+      U[2][2][1][1] = (K3*L4)/24.;
+      U[2][2][2][2] = -(K3*L2)/12.;
+      U[2][3][0][0] = (K3*L3)/12.;
+      U[2][3][1][0] = (K3*L4)/24.;
+      U[2][3][1][1] = (K3*L5)/40.;
+      U[2][3][2][2] = -(K3*L3)/36.;
+      U[2][3][3][2] = -(K3*L4)/72.;
+      U[2][3][3][3] = -(K3*L5)/120.;
+      U[3][2][0][0] = (K3*L)/2.;
+      U[3][2][1][0] = (K3*L2)/4.;
+      U[3][2][1][1] = (K3*L3)/6.;
+      U[3][2][2][2] = -(K3*L)/6.;
+      U[3][3][0][0] = (K3*L2)/4.;
+      U[3][3][1][0] = (K3*L3)/6.;
+      U[3][3][1][1] = (K3*L4)/8.;
+      U[3][3][2][2] = -(K3*L2)/12.;
+      U[3][3][3][2] = -(K3*L3)/18.;
+      U[3][3][3][3] = -(K3*L4)/24.;
+    }
+    tilt_matrices(M, tilt);
+
+    return(M);
+  }
+
 
 VMATRIX *solenoid_matrix(double length, double ks, long max_order)
 {
@@ -591,10 +664,10 @@ VMATRIX *compute_matrix(
                         )
 {
     QUAD *quad; BEND *bend; SEXT *sext; HCOR *hcor; HVCOR *hvcor;
-    VCOR *vcor; ALPH *alph; DRIFT *drift;
+    VCOR *vcor; ALPH *alph; DRIFT *drift; OCTU *oct;
     SOLE *sole; ROTATE *rot; QFRING *qfring;
     MONI *moni; HMON *hmon; VMON *vmon; 
-    KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
+    KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
@@ -753,6 +826,14 @@ VMATRIX *compute_matrix(
                                         sext->fse);
         if (sext->dx || sext->dy || sext->dz)
             misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz, 0.0);
+        break;
+      case T_OCT:
+        oct = (OCTU*)elem->p_elem;
+        elem->matrix = octupole_matrix(oct->k3, oct->length, 
+                                        oct->order?oct->order:run->default_order, oct->tilt,
+                                        oct->fse);
+        if (oct->dx || oct->dy || oct->dz)
+            misalign_matrix(elem->matrix, oct->dx, oct->dy, oct->dz, 0.0);
         break;
       case T_ALPH:
         alph = (ALPH*)elem->p_elem;
@@ -914,6 +995,22 @@ VMATRIX *compute_matrix(
                                   ksext->systematic_multipoles, 0);
         readErrorMultipoleData(&(ksext->randomMultipoleData),
                                   ksext->random_multipoles, 0);
+        break;
+      case T_KOCT:
+        koct = (KOCT*)elem->p_elem;
+        if (koct->bore)
+            koct->k3 = 6*koct->B/ipow(koct->bore,3)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
+        if (koct->n_kicks<1)
+            bombElegant("n_kicks must by > 0 for KOCT element", NULL);
+        elem->matrix = octupole_matrix(koct->k3, koct->length, 
+                                        (run->default_order?run->default_order:2), koct->tilt,
+                                        koct->fse);
+        if (koct->dx || koct->dy || koct->dz)
+            misalign_matrix(elem->matrix, koct->dx, koct->dy, koct->dz, 0.0);
+        readErrorMultipoleData(&(koct->systematicMultipoleData),
+                                  koct->systematic_multipoles, 0);
+        readErrorMultipoleData(&(koct->randomMultipoleData),
+                                  koct->random_multipoles, 0);
         break;
       case T_KQUSE:
         kquse = (KQUSE*)elem->p_elem;

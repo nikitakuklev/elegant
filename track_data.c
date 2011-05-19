@@ -52,7 +52,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE",
+    "FTABLE", "KOCT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -66,7 +66,7 @@ char *entity_text[N_TYPES] = {
     "A rectangular dipole, implemented as a SBEND with edge angles, up to 2nd order.",
     "A drift space implemented as a matrix, up to 2nd order",
     "A sextupole implemented as a matrix, up to 3rd order",
-    "Not implemented--use the MULT element.",
+    "An octupole implemented as a third-order matrix",
     "A canonical kick multipole.",
     "A solenoid implemented as a matrix, up to 2nd order.",
     "A horizontal steering dipole implemented as a matrix, up to 2nd order.",
@@ -186,6 +186,7 @@ and phase modulation.",
     "Applies a linear transformation to the beam to force the emittance to given values.",
     "Request for multiple dimensions (1, 2, 4 or 6) histogram output of particle coordinates.",
     "Tracks through a magnetic field which is expressed by a SDDS table.",
+    "A canonical kick octupole."
     } ;
 
 QUAD quad_example;
@@ -286,6 +287,19 @@ PARAMETER sext_param[N_SEXT_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.order), NULL, 0.0, 0, "matrix order"}
+    };
+   
+OCTU oct_example;
+/* octupole physical parameters */
+PARAMETER octu_param[N_OCTU_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&oct_example.length), NULL, 0.0, 0, "length"},
+    {"K3", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.k3), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&oct_example.order), NULL, 0.0, 0, "matrix order"}
     };
    
 MULT mult_example;
@@ -898,6 +912,28 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    };
+
+KOCT koct_example;
+/* kick octupole physical parameters */
+PARAMETER koct_param[N_KOCT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.length), NULL, 0.0, 0, "length"},
+    {"K3", "1/M$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.k3), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.bore), NULL, 0.0, 0, "bore radius"},
+    {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&koct_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
+    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
+    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&koct_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
 KSBEND ksbend_example;
@@ -2269,7 +2305,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_BEND_PARAMS,     MAT_LEN|DIVIDE_OK|IS_MAGNET|MATRIX_TRACKING,       sizeof(BEND),    rbend_param     },
     {    N_DRIFT_PARAMS,     MAT_LEN|DIVIDE_OK|MATRIX_TRACKING,      sizeof(DRIFT),    drift_param    }, 
     {    N_SEXT_PARAMS,     MAT_LEN|DIVIDE_OK|IS_MAGNET|MATRIX_TRACKING,       sizeof(SEXT),    sext_param     },
-    {                0,           0,                  0,    NULL           },
+    {    N_OCTU_PARAMS,     MAT_LEN|DIVIDE_OK|IS_MAGNET|MATRIX_TRACKING,       sizeof(OCTU),    octu_param     },
     {    N_MULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(MULT),    mult_param     }, 
     {    N_SOLE_PARAMS,     MAT_LEN|IS_MAGNET|MAT_CHW_ENERGY,
            sizeof(SOLE),    sole_param     }, 
@@ -2382,6 +2418,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_EMITTANCEELEMENT_PARAMS,  MPALGORITHM,    sizeof(EMITTANCEELEMENT),    emittanceElement_param   },
     { N_MHISTOGRAM_PARAMS, UNIPROCESSOR, sizeof(MHISTOGRAM), mhistogram_param},
     { N_FTABLE_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(FTABLE), ftable_param},
+    {   N_KOCT_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
+                                          sizeof(KOCT),    koct_param    },
 } ;
 
 void compute_offsets()
