@@ -536,7 +536,7 @@ VMATRIX *corrector_matrix(
 
 
 /* routine: sbend_matrix
- * purpose: third-order sector bending magnet matrix calculation
+ * purpose: second-order sector bending magnet matrix calculation
  * 
  * Michael Borland, 1991. 
  */
