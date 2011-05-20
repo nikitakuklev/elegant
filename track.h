@@ -905,7 +905,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 33
 #define N_TSCATTER_PARAMS 1
-#define N_KQUSE_PARAMS 14
+#define N_KQUSE_PARAMS 15
 #define N_UKICKMAP_PARAMS 13
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
@@ -2587,7 +2587,7 @@ typedef struct {
     double length, k1, k2, tilt;
     double dx, dy, dz, fse1, fse2;
     long n_kicks, synch_rad;
-    long integration_order, isr, isr1Particle;
+    long integration_order, isr, isr1Particle, matrixTracking;
   } KQUSE;
 
 /* names and storage structure for kick map physical parameters */

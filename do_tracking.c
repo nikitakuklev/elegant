@@ -1253,16 +1253,22 @@ long do_tracking(
                 ((KOCT*)eptr->p_elem)->isr = saveISR;
 	      break;
 	    case T_KQUSE:
-              if (flags&TEST_PARTICLES) {
-                saveISR = ((KQUSE*)eptr->p_elem)->isr;
-                ((KQUSE*)eptr->p_elem)->isr = 0;
+              if (((KQUSE*)eptr->p_elem)->matrixTracking) {
+                if (!eptr->matrix)
+                  eptr->matrix = compute_matrix(eptr, run, NULL);
+                track_particles(coord, eptr->matrix, coord, nToTrack);
+              } else {
+                if (flags&TEST_PARTICLES) {
+                  saveISR = ((KQUSE*)eptr->p_elem)->isr;
+                  ((KQUSE*)eptr->p_elem)->isr = 0;
+                }
+                nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
+                                            *P_central, accepted, last_z,
+                                            x_max, y_max, elliptical,
+                                            &(run->apertureData), NULL);
+                if (flags&TEST_PARTICLES)
+                  ((KQUSE*)eptr->p_elem)->isr = saveISR;
               }
-	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z,
-                                          x_max, y_max, elliptical,
-                                          &(run->apertureData), NULL);
-              if (flags&TEST_PARTICLES)
-                ((KQUSE*)eptr->p_elem)->isr = saveISR;
 	      break;
 	    case T_SAMPLE:
 	      if (!(flags&TEST_PARTICLES))

@@ -2241,6 +2241,7 @@ PARAMETER kquse_param[N_KQUSE_PARAMS] = {
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquse_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&kquse_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquse_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    {"MATRIX_TRACKING", "", IS_LONG, 0, (long)((char *)&kquse_example.matrixTracking), NULL, 0.0, 0, "For testing only."},
     };
 
 
