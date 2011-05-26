@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.24  2011/04/06 15:21:37  borland
+# Added control of number of processors for FMA delta.
+#
 # Revision 1.23  2010/10/19 02:24:42  borland
 # Added control over number of processors for FMA.
 #
@@ -849,6 +852,11 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable dynamicApertureErrors(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
+
+    APSLabeledEntry .nproc -parent $widget \
+	-label "Number of cores per job: " -width 20 \
+	-textVariable dynamicApertureErrors(nCores) \
+	-contextHelp "Enter the number of cores per job.  If 1, then serial elegant is used."
 
     APSLabeledEntry .leaf -parent $widget \
       -label "Aperture file: " -width 80 -textVariable dynamicApertureErrors(apertureFile) \
