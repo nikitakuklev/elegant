@@ -75,7 +75,6 @@ sinclude(<ERRORPARAM>)
 &end
 
 &run_control 
-	n_steps = <numberOfSeeds>,
 &end
 
 sinclude(<ERROR>)
