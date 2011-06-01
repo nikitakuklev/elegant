@@ -257,6 +257,8 @@ MPI_Comm workers;
 int fd; /* save the duplicated file descriptor stdout to use it latter */
 long last_optimize_function_call = 0;
 int min_value_location = 0;
+MPI_Group world_group, worker_group;
+int ranks[1];
 #endif
 
 #ifdef SET_DOUBLE
@@ -316,8 +318,6 @@ char **argv;
   char processor_name[MPI_MAX_PROCESSOR_NAME];
   int namelen;  
 #endif 
-  MPI_Group world_group, worker_group;
-  int ranks[1];
 #endif
 
   semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
@@ -1132,13 +1132,6 @@ char **argv;
         createSemaphoreFile(semaphoreFile[1]);
       free_beamdata(&beam);
       printFarewell(stdout);
-#if USE_MPI
-      if (isSlave)
-	MPI_Comm_free(&workers); 
-      MPI_Group_free(&worker_group); 
-      close(fd); 
-      MPI_Finalize();
-#endif
       exitElegant(0);
       break;
     case OPTIMIZATION_SETUP:
@@ -1585,10 +1578,6 @@ char **argv;
   fflush(stdout);
   lorentz_report();
   finish_load_parameters();
-  if (semaphore_file)
-    createSemaphoreFile(semaphore_file);
-  if (semaphoreFile[1])
-    createSemaphoreFile(semaphoreFile[1]);
   free_beamdata(&beam);
   free(macroTag);
   free(macroValue);
@@ -1599,14 +1588,10 @@ char **argv;
 #endif
   log_exit("main");
   printFarewell(stdout);
-#if USE_MPI
-  close(fd);
-  MPI_Finalize();
-#endif
   if (load_hash)
     hdestroy(load_hash);                         /* destroy hash table */
   free_scanargs(&scanned, argc);
-  return(0);
+  exitElegant(0);
 }
 
 void printFarewell(FILE *fp)
@@ -2149,6 +2134,10 @@ void swapParticles(double *p1, double *p2)
 void createSemaphoreFile(char *filename)
 {
   FILE *fp;
+#if USE_MPI
+  if (!isMaster)
+    return ;
+#endif
   if (filename) {
     fprintf(stdout, "Creating semaphore file %s\n", filename);
   } else 
@@ -2451,6 +2440,14 @@ void bombElegant(char *error, char *usage)
     fprintf(stderr, "usage: %s\n", usage);
   if (semaphoreFile[2]) 
     createSemaphoreFile(semaphoreFile[2]);
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD); 
+  if (isSlave)
+    MPI_Comm_free(&workers); 
+  MPI_Group_free(&worker_group); 
+  close(fd); 
+  MPI_Finalize();
+#endif
   exit(1);
 }
 
@@ -2462,5 +2459,13 @@ void exitElegant(long status)
     createSemaphoreFile(semaphoreFile[1]);
   if (!status && semaphore_file)
     createSemaphoreFile(semaphore_file);
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (isSlave)
+    MPI_Comm_free(&workers); 
+  MPI_Group_free(&worker_group); 
+  close(fd); 
+  MPI_Finalize();
+#endif
   exit(status);
 }
