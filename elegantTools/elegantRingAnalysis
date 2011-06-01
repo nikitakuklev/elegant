@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.25  2011/05/26 17:04:56  borland
+# Added option to use parallel elegant for DA with errors.
+#
 # Revision 1.24  2011/04/06 15:21:37  borland
 # Added control of number of processors for FMA delta.
 #
@@ -124,8 +127,11 @@
 #
 #
 
-set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
-set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
+if ![info exists env(OAG_TOP_DIR)] {
+    set env(OAG_TOP_DIR) /usr/local
+}
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
 APSDebugPath
 
 set CVSRevisionAuthor "\$Author: borland $"
@@ -1291,8 +1297,13 @@ lappend elegantSaveVarList momentumAperture kickApertureErrors
 set args $argv
 set configuration ""
 set templateDirectory ""
-if {[APSStrictParseArguments {configuration templateDirectory}]} {
-    return -code error "usage: $argv0 \[-configuration <filename>\] \[-templateDirectory <path>\]"
+set sideTabs 0
+if {[APSStrictParseArguments {configuration templateDirectory sideTabs}]} {
+    return -code error "usage: $argv0 \[-configuration <filename>\] \[-templateDirectory <path>\] [-sideTabs 1\]"
+}
+set tabPosition n
+if $sideTabs {
+    set tabPosition w
 }
 if {[string length $configuration]} {
     if ![file exists $configuration] {
@@ -1306,7 +1317,7 @@ if [string length $templateDirectory] {
     set sourceDir $templateDirectory
 }
 
-set topTabList [APSTabFrame .top -parent .userFrame \
+set topTabList [APSTabFrame .top -parent .userFrame -tabPosition $tabPosition \
                   -labelList $topLabelList -frameIndexVariable topIndex \
                   -width 900 -height 600 -packOption "-expand true" \
                   -commandList \
@@ -1316,7 +1327,7 @@ set index 0
 foreach name $topLabelList widget $topTabList { 
     set tabList [set ${name}TabList]
     set len [llength $tabList] 
-    set tabFrameList [APSTabFrame .under$name -parent $widget  -packOption "-expand true"\
+    set tabFrameList [APSTabFrame .under$name -parent $widget  -packOption "-expand true" -tabPosition $tabPosition \
                         -labelList $tabList -width 900 -height 550 \
                         -frameIndexVariable ${name}Index \
                         -commandList \
