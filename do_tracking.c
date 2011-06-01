@@ -927,6 +927,16 @@ long do_tracking(
 #ifdef  USE_MPE
 	      MPE_Log_event(event1a, 0, "start watch"); /* record time spent on I/O operations */
 #endif
+#if USE_MPI
+	      if (!notSinglePart) /* When each processor tracks the beam independently, the watch point will be disabled in Pelegant */
+		break;
+	      if (!partOnMaster && notSinglePart) { /* Update the total particle number to get the correct charge */
+		if (isMaster) nToTrack = 0;
+		MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	      } else { /* singlePart tracking or partOnMaster */
+		beam->n_to_track_total = nToTrack;
+	      }
+#endif
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
 	        watch = (WATCH*)eptr->p_elem;
 	        if (!watch->disable) {
