@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.29  2011/06/02 16:20:41  borland
+# For FMA, can now specify using a single job (good for parallel mode).
+#
 # Revision 1.28  2011/06/02 16:16:48  borland
 # Added control of number of orbit correction SVs.
 #
@@ -309,6 +312,15 @@ proc Display {args} {
 
 proc FillErrorsFrame {widget args} {
     global errors correction
+
+    APSFrame .f0 -parent $widget
+    set w0 $widget.f0.frame
+    APSLabeledEntryFrame .svs -parent $w0 \
+	-label "Singular values for H, V orbit correction: " \
+	-width 10 -orientation horizontal \
+	-variableList [list correction(horizontalSVs) correction(verticalSVs)]  -contextHelp \
+	"Enter the number of largest singular values to use for orbit correction.  If zero, chosen automatically, which is generally good unless the orbit correction configuration has issues."
+
     APSFrame .f1 -parent $widget
     set w0 $widget.f1.frame
     APSRadioButtonFrame .on -parent $w0 \
@@ -324,11 +336,6 @@ proc FillErrorsFrame {widget args} {
       -label "Parameter file: " -width 80 -textVariable errors(errorInputFile) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.erl \
       -contextHelp \
       "Enter the name of an optional file from which to read errors"
-    APSLabeledEntryFrame .svs -parent $w0 \
-	-label "Singular values for H, V orbit correction: " \
-	-width 10 -orientation horizontal \
-	-variableList [list correction(horizontalSVs) correction(verticalSVs)]  -contextHelp \
-	"Enter the number of largest singular values to use for orbit correction.  If zero, chosen automatically, which is generally good unless the orbit correction configuration has issues."
 
     APSFrame .other -parent $widget
     set w1 $widget.other.frame
