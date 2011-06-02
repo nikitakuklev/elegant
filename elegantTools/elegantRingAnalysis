@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.26  2011/06/01 23:51:48  borland
+# Added portability improvements.  Added side tab option to elegantRingAnalysis.
+#
 # Revision 1.25  2011/05/26 17:04:56  borland
 # Added option to use parallel elegant for DA with errors.
 #
@@ -322,7 +325,7 @@ proc FillErrorsFrame {widget args} {
         -variable errors(maskTable) -orientation horizontal \
         -commandList [list "APSDisableWidget $w1.fg" "APSEnableWidget $w1.fg" ]
     APSFrameGrid .fg -parent $w1 -xList "magnet dx dy dtilt fse" \
-      -yList "label bend quad sext"
+      -yList "label bend quad sext moni"
     if $errors(maskTable) {
         APSDisableWidget $w1.fg
     }
@@ -330,12 +333,12 @@ proc FillErrorsFrame {widget args} {
         label $w1.fg.$label.label.label -text "$label ($unit)"
         pack $w1.fg.$label.label.label 
     }
-    foreach magnet {Bend Quad Sext} type {bend quad sext} {
+    foreach magnet {Bend Quad Sext Moni} type {bend quad sext moni} {
         label $w1.fg.magnet.$type.label -text "${magnet}:" 
         pack $w1.fg.magnet.$type.label
     }
     foreach quantity {dx dy dtilt fse} {
-        foreach type {bend quad sext} magnet {Bend Quad Sext} {
+        foreach type {bend quad sext moni} magnet {Bend Quad Sext Moni} {
             entry $w1.fg.$quantity.$type.entry \
               -textvariable errors($quantity$magnet) \
               -width 10
