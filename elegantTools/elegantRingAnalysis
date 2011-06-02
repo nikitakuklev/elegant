@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.31  2011/06/02 16:53:32  borland
+# Added saving/loading of correction() array.
+#
 # Revision 1.30  2011/06/02 16:35:58  borland
 # Moved correction controls to separate frame to indicate that they are active
 # without explicit errors.
@@ -317,15 +320,18 @@ proc Display {args} {
 proc FillErrorsFrame {widget args} {
     global errors correction
 
-    APSFrame .f0 -parent $widget
+    APSFrame .f0 -parent $widget -label "Orbit correction"
     set w0 $widget.f0.frame
+    APSRadioButtonFrame .disable -parent $w0 \
+	-label "Enable: " -valueList {0 1} -buttonList {Yes No} \
+	-variable correction(disableOrbitCorrection) -orientation horizontal 
     APSLabeledEntryFrame .svs -parent $w0 \
 	-label "Singular values for H, V orbit correction: " \
 	-width 10 -orientation horizontal \
 	-variableList [list correction(horizontalSVs) correction(verticalSVs)]  -contextHelp \
 	"Enter the number of largest singular values to use for orbit correction.  If zero, chosen automatically, which is generally good unless the orbit correction configuration has issues."
 
-    APSFrame .f1 -parent $widget
+    APSFrame .f1 -parent $widget -label "Error control"
     set w0 $widget.f1.frame
     APSRadioButtonFrame .on -parent $w0 \
       -label "Include error in computation?" -valueList {1 0} -buttonList {Yes No} \
@@ -341,7 +347,7 @@ proc FillErrorsFrame {widget args} {
       -contextHelp \
       "Enter the name of an optional file from which to read errors"
 
-    APSFrame .other -parent $widget
+    APSFrame .other -parent $widget -label "Error rms values"
     set w1 $widget.other.frame
     APSRadioButtonFrame .mask -parent $w1 -label "Mask?" -valueList {1 0} -buttonList {Yes No} \
         -variable errors(maskTable) -orientation horizontal \

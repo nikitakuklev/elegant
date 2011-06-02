@@ -144,7 +144,7 @@ void correction_setup(
     set_print_namelist_flags(0);
     if (processNamelist(&correct, nltext)==NAMELIST_ERROR)
       bombElegant(NULL, NULL);
-    
+
 #if USE_MPI 
     if (isSlave) {
        trajectory_output = NULL;
@@ -153,6 +153,10 @@ void correction_setup(
     }
 #endif
     if (echoNamelists) print_namelist(stdout, &correct);
+
+    if (_correct->disable = disable)
+      return;
+
     usePerturbedMatrix = use_perturbed_matrix;
     fixedLengthMatrix = fixed_length_matrix;
     
@@ -559,6 +563,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   log_entry("do_correction");
 
   if (correct->response_only)
+    return 1;
+
+  if (correct->disable)
     return 1;
 
 #if SDDS_MPI_IO

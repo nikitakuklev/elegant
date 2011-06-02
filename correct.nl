@@ -6,6 +6,7 @@
 #include "namelist.h"
 
 #namelist correct static
+    long disable = 0;
     STRING mode = "trajectory";
     STRING method = "global";
     STRING trajectory_output = NULL;
@@ -13,6 +14,7 @@
     STRING statistics = NULL;
     double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};
+
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
     long remove_smallest_SVs[2] = {0, 0};
