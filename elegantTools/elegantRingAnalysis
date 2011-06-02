@@ -4,6 +4,10 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.30  2011/06/02 16:35:58  borland
+# Moved correction controls to separate frame to indicate that they are active
+# without explicit errors.
+#
 # Revision 1.29  2011/06/02 16:20:41  borland
 # For FMA, can now specify using a single job (good for parallel mode).
 #
@@ -1309,7 +1313,7 @@ proc DescribeSection {args} {
     }
 }
 
-lappend elegantSaveVarList errors
+lappend elegantSaveVarList errors correction
 lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
 lappend elegantSaveVarList mainPrefix gridEngine forceOccurence makePngFiles
 lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
