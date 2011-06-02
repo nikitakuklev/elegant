@@ -583,7 +583,8 @@ long multipole_tracking2(
   KSEXT *ksext;
   KQUSE *kquse;
   KOCT *koct;
-  
+  static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
+
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
   long sqrtOrder;
   MULT_APERTURE_DATA apertureData;
@@ -627,6 +628,13 @@ long multipole_tracking2(
     if (!kquad->isr || (kquad->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
+    if (kquad->length<1e-6 && (kquad->isr || kquad->synch_rad)) {
+      rad_coef = isr_coef = 0;  /* avoid unphysical results */
+      if (!quadWarning) {
+        printf("**** Warning: one or more quadrupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
+	quadWarning = 1;
+      }
+    }
     if (!kquad->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(kquad->systematicMultipoleData),
@@ -667,6 +675,13 @@ long multipole_tracking2(
     if (!ksext->isr || (ksext->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
+    if (ksext->length<1e-6 && (ksext->isr || ksext->synch_rad)) {
+      rad_coef = isr_coef = 0;  /* avoid unphysical results */
+      if (!sextWarning) {
+        printf("**** Warning: one or more sextupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
+	sextWarning = 1;
+      }
+    }
     if (!ksext->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(ksext->systematicMultipoleData),
@@ -704,6 +719,13 @@ long multipole_tracking2(
     if (!koct->isr || (koct->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
+    if (koct->length<1e-6 && (koct->isr || koct->synch_rad)) {
+      rad_coef = isr_coef = 0;  /* avoid unphysical results */
+      if (!octWarning) {
+        printf("**** Warning: one or more octupoles with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
+	octWarning = 1;
+      }
+    }
     if (!koct->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(koct->systematicMultipoleData),
@@ -738,6 +760,13 @@ long multipole_tracking2(
     if (!kquse->isr || (kquse->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
+    if (kquse->length<1e-6 && (kquse->isr || kquse->synch_rad)) {
+      rad_coef = isr_coef = 0;  /* avoid unphysical results */
+      if (!quseWarning) {
+        printf("**** Warning: one or more KQUSE's with length < 1e-6 have had SYNCH_RAD=0 and ISR=0 forced to avoid unphysical results.\n");
+	quseWarning = 1;
+      }
+    }
     K2L = kquse->k2*kquse->length*(1+kquse->fse2);
     if (K2L) {
       multData = tmalloc(sizeof(*multData));
