@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.27  2011/06/02 15:51:52  borland
+# Added BPM offset errors.
+#
 # Revision 1.26  2011/06/01 23:51:48  borland
 # Added portability improvements.  Added side tab option to elegantRingAnalysis.
 #
@@ -302,7 +305,7 @@ proc Display {args} {
 }
 
 proc FillErrorsFrame {widget args} {
-    global errors
+    global errors correction
     APSFrame .f1 -parent $widget
     set w0 $widget.f1.frame
     APSRadioButtonFrame .on -parent $w0 \
@@ -318,6 +321,11 @@ proc FillErrorsFrame {widget args} {
       -label "Parameter file: " -width 80 -textVariable errors(errorInputFile) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.erl \
       -contextHelp \
       "Enter the name of an optional file from which to read errors"
+    APSLabeledEntryFrame .svs -parent $w0 \
+	-label "Singular values for H, V orbit correction: " \
+	-width 10 -orientation horizontal \
+	-variableList [list correction(horizontalSVs) correction(verticalSVs)]  -contextHelp \
+	"Enter the number of largest singular values to use for orbit correction.  If zero, chosen automatically, which is generally good unless the orbit correction configuration has issues."
 
     APSFrame .other -parent $widget
     set w1 $widget.other.frame
