@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2010/03/13 22:45:07  borland
+ Fixed bug in loading data from twiss file when element name is given.
+
  Revision 1.2  2007/03/30 21:20:35  soliday
  Modified to work on WIN32
 
@@ -521,6 +524,8 @@ long PerformZTransformation(double *t, double *p,
       S12 = match->correlation*sqrt(S11*S22);
     else if (match->flags&ALPHAZ_GIVEN)
       S12 = -match->alpha*sqrt(S11*S22)/sqrt(1+sqr(match->alpha));
+    else
+      S12 = -alpha1*sqrt(S11*S22)/sqrt(1+sqr(alpha1));
     if ((emit2 = S11*S22-sqr(S12))<=0)
       SDDS_Bomb("longitudinal emittance is zero");
     else
