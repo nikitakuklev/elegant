@@ -1573,6 +1573,8 @@ long do_tracking(
             case T_EMITTANCE:
               transformEmittances(coord, nToTrack, *P_central, (EMITTANCEELEMENT*)eptr->p_elem);
               break;
+            case T_MRADINTEGRALS:
+              break;
             case T_HCOR:
             case T_VCOR:
             case T_HVCOR:

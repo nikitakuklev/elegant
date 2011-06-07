@@ -311,6 +311,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
   double *func, path[6], path0[6], detR[2], length, sTotal;
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
+  double lastRI[6];
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix, hasPath;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
@@ -379,7 +380,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   
   if (radIntegrals) {
     for (i=0; i<6; i++) 
-      radIntegrals->RI[i] = 0;
+      lastRI[i] = radIntegrals->RI[i] = 0;
   }
   waists[0] = waists[1] = 0;
 
@@ -533,12 +534,19 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     if (!elem->twiss)
       elem->twiss = (TWISS*)tmalloc(sizeof(*elem->twiss));
     elem->twiss->periodic = matched;
-    if (radIntegrals)
+    if (radIntegrals) {
       incrementRadIntegrals(radIntegrals, elem->twiss->dI, 
                             elem, 
                             beta[0], alpha[0], gamma[0], eta[0], etap[0], 
                             beta[1], alpha[1], gamma[1], eta[1], etap[1], 
                             path0);
+      if (elem->type==T_MRADINTEGRALS) {
+        for (i=0; i<6; i++) {
+          radIntegrals->RI[i] = (radIntegrals->RI[i]-lastRI[i])*(((MRADINTEGRALS*)elem->p_elem)->factor)+lastRI[i];
+          lastRI[i] = radIntegrals->RI[i];
+        }
+      }
+    }
     if (elem->type==T_ROTATE) {
       if (fabs(((ROTATE*)elem->p_elem)->tilt-PI/2.0)<1e-6 ||
           fabs(((ROTATE*)elem->p_elem)->tilt-3*PI/2.0)<1e-6 ||

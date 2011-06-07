@@ -799,7 +799,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MHISTOGRAM 103
 #define T_FTABLE 104
 #define T_KOCT 105
-#define N_TYPES   106
+#define T_MRADINTEGRALS 106
+#define N_TYPES   107
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -912,6 +913,7 @@ extern char *entity_text[N_TYPES];
 #define N_MHISTOGRAM_PARAMS 12
 #define N_FTABLE_PARAMS 13
 #define N_KOCT_PARAMS 17
+#define N_MRADITEGRALS_PARAMS 1
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1222,6 +1224,11 @@ typedef struct {
   double position[3]; /* X, Y, Z */
   double angle[3];    /* theta, phi, psi */
 } FLOORELEMENT;
+
+/* storage structure for radiation integral multiplier */
+typedef struct {
+  double factor;
+} MRADINTEGRALS;
 
 /* storage structure for marker */
 

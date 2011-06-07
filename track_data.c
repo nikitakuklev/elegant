@@ -52,7 +52,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE", "KOCT",
+    "FTABLE", "KOCT", "RIMULT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -186,7 +186,8 @@ and phase modulation.",
     "Applies a linear transformation to the beam to force the emittance to given values.",
     "Request for multiple dimensions (1, 2, 4 or 6) histogram output of particle coordinates.",
     "Tracks through a magnetic field which is expressed by a SDDS table.",
-    "A canonical kick octupole."
+    "A canonical kick octupole.",
+    "Multiplies radiation integrals by a given factor.  Use to compute emittance for collection of various types of cells.",
     } ;
 
 QUAD quad_example;
@@ -2294,6 +2295,12 @@ PARAMETER emittanceElement_param[N_EMITTANCEELEMENT_PARAMS] = {
   {"EMITNY", "M", IS_DOUBLE, 0, (long)((char *)&emittanceElem_example.emitn[1]), NULL, -1.0, 0, "vertical normalized emittance"},
 };
 
+/* radiation integral scaling element  */
+MRADINTEGRALS mRadIntegrals_example;
+PARAMETER mRadIntegrals_param[N_MRADITEGRALS_PARAMS] = {
+  {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&mRadIntegrals_example.factor), NULL, 1.0, 0, "factor"},
+} ;  
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2421,6 +2428,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_FTABLE_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(FTABLE), ftable_param},
     {   N_KOCT_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KOCT),    koct_param    },
+    {N_MRADITEGRALS_PARAMS, 0, sizeof(MRADINTEGRALS), mRadIntegrals_param },
 } ;
 
 void compute_offsets()
