@@ -3,6 +3,9 @@
 exec oagtclsh "$0" "$@"
 
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2010/01/25 22:51:52  borland
+# Copy the correct parameter file for case with emittance target.
+#
 # Revision 1.5  2010/01/15 18:45:47  borland
 # Changes to workaround an apparent bug in elegant.
 #
@@ -67,6 +70,9 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     catch {exec elegant $srcDir/etayCPCorrTemplate.ele -macro=rootname=${rootname}-original,inputParameters=$input,hcPattern=$hcPattern,vcPattern=$vcPattern,lattice=$lattice,beamline=$beamline,bpmPattern=$bpmPattern,order=$order > ${rootname}-original.log} result
     puts $fdo "Compute moments with input errors: $result"
     flush $fdo
+    if [file exists ${rootname}-original.failed] {
+        return -code error "correction failed"
+    }
     if $iteration==1 {
         # Want to keep the actual original values for later review
         file copy -force $rootname-original.mom $rootname-original.mom0
@@ -132,7 +138,7 @@ catch {exec elegant $srcDir/couplingCorrTemplate1.ele \
          -macro=bpmPattern=$bpmPattern,hcPattern=$hcPattern,vcPattern=$vcPattern \
          -macro=order=$order > $rootname.log} result
 puts $fdo "$result"
-if ![file exists $rootname.done] {
+if {![file exists $rootname.done] || [file exists $rootname.failed]} {
     puts stderr "Run failed."
     exit 1
 }
@@ -171,7 +177,7 @@ catch {exec elegant $rootname.ele \
 puts $fdo "Correct coupling: $result"
 flush $fdo
 
-if ![file exists $rootname.done] {
+if {![file exists $rootname.done] || [file exists $rootname.failed]} {
     puts stderr "Run failed."
     exit 1
 }

@@ -1,5 +1,10 @@
 # Second step with zeroth harmonic to adjust ey
 
+&semaphores
+        failed = %s.failed
+        done = %s.done
+&end
+
 &run_setup
 	lattice = <lattice>,
 	use_beamline = <beamline>
@@ -7,7 +12,6 @@
 	default_order = <order>,
         final = %s.finOpt
         parameters = %s-final.param
-        semaphore_file = %s.done,
         rootname = <rootname>
 &end
 

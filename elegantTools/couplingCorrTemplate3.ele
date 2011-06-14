@@ -9,7 +9,6 @@
 	p_central_mev = 7e3,
 	default_order = <order>,
         magnets = %s.mag,
-        semaphore_file = %s.done,
         rootname = <rootname>
 &end
 
