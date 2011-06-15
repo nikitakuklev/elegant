@@ -57,7 +57,7 @@ proc APSStrictParseArguments {optlist} {
 }
 
 
-set usage {usage: smoothDist6 -input <name> -output <name> -factor <number> -rippleAmplitude <%> -rippleWavelength <um> -smoothPasses <num(500)> -energyMod <%> -betaSlices <n>}
+set usage {usage: smoothDist6 -input <name> -output <name> -factor <number> -rippleAmplitude <%> -rippleWavelength <um> -smoothPasses <num(500)> -energyMod <%> -betaSlices <n> -seed <integer> -haltonOffset <integer>}
 set debug 0
 set args $argv
 set output ""
@@ -68,7 +68,9 @@ set smoothPasses 500
 set factor 0
 set betaSlices 1
 set energyMod 0
-if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices debug}]} {
+set seed 987654321
+set haltonOffset 0
+if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices debug seed haltonOffset}]} {
     puts "$usage"
     exit 1
 }
@@ -216,13 +218,13 @@ if {[catch {exec sddssequence -pipe=out -defi=z,type=double -sequence=begin=-3,e
 # gaussian DF for (x, xp, y, yp).
 # Set p = pAve for now.
 # Match beam to the right emittance and twiss parameters.
-if {[catch {exec sddssampledist -pipe=out -samples=$samples \
-              -column=indep=t,df=frequency,output=t,units=s,haltonRadix=2,datafile=$input.this \
-              -column=indep=z,df=gaussianDF,output=x,units=m,haltonRadix=3,datafile=gdf.sdds,factor=1e-4 \
-              -column=indep=z,df=gaussianDF,output=xp,haltonRadix=5,datafile=gdf.sdds,factor=1e-4 \
-              -column=indep=z,df=gaussianDF,output=y,units=m,haltonRadix=7,datafile=gdf.sdds,factor=1e-4 \
-              -column=indep=z,df=gaussianDF,output=yp,haltonRadix=11,datafile=gdf.sdds,factor=1e-4 \
-              -column=indep=z,df=gaussianDF,output=delta1,haltonRadix=13,datafile=gdf.sdds \
+if {[catch {exec sddssampledist -pipe=out -samples=$samples -seed=$seed \
+              -column=indep=t,df=frequency,output=t,units=s,haltonRadix=2,datafile=$input.this,haltonOffset=$haltonOffset \
+              -column=indep=z,df=gaussianDF,output=x,units=m,haltonRadix=3,datafile=gdf.sdds,factor=1e-4,haltonOffset=$haltonOffset  \
+              -column=indep=z,df=gaussianDF,output=xp,haltonRadix=5,datafile=gdf.sdds,factor=1e-4,haltonOffset=$haltonOffset  \
+              -column=indep=z,df=gaussianDF,output=y,units=m,haltonRadix=7,datafile=gdf.sdds,factor=1e-4,haltonOffset=$haltonOffset  \
+              -column=indep=z,df=gaussianDF,output=yp,haltonRadix=11,datafile=gdf.sdds,factor=1e-4,haltonOffset=$haltonOffset  \
+              -column=indep=z,df=gaussianDF,output=delta1,haltonRadix=13,datafile=gdf.sdds,haltonOffset=$haltonOffset  \
               | sddsprocess -pipe -define=col,p,$pAve \
               | sddssort -pipe=in -column=t $input.partial0} results]} {
     puts "Error8: $results"
