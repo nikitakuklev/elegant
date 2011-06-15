@@ -137,47 +137,55 @@ void dipoleFringe(double *vec, double h, long inFringe, long higherOrder)
   a = inFringe*h/(8*(1 + delta));
 
   if (higherOrder) {
-    dx  = (a*(7*ipow(a,7)*ipow(x,9) + 7*ipow(a,8)*ipow(x,10) + ipow(a,5)*ipow(x,7)*(7 + 27*ipow(a,2)*ipow(y,2)) 
-		  + ipow(a,6)*ipow(x,8)*(7 + 30*ipow(a,2)*ipow(y,2)) + ipow(a,4)*ipow(x,6)*(7 + 24*ipow(a,2)*ipow(y,2)
-		  + 30*ipow(a,4)*ipow(y,4)) + ipow(a,3)*ipow(x,5)*(7 + 21*ipow(a,2)*ipow(y,2) + 99*ipow(a,4)*ipow(y,4))
-		  + 3*a*x*ipow(y,2)*(-7 + 35*ipow(a,2)*ipow(y,2) - 91*ipow(a,4)*ipow(y,4) + 246*ipow(a,6)*ipow(y,6))
-		  + ipow(a,2)*ipow(x,4)*(7 + 21*ipow(a,2)*ipow(y,2) - 90*ipow(a,4)*ipow(y,4) + 1140*ipow(a,6)*ipow(y,6))
-		  + ipow(x,3)*(7*a + 189*ipow(a,5)*ipow(y,4) - 975*ipow(a,7)*ipow(y,6)) 
-		  + 3*ipow(y,2)*(7 - 7*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) - 39*ipow(a,6)*ipow(y,6) 
-		  + 82*ipow(a,8)*ipow(y,8)) - 7*ipow(x,2)*(-1 - 6*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) 
-		  - 96*ipow(a,6)*ipow(y,6) + 315*ipow(a,8)*ipow(y,8))))/7;
-    dpx = (a*(2*py*y*(7 - 7*a*x - 28*ipow(a,2)*ipow(y,2) + 70*x*ipow(a,3)*ipow(y,2) + 56*x*ipow(a,5)*(ipow(x,2)
-		  - 6*ipow(y,2))*ipow(y,2) + 84*ipow(a,4)*ipow(y,2)*(-ipow(x,2) + ipow(y,2)) 
-		  + 3*x*ipow(a,7)*ipow(y,2)*(ipow(x,4) - 262*ipow(x,2)*ipow(y,2) + 409*ipow(y,4))
-		  - 4*ipow(a,6)*(5*ipow(x,4)*ipow(y,2) - 162*ipow(x,2)*ipow(y,4) + 57*ipow(y,6))
-		  + 20*ipow(a,8)*(33*ipow(x,4)*ipow(y,4) - 162*ipow(x,2)*ipow(y,6) + 29*ipow(y,8)))
-		  + px*(-3*ipow(a,7)*ipow(x,6)*ipow(y,2) - 24*ipow(a,6)*ipow(x,5)*ipow(y,2)*(-1 + 55*ipow(a,2)*ipow(y,2))
-		  + 3*ipow(a,5)*ipow(x,4)*ipow(y,2)*(-28 + 655*ipow(a,2)*ipow(y,2))
-		  + 24*ipow(a,4)*ipow(x,3)*ipow(y,2)*(7 - 90*ipow(a,2)*ipow(y,2) + 630*ipow(a,4)*ipow(y,4))
-		  + 3*a*ipow(y,2)*(-21 + 70*ipow(a,2)*ipow(y,2) - 196*ipow(a,4)*ipow(y,4) + 513*ipow(a,6)*ipow(y,6))
-		  - 7*a*ipow(x,2)*(-1 + 30*ipow(a,2)*ipow(y,2) - 240*ipow(a,4)*ipow(y,4) + 1227*ipow(a,6)*ipow(y,6))
-		  - 2*x*(7 - 84*ipow(a,2)*ipow(y,2) + 420*ipow(a,4)*ipow(y,4) - 1596*ipow(a,6)*ipow(y,6)
-		  + 5220*ipow(a,8)*ipow(y,8)))))/7;
-    dy  = -(a*y*(ipow(a,7)*ipow(x,6)*ipow(y,2) + 8*ipow(a,6)*ipow(x,5)*ipow(y,2)*(-1 + 33*ipow(a,2)*ipow(y,2))
-		  - 8*ipow(a,4)*ipow(x,3)*ipow(y,2)*(7 - 54*ipow(a,2)*ipow(y,2) + 270*ipow(a,4)*ipow(y,4))
-		  + ipow(x,4)*(28*ipow(a,5)*ipow(y,2) - 393*ipow(a,7)*ipow(y,4)) + 3*a*ipow(y,2)*(7 - 14*ipow(a,2)*ipow(y,2)
-		  + 28*ipow(a,4)*ipow(y,4) - 57*ipow(a,6)*ipow(y,6)) + a*ipow(x,2)*(-7 + 70*ipow(a,2)*ipow(y,2)
-		  - 336*ipow(a,4)*ipow(y,4) + 1227*ipow(a,6)*ipow(y,6)) + 2*x*(7 - 28*ipow(a,2)*ipow(y,2) 
-		  + 84*ipow(a,4)*ipow(y,4) - 228*ipow(a,6)*ipow(y,6) + 580*ipow(a,8)*ipow(y,8))))/7;
-    dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ipow(a,2)*(ipow(x,2) - ipow(y,2)) + 70*x*ipow(a,3)*ipow(y,2) 
-		  + 7*ipow(a,4)*(ipow(x,4) - 14*ipow(x,2)*ipow(y,2) + 9*ipow(y,4)) + 7*ipow(a,5)*(ipow(x,5)
-		  + 18*ipow(x,3)*ipow(y,2) - 39*x*ipow(y,4)) + 4*ipow(a,6)*(2*ipow(x,6) - 15*ipow(x,4)*ipow(y,2)
-		  + 168*ipow(x,2)*ipow(y,4) - 39*ipow(y,6)) + ipow(a,7)*(9*ipow(x,7) + 66*ipow(x,5)*ipow(y,2)
-		  - 975*ipow(x,3)*ipow(y,4) + 984*x*ipow(y,6)) + 10*ipow(a,8)*(ipow(x,8) + 2*ipow(x,6)*ipow(y,2) 
-		  + 114*ipow(x,4)*ipow(y,4) - 294*ipow(x,2)*ipow(y,6) + 41*ipow(y,8))) + py*(63*ipow(a,7)*ipow(x,8)
-		  + 70*ipow(a,8)*ipow(x,9) + 7*ipow(a,5)*ipow(x,6)*(7 + 27*ipow(a,2)*ipow(y,2)) 
-		  + 8*ipow(a,6)*ipow(x,7)*(7 + 30*ipow(a,2)*ipow(y,2)) + 6*ipow(a,4)*ipow(x,5)*(7 + 24*ipow(a,2)*ipow(y,2)
-		  + 30*ipow(a,4)*ipow(y,4)) + 5*ipow(a,3)*ipow(x,4)*(7 + 21*ipow(a,2)*ipow(y,2) + 99*ipow(a,4)*ipow(y,4))
-		  + 3*a*ipow(x,2)*(7 + 189*ipow(a,4)*ipow(y,4) - 975*ipow(a,6)*ipow(y,6))
-		  + 3*a*ipow(y,2)*(-7 + 35*ipow(a,2)*ipow(y,2) - 91*ipow(a,4)*ipow(y,4) + 246*ipow(a,6)*ipow(y,6))
-		  + 4*ipow(a,2)*ipow(x,3)*(7 + 21*ipow(a,2)*ipow(y,2) - 90*ipow(a,4)*ipow(y,4) + 1140*ipow(a,6)*ipow(y,6))
-		  - 14*x*(-1 - 6*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) - 96*ipow(a,6)*ipow(y,6)
-		  + 315*ipow(a,8)*ipow(y,8)))))/7;
+    double xr[11], yr[11], ar[11];
+    long i, j;
+    xr[0] = yr[0] = ar[0] = 1;
+    for (j=0, i=1; i<11; i++, j++) {
+      xr[i] = xr[j]*x;
+      yr[i] = yr[j]*y;
+      ar[i] = ar[j]*a;
+    }
+    dx  = (a*(7*ar[7]*xr[9] + 7*ar[8]*xr[10] + ar[5]*xr[7]*(7 + 27*ar[2]*yr[2]) 
+		  + ar[6]*xr[8]*(7 + 30*ar[2]*yr[2]) + ar[4]*xr[6]*(7 + 24*ar[2]*yr[2]
+		  + 30*ar[4]*yr[4]) + ar[3]*xr[5]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
+		  + 3*a*x*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
+		  + ar[2]*xr[4]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
+		  + xr[3]*(7*a + 189*ar[5]*yr[4] - 975*ar[7]*yr[6]) 
+		  + 3*yr[2]*(7 - 7*ar[2]*yr[2] + 21*ar[4]*yr[4] - 39*ar[6]*yr[6] 
+		  + 82*ar[8]*yr[8]) - 7*xr[2]*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] 
+		  - 96*ar[6]*yr[6] + 315*ar[8]*yr[8])))/7;
+    dpx = (a*(2*py*y*(7 - 7*a*x - 28*ar[2]*yr[2] + 70*x*ar[3]*yr[2] + 56*x*ar[5]*(xr[2]
+		  - 6*yr[2])*yr[2] + 84*ar[4]*yr[2]*(-xr[2] + yr[2]) 
+		  + 3*x*ar[7]*yr[2]*(xr[4] - 262*xr[2]*yr[2] + 409*yr[4])
+		  - 4*ar[6]*(5*xr[4]*yr[2] - 162*xr[2]*yr[4] + 57*yr[6])
+		  + 20*ar[8]*(33*xr[4]*yr[4] - 162*xr[2]*yr[6] + 29*yr[8]))
+		  + px*(-3*ar[7]*xr[6]*yr[2] - 24*ar[6]*xr[5]*yr[2]*(-1 + 55*ar[2]*yr[2])
+		  + 3*ar[5]*xr[4]*yr[2]*(-28 + 655*ar[2]*yr[2])
+		  + 24*ar[4]*xr[3]*yr[2]*(7 - 90*ar[2]*yr[2] + 630*ar[4]*yr[4])
+		  + 3*a*yr[2]*(-21 + 70*ar[2]*yr[2] - 196*ar[4]*yr[4] + 513*ar[6]*yr[6])
+		  - 7*a*xr[2]*(-1 + 30*ar[2]*yr[2] - 240*ar[4]*yr[4] + 1227*ar[6]*yr[6])
+		  - 2*x*(7 - 84*ar[2]*yr[2] + 420*ar[4]*yr[4] - 1596*ar[6]*yr[6]
+		  + 5220*ar[8]*yr[8]))))/7;
+    dy  = -(a*y*(ar[7]*xr[6]*yr[2] + 8*ar[6]*xr[5]*yr[2]*(-1 + 33*ar[2]*yr[2])
+		  - 8*ar[4]*xr[3]*yr[2]*(7 - 54*ar[2]*yr[2] + 270*ar[4]*yr[4])
+		  + xr[4]*(28*ar[5]*yr[2] - 393*ar[7]*yr[4]) + 3*a*yr[2]*(7 - 14*ar[2]*yr[2]
+		  + 28*ar[4]*yr[4] - 57*ar[6]*yr[6]) + a*xr[2]*(-7 + 70*ar[2]*yr[2]
+		  - 336*ar[4]*yr[4] + 1227*ar[6]*yr[6]) + 2*x*(7 - 28*ar[2]*yr[2] 
+		  + 84*ar[4]*yr[4] - 228*ar[6]*yr[6] + 580*ar[8]*yr[8])))/7;
+    dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ar[2]*(xr[2] - yr[2]) + 70*x*ar[3]*yr[2] 
+		  + 7*ar[4]*(xr[4] - 14*xr[2]*yr[2] + 9*yr[4]) + 7*ar[5]*(xr[5]
+		  + 18*xr[3]*yr[2] - 39*x*yr[4]) + 4*ar[6]*(2*xr[6] - 15*xr[4]*yr[2]
+		  + 168*xr[2]*yr[4] - 39*yr[6]) + ar[7]*(9*xr[7] + 66*xr[5]*yr[2]
+		  - 975*xr[3]*yr[4] + 984*x*yr[6]) + 10*ar[8]*(xr[8] + 2*xr[6]*yr[2] 
+		  + 114*xr[4]*yr[4] - 294*xr[2]*yr[6] + 41*yr[8])) + py*(63*ar[7]*xr[8]
+		  + 70*ar[8]*xr[9] + 7*ar[5]*xr[6]*(7 + 27*ar[2]*yr[2]) 
+		  + 8*ar[6]*xr[7]*(7 + 30*ar[2]*yr[2]) + 6*ar[4]*xr[5]*(7 + 24*ar[2]*yr[2]
+		  + 30*ar[4]*yr[4]) + 5*ar[3]*xr[4]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
+		  + 3*a*xr[2]*(7 + 189*ar[4]*yr[4] - 975*ar[6]*yr[6])
+		  + 3*a*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
+		  + 4*ar[2]*xr[3]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
+		  - 14*x*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] - 96*ar[6]*yr[6]
+		  + 315*ar[8]*yr[8]))))/7;
   } else {
     dx  = a*(ipow(x,2) + 3*ipow(y,2));
     dpx = 2*a*(-px*x + py*y);
