@@ -3190,7 +3190,7 @@ extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, 
 
 /* prototypes for fringe.c */
 void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrder);
-void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrder);
+void dipoleFringe(double *vec, double h, long inFringe, long higherOrder);
 
 /* prototypes for tilt_matrices.c: */
 extern void tilt_matrices0(VMATRIX *M, double tilt);

@@ -40,6 +40,9 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 
 long correctDistribution(double *array, long npoints, double desiredSum);
 
+void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
+void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
+
 static double **Fx_xy = NULL, **Fy_xy = NULL;
 static long expansionOrder1 = 11;  /* order of expansion+1 */
 
@@ -447,6 +450,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
+    convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
+    
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1)
+      dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2);
+    
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
@@ -454,6 +462,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       else
         integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
+
+    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1)
+      dipoleFringe(Qi, rho0, 1, csbend->edge2_effects-2);
+
+    convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
     if (particle_lost) {
       if (!part[i_top]) {
@@ -556,6 +569,23 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   return(i_top+1);
 }
 
+void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
+{
+  double f;
+  f = (1 + Qi[5])/EXSQRT(sqr(1+Qi[0]/rho) + sqr(Qi[1]) + sqr(Qi[3]), sqrtOrder);
+  Qi[1] *= f;
+  Qi[3] *= f;
+}
+
+void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
+{
+  double f, delta;
+  f = (1 + Qi[0]/rho)/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
+  Qi[1] *= f;
+  Qi[3] *= f;
+}
+
+
 void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
@@ -586,11 +616,14 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
 
   /* calculate canonical momenta (scaled to central momentum) */
-  dp = DPoP0;
+/*  dp = DPoP0;
   f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
   QX = XP0*f;
   QY = YP0*f;
+*/
 
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+  
   X = X0;
   Y = Y0;
   S = S0;
@@ -706,9 +739,11 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   }
 
   /* convert back to slopes */
-  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
+/*  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
   Qf[1] *= f;
   Qf[3] *= f;
+*/
+
   Qf[4] += dist;
 }
 
@@ -746,6 +781,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
 
   /* calculate canonical momenta (scaled to central momentum) */
+/*
   dp = DPoP0;
   f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
   QX = XP0*f;
@@ -755,7 +791,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   Y = Y0;
   S = S0;
   DPoP = DPoP0;
+*/
   
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+
   dist = 0;
 
   s /= n;
@@ -927,9 +966,12 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   }
 
   /* convert back to slopes */
+/*
   f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
   Qf[1] *= f;
   Qf[3] *= f;
+*/
+
   Qf[4] += dist;
 }
 

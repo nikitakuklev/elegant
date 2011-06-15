@@ -121,26 +121,23 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
 }
 
 
-void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrder)
+void dipoleFringe(double *vec, double h, long inFringe, long higherOrder)
 {
   /* vec = {x, qx, y, qy, s, delta} */
-  double *vec;
   double x, px, y, py, delta;
   double a, dx, dpx, dy, dpy, ds;
-  long ip;
-  
-  for (ip=0; ip<np; ip++) {
-    vec = coord[ip];
-    x = vec[0];
-    px = vec[1];
-    y = vec[2];
-    py = vec[3];
-    delta = vec[5];
-    
-    a = inFringe*h/(8*(1 + delta));
 
-    if (higherOrder) {
-	dx  = (a*(7*ipow(a,7)*ipow(x,9) + 7*ipow(a,8)*ipow(x,10) + ipow(a,5)*ipow(x,7)*(7 + 27*ipow(a,2)*ipow(y,2)) 
+  x = vec[0];
+  px = vec[1];
+  y = vec[2];
+  py = vec[3];
+  delta = vec[5];
+  dx = dpx = dy = dpy = ds = 0;
+  
+  a = inFringe*h/(8*(1 + delta));
+
+  if (higherOrder) {
+    dx  = (a*(7*ipow(a,7)*ipow(x,9) + 7*ipow(a,8)*ipow(x,10) + ipow(a,5)*ipow(x,7)*(7 + 27*ipow(a,2)*ipow(y,2)) 
 		  + ipow(a,6)*ipow(x,8)*(7 + 30*ipow(a,2)*ipow(y,2)) + ipow(a,4)*ipow(x,6)*(7 + 24*ipow(a,2)*ipow(y,2)
 		  + 30*ipow(a,4)*ipow(y,4)) + ipow(a,3)*ipow(x,5)*(7 + 21*ipow(a,2)*ipow(y,2) + 99*ipow(a,4)*ipow(y,4))
 		  + 3*a*x*ipow(y,2)*(-7 + 35*ipow(a,2)*ipow(y,2) - 91*ipow(a,4)*ipow(y,4) + 246*ipow(a,6)*ipow(y,6))
@@ -149,7 +146,7 @@ void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrd
 		  + 3*ipow(y,2)*(7 - 7*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) - 39*ipow(a,6)*ipow(y,6) 
 		  + 82*ipow(a,8)*ipow(y,8)) - 7*ipow(x,2)*(-1 - 6*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) 
 		  - 96*ipow(a,6)*ipow(y,6) + 315*ipow(a,8)*ipow(y,8))))/7;
-	dpx = (a*(2*py*y*(7 - 7*a*x - 28*ipow(a,2)*ipow(y,2) + 70*x*ipow(a,3)*ipow(y,2) + 56*x*ipow(a,5)*(ipow(x,2)
+    dpx = (a*(2*py*y*(7 - 7*a*x - 28*ipow(a,2)*ipow(y,2) + 70*x*ipow(a,3)*ipow(y,2) + 56*x*ipow(a,5)*(ipow(x,2)
 		  - 6*ipow(y,2))*ipow(y,2) + 84*ipow(a,4)*ipow(y,2)*(-ipow(x,2) + ipow(y,2)) 
 		  + 3*x*ipow(a,7)*ipow(y,2)*(ipow(x,4) - 262*ipow(x,2)*ipow(y,2) + 409*ipow(y,4))
 		  - 4*ipow(a,6)*(5*ipow(x,4)*ipow(y,2) - 162*ipow(x,2)*ipow(y,4) + 57*ipow(y,6))
@@ -161,13 +158,13 @@ void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrd
 		  - 7*a*ipow(x,2)*(-1 + 30*ipow(a,2)*ipow(y,2) - 240*ipow(a,4)*ipow(y,4) + 1227*ipow(a,6)*ipow(y,6))
 		  - 2*x*(7 - 84*ipow(a,2)*ipow(y,2) + 420*ipow(a,4)*ipow(y,4) - 1596*ipow(a,6)*ipow(y,6)
 		  + 5220*ipow(a,8)*ipow(y,8)))))/7;
-	dy  = -(a*y*(ipow(a,7)*ipow(x,6)*ipow(y,2) + 8*ipow(a,6)*ipow(x,5)*ipow(y,2)*(-1 + 33*ipow(a,2)*ipow(y,2))
+    dy  = -(a*y*(ipow(a,7)*ipow(x,6)*ipow(y,2) + 8*ipow(a,6)*ipow(x,5)*ipow(y,2)*(-1 + 33*ipow(a,2)*ipow(y,2))
 		  - 8*ipow(a,4)*ipow(x,3)*ipow(y,2)*(7 - 54*ipow(a,2)*ipow(y,2) + 270*ipow(a,4)*ipow(y,4))
 		  + ipow(x,4)*(28*ipow(a,5)*ipow(y,2) - 393*ipow(a,7)*ipow(y,4)) + 3*a*ipow(y,2)*(7 - 14*ipow(a,2)*ipow(y,2)
 		  + 28*ipow(a,4)*ipow(y,4) - 57*ipow(a,6)*ipow(y,6)) + a*ipow(x,2)*(-7 + 70*ipow(a,2)*ipow(y,2)
 		  - 336*ipow(a,4)*ipow(y,4) + 1227*ipow(a,6)*ipow(y,6)) + 2*x*(7 - 28*ipow(a,2)*ipow(y,2) 
 		  + 84*ipow(a,4)*ipow(y,4) - 228*ipow(a,6)*ipow(y,6) + 580*ipow(a,8)*ipow(y,8))))/7;
-	dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ipow(a,2)*(ipow(x,2) - ipow(y,2)) + 70*x*ipow(a,3)*ipow(y,2) 
+    dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ipow(a,2)*(ipow(x,2) - ipow(y,2)) + 70*x*ipow(a,3)*ipow(y,2) 
 		  + 7*ipow(a,4)*(ipow(x,4) - 14*ipow(x,2)*ipow(y,2) + 9*ipow(y,4)) + 7*ipow(a,5)*(ipow(x,5)
 		  + 18*ipow(x,3)*ipow(y,2) - 39*x*ipow(y,4)) + 4*ipow(a,6)*(2*ipow(x,6) - 15*ipow(x,4)*ipow(y,2)
 		  + 168*ipow(x,2)*ipow(y,4) - 39*ipow(y,6)) + ipow(a,7)*(9*ipow(x,7) + 66*ipow(x,5)*ipow(y,2)
@@ -181,23 +178,20 @@ void dipoleFringe(double **coord, long np, double h, int inFringe, int higherOrd
 		  + 4*ipow(a,2)*ipow(x,3)*(7 + 21*ipow(a,2)*ipow(y,2) - 90*ipow(a,4)*ipow(y,4) + 1140*ipow(a,6)*ipow(y,6))
 		  - 14*x*(-1 - 6*ipow(a,2)*ipow(y,2) + 21*ipow(a,4)*ipow(y,4) - 96*ipow(a,6)*ipow(y,6)
 		  + 315*ipow(a,8)*ipow(y,8)))))/7;
-
-      } else {
-
-	dx  = a*(ipow(x,2) + 3*ipow(y,2));
-	dpx = 2*a*(-px*x + py*y);
-	dy  = -2*a*x*y;
-	dpy = 2*a*(py*x - 3*px*y);
-
-      }
-	
-    ds  = (a/(1+delta))*(2*py*x*y - px*ipow(x,2) - 3*px*ipow(y,2));
-
-    vec[0] += dx;
-    vec[1] += dpx;
-    vec[2] += dy;
-    vec[3] += dpy;
-    vec[4] += ds;
+  } else {
+    dx  = a*(ipow(x,2) + 3*ipow(y,2));
+    dpx = 2*a*(-px*x + py*y);
+    dy  = -2*a*x*y;
+    dpy = 2*a*(py*x - 3*px*y);
   }
+  
+  ds  = (a/(1+delta))*(2*py*x*y - px*ipow(x,2) - 3*px*ipow(y,2));
+
+  vec[0] += dx;
+  vec[1] += dpx;
+  vec[2] += dy;
+  vec[3] += dpy;
+  vec[4] += ds;
+  
 }
 
