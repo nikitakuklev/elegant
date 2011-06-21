@@ -3,6 +3,10 @@
 # Script to compute core slice emittance from elegant beam file output data
 # X. Dong, ANL
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2011/06/21 17:42:03  borland
+# Added standard commandline argument parsing.
+# Added png output.
+#
 # Revision 1.1  2011/06/10 18:26:24  borland
 # First version, by X. Dong.
 # 
@@ -142,6 +146,7 @@ eval exec sddscombine -pipe=out $fileList \
   | sddsprocess -pipe=in $rootname.slice \
   "{-redefine=col,enx,enx 1e6 *,units=\$gp\$r mrad mm,symbol=\$ge\$r\$an\$h\$h\$bx;rms\$n}" \
   "{-redefine=col,eny,eny 1e6 *,units=\$gp\$r mrad mm,symbol=\$ge\$r\$an\$h\$h\$by;rms\$n}"
+eval file delete $fileList
 
 exec sddsplot -thick=1 -line=0,thick=2 -col=dtmean,enx -graph=line,vary $rootname.slice -split=page -tickSettings=grid -legend=par=percentage &
 exec sddsplot -thick=1 -line=0,thick=2 -col=dtmean,eny -graph=line,vary $rootname.slice -split=page -tickSettings=grid -legend=par=percentage &
@@ -154,5 +159,5 @@ if [string length $pngRoot] {
 }
 
 after 3000
-file delete -force $rootname.ana ana10000.sdds ana9500.sdds ana9000.sdds ana8000.sdds 
+file delete -force $rootname.ana $rootname.ana10000.sdds $rootname.ana9500.sdds $rootname.ana9000.sdds $rootname.ana8000.sdds 
 
