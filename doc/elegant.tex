@@ -4410,6 +4410,8 @@ given with no arguments.
         The file may, for example, be the file produced
         by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
         executed inside of {\tt elegant} using {\tt vary\_elements}. (Program by M. Borland.)
+\item {\tt sddsfindresonances} --- Uses output from frequency map analysis to find and identify resonance lines.
+ (Program by H. Shang, M. Borland.)
 \item {\tt sddsfluxcurve} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator flux tuning curves.  (Program by M. Borland, H. Shang, R. Dejus.)
 \item {\tt sddsmatchtwiss} --- Transforms a beam of macro-particles to match to given beta
@@ -5083,6 +5085,50 @@ removed and the fit is repeated.
 
 \item {\bf author:} M. Borland, ANL/APS.
 
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|sddsfindresonances|}\end{center}
+\end{latexonly}
+\subsection{sddsfindresonances}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsfindresonances} scans frequency map analysis data and
+identifies resonances.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+sddsfindresonances run.fma run.res -multipoles=dipole,quad,sext,oct -type=skew
+sddsfindresonances run.fma run.res -multipoles=sext,oct -type=skew,norm
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsfindresonances [-pipe=[input][,output]] [{\em inputFile}] [{\em outputfile}]
+ -multipoles=[all={\em integer}]|[dipole,][quadrupole,][sextupole,][octupole,]
+ [-type=[normal,][skew]] [-variables={\em firstColumn},{\em secondColumn}]
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\em inputFile} --- By default, frequency map analysis output file from {\tt elegant}'s {\tt frequency\_map} command
+or equivalent, containing at minimum the columns {\tt x}, {\tt y}, {\tt nux}, and {\tt nuy}.  Each page of the file is
+treated separately.
+\item {\em outputFile} --- Contains the identified resonance lines, one resonance line per page.  The file contains
+the columns {\tt x}, {\tt y}, {\tt nux}, and {\tt nuy}, along with parameters that identify the resonance.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt pipe} --- The standard SDDS Toolkit pipe option.
+\item {\tt multipoles=[all={\em integer}]|[dipole,][quadrupole,][sextupole,][octupole,]} --- Choose what order of resonances to 
+  search for by naming the type of magnet that nominally drives it, or by giving the maximum order to search ({\tt all} option).
+\item {\tt -type=[normal,][skew]} --- Specify normal- or skew-driven resonances.  Default is both.
+\item {\tt -variables={\em firstColumn},{\em secondColumn}} --- Use to change the default names for the coordinate variables.
+\end{itemize}
+
+\item {\bf authors:} H. Shang, M. Borland. (ANL).
 \end{itemize}
 
 \begin{latexonly}
