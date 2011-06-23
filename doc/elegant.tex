@@ -2081,6 +2081,7 @@ assigned to the target parameter.
         long allow_missing_parameters = 0;
 	long force_occurence_data = 0;
         long verbose = 0;
+        long use_first = 0;
 &end
 \end{verbatim}
 
@@ -2144,6 +2145,15 @@ This behavior can be altered with the next control.
 
 \item \verb|force_occurence_data| --- If set, then occurence data is
 used even in \verb|change_defined_values| mode.
+
+\item \verb|use_first| --- It is possible that the input file will contain
+multiple lines for any given parameter.  In this case, {\tt elegant} will
+by default process all lines.  For example, if the lines give differential values,
+then all would be included. However, if the lines give absolute values, then the
+last one will overwrite the previous values; this flag allows overriding the
+behavior in this case to force {\tt elegant} to use the first value.
+This can have speed advantages for cases where there are many identical
+occurences of the same element.
 
 \item \verb|clear_settings| --- If set, clear all settings and files
 being used for loading parameters.
