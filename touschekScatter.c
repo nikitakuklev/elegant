@@ -302,11 +302,11 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       iElement++;
-      if(iElement < i_start) {
+      if (i_start>=0 && iElement < i_start) {
         eptr = eptr->succ; 
         continue;
       }
-      if(iElement > i_end)
+      if (i_end>=0 && iElement > i_end)
         break;
       if (verbosity)
 	printf("Working on %s#%ld at s=%le\n",

@@ -30,8 +30,8 @@
         long nbins = 100;
         long n_simulated = 5E6;
         double ignored_portion = 0.01;
-        long i_start = 0;
-        long i_end = 1;
+        long i_start = -1;
+        long i_end = -1;
 	long match_position_only = 0;
         long do_track = 0;
         long verbosity = 0;
