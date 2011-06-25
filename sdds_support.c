@@ -1898,10 +1898,6 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
        
     if (!inhibitFileSync)
       SDDS_DoFSync(SDDS_table);
-    if (!SDDS_Terminate(SDDS_table)) {
-      SDDS_SetError("Problem terminating 'distribution' file (TouschekDistribution)");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
     log_exit("dump_scattered_particles");    
 }
   

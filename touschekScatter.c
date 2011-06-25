@@ -47,6 +47,8 @@ void cm2bunch(double *p1, double *p2, double *q, double *beta, double *gamma);
 double moeller(double beta0, double theta);
 void pickPart(double *weight, long *index, long start, long end, 
               long *iTotal, double *wTotal, double weight_limit, double weight_ave);
+void determineOccurenceInFilenames(short *occurenceSeen, short*noOccurenceSeen, 
+				   char *initial, char *distribution, char *output, char *loss, char *bunch);
 
 void TouschekEffect(RUN *run,
                     VARY *control,
@@ -292,12 +294,19 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   long *index, iTotal, sTotal;
   double weight_limit, weight_ave, wTotal;
   double **fiducialParticle, pCentral;
+  long iProcessing = 0;
+  short occurenceSeen = 0, noOccurenceSeen = 0, skip;
 
   fiducialParticle = (double**)czarray_2d(sizeof(**fiducialParticle), 1, 7);
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
   sTotal = (long)beamline->revolution_length+1;
+
+  determineOccurenceInFilenames(&occurenceSeen, &noOccurenceSeen,
+				initial, distribution, output, loss, bunch);
+  if (occurenceSeen && noOccurenceSeen)
+    bombElegant("Some output files have occurence field and some don't.  Use only one method.", NULL);
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
@@ -308,11 +317,47 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
       if (i_end>=0 && iElement > i_end)
         break;
+
+      tsptr = initTSCATTER (eptr, iElement);
+      skip = 0;
+      if (initial) {
+	tsptr->iniFile = compose_filename_occurence(initial, run->rootname, eptr->occurence);
+	if (occurenceSeen && !overwrite_files && fexists(tsptr->iniFile))
+	  skip = 1;
+      }
+      if (distribution) {
+        tsptr->disFile = compose_filename_occurence(distribution, run->rootname, eptr->occurence);
+	if (occurenceSeen && !overwrite_files && fexists(tsptr->disFile))
+	  skip = 1;
+      }
+      if (output) {
+        tsptr->outFile = compose_filename_occurence(output, run->rootname, eptr->occurence);
+	if (occurenceSeen && !overwrite_files && fexists(tsptr->outFile))
+	  skip = 1;
+      }
+      if (loss) {
+        tsptr->losFile = compose_filename_occurence(loss, run->rootname, eptr->occurence);
+	if (occurenceSeen && !overwrite_files && fexists(tsptr->losFile))
+	  skip = 1;
+      }
+      if (bunch) {
+        tsptr->bunFile = compose_filename_occurence(bunch, run->rootname, eptr->occurence);
+	if (occurenceSeen && !overwrite_files && fexists(tsptr->bunFile))
+	  skip = 1;
+      }
+      if (skip) {
+	if (verbosity)
+	  printf("Skipping %s#%ld at s=%le (some files exist)\n",
+		 eptr->name, eptr->occurence, eptr->end_pos);
+	eptr = eptr->succ;
+	continue;
+      }
       if (verbosity)
 	printf("Working on %s#%ld at s=%le\n",
 	       eptr->name, eptr->occurence, eptr->end_pos);
 
-      tsptr = initTSCATTER (eptr, iElement);
+      iProcessing ++;
+
       weight = (double*)malloc(sizeof(double)*n_simulated);
       beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, 7);
       beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, 7);
@@ -324,13 +369,11 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
 
       if (initial) {
-        tsptr->iniFile = compose_filename_occurence(initial, run->rootname, eptr->occurence);
         for (i=0; i<6; i++)
           bookBins[i] = tsSpec->nbins;
         iniBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
       }
       if (distribution) {
-        tsptr->disFile = compose_filename_occurence(distribution, run->rootname, eptr->occurence);
         for (i=0; i<6; i++)
           bookBins[i] = tsSpec->nbins;
         tsptr->xmin[5] = -0.1;
@@ -338,23 +381,22 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         disBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
       }
       if (output) {
-        tsptr->outFile = compose_filename_occurence(output, run->rootname, eptr->occurence);
         lossDis = chbook1("s", "m", 0, sTotal, sTotal);
       }
       if (loss) {
-        tsptr->losFile = compose_filename_occurence(loss, run->rootname, eptr->occurence);
-        SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
-                                  "lost particle coordinates", run->runfile,
-                                  run->lattice, "touschek_scatter");
+	if (occurenceSeen || iProcessing==1)
+	  SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
+				    "lost particle coordinates", run->runfile,
+				    run->lattice, "touschek_scatter");
       }
 #if USE_MPI
       if (isMaster)
 #endif
       if (bunch) {
-        tsptr->bunFile = compose_filename_occurence(bunch, run->rootname, eptr->occurence);
-        SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
-                              "scattered-beam phase space", run->runfile,
-                              run->lattice, "touschek_scatter");
+	if (occurenceSeen || iProcessing==1)
+	  SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
+				"scattered-beam phase space", run->runfile,
+				run->lattice, "touschek_scatter");
       }
       report_stats(stdout, "Before particle generation: "); 
       i = 0; j=0; total_event=0;
@@ -523,9 +565,14 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #if USE_MPI
       if (isMaster)
 #endif
-      if (bunch)
-        dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
+      if (bunch) {
+	  dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
                                  weight, tsptr);
+          if (occurenceSeen && !SDDS_Terminate(&SDDS_bunch)) {
+            SDDS_SetError("Problem terminating 'bunch' file (finish_output)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+      }
       if (distribution || initial) {
         part_dist_paraValue[0] = (void*)(&tsptr->name);
         part_dist_paraValue[1] = (void*)(&tsptr->s);
@@ -539,7 +586,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #endif        
         if (distribution) {
           chprint1m(disBook, tsptr->disFile, "Simulated scattered particle final distribution", part_dist_para, 
-                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
+                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, noOccurenceSeen && iProcessing!=1);
           free_hbook1m(disBook);
         }
 #if USE_MPI
@@ -547,7 +594,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #endif
         if (initial) {
           chprint1m(iniBook, tsptr->iniFile, "Simulated scattered particle original distribution", part_dist_para, 
-                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
+                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, noOccurenceSeen && iProcessing!=1);
           free_hbook1m(iniBook);
         }
       }
@@ -610,7 +657,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         if (loss) {
           dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
                                         beam->lostOnPass+n_left, beam->n_to_track-n_left, weight, tsptr);
-          if (!SDDS_Terminate(&SDDS_loss)) {
+          if (occurenceSeen && !SDDS_Terminate(&SDDS_loss)) {
             SDDS_SetError("Problem terminating 'losses' file (finish_output)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -624,7 +671,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
             chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
           }
           chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", NULL,
-                   NULL, 0, 0, verbosity, 0);
+                   NULL, 0, 0, verbosity, noOccurenceSeen && iProcessing!=1);
           free_hbook1(lossDis);
         }
       }
@@ -645,6 +692,16 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
     }
     eptr = eptr->succ; 
   }
+
+  if (!occurenceSeen && !SDDS_Terminate(&SDDS_loss)) {
+    SDDS_SetError("Problem terminating 'losses' file");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!occurenceSeen && !SDDS_Terminate(&SDDS_bunch)) {
+    SDDS_SetError("Problem terminating 'bunch' file");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+
   return;
 }
 
@@ -864,9 +921,9 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
   long result, i, iTotal;
   ELEMENT_LIST *eptr;
   SDDS_DATASET input;
-  char **Name, **Type;
-  double *s, *dpp, *dpm, eps=1e-7;
-  int32_t *Occurence;
+  char **Name = NULL, **Type = NULL;
+  double *s = NULL, *dpp = NULL, *dpm = NULL, eps=1e-7;
+  int32_t *Occurence = NULL;
 
   if (!SDDS_InitializeInput(&input, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1186,4 +1243,60 @@ void pickPart(double *weight, long *index, long start, long end,
   pickPart(weight, index, i2+start, end,
            iTotal, wTotal, weight_limit, weight_ave);
   return;
+}
+
+
+#include <sys/types.h>
+#include <regex.h>
+
+short has_occurence_string(char *template)
+{
+  static regex_t regExpr;
+  static short first = 1;
+  if (first) {
+    int code;
+    if ((code=regcomp(&regExpr, ".*%[0-9]*ld.*", REG_NOSUB))) {
+      char errbuf[1000];
+      regerror(code, &regExpr, errbuf, (size_t)1000);
+      fprintf(stdout, "%s\n", errbuf);
+      bombElegant("problem compiling regular expression for filename occurence determination (has_occurence_string)", NULL);
+    }
+    first = 0;
+  }
+  return !regexec (&regExpr, template, 0, NULL, 0);
+}
+
+void determineOccurenceInFilenames(short *occurenceSeen, short*noOccurenceSeen, 
+				   char *initial, char *distribution, char *output, char *loss, char *bunch)
+{
+  if (initial) {
+    if (has_occurence_string(initial))
+      *occurenceSeen = 1;
+    else
+      *noOccurenceSeen = 1;
+  }
+  if (distribution) {
+    if (has_occurence_string(distribution))
+      *occurenceSeen = 1;
+    else
+      *noOccurenceSeen = 1;
+  }
+  if (output) {
+    if (has_occurence_string(output))
+      *occurenceSeen = 1;
+    else
+      *noOccurenceSeen = 1;
+  }
+  if (loss) {
+    if (has_occurence_string(loss))
+      *occurenceSeen = 1;
+    else
+      *noOccurenceSeen = 1;
+  }
+  if (bunch) {
+    if (has_occurence_string(bunch))
+      *occurenceSeen = 1;
+    else
+      *noOccurenceSeen = 1;
+  }
 }

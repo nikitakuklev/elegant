@@ -35,6 +35,7 @@
 	long match_position_only = 0;
         long do_track = 0;
         long verbosity = 0;
+	long overwrite_files = 1;
 #end
 /*
 charge in C.
