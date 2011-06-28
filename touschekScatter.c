@@ -939,6 +939,10 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
     bombElegant("Momentum aperture file lacks required columns (s, deltaPositive, deltaNegative, ElementOccurence, ElementName, ElementType)", NULL);
   }
 
+  for (i=1; i<iTotal; i++) 
+    if (s[i-1]>s[i])
+      bombElegant("Momentum aperture data is not sorted in order of increasing s.", NULL);
+
   i = 0;
   result = -nElement;
   eptr = &(beamline->elem);
