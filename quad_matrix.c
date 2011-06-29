@@ -50,7 +50,7 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
       if (ffringe) {
         /* If mode is fixedStrength, then the sloped area is symmetric about the nominal
          * entrance and exit points.  This means that the integrated strength is not
-         * changed. 
+         * changed.   FFRINGE=(2*fringeLengthOnOneSide)/HardEdgeLength
          * If the mode is "inset", then the sloped areas end at the nominal ends of
          * the quad.  The integrated strength changes as the fringe fraction changes.
          */
@@ -567,7 +567,7 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
     if (K1==0 || length==0) {
       if (K2==0)
         return drift_matrix(length, maximum_order);
-      return sextupole_matrix(K2, length, maximum_order, tilt, fse2);
+      return sextupole_matrix(K2, length, maximum_order, tilt, fse2, 0);
     }
 
     K2 *= (1+fse2);

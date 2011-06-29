@@ -21,6 +21,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
 VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
 VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
+VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
@@ -394,14 +395,14 @@ VMATRIX *wiggler_matrix(double length, double radius, long poles,
     return(M);
     }
 
-VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse)
+VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe)
 {
-    VMATRIX *M;
+    VMATRIX *M, *Medge1, *Medge2;
     double *C, **R, ***T, ****U;
-    double temp;
+    double temp, lf = 0;
     
-    log_entry("sextupole_matrix");
-
+    Medge1 = Medge2 = NULL;
+    
     K2 *= (1+fse);
 
     M = tmalloc(sizeof(*M));
@@ -409,8 +410,16 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
     R = M->R;
     C = M->C;
     
+    if (ffringe>0) {
+      lf = length*ffringe/2;
+      length *= (1-ffringe/2);
+      Medge1 = sextupoleFringeMatrix(K2, lf, maximum_order, -1);
+      Medge2 = sextupoleFringeMatrix(K2, lf, maximum_order,  1);
+    }
+
     R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
     C[4] = R[0][1] = R[2][3] = length;
+    
     if (M->order>=2) {
       T = M->T;
       temp = K2*length/2;   /* temp = ks^2*l */
@@ -507,8 +516,31 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
         U[4][3][3][1] = K2*ipow(length,4)/8.0 ;
       }
     }
+
+    if (Medge1 && Medge2) {
+      VMATRIX *M1, *M2, *tmp, *Md;
+      M1 = tmalloc(sizeof(*M1));
+      initialize_matrices(M1, M->order);
+      M2 = tmalloc(sizeof(*M2));
+      initialize_matrices(M2, M->order);
+
+      /* drift back to fringe starting point */
+      Md = drift_matrix(-lf/2, M->order);
+      
+      concat_matrices(M1, Medge1, Md, 0);
+      concat_matrices(M2, M, M1, 0);
+      concat_matrices(M1, Medge2, M2, 0);
+      concat_matrices(M, Md, M1, 0);
+
+      free_matrices(Md); tfree(Md); Md = NULL;
+      free_matrices(M1); tfree(M1); M1 = NULL;
+      free_matrices(M2); tfree(M2); M2 = NULL;
+      free_matrices(Medge1); tfree(Medge1); Medge1 = NULL;
+      free_matrices(Medge2); tfree(Medge2); Medge2 = NULL;
+    }
+    
     tilt_matrices(M, tilt);
-    log_exit("sextupole_matrix");
+
     return(M);
   }
 
@@ -823,7 +855,7 @@ VMATRIX *compute_matrix(
         sext = (SEXT*)elem->p_elem;
         elem->matrix = sextupole_matrix(sext->k2, sext->length, 
                                         sext->order?sext->order:run->default_order, sext->tilt,
-                                        sext->fse);
+                                        sext->fse, sext->ffringe);
         if (sext->dx || sext->dy || sext->dz)
             misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz, 0.0);
         break;
@@ -988,7 +1020,7 @@ VMATRIX *compute_matrix(
             bombElegant("n_kicks must by > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->length, 
                                         (run->default_order?run->default_order:2), ksext->tilt,
-                                        ksext->fse);
+                                        ksext->fse, 0.0);
         if (ksext->dx || ksext->dy || ksext->dz)
             misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 0.0);
         readErrorMultipoleData(&(ksext->systematicMultipoleData),
@@ -2063,5 +2095,207 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     return(Mt);
   }
 
+}
+
+VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side)
+{
+  VMATRIX *M;
+  double *C, **R, ***T, ****U;
+  double temp;
+  
+  M = tmalloc(sizeof(*M));
+  initialize_matrices(M, M->order=MIN(3,maxOrder));
+  R = M->R;
+  C = M->C;
+
+  R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
+  C[4] = R[0][1] = R[2][3] = length;
+
+  if (side==-1) {
+    /* entrance */
+    if (M->order >= 2) {
+      T = M->T;
+      T[0][0][0] = -(K2*ipow(length,2))/12.;
+      T[0][1][0] = -(K2*ipow(length,3))/12.;
+      T[0][1][1] = -(K2*ipow(length,4))/40.;
+      T[0][2][2] = (K2*ipow(length,2))/12.;
+      T[0][3][2] = (K2*ipow(length,3))/12.;
+      T[0][3][3] = (K2*ipow(length,4))/40.;
+      T[1][0][0] = -(K2*length)/4.;
+      T[1][1][0] = -(K2*ipow(length,2))/3.;
+      T[1][1][1] = -(K2*ipow(length,3))/8.;
+      T[1][2][2] = (K2*length)/4.;
+      T[1][3][2] = (K2*ipow(length,2))/3.;
+      T[1][3][3] = (K2*ipow(length,3))/8.;
+      T[2][2][0] = (K2*ipow(length,2))/6.;
+      T[2][2][1] = (K2*ipow(length,3))/12.;
+      T[2][3][0] = (K2*ipow(length,3))/12.;
+      T[2][3][1] = (K2*ipow(length,4))/20.;
+      T[3][2][0] = (K2*length)/2.;
+      T[3][2][1] = (K2*ipow(length,2))/3.;
+      T[3][3][0] = (K2*ipow(length,2))/3.;
+      T[3][3][1] = (K2*ipow(length,3))/4.;
+      T[4][1][1] = length/2.;
+      T[4][3][3] = length/2.;
+      if (M->order >= 3) {
+        U =  M->Q;
+        U[0][0][0][0] = (ipow(K2,2)*ipow(length,4))/360.;
+        U[0][1][0][0] = (ipow(K2,2)*ipow(length,5))/252.;
+        U[0][1][1][0] = (13*ipow(K2,2)*ipow(length,6))/6720.;
+        U[0][1][1][1] = (ipow(K2,2)*ipow(length,7))/2880.;
+        U[0][2][2][0] = (ipow(K2,2)*ipow(length,4))/360.;
+        U[0][3][2][0] = (ipow(K2,2)*ipow(length,5))/252.;
+        U[0][3][2][1] = (ipow(K2,2)*ipow(length,6))/1120.;
+        U[0][3][3][0] = (ipow(K2,2)*ipow(length,6))/960.;
+        U[0][3][3][1] = (ipow(K2,2)*ipow(length,7))/2880.;
+        U[0][5][0][0] = (K2*ipow(length,2))/12.;
+        U[0][5][1][0] = (K2*ipow(length,3))/12.;
+        U[0][5][1][1] = (K2*ipow(length,4))/40.;
+        U[0][5][2][2] = -(K2*ipow(length,2))/12.;
+        U[0][5][3][2] = -(K2*ipow(length,3))/12.;
+        U[0][5][3][3] = -(K2*ipow(length,4))/40.;
+        U[1][0][0][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[1][1][0][0] = (ipow(K2,2)*ipow(length,4))/36.;
+        U[1][1][1][0] = (13*ipow(K2,2)*ipow(length,5))/840.;
+        U[1][1][1][1] = (ipow(K2,2)*ipow(length,6))/320.;
+        U[1][2][2][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[1][3][2][0] = (ipow(K2,2)*ipow(length,4))/36.;
+        U[1][3][2][1] = (ipow(K2,2)*ipow(length,5))/140.;
+        U[1][3][3][0] = (ipow(K2,2)*ipow(length,5))/120.;
+        U[1][3][3][1] = (ipow(K2,2)*ipow(length,6))/320.;
+        U[1][5][0][0] = (K2*length)/4.;
+        U[1][5][1][0] = (K2*ipow(length,2))/3.;
+        U[1][5][1][1] = (K2*ipow(length,3))/8.;
+        U[1][5][2][2] = -(K2*length)/4.;
+        U[1][5][3][2] = -(K2*ipow(length,2))/3.;
+        U[1][5][3][3] = -(K2*ipow(length,3))/8.;
+        U[2][2][0][0] = (ipow(K2,2)*ipow(length,4))/360.;
+        U[2][2][1][0] = (ipow(K2,2)*ipow(length,5))/252.;
+        U[2][2][1][1] = (ipow(K2,2)*ipow(length,6))/960.;
+        U[2][2][2][2] = (ipow(K2,2)*ipow(length,4))/360.;
+        U[2][3][1][0] = (ipow(K2,2)*ipow(length,6))/1120.;
+        U[2][3][1][1] = (ipow(K2,2)*ipow(length,7))/2880.;
+        U[2][3][2][2] = (ipow(K2,2)*ipow(length,5))/252.;
+        U[2][3][3][2] = (13*ipow(K2,2)*ipow(length,6))/6720.;
+        U[2][3][3][3] = (ipow(K2,2)*ipow(length,7))/2880.;
+        U[2][5][2][0] = -(K2*ipow(length,2))/6.;
+        U[2][5][2][1] = -(K2*ipow(length,3))/12.;
+        U[2][5][3][0] = -(K2*ipow(length,3))/12.;
+        U[2][5][3][1] = -(K2*ipow(length,4))/20.;
+        U[3][2][0][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[3][2][1][0] = (ipow(K2,2)*ipow(length,4))/36.;
+        U[3][2][1][1] = (ipow(K2,2)*ipow(length,5))/120.;
+        U[3][2][2][2] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[3][3][1][0] = (ipow(K2,2)*ipow(length,5))/140.;
+        U[3][3][1][1] = (ipow(K2,2)*ipow(length,6))/320.;
+        U[3][3][2][2] = (ipow(K2,2)*ipow(length,4))/36.;
+        U[3][3][3][2] = (13*ipow(K2,2)*ipow(length,5))/840.;
+        U[3][3][3][3] = (ipow(K2,2)*ipow(length,6))/320.;
+        U[3][5][2][0] = -(K2*length)/2.;
+        U[3][5][2][1] = -(K2*ipow(length,2))/3.;
+        U[3][5][3][0] = -(K2*ipow(length,2))/3.;
+        U[3][5][3][1] = -(K2*ipow(length,3))/4.;
+      }
+    }
+  } else {
+    /* exit */
+    if (M->order >= 2) {
+      T =  M->T;
+      T[0][0][0] = -(K2*ipow(length,2))/6.;
+      T[0][1][0] = -(K2*ipow(length,3))/12.;
+      T[0][1][1] = -(K2*ipow(length,4))/60.;
+      T[0][2][2] = (K2*ipow(length,2))/6.;
+      T[0][3][2] = (K2*ipow(length,3))/12.;
+      T[0][3][3] = (K2*ipow(length,4))/60.;
+      T[1][0][0] = -(K2*length)/4.;
+      T[1][1][0] = -(K2*ipow(length,2))/6.;
+      T[1][1][1] = -(K2*ipow(length,3))/24.;
+      T[1][2][2] = (K2*length)/4.;
+      T[1][3][2] = (K2*ipow(length,2))/6.;
+      T[1][3][3] = (K2*ipow(length,3))/24.;
+      T[2][2][0] = (K2*ipow(length,2))/3.;
+      T[2][2][1] = (K2*ipow(length,3))/12.;
+      T[2][3][0] = (K2*ipow(length,3))/12.;
+      T[2][3][1] = (K2*ipow(length,4))/30.;
+      T[3][2][0] = (K2*length)/2.;
+      T[3][2][1] = (K2*ipow(length,2))/6.;
+      T[3][3][0] = (K2*ipow(length,2))/6.;
+      T[3][3][1] = (K2*ipow(length,3))/12.;
+      T[4][1][1] = length/2.;
+      T[4][3][3] = length/2.;
+      if (M->order >= 3) {
+        U =  M->Q;
+        U[0][0][0][0] = (ipow(K2,2)*ipow(length,4))/144.;
+        U[0][1][0][0] = (3*ipow(K2,2)*ipow(length,5))/560.;
+        U[0][1][1][0] = (3*ipow(K2,2)*ipow(length,6))/2240.;
+        U[0][1][1][1] = (ipow(K2,2)*ipow(length,7))/6720.;
+        U[0][2][2][0] = (ipow(K2,2)*ipow(length,4))/144.;
+        U[0][2][2][1] = -(ipow(K2,2)*ipow(length,5))/720.;
+        U[0][3][2][0] = (17*ipow(K2,2)*ipow(length,5))/2520.;
+        U[0][3][2][1] = (ipow(K2,2)*ipow(length,6))/2016.;
+        U[0][3][3][0] = (17*ipow(K2,2)*ipow(length,6))/20160.;
+        U[0][3][3][1] = (ipow(K2,2)*ipow(length,7))/6720.;
+        U[0][5][0][0] = (K2*ipow(length,2))/6.;
+        U[0][5][1][0] = (K2*ipow(length,3))/12.;
+        U[0][5][1][1] = (K2*ipow(length,4))/60.;
+        U[0][5][2][2] = -(K2*ipow(length,2))/6.;
+        U[0][5][3][2] = -(K2*ipow(length,3))/12.;
+        U[0][5][3][3] = -(K2*ipow(length,4))/60.;
+        U[1][0][0][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[1][1][0][0] = (11*ipow(K2,2)*ipow(length,4))/720.;
+        U[1][1][1][0] = (11*ipow(K2,2)*ipow(length,5))/2520.;
+        U[1][1][1][1] = (11*ipow(K2,2)*ipow(length,6))/20160.;
+        U[1][2][2][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[1][2][2][1] = -(ipow(K2,2)*ipow(length,4))/240.;
+        U[1][3][2][0] = (7*ipow(K2,2)*ipow(length,4))/360.;
+        U[1][3][2][1] = (ipow(K2,2)*ipow(length,5))/630.;
+        U[1][3][3][0] = (ipow(K2,2)*ipow(length,5))/360.;
+        U[1][3][3][1] = (11*ipow(K2,2)*ipow(length,6))/20160.;
+        U[1][5][0][0] = (K2*length)/4.;
+        U[1][5][1][0] = (K2*ipow(length,2))/6.;
+        U[1][5][1][1] = (K2*ipow(length,3))/24.;
+        U[1][5][2][2] = -(K2*length)/4.;
+        U[1][5][3][2] = -(K2*ipow(length,2))/6.;
+        U[1][5][3][3] = -(K2*ipow(length,3))/24.;
+        U[2][2][0][0] = (ipow(K2,2)*ipow(length,4))/144.;
+        U[2][2][1][0] = (17*ipow(K2,2)*ipow(length,5))/2520.;
+        U[2][2][1][1] = (17*ipow(K2,2)*ipow(length,6))/20160.;
+        U[2][2][2][2] = (ipow(K2,2)*ipow(length,4))/144.;
+        U[2][3][0][0] = -(ipow(K2,2)*ipow(length,5))/720.;
+        U[2][3][1][0] = (ipow(K2,2)*ipow(length,6))/2016.;
+        U[2][3][1][1] = (ipow(K2,2)*ipow(length,7))/6720.;
+        U[2][3][2][2] = (3*ipow(K2,2)*ipow(length,5))/560.;
+        U[2][3][3][2] = (3*ipow(K2,2)*ipow(length,6))/2240.;
+        U[2][3][3][3] = (ipow(K2,2)*ipow(length,7))/6720.;
+        U[2][5][2][0] = -(K2*ipow(length,2))/3.;
+        U[2][5][2][1] = -(K2*ipow(length,3))/12.;
+        U[2][5][3][0] = -(K2*ipow(length,3))/12.;
+        U[2][5][3][1] = -(K2*ipow(length,4))/30.;
+        U[3][2][0][0] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[3][2][1][0] = (7*ipow(K2,2)*ipow(length,4))/360.;
+        U[3][2][1][1] = (ipow(K2,2)*ipow(length,5))/360.;
+        U[3][2][2][2] = (ipow(K2,2)*ipow(length,3))/60.;
+        U[3][3][0][0] = -(ipow(K2,2)*ipow(length,4))/240.;
+        U[3][3][1][0] = (ipow(K2,2)*ipow(length,5))/630.;
+        U[3][3][1][1] = (11*ipow(K2,2)*ipow(length,6))/20160.;
+        U[3][3][2][2] = (11*ipow(K2,2)*ipow(length,4))/720.;
+        U[3][3][3][2] = (11*ipow(K2,2)*ipow(length,5))/2520.;
+        U[3][3][3][3] = (11*ipow(K2,2)*ipow(length,6))/20160.;
+        U[3][5][2][0] = -(K2*length)/2.;
+        U[3][5][2][1] = -(K2*ipow(length,2))/6.;
+        U[3][5][3][0] = -(K2*ipow(length,2))/6.;
+        U[3][5][3][1] = -(K2*ipow(length,3))/12.;
+      }
+    }
+  }
+
+  /* 
+  if (side==-1) 
+    print_matrices(stdout, "entrance fringe matrix:\n", M);
+  else
+    print_matrices(stdout, "exit fringe matrix:\n", M);
+    */
+
+  return M;
 }
 

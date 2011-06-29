@@ -20,53 +20,54 @@
 #include "mdb.h"
 #include "track.h"
 
-void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrder)
+void quadFringe(double **coord, long np, double K1, 
+                double *fringeIntM0,  /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
+                double *fringeIntP0,  /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
+                int inFringe,        /* -1 = entrance, +1 = exit */
+                int higherOrder)
 {
   /* vec = {x, qx, y, qy, s, delta}
      need paramenters K1, R11, R12, R21, R33, R34, R43, r11, r12, r21, r33, r34, r43
      */
   long ip;
-  double ks=inFringe*K1/(-0.75563);   /* scaling factor based on the field used for computing the fringe matrices, may need better treatment */
-  double R11, R12, R21, R33, R34, R43;
-  double r11, r12, r21, r33, r34, r43;
-  double R22, R44, r22, r44;
+  double R11, R12, R21, R22, R33, R34, R43, R44;
+  double J1, J2, J3;
   double x, px, y, py, delta;
   double *vec;
   double a, dx, dpx, dy, dpy, ds;
-
-  if (inFringe<0){
-    /* Entrance fringe */
-    R11=0.999684, R12=-0.0000216824, R21=0.00948972, R33=1.00032, R34=0.0000216824, R43=-0.00948671;
-    r11=0.999781, r12=0.0000121256, r21=-0.00987381, r33=1.00022, r34=-0.0000121256, r43=0.00985779; 
-   } else {
-    R11=0.999781, R12=0.0000121256, R21=-0.00987381, R33=1.00022, R34=-0.0000121256, R43=0.00985779; 
-    r11=0.999684, r12=-0.0000216824, r21=0.00948972, r33=1.00032, r34=0.0000216824, r43=-0.00948671;
+  double K1a;
+  double *fringeIntM, *fringeIntP;
+  
+  if (inFringe==-1) {
+    fringeIntM = fringeIntP0;
+    fringeIntP = fringeIntM0;
+  } else {
+    fringeIntM = fringeIntM0;
+    fringeIntP = fringeIntP0;
   }
-
-
-  R11 = 1 + ks*(R11-1);       /* assuming fringe matrix is very close to I */
-  R12 = ks*R12;
-  R21 = ks*R21;
-  R33 = 1 + ks*(R33-1);
-  R34 = ks*R34;
-  R43 = ks*R43;
-
-  r11 = 1 + ks*(r11-1);
-  r12 = ks*r12;
-  r21 = ks*r21;
-  r33 = 1 + ks*(r33-1);
-  r34 = ks*r34;
-  r43 = ks*r43;
-
-  R22 = (1 + R12*R21)/R11;
-  R44 = (1 + R34*R43)/R33;
-  r22 = (1 + r12*r21)/r11;
-  r44 = (1 + r34*r43)/r33;     /* up till here can be moved out for faster tracking */
-
-
+  
   for (ip=0; ip<np; ip++) {
     vec = coord[ip];
     delta = vec[5];
+
+    /* determine first linear matrix for this delta */
+    K1a = K1/(1+delta);
+    J1 = inFringe*(K1a*fringeIntM[1] - 2*sqr(K1a)*fringeIntM[3]/3.);
+    J2 = inFringe*(K1a*fringeIntM[2]);
+    J3 = inFringe*(sqr(K1a)*(fringeIntM[2] + fringeIntM[4]));
+    R11 = exp(J1);
+    R12 = J2/exp(J1);
+    R21 = exp(J1)*J3;
+    R22 = (1 + J2*J3)/exp(J1);
+
+    K1a = -K1/(1+delta);
+    J1 = inFringe*(K1a*fringeIntM[1] - 2*sqr(K1a)*fringeIntM[3]/3.);
+    J2 = -J2;
+    R33 = exp(J1);
+    R34 = J2/exp(J1);
+    R43 = exp(J1)*J3;
+    R44 = (1 + J2*J3)/exp(J1);
+    
     x  = R11*vec[0] + R12*vec[1];
     px = R21*vec[0] + R22*vec[1];
     y  = R33*vec[2] + R34*vec[3];
@@ -75,22 +76,22 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
     a = inFringe*K1/(12*(1 + delta));
 
     if (higherOrder) {
-	dx  = (a*x*(8*(ipow(x,2) + 3*ipow(y,2)) + 4*ipow(a,2)*(5*ipow(x,6) + 21*ipow(x,4)*ipow(y,2) 
+      dx  = (a*x*(8*(ipow(x,2) + 3*ipow(y,2)) + 4*ipow(a,2)*(5*ipow(x,6) + 21*ipow(x,4)*ipow(y,2) 
 		  - 25*ipow(x,2)*ipow(y,4) - ipow(y,6)) + ipow(a,3)*(35*ipow(x,8) + 84*ipow(x,6)*ipow(y,2) 
 		  + 498*ipow(x,4)*ipow(y,4) - 108*ipow(x,2)*ipow(y,6) + 3*ipow(y,8)) + 12*a*ipow(ipow(x,2)
 		  - ipow(y,2),2)))/8;
-	dpx = (a*(12*a*(-4*py*x*y + px*(ipow(x,2) - 5*ipow(y,2)))*(ipow(x,2) - ipow(y,2)) 
+      dpx = (a*(12*a*(-4*py*x*y + px*(ipow(x,2) - 5*ipow(y,2)))*(ipow(x,2) - ipow(y,2)) 
 		  - 24*(-2*py*x*y + px*(ipow(x,2) + ipow(y,2))) + 4*ipow(a,2)*(-2*py*x*y*(3*ipow(x,4) 
 		  + 50*ipow(x,2)*ipow(y,2) - 21*ipow(y,4)) + px*(ipow(x,6) + 75*ipow(x,4)*ipow(y,2) 
 		  - 105*ipow(x,2)*ipow(y,4) - 35*ipow(y,6))) + 3*ipow(a,3)*(-8*py*x*y*(ipow(x,6) 
 		  - 27*ipow(x,4)*ipow(y,2) + 83*ipow(x,2)*ipow(y,4) + 7*ipow(y,6)) + px*(ipow(x,8) 
 		  - 108*ipow(x,6)*ipow(y,2) + 830*ipow(x,4)*ipow(y,4) + 196*ipow(x,2)*ipow(y,6) 
 		  + 105*ipow(y,8)))))/8;
-	dy  = (a*y*(-8*(3*ipow(x,2) + ipow(y,2)) + 4*ipow(a,2)*(ipow(x,6) + 25*ipow(x,4)*ipow(y,2) 
+      dy  = (a*y*(-8*(3*ipow(x,2) + ipow(y,2)) + 4*ipow(a,2)*(ipow(x,6) + 25*ipow(x,4)*ipow(y,2) 
 		  - 21*ipow(x,2)*ipow(y,4) - 5*ipow(y,6)) + ipow(a,3)*(3*ipow(x,8) - 108*ipow(x,6)*ipow(y,2) 
 		  + 498*ipow(x,4)*ipow(y,4) + 84*ipow(x,2)*ipow(y,6) + 35*ipow(y,8)) + 12*a*ipow(ipow(x,2) 
 		  - ipow(y,2),2)))/8;
-	dpy = (a*(-8*px*x*y*(6 - 6*a*(ipow(x,2) - ipow(y,2)) + ipow(a,2)*(21*ipow(x,4) 
+      dpy = (a*(-8*px*x*y*(6 - 6*a*(ipow(x,2) - ipow(y,2)) + ipow(a,2)*(21*ipow(x,4) 
 		  - 50*ipow(x,2)*ipow(y,2) - 3*ipow(y,4)) + 3*ipow(a,3)*(7*ipow(x,6) + 83*ipow(x,4)*ipow(y,2)
 		  - 27*ipow(x,2)*ipow(y,4) + ipow(y,6))) + py*(315*ipow(a,3)*ipow(x,8) 
 		  + 28*ipow(a,2)*ipow(x,6)*(5 + 21*a*ipow(y,2)) + 30*a*ipow(x,4)*(2 + 14*a*ipow(y,2) 
@@ -98,12 +99,12 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
 		  + 3*ipow(a,3)*ipow(y,6)) - 12*ipow(x,2)*(-2 + 6*a*ipow(y,2) + 25*ipow(a,2)*ipow(y,4) 
 		  + 27*ipow(a,3)*ipow(y,6)))))/8;
 
-      } else {
-	dx  = a*(ipow(x,3) + 3*x*ipow(y,2))/3;
-	dpx = a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
-	dy  = a*(-ipow(x,2)*y - ipow(y,3)/3);
-	dpy = a*(-py*ipow(x,2) - 2*px*x*y - py*ipow(y,2));
-      }
+    } else {
+      dx  = a*(ipow(x,3) + 3*x*ipow(y,2))/3;
+      dpx = a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
+      dy  = a*(-ipow(x,2)*y - ipow(y,3)/3);
+      dpy = a*(-py*ipow(x,2) - 2*px*x*y - py*ipow(y,2));
+    }
 	
     ds  = (a/(1+delta))*(3*py*y*ipow(x,2) - px*ipow(x,3) - 3*px*x*ipow(y,2) + py*ipow(y,3));
 
@@ -112,10 +113,28 @@ void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrde
     y  += dy;
     py += dpy;
 
-    vec[0] = r11*x + r12*px;
-    vec[1] = r21*x + r22*px;
-    vec[2] = r33*y + r34*py;
-    vec[3] = r43*y + r44*py;
+    /* determine and apply second linear matrix */
+    K1a = K1/(1+delta);
+    J1 = inFringe*(K1a*fringeIntP[1] + sqr(K1a)*fringeIntP[0]*fringeIntP[2]);
+    J2 = inFringe*(K1a*fringeIntP[2]);
+    J3 = inFringe*(sqr(K1a)*(fringeIntP[4]-fringeIntP[0]*fringeIntP[1]));
+    R11 = exp(J1);
+    R12 = J2/exp(J1);
+    R21 = exp(J1)*J3;
+    R22 = (1 + J2*J3)/exp(J1);
+
+    K1a = -K1/(1+delta);
+    J1 = inFringe*(K1a*fringeIntP[1] + sqr(K1a)*fringeIntP[0]*fringeIntP[2]);
+    J2 = -J2;
+    R33 = exp(J1);
+    R34 = J2/exp(J1);
+    R43 = exp(J1)*J3;
+    R44 = (1 + J2*J3)/exp(J1);
+    
+    vec[0] = R11*x + R12*px;
+    vec[1] = R21*x + R22*px;
+    vec[2] = R33*y + R34*py;
+    vec[3] = R43*y + R44*py;
     vec[4] += ds;
   }
 }

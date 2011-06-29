@@ -809,10 +809,10 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 16
+#define N_QUAD_PARAMS 28
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
-#define N_SEXT_PARAMS 8
+#define N_SEXT_PARAMS 9
 #define N_OCTU_PARAMS 8
 #define N_MULT_PARAMS 12
 #define N_SOLE_PARAMS 7
@@ -849,7 +849,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 13
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 25
+#define N_KQUAD_PARAMS 36
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -991,15 +991,22 @@ typedef struct {
 
 extern ELEMENT_DESCRIPTION entity_description[N_TYPES];
 
+#define QFRINGE_SIMPLE 0
+#define QFRINGE_INSET  1
+#define QFRINGE_INTEGRALS 2
+
 /* names and storage structure for quadrupole physical parameters */
 extern PARAMETER quad_param[N_QUAD_PARAMS];
 
 typedef struct {
-    double length, k1, tilt, ffringe;
+    double length, k1, tilt;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, order;
+    long edge1_effects, edge2_effects;
     char *fringeType;
+    double ffringe;
+    double fringeIntP[5], fringeIntM[5];
     } QUAD;
 
 /* names and storage structure for bending magnet physical parameters */
@@ -1041,6 +1048,7 @@ extern PARAMETER sext_param[N_SEXT_PARAMS];
 typedef struct {
     double length, k2, tilt;
     double dx, dy, dz, fse;
+    double ffringe;
     long order;
     } SEXT;
 
@@ -1747,7 +1755,8 @@ typedef struct {
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder, isr, isr1Particle;
-    long fringe;
+    long edge1_effects, edge2_effects;
+    double fringeIntP[5], fringeIntM[5];
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -2811,7 +2820,7 @@ extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double 
 			       double tilt, long order);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler);
-extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse);
+extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
@@ -3189,7 +3198,7 @@ extern VMATRIX *qfringe_matrix(double K1, double l, double tilt, long direction,
 extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
 
 /* prototypes for fringe.c */
-void quadFringe(double **coord, long np, double K1, int inFringe, int higherOrder);
+void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, int inFringe, int higherOrder);
 void dipoleFringe(double *vec, double h, long inFringe, long higherOrder);
 
 /* prototypes for tilt_matrices.c: */
