@@ -35,7 +35,7 @@ void quadFringe(double **coord, long np, double K1,
   double x, px, y, py, delta;
   double *vec;
   double a, dx, dpx, dy, dpy, ds;
-  double K1a;
+  double K1a, K1a2, expJ1;
   double *fringeIntM, *fringeIntP;
   
   if (inFringe==-1) {
@@ -52,21 +52,22 @@ void quadFringe(double **coord, long np, double K1,
 
     /* determine first linear matrix for this delta */
     K1a = K1/(1+delta);
-    J1 = inFringe*(K1a*fringeIntM[1] - 2*sqr(K1a)*fringeIntM[3]/3.);
+    K1a2 = sqr(K1a);
+    J1 = inFringe*(K1a*fringeIntM[1] - 2*K1a2*fringeIntM[3]/3.);
     J2 = inFringe*(K1a*fringeIntM[2]);
-    J3 = inFringe*(sqr(K1a)*(fringeIntM[2] + fringeIntM[4]));
-    R11 = exp(J1);
-    R12 = J2/exp(J1);
-    R21 = exp(J1)*J3;
-    R22 = (1 + J2*J3)/exp(J1);
+    J3 = inFringe*(K1a2*(fringeIntM[2] + fringeIntM[4]));
+    expJ1 = R11 = exp(J1);
+    R12 = J2/expJ1;
+    R21 = expJ1*J3;
+    R22 = (1 + J2*J3)/expJ1;
 
     K1a = -K1/(1+delta);
-    J1 = inFringe*(K1a*fringeIntM[1] - 2*sqr(K1a)*fringeIntM[3]/3.);
+    J1 = inFringe*(K1a*fringeIntM[1] - 2*K1a2*fringeIntM[3]/3.);
     J2 = -J2;
-    R33 = exp(J1);
-    R34 = J2/exp(J1);
-    R43 = exp(J1)*J3;
-    R44 = (1 + J2*J3)/exp(J1);
+    expJ1 = R33 = exp(J1);
+    R34 = J2/expJ1;
+    R43 = expJ1*J3;
+    R44 = (1 + J2*J3)/expJ1;
     
     x  = R11*vec[0] + R12*vec[1];
     px = R21*vec[0] + R22*vec[1];
@@ -115,21 +116,22 @@ void quadFringe(double **coord, long np, double K1,
 
     /* determine and apply second linear matrix */
     K1a = K1/(1+delta);
-    J1 = inFringe*(K1a*fringeIntP[1] + sqr(K1a)*fringeIntP[0]*fringeIntP[2]);
+    K1a2 = sqr(K1a);
+    J1 = inFringe*(K1a*fringeIntP[1] + K1a2*fringeIntP[0]*fringeIntP[2]/2);
     J2 = inFringe*(K1a*fringeIntP[2]);
-    J3 = inFringe*(sqr(K1a)*(fringeIntP[4]-fringeIntP[0]*fringeIntP[1]));
-    R11 = exp(J1);
-    R12 = J2/exp(J1);
-    R21 = exp(J1)*J3;
-    R22 = (1 + J2*J3)/exp(J1);
+    J3 = inFringe*(K1a2*(fringeIntP[4]-fringeIntP[0]*fringeIntP[1]));
+    expJ1 = R11 = exp(J1);
+    R12 = J2/expJ1;
+    R21 = expJ1*J3;
+    R22 = (1 + J2*J3)/expJ1;
 
     K1a = -K1/(1+delta);
     J1 = inFringe*(K1a*fringeIntP[1] + sqr(K1a)*fringeIntP[0]*fringeIntP[2]);
     J2 = -J2;
-    R33 = exp(J1);
-    R34 = J2/exp(J1);
-    R43 = exp(J1)*J3;
-    R44 = (1 + J2*J3)/exp(J1);
+    expJ1 = R33 = exp(J1);
+    R34 = J2/expJ1;
+    R43 = expJ1*J3;
+    R44 = (1 + J2*J3)/expJ1;
     
     vec[0] = R11*x + R12*px;
     vec[1] = R21*x + R22*px;
