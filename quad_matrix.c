@@ -18,20 +18,31 @@
 static double swap_tmp;
 #define swap_double(x, y) (swap_tmp=(x),(x)=(y),(y)=swap_tmp)
 
+#define INSET_FRINGE 0
+#define FIXED_STRENGTH_FRINGE 1
+#define INTEGRALS_FRINGE 2
+static char *fringeTypeOpt[3] = {"inset", "fixed-strength", "integrals"};
+
 VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
-                           double tilt, double ffringe, double fse,
+                           double tilt, double fse,
                            double xkick, double ykick,
-                           char *fringeType)
+                           double edge1_effects, double edge2_effects,
+                           char *fringeType, double ffringe,
+                           double *fringeIntM, double *fringeIntP
+                           )
 {
     VMATRIX *M;
     VMATRIX *Mfringe, *Mtot, *Md, *tmp;
     double *C, **R, ***T, ****U;
     double kl, k, sin_kl, cos_kl, cosh_kl, sinh_kl;
     double lNominal, lEdge=0;
-    static char *fringeTypeOpt[2] = {"inset", "fixed-strength"};
-    long fixedStrengthFringe = 0;
+    long fringeCode = 0;
     
     K1 *= (1+fse);
+
+    fringeCode = -1;
+    if (fringeType && (fringeCode = match_string(fringeType, fringeTypeOpt, 3, 0))<0)
+      bombElegant("Unrecognized fringe type for QUAD or KQUAD", NULL);
     
     if (K1==0 || lHC==0) {
       M = drift_matrix(lHC, maximum_order);
@@ -47,25 +58,32 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
        * If fringe effects are off, these are the same.
        */
       lNominal = lHC;
-      if (ffringe) {
+      if (ffringe && fringeCode!=INTEGRALS_FRINGE) {
+        /* This is the old default behavior, triggered just by having FFRINGE non-zero */
+        if (edge1_effects==0 || edge2_effects==0)
+          bombElegant("EDGE1_EFFECTS and EDGE2_EFFECTS must both be non-zero for FFRINGE-based quadrupole fringe effects", NULL);
+        
         /* If mode is fixedStrength, then the sloped area is symmetric about the nominal
          * entrance and exit points.  This means that the integrated strength is not
          * changed.   FFRINGE=(2*fringeLengthOnOneSide)/HardEdgeLength
          * If the mode is "inset", then the sloped areas end at the nominal ends of
          * the quad.  The integrated strength changes as the fringe fraction changes.
          */
-        if (fringeType) {
-          if ((fixedStrengthFringe = match_string(fringeType, fringeTypeOpt, 2, 0))<0)
-            bombElegant("unrecognized fringe type for QUAD", NULL);
-        }
         /* length of each edge */
         lEdge = lNominal*ffringe/2;
-        if (fixedStrengthFringe)
+        switch (fringeCode) {
+        case 1:
           /* only half the total edge-field length is inside the nominal length */
           lHC = lNominal-lEdge;
-        else 
+          break;
+        case 0:
           lHC = lNominal-2*lEdge;
+          break;
+        default:
+          break;
+        }
       }
+      
 
       kl = (k=sqrt(fabs(K1)))*lHC;
       sin_kl  = sin(kl);
@@ -269,49 +287,69 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           }
         }
       }
+      
 
-      if (lEdge && K1) {
-        Md = NULL;
+      if (fringeCode==INSET_FRINGE || fringeCode==FIXED_STRENGTH_FRINGE) {
+        if (lEdge && K1) {
+          Md = NULL;
+          Mtot = tmalloc(sizeof(*Mtot));
+          initialize_matrices(Mtot, M->order);
+
+          /* entrance fringe fields */
+          Mfringe = quad_fringe(lEdge, K1, M->order, 0, 0.0);
+        
+          if (fringeCode==FIXED_STRENGTH_FRINGE) {
+            /* drift back to fringe entrance */
+            Md = drift_matrix(-lEdge/2, M->order);
+            concat_matrices(Mtot, Mfringe, Md, 0);
+            tmp = Mfringe;
+            Mfringe = Mtot;
+            Mtot = tmp;
+          }
+          
+          concat_matrices(Mtot, M, Mfringe, 0);
+          tmp  = Mtot;
+          Mtot = M;
+          M    = tmp;
+          free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
+          
+          /* exit fringe fields */
+          Mfringe = quad_fringe(lEdge, K1, M->order, 1, 0.0);
+          concat_matrices(Mtot, Mfringe, M, 0);
+          tmp  = Mtot;
+          Mtot = M;
+          M    = tmp;
+          
+          if (fringeCode==FIXED_STRENGTH_FRINGE) {
+            /* drift back to quad exit plane */
+            concat_matrices(Mtot, Md, M, 0);
+            tmp = M;
+            M = Mtot;
+            Mtot = tmp;
+            free_matrices(Md); tfree(Md); Md = NULL;
+          }
+          free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
+          free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
+        }
+      } else if (fringeCode==INTEGRALS_FRINGE && (edge1_effects || edge2_effects) && !(fringeIntM[0]==0 && fringeIntP[0]==0)) {
         Mtot = tmalloc(sizeof(*Mtot));
         initialize_matrices(Mtot, M->order);
-        
-        /* entrance fringe fields */
-        Mfringe = quad_fringe(lEdge, K1, M->order, 0, 0.0);
-        
-        if (fixedStrengthFringe) {
-          /* drift back to fringe entrance */
-          Md = drift_matrix(-lEdge/2, M->order);
-          concat_matrices(Mtot, Mfringe, Md, 0);
-          tmp = Mfringe;
-          Mfringe = Mtot;
-          Mtot = tmp;
+        Mfringe = NULL;
+        if (edge1_effects) {
+          Mfringe = quadFringeMatrix(NULL, K1, -1, fringeIntM, fringeIntP);
+          concat_matrices(Mtot, M, Mfringe, 0);
+          tmp = M; M = Mtot; Mtot = tmp;
         }
-        
-        concat_matrices(Mtot, M, Mfringe, 0);
-        tmp  = Mtot;
-        Mtot = M;
-        M    = tmp;
-        free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
-        
-        /* exit fringe fields */
-        Mfringe = quad_fringe(lEdge, K1, M->order, 1, 0.0);
-        concat_matrices(Mtot, Mfringe, M, 0);
-        tmp  = Mtot;
-        Mtot = M;
-        M    = tmp;
-        
-        if (fixedStrengthFringe) {
-          /* drift back to quad exit plane */
-          concat_matrices(Mtot, Md, M, 0);
-          tmp = M;
-          M = Mtot;
-          Mtot = tmp;
-          free_matrices(Md); tfree(Md); Md = NULL;
+        if (edge2_effects) {
+          Mfringe = quadFringeMatrix(Mfringe, K1, 1, fringeIntM, fringeIntP);
+          concat_matrices(Mtot, Mfringe, M, 0);
+          tmp = M; M = Mtot; Mtot = tmp;
         }
-        free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
-        free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
+        free_matrices(Mtot); free(Mtot); Mtot = NULL;
+        free_matrices(Mfringe); free(Mfringe); Mfringe = NULL;
       }
     }
+    
 
     if (xkick || ykick) {
       /* put identical kicks at the entrance and exit */

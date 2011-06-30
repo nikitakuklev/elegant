@@ -846,10 +846,13 @@ VMATRIX *compute_matrix(
       case T_QUAD:
         quad = (QUAD*)elem->p_elem;
         elem->matrix = quadrupole_matrix(quad->k1, quad->length, 
-                                         quad->order?quad->order:run->default_order, quad->tilt, quad->ffringe,
-                                         quad->fse, quad->xkick, quad->ykick, quad->fringeType); 
+                                         quad->order?quad->order:run->default_order, quad->tilt, 
+                                         quad->fse, quad->xkick, quad->ykick, 
+                                         quad->edge1_effects, quad->edge2_effects,
+                                         quad->fringeType, quad->ffringe,
+                                         quad->fringeIntM, quad->fringeIntP); 
         if (quad->dx || quad->dy || quad->dz)
-            misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
+          misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
         break;
       case T_SEXT:
         sext = (SEXT*)elem->p_elem;
@@ -1001,8 +1004,11 @@ VMATRIX *compute_matrix(
         if (kquad->n_kicks<1)
             bombElegant("n_kicks must by > 0 for KQUAD element", NULL);
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
-                                         (run->default_order?run->default_order:1), kquad->tilt, 0.0,
-                                         kquad->fse, kquad->xkick, kquad->ykick, NULL);
+                                         (run->default_order?run->default_order:1), kquad->tilt, 
+                                         kquad->fse, kquad->xkick, kquad->ykick,
+                                         kquad->edge1_effects, kquad->edge2_effects,
+                                         "integrals", 0.0,
+                                         kquad->fringeIntM, kquad->fringeIntP);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),

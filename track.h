@@ -3188,8 +3188,13 @@ extern void print_elem(FILE *fp, ELEMENT_LIST *eptr);
 extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width);
 
 /* prototypes for quad_matrix3.c: */
-extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse,
-                                  double xkick, double ykick, char *fringeType);
+VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
+                           double tilt, double fse,
+                           double xkick, double ykick,
+                           double edge1_effects, double edge2_effects,
+                           char *fringeType, double ffringe,
+                           double *fringeIntM, double *fringeIntP
+                           );
 extern VMATRIX *quad_fringe(double l, double ko, long order, long reverse, double fse);
 extern void qfringe_R_matrix(double *R11, double *R21, double *R12, double *R22, double dk_dz, double l);
 extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T226,
@@ -3200,6 +3205,8 @@ extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, 
 /* prototypes for fringe.c */
 void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, int inFringe, int higherOrder);
 void dipoleFringe(double *vec, double h, long inFringe, long higherOrder);
+VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeIntM, double *fringeIntP);
+VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *fringeInt, long part);
 
 /* prototypes for tilt_matrices.c: */
 extern void tilt_matrices0(VMATRIX *M, double tilt);

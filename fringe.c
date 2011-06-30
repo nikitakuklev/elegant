@@ -27,16 +27,16 @@ void quadFringe(double **coord, long np, double K1,
                 int higherOrder)
 {
   /* vec = {x, qx, y, qy, s, delta}
-     need paramenters K1, R11, R12, R21, R33, R34, R43, r11, r12, r21, r33, r34, r43
      */
   long ip;
-  double R11, R12, R21, R22, R33, R34, R43, R44;
-  double J1, J2, J3;
   double x, px, y, py, delta;
   double *vec;
   double a, dx, dpx, dy, dpy, ds;
-  double K1a, K1a2, expJ1;
   double *fringeIntM, *fringeIntP;
+  VMATRIX *M;
+  
+  M = tmalloc(sizeof(*M));
+  initialize_matrices(M, 1);
   
   if (inFringe==-1) {
     fringeIntM = fringeIntP0;
@@ -51,28 +51,12 @@ void quadFringe(double **coord, long np, double K1,
     delta = vec[5];
 
     /* determine first linear matrix for this delta */
-    K1a = K1/(1+delta);
-    K1a2 = sqr(K1a);
-    J1 = inFringe*(K1a*fringeIntM[1] - 2*K1a2*fringeIntM[3]/3.);
-    J2 = inFringe*(K1a*fringeIntM[2]);
-    J3 = inFringe*(K1a2*(fringeIntM[2] + fringeIntM[4]));
-    expJ1 = R11 = exp(J1);
-    R12 = J2/expJ1;
-    R21 = expJ1*J3;
-    R22 = (1 + J2*J3)/expJ1;
-
-    K1a = -K1/(1+delta);
-    J1 = inFringe*(K1a*fringeIntM[1] - 2*K1a2*fringeIntM[3]/3.);
-    J2 = -J2;
-    expJ1 = R33 = exp(J1);
-    R34 = J2/expJ1;
-    R43 = expJ1*J3;
-    R44 = (1 + J2*J3)/expJ1;
+    quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntM, 1);
     
-    x  = R11*vec[0] + R12*vec[1];
-    px = R21*vec[0] + R22*vec[1];
-    y  = R33*vec[2] + R34*vec[3];
-    py = R43*vec[2] + R44*vec[3];
+    x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
+    px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
+    y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
+    py = M->R[3][2]*vec[2] + M->R[3][3]*vec[3];
     
     a = inFringe*K1/(12*(1 + delta));
 
@@ -115,30 +99,16 @@ void quadFringe(double **coord, long np, double K1,
     py += dpy;
 
     /* determine and apply second linear matrix */
-    K1a = K1/(1+delta);
-    K1a2 = sqr(K1a);
-    J1 = inFringe*(K1a*fringeIntP[1] + K1a2*fringeIntP[0]*fringeIntP[2]/2);
-    J2 = inFringe*(K1a*fringeIntP[2]);
-    J3 = inFringe*(K1a2*(fringeIntP[4]-fringeIntP[0]*fringeIntP[1]));
-    expJ1 = R11 = exp(J1);
-    R12 = J2/expJ1;
-    R21 = expJ1*J3;
-    R22 = (1 + J2*J3)/expJ1;
-
-    K1a = -K1/(1+delta);
-    J1 = inFringe*(K1a*fringeIntP[1] + sqr(K1a)*fringeIntP[0]*fringeIntP[2]);
-    J2 = -J2;
-    expJ1 = R33 = exp(J1);
-    R34 = J2/expJ1;
-    R43 = expJ1*J3;
-    R44 = (1 + J2*J3)/expJ1;
+    quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntP, 2);
     
-    vec[0] = R11*x + R12*px;
-    vec[1] = R21*x + R22*px;
-    vec[2] = R33*y + R34*py;
-    vec[3] = R43*y + R44*py;
+    vec[0] = M->R[0][0]*x + M->R[0][1]*px;
+    vec[1] = M->R[1][0]*x + M->R[1][1]*px;
+    vec[2] = M->R[2][2]*y + M->R[2][3]*py;
+    vec[3] = M->R[3][2]*y + M->R[3][3]*py;
     vec[4] += ds;
   }
+  free_matrices(M);
+  free(M);
 }
 
 
@@ -223,4 +193,77 @@ void dipoleFringe(double *vec, double h, long inFringe, long higherOrder)
   vec[4] += ds;
   
 }
+
+VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *fringeInt, long part)
+{
+  double J1x, J2x, J3x, J1y, J2y, J3y;
+  double K1sqr, expJ1x, expJ1y;
+  
+  if (!M) {
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, 1);
+  }    
+  null_matrices(M, 0);
+  M->R[4][4] = M->R[5][5] = 1;
+  
+  K1sqr = sqr(K1);
+
+  if (part==1) {
+    J1x = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3.);
+    J2x = inFringe*(K1*fringeInt[2]);
+    J3x = inFringe*(K1sqr*(fringeInt[2] + fringeInt[4]));
+
+    K1 = -K1;
+    J1y = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3.);
+    J2y = -J2x;
+    J3y = J3x;
+  } else {
+    J1x = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]/2);
+    J2x = inFringe*(K1*fringeInt[2]);
+    J3x = inFringe*(K1sqr*(fringeInt[4]-fringeInt[0]*fringeInt[1]));
+
+    K1 = -K1;
+    J1y = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]);
+    J2y = -J2x;
+    J3y = J3x;
+  }
+
+  expJ1x = M->R[0][0] = exp(J1x);
+  M->R[0][1] = J2x/expJ1x;
+  M->R[1][0] = expJ1x*J3x;
+  M->R[1][1] = (1 + J2x*J3x)/expJ1x;
+  
+  expJ1y = M->R[2][2] = exp(J1y);
+  M->R[2][3] = J2y/expJ1y;
+  M->R[3][2] = expJ1y*J3y;
+  M->R[3][3] = (1 + J2y*J3y)/expJ1y;
+
+  return M;
+}
+
+VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeIntM, double *fringeIntP)
+{
+  VMATRIX *M1, *M2, *M;
+  if (inFringe==-1) {
+    M1 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntP, 1);
+    M2 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntM, 2);
+  } else {
+    M1 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntM, 1);
+    M2 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntP, 2);
+  }
+
+  if (Mu) {
+    M = Mu;
+  } else {
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, 1);
+  }
+  
+  concat_matrices(M, M2, M1, 0);
+  free_matrices(M1); free(M1);
+  free_matrices(M2); free(M2);
+  return M;
+}
+
+
 
