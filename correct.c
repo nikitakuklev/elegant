@@ -2505,7 +2505,7 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
   if (correct->verbose)
-    fprintf(stderr, "%ld H correctors set to zero\n", nz);
+    fprintf(stdout, "%ld H correctors set to zero\n", nz);
   return nz;
 }
 
@@ -2514,7 +2514,7 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
   if (correct->verbose)
-    fprintf(stderr, "%ld V correctors set to zero\n", nz);
+    fprintf(stdout, "%ld V correctors set to zero\n", nz);
   return nz;
 }
 
