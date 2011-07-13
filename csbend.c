@@ -454,7 +454,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1)
       dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2);
-    
+  
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
@@ -464,7 +464,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
 
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1)
-      dipoleFringe(Qi, rho0, 1, csbend->edge2_effects-2);
+      dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2);
 
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
@@ -739,7 +739,8 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   }
 
   /* convert back to slopes */
-/*  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
+/*
+  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
   Qf[1] *= f;
   Qf[3] *= f;
 */
@@ -1476,6 +1477,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[3] = YP;
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
+          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
         
 	  if (csbend->integration_order==4)
 	    integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
@@ -1484,6 +1486,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  particleLost[i_part] = particle_lost;
       
 	  /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
 	  X  = Qf[0];  
 	  XP = Qf[1];  
 	  Y  = Qf[2];  
