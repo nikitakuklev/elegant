@@ -364,10 +364,11 @@ long doMomentumApertureSearch(
 
 #if USE_MPI
         if (myid==0) {
-          if (output_mode==1)
-            fprintf(stdout, "About %.15f%% done\n", (jobCounter*50.0)/nElem);
+          if (output_mode==1) 
+            sprintf(s, "About %.3g%% done: ", (jobCounter*50.0)/nElem);
           else if (side==0)
-            fprintf(stdout, "About %.15f%% done\n", (jobCounter*100.0)/nElem);
+            sprintf(s, "About %.3g%% done: ", (jobCounter*100.0)/nElem);
+          report_stats(stdout, s);
           fflush(stdout);
         }
 #endif
