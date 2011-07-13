@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2011/06/10 16:04:51  shang
+ added -saveMatrices option to save matrices in a file, and -loadMatrices option to load matrices from a file.
+
  Revision 1.4  2011/06/07 20:51:56  borland
  Fixed computation of S12 (in some cases it wasn't computed).
 
@@ -381,12 +384,12 @@ int main(int argc, char **argv)
         !(t = SDDS_GetColumnInDoubles(&SDDSin, "t")) ||
         !(p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (zSpec.flags)
+      PerformZTransformation(t, p, x, xp, y, yp, rows, &zSpec, zCompute);
     if (xSpec.flags)
       PerformTransformation(x, xp, p, rows, &xSpec, xCompute);
     if (ySpec.flags)
       PerformTransformation(y, yp, p, rows, &ySpec, yCompute);
-    if (zSpec.flags)
-      PerformZTransformation(t, p, x, xp, y, yp, rows, &zSpec, zCompute);
     if (saveMatrix)
       SaveMatrix(&save_matrix, xSpec, ySpec, zSpec);
     if (verbose) {
