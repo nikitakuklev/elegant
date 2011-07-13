@@ -424,7 +424,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<2) {
+      if (csbend->edge_order<2 || csbend->edge1_effects>1) {
         /* apply edge focusing */
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
@@ -531,7 +531,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<2) {
+      if (csbend->edge_order<2 || csbend->edge2_effects>1) {
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
