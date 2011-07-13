@@ -331,22 +331,30 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
           free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
         }
-      } else if (fringeCode==INTEGRALS_FRINGE && (edge1_effects || edge2_effects) && !(fringeIntM[0]==0 && fringeIntP[0]==0)) {
-        Mtot = tmalloc(sizeof(*Mtot));
-        initialize_matrices(Mtot, M->order);
-        Mfringe = NULL;
-        if (edge1_effects) {
-          Mfringe = quadFringeMatrix(NULL, K1, -1, fringeIntM, fringeIntP);
-          concat_matrices(Mtot, M, Mfringe, 0);
-          tmp = M; M = Mtot; Mtot = tmp;
+      } else if (fringeCode==INTEGRALS_FRINGE && (edge1_effects || edge2_effects)) {
+        short hasFringeIntegrals = 0, i;
+        for (i=0; i<5; i++) 
+          if (fringeIntM[i] || fringeIntP[i]) {
+            hasFringeIntegrals = 1;
+            break;
+          }
+        if (hasFringeIntegrals) {
+          Mtot = tmalloc(sizeof(*Mtot));
+          initialize_matrices(Mtot, M->order);
+          Mfringe = NULL;
+          if (edge1_effects) {
+            Mfringe = quadFringeMatrix(NULL, K1, -1, fringeIntM, fringeIntP);
+            concat_matrices(Mtot, M, Mfringe, 0);
+            tmp = M; M = Mtot; Mtot = tmp;
+          }
+          if (edge2_effects) {
+            Mfringe = quadFringeMatrix(Mfringe, K1, 1, fringeIntM, fringeIntP);
+            concat_matrices(Mtot, Mfringe, M, 0);
+            tmp = M; M = Mtot; Mtot = tmp;
+          }
+          free_matrices(Mtot); free(Mtot); Mtot = NULL;
+          free_matrices(Mfringe); free(Mfringe); Mfringe = NULL;
         }
-        if (edge2_effects) {
-          Mfringe = quadFringeMatrix(Mfringe, K1, 1, fringeIntM, fringeIntP);
-          concat_matrices(Mtot, Mfringe, M, 0);
-          tmp = M; M = Mtot; Mtot = tmp;
-        }
-        free_matrices(Mtot); free(Mtot); Mtot = NULL;
-        free_matrices(Mfringe); free(Mfringe); Mfringe = NULL;
       }
     }
     
