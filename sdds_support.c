@@ -316,12 +316,13 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     }
 
 
-#define WATCH_PARAMETER_MODE_COLUMNS 26
-#define WATCH_CENTROID_MODE_COLUMNS 16
+#define WATCH_PARAMETER_MODE_COLUMNS 27
+#define WATCH_CENTROID_MODE_COLUMNS 17
 static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS] = {
     {"Step", "&column name=Step, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
     {"ElapsedTime", "&column name=ElapsedTime, type=long, units=s &end"},
+    {"ElapsedCoreTime", "&column name=ElapsedCoreTime, type=long, units=s &end"},
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
     {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double, description=\"y centroid\" &end"},
@@ -442,6 +443,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
         !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "ElapsedTime", "s", SDDS_LONG) ||	
+	!SDDS_DefineSimpleParameter(SDDS_table, "ElapsedCoreTime", "s", SDDS_LONG) ||	
 	!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
@@ -709,6 +711,11 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           "Charge", charge,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", (long)delapsed_time(),
+#if SDDS_MPI_IO
+		          "ElapsedCoreTime", (long)(delapsed_time()*n_processors),
+#else
+		          "ElapsedCoreTime", (long)delapsed_time(),
+#endif
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -977,9 +984,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #if SDDS_MPI_IO
 			     "Particles", particles_total,
 			     "Transmission", (original_particles?((double)particles_total)/original_particles:(double)0.0),
+			     "ElapsedCoreTime", (long)(delapsed_time()*n_processors),
 #else 
 			     "Particles", particles,
 			     "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
+			     "ElapsedCoreTime", (long)delapsed_time(),
 #endif
 	                     "ElapsedTime", (long)delapsed_time(),
 			     "Pass", pass, 
