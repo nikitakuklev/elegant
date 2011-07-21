@@ -558,6 +558,7 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
+    long n_lost;            /* number of lost paricles */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
   long n_original_total;    /* The total number of particles read from data file */
@@ -566,6 +567,7 @@ typedef struct {
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
+    double **lost;          /* coordinates of lost particles, with pass on which a particle is lost */	
     long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
     } BEAM;
@@ -2495,6 +2497,8 @@ typedef struct {
   long useCsh, verbosity, startPass, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
   long keepFiles, driftMatrix;
+  long useParticleID; 
+  long noNewParticles;
   double NP[10];
   char *SP[10];
 } SCRIPT;
@@ -2871,7 +2875,7 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
-                        double *finalCharge, long *lostOnTurn, ELEMENT_LIST *startElem);
+                        double *finalCharge, double **lostParticles, ELEMENT_LIST *startElem);
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -2888,7 +2892,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
                               ELEMENT_LIST *eptr);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, long nLost, char *mainRootname, long iPass, long driftOrder);
+                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
