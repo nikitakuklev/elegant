@@ -512,17 +512,18 @@ long trackRfCavityWithWakes
           if (trwake)
             track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
           if (LSCKick) {
-            if (dgammaOverGammaNp)
 #if !USE_MPI
+            if (dgammaOverGammaNp)
               dgammaOverGammaAve /= dgammaOverGammaNp;           
 #else
 	    if (notSinglePart) {
               double t1 = dgammaOverGammaAve;
               long t2 = dgammaOverGammaNp;
-	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
-              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
-              dgammaOverGammaAve /= dgammaOverGammaNp; 
-	    } else
+	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	      if (dgammaOverGammaNp)
+		dgammaOverGammaAve /= dgammaOverGammaNp; 
+	    } else if (dgammaOverGammaNp)
 	      dgammaOverGammaAve /= dgammaOverGammaNp;
     
 #endif
