@@ -812,6 +812,9 @@ char **argv;
       beam_type = SET_BUNCHED_BEAM;
       break;
     case SET_SDDS_BEAM: 
+#if USE_MPI
+    notSinglePart = 1; 
+#endif      
       if (!run_setuped || !run_controled)
         bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
       setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
@@ -2078,9 +2081,10 @@ void free_beamdata(BEAM *beam)
     free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
   if (beam->original && beam->original!=beam->particle)
     free_czarray_2d((void**)beam->original, beam->n_original, 7);
-  if (beam->lostOnPass)
-    free(beam->lostOnPass);
-  beam->particle = beam->accepted = beam->original = NULL;
+  if (beam->lost)
+    free_czarray_2d((void**)beam->lost, beam->n_particle, 8);
+
+  beam->particle = beam->accepted = beam->original = beam->lost = NULL;
   beam->lostOnPass = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
