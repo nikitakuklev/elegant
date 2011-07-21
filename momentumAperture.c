@@ -372,6 +372,10 @@ long doMomentumApertureSearch(
           report_stats(stdout, s);
           fflush(stdout);
         }
+#else
+	sprintf(s, "About %.3g%% done: ", (outputRow*100.0)/nElem);
+	report_stats(stdout, s);
+	fflush(stdout);
 #endif
 
         ElementName[outputRow] = elem->name;
