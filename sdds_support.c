@@ -98,7 +98,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 #if SDDS_MPI_IO 
   /* In the case of parallel IO, the WiteLayout will be called at the time it dumps data or setups the output,
      as the communicator information is required */
-    if (!SDDS_table->parallel_io)
+    if (!SDDS_table->parallel_io && isMaster)
 #endif
     if (flags&SDDS_EOS_COMPLETE) {
         if (!SDDS_WriteLayout(SDDS_table)) {
@@ -151,9 +151,12 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
 {
     log_entry("SDDS_PhaseSpaceSetup");
 #if SDDS_MPI_IO
-    SDDS_table->parallel_io = 1;
+    if (notSinglePart)	
+      SDDS_table->parallel_io = 1;
+    else
+      SDDS_table->parallel_io = 0;
     /* set up parallel IO information */      
-    SDDS_MPI_Setup(SDDS_table, 1, n_processors, myid, MPI_COMM_WORLD, 0);
+    SDDS_MPI_Setup(SDDS_table, SDDS_table->parallel_io, n_processors, myid, MPI_COMM_WORLD, 0);  
 #endif
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             phase_space_parameter, PHASE_SPACE_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
@@ -1341,6 +1344,9 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
 #if SDDS_MPI_IO
     long total_particles;
 
+    if (!SDDS_table->parallel_io && isSlave)
+      return;
+
     /* Open file here for parallel IO */
     if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
       if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
@@ -1348,6 +1354,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
       if (!SDDS_MPI_WriteLayout(SDDS_table))  
 	SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_table->MPI_dataset->MPI_file);
     }
+
 #endif
 
     log_entry("dump_phase_space");
@@ -1397,7 +1404,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
 #if SDDS_MPI_IO
-    if (!SDDS_MPI_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1))
+    if ((notSinglePart && !SDDS_MPI_WriteTable(SDDS_table)) || (!notSinglePart&&!SDDS_WriteTable(SDDS_table)) || !SDDS_ShortenTable(SDDS_table, 1))
 #else
     if (!SDDS_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1))
 #endif
@@ -1430,11 +1437,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 			 long particles, long step)
 {
     long i;
-#ifdef SORT   /* sort for comparing the serial and parallel versions */
-    long **tmp, j;
-#endif
 #if SDDS_MPI_IO
-
     /* Open file here for parallel IO */
     if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
       if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
@@ -1450,32 +1453,14 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         bombElegant("NULL coordinate pointer passed to dump_lost_particles", NULL);
     }
 
-#ifdef SORT   /* sort for comparing the serial and parallel versions */
-    if (SORT && particles) {
-        tmp = tmalloc(sizeof(*tmp) * particles);
-        for (j=0; j<particles; j++) {
-          tmp[j] = tmalloc(sizeof(*(tmp[j])) * 2);
-	  tmp[j][0] = lostOnPass[j]; 
-          tmp[j][1] = particle[j][6];
-	}    
+#ifdef SORT   /* Sort for comparing the serial and parallel versions. Disabled for parallel I/O version */
+    if (SORT && particles) { 
         /* This call looks strange, but works because the particle data is contiguous.  The sort
          * actually moves the data around without changing the pointers.
          */
-	qsort(particle[0], particles, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs); 
-        /* This call is more standard.  We sort the pointers and leave the data in place. */
-	qsort(tmp, particles, sizeof(long*), comp_IDs1);
-	for (j=0; j<particles; j++) {
-	  lostOnPass[j] = tmp[j][0];
-	}
+	qsort(particle[0], particles, (COORDINATES_PER_PARTICLE+1)*sizeof(double), comp_IDs); 
       }
-    if (SORT && particles) {
-      for (j=0; j<particles; j++) {
-	free(tmp[j]);
-      }
-      free(tmp);
-    }
 #endif
-
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stdout, "error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);
@@ -1491,7 +1476,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4], 5, particle[i][5],
-                               6, (long)particle[i][6], 7, lostOnPass[i], -1)) {
+                               6, (long)particle[i][6], 7, (long) particle[i][7], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
@@ -1981,7 +1966,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                0, particleOri[j][0], 1, particleOri[j][1], 2, particleOri[j][2], 3, particleOri[j][3],
                                4, tsptr->s, 5, (1.+particleOri[j][5])*tsptr->betagamma, 6, (long)particleOri[j][6],
                                7, particleLos[i][0],8, particleLos[i][2],9, particleLos[i][4],
-                               10, lostOnPass[i], 11, weight[j], 12, rate, -1)) {
+                               10, (long) particleLos[i][7], 11, weight[j], 12, rate, -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_scattered_loss_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
