@@ -82,7 +82,7 @@ long find_median_of_row_p(double *best_particle, double **x, long index, long n,
     if (index<0 && n_total<=0)
         return(-1);
 
-    if (n_total < n_processors-1) {
+    if (n_total < n_processors) {
       long *n_vector_long = (long*)tmalloc(n_processors*sizeof(*n_vector_long));
       int *n_vector = (int*)tmalloc(n_processors*sizeof(*n_vector));	
       int *offset = (int*)tmalloc(n_processors*sizeof(*offset));
