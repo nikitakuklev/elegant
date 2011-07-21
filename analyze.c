@@ -450,7 +450,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
-  
+ 
+#if USE_MPI
+  long notSinglePart_saved = notSinglePart;
+
+  /* All the particles should do the same thing for this routine. */	
+  notSinglePart = 0;
+#endif
+   		 
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
 
   if (stepSize==NULL)
@@ -585,7 +592,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     sprintf(s, "\nElement matrix determined from tracking:\n");
   print_matrices(stdout, s, M);
   */
-
+#if USE_MPI
+  notSinglePart = notSinglePart_saved;
+#endif
   return M;
 }
 
