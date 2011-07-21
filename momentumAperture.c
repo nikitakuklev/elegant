@@ -185,7 +185,8 @@ long doMomentumApertureSearch(
   long nElem, iElem;
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
-  long *lostOnPass0, side;
+  long side;
+  double **lostParticles;	
   short **loserFound, *direction=NULL, **survivorFound;
   int32_t **lostOnPass, *ElementOccurence;
   double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
@@ -291,8 +292,8 @@ long doMomentumApertureSearch(
   deltaStart1[1] = delta_positive_start;
 
   /* need to do this because do_tracking() in principle may realloc this pointer */
-  lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
-  
+  lostParticles = (double**)czarray_2d(sizeof(double),1, 8);	 
+ 
   elem = elem0;
   iElem = 0;
   processElements = process_elements;
@@ -309,7 +310,7 @@ long doMomentumApertureSearch(
       fprintf(stdout, "Tracking fiducial particle\n");
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
-                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
     if (!code) {
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
@@ -405,7 +406,7 @@ long doMomentumApertureSearch(
           pCentral = run->p_central;
           code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                              NULL, NULL, NULL, NULL, run, control->i_step, 
-                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             fprintf(stdout, "Fiducial particle tune is undefined.\n");
             exitElegant(1);
@@ -446,14 +447,14 @@ long doMomentumApertureSearch(
                       pCentral);
               fflush(stdout);
             }
-            lostOnPass0[0] = -1;
+            lostParticles[0][7] = -1;
             if (!fiducialize) {
               delete_phase_references();
               reset_special_elements(beamline, 1);
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
-                               SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+                               SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
             if (forbid_resonance_crossing && code) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
                 if (verbosity>3)
@@ -482,7 +483,7 @@ long doMomentumApertureSearch(
                     fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
-              lostOnPass[slot][outputRow] = lostOnPass0[0];
+              lostOnPass[slot][outputRow] = lostParticles[0][7];
               xLost[slot][outputRow] = coord[0][0];
               yLost[slot][outputRow] = coord[0][2];
               sLost[slot][outputRow] = coord[0][4];
@@ -625,7 +626,6 @@ long doMomentumApertureSearch(
   free(ElementName);
   free(ElementType);
   free(ElementOccurence);
-  free(lostOnPass0);
   if (turnByTurnCoord) 
     free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
   return 1;
