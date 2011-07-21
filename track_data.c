@@ -1853,6 +1853,8 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"OUTPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.outputExtension), "out", 0.0, 0, "Extension for the script output file."},
   {"KEEP_FILES", "", IS_LONG, 0, (long)((char *)&script_example.keepFiles), NULL, 0.0, 0, "If nonzero, then script input and output files are not deleted after use.  By default, they are deleted."},
   {"DRIFT_MATRIX", "", IS_LONG, 0, (long)((char *)&script_example.driftMatrix), NULL, 0.0, 0, "If nonzero, then for matrix calculations the element is treated as a drift space."},
+  {"USE_PARTICLE_ID", "", IS_LONG, 0, (long)((char *)&script_example.useParticleID), NULL, 0.0, 1, "If nonzero, then the output file should use the original particle ID."},
+  {"NO_NEW_PARTICLES", "", IS_LONG, 0, (long)((char *)&script_example.noNewParticles), NULL, 0.0, 1, "If nonzero, then no new particles will be added in the script output file."},
   {"NP0", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[0]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np0"},
   {"NP1", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[1]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np1"},
   {"NP2", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[2]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np2"},
