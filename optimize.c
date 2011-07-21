@@ -72,8 +72,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       output_sparsing_factor = 1;
 #if USE_MPI
     if (!writePermitted)
-      log_file = NULL; 
-    optimization_data->random_factor = random_factor; 
+      log_file = NULL;
+    optimization_data->random_factor = random_factor;
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
@@ -123,11 +123,11 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
 
   do_optimization_setup(optimization_data, nltext, run, beamline);  
-  if (optimization_data->method!=OPTIM_METHOD_HYBSIMPLEX) {
+  if (optimization_data->method==OPTIM_METHOD_SWARM || optimization_data->method==OPTIM_METHOD_GENETIC) {
     if (population_size < n_processors) {
-      fprintf (stderr, "The populaition size (%ld) can not be less than the number of processors (%d).\n",
-               population_size, n_processors);
-      MPI_Abort(MPI_COMM_WORLD, 1);
+      fprintf (stdout, "Warning: The population size (%ld) can not be less than the number of processors (%d). The population size will be set as %ld.\n",
+               population_size, n_processors, n_processors);
+      population_size = n_processors;
     }
   }
  
@@ -810,7 +810,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if USE_MPI
     if (scale_factor != 1.0)
       for (i=0; i<variables->n_variables; i++) {
-	variables->step[i] *= scale_factor;
+	variables->step[i] *= scale_factor;	
       }
 #endif 
 
@@ -871,7 +871,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	}
 #endif
 	fputs("Starting simplex optimization.\n", stdout);
-        if (simplexMin(&result, variables->varied_quan_value, variables->step, 
+	if (simplexMin(&result, variables->varied_quan_value, variables->step, 
                        variables->lower_limit, variables->upper_limit, NULL, 
                        variables->n_variables, optimization_data->target, 
                        optimization_data->tolerance, optimization_function, optimization_report_ptr,
@@ -881,7 +881,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        (optimization_data->includeSimplex1dScans?0:SIMPLEX_NO_1D_SCANS)+
 		       (optimization_data->verbose>1?SIMPLEX_VERBOSE_LEVEL1:0)+
 		       (optimization_data->verbose>2?SIMPLEX_VERBOSE_LEVEL2:0)+
-		       (optimization_data->startFromSimplexVertex1?SIMPLEX_START_FROM_VERTEX1:0))<0) {
+		       (optimization_data->startFromSimplexVertex1?SIMPLEX_START_FROM_VERTEX1:0))<0) { 
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bombElegant("optimization unsuccessful--aborting", NULL);
@@ -1020,51 +1020,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
           MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
-#if MPI_DEBUG 
-	  if (isSlave) {
-	      fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
-	      fprintf(stdout, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
-	      fflush(stdout);
-	      for (i=0; i<variables->n_variables; i++)
-		  fprintf(stdout, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
-	      fflush(stdout);
-	     
-	      if (covariables->n_covariables) {
-		if (optimization_data->n_restarts==startsLeft)
-		  covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
-                if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
-	          for (i=0; i<covariables->n_covariables; i++)
-		    covariables_global[i] = covariables->varied_quan_value[i];	
-                }
-		fprintf(stdout, "new covariable values:\n");
-		  for (i=0; i<covariables->n_covariables; i++) 
-		    fprintf(stdout, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
-	      }
-	      fflush(stdout);
-          }
-#endif
-	  if ((optimization_data->verbose>1) && optimization_data->fp_log) {
-	      fprintf (optimization_data->fp_log, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
-	      fprintf(optimization_data->fp_log, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
-	      fflush(optimization_data->fp_log);
-	      for (i=0; i<variables->n_variables; i++)
-		  fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
-	      fflush(optimization_data->fp_log);
-	     
-	      if (covariables->n_covariables) {
-		if (optimization_data->n_restarts==startsLeft)
-		  covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
-                if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
-	          for (i=0; i<covariables->n_covariables; i++)
-		    covariables_global[i] = covariables->varied_quan_value[i];	
-                }
-		fprintf(optimization_data->fp_log, "new covariable values:\n");
-		  for (i=0; i<covariables->n_covariables; i++) 
-		    fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
-	      }
-	      fflush(optimization_data->fp_log);
-          }
-        }
+        }	 
         if (optimAbort(0))
           stopOptimization = 1;
         break;
@@ -1083,17 +1039,61 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	/* The covariables are updated locally after each optimization_function call no matter if a better result 
 	   is achieved, which might not match the optimal variables for current iteration. So we keep the global best 
 	   covariable values in a separate array. */
-	if (covariables->n_covariables && (optimization_data->verbose>1) && (result<lastResult || (optimization_data->n_restarts==startsLeft))) 
-	  MPI_Bcast(covariables->varied_quan_value, covariables->n_covariables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
-	
 	if (covariables->n_covariables) {
-	  if (optimization_data->n_restarts==startsLeft)
-	    covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
-	  if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
-	    for (i=0; i<covariables->n_covariables; i++)
-	      covariables_global[i] = covariables->varied_quan_value[i];	
-	  }
+	  if ((optimization_data->verbose>1) && optimization_data->fp_log && (optimization_data->n_restarts==startsLeft)) 
+	    fprintf(optimization_data->fp_log, "Warning: The covariable values might not match the calculated result from the variable values when there are more "
+		    "than one individual per processor. While the correctness of the final result is not affected.\n"); 
+	  /* Only one memory is allocated for each covariable on each processor. It is updated as needed in the optimization function. */
 	}
+	if (covariables->n_covariables && (optimization_data->verbose>1) && (result<lastResult || (optimization_data->n_restarts==startsLeft))) 
+	  MPI_Bcast(covariables->varied_quan_value, covariables->n_covariables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);    
+	if ((optimization_data->verbose>1) && optimization_data->fp_log) {
+	  fprintf (optimization_data->fp_log, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
+	  fprintf(optimization_data->fp_log, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
+	  fflush(optimization_data->fp_log);
+	  for (i=0; i<variables->n_variables; i++)
+	    fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
+	  fflush(optimization_data->fp_log);
+		
+	  if (covariables->n_covariables) {
+	    if (optimization_data->n_restarts==startsLeft) {
+	      covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));
+	    }	
+	    if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
+	      for (i=0; i<covariables->n_covariables; i++)
+		covariables_global[i] = covariables->varied_quan_value[i];	
+	    }
+	    fprintf(optimization_data->fp_log, "new covariable values:\n");
+	    for (i=0; i<covariables->n_covariables; i++) 
+	      fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
+	  }
+	  fflush(optimization_data->fp_log);
+	}
+	
+
+#if MPI_DEBUG
+
+	if ((isSlave || !notSinglePart)&& (optimization_data->verbose>1)) {
+	  fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
+	  fprintf(stdout, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
+	  fflush(stdout);
+	  for (i=0; i<variables->n_variables; i++)
+	    fprintf(stdout, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
+	  fflush(stdout);
+	  if (covariables->n_covariables) {
+		if (optimization_data->n_restarts==startsLeft)
+		  covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
+                if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
+	          for (i=0; i<covariables->n_covariables; i++)
+		    covariables_global[i] = covariables->varied_quan_value[i];	
+                }
+		fprintf(stdout, "new covariable values:\n");
+		for (i=0; i<covariables->n_covariables; i++) 
+		  fprintf(stdout, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
+	  }
+	  fflush(stdout);
+	}
+#endif
 	if (population_log)
 	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
       }
@@ -1263,7 +1263,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if !USE_MPI
         fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
 #else
-	fprintf(optimization_data->fp_log, "    A total of %ld function evaluations were made with an average of %ld function evaluations per processor\n", n_total_evaluations_made, n_total_evaluations_made/n_processors);
+	if (isMaster)
+	  fprintf(stdout, "    A total of %ld function evaluations were made with an average of %ld function evaluations per processor\n", n_total_evaluations_made, n_total_evaluations_made/n_processors);
 #endif
         fflush(stdout);
         if (constraints->n_constraints) {
@@ -2063,7 +2064,7 @@ double optimization_function(double *value, long *invalid)
 #endif
  
     storeOptimRecord(value, variables->n_variables, *invalid, result);
-    
+
     log_exit("optimization_function");
     return(result);
 }
