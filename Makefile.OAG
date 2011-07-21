@@ -16,7 +16,7 @@ CC := $(RATIONAL) -best-effort $(CC)
 CCC := $(RATIONAL) -best-effort $(CCC)
 endif
 
-OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two elegants
+# OP_SYS_CFLAGS+= -DSORT               # sort for comparing the results of two elegants
                                        # -g should be turned off for comparison
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
