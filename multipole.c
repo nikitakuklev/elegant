@@ -586,7 +586,7 @@ long multipole_tracking2(
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
 
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
-  long sqrtOrder;
+  long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double K2L;
   
@@ -777,6 +777,7 @@ long multipole_tracking2(
       multData->KnL = tmalloc(sizeof(*(multData->KnL))*1);
       multData->KnL[0] = K2L;
       multData->JnL = NULL;
+      freeMultData = 1;
     }
     break;
   default:
@@ -904,6 +905,14 @@ long multipole_tracking2(
     rotateBeamCoordinates(particle, n_part, -tilt);
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
+
+  if (freeMultData) {
+    if (multData->order)
+      free(multData->order);
+    if (multData->KnL)
+      free(multData->KnL);
+    free(multData);
+  }
 
   log_exit("multipole_tracking2");
   return(i_top+1);
