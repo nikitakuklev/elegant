@@ -1054,25 +1054,23 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  for (i=0; i<variables->n_variables; i++)
 	    fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
 	  fflush(optimization_data->fp_log);
-		
-	  if (covariables->n_covariables) {
-	    if (optimization_data->n_restarts==startsLeft) {
-	      covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));
-	    }	
-	    if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
-	      for (i=0; i<covariables->n_covariables; i++)
-		covariables_global[i] = covariables->varied_quan_value[i];	
-	    }
+	}
+	if (covariables->n_covariables) {
+	  if (optimization_data->n_restarts==startsLeft) {
+	    covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));
+	  }	
+	  if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
+	    for (i=0; i<covariables->n_covariables; i++)
+	      covariables_global[i] = covariables->varied_quan_value[i];	
+	  }
+	  if ((optimization_data->verbose>1) && optimization_data->fp_log) {
 	    fprintf(optimization_data->fp_log, "new covariable values:\n");
 	    for (i=0; i<covariables->n_covariables; i++) 
 	      fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
+	    fflush(optimization_data->fp_log);
 	  }
-	  fflush(optimization_data->fp_log);
 	}
-	
-
 #if MPI_DEBUG
-
 	if ((isSlave || !notSinglePart)&& (optimization_data->verbose>1)) {
 	  fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
 	  fprintf(stdout, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
@@ -1081,15 +1079,15 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	    fprintf(stdout, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
 	  fflush(stdout);
 	  if (covariables->n_covariables) {
-		if (optimization_data->n_restarts==startsLeft)
-		  covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
-                if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
-	          for (i=0; i<covariables->n_covariables; i++)
-		    covariables_global[i] = covariables->varied_quan_value[i];	
-                }
-		fprintf(stdout, "new covariable values:\n");
-		for (i=0; i<covariables->n_covariables; i++) 
-		  fprintf(stdout, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
+	    if (optimization_data->n_restarts==startsLeft)
+	      covariables_global = trealloc(covariables_global, sizeof(*covariables_global)*(covariables->n_covariables+1));	
+	    if (result<lastResult || (optimization_data->n_restarts==startsLeft)) {  
+	      for (i=0; i<covariables->n_covariables; i++)
+		covariables_global[i] = covariables->varied_quan_value[i];	
+	    }
+	    fprintf(stdout, "new covariable values:\n");
+	    for (i=0; i<covariables->n_covariables; i++) 
+	      fprintf(stdout, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
 	  }
 	  fflush(stdout);
 	}
