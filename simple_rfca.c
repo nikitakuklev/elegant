@@ -61,8 +61,8 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 	tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
       else
 	bombElegant("0 particle for the FID_MODE_FIRST mode in findFiducialTime on processor 1", NULL);
-      MPI_Bcast(&tFid, 1, MPI_DOUBLE, 1, MPI_COMM_WORLD);
-    }
+    }	
+    MPI_Bcast(&tFid, 1, MPI_DOUBLE, 1, MPI_COMM_WORLD);
     /*
     fprintf(stdout, "FID_MODE_FIRST mode is not supported in the current parallel version.\n");
     fprintf(stdout, "Please use serial version.\n");
