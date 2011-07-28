@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.32  2010/11/23 22:02:45  xiaoam
+ * Add forceCoupling option to force coupling to be constant (default).
+ *
  * Revision 1.31  2010/08/12 15:32:20  borland
  * Added exitElegant() routine so that any exit will result in creation of
  * semaphore files if requested.
@@ -146,7 +149,7 @@
 #include "constants.h"
 static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
- [-emitxInput=<value>] [-deltaInput=<value>] \n\
+ [-emitInput=<value>] [-deltaInput=<value>] \n\
  [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] \n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
@@ -181,7 +184,7 @@ char *option[N_OPTIONS] = {
   "length",
   "superperiod",
   "method",
-  "emitxinput",
+  "emitinput",
   "deltainput",
   "growthratesonly",
   "target",
@@ -203,7 +206,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double sigmaDelta, double sigmaz,
                   double particles,
                   double emitx0, double sigmaDelta0, 
-                  double transSRdampRate, double longSRdampRate,
+                  double xSRdampRate, double ySRdampRate, double longSRdampRate,
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp, long elements, 
@@ -220,7 +223,7 @@ int main( int argc, char **argv)
   SDDS_DATASET twissPage, resultsPage;
   double particles, charge, length;
   long verbosity, noWarning, i, elements, superperiods, growthRatesOnly, force;
-  double pCentral0, I1, I2, I3, I4, I5, taux, taudelta;
+  double pCentral0, I1, I2, I3, I4, I5, taux, tauy, taudelta;
   double EMeV;
   double emitx0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
   double sigmaDelta0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
@@ -230,7 +233,7 @@ int main( int argc, char **argv)
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
-  long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
+  long dimensions = 15, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
@@ -442,6 +445,7 @@ int main( int argc, char **argv)
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "I5", NULL) ||             
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "pCentral", NULL) ||
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "taux", NULL) ||
+      !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "tauy", NULL) ||
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "taudelta", NULL) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -509,9 +513,9 @@ int main( int argc, char **argv)
       bomb("memory allocation failure (integration arrays)", NULL);
   } else {
     if (SDDS_DefineColumn(&resultsPage, "s", NULL, "m", "Position", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatex", NULL, "1/(m s)", "Horizontal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatey", NULL, "1/(m s)", "Vertical IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatel", NULL, "1/(m s)", "Longitudinal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_DefineColumn(&resultsPage, "dIBSRatex", NULL, "1/s", "Local Horizontal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "dIBSRatey", NULL, "1/s", "Local Vertical IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "dIBSRatel", NULL, "1/s", "Local Longitudinal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
@@ -527,6 +531,7 @@ int main( int argc, char **argv)
                             "I4", &I4,
                             "I5", &I5,
                             "taux", &taux,
+			    "tauy", &tauy,
                             "taudelta", &taudelta,
                             "alphac", &alphac,
                             "U0", &U0,
@@ -542,6 +547,7 @@ int main( int argc, char **argv)
       /* scale to new energy */
       pCentral0 = sqrt(sqr(energy/me_mev)-1);
       taux /= ipow(energy/EMeV, 3);
+      tauy /= ipow(energy/EMeV, 3);
       taudelta /= ipow(energy/EMeV, 3);
       U0 *= ipow(energy/EMeV, 4);
       for (i=0; i<elements; i++) pCentral[i] = pCentral0;
@@ -595,7 +601,7 @@ int main( int argc, char **argv)
                    xRateInteg, yRateInteg, zRateInteg,
                    integrationTurns, integrationStepSize, 
                    pCentral0, emitx, emity, sigmaDelta, sigmaz, particles,
-                   emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
+                   emitx0, sigmaDelta0, 2./taux, 2./tauy, 2./taudelta, coupling,
                    s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp, elements,
                    superperiods, verbosity, isRing, force);
     } else {
@@ -643,11 +649,12 @@ int main( int argc, char **argv)
       xGuess[6] = emitx0;
       xGuess[7] = sigmaDelta0;
       xGuess[8] = taux;
-      xGuess[9] = taudelta;
-      xGuess[10] = coupling;
-      xGuess[11] = elements;
-      xGuess[12] = superperiods;
-      xGuess[13] = verbosity;
+      xGuess[9] = tauy;
+      xGuess[10] = taudelta;
+      xGuess[11] = coupling;
+      xGuess[12] = elements;
+      xGuess[13] = superperiods;
+      xGuess[14] = verbosity;
       xLowerLimit[2] = pCentral0;
       xLowerLimit[3] = emity;
       xLowerLimit[4] = sigmaz0;
@@ -655,11 +662,12 @@ int main( int argc, char **argv)
       xLowerLimit[6] = emitx0;
       xLowerLimit[7] = sigmaDelta0;
       xLowerLimit[8] = taux;
-      xLowerLimit[9] = taudelta;
-      xLowerLimit[10] = coupling;
-      xLowerLimit[11] = elements;
-      xLowerLimit[12] = superperiods;
-      xLowerLimit[13] = verbosity;
+      xLowerLimit[9] = tauy;
+      xLowerLimit[10] = taudelta;
+      xLowerLimit[11] = coupling;
+      xLowerLimit[12] = elements;
+      xLowerLimit[13] = superperiods;
+      xLowerLimit[14] = verbosity;
       xUpperLimit[2] = pCentral0;
       xUpperLimit[3] = emity;
       xUpperLimit[4] = sigmaz0;
@@ -667,11 +675,12 @@ int main( int argc, char **argv)
       xUpperLimit[6] = emitx0;
       xUpperLimit[7] = sigmaDelta0;
       xUpperLimit[8] = taux;
-      xUpperLimit[9] = taudelta;
-      xUpperLimit[10] = coupling;
-      xUpperLimit[11] = elements;
-      xUpperLimit[12] = superperiods;
-      xUpperLimit[13] = verbosity;
+      xUpperLimit[9] = tauy;
+      xUpperLimit[10] = taudelta;
+      xUpperLimit[11] = coupling;
+      xUpperLimit[12] = elements;
+      xUpperLimit[13] = superperiods;
+      xUpperLimit[14] = verbosity;
       disable[0] = 0;
       disable[1] = 0;
       for (i=2 ; i<dimensions ; i++) {
@@ -724,6 +733,7 @@ int main( int argc, char **argv)
                             "I4", I4,
                             "I5", I5,
                             "taux", taux,
+                            "tauy", tauy,
                             "taudelta", taudelta,
                             "Energy", EMeV,
                             "Particles", particles,
@@ -776,7 +786,7 @@ int main( int argc, char **argv)
 double IBSequations(double *x, long *invalid) {
   double emitx, sigmaDelta;
   double pCentral0, emity, sigmaz, sigmaz0, particles, emitx0, 
-  sigmaDelta0, taux, taudelta, coupling;
+  sigmaDelta0, taux, tauy, taudelta, coupling;
   long elements, superperiods, verbosity;
   double xGrowthRate, yGrowthRate, zGrowthRate;
   double a, b, c, d, e, f, func1, func2;
@@ -789,11 +799,12 @@ double IBSequations(double *x, long *invalid) {
   emitx0 = x[6];
   sigmaDelta0 = x[7];
   taux = x[8];
-  taudelta = x[9];
-  coupling = x[10];
-  elements = x[11];
-  superperiods = x[12];
-  verbosity = x[13];
+  tauy = x[9];
+  taudelta = x[10];
+  coupling = x[11];
+  elements = x[12];
+  superperiods = x[13];
+  verbosity = x[14];
 
     /* zap code requires damping rate for horizontal and longitudinal emittances
        which is twice the damping rate for one coordinate.
@@ -862,9 +873,9 @@ double IBSequations(double *x, long *invalid) {
           s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
           NULL, NULL, NULL, 
           &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
-  a = -2./taux * emitx;
-  b = 2./taux * emitx0/(1+coupling);
-  c = xGrowthRate * emitx/(1 + coupling);
+  a = -2./taux*emitx - 2./tauy*emity;
+  b = 2./taux * emitx0;
+  c = xGrowthRate * emitx + yGrowthRate * emity;
   d = -2./taudelta * sqr(sigmaDelta);
   e = 2./taudelta * sqr(sigmaDelta0);
   f = zGrowthRate * sqr(sigmaDelta);
@@ -890,7 +901,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
                   double sigmaDelta, double sigmaz,
                   double particles,
                   double emitx0, double sigmaDelta0, 
-                  double transSRdampRate, double longitSRdampRate,
+                  double xSRdampRate, double ySRdampRate, double longitSRdampRate,
                   double coupling,
                   double *s, double *pCentral, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, double *etay, double *etayp,long elements, 
@@ -922,12 +933,12 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
     xRateInteg[slot] = xGrowthRate;
     yRateInteg[slot] = yGrowthRate;
     zRateInteg[slot] = zGrowthRate;
-    emitx += (xGrowthRate-transSRdampRate)*emitx*dT+transSRdampRate*emitx0*dT/(1+coupling);
-    emity += (yGrowthRate-transSRdampRate)*emity*dT+transSRdampRate*emitx0*coupling*dT/(1+coupling);
+    emitx += (xGrowthRate-xSRdampRate)*emitx*dT+xSRdampRate*emitx0*dT/(1+coupling);
+    emity += (yGrowthRate-ySRdampRate)*emity*dT+ySRdampRate*emitx0*coupling*dT/(1+coupling);
     emitz += (zGrowthRate-longitSRdampRate)*emitz*dT+longitSRdampRate*emitz0*dT;
     if (force) {
       emitx = (emitx+emity)/(1+coupling);
-      emity = emitx;
+      emity = emitx*coupling;
     }
     sigmaDelta = sqrt(emitz*zRatio);
     sigmaz = emitz/sigmaDelta;
