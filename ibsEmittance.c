@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.33  2011/07/28 19:56:12  xiaoam
+ * Fixed the bug for forced coupling calculation. Add calculation which takes different taux tauy. Modified equibrium emittance calculation which suit for coupling case.
+ *
  * Revision 1.32  2010/11/23 22:02:45  xiaoam
  * Add forceCoupling option to force coupling to be constant (default).
  *
@@ -165,7 +168,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define LENGTH 6
 #define SUPERPERIOD 7
 #define METHOD 8
-#define EMITXINPUT 9
+#define EMITINPUT 9
 #define DELTAINPUT 10
 #define GROWTHRATESONLY 11
 #define SET_TARGET 12
@@ -173,7 +176,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define NO_WARNING 14
 #define ISRING 15
 #define FORCECOUPLING 16
-#define N_OPTIONS 17
+#define EMITXINPUT 17
+#define N_OPTIONS 18
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -192,6 +196,7 @@ char *option[N_OPTIONS] = {
   "noWarning",
   "isRing",
   "forceCoupling",
+  "emitxinput",  /* For backward compatibility---identical to -emitInput */
   };
 
 #include "zibs.h"
@@ -291,6 +296,10 @@ int main( int argc, char **argv)
         get_double(&charge, scanned[i].list[1]);
         break;
       case EMITXINPUT:
+        /* This is really the emitx+emity, not emitx */
+        get_double(&emitxInput, scanned[i].list[1]);
+        break;
+      case EMITINPUT:
         get_double(&emitxInput, scanned[i].list[1]);
         break;
       case DELTAINPUT:
@@ -580,6 +589,7 @@ int main( int argc, char **argv)
     if (!emitxInput)
       emitxInput = emitx0/ ( 1 + coupling);
     else 
+      /* The emitxInput value is really emit=emitx+emity */
       emitxInput = emitxInput/ ( 1 + coupling);
     emityInput = emitxInput * coupling;
     sigmaDelta = sigmaDeltaInput;
