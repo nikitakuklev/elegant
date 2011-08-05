@@ -374,9 +374,9 @@ long doMomentumApertureSearch(
         }
 #else
 	if (output_mode==1) 
-	  sprintf(s, "About %.3g%% done: ", (jobCounter*50.0)/nElem);
+	  sprintf(s, "About %.3g%% done: ", (outputRow*50.0)/nElem);
 	else if (side==0)
-	  sprintf(s, "About %.3g%% done: ", (jobCounter*100.0)/nElem);
+	  sprintf(s, "About %.3g%% done: ", (outputRow*100.0)/nElem);
 	report_stats(stdout, s);
 	fflush(stdout);
 #endif
