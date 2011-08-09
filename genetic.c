@@ -123,7 +123,9 @@ long geneticMin(
   /* User defined functions */
   PGASetUserFunction(ctx, PGA_USERFUNCTION_INITSTRING, (void *)N_InitString);
   PGASetUserFunction(ctx, PGA_USERFUNCTION_STOPCOND,   (void *)N_StopCond);
-  /* PGASetUserFunction(ctx, PGA_USERFUNCTION_PRINTSTRING,(void *)N_PrintString); */
+  /* This function should not be defined as the user function, as it will be called for
+     every individual 
+     PGASetUserFunction(ctx, PGA_USERFUNCTION_PRINTSTRING,(void *)N_PrintString); */
   PGASetUserFunction(ctx, PGA_USERFUNCTION_ENDOFGEN,   (void *)N_EndOfGen);
 
   PGASetUp(ctx);
@@ -157,7 +159,6 @@ double evaluate (PGAContext *ctx, int p, int pop)
   static long initialized = 0;
   double *string, result;
   long direction, isInvalid;
-  long random_offset;
   
   if (!dimensions)
     dimensions =  (long) PGAGetStringLength (ctx);
@@ -215,15 +216,15 @@ int N_StopCond(PGAContext *ctx) {
     if ((done == PGA_FALSE) && 
 	(PGAGetEvaluation(ctx, best, PGA_OLDPOP) <= target_value))
 	done = PGA_TRUE;
-
     return(done);
 }
 
 /* Function to print strings */
 void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
-  int i, j, dimensions, pop_size;
-  double best_value, *best_string, *string;
-  long offset = 2;
+  int i, j, dimensions, pop_size, worst_p, median_p;
+  double best_value, *best_string, *string, worst_value, median, average, sigma;
+  long offset = 6;
+  static double *a = NULL;
   
   if (print_all)
     pop_size = PGAGetPopSize(ctx);
@@ -235,11 +236,34 @@ void N_PrintString(PGAContext *ctx, FILE *file, int best_p, int pop) {
   if (isMaster && log_file) {
     best_string = (double*) PGAGetIndividual(ctx, best_p, PGA_NEWPOP)->chrom;
     best_value = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
+   
+    worst_p = PGAGetWorstIndex(ctx, PGA_NEWPOP);
+    worst_value = PGAGetEvaluation (ctx, worst_p, PGA_NEWPOP);
+
+    PGASortPop(ctx, PGA_NEWPOP);
+    median_p = PGAGetSortedPopIndex (ctx, PGAGetPopSize(ctx)/2);
+    median = PGAGetEvaluation (ctx, median_p, PGA_NEWPOP);
+
+    if (!a)
+      a = (double *) tmalloc(PGAGetPopSize(ctx)*sizeof(*a));
+    for (i=0; i<PGAGetPopSize(ctx); i++) /* Put all the result in an array */
+      a[i] = PGAGetEvaluation (ctx, i, PGA_NEWPOP);
+    /* This is not right, as they are the fitness value */
+    average  = PGAMean (ctx, a, PGAGetPopSize(ctx));
+    sigma = PGAStddev (ctx, a, PGAGetPopSize(ctx), average);
 
     if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "Iteration", PGAGetGAIterValue(ctx), NULL) ||
 	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "OptimizationValue", best_value, NULL))
+			    "OptimizationValue", best_value, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "WorstOptimizationValue", worst_value, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "MedianOptimizationValue", median, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "AverageOptimizationValue", average, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "OptimizationValueSpread", sigma, NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
     dimensions = PGAGetStringLength(ctx);
@@ -272,6 +296,16 @@ void N_EndOfGen(PGAContext *ctx) {
     int best;
     int current_iter = PGAGetGAIterValue(ctx);
 
+    /* If the best value is unchanged for 30 iterations, the step size will be reduced */
+    if((ctx->ga.ItersOfSame % 10 == 0) && current_iter) {
+      PGASetMutationRealValue(ctx, 0.1*PGAGetMutationRealValue(ctx));
+      last_reduced_iter = PGAGetGAIterValue(ctx);
+    } else {
+      if(((current_iter-last_reduced_iter)%100 == 0) && current_iter) {
+	PGASetMutationRealValue(ctx, PGAGetMutationRealValue(ctx)/0.618);
+      }
+    }
+
     if (isMaster) {
       if (log_file) {
 	if ((sparsing_factor >0) && !(current_iter % sparsing_factor)) {
@@ -279,14 +313,6 @@ void N_EndOfGen(PGAContext *ctx) {
 	  N_PrintString(ctx, stdout, best, PGA_NEWPOP);
 	}
       }
-    }
-    /* If the best value is unchanged for 300 iterations, the step size will be reduced */
-    if((ctx->ga.ItersOfSame % 300 == 0) && (!current_iter)) {
-      PGASetMutationRealValue(ctx, 0.618*PGAGetMutationRealValue(ctx));
-      last_reduced_iter = PGAGetGAIterValue(ctx);
-    }
-    if(((current_iter-last_reduced_iter)%300 == 0) && !current_iter) {
-      PGASetMutationRealValue(ctx, PGAGetMutationRealValue(ctx)/0.618);
     }
 #if MPI_DEBUG
     if (MPI_DEBUG) {
@@ -296,6 +322,7 @@ void N_EndOfGen(PGAContext *ctx) {
 	PGAPrintIndividual (ctx, stdout, i, PGA_NEWPOP);
       }
       printf ("Best index: %d\n\n", PGAGetBestIndex(ctx, PGA_NEWPOP));
+      printf ("Mutation value for the genetic algorithm: %lg. The number of iterations with the same result:%d\n", PGAGetMutationRealValue(ctx),ctx->ga.ItersOfSame);
     }
 #endif
 }

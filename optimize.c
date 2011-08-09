@@ -31,7 +31,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
 /* Find the global minimal value and its location across all the processors */
 void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
 /* Print out the best individual and value after each iteration */
-void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double *variable, long n_variables, double *covariable, long n_covariables);
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables);
 #endif
 
 #if !USE_MPI
@@ -125,7 +125,7 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   do_optimization_setup(optimization_data, nltext, run, beamline);  
   if (optimization_data->method==OPTIM_METHOD_SWARM || optimization_data->method==OPTIM_METHOD_GENETIC) {
     if (population_size < n_processors) {
-      fprintf (stdout, "Warning: The population size (%ld) can not be less than the number of processors (%d). The population size will be set as %ld.\n",
+      fprintf (stdout, "Warning: The population size (%ld) can not be less than the number of processors (%d). The population size will be set as %d.\n",
                population_size, n_processors, n_processors);
       population_size = n_processors;
     }
@@ -687,7 +687,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     long n_total_evaluations_made = 0;
     double scale_factor = optimization_data1->random_factor;
     int min_location = 0;
-    static double *covariables_global = NULL;
+    double worst_result, median, average, spread = 0.0;
+    static double *covariables_global = NULL, *result_array;
 #endif
     
     log_entry("do_optimize");
@@ -854,7 +855,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       signal(SIGINT, optimizationInterruptHandler);
 #endif
 #if USE_MPI
-    SDDS_PopulationSetup (population_log, &(optimization_data->popLog), &(optimization_data->variables), &(optimization_data->covariables));
+    if (optimization_data->method!=OPTIM_METHOD_SIMPLEX)
+      SDDS_PopulationSetup (population_log, &(optimization_data->popLog), &(optimization_data->variables), &(optimization_data->covariables));
 #endif
     while (startsLeft-- && !stopOptimization) {
       lastResult = result;
@@ -866,7 +868,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  for (i=0; i<variables->n_variables; i++)
 	    variables->step[i] = (random_2(0)-0.5)*variables->orig_step[i]*scale_factor; 	
 	  /* Disabling the report from simplexMin routine, as it will print result from the Master only.
-	     We print the best result across all the processor in a higher level routine */
+	     We print the best result across all the processors in a higher level routine */
 	  optimization_report_ptr = NULL;
 	}
 #endif
@@ -897,6 +899,27 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
 	  fprintf (stdout, "minimal value is %g on %d\n", result, myid);
 #endif
+	  if (population_log) {
+	    /* Compute statistics of the results over all processors */
+	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	    if (isMaster) {
+	      average /= n_processors;
+	      if (!result_array)	      
+		result_array = tmalloc (n_processors*sizeof(*result_array));
+	    }
+	    MPI_Gather(&result, 1, MPI_DOUBLE, result_array, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    if(isMaster){
+	      compute_median(&median, result_array, n_processors);
+	      spread = 0.0;
+	      for (i=0; i<n_processors; i++) {
+		if (!isnan(result_array[i]) && !isinf(result_array[i]))
+		  spread += sqr(result_array[i]-average);
+ 	      }
+	      spread = sqrt(spread/n_processors);
+	    }
+	  }
+
    	  find_global_min_index (&result, &min_location, MPI_COMM_WORLD);
 	  MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
@@ -1014,6 +1037,27 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
           fprintf (stdout, "minimal value is %g for iteration %ld on %d\n", result, optimization_data->n_restarts+1-startsLeft, myid);
 #endif
+	  if (population_log) {
+	    /* Compute statistics of the results over all processors */
+	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+	    if (isMaster) {
+	      average /= n_processors;
+	      if (!result_array)	      
+		result_array = tmalloc (n_processors*sizeof(*result_array));
+	    }
+	    MPI_Gather(&result, 1, MPI_DOUBLE, result_array, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    if (isMaster) {
+	      compute_median(&median, result_array, n_processors);
+	      spread = 0.0;
+	      for (i=0; i<n_processors; i++) {
+		if (!isnan(result_array[i]) && !isinf(result_array[i]))
+		  spread += sqr(result_array[i]-average);
+ 	      }
+	      spread = sqrt(spread/n_processors);
+	    }
+	  }
+
           find_global_min_index (&result, &min_location, MPI_COMM_WORLD);
 #if MPI_DEBUG
 	  fprintf (stdout, "min_location=%d\n", min_location);
@@ -1093,7 +1137,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	}
 #endif
 	if (population_log)
-	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
+	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, worst_result, median, average, spread, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
       }
 #else
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
@@ -2249,6 +2293,10 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
       if (!SDDS_InitializeOutput(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "Iteration", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "OptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "WorstOptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "MedianOptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "AverageOptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "OptimizationValueSpread", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameters(popLogPtr, optim->n_variables, optim->varied_quan_name, 
 				    optim->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameters(popLogPtr, co_optim->n_covariables,co_optim->varied_quan_name, 
@@ -2264,10 +2312,10 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
 }
 
 /* Function to print populations */
-void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double *best_individual, long dimensions, double *covariable, long n_covariables) {
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double average, double spread, double *best_individual, long dimensions, double *covariable, long n_covariables) {
   int i;
-  long offset = 2;
-  
+  long offset = 6;
+
   if (isMaster && log_file) {
     if (!SDDS_StartPage(popLogPtr, 1))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -2275,7 +2323,15 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_va
     if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "Iteration", iteration , NULL) ||
 	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "OptimizationValue", best_value, NULL))
+			    "OptimizationValue", best_value, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "WorstOptimizationValue", worst_value, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "MedianOptimizationValue", median, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "AverageOptimizationValue", average, NULL) ||
+	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "OptimizationValueSpread", spread, NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
     for(i=0; i<dimensions; i++) {
