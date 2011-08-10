@@ -702,8 +702,12 @@ char **argv;
 		
       if (semaphoreFile[0]) {
         /* "started" */
+	char *lastSem;
+	cp_str(&lastSem, semaphoreFile[0]);
         semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
-	createSemaphoreFile(semaphoreFile[0]);
+	if (strcmp(lastSem, semaphoreFile[0]))
+	  createSemaphoreFile(semaphoreFile[0]);
+	free(lastSem);
       }
       if (semaphoreFile[1]) {
         /* "done" */
