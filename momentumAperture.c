@@ -365,20 +365,27 @@ long doMomentumApertureSearch(
 
 #if USE_MPI
         if (myid==0) {
-          if (output_mode==1) 
+          if (output_mode==1) {
             sprintf(s, "About %.3g%% done: ", (jobCounter*50.0)/nElem);
-          else if (side==0)
+            report_stats(stdout, s);
+            fflush(stdout);
+          } else if (side==0) {
             sprintf(s, "About %.3g%% done: ", (jobCounter*100.0)/nElem);
+            report_stats(stdout, s);
+            fflush(stdout);
+          }
+        }
+#else
+	if (output_mode==1) {
+	  sprintf(s, "About %.3g%% done: ", (outputRow*50.0)/nElem);
+          report_stats(stdout, s);
+          fflush(stdout);
+	} else if (side==0) {
+	  sprintf(s, "About %.3g%% done: ", (outputRow*100.0)/nElem);
           report_stats(stdout, s);
           fflush(stdout);
         }
-#else
-	if (output_mode==1) 
-	  sprintf(s, "About %.3g%% done: ", (outputRow*50.0)/nElem);
-	else if (side==0)
-	  sprintf(s, "About %.3g%% done: ", (outputRow*100.0)/nElem);
-	report_stats(stdout, s);
-	fflush(stdout);
+        
 #endif
 
         ElementName[outputRow] = elem->name;
