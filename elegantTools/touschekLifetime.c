@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.10  2010/05/06 20:12:52  xiaoam
+ * Fix a round off error.
+ *
  * Revision 1.9  2010/02/25 03:56:42  borland
  * Fixed problems with convergence, which would sometimes result in very
  * long run times.
@@ -423,6 +426,9 @@ int main( int argc, char **argv)
   eOccur1 = SDDS_GetColumn(&twissPage, "ElementOccurence");
 
   eName2 = SDDS_GetColumn(&aperPage, "ElementName");
+  for (i=0; i<elem2; i++)
+    trim_spaces(eName2[i]);
+  
   dpp = SDDS_GetColumnInDoubles(&aperPage, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&aperPage, "deltaNegative");
   if (deltaLimit>0)
