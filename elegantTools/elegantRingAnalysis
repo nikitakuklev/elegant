@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.32  2011/06/02 17:32:41  borland
+# Added ability to enable/disable orbit correction.
+#
 # Revision 1.31  2011/06/02 16:53:32  borland
 # Added saving/loading of correction() array.
 #
@@ -1264,6 +1267,8 @@ proc FillMomentumApertureFrame {widget args} {
       -textVariable momentumAperture(userSuffix)
     APSButton .bu1 -parent $widget \
       -text "Run" -command "Run -computation MomentumAperture"
+    APSButton .bu15 -parent $widget \
+      -text "Process" -command "Run -computation MomentumAperture -processOnly 1"
     APSButton .bu2 -parent $widget \
       -text "Display" -command {Display -type MomentumAperture}
     global apsAbortElegantRun
