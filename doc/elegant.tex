@@ -5239,6 +5239,8 @@ sddsmatchtwiss [-pipe=[input][,output]] {\em inputfile} {\em outputfile}
 [-saveMatrices={\em filename}] [-loadMatrices={\em filename}]
 [-xPlane=[beta={\em meters},alpha={\em value}][,etaValue={\em meters}][,etaSlope={\em value}]]
 [-yPlane=[beta={\em meters},alpha={\em value}][,etaValue={\em meters}][,etaSlope={\em value}]]
+[-zPlane=[deltaStDev={\em value}][,tStDev={\em value}]
+\hspace*{4mm}[{,correlation={\em seconds}|alpha={\em value}}][,chirp={\em seconds}][,betaGamma={\em value}]]
 [-nowarnings]
 }\end{flushleft}
 
@@ -5265,6 +5267,17 @@ passed to {\em outputfile} unchanged.
         its slope, $\frac{\partial \eta}{\partial s}$.
 \item {\tt -yPlane=[beta={\em meters},alpha={\em value}][,etaValue={\em meters}][,etaSlope={\em value}]} ---
         Same as {\tt -xPlane}, except for the vertical plane.
+\item {\tt -zPlane=[deltaStDev={\em value}][,tStDev={\em value}]}
+  {\tt [,\{correlation={\em seconds}|alpha={\em value}\}][,chirp={\em seconds}][,betaGamma={\em value}]} ---
+  {\tt deltaStDev} is $\sigma_\delta = \langle \sqrt{(\delta - \langle \delta \rangle)^2}$, 
+  {\tt tStDev} is $\sigma_t = \langle \sqrt{(t - \langle t \rangle)^2}$,  and
+  {\tt correlation} is $\sigma_{t,\delta} = \langle (\delta - \langle \delta \rangle)((t - \langle t \rangle)\rangle$, in terms of which
+  the longitudinal emittance is $\epsilon = \sqrt{\sigma_t^2*\sigma_\delta^2 - \sigma_{t,\delta}^2}$.
+  {\tt alpha} is $-\sigma_{t,\delta}/\epsilon$.
+  The {\tt chirp}, if requested, is added after generation of the beam according to the other parameters.
+  If {\tt betaGamma} is given, the beam is ``accelerated'' to the given average value of $\beta\gamma$ 
+  in a idealized sense, preserving the momentum spread and transforming the transverse coordinates
+  by the factor $\sqrt{\langle \beta\gamma\rangle_0/(\beta\gamma)_{\rm desired}}$.
 \item {\tt -saveMatrices={\em filename}} --- Requests saving the transformation matrices to a file.
 \item {\tt -loadMatrices={\em filename}} --- Requests loading the transformation matrices from a file.
 \item {\tt -nowarnings} --- Suppresses warning messages.
