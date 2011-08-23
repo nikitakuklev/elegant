@@ -825,7 +825,7 @@ extern char *entity_text[N_TYPES];
 #define N_HMON_PARAMS 9
 #define N_VMON_PARAMS 9
 #define N_MONI_PARAMS 11
-#define N_RCOL_PARAMS 6
+#define N_RCOL_PARAMS 7
 #define N_ECOL_PARAMS 8
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
@@ -1194,6 +1194,7 @@ extern PARAMETER rcol_param[N_RCOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
+    long invert;
     } RCOL;
 
 /* names and storage structure for elliptical collimator physical parameters */

@@ -479,6 +479,7 @@ PARAMETER rcol_param[N_RCOL_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.dy), NULL, 0.0, 0, "misalignment"},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&rcol_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
+    {"INVERT", "", IS_LONG, 0, (long)((char *)&rcol_example.invert), NULL, 0.0, 0, "If non-zero, particles inside the aperture are lost while those outside are transmitted."},
     } ;
    
 ECOL ecol_example;

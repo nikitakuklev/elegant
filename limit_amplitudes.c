@@ -42,6 +42,9 @@ long rectangular_collimator(
   x_center = rcol->dx;
   y_center = rcol->dy;
 
+  if (rcol->invert && rcol->length)
+    bombElegant("Cannot have invert=1 and non-zero length for RCOL", NULL);
+
   if (xsize<=0 && ysize<=0) {
     exactDrift(initial, np, rcol->length);
     return(np);
@@ -59,6 +62,8 @@ long rectangular_collimator(
     } else if (isinf(ini[0]) || isinf(ini[2]) ||
                isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
+    if (rcol->invert)
+      lost = !lost;
     if (lost) {
       swapParticles(initial[ip], initial[itop]);
      if (accepted)
