@@ -30,7 +30,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
   MALIGN mal;
-
+  
   if (pass==fireOnPass) {
     mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;
     mal.dx = x_initial;
@@ -420,7 +420,7 @@ long doMomentumApertureSearch(
           pCentral = run->p_central;
           code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                              NULL, NULL, NULL, NULL, run, control->i_step, 
-                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+                             (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             fprintf(stdout, "Fiducial particle tune is undefined.\n");
             exitElegant(1);
@@ -468,7 +468,7 @@ long doMomentumApertureSearch(
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
-                               SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
+                               (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
             if (forbid_resonance_crossing && code) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
                 if (verbosity>3)
@@ -508,6 +508,9 @@ long doMomentumApertureSearch(
             } else {
               if (verbosity>2)
                 fprintf(stdout, "  Particle survived with delta0 = %e\n", delta);
+              if (verbosity>3)
+                fprintf(stdout, "     Final coordinates: %le, %le, %le, %le, %le, %le\n",
+                        coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
               deltaSurvived[slot][outputRow] = delta;
               survivorFound[slot][outputRow] = 1;
             }
