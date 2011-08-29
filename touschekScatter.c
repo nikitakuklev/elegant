@@ -308,16 +308,25 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   if (occurenceSeen && noOccurenceSeen)
     bombElegant("Some output files have occurence field and some don't.  Use only one method.", NULL);
 
+  iTotal = 0;  /* Suppress compiler warning */
+  
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       iElement++;
       if (i_start>=0 && iElement < i_start) {
+        if (verbosity)
+          printf("Skipping %s#%ld at s=%le (outside index range)\n",
+                 eptr->name, eptr->occurence, eptr->end_pos);
         eptr = eptr->succ; 
         continue;
       }
-      if (i_end>=0 && iElement > i_end)
+      if (i_end>=0 && iElement > i_end) {
+        if (verbosity)
+          printf("Breaking at %s#%ld at s=%le (outside index range)\n",
+                 eptr->name, eptr->occurence, eptr->end_pos);
         break;
-
+      }
+      
       tsptr = initTSCATTER (eptr, iElement);
       skip = 0;
       if (initial) {
@@ -618,7 +627,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #endif
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
-                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
+                             SILENT_RUNNING+FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
                              NULL, NULL, NULL, eptr);
 #if USE_MPI
 	if (USE_MPI) {
