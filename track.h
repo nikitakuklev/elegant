@@ -889,7 +889,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
 #define N_WIGGLER_PARAMS 8
-#define N_SCRIPT_PARAMS 32
+#define N_SCRIPT_PARAMS 34
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
