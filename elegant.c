@@ -27,6 +27,10 @@
 #include <malloc.h>
 #endif
 #endif
+#if defined(_WIN32)
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 #if defined(linux)
 #include <sched.h>
@@ -520,7 +524,7 @@ char **argv;
       bombElegant("both -pipe=input and input file given", NULL);
 #if defined(_WIN32)
     if (_setmode(_fileno(stdin), _O_BINARY) == -1)
-      bombElegant("unable to set stdin to binary mode");
+      bombElegant("unable to set stdin to binary mode", NULL);
 #endif
     fp_in = stdin;
     inputfile = "stdin";
