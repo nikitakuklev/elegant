@@ -905,7 +905,7 @@ long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, do
 long determineOpenSideCode(char *openSide)
 {
   TRACKING_CONTEXT context;
-  long value;
+  long value = -1;
   
   if (!openSide)
     return 0;
