@@ -628,7 +628,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              SILENT_RUNNING+FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
-                             NULL, NULL, NULL, eptr);
+                             NULL, NULL, beam->lost, eptr);
 #if USE_MPI
 	if (USE_MPI) {
 	  MPI_Status status;
@@ -675,6 +675,12 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         if (output) {
           for (i=0; i< beam->n_to_track-n_left; i++) {
             j = (beam->lost+n_left)[i][6]-1;
+/*
+            printf("lost particle %ld has original index %ld, weight %e, coordinates %e, %e, %e, %e, %e, %e\n",
+                   i, j, weight[j],
+                   (beam->lost+n_left)[i][0], (beam->lost+n_left)[i][1], (beam->lost+n_left)[i][2],
+                   (beam->lost+n_left)[i][3], (beam->lost+n_left)[i][4], (beam->lost+n_left)[i][5]);
+*/
             chfill1(lossDis, (beam->lost+n_left)[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
           }
           chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", NULL,
