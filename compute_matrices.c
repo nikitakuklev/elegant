@@ -705,7 +705,7 @@ VMATRIX *compute_matrix(
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
-    WIGGLER *wiggler; CWIGGLER *cwiggler;
+    WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
     UKICKMAP *ukmap; SCRIPT *script; FTABLE *ftable;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -779,6 +779,29 @@ VMATRIX *compute_matrix(
           /* printf("Wiggler %s radii are %le  and %le,  length is %le, with %ld periods\n",
              elem->name, cwiggler->radiusInternal[0], cwiggler->radiusInternal[1], 
              cwiggler->length, cwiggler->periods);
+             */
+          pSave = run->p_central;
+          run->p_central = elem->Pref_input;
+          elem->matrix = determineMatrix(run, elem, NULL, NULL);
+          run->p_central = pSave;
+        }
+        break;
+      case T_APPLE:
+	apple = (APPLE*)elem->p_elem;
+        InitializeAPPLE(apple, elem->name);
+	if (apple->BPeak[0]==0 && apple->BPeak[1]==0) {
+	  fprintf(stderr, "*** Warning: APPLE has zero field in both planes\n");
+          elem->matrix = drift_matrix(apple->length, run->default_order);
+          apple->radiusInternal[0] = apple->radiusInternal[1] = HUGE_VAL;
+	} else {
+          apple->radiusInternal[0] = apple->radiusInternal[1] = HUGE_VAL;
+          if (apple->BPeak[0])
+            apple->radiusInternal[0] = elem->Pref_input/(particleCharge/particleMass/c_mks)/apple->BPeak[0];
+          if (apple->BPeak[1])
+            apple->radiusInternal[1] = elem->Pref_input/(particleCharge/particleMass/c_mks)/apple->BPeak[1];
+          /* printf("Wiggler %s radii are %le  and %le,  length is %le, with %ld periods\n",
+             elem->name, apple->radiusInternal[0], apple->radiusInternal[1], 
+             apple->length, apple->periods);
              */
           pSave = run->p_central;
           run->p_central = elem->Pref_input;

@@ -1494,6 +1494,15 @@ long do_tracking(
               if (flags&TEST_PARTICLES)
                 ((CWIGGLER*)eptr->p_elem)->isr = saveISR;
 	      break;
+	    case T_APPLE:
+              if (flags&TEST_PARTICLES) {
+                saveISR = ((APPLE*)eptr->p_elem)->isr;
+                ((APPLE*)eptr->p_elem)->isr = 0;
+              }
+	      APPLE_Track(coord, nToTrack, *P_central, (APPLE*)eptr->p_elem);
+              if (flags&TEST_PARTICLES)
+                ((APPLE*)eptr->p_elem)->isr = saveISR;
+	      break;
             case T_UKICKMAP:
               nLeft = trackUndulatorKickMap(coord, accepted, nToTrack, *P_central, (UKICKMAP*)eptr->p_elem, 
                                             last_z);
@@ -4421,21 +4430,25 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
 
   /* convert coordinate frame from local to ftable element frame. Before misalignment.*/
   if (debug) 
-    dump_phase_space(&test_output, particle, np, -1, Po, 0);
+    dump_phase_space(&test_output, particle, np, -2, Po, 0);
   if (ftable->e1 || ftable->l1)
     ftable_frame_converter(particle, np, ftable, 0);
+  if (debug) 
+    dump_phase_space(&test_output, particle, np, -1, Po, 0);
   
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, ftable->dx, ftable->dy, ftable->dz);
   if (ftable->tilt)
     rotateBeamCoordinates(particle, np, ftable->tilt);
+  if (debug) 
+      dump_phase_space(&test_output, particle, np, 0, Po, 0);
 
   s_location =step/2.;
   eomc = -particleCharge/particleMass/c_mks;
   A = (double**)czarray_2d(sizeof(double), 3, 3);
+  if (debug) 
+        fprintf(stdout, "ik         x       y         z   Bx  By Bz \n");
   for (ik=0; ik<nKicks; ik++) {
-    if (debug) 
-      dump_phase_space(&test_output, particle, np, ik, Po, 0);
     for (ip=0; ip<np; ip++) {
       /* 1. get particle's coordinates */
       coord = particle[ip];
@@ -4444,15 +4457,15 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       p[2] = p0/factor;
       p[0] = coord[1]*p[2];
       p[1] = coord[3]*p[2];
-      if (debug && ip) 
-        fprintf(stdout, "ik=%ld, x=%g, y=%g, z=%g, px=%g, py=%g, pz=%g \n", ik, coord[0], coord[2], coord[4], p[0], p[1], p[2]);
 
       /* 2. get field at the middle point */
       xyz[0] = coord[0] + coord[1]*step/2.0;
       xyz[1] = coord[2] + coord[3]*step/2.0;
       xyz[2] = s_location; 
       interpolateFTable(B, xyz, ftable);
-      
+/*      if (debug) 
+        fprintf(stdout, "%5d \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+*/      
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
       /* 3. calculate the rotation matrix */
       A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
@@ -4495,6 +4508,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
           theta0 = step/rho/tm_a;
         }
         theta=choose_theta(rho, theta0, theta1, theta2);
+       if (debug) 
+        fprintf(stdout, "%5d \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \t %20f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], p[2], rho, theta);
 
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
@@ -4517,21 +4532,24 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       }
     }
     s_location += step;
-  }
   if (debug) 
-    dump_phase_space(&test_output, particle, np, nKicks, Po, 0);
+    dump_phase_space(&test_output, particle, np, ik+1, Po, 0);
+  }
+
   free_czarray_2d((void**)A,3,3);
 
   if (ftable->tilt)
     rotateBeamCoordinates(particle, np, -ftable->tilt);
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
+  if (debug) 
+    dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0);
 
   /* convert coordinate frame from ftable element frame to local frame. After misalignment.*/
   if (ftable->e2 || ftable->l2)
     ftable_frame_converter(particle, np, ftable, 1);
   if (debug) 
-    dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0);
+    dump_phase_space(&test_output, particle, np, nKicks+2, Po, 0);
 
   return;  
 }
@@ -4606,10 +4624,14 @@ void ftable_frame_converter(double **particle, long np, FTABLE *ftable, long ent
 void interpolateFTable(double *B, double *xyz, FTABLE *ftable) 
 {
   double dummy[3];
-
+/*
   B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
   B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
   B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
+*/
+  B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0, 1, 0);
+  B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, 0);
+  B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, 0);
   
   return;
 }

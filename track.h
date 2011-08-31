@@ -802,7 +802,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_FTABLE 104
 #define T_KOCT 105
 #define T_MRADINTEGRALS 106
-#define N_TYPES   107
+#define T_APPLE 107
+#define N_TYPES   108
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -916,6 +917,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTABLE_PARAMS 13
 #define N_KOCT_PARAMS 17
 #define N_MRADITEGRALS_PARAMS 1
+#define N_APPLE_PARAMS 22
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2490,6 +2492,29 @@ typedef struct {
   long fieldOutputRow, fieldOutputRows;
 } CWIGGLER;
 
+/* names and storage structure for APPLE-II element */
+extern PARAMETER apple_param[N_APPLE_PARAMS];
+typedef struct {
+  double length, BMax;
+  double dx, dy, dz, tilt;
+  long periods, step, order, End_Pole;
+  char *Input;
+  long sr, isr, isr1Particle;
+  double x0, gap0, gap, phi1, phi2, phi3, phi4;
+  long verbosity;
+  /* for internal use */
+  long initialized;
+  long NxHarm, NzHarm;
+  double C1, C2, C3, C4;
+  double S1, S2, S3, S4;
+  double **Cij, **kx, **ky, *kz;
+  double **CoZ, **CxXoZ, **CxYoZ, **CxXoYZ, **CxX2oYZ;
+  double **CxX2oZ, **CxXYoZ, **CxX3oYZ, **CxY2oZ;
+  double lz;  
+  long drift;
+  double BPeak[2], radiusInternal[2];
+} APPLE;
+
 /* names and storage structure for SCRIPT element */
 extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
@@ -2654,7 +2679,8 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 
 #define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND)
 #define IS_RADIATOR(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_CSRCSBEND || \
-                           (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || (type)==T_WIGGLER || (type)==T_CWIGGLER || \
+                           (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
+			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE ||	\
 			   (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR)
 
 /* flags for run_awe_beam and run_bunched_beam */
@@ -2825,6 +2851,9 @@ extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double 
 			       double tilt, long order);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler);
+extern void InitializeAPPLE(char *file, APPLE *apple);
+extern void APPLE_Track(double **coord, long num_particles, double pCentral,
+			APPLE *apple);
 extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);

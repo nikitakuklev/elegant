@@ -2418,6 +2418,31 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       radIntegrals->RI[1] += I2;
       radIntegrals->RI[2] += I3;
     }
+  } else if (elem->type==T_APPLE) {
+    APPLE *wiggler;
+    wiggler = (APPLE*)(elem->p_elem);
+    if (wiggler->BPeak[1]) {
+      /* By */
+      AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
+                                   wiggler->radiusInternal[1],
+                                   eta0, etap0, beta0, alpha0,
+                                   &I1, &I2, &I3, &I4, &I5);
+      radIntegrals->RI[0] += I1;
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[3] += I4;
+      radIntegrals->RI[4] += I5;
+    }
+    if (wiggler->BPeak[0]) {
+      /* Bx */
+      I1 = I2 = I3 = I4 = I5 = 0;
+      AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
+                                   wiggler->radiusInternal[0],
+                                   etay0, etapy0, betay0, alphay0,
+                                   &I1, &I2, &I3, &I4, &I5);
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
+    }
   } else if (elem->type==T_UKICKMAP) {
     UKICKMAP *ukmap;
     ukmap = (UKICKMAP*)(elem->p_elem);

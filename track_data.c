@@ -52,7 +52,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE", "KOCT", "RIMULT",
+    "FTABLE", "KOCT", "RIMULT", "APPLE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -188,6 +188,7 @@ and phase modulation.",
     "Tracks through a magnetic field which is expressed by a SDDS table.",
     "A canonical kick octupole.",
     "Multiplies radiation integrals by a given factor.  Use to compute emittance for collection of various types of cells.",
+    "Tracks through a wiggler using generate function method of J. Bahrdt and G. Wuestefeld (BESSY, Berlin, Germany).",
     } ;
 
 QUAD quad_example;
@@ -1839,6 +1840,33 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&cwiggler_example.verbosity), NULL, 0.0, 0, "A higher value requires more detailed printouts related to computations."},
 } ;
 
+APPLE apple_example;
+
+PARAMETER apple_param[N_APPLE_PARAMS] = {
+  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.length), NULL, 0.0, 0, "Total length"},
+  {"B_MAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.BMax), NULL, 0.0, 0, "Maximum on-axis magnetic field. Normal horizontal polarization mode, minimum gap"},
+  {"DX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.dx), NULL, 0.0, 0, "Misaligment."},
+  {"DY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.dy), NULL, 0.0, 0, "Misaligment."},
+  {"DZ", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.dz), NULL, 0.0, 0, "Misaligment."},
+  {"TILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.tilt), NULL, 0.0, 0, "Rotation about beam axis."},
+  {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.periods), NULL, 0.0, 0, "Total wiggler periods. Include end poles"},
+  {"STEP", "", IS_LONG, 0, (long)((char *)&apple_example.step), NULL, 0.0, 10, "Number of normal periods to track each step"},
+  {"ORDER", "", IS_LONG, 0, (long)((char *)&apple_example.order), NULL, 0.0, 10, "Use 3rd order for tracking?"},
+  {"END_POLE", "", IS_LONG, 0, (long)((char *)&apple_example.End_Pole), NULL, 0.0, 10, "Including end_pole effects? Periods has to > 2"},
+  {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&apple_example.Input), NULL, 0.0, 0, "Name of SDDS file with By harmonic data given at minimum gap and normal horizontal polarization mode."},
+  {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&apple_example.sr), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
+  {"ISR", "", IS_LONG, 0, (long)((char *)&apple_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (scattering)?"},
+  {"ISR1PART", "", IS_LONG, 0, (long)((char *)&apple_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+  {"X0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.x0), NULL, 0.0, 0, "Offset of magnet row center in meter."},
+  {"GAP0", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.gap0), NULL, 0.0, 0, "Minimim gap."},
+  {"GAP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.gap), NULL, 0.0, 0, "Working gap."},
+  {"PHASE1", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.phi1), NULL, 0.0, 0, "First row (top right) longitudinal phase"},
+  {"PHASE2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.phi2), NULL, 0.0, 0, "Second row (top left) longitudinal phase"},
+  {"PHASE3", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.phi3), NULL, 0.0, 0, "Third row (bottom right) longitudinal phase"},
+  {"PHASE4", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.phi4), NULL, 0.0, 0, "Fourth row (bottom left) longitudinal phase"},
+  {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&apple_example.verbosity), NULL, 0.0, 0, "A higher value requires more detailed printouts related to computations."},
+} ;
+
 SCRIPT script_example;
 
 PARAMETER script_param[N_SCRIPT_PARAMS] = {
@@ -2456,6 +2484,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_KOCT_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KOCT),    koct_param    },
     {N_MRADITEGRALS_PARAMS, 0, sizeof(MRADINTEGRALS), mRadIntegrals_param },
+    { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
 } ;
 
 void compute_offsets()

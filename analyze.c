@@ -516,6 +516,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
+  case T_APPLE:
+    ltmp1 = ((APPLE*)eptr->p_elem)->isr;
+    ltmp2 = ((APPLE*)eptr->p_elem)->sr;
+    ((APPLE*)eptr->p_elem)->isr = ((APPLE*)eptr->p_elem)->sr = 0;
+    APPLE_Track(coord, n_track, run->p_central, (APPLE*)eptr->p_elem);
+    ((APPLE*)eptr->p_elem)->isr = ltmp1;
+    ((APPLE*)eptr->p_elem)->sr = ltmp2;
+    break;
   case T_UKICKMAP:
     ltmp1 = ((UKICKMAP*)eptr->p_elem)->isr;
     ltmp2 = ((UKICKMAP*)eptr->p_elem)->synchRad;
