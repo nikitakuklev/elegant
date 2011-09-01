@@ -376,7 +376,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     kx[row] *=kw;
     ky[row] *=kw;
     kz[row] *=kw;
-    apple->Cij[xHarm[row]][j] = -Cmn[row]*bo4;
+    apple->Cij[xHarm[row]][j] = -Cmn[row]*bo4*exp(-ky[row]*apple->gap/2.);
     apple->BPeak[1] += apple->Cij[xHarm[row]][j];	
     apple->Cij[xHarm[row]][j] = apple->Cij[xHarm[row]][j]/cos(kx[row]*apple->x0);
     apple->BPeak[0] += apple->Cij[xHarm[row]][j]*sin(kx[row]*apple->x0)*kx[row]/ky[row];	
@@ -401,7 +401,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
   apple->S2 = sin(apple->phi2);
   apple->S3 = sin(apple->phi3);
   apple->S4 = sin(apple->phi4);
-  BxAmp = sqrt(sqr(apple->C1 - apple->C2 + apple->C3 - apple->C4) + sqr(apple->S1 - apple->S2 + apple->S3 - apple->S4));
+  BxAmp = sqrt(sqr(apple->C1 - apple->C2 - apple->C3 + apple->C4) + sqr(apple->S1 - apple->S2 - apple->S3 + apple->S4));
   ByAmp = sqrt(sqr(apple->C1 + apple->C2 + apple->C3 + apple->C4) + sqr(apple->S1 + apple->S2 + apple->S3 + apple->S4));
   apple->BPeak[0] *= BxAmp;	
   apple->BPeak[1] *= ByAmp;
