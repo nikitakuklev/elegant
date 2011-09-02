@@ -2138,6 +2138,8 @@ void getRunControlContext (VARY *context)
 void swapParticles(double *p1, double *p2)
 {
   double buffer[7];
+  if (p1==p2)
+    return;
   memcpy(buffer,     p1, sizeof(double)*7);
   memcpy(p1    ,     p2, sizeof(double)*7);
   memcpy(p2    , buffer, sizeof(double)*7);
