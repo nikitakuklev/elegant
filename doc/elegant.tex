@@ -43,7 +43,7 @@ Here is a summary of what's changed since release 24.0:
   to 0, since this gives better results in most cases.  This was reported by M. Cornacchia (SLAC).
 \item A bug was fixed in the matrix for the {\tt RFDF} element.  It didn't reflect the setting of the \verb|STANDING_WAVE| parameter, but behaved as if
   \verb|STANDING_WAVE=1|.   This would only affect twiss parameter calculations, matrix output, etc., and not tracking.
-\item A bug was fixed for the \verb|CSRCSBEND| element, which affected the $x^\prime$ coordinate in the \verb|PARTICLE_OUTPUT_FILE|.
+\item A bug was fixed for the \verb|CSRCSBEND| element, which affected the $x^\prime$ coordinate in the \\ \verb|PARTICLE_OUTPUT_FILE|.
   Instead of $x^\prime$, the code was providing $q_x = x^\prime (1 + x/\rho)$.  This would not affect any other results.
 \item A memory leak was fixed for the \verb|KQUSE| element that would affect long-running simulations.  This was reported by V. Sajaev (ANL).
 \item Synchrotron radiation is now turned off for multipoles less than 1$\mu$m long, to avoid ridiculous results.  This is not really a bug.
@@ -63,10 +63,13 @@ Here is a summary of what's changed since release 24.0:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|GFWIGGLER| element was added, which allows simulation of wigglers and undulators using the generating-function
+  method of J. Bahrdt and G. W\"{u}stefeld. This was implemented by A. Xiao.
 \item The \verb|SCMULT| element (space-charge kicks) now supports distributions that are transversely gaussian and
   uniform longitudinally.  This was requested by R. Kishek (University of Maryland)
   and implemented by A. Xiao (ANL).
-\item The \verb|KQUAD| element now supports symplectic fringe fields using the method of Irwin and Wang {\em et al.}.
+\item The \verb|KQUAD| element now supports symplectic fringe fields using the method of Irwin and Wang {\em et al.}.  This was
+  implemented by C. Wang and M. Borland (ANL).
 \item Sextupoles (\verb|SEXT|) now include a third-order matrix treatment of fringe fields.
 \item Octupoles have been added.  The \verb|OCTU| and \verb|KOCTU| elements are the matrix and kick implementations, respectively.
 \item The \verb|RIMULT| element was added.  It allows MULTiplying the Radiation Integrals by a specified factor, which allows computing
@@ -155,8 +158,9 @@ These changes are by Y. Wang (ANL), unless otherwise noted.
 
 \section{Credits}
 
-Contributors to {\tt elegant} include M. Borland, W. Guo, R. Soliday, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.
-Contributors to related programs include M. Borland, R. Dejus, L. Emery, H. Shang, and Y. Wang.
+Contributors to {\tt elegant} include M. Borland, W. Guo, R. Soliday, V. Sajaev, C. Wang, Y. Wang, Y. Wu, and A. Xiao.
+Contributors to related programs include M. Borland, R. Dejus, L. Emery, H. Shang, Y. Wang, and
+A. Xiao.
 R. Soliday is responsible for multi-platform builds and distribution.
 Of course, we also appreciate the many suggestions, comments, and bug reports from users.
 
@@ -458,6 +462,20 @@ note that, unlike FORTRAN namelists, these namelists need not come in
 a predefined order; {\tt elegant} is able to detect which namelist is
 next in the file and react appropriately.
 
+\subsection{Commandline Syntax}
+
+The commandline syntax for {\tt elegant} is of the form
+\begin{flushleft}{\tt
+elegant \{{\em inputfile}|-pipe=in\} -macro={\em tag1}={\em value1}[,{\em
+tag2}={\em value2}...]  }\end{flushleft} 
+{\em inputfile} is the name of the command input file, which is a series of
+namelist commands directing the calculations.
+Alternatively, one may give the \verb|-pipe=in| option, allowing {\tt elegant } to be
+fed a stream of commands by another program or script.
+The \verb|-macro| option allows performing text substitutions in the command stream.
+Multiple \verb|-macro| options may be given.
+Usage is described in more detail below.
+
 \subsection{General Command Syntax}
 
 Each namelist has a number of variables associated with it, which are
@@ -544,8 +562,9 @@ parameters without editing the input file.  Macros inside the input
 file have one of two forms: \verb|<tag>| or \verb|\$tag|.  To perform
 substitution, use the syntax
 \begin{flushleft}{\tt
-elegant {\em inputfile} -macro={\em tag1}={\em value1}[,{\em
-tag2}={\em value2}...]  }\end{flushleft} When using this feature, it
+elegant \{{\em inputfile}|-pipe=in} -macro={\em tag1}={\em value1}[,{\em
+tag2}={\em value2}...]  }\end{flushleft} 
+When using this feature, it
 is important to substitute the value of {\tt rootname} (in run\_setup)
 so that one can get a new set of output files (assuming use of the
 suggested ``\%s'' field in all the output file names).
