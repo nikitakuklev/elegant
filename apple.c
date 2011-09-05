@@ -392,6 +392,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     apple->CxX3oYZ[xHarm[row]][j] = apple->CxX2oYZ[xHarm[row]][j] * kx[row];
     apple->CxXYoZ[xHarm[row]][j] = apple->CxXoZ[xHarm[row]][j] * ky[row];
     apple->CxY2oZ[xHarm[row]][j] = apple->CxYoZ[xHarm[row]][j] * ky[row];
+    /*fprintf(stdout, "i=%d, cmn=%g, kx=%g, ky=%g, kz=%g\n", row, apple->Cij[xHarm[row]][j], apple->kx[xHarm[row]][j], apple->ky[xHarm[row]][j], apple->kz[j]); */
   }  
   apple->C1 = cos(apple->phi1);
   apple->C2 = cos(apple->phi2);
@@ -401,7 +402,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
   apple->S2 = sin(apple->phi2);
   apple->S3 = sin(apple->phi3);
   apple->S4 = sin(apple->phi4);
-  BxAmp = sqrt(sqr(apple->C1 - apple->C2 - apple->C3 + apple->C4) + sqr(apple->S1 - apple->S2 - apple->S3 + apple->S4));
+  BxAmp = sqrt(sqr(apple->C1 - apple->C2 + apple->C3 - apple->C4) + sqr(apple->S1 - apple->S2 + apple->S3 - apple->S4));
   ByAmp = sqrt(sqr(apple->C1 + apple->C2 + apple->C3 + apple->C4) + sqr(apple->S1 + apple->S2 + apple->S3 + apple->S4));
   apple->BPeak[0] *= BxAmp;	
   apple->BPeak[1] *= ByAmp;
