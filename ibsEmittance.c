@@ -9,6 +9,13 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.34  2011/08/02 13:27:53  borland
+ * Previously, -emitxInput was renamed -emitInput, in order to be more accurate.
+ * However, this breaks existing scripts.
+ * Restored the -emitxInput option for backward compatibility.
+ * It has the same function as -emitInput, but is not documented in order to
+ * discourage use.
+ *
  * Revision 1.33  2011/07/28 19:56:12  xiaoam
  * Fixed the bug for forced coupling calculation. Add calculation which takes different taux tauy. Modified equibrium emittance calculation which suit for coupling case.
  *
@@ -200,6 +207,7 @@ char *option[N_OPTIONS] = {
   };
 
 #include "zibs.h"
+void exitElegant(long status);
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
 
@@ -313,7 +321,7 @@ int main( int argc, char **argv)
         get_double(&coupling, scanned[i].list[1]);
         break;
       case FORCECOUPLING:
-        get_double(&force, scanned[i].list[1]);
+        get_long(&force, scanned[i].list[1]);
         break;
       case PARTICLES:
         get_double(&particles, scanned[i].list[1]);
