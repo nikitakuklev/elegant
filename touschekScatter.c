@@ -1310,7 +1310,9 @@ void pickPart(double *weight, long *index, long start, long end,
   return;
 }
 
-
+#if defined(_WIN32)
+short has_occurence_string(char *template);
+#else
 #include <sys/types.h>
 #include <regex.h>
 
@@ -1330,6 +1332,7 @@ short has_occurence_string(char *template)
   }
   return !regexec (&regExpr, template, 0, NULL, 0);
 }
+#endif
 
 void determineOccurenceInFilenames(short *occurenceSeen, short*noOccurenceSeen, 
 				   char *initial, char *distribution, char *output, char *loss, char *bunch)
