@@ -16,6 +16,10 @@
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.12  2010/08/12 15:32:21  borland
+ Added exitElegant() routine so that any exit will result in creation of
+ semaphore files if requested.
+
  Revision 1.11  2010/02/05 22:05:38  soliday
  Made some changes to reduce the number or compiler warnings on Linux.
 
@@ -60,6 +64,8 @@
 #include "mdb.h"
 #include "scan.h"
 #include "SDDS.h"
+
+void exitElegant(long status);
 
 #define DEBUG 0
 
