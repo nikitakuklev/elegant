@@ -1562,7 +1562,7 @@ char **argv;
     case MODULATE_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede modulate_elements", NULL);
-      addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline);
+      addModulationElements(&(run_conditions.modulationData), &namelist_text, beamline, &run_conditions);
       break;
     case RAMP_ELEMENTS:
       if (!run_setuped)

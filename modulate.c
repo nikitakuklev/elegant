@@ -13,7 +13,7 @@
 
 long loadModulationTable(double **t, double **value, char *file, char *timeColumn, char *amplitudeColumn);
 
-void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
+void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
 {
   long n_items, n_added, firstIndexInGroup;
   ELEMENT_LIST *context;
@@ -108,13 +108,17 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       modData->dataIndex        = SDDS_Realloc(modData->dataIndex, sizeof(*modData->dataIndex)*(n_items+1));
       modData->timeData         = SDDS_Realloc(modData->timeData, sizeof(*modData->timeData)*(n_items+1));
       modData->modulationData   = SDDS_Realloc(modData->modulationData, sizeof(*modData->modulationData)*(n_items+1));
+      modData->record           = SDDS_Realloc(modData->record, sizeof(*modData->record)*(n_items+1));
+      modData->fpRecord          = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
 
       modData->element[n_items] = context;
       modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
         + (verbose?VERBOSE_MOD:0);
       modData->timeData[n_items] = modData->modulationData[n_items] = NULL;
       modData->expression[n_items] = NULL;
+      modData->fpRecord[n_items] = NULL;
       modData->nData[n_items] = 0;
+
       if (filename) {
         if ((modData->dataIndex[n_items] = firstIndexInGroup)==-1) {
           modData->timeData[n_items]      = tData;
@@ -138,11 +142,30 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
                 context->name, item);
         fflush(stdout);
       }
+
+      if (record 
+#if USE_MPI
+          && myid==0
+#endif
+          ) {
+        modData->record[n_items] = compose_filename(record, run->rootname);
+        record = NULL;
+        if (!(modData->fpRecord[n_items] = fopen(modData->record[n_items], "w")))
+          SDDS_Bomb("problem setting up  modulation record file");
+        fprintf(modData->fpRecord[n_items], "SDDS1\n&column name=t, units=s, type=double &end\n");
+        fprintf(modData->fpRecord[n_items], "&column name=Pass, type=long &end\n");
+        fprintf(modData->fpRecord[n_items], "&column name=Amplitude, type=double &end\n");
+        fprintf(modData->fpRecord[n_items], "&column name=OriginalValue, type=double &end\n");
+        fprintf(modData->fpRecord[n_items], "&column name=NewValue, type=double &end\n");
+        fprintf(modData->fpRecord[n_items], "&data mode=ascii, no_row_counts=1 &end\n");
+      }
+      
       modData->nItems = ++n_items;
       n_added++;
       if (firstIndexInGroup==-1)
         firstIndexInGroup = n_items-1;
     }
+    
   }
   else {
     str_toupper(name);
@@ -160,11 +183,14 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->dataIndex        = SDDS_Realloc(modData->dataIndex, sizeof(*modData->dataIndex)*(n_items+1));
     modData->timeData         = SDDS_Realloc(modData->timeData, sizeof(*modData->timeData)*(n_items+1));
     modData->modulationData   = SDDS_Realloc(modData->modulationData, sizeof(*modData->modulationData)*(n_items+1));
+    modData->record           = SDDS_Realloc(modData->record, sizeof(*modData->record)*(n_items+1));
+    modData->fpRecord          = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
     
     modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
       + (verbose?VERBOSE_MOD:0);
     modData->timeData[n_items] = modData->modulationData[n_items] = NULL;
     modData->expression[n_items] = NULL;
+    modData->fpRecord[n_items] = NULL;
     modData->nData[n_items] = 0;
 
     modData->element[n_items] = context;
@@ -188,6 +214,23 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
               context->name,  item);
       fflush(stdout);
     }
+
+    if (record
+#if USE_MPI
+        && myid==0
+#endif
+        ) {
+      modData->record[n_items] = compose_filename(record, run->rootname);
+      if (!(modData->fpRecord[n_items] = fopen(modData->record[n_items], "w")))
+        SDDS_Bomb("problem setting up  modulation record file");
+      fprintf(modData->fpRecord[n_items], "SDDS1\n&column name=t, units=s, type=double &end\n");
+      fprintf(modData->fpRecord[n_items], "&column name=Pass, type=long &end\n");
+      fprintf(modData->fpRecord[n_items], "&column name=Amplitude, type=double &end\n");
+      fprintf(modData->fpRecord[n_items], "&column name=OriginalValue, type=double &end\n");
+      fprintf(modData->fpRecord[n_items], "&column name=NewValue, type=double &end\n");
+      fprintf(modData->fpRecord[n_items], "&data mode=ascii, no_row_counts=1 &end\n");
+    }
+
     modData->nItems += 1;
     n_added++;
   }
@@ -221,7 +264,7 @@ long loadModulationTable(double **t, double **value, char *file, char *timeColum
   return(count);
 }
 
-long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run)
+long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long iPass)
 {
   long iMod, code, matricesUpdated;
   short modulationValid = 0;
@@ -292,6 +335,16 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       break;
     default:
       break;
+    }
+
+    if (modData->fpRecord[iMod] 
+#if USE_MPI
+        && myid==0
+#endif
+        ) {
+      fprintf(modData->fpRecord[iMod], "%le %ld %le %le %le\n",
+              t, iPass, modulation, value);
+      fflush(modData->fpRecord[iMod]);
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 

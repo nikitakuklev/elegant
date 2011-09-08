@@ -337,7 +337,7 @@ long do_tracking(
     }
 
     ResetNoiseGroupValues();
-    if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run)) {
+    if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run, i_pass)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }

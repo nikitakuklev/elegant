@@ -358,6 +358,8 @@ typedef struct {
     long *nData;                 /* number of data elements */
     double **timeData;           /* time values */
     double **modulationData;     /* amplitude values */
+    char **record;               /* output filenames */
+    FILE **fpRecord;             /* output file structures */
   } MODULATION_DATA;
 
 typedef struct {
@@ -3694,8 +3696,8 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 void finish_coupled_twiss_output();
 void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity);
 
-long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run);
-void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long i_pass);
+void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run);
 
 void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass);
