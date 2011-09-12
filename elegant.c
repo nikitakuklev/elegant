@@ -881,6 +881,16 @@ char **argv;
             track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                        beamline, &beam, &output_data, 
                        PRECORRECTION_BEAM, 0, &finalCharge);
+          /* This is needed to put the original bunch back in the tracking buffer, since it may
+           * be needed as the starting point for orbit/trajectory correction 
+           */
+          if (beam_type==SET_SDDS_BEAM) {
+            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+              break;
+          }
+          else
+            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+          new_beam_flags = TRACK_PREVIOUS_BUNCH;
         }
 
         /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't do
@@ -1033,6 +1043,9 @@ char **argv;
         }
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
+        /* Reset corrector magnets for before/after tracking mode */
+        if (correct.mode!=-1 && commandCode==TRACK && correct.track_before_and_after)
+          zero_correctors(beamline->elem_recirc?beamline->elem_recirc:&(beamline->elem), &run_conditions, &correct);
       }
       if (commandCode==TRACK)
         finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 

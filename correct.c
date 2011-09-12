@@ -1202,6 +1202,23 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     else
       copy_particles(particle, beam->particle, n_part=beam->n_to_track);
 
+#ifdef DEBUG
+    if (1) {
+      double centroid;
+      long i, j;
+      printf("beam centroids before tracking (beam:%s):\n",
+             beam?"given":"not given");
+      for (i=0; i<4; i++) {
+        centroid = 0;
+        for (j=0; j<n_part; j++) {
+          centroid += particle[j][i];
+        }
+        centroid /= n_part;
+        printf("<x%ld> = %e\n", i, centroid);
+      }
+    }
+#endif
+
     n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
                          traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);

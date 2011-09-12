@@ -101,3 +101,4 @@ extern void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *
 void compute_amplification_factors(NAMELIST_TEXT *nltext, RUN *run, CORRECTION *correct,
     long closed_orbit, LINE_LIST *beamline);
 
+long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
