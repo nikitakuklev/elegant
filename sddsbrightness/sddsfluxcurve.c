@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.11  2011/02/17 18:38:21  shang
+ changed the default pinhole size to 2.0 instead of 0 to avoid giving 0 insentities when the pinhole sizes are not provided.
+
  Revision 1.10  2010/10/26 17:32:38  borland
  Fixed bugs in parsing the emittanceRatio parameter.
 
@@ -68,7 +71,7 @@ char *option[N_OPTIONS] = {
 char *USAGE1="sddsfluxcurve [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
     [-harmonics=<integer>] [-method=<methodName>[,neks=<integer>]]\n\
     [-mode={pinhole|density|total}]\n\
-    -undulator=period=<meters>,numberOfPeriods=<integer>,kmin=<value>,kmax=<value>[,points=<number>]\n\
+    -undulator=period=<meters>,numberOfPeriods=<integer>{,kmin=<value>,kmax=<value>[,points=<number>]kfilename=<string>,kcolumn=<string>}\n\
     [-electronBeam=current=<amps>,[,{coupling=<value> | emittanceRatio=<value>}]]\n\
     [-pinhole=distance=<meters>,xsize=<meters>,ysize=<meters>[,xnumber=<integer>][,ynumber=<integer>][,xposition=<meters>][,yposition=<meters>]]\n\
     [-nowarnings]\n\n\
@@ -92,7 +95,7 @@ pinhole          Specify pinhole parameters.  Defaults to 50x50 grid centered on
 Computes on-axis aperture-limited flux tuning curve for an undulator centered on the\n\
 end of the beamline the Twiss parameters for which are in the input file.  You should generate the\n\
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
-Program by Michael Borland.  (This is version 1, April 2009.)\n";
+Program by Michael Borland.  (This is version 1.12, "__DATE__")\n";
 
 #define MODE_PINHOLE 0
 #define MODE_DENSITY 1
@@ -103,6 +106,8 @@ static char *mode_option[MODE_OPTIONS] = {
   } ;
 
 typedef struct {
+  char *kfilename, *kcolumn;
+  double *kvalue;
   long nPeriods, nPoints;
   double period, KMin, KMax;
   unsigned long flags;
@@ -122,23 +127,25 @@ typedef struct {
   unsigned long flags;
 } PINHOLE_PARAM;
 
-#define UNDULATOR_KMIN_GIVEN              0x0001U
-#define UNDULATOR_KMAX_GIVEN              0x0002U
-#define UNDULATOR_PERIOD_GIVEN            0x0004U
-#define UNDULATOR_PERIODS_GIVEN           0x0008U
-#define UNDULATOR_POINTS_GIVEN            0x0010U
+#define UNDULATOR_KMIN_GIVEN              0x00001U
+#define UNDULATOR_KMAX_GIVEN              0x00002U
+#define UNDULATOR_PERIOD_GIVEN            0x00004U
+#define UNDULATOR_PERIODS_GIVEN           0x00008U
+#define UNDULATOR_POINTS_GIVEN            0x00010U
+#define UNDULATOR_KFILENAME_GIVEN         0x00020U
+#define UNDULATOR_KCOLUMN_GIVEN           0x00040U
 
-#define ELECTRON_CURRENT_GIVEN            0x0020U
-#define ELECTRON_COUPLING_GIVEN           0x0040U
-#define ELECTRON_ERATIO_GIVEN             0x0080U
+#define ELECTRON_CURRENT_GIVEN            0x00080U
+#define ELECTRON_COUPLING_GIVEN           0x00100U
+#define ELECTRON_ERATIO_GIVEN             0x00200U
 
-#define PINHOLE_DISTANCE_GIVEN            0x0100U
-#define PINHOLE_XPC_GIVEN                 0x0200U
-#define PINHOLE_YPC_GIVEN                 0x0400U
-#define PINHOLE_XPS_GIVEN                 0x0800U
-#define PINHOLE_YPS_GIVEN                 0x1000U
-#define PINHOLE_NXP_GIVEN                 0x2000U
-#define PINHOLE_NYP_GIVEN                 0x4000U
+#define PINHOLE_DISTANCE_GIVEN            0x00400U
+#define PINHOLE_XPC_GIVEN                 0x00800U
+#define PINHOLE_YPC_GIVEN                 0x01000U
+#define PINHOLE_XPS_GIVEN                 0x02000U
+#define PINHOLE_YPS_GIVEN                 0x04000U
+#define PINHOLE_NXP_GIVEN                 0x08000U
+#define PINHOLE_NYP_GIVEN                 0x10000U
 
 /*fortran subroutine*/
 void urgent_();
@@ -165,6 +172,8 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
                    long method, long mode,
                    double **K, double **TotalPower, double **OnAxisPowerDensity, double ***FnOut,
                    double ***Energy, double ***Flux, double ***LambdarOut);
+
+void getKValueDataFromFile(UNDULATOR_PARAM *undulator_param);
 
 int main(int argc, char **argv)
 {
@@ -211,7 +220,9 @@ int main(int argc, char **argv)
   undulator_param.nPeriods = 0;
   undulator_param.nPoints = 100;
   undulator_param.period = undulator_param.KMin = undulator_param.KMax = 0;
-
+  undulator_param.kfilename = undulator_param.kcolumn = NULL;
+  undulator_param.kvalue = NULL;
+  
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
       switch (match_string(s_arg[i_arg].list[0], option, N_OPTIONS, 0)) {
@@ -233,10 +244,20 @@ int main(int argc, char **argv)
                           "kmax", SDDS_DOUBLE, &undulator_param.KMax, 1, UNDULATOR_KMAX_GIVEN,
                           "numberofperiods", SDDS_LONG, &undulator_param.nPeriods, 1, UNDULATOR_PERIODS_GIVEN,
                           "points", SDDS_LONG, &undulator_param.nPoints, 1, UNDULATOR_POINTS_GIVEN,
+			  "kfilename", SDDS_STRING, &undulator_param.kfilename, 1, UNDULATOR_KFILENAME_GIVEN,
+			  "kcolumn", SDDS_STRING, &undulator_param.kcolumn, 1, UNDULATOR_KCOLUMN_GIVEN,
                           NULL) ||
-            undulator_param.period<=0 || undulator_param.KMin<=0 || undulator_param.KMax<undulator_param.KMax ||
-            undulator_param.nPoints<1 || undulator_param.nPeriods<=10)
+            undulator_param.period<=0 || undulator_param.nPeriods<=10)
           SDDS_Bomb("invalid -undulator parameters/values");
+	if (!(undulator_param.flags&UNDULATOR_KFILENAME_GIVEN)) {
+	  if (undulator_param.KMin<=0 || undulator_param.KMax<undulator_param.KMax ||
+	      undulator_param.nPoints<1)
+	    SDDS_Bomb("invalid -undulator syntax: invalid k values provided.");
+	} else {
+	  if (!undulator_param.flags&UNDULATOR_KCOLUMN_GIVEN)
+	    SDDS_Bomb("invalid -undulator syntax: kcolumn provided.");
+	  getKValueDataFromFile(&undulator_param);
+	}
         break;
       case SET_PINHOLE:
         if (s_arg[i_arg].n_items<2)
@@ -419,6 +440,9 @@ int main(int argc, char **argv)
   
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (undulator_param.kfilename) free(undulator_param.kfilename);
+  if (undulator_param.kcolumn) free(undulator_param.kcolumn);
+  if (undulator_param.kvalue) free(undulator_param.kvalue);
   free_scanargs(&s_arg,argc);
   if (method) {
     for (ih=0;ih<harmonics;ih++) {
@@ -873,7 +897,10 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
     nek = neks;
     do {
       je--;
-      ek = eMin+je*de;
+      if (!undulator.kvalue)
+	ek = eMin+je*de;
+      else
+	ek = reducedE/(1+sqr(undulator.kvalue[je])/2.0);
       ky = sqrt(2.0*(reducedE/ek-1.0));
       if (ih == 0)
         kyb[je] = ky;
@@ -952,7 +979,10 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
     }
     je = nE-1;
     for (j=0; j<=je; j++) {
-      ek = eMin+j*de;
+      if (!undulator.kvalue)
+	ek = eMin+j*de;
+      else
+	ek = reducedE/(1+sqr(undulator.kvalue[j])/2.0);
       ky = sqrt(2.0*(reducedE/ek-1.0));
       if (ih == 0) 
         kyb[j] = ky;
@@ -1165,3 +1195,27 @@ int Gauss_Convolve(double *E, double *spec, long *ns, double sigmaE)
   return 0;
 }
 
+void getKValueDataFromFile(UNDULATOR_PARAM *undulator_param)
+{
+  SDDS_DATASET SDDSin;
+  
+  if (!SDDS_InitializeInput(&SDDSin, undulator_param->kfilename))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (SDDS_CheckColumn(&SDDSin, undulator_param->kcolumn, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    fprintf(stderr, "Something wrong with column %s in %s\n", undulator_param->kcolumn, undulator_param->kfilename);
+    exit(1);
+  }
+  if (SDDS_ReadPage(&SDDSin)<1 || (undulator_param->nPoints = SDDS_RowCount(&SDDSin))<1 || 
+      !(undulator_param->kvalue=SDDS_GetColumnInDoubles(&SDDSin, undulator_param->kcolumn)))
+    SDDS_Bomb("unable to read error factor file");
+  if (!SDDS_Terminate(&SDDSin))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  /*sort kvalue in decreasing order to make the energy in increasing order */
+  qsort(undulator_param->kvalue, undulator_param->nPoints, sizeof(*undulator_param->kvalue), double_cmpdes);
+  undulator_param->KMin = undulator_param->kvalue[undulator_param->nPoints-1];
+  undulator_param->KMax = undulator_param->kvalue[0];
+  if (undulator_param->KMax<undulator_param->KMin || undulator_param->KMin<0 || undulator_param->nPoints<1)
+    SDDS_Bomb("Invalid k values provided for undulator-- has to at least two points, and in increasing order."); 
+  
+}
