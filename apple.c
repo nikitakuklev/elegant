@@ -68,7 +68,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
       } else {
 	apple->End_Pole = 0;
 	nleft = apple->periods;
-	fprintf(stdout, "warning: apple.c periods <2, set end_pole to zero\n", np);
+	fprintf(stdout, "warning: apple.c periods <2, set end_pole to zero\n");
       }
     } else {
       nleft = apple->periods;
