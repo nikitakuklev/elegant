@@ -891,7 +891,7 @@ extern char *entity_text[N_TYPES];
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
-#define N_WIGGLER_PARAMS 8
+#define N_WIGGLER_PARAMS 9
 #define N_SCRIPT_PARAMS 34
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
@@ -2465,7 +2465,7 @@ extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
   double length, radius, K;
   double dx, dy, dz, tilt;
-  long poles;
+  long poles, focusing;
   /* internal use only */
   double radiusInternal;  /* may be computed from K */
 } WIGGLER;
@@ -2850,7 +2850,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double dx, double dy, double dz,
-			       double tilt, long order);
+			       double tilt, long order, long focusing);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler);
 extern void InitializeAPPLE(char *file, APPLE *apple);

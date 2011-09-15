@@ -364,7 +364,7 @@ VMATRIX *drift_matrix(double length, long order)
 
 VMATRIX *wiggler_matrix(double length, double radius, long poles,
 			double dx, double dy, double dz, 
-			double tilt, long order)
+			double tilt, long order, long focusing)
 {
     VMATRIX *M;
     double **R, *C;
@@ -381,10 +381,14 @@ VMATRIX *wiggler_matrix(double length, double radius, long poles,
     if (length) {
       C[4] = length;
       R[0][1] = length;
-      kl = length/(SQRT2*fabs(radius));
-      R[2][2] = R[3][3] = cos(kl);
-      R[2][3] = sin(kl)/(kl/length);
-      R[3][2] = -(kl/length)*sin(kl);
+      if (focusing) {
+        kl = length/(SQRT2*fabs(radius));
+        R[2][2] = R[3][3] = cos(kl);
+        R[2][3] = sin(kl)/(kl/length);
+        R[3][2] = -(kl/length)*sin(kl);
+      } else {
+        R[2][3] = length;
+      }
       R[4][5] = -(poles/2)*ipow(1/radius,2)*ipow(length/poles, 3)/ipow(PI,2);
     }
 
@@ -761,7 +765,7 @@ VMATRIX *compute_matrix(
 	}
         elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal, wiggler->poles,
 				      wiggler->dx, wiggler->dy, wiggler->dz, wiggler->tilt,
-				      run->default_order);
+				      run->default_order, wiggler->focusing);
 	break;
       case T_CWIGGLER:
 	cwiggler = (CWIGGLER*)elem->p_elem;
