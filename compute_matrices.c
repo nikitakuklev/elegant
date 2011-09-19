@@ -751,12 +751,14 @@ VMATRIX *compute_matrix(
         break;
       case T_WIGGLER:
 	wiggler = (WIGGLER*)elem->p_elem;
-	if (wiggler->K) {
+	if (wiggler->K>0) {
 	  double period;
 	  /* poles = 2*(wiggler->poles/2)+1; */
 	  period = 2*(wiggler->length/wiggler->poles);
 	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
-	} else
+	} else if (wiggler->B>0)
+	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)/(particleCharge/particleMass/c_mks)/wiggler->B;
+	else 
 	  wiggler->radiusInternal = wiggler->radius;
 	if (wiggler->radiusInternal==0) {
 	  fprintf(stderr, "Error: wiggler radius is zero\n");
@@ -1268,7 +1270,10 @@ VMATRIX *compute_matrix(
         break;
       case T_RFDF:
 	/* elem->matrix = determineMatrix(run, elem, NULL, NULL); */
-	elem->matrix = rfdf_matrix((RFDF*)elem->p_elem, Pref_output);
+	if (((RFDF*)elem->p_elem)->driftMatrix)
+	  elem->matrix = drift_matrix(((RFDF*)elem->p_elem)->length, run->default_order);
+	else
+	  elem->matrix = rfdf_matrix((RFDF*)elem->p_elem, Pref_output);
         break;
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 

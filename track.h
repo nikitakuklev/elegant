@@ -833,7 +833,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 20
+#define N_RFDF_PARAMS 21
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -891,7 +891,7 @@ extern char *entity_text[N_TYPES];
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
-#define N_WIGGLER_PARAMS 9
+#define N_WIGGLER_PARAMS 10
 #define N_SCRIPT_PARAMS 34
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
@@ -1305,6 +1305,7 @@ typedef struct {
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
   long startPass, endPass;
+  long driftMatrix;
   /* for internal use only */
   double t_first_particle;        
   long initialized, fiducial_seen;
@@ -2463,7 +2464,7 @@ typedef struct {
 /* names and storage structure for WIGGLER element */
 extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
-  double length, radius, K;
+  double length, radius, K, B;
   double dx, dy, dz, tilt;
   long poles, focusing;
   /* internal use only */
