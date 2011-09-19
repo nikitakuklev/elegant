@@ -343,7 +343,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 #endif
         ) {
       fprintf(modData->fpRecord[iMod], "%le %ld %le %le %le\n",
-              t, iPass, modulation, value);
+              t, iPass, modulation, modData->unperturbedValue[iMod], value);
       fflush(modData->fpRecord[iMod]);
     }
     
