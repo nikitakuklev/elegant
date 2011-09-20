@@ -3357,7 +3357,9 @@ long ramped_rf_cavity(double **part, long np, RAMPRF *ramprf, double P_central,
 /* prototypes for closed_orbit.c */
 extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation);
 void finish_clorb_output(void);
-long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output);
+#define CLOSED_ORBIT_OUTPUT 0x01UL
+#define CLOSED_ORBIT_IGNORE_BEAM 0x02UL
+long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, unsigned long flags);
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */

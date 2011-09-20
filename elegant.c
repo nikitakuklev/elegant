@@ -860,12 +860,12 @@ char **argv;
         setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
         break;
       }
-      new_beam_flags = 0;
       firstPass = 1;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
         fill_double_array(starting_coord, 6, 0.0);
         correctionDone = 0;
+        new_beam_flags = 0;
         if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
           if (beam_type==SET_AWE_BEAM) {
             bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
@@ -892,11 +892,14 @@ char **argv;
             new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
           new_beam_flags = TRACK_PREVIOUS_BUNCH;
         }
+        
 
         /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't do
          * any output unless requested to do so "pre-correction"
          */
-        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+        if (do_closed_orbit && 
+            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 
+                              new_beam_flags==TRACK_PREVIOUS_BUNCH?0:CLOSED_ORBIT_IGNORE_BEAM) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);
