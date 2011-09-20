@@ -74,6 +74,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     if (!writePermitted)
       log_file = NULL;
     optimization_data->random_factor = random_factor;
+    runInSinglePartMode = 1;  /* To be compatible with the original simplex method setup */
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
