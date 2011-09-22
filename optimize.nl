@@ -13,6 +13,10 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic", "hybridsimplex", "swarm"
     } ;
 
+static char *crossover_type[N_CROSSOVER_TYPES] = {
+    "onepoint", "twopoint", "uniform"
+    } ;
+	
 #namelist optimization_term,struct
     STRING term = NULL;
     double weight = 1.0;
@@ -42,6 +46,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     STRING term_log_file = NULL;
     long verbose = 1;
     long output_sparsing_factor = 1;
+    STRING crossover = "twopoint";
     long balance_terms = 0;
     double simplex_divisor = 3;
     double simplex_pass_range_factor = 1;

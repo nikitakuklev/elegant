@@ -46,6 +46,7 @@ long geneticMin(
 		char *population_log,
 		SDDS_TABLE *logPtr,
 		long verbose,
+		long crossover_type,
 		OPTIM_VARIABLES *optim,
 		OPTIM_COVARIABLES *co_optim
 		)
@@ -93,7 +94,13 @@ long geneticMin(
  
   /* Set the size of population */
   PGASetPopSize(ctx, populationSize);
-	
+
+  /* Set the crossover type */
+  if (crossover_type!=PGA_CROSSOVER_TWOPT)
+    PGASetCrossoverType(ctx, crossover_type); 
+  if (dimensions==2) /* It is not valid for PGA_CROSSOVER_TWOPT when the dimension is 2 */
+    PGASetCrossoverType(ctx, PGA_CROSSOVER_ONEPT); 
+
   /* The number of genes to be replaced for each iteration */
   PGASetNumReplaceValue (ctx,  PGAGetPopSize(ctx)-1); 
 

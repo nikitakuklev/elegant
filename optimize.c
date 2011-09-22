@@ -142,6 +142,10 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
     if (str_in(population_log, "%s"))
       population_log = compose_filename(population_log, run->rootname);
   }
+  if (optimization_data->method==OPTIM_METHOD_GENETIC)
+    /* The crossover type defined in PGAPACK started from 1, instead of 0. */ 
+    if ((optimization_data->crossover_type=(match_string(crossover, crossover_type, N_CROSSOVER_TYPES, EXACT_MATCH)+1))<1)
+        bombElegant("unknown genecic optimization crossover type ", NULL);
 }
 #endif
 
@@ -1014,13 +1018,14 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       case OPTIM_METHOD_GENETIC:
 	fputs("Starting genetic optimization.\n", stdout);
 	n_total_evaluations_made = geneticMin(&result, variables->varied_quan_value, 
-					variables->lower_limit, variables->upper_limit, variables->step,
-					variables->n_variables, optimization_data->target, 
-					optimization_function, optimization_data->n_iterations,
-					optimization_data->max_no_change,
-					optimization_data->population_size, output_sparsing_factor,
-					optimization_data->print_all_individuals, population_log,
-					      &(optimization_data->popLog), optimization_data->verbose, variables, covariables);
+					      variables->lower_limit, variables->upper_limit, variables->step,
+					      variables->n_variables, optimization_data->target, 
+					      optimization_function, optimization_data->n_iterations,
+					      optimization_data->max_no_change,
+					      optimization_data->population_size, output_sparsing_factor,
+					      optimization_data->print_all_individuals, population_log,
+					      &(optimization_data->popLog), optimization_data->verbose, 
+					      optimization_data->crossover_type, variables, covariables);
         if (optimAbort(0))
           stopOptimization = 1;
 	break;

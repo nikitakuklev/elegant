@@ -519,6 +519,10 @@ typedef struct {
 #define OPTIM_METHOD_SWARM      8
 #define N_OPTIM_METHODS         9
 
+
+  /* The definitions of PGA_CROSSOVER_ONEPT, PGA_CROSSOVER_TWOPT, PGA_CROSSOVER_UNIFORM can be found at pgapack.h */
+#define N_CROSSOVER_TYPES       3
+
 typedef struct {
     long mode, method;
     double tolerance, target;
@@ -550,6 +554,7 @@ typedef struct {
     long population_size;
     long print_all_individuals;
     SDDS_TABLE popLog;
+    long crossover_type;          /* For genetic optimization only */
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
@@ -3310,9 +3315,10 @@ void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nl
 double optimization_function(double *values, long *invalid);
 #if USE_MPI
   long geneticMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep,
-                long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
-		long maxNoChange, long populationSize, long printFrequency, long pirntAllPopulations,
-		  char *populations_log, SDDS_TABLE *logPtr, long verbose, OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim);
+		  long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
+		  long maxNoChange, long populationSize, long printFrequency, long pirntAllPopulations,
+		  char *populations_log, SDDS_TABLE *logPtr, long verbose, long crossoverType,
+		  OPTIM_VARIABLES *optim, OPTIM_COVARIABLES *co_optim);
   
   long swarmMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep, long dimensions, 
 		double target,double (*func)(double *x, long *invalid), long populationSize, long n_iterations, long max_iterations);
