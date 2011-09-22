@@ -222,7 +222,12 @@ int N_StopCond(PGAContext *ctx) {
     best = PGAGetBestIndex(ctx, PGA_OLDPOP);
     if ((done == PGA_FALSE) && 
 	(PGAGetEvaluation(ctx, best, PGA_OLDPOP) <= target_value))
-	done = PGA_TRUE;
+      done = PGA_TRUE;
+
+    if ((done == PGA_FALSE) &&
+	(PGAGetMutationRealValue(ctx) <= 10*DBL_EPSILON)) /* PGA will hang there if the variance is too small */
+      done = PGA_TRUE;
+
     return(done);
 }
 
@@ -303,7 +308,7 @@ void N_EndOfGen(PGAContext *ctx) {
     int best;
     int current_iter = PGAGetGAIterValue(ctx);
 
-    /* If the best value is unchanged for 30 iterations, the step size will be reduced */
+    /* If the best value is unchanged for 10 iterations, the step size will be reduced */
     if((ctx->ga.ItersOfSame % 10 == 0) && current_iter) {
       PGASetMutationRealValue(ctx, 0.1*PGAGetMutationRealValue(ctx));
       last_reduced_iter = PGAGetGAIterValue(ctx);
