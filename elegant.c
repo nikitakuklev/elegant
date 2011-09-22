@@ -2462,14 +2462,38 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
     freopen(error_log_file, "w", stderr);
 }
 
+void bombTracking(char *error)
+{
+  TRACKING_CONTEXT tc;
+  getTrackingContext(&tc);
+  fprintf(stdout, "error:  %s\n", error);
+  if (tc.elementName)
+    fprintf(stdout, "Tracking through %s#%ld at s=%lem\n", 
+            tc.elementName, tc.elementOccurrence, tc.zEnd);
+  else 
+    fprintf(stdout, "Tracking through unidentified element\n");
+  show_traceback(stdout);
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD); 
+  if (isSlave)
+    MPI_Comm_free(&workers); 
+  MPI_Group_free(&worker_group); 
+  close(fd); 
+  MPI_Finalize();
+#endif
+  exit(1);
+}
+
+
 void bombElegant(char *error, char *usage)
 {
   if (error)
-    fprintf(stderr, "error: %s\n", error);
+    fprintf(stdout, "error: %s\n", error);
   if (usage)
-    fprintf(stderr, "usage: %s\n", usage);
+    fprintf(stdout, "usage: %s\n", usage);
   if (semaphoreFile[2]) 
     createSemaphoreFile(semaphoreFile[2]);
+  show_traceback(stdout);
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD); 
   if (isSlave)

@@ -152,7 +152,7 @@ void initialize_fmultipole(FMULT *multipole)
   if (multData->initialized)
     return;
   if (!multipole->filename)
-    bombElegant("FMULT element doesn't have filename", NULL);
+    bombTracking("FMULT element doesn't have filename");
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multipole->filename)) {
     sprintf(buffer, "Problem opening file %s (FMULT)\n", multipole->filename);
     SDDS_SetError(buffer);
@@ -162,7 +162,7 @@ void initialize_fmultipole(FMULT *multipole)
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "JnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
-    bombElegant("problems with data in FMULT input file", NULL);
+    bombTracking("problems with data in FMULT input file");
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
@@ -214,16 +214,16 @@ long fmultipole_tracking(
   MULTIPOLE_DATA multData;
   
   if (!particle)
-    bombElegant("particle array is null (fmultipole_tracking)", NULL);
+    bombTracking("particle array is null (fmultipole_tracking)");
 
   if (!multipole)
-    bombElegant("null MULT pointer (fmultipole_tracking)", NULL);
+    bombTracking("null MULT pointer (fmultipole_tracking)");
   
   if (!multipole->multData.initialized)
     initialize_fmultipole(multipole);
   
   if ((n_kicks=multipole->n_kicks)<=0)
-    bombElegant("n_kicks<=0 in multipole()", NULL);
+    bombTracking("n_kicks<=0 in fmultipole_tracking()");
 
   drift = multipole->length;
 
@@ -332,23 +332,19 @@ long multipole_tracking(
     log_entry("multipole_tracking");
 
     if (!particle)
-        bombElegant("particle array is null (multipole_tracking)", NULL);
+        bombTracking("particle array is null (multipole_tracking)");
 
     if (!multipole)
-        bombElegant("null MULT pointer (multipole_tracking)", NULL);
+        bombTracking("null MULT pointer (multipole_tracking)");
 
-    if ((n_kicks=multipole->n_kicks)<=0) {
-      TRACKING_CONTEXT tc;
-      getTrackingContext(&tc);
-      fprintf(stderr, "error: n_kicks<=0 in multipole() for %s #%ld\n", tc.elementName, tc.elementOccurrence);
-      exitElegant(1);
-    }
+    if ((n_kicks=multipole->n_kicks)<=0) 
+      bombTracking("n_kicks<=0 in multipole_tracking()");
 
     if ((order=multipole->order)<0)
-        bombElegant("order < 0 in multipole()", NULL);
+      bombTracking("order < 0 in multipole_tracking()");
 
     if (!(coef = expansion_coefficients(order)))
-        bombElegant("expansion_coefficients() returned null pointer (multipole_tracking)", NULL);
+      bombTracking("expansion_coefficients() returned null pointer (multipole_tracking)");
 
     drift = multipole->length/n_kicks/2;
     if (multipole->bore)
@@ -593,12 +589,12 @@ long multipole_tracking2(
   log_entry("multipole_tracking2");
 
   if (!particle)
-    bombElegant("particle array is null (multipole_tracking)", NULL);
+    bombTracking("particle array is null (multipole_tracking)");
 
   if (!elem)
-    bombElegant("null element pointer (multipole_tracking2)", NULL);
+    bombTracking("null element pointer (multipole_tracking2)");
   if (!elem->p_elem)
-    bombElegant("null p_elem pointer (multipole_tracking2)", NULL);
+    bombTracking("null p_elem pointer (multipole_tracking2)");
 
   rad_coef = xkick = ykick = isr_coef = 0;
   sqrtOrder = 0;
@@ -790,14 +786,14 @@ long multipole_tracking2(
     multData = NULL;
   
   if (n_kicks<=0)
-    bombElegant("n_kicks<=0 in multipole()", NULL);
+    bombTracking("n_kicks<=0 in multipole()");
   if (order<=0)
-    bombElegant("order <= 0 in multipole()", NULL);
+    bombTracking("order <= 0 in multipole()");
   if (integ_order!=2 && integ_order!=4) 
-    bombElegant("multipole integration_order must be 2 or 4", NULL);
+    bombTracking("multipole integration_order must be 2 or 4");
   
   if (!(coef = expansion_coefficients(order)))
-    bombElegant("expansion_coefficients() returned null pointer (multipole_tracking)", NULL);
+    bombTracking("expansion_coefficients() returned null pointer (multipole_tracking)");
 
   i_top = n_part-1;
   if (integ_order==4) {
@@ -1371,39 +1367,38 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     if (steeringMult && steeringMult->orders) {
       if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
           !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
-        bombElegant("memory allocation failure (computeTotalMultipoleFields)", NULL);
+        bombTracking("memory allocation failure (computeTotalMultipoleFields)");
     }
     /* make a list of unique orders for random and systematic multipoles */
     if (systematicMult->orders && randomMult->orders &&
         systematicMult->orders!=randomMult->orders)
-      bombElegant("The number of systematic and random multipole error orders must be the same for any given element", NULL);
+      bombTracking("The number of systematic and random multipole error orders must be the same for any given element");
     if (systematicMult->orders)
       totalMult->orders = systematicMult->orders;
     else
       totalMult->orders = randomMult->orders;
     if (totalMult->orders) {
       if (!(totalMult->order=SDDS_Malloc(sizeof(*totalMult->order)*(totalMult->orders))))
-        bombElegant("memory allocation failure (computeTotalMultipoleFields)", NULL);
+        bombTracking("memory allocation failure (computeTotalMultipoleFields)");
       if (systematicMult->orders &&
           (!(systematicMult->anMod=SDDS_Malloc(sizeof(*systematicMult->anMod)*systematicMult->orders)) ||
            !(systematicMult->bnMod=SDDS_Malloc(sizeof(*systematicMult->bnMod)*systematicMult->orders)) ||
            !(systematicMult->KnL=SDDS_Malloc(sizeof(*systematicMult->KnL)*systematicMult->orders)) ||
            !(systematicMult->JnL=SDDS_Malloc(sizeof(*systematicMult->JnL)*systematicMult->orders))))
-        bombElegant("memory allocation failure (computeTotalMultipoleFields)", NULL);
+        bombTracking("memory allocation failure (computeTotalMultipoleFields)");
       if (randomMult->orders &&
           (!(randomMult->anMod=SDDS_Malloc(sizeof(*randomMult->anMod)*randomMult->orders)) ||
            !(randomMult->bnMod=SDDS_Malloc(sizeof(*randomMult->bnMod)*randomMult->orders)) ||
            !(randomMult->KnL=SDDS_Malloc(sizeof(*randomMult->KnL)*randomMult->orders)) ||
            !(randomMult->JnL=SDDS_Malloc(sizeof(*randomMult->JnL)*randomMult->orders))))
-        bombElegant("memory allocation failure (computeTotalMultipoleFields", NULL);
+        bombTracking("memory allocation failure (computeTotalMultipoleFields");
       if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
           !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
-        bombElegant("memory allocation failure (computeTotalMultipoleFields)", NULL);
+        bombTracking("memory allocation failure (computeTotalMultipoleFields)");
       for (i=0; i<totalMult->orders; i++) {
         if (systematicMult->orders && randomMult->orders &&
             systematicMult->order[i]!=randomMult->order[i])
-          bombElegant("multipole orders in systematic and random lists must match up for any given element.",
-               NULL);
+          bombTracking("multipole orders in systematic and random lists must match up for any given element.");
         if (systematicMult->orders) {
           totalMult->order[i] = systematicMult->order[i] ;
           systematicMult->anMod[i] = systematicMult->an[i]*dfactorial(systematicMult->order[i])/
