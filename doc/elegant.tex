@@ -2983,15 +2983,16 @@ a significant difference in the optimization speed.
     STRING population_log = NULL;
     long print_all_individuals = 0;
     long output_sparsing_factor = 1;
+    STRING crossover = "twopoint";
 &end
 \end{verbatim}
 
 \begin{itemize}
-\item \verb|method| --- May be one of "genetic", "hybridsimplex" or "swarm". If the default "simplex" method is chosen, all the processors will do the same optimization as the serial version and then track in parallel. All algorithms can be used for global optimization. "swarm" is recommended when there is sufficient computation resource available, so it can reach the optimization target fast. "hybridsimplex" is recommended when the initial point is close to the optimal result. "genetic" can be chosen for a global optimizer with a random start point (0 should be avoided for any initial coordinate). 
+\item \verb|method| --- May be one of ``genetic'', ``hybridsimplex'' or ``swarm''. If the default ``simplex'' method is chosen, all the processors will do the same optimization as the serial version and then track in parallel. All algorithms can be used for global optimization. ``swarm'' is recommended when there is sufficient computation resource available, so it can reach the optimization target fast. ``hybridsimplex'' is recommended when the initial point is close to the optimal result. ``genetic'' can be chosen for a global optimizer with a random start point (0 should be avoided for any initial coordinate). 
 
 \item \verb|random_factor| --- The factor to scale the step size for both parallel swarm and genetic methods.
 
-\item \verb|n_restarts| --- For the parallel "hybridsimplex" method, this number should be set larger than 1, so the the best result across all processors can be used for the next restart. The parameter is not used for the swarm method.
+\item \verb|n_restarts| --- For the parallel ``hybridsimplex'' method, this number should be set larger than 1, so the the best result across all processors can be used for the next restart. The parameter is not used for the swarm method.
 
 \item \verb|n_iterations| --- The maximal number of generations/iterations for the parallel genetic and particle swarm optimization. 
 
@@ -3006,6 +3007,8 @@ a significant difference in the optimization speed.
 \item \verb|print_all_individuals| --- If nonzero, all the strings in a population will be recorded in the population\_log file. This is supported for the genetic method only.
 
 \item \verb|output_sparsing_factor| --- For genetic optimization, this is used to set the frequency of printing strings in the log file with the number of generations as the interval.
+
+\item \verb|crossover| --- For genetic optimization, it allows the user to choose a crossover type from ``onepoint'', ``twopoint'' and ``uniform''. ``twopoint'' is the default crossover type. If the dimension is 2, it will be set to onepoint crossover.
 
 \end{itemize}
 
