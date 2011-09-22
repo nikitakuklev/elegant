@@ -8,7 +8,7 @@
 &run_setup
 	lattice = <lattice>,
 	use_beamline = <beamline>
-	p_central_mev = 7e3,
+	p_central_mev = <pCentralMeV>,
 	default_order = <order>,
         final = %s.finOpt
         parameters = %s-final.param
@@ -20,11 +20,20 @@
         radiation_integrals = 1
 &end
 
+&twiss_output
+        matched = 1
+        radiation_integrals = 1
+        output_at_each_step = 1
+&end
+
 &moments_output
         matched = 1,
         equilibrium = 1,
         radiation = 1,
         output_at_each_step = 1
+&end
+
+&closed_orbit
 &end
 
 &load_parameters
