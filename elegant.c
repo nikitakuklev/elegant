@@ -877,20 +877,21 @@ char **argv;
           else
             new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
           new_beam_flags = TRACK_PREVIOUS_BUNCH;
-          if (commandCode==TRACK && correct.track_before_and_after)
+          if (commandCode==TRACK && correct.track_before_and_after) {
             track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                        beamline, &beam, &output_data, 
                        PRECORRECTION_BEAM, 0, &finalCharge);
-          /* This is needed to put the original bunch back in the tracking buffer, since it may
-           * be needed as the starting point for orbit/trajectory correction 
-           */
-          if (beam_type==SET_SDDS_BEAM) {
-            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
-              break;
+            /* This is needed to put the original bunch back in the tracking buffer, since it may
+             * be needed as the starting point for orbit/trajectory correction 
+             */
+            if (beam_type==SET_SDDS_BEAM) {
+              if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
+                break;
+            }
+            else
+              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
+            new_beam_flags = TRACK_PREVIOUS_BUNCH;
           }
-          else
-            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
-          new_beam_flags = TRACK_PREVIOUS_BUNCH;
         }
         
 
