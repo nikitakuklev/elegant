@@ -810,7 +810,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_KOCT 105
 #define T_MRADINTEGRALS 106
 #define T_APPLE 107
-#define N_TYPES   108
+#define T_MRFDF 108
+#define N_TYPES   109
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -925,6 +926,7 @@ extern char *entity_text[N_TYPES];
 #define N_KOCT_PARAMS 17
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 22
+#define N_MRFDF_PARAMS 23
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1294,8 +1296,7 @@ typedef struct {
     double gradient;   
     } ALPH;
 
-/* names and storage structure for RF deflector cavity done with
- * inaccurate method (electric field)
+/* names and storage structure for RF deflector cavity
  */
 extern PARAMETER rfdf_param[N_RFDF_PARAMS] ;
    
@@ -1319,6 +1320,20 @@ typedef struct {
   double V_tFinal, V_tInitial;
   long n_Vpts;
 } RFDF;
+
+/* names and storage structure for multipole RF deflector cavity
+ */
+extern PARAMETER mrfdf_param[N_MRFDF_PARAMS] ;
+   
+typedef struct {
+  double factor, tilt;
+  double a[5], b[5], frequency[5], phase[5];
+  long phase_reference;
+  /* for internal use only */
+  double t_first_particle;        
+  long initialized, fiducial_seen;
+} MRFDF;
+
 
 /* names and storage structure for RF deflector cavity done with
  * correct TM110 mode fields

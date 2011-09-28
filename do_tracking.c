@@ -854,6 +854,11 @@ long do_tracking(
 	      else
 		exactDrift(coord, nToTrack, ((RFDF*)eptr->p_elem)->length);
 	      break;
+	    case T_MRFDF:
+	      if (!(flags&TIME_DEPENDENCE_OFF))
+		track_through_multipole_deflector(coord, (MRFDF*)eptr->p_elem,
+                                           coord, nToTrack, *P_central);
+	      break;
 	    case T_RFTM110:
 	      if (!(flags&TIME_DEPENDENCE_OFF))
 		track_through_rftm110_deflector(coord, (RFTM110*)eptr->p_elem,

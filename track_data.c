@@ -52,7 +52,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER",
+    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -189,6 +189,7 @@ and phase modulation.",
     "A canonical kick octupole.",
     "Multiplies radiation integrals by a given factor.  Use to compute emittance for collection of various types of cells.",
     "Tracks through a wiggler using generate function method of J. Bahrdt and G. Wuestefeld (BESSY, Berlin, Germany).",
+    "Zero-length Multipole RF DeFlector from dipole to decapole"
     } ;
 
 QUAD quad_example;
@@ -2359,6 +2360,34 @@ PARAMETER mRadIntegrals_param[N_MRADITEGRALS_PARAMS] = {
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&mRadIntegrals_example.factor), NULL, 1.0, 0, "factor"},
 } ;  
 
+MRFDF mrfdf_example;
+/* names for multipole rf deflector parameters */
+PARAMETER mrfdf_param[N_MRFDF_PARAMS] = {
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.factor), NULL, 1.0, 0, "A factor to multiple all components with."},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"A1", "V/m", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[0]), NULL, 0.0, 0, "Vertically-deflecting dipole"},
+    {"A2", "V/m$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[1]), NULL, 0.0, 0, "Skew quadrupole"},
+    {"A3", "V/m$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[2]), NULL, 0.0, 0, "Skew sextupole"},
+    {"A4", "V/m$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[3]), NULL, 0.0, 0, "Skew octupole"},
+    {"A5", "V/m$a5$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[4]), NULL, 0.0, 0, "Skew decapole"},
+    {"B1", "V/m", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.b[0]), NULL, 0.0, 0, "Horizontally-deflecting dipole"},
+    {"B2", "V/m$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.b[1]), NULL, 0.0, 0, "Normal quadrupole"},
+    {"B3", "V/m$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.b[2]), NULL, 0.0, 0, "Normal sextupole"},
+    {"B4", "V/m$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.b[3]), NULL, 0.0, 0, "Normal octupole"},
+    {"B5", "V/m$a5$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.b[4]), NULL, 0.0, 0, "Normal decapole"},
+    {"FREQUENCY1", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.frequency[0]), NULL, DEFAULT_FREQUENCY, 0, "Dipole frequency"},
+    {"FREQUENCY2", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.frequency[1]), NULL, DEFAULT_FREQUENCY, 0, "Quadrupole frequency"},
+    {"FREQUENCY3", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.frequency[2]), NULL, DEFAULT_FREQUENCY, 0, "Sextupole frequency"},
+    {"FREQUENCY4", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.frequency[3]), NULL, DEFAULT_FREQUENCY, 0, "Octupole frequency"},
+    {"FREQUENCY5", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.frequency[4]), NULL, DEFAULT_FREQUENCY, 0, "Decapole frequency"},
+    {"PHASE1", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[0]), NULL, 0.0, 0, "Dipole phase"},
+    {"PHASE2", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[1]), NULL, 0.0, 0, "Quadrupole phase"},
+    {"PHASE3", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[2]), NULL, 0.0, 0, "Sextupole phase"},
+    {"PHASE4", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[3]), NULL, 0.0, 0, "Octupole phase"},
+    {"PHASE5", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.phase[4]), NULL, 0.0, 0, "Decapole phase"},
+    {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&mrfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    } ;
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2488,6 +2517,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                           sizeof(KOCT),    koct_param    },
     {N_MRADITEGRALS_PARAMS, 0, sizeof(MRADINTEGRALS), mRadIntegrals_param },
     { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
+    { N_MRFDF_PARAMS,  MAT_LEN_NCAT|HAS_RF_MATRIX|MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
 } ;
 
 void compute_offsets()
