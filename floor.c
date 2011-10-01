@@ -66,7 +66,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              double *theta, double *phi, double *psi, double *s,
                              ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
                              SDDS_DATASET *SDDS_floor, long row_index);
-void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W);
+void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W, char *name);
 double nearbyAngle(double angle, double reference);
 
 void setupSurveyAngleMatrix(MATRIX *W0, double theta0, double phi0, double psi0) 
@@ -420,7 +420,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     m_mult(tempV, W0, R);
     m_add(V1, tempV, V0);
     m_mult(W1, W0, S);
-    computeSurveyAngles(theta, phi, psi, W1);
+    computeSurveyAngles(theta, phi, psi, W1, elem->name);
     if ((is_bend || is_magnet) && magnet_centers) {
       for (i=0; i<3; i++)
 	coord[i] = V0->a[i][0] + (V1->a[i][0] - V0->a[i][0])/2;
@@ -604,6 +604,15 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
 double nearbyAngle(double angle, double reference)
 {
   double minDiff, bestAngle, diff;
+  return angle;
+
+  if ((diff = reference-angle)>0)
+    return angle + PIx2*((long)(diff/PIx2+0.5));
+  else
+    return angle + PIx2*((long)(diff/PIx2-0.5));
+
+  /*
+
   bestAngle = angle;
   minDiff = fabs(reference-angle);
 
@@ -621,21 +630,48 @@ double nearbyAngle(double angle, double reference)
     bestAngle = angle;
   }
   return bestAngle;
+  */
 }
 
-void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W)
+void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W, char *name)
 {
   double arg;
-  
+  double Wc[3][3];
+  long iw, jw;
+
   arg = sqrt( sqr(W->a[1][0]) + sqr(W->a[1][1]));  /* |cos(phi)| */
   arg = SIGN(cos(*phi))*arg;
-  *phi = nearbyAngle(atan2(W->a[1][2], arg), *phi);
-  if (fabs(arg)>1e-15) {
+  *phi = atan2(W->a[1][2], arg);
+  if (fabs(arg)>1e-20) {
     *theta = nearbyAngle(atan2(W->a[0][2], W->a[2][2]), *theta);
     *psi   = nearbyAngle(atan2(W->a[1][0], W->a[1][1]), *psi);
   }
   else {
     *psi = nearbyAngle(atan2(-W->a[0][1], W->a[0][0])-*theta, *psi);
   }
+
+#ifdef DEBUG
+  Wc[0][0] = cos(*psi)*cos(*theta) - sin(*phi)*sin(*psi)*sin(*theta);
+  Wc[0][1] = -sin(*phi)*cos(*psi)*sin(*theta) - sin(*psi)*cos(*theta);
+  Wc[0][2] = cos(*phi)*sin(*theta);
+  Wc[1][0] = cos(*phi)*sin(*psi);
+  Wc[1][1] = cos(*phi)*cos(*psi);
+  Wc[1][2] = sin(*phi);
+  Wc[2][0] = -cos(*psi)*sin(*theta)-sin(*phi)*sin(*psi)*cos(*theta);
+  Wc[2][1] = sin(*psi)*sin(*theta)-sin(*phi)*cos(*psi)*cos(*theta);
+  Wc[2][2] = cos(*phi)*cos(*theta);
   
+  printf("%s: theta=%13.6e, phi=%13.6e, psi=%13.6e\n", name, *theta, *phi, *psi);
+  for (iw=0; iw<3; iw++) {
+    for (jw=0; jw<3; jw++) {
+      printf("%13.6e ", W->a[iw][jw]);
+    }
+    printf(" * ");
+    for (jw=0; jw<3; jw++) {
+      printf("%13.6e ", W->a[iw][jw] - Wc[iw][jw]);
+    }
+    printf("\n");
+  }
+#endif
+
 }
