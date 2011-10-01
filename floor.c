@@ -18,6 +18,7 @@
 
 static SDDS_TABLE SDDS_floor;
 
+
 #define IC_S 0
 #define IC_X 1
 #define IC_Y 2
@@ -28,7 +29,12 @@ static SDDS_TABLE SDDS_floor;
 #define IC_ELEMENT 7
 #define IC_OCCURENCE 8
 #define IC_TYPE 9
+#ifdef INCLUDE_WIJ 
+#define IC_W11 10
+#define N_COLUMNS 19
+#else
 #define N_COLUMNS 10
+#endif
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
     {"X", "&column name=X, units=m, type=double, description=\"Transverse survey coordinate\" &end"},
@@ -41,6 +47,17 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"ElementOccurence", 
          "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
     {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+#ifdef INCLUDE_WIJ 
+    {"W11", "&column name=W11 type=double &end\n"},
+    {"W12", "&column name=W12 type=double &end\n"},
+    {"W13", "&column name=W13 type=double &end\n"},
+    {"W21", "&column name=W21 type=double &end\n"},
+    {"W22", "&column name=W22 type=double &end\n"},
+    {"W23", "&column name=W23 type=double &end\n"},
+    {"W31", "&column name=W31 type=double &end\n"},
+    {"W32", "&column name=W32 type=double &end\n"},
+    {"W33", "&column name=W33 type=double &end\n"},
+#endif
 } ;
 
 #include "floor.h"
@@ -92,7 +109,10 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   MATRIX *V0, *V1;
   MATRIX *W0, *W1;
   double theta, phi, psi, s;
-  
+#ifdef INCLUDE_WIJ
+  long iw, jw;
+#endif
+
   log_entry("output_floor_coordinates");
 
   /* process namelist input */
@@ -146,17 +166,6 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  row_index = 0;
-  if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                         IC_S, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
-                         IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
-                         IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
-    SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-  
-  elem = &(beamline->elem);
-
   m_alloc(&V0, 3, 1);
   m_alloc(&V1, 3, 1);
   V0->a[0][0] = X0;
@@ -168,6 +177,28 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   setupSurveyAngleMatrix(W0, theta=theta0, phi=phi0, psi=psi0);
 
   s = 0;
+
+  row_index = 0;
+  if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+                         IC_S, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
+                         IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
+                         IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
+    SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+#ifdef INCLUDE_WIJ
+  for (iw=0; iw<3; iw++) 
+    for (jw=0; jw<3; jw++) 
+      if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+			     IC_W11+iw*3+jw, W0->a[iw][jw], -1)) {
+	SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0a)");
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+#endif
+  row_index++;
+
+  elem = &(beamline->elem);
+
   while (elem) {
     if (elem->type==T_STRAY) {
       STRAY *stray;
@@ -213,6 +244,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
   double theta0, phi0, psi0, tilt;
+#ifdef INCLUDE_WIJ
+  long iw, jw;
+#endif
   
   if (!matricesAllocated) {
     m_alloc(&temp33, 3, 3);
@@ -327,7 +361,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 	m_mult(tempV, W0, R);
 	m_add(V1, tempV, V0);
 	sprintf(label, "%s-VP", elem->name);
-	if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
+	if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
 			       IC_S, *s+R->a[2][0],
 			       IC_X, V1->a[0][0], IC_Y, V1->a[1][0], IC_Z, V1->a[2][0], 
 			       IC_THETA, *theta, IC_PHI, *phi, IC_PSI, *psi,
@@ -335,6 +369,16 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 	  SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	}
+#ifdef INCLUDE_WIJ
+	for (iw=0; iw<3; iw++) 
+	  for (jw=0; jw<3; jw++) 
+	    if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+				   IC_W11+iw*3+jw, W1->a[iw][jw], -1)) {
+	      SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1a)");
+	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	    }
+#endif
+	row_index++;
       }
       if (angle && !isnan(rho)) {
         if (!is_mirror) {
@@ -410,7 +454,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   }
   if (SDDS_floor &&
       (!vertices_only || (!last_elem || elem==last_elem))) {
-    if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
+    if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                            IC_S, *s, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
                            IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
                            IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
@@ -418,6 +462,16 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
+#ifdef INCLUDE_WIJ
+    for (iw=0; iw<3; iw++) 
+      for (jw=0; jw<3; jw++) 
+	if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+			       IC_W11+iw*3+jw, W1->a[iw][jw], -1)) {
+	  SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2a)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+#endif
+    row_index++;
   }
   *s += length/2;
   return row_index;
