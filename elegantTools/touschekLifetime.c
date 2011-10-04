@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  2011/08/17 21:27:41  borland
+ * Trim spaces on element names from the aperture, since they may be padded
+ * if parallel version was used.
+ *
  * Revision 1.10  2010/05/06 20:12:52  xiaoam
  * Fix a round off error.
  *
@@ -67,10 +71,10 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
  [-deltaLimit=<percent>]\n\
- {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
+ {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]\n\
  [-ignoreMismatch]\n\
-Program by A. Xiao.  (This is version 3, M. Borland)";
+Program by A. Xiao.  (This is version 4, October 2011, M. Borland)";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -122,6 +126,8 @@ char **eName1, **eName2, **eType1;
 long ignoreMismatch = 0;
 #define NDIV 10000;
 
+#define RF_LIMIT_APERTURE 0x01UL
+
 int main( int argc, char **argv)
 {
   SCANNED_ARG *scanned;
@@ -130,7 +136,7 @@ int main( int argc, char **argv)
   long verbosity;
   double etaymin, etaymax;
   long i;
-  unsigned long dummyFlags;
+  unsigned long rfFlags;
   double emitxInput, sigmaDeltaInput, rfVoltage, rfHarmonic;
   double alphac, U0, circumference, EMeV;
   double coupling, emitx0, charge;
@@ -157,6 +163,7 @@ int main( int argc, char **argv)
   emitxInput = 0;
   sigmaDeltaInput = 0;
   rfVoltage = rfHarmonic = 0;
+  rfFlags = 0;
   
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
@@ -204,9 +211,10 @@ int main( int argc, char **argv)
         if (scanned[i].n_items<2)
           bomb("invalid -rf syntax", NULL);
         scanned[i].n_items--;
-        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
+        if (!scanItemList(&rfFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "voltage", SDDS_DOUBLE, &rfVoltage, 1, 0,
                           "harmonic", SDDS_DOUBLE, &rfHarmonic, 1, 0,
+                          "limit", -1, NULL, 0, RF_LIMIT_APERTURE, 
                           NULL) ||
             rfVoltage<=0 || rfHarmonic<=0)
           bomb("invalid -rf syntax/values", "-rf=voltage=MV,harmonic=<value>");
@@ -411,6 +419,14 @@ int main( int argc, char **argv)
     sz = 
       circumference*sigmap*
         sqrt(alphac*EMeV/(PIx2*rfHarmonic*sqrt(sqr(rfVoltage)-sqr(U0))));
+    if (rfFlags&RF_LIMIT_APERTURE) {
+      double q, rfLimit = 0;
+      q = rfVoltage/U0;
+      if (q<1 || (rfLimit = sqrt(2*U0/(PI*alphac*rfHarmonic*EMeV)*(sqrt(q*q-1)-acos(1/q))))==0)
+        SDDS_Bomb("rf voltage too low compared to energy loss per turn");
+      if (deltaLimit==0 || rfLimit<deltaLimit)
+        deltaLimit = rfLimit;
+    }
   }
 
   betax = SDDS_GetColumnInDoubles(&twissPage, "betax");
