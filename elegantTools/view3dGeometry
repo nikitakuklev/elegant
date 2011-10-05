@@ -420,10 +420,22 @@ proc main {} {
 }
 
 proc element_par {element parameter} {
-    return [exec \
-                sddsprocess $::par -pipe=out -match=col,ElementName=$element -match=col,ElementParameter=$parameter | \
-		sddsprocess -pipe -clip=1,0,invert | \
-                sdds2stream -pipe=in -col=ParameterValue]
+    if [catch {exec \
+                 sddsprocess $::par -pipe=out -match=col,ElementName=$element -match=col,ElementParameter=$parameter | \
+                 sddsprocess -pipe -clip=1,0,invert | \
+                 sdds2stream -pipe=in -col=ParameterValue} result] {
+        if [string match "*-C" $element] {
+            regexp (.*)-C $element matched part1 part2
+            if [catch {exec \
+                         sddsprocess $::par -pipe=out -match=col,ElementName=$part1 -match=col,ElementParameter=$parameter | \
+                         sddsprocess -pipe -clip=1,0,invert | \
+                         sdds2stream -pipe=in -col=ParameterValue} result] {
+                return -code error "No parameter data found for element $element or $part1"
+            }
+            return $result
+        }
+    }
+    return $result
 }
 
 proc get_bounding_box {} {
