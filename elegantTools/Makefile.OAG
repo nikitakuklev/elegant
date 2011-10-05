@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.27 2011-06-21 20:17:31 borland Exp $
+# $Id: Makefile.OAG,v 1.28 2011-10-05 16:02:00 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.27  2011/06/21 20:17:31  borland
+# Added scaleRingErrors.
+#
 # Revision 1.26  2011/06/10 18:26:49  borland
 # Added coreEmittance script.
 #
@@ -115,7 +118,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime csrImpedance astra2elegant rfgun2elegant
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry
 
 PROD_HOST = $(PRODOAG)
 
