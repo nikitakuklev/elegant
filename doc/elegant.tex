@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 24.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 24.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,109 +32,51 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 24.1}
+\section{Highlights of What's New in Version 24.2}
 
-Here is a summary of what's changed since release 24.0:
+Here is a summary of what's changed since release 24.1:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A bug was fixed in \verb|RFCA| and \verb|RFCW| elements related to edge focusing with \verb|N_KICKS|$>$1.  In addition, \verb|N_KICKS| now defaults
-  to 0, since this gives better results in most cases.  This was reported by M. Cornacchia (SLAC).
-\item A bug was fixed in the matrix for the {\tt RFDF} element.  It didn't reflect the setting of the \verb|STANDING_WAVE| parameter, but behaved as if
-  \verb|STANDING_WAVE=1|.   This would only affect twiss parameter calculations, matrix output, etc., and not tracking.
-\item A bug was fixed for the \verb|CSRCSBEND| element, which affected the $x^\prime$ coordinate in the \\ \verb|PARTICLE_OUTPUT_FILE|.
-  Instead of $x^\prime$, the code was providing $q_x = x^\prime (1 + x/\rho)$.  This would not affect any other results.
-\item A memory leak was fixed for the \verb|KQUSE| element that would affect long-running simulations.  This was reported by V. Sajaev (ANL).
-\item Synchrotron radiation is now turned off for multipoles less than 1$\mu$m long, to avoid ridiculous results.  This is not really a bug.
-\item \verb|WATCH| elements were providing incorrect charge information when particles were lost.  This has been fixed. (Y. Wang, ANL.)
+\item None
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed in the \verb|momentum_aperture| command that gave invalid momentum aperture determination for lattices with
-  acceleration or deceleration.  This was reported by N. Nakamura (KEK). A related bug was fixed in the \verb|touscheck_scatter| command,
-  to allow  fiducialization prior to tracking.  Neither bug would affect storage ring tracking.
-\item The \verb|semaphores| command had an issue with the \verb|start| file.  In particular, in multi-step runs, the start file would
-  be repeatedly created.  This was fixed.
-\item A bug was fixed that affected parameter loading when one \verb|load_parameters| statement was in ``changed-defined-values'' mode and
-  the other was not.
+\item Fixed bug that caused \verb|floor_coordinates| command to sometimes give incorrect values for the survey angles $\psi$ and $\phi$. 
+  This was reported by A. Petrenko (BINP).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|GFWIGGLER| element was added, which allows simulation of wigglers and undulators using the generating-function
-  method of J. Bahrdt and G. W\"{u}stefeld. This was implemented by A. Xiao.
-\item The \verb|SCMULT| element (space-charge kicks) now supports distributions that are transversely gaussian and
-  uniform longitudinally.  This was requested by R. Kishek (University of Maryland)
-  and implemented by A. Xiao (ANL).
-\item The \verb|KQUAD| element now supports symplectic fringe fields using the method of Irwin and Wang {\em et al.}.  This was
-  implemented by C. Wang and M. Borland (ANL).
-\item Sextupoles (\verb|SEXT|) now include a third-order matrix treatment of fringe fields.
-\item Octupoles have been added.  The \verb|OCTU| and \verb|KOCTU| elements are the matrix and kick implementations, respectively.
-\item The \verb|RIMULT| element was added.  It allows MULTiplying the Radiation Integrals by a specified factor, which allows computing
-  the emittances etc. for a ring with many different sector types without simulating the entire ring.
-\item The \verb|CENTER| element now has the ability to operate on the $s$, $t$, and $\delta$ coordinates.
-\item The \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements now have two parameters, \verb|WAKE_START| and \verb|WAKE_END|, that allow
-  specifying when to start and stop providing output of the computed wakes.  This was suggested by Y. Chae (ANL).
-\item The \verb|CWIGGLER| element will now accept up to 1000 harmonics.
-\item The default mode for \verb|LSRMDLTR| was changed from ``ideal'' to ``leading terms.''  The former does not include vertical focusing,
-  which is physically not correct.  The default pole-strength factors were refined.
-\item The \verb|SCRIPT| element has two new flags, \verb|USE_PARTICLE_ID| and \verb|NO_NEW_PARTICLES|, which improve particle accounting, particularly
-  when particles are lost in the script element.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|optimization_setup| command now has a parameter \verb|restart_random_numbers| that allows specifying that random number generators
-  will be reinitialized for each function evaluation.
-\item The \verb|sigma| and \verb|final| output files now include the bunch duration and other quantities related to the time coordinate $t$.
-  This is in addition to quantities related to the distance-traveled coordinate $s$, which existed in all previous versions.  In cases where
-  statistical quantities are numbered (e.g., \verb|s56| is $\langle s \delta\rangle$), those related to the time coordinate have the number ``7,''
-  e.g., \verb|s57| is $\langle t \delta \rangle$.
-\item Orbit correction can now be disabled using \verb|disable| parameter, rather than commenting out the command.
-\item The \verb|touschek_scatter| command now includes automatic detection of whether occurence indexing is requested for
-  output files.  If not, then data is placed on multiple pages rather than being overwritten.  Also added option to skip calculations if
-  occurence-index files are already present.  The default is now to ignore the \verb|i_start| and \verb|i_end| parameters (default values of $-1$).
-  There is now the option to ignore the element names and just look at the element positions when interpreting input data.
+\item None
 \end{itemize}
 
 \subsection{Other Changes}
 \begin{itemize}
-\item {\tt elegant} can now accept commands on a pipe, using the \verb|-pipe| option.  This allows the program to be used as a subprocess
-  of another program that needs repeated computations of, for example, twiss parameters.  This is in response to a request from M. Joyce (TJNAF).
+\item None
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 These changes are by Y. Wang (ANL), unless otherwise noted.
 \begin{itemize}
-\item The \verb|FTABLE| element (3d field table) is now parallel capable.
-\item Aperture determination using the line-search method can now use a much larger number of cores.   Before, the number of cores was
-  limited to the number of steps along the line.  Now, it is limited to the number of lines times the number of steps. (M. Borland, ANL.)
-\item The \verb|SCRIPT| element is now parallel-compatible.  However, the script does not use parallel resources. 
-\item A bug was fixed for the parallel version that caused a crash when \verb|PFILTER| was used with \verb|DELTA_LIMIT| greater than zero.
-  This was reported by J. Frederico (SLAC). 
-\item Several improvements were made for parallel optimization:
-  The population log output now includes statistical information on the optimization function values. 
-  The population size will be set to the number of processors if the user sets the population size too small. 
-  For swarm optimization, the initial points are spread within the whole space, instead of a local
-  neighbourhood, for global optimization. 
-\item Implemented a new function for calculating the sparsely-populated histograms efficiently, which allowed parallelizing the
-  \verb|RFMODE| element.
-  
+\item None
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A bug was fixed in the \verb|ibsEmittance| program related to implementation of coupling.  It should only make small differences in the
-  results.  This was discovered with the assistance of K. Bane and M. Wang (SLAC), and fixed by A. Xiao (ANL).
-\item The script {\tt coreEmittance}, by X. Dong (ANL), was added.  It computes the slice emittance for various fractions of the beam.
-\item The scripts {\tt mars2elegant} and {\tt elegant2mars}, by H. Shang and J. Dooling, where added. They allow conversion of particle
-  data between formats used by {\tt elegant} and MARS.
-\item {\tt sddsmatchtwiss} now has the ability to save and reuse the transformation matrix.  This was requested by Y. Ding (SLAC) and
-  implemented by H. Shang (ANL).
+\item {\tt touschekLifetime:} Added ability to limit momentum aperture using the supplied rf voltage and harmonic number, following a 
+  discussion with R. Bosch (SRC).
+\item {\tt view3dGeometry:} This is a new script, which is a slight adaptation of scripts posted on the forum by A. Petrenko.
+  It allows viewing a beamline geometry in 3D using the freeWRL viewer.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -159,7 +101,7 @@ These changes are by Y. Wang (ANL), unless otherwise noted.
 \section{Credits}
 
 Contributors to {\tt elegant} include M. Borland, W. Guo, R. Soliday, V. Sajaev, C. Wang, Y. Wang, Y. Wu, and A. Xiao.
-Contributors to related programs include M. Borland, R. Dejus, L. Emery, H. Shang, Y. Wang, and
+Contributors to related programs include M. Borland, R. Dejus, L. Emery, A. Petrenko, H. Shang, Y. Wang, and
 A. Xiao.
 R. Soliday is responsible for multi-platform builds and distribution.
 Of course, we also appreciate the many suggestions, comments, and bug reports from users.
@@ -4568,6 +4510,7 @@ given with no arguments.
   This gives a profile of the beamline that can be plotted with other data.
 \item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
   matrices for skew quadrupoles and to perform coupling correction using those matrices.
+\item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice.
 \end{itemize}
 
 \begin{latexonly}
@@ -5674,6 +5617,7 @@ the beam will vary step-wise from slice to slice.  This discontinuous variation 
 \item {\bf see also:} {\tt doubleDist6}
 \end{itemize}
 
+
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|touschekLifetime|}\end{center}
@@ -5695,7 +5639,7 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 touschekLifetime {\em outputFile}
  -twiss=<twissFile> -aperture=<momentumApertureFile>
  {-charge=<nC>|-particles=<value>} -coupling=<value>
- {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>} 
+ {-RF=Voltage=<MV>,harmonic=<value>[,limit] | -length=<mm>} 
  [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]
  [-ignoreMismatch] [-deltaLimit=<value>]
 }\end{flushleft}
@@ -5717,7 +5661,9 @@ yield incorrect results.
  number of electrons.
 \item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.  This is
  used to compute the horizontal and vertical emittance from the natural emittance.
-\item {\tt -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
+\item {\tt -RF=Voltage={\em MV},harmonic={\em value}[,limit]} --- Specify rf voltage and harmonic number.
+ The {\tt limit} qualifier, if given means that the momentum acceptance is limited by the bucket
+ half-height.
  N.B.: If the data files cover only a portion of the ring, using this option will give incorrect results!
 \item {\tt -length={\em mm}} --- Specify the rms bunch length.  This is an alternative to giving rf parameters.
 \item {\tt -emitxInput} --- Give the initial x emittance in meters.  If not specified,
@@ -5728,10 +5674,60 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
 \item {\tt -ignoreMismatch} --- If given, then mismatch of element names between the twiss and momentum
   aperture files is ignored.  May be useful if there are zero-length elements.
 \item {\tt -deltaLimit} --- Give the maximum value for the momentum aperture.  If not specified,
-  the values in the momentum aperture input file are used unaltered.
+  the values in the momentum aperture input file are used, possibly altered by the use of the
+  {\tt -RF} option with the {\tt limit} qualifier.  If both {\tt -deltaLimit} and {\tt -RF=limit...} are
+  given, the smaller is enforced.
 \end{itemize}
 
 \item {\bf author:} A. Xiao, ANL/APS.
+
+\end{itemize}
+
+\begin{latexonly}
+
+\newpage
+\begin{center}{\Large\verb|view3dGeometry|}\end{center}
+\end{latexonly}
+\subsection{view3dGeometry}
+
+\begin{itemize}
+
+\item {\bf description:} Allows viewing the 3D geometry of a beamline using the freewrl viewer.
+
+\item {\bf examples:}
+To generate 3d data and view:
+\begin{flushleft}{\tt
+view3dGeometry -rootname aps -showNames ``*QUAD* *BEN*'' -showCoordinates ``*MON*''
+}\end{flushleft}
+To view again:
+\begin{flushleft}{\tt
+freewrl aps.x3d
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt 
+view3dGeometry -rootname {\em string} -showNames {\em listOfElementTypes} -showCoordinates {\em listOfElementTypes}
+}\end{flushleft}
+
+\item {\bf input files:}
+  \begin{itemize}
+  \item {\em rootname}.flr --- Contains floor coordinate output from {\tt elegant} (\verb|floor_coodinates| command).
+  \item {\em rootname}.param --- Contains parameter output from {\tt elegant} (\verb|run_setup| command).
+  \end{itemize}
+
+\item {\bf output files:}
+{\em rootname}.x3d --- Input data to freewrl.
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -rootname} --- Gives the rootname of the run, used to identify the input and output files.
+\item {\tt -showNames} --- Gives list of element types, with optional wildcards, for which the element name will be shown 
+  in the viewer.  Default: ``*SBEN*''.
+\item {\tt -showCoordinates} --- Gives list of element types, with optional wildcards, for which the local coordinate system will be
+  shown in the viewer.  Default: ``MARK* WATCH*''.
+\end{itemize}
+
+\item {\bf author:} A. Petrenko, BINP.
 
 \end{itemize}
 
