@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2011/10/04 21:18:45  borland
+ * Added limit qualifier to -rf option, so that rf specifications will
+ * limit the momentum acceptance.  Suggested by exchange with R. Bosch.
+ *
  * Revision 1.11  2011/08/17 21:27:41  borland
  * Trim spaces on element names from the aperture, since they may be padded
  * if parallel version was used.
@@ -69,10 +73,10 @@
 
 static char *USAGE = "touschekLifetime <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
- {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
+ {-charge=<nC>|-particles=<number>} -coupling=<value>\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
- [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]\n\
+ [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
  [-ignoreMismatch]\n\
 Program by A. Xiao.  (This is version 4, October 2011, M. Borland)";
 
@@ -82,13 +86,14 @@ Program by A. Xiao.  (This is version 4, October 2011, M. Borland)";
 #define COUPLING 3
 #define RF 4
 #define LENGTH 5
-#define EMITXINPUT 6
+#define EMITINPUT 6
 #define DELTAINPUT 7
 #define TWISSFILE 8
 #define APERFILE 9
 #define DELTALIMIT 10
 #define IGNORE_MISMATCH 11
-#define N_OPTIONS 12
+#define EMITXINPUT 12
+#define N_OPTIONS 13
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -97,12 +102,13 @@ char *option[N_OPTIONS] = {
   "coupling",
   "rf",
   "length",
-  "emitxinput",
+  "emitinput",
   "deltainput",
   "twiss",
   "aperture",
   "deltalimit",
   "ignoreMismatch",
+  "emitxinput"
 };
 
 void TouschekLifeCalc();  
@@ -137,7 +143,7 @@ int main( int argc, char **argv)
   double etaymin, etaymax;
   long i;
   unsigned long rfFlags;
-  double emitxInput, sigmaDeltaInput, rfVoltage, rfHarmonic;
+  double emitInput, sigmaDeltaInput, rfVoltage, rfHarmonic;
   double alphac, U0, circumference, EMeV;
   double coupling, emitx0, charge;
   short has_ex0 = 0, has_Sdelta0 = 0;
@@ -160,7 +166,7 @@ int main( int argc, char **argv)
   charge = 0;
   coupling = 0;
   sz = 0;
-  emitxInput = 0;
+  emitInput = 0;
   sigmaDeltaInput = 0;
   rfVoltage = rfHarmonic = 0;
   rfFlags = 0;
@@ -181,10 +187,11 @@ int main( int argc, char **argv)
           bomb("invalid -charge syntax/values", "-charge=<nC>");
         get_double(&charge, scanned[i].list[1]);
         break;
+      case EMITINPUT:
       case EMITXINPUT:
         if (scanned[i].n_items != 2 ) 
-          bomb("invalid -exitxInput syntax/values", "-emitxInput=<value>");        
-        get_double(&emitxInput, scanned[i].list[1]);
+          bomb("invalid -emitInput syntax/values", "-emitInput=<value>");        
+        get_double(&emitInput, scanned[i].list[1]);
         break;
       case DELTAINPUT:
         if (scanned[i].n_items != 2 ) 
@@ -393,8 +400,8 @@ int main( int argc, char **argv)
   s2 = SDDS_GetColumnInDoubles(&aperPage, "s");
   if(elements<elem2)
     fprintf(stdout, "warning: Twiss file is shorter than Aperture file\n");
-  if (emitxInput) {
-    emitx = emitxInput/(1+coupling);
+  if (emitInput) {
+    emitx = emitInput/(1+coupling);
   } else {
     if (!SDDS_GetParameters(&twissPage, "ex0", &emitx0, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
