@@ -160,6 +160,11 @@ LAPACK = 0
 ifeq ($(OS_CLASS),Linux)
 LAPACK = 1
 endif
+#Use LAPACK on OSX by default.
+#This is available from the Accelerate framework
+ifeq ($(OS_CLASS),Darwin)
+LAPACK = 1
+endif
 
 CLAPACK = 0
 #Use CLAPACK on WIN32 by default.
