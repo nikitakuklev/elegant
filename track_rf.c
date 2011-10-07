@@ -121,6 +121,8 @@ void track_through_rf_deflector(
   k = omega/c_mks;
 
   if (isSlave || !notSinglePart) {
+    if (rf_param->dx || rf_param->dy || rf_param->dz)
+      offsetBeamCoordinates(initial, n_particles, rf_param->dx, rf_param->dy, rf_param->dz);
     if (rf_param->tilt)
       rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
     for (ip=0; ip<n_particles; ip++) {
@@ -180,7 +182,9 @@ void track_through_rf_deflector(
 #endif
     }
     if (rf_param->tilt)
-      rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
+      rotateBeamCoordinates(final, n_particles, -rf_param->tilt);
+    if (rf_param->dx || rf_param->dy || rf_param->dz)
+      offsetBeamCoordinates(final, n_particles, -rf_param->dx, -rf_param->dy, -rf_param->dz);
   }
   
 }

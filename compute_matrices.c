@@ -2130,6 +2130,11 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     Mt->C[4] += rfdf->length/2;
     null_matrices(Mt, EXCLUDE_R+EXCLUDE_C);
     Mt->order = 1;
+
+    if (rfdf->tilt)
+      tilt_matrices(Mt, rfdf->tilt);
+    if (rfdf->dx || rfdf->dy || rfdf->dz)
+      misalign_matrix(Mt, rfdf->dx, rfdf->dy, rfdf->dz, 0.0);
     return(Mt);
   }
 

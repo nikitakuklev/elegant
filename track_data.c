@@ -567,6 +567,9 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"START_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.startPass), NULL, 0.0, -1, "If non-negative, pass on which to start modeling cavity."},    
     {"END_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.endPass), NULL, 0.0, -1, "If non-negative, pass on which to end modeling cavity."},
     {"DRIFT_MATRIX", "", IS_LONG, 0, (long)((char *)&rfdf_example.driftMatrix), NULL, 0.0, 0, "If non-zero, calculations involving matrices assume this element is a drift space."},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dz), NULL, 0.0, 0, "misalignment"},
     } ;
 
 RFTM110 rftm110_example;
