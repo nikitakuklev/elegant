@@ -73,8 +73,9 @@ These changes are by Y. Wang (ANL), unless otherwise noted.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item {\tt touschekLifetime:} Added ability to limit momentum aperture using the supplied rf voltage and harmonic number, following a 
-  discussion with R. Bosch (SRC).
+\item {\tt touschekLifetime:} Added ability to limit momentum aperture using the supplied rf voltage and harmonic number.  Also,
+  removed the confusing {\tt emitxInput} option and generally improved documentation.  These deficiencies were pointed out
+  by R. Bosch (SRC).
 \item {\tt view3dGeometry:} This is a new script, which is a slight adaptation of scripts posted on the forum by A. Petrenko.
   It allows viewing a beamline geometry in 3D using the freeWRL viewer.
 \end{itemize}
@@ -4758,7 +4759,7 @@ ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=129
 \begin{flushleft}{\tt 
 ibsEmittance {\em twissFile} {\em resultsFile}
  {-charge=<nC>|-particles=<value>} -coupling=<value>
- [-emitxInput=<value>] [-deltaInput=<value>] 
+ [-emitInput=<value>] [-deltaInput=<value>] 
  [-superperiods=<value>] [-isRing=1|0]
  \{-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>\}
  [-energy=<MeV>] 
@@ -4775,7 +4776,7 @@ ibsEmittance {\em twissFile} {\em resultsFile}
 \item {\bf -charge}, {\bf -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
 \item {\bf -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
-\item {\bf -emitxInput} --- Give the initial x emittance in meters.  If not specified,
+\item {\bf -emitInput} --- Give the initial total emittance in meters.  If not specified,
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\bf -deltaInput} --- Give the initial rms fractional momentum spread.  If not
 specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
@@ -5637,11 +5638,11 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 touschekLifetime {\em outputFile}
- -twiss=<twissFile> -aperture=<momentumApertureFile>
- {-charge=<nC>|-particles=<value>} -coupling=<value>
- {-RF=Voltage=<MV>,harmonic=<value>[,limit] | -length=<mm>} 
- [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]
- [-ignoreMismatch] [-deltaLimit=<value>]
+ -twiss={\em twissFile} -aperture={\em momentumApertureFile}
+ {-charge={\em nC}|-particles={\em value}} -coupling={\em value}
+ {-RF=Voltage={\em MV},harmonic={\em value}[,limit] | -length={\em mm}} 
+ [-emitInput={\em valueInMeters}] [-deltaInput={\em value}] [-verbosity={\em value}]
+ [-ignoreMismatch] [-deltaLimit={\em valueInPercent}]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -5666,14 +5667,14 @@ yield incorrect results.
  half-height.
  N.B.: If the data files cover only a portion of the ring, using this option will give incorrect results!
 \item {\tt -length={\em mm}} --- Specify the rms bunch length.  This is an alternative to giving rf parameters.
-\item {\tt -emitxInput} --- Give the initial x emittance in meters.  If not specified,
+\item {\tt -emitInput} --- Give the initial total emittance in meters.  If not specified,
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
 specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
 \item {\tt -verbosity} --- If nonzero, program execution information is printed to the standard output.
 \item {\tt -ignoreMismatch} --- If given, then mismatch of element names between the twiss and momentum
   aperture files is ignored.  May be useful if there are zero-length elements.
-\item {\tt -deltaLimit} --- Give the maximum value for the momentum aperture.  If not specified,
+\item {\tt -deltaLimit} --- Give the maximum value for the momentum aperture, in percent.  If not specified,
   the values in the momentum aperture input file are used, possibly altered by the use of the
   {\tt -RF} option with the {\tt limit} qualifier.  If both {\tt -deltaLimit} and {\tt -RF=limit...} are
   given, the smaller is enforced.
