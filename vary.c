@@ -853,7 +853,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
               /* save value if this is the first from a group */
               perturb[i_elem] = delta;
             if (elem_perturb_flags[i_elem]&ANTIBIND_ERRORS)
-                delta = -delta;
+                perturb[i_elem] = -delta;
             }
         }
     if (fp_log) {
