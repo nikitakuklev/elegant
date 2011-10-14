@@ -488,7 +488,21 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                             command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS,
                             watch_parameter_mode_column, WATCH_CENTROID_MODE_COLUMNS,
-                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+                            caller, SDDS_EOS_NEWFILE);
+    if (!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE) ||
+	SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
+                             previousElementName?previousElementName:"_BEG_")<0) {
+      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    if (!SDDS_WriteLayout(SDDS_table)) {
+      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
     break;
   case WATCH_PARAMETERS:
     if (isMaster)
@@ -496,7 +510,21 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                             command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS, 
                             watch_parameter_mode_column, WATCH_PARAMETER_MODE_COLUMNS,
-                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+                            caller, SDDS_EOS_NEWFILE);
+    if (!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE) ||
+	SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
+                             previousElementName?previousElementName:"_BEG_")<0) {
+      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    if (!SDDS_WriteLayout(SDDS_table)) {
+      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
     break;
   case WATCH_FFT:
     if (isMaster) {
@@ -754,7 +782,7 @@ double tmp_safe_sqrt;
 
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, 
                            long particles, long original_particles,  double Po, 
-                           double revolutionLength)
+                           double revolutionLength, double z)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
@@ -1000,7 +1028,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-			      "Step", step, NULL)) {
+			      "Step", step, "s", z, NULL)) {
 	SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }

@@ -995,10 +995,10 @@ long do_tracking(
 		    case WATCH_CENTROIDS:
 #if SDDS_MPI_IO
 		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					    beamline->revolution_length);
+					    beamline->revolution_length, z);
 #else
 		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					    beamline->revolution_length);
+					    beamline->revolution_length, z);
 #endif
 		      break;
 		    case WATCH_FFT:
@@ -1843,10 +1843,10 @@ long do_tracking(
 		case WATCH_CENTROIDS:
 #if SDDS_MPI_IO
 		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					beamline->revolution_length);
+					beamline->revolution_length, z);
 #else
 		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					beamline->revolution_length);
+					beamline->revolution_length, z);
 #endif
 		  break;
 		case WATCH_FFT:
