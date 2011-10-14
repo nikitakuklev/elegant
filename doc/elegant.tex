@@ -2279,6 +2279,7 @@ number of the occurrence of the named element from which to start.
     STRING filename = NULL;
     STRING time_column = NULL;
     STRING amplitude_column = NULL;
+    long refresh_matrix = 0;
     long differential = 1;
     long multiplicative = 0;
     long start_occurence = 0;
@@ -2313,6 +2314,11 @@ is modulated.
 \item \verb|amplitude_column| --- Name of column in \verb|filename| giving amplitude data
   for the modulation.  Together, \verb|time_column| and \verb|amplitude_column| define
   a function $A(t)$.
+\item \verb|refresh_matrix| --- Frequently there is a matrix associated with an element even
+  if tracking through the element does not use the matrix.  In this case, {\tt elegant} doesn't
+  normally update the matrix for the element as it modulates the element, since that may involve
+  a significant time penalty.  If this parameter is set to a non-zero value, the matrix will
+  be updated.  For elements that use a matrix for tracking, the matrix is always updated.
 \item \verb|differential|, \verb|multiplicative| --- Determine how the amplitude function
   $A(t)$ is used to obtain the new value of the parameter.  There are four cases
   \begin{itemize}

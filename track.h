@@ -352,6 +352,7 @@ typedef struct {
 #define DIFFERENTIAL_MOD   0x01
 #define MULTIPLICATIVE_MOD 0x02
 #define VERBOSE_MOD        0x04
+#define REFRESH_MATRIX_MOD 0x08
     double *unperturbedValue;    /* value without modulation */
     char **expression;           /* rpn expression for A(t) */
     long *dataIndex;             /* used for sharing of data tables */

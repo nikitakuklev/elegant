@@ -113,7 +113,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
 
       modData->element[n_items] = context;
       modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
-        + (verbose?VERBOSE_MOD:0);
+        + (verbose?VERBOSE_MOD:0) + (refresh_matrix?REFRESH_MATRIX_MOD:0);
       modData->timeData[n_items] = modData->modulationData[n_items] = NULL;
       modData->expression[n_items] = NULL;
       modData->fpRecord[n_items] = NULL;
@@ -187,7 +187,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->fpRecord          = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
     
     modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
-      + (verbose?VERBOSE_MOD:0);
+      + (verbose?VERBOSE_MOD:0) + (refresh_matrix?REFRESH_MATRIX_MOD:0);
     modData->timeData[n_items] = modData->modulationData[n_items] = NULL;
     modData->expression[n_items] = NULL;
     modData->fpRecord[n_items] = NULL;
@@ -348,20 +348,22 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 
-        entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX) {
+        entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX &&
+        ((modData->flags[iMod]&REFRESH_MATRIX_MOD) || (entity_description[type].flags&MATRIX_TRACKING))) {
       /* update the matrix */
       if (modData->element[iMod]->matrix) {
         free_matrices(modData->element[iMod]->matrix);
         tfree(modData->element[iMod]->matrix);
         modData->element[iMod]->matrix = NULL;
-        compute_matrix(modData->element[iMod], run, NULL);
-        matricesUpdated ++;
       }
+      compute_matrix(modData->element[iMod], run, NULL);
+      matricesUpdated ++;
     }
   }
 
   return matricesUpdated;
 }
+
 
 
       
