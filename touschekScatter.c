@@ -704,6 +704,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
         }
+
 #if USE_MPI
 	if (isMaster)
 #endif
