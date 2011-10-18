@@ -307,7 +307,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 				initial, distribution, output, loss, bunch);
   if (occurenceSeen && noOccurenceSeen)
     bombElegant("Some output files have occurence field and some don't.  Use only one method.", NULL);
-
+  if (verbosity)
+    printf("Output filenames will%s have occurence index\n", occurenceSeen?"":" not");
+  
   iTotal = 0;  /* Suppress compiler warning */
   
   while (eptr) {
@@ -392,11 +394,17 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       if (output) {
         lossDis = chbook1("s", "m", 0, sTotal, sTotal);
       }
+#if USE_MPI
+      if (isMaster)
+#endif
       if (loss) {
-	if (occurenceSeen || iProcessing==1)
+	if (occurenceSeen || iProcessing==1) {
+          if (verbosity)
+            printf("Setting up loss file\n");
 	  SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
 				    "lost particle coordinates", run->runfile,
 				    run->lattice, "touschek_scatter");
+        }
       }
 #if USE_MPI
       if (isMaster)
