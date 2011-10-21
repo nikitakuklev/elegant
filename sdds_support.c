@@ -497,6 +497,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
+    if (isMaster)
     if (!SDDS_WriteLayout(SDDS_table)) {
       fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
@@ -519,6 +520,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
+    if (isMaster)
     if (!SDDS_WriteLayout(SDDS_table)) {
       fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
