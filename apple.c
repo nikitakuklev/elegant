@@ -404,9 +404,8 @@ void InitializeAPPLE(char *file, APPLE *apple)
   apple->S4 = sin(apple->phi4);
   BxAmp = sqrt(sqr(apple->C1 - apple->C2 + apple->C3 - apple->C4) + sqr(apple->S1 - apple->S2 + apple->S3 - apple->S4));
   ByAmp = sqrt(sqr(apple->C1 + apple->C2 + apple->C3 + apple->C4) + sqr(apple->S1 + apple->S2 + apple->S3 + apple->S4));
-  apple->BPeak[0] *= BxAmp;	
-  apple->BPeak[1] *= ByAmp;
-  
+  apple->BPeak[0] = fabs(apple->BPeak[0]*BxAmp);	
+  apple->BPeak[1] = fabs(apple->BPeak[1]*ByAmp);
   
   apple->initialized = 1;
   

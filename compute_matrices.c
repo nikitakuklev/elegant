@@ -794,7 +794,7 @@ VMATRIX *compute_matrix(
         break;
       case T_APPLE:
 	apple = (APPLE*)elem->p_elem;
-        InitializeAPPLE(apple, elem->name);
+        InitializeAPPLE(apple->Input, apple);
 	if (apple->BPeak[0]==0 && apple->BPeak[1]==0) {
 	  fprintf(stderr, "*** Warning: APPLE has zero field in both planes\n");
           elem->matrix = drift_matrix(apple->length, run->default_order);
