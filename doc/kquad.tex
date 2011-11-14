@@ -85,4 +85,5 @@ i_3^- = \int_{s_1}^{s_0} \tilde{k}(s) (s-s_0)^3 ds & & i_3^+ = \int_{s_0}^{s_2} 
 Normally, the effects are dominated by $i_1^-$ and $i_1^+$.  
 
 The \verb|EDGE1_EFFECTS| and \verb|EDGE2_EFFECTS| parameters can be used to turn fringe field effects on and off, but also
-to control the order of the implementation.  If the value is 1, linear fringe effects are included.
+to control the order of the implementation.  If the value is 1, linear fringe effects are included.  If the value is 2, 
+leading-order (cubic) nonlinear effects are included.  If the value is 3 or higher, higher order effects are included.
