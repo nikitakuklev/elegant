@@ -60,7 +60,7 @@ void quadFringe(double **coord, long np, double K1,
     
     a = inFringe*K1/(12*(1 + delta));
 
-    dx = dpx = dy = dpy = 0;
+    dx = dpx = dy = dpy = ds = 0;
     
     if (higherOrder>0) {
       if (higherOrder>1) {
