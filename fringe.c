@@ -62,7 +62,7 @@ void quadFringe(double **coord, long np, double K1,
 
     dx = dpx = dy = dpy = 0;
     
-    if (higherOrder) {
+    if (higherOrder>0) {
       if (higherOrder>1) {
         dx  = (a*x*(8*(ipow(x,2) + 3*ipow(y,2)) + 4*ipow(a,2)*(5*ipow(x,6) + 21*ipow(x,4)*ipow(y,2) 
 		  - 25*ipow(x,2)*ipow(y,4) - ipow(y,6)) + ipow(a,3)*(35*ipow(x,8) + 84*ipow(x,6)*ipow(y,2) 
