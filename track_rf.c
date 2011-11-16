@@ -161,7 +161,7 @@ void track_through_rf_deflector(
 	fprintf(stdout, "ip=%ld  is=%ld  dphase=%f, phase=%f\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
-	px += (dpx=Estrength*cos((t_part-tLight)*omega + Ephase));
+	px += Estrength*cos((t_part-tLight)*omega + Ephase);
         if (rf_param->magneticDeflection)
           pz = sqrt(sqr(pc)-sqr(px)-sqr(py));
         pz += Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
@@ -255,7 +255,7 @@ void track_through_rftm110_deflector(
   }
 
   /* using 2*volt in expressions gives us theta=V/E */
-  voltTimes2 *= 2*beta*rf_param->voltage/(1e6*particleMassMV*particleRelSign)*
+  voltTimes2 *= 2*rf_param->voltage/(1e6*particleMassMV*particleRelSign)*
     (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
      (rf_param->voltageNoiseGroup
       ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)
