@@ -36,7 +36,7 @@ void track_through_rf_deflector(
   double t_part;      /* time at which a particle enters cavity */
   double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2) */
   double x, xp, y, yp;
-  double beta, px, py, pz, beta_z, pc, gamma;
+  double beta, px, py, pz, beta_z, pc, gamma, dpx;
   double omega, k, Ephase, voltFactor, t0;
   double cos_tilt, sin_tilt, dtLight, tLight;
   double length;
@@ -161,7 +161,9 @@ void track_through_rf_deflector(
 	fprintf(stdout, "ip=%ld  is=%ld  dphase=%f, phase=%f\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
-	px += Estrength*cos((t_part-tLight)*omega + Ephase);
+	px += (dpx=Estrength*cos((t_part-tLight)*omega + Ephase));
+        if (rf_param->magneticDeflection)
+          pz = sqrt(sqr(pc)-sqr(px)-sqr(py));
         pz += Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
 	xp = px/pz;
 	yp = py/pz;
@@ -253,7 +255,7 @@ void track_through_rftm110_deflector(
   }
 
   /* using 2*volt in expressions gives us theta=V/E */
-  voltTimes2 *= 2*rf_param->voltage/(1e6*particleMassMV*particleRelSign)*
+  voltTimes2 *= 2*beta*rf_param->voltage/(1e6*particleMassMV*particleRelSign)*
     (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
      (rf_param->voltageNoiseGroup
       ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)

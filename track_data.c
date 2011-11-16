@@ -570,6 +570,7 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"MAGENTIC_DEFLECTION", "", IS_LONG, 0, (long)((char *)&rfdf_example.magneticDeflection), NULL, 0.0, 0, "If non-zero, deflection is assumed to be performed by a magnetic field, rather than electric field (default)."},
     } ;
 
 RFTM110 rftm110_example;
