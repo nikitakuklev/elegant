@@ -2520,7 +2520,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                           sizeof(KOCT),    koct_param    },
     {N_MRADITEGRALS_PARAMS, 0, sizeof(MRADINTEGRALS), mRadIntegrals_param },
     { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
-    { N_MRFDF_PARAMS,  MAT_LEN_NCAT|HAS_RF_MATRIX|MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
+    { N_MRFDF_PARAMS,  MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
 } ;
 
 void compute_offsets()
