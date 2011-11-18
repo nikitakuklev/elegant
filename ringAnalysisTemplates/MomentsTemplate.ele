@@ -88,6 +88,7 @@ sinclude(<ERRORPARAM>)
         matched = 1
         equilibrium = 1
         output_at_each_step = 1
+	verbosity = 10
 &end
 
 &run_control 
