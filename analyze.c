@@ -738,6 +738,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       kquad.isr = 0;
       length = (kquad.length /= nSlices);
       kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
+      if (slice!=0)
+	kquad.edge1_effects = 0;
+      if (slice!=nSlices-1)
+	kquad.edge2_effects = 0;
       elem.type = T_KQUAD;
       elem.p_elem = (void*)&kquad;
       break;
@@ -761,6 +765,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       kquad.yKickCalibration = quad->yKickCalibration;
       kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
       kquad.integration_order = 4;
+      if (slice!=0)
+	kquad.edge1_effects = 0;
+      if (slice!=nSlices-1)
+	kquad.edge2_effects = 0;
       elem.type = T_KQUAD;
       elem.p_elem = (void*)&kquad;
       break;
