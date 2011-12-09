@@ -1904,6 +1904,8 @@ double optimization_function(double *value, long *invalid)
 	MPI_Abort(MPI_COMM_WORLD, 2);    
       }
 #endif
+    if (center_on_orbit) 
+      center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
 
@@ -2093,9 +2095,12 @@ double optimization_function(double *value, long *invalid)
 #if USE_MPI
       if (notSinglePart) /* Disable the beam output when all the processors track independently */
 #endif
-	if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0))
+	if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0)) {
+          if (center_on_orbit)
+            center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
 	  do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
 			   charge);
+        }
   }
   
   
