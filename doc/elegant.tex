@@ -2696,6 +2696,8 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     STRING method = "simplex";
     double tolerance = -0.01;
     double target = 0;
+    long center_on_orbit = 0;
+    long center_momentum_also = 1;
     long soft_failure = 1;
     long n_passes = 2;
     long n_evaluations = 500; 
@@ -2834,6 +2836,12 @@ and not-equal functions, which have the names {\tt segt}, {\tt selt}, and
 a fractional criterion.
 \item \verb|target| --- The value which, if reached, results in immediate termination of the optimization,
 whether it has converged or not.
+
+\item \verb|center_on_orbit| --- A flag indicating whether to center the beam transverse coordinates on the closed orbit
+  before tracking.
+
+\item \verb|center_momentum_also| --- A flag indicating whether to center the momentum coordinate also.
+
 \item \verb|soft_failure| --- A flag indicating, if set, that failure of an optimization pass should not
 result in termination of the optimization.
 
