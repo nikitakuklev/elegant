@@ -28,6 +28,16 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
     savedRandomNumberSeed[2] = FABS(iseed+4);
   }
 
+#if USE_MPI
+  if (myid==0) {
+    printf("Seeding random number generators\n");
+    fflush(stdout);
+  }
+#else
+  printf("Seeding random number generators\n");
+  fflush(stdout);
+#endif
+
   /* seed random number generators.  
    * random_1_elegant is used for beamline errors, same on all processors
    * random_2 is used for random scraping/sampling/scattering
