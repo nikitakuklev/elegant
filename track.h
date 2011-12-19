@@ -926,7 +926,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTABLE_PARAMS 13
 #define N_KOCT_PARAMS 17
 #define N_MRADITEGRALS_PARAMS 1
-#define N_APPLE_PARAMS 22
+#define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2521,22 +2521,24 @@ typedef struct {
 /* names and storage structure for APPLE-II element */
 extern PARAMETER apple_param[N_APPLE_PARAMS];
 typedef struct {
-  double length, BMax;
+  double length, BMax, shimScale;
   double dx, dy, dz, tilt;
-  long periods, step, order, End_Pole;
+  long periods, step, order, End_Pole, shimOn;
   char *Input;
+  char *shimInput;
   long sr, isr, isr1Particle;
-  double x0, gap0, gap, phi1, phi2, phi3, phi4;
+  double x0, gap0, dgap, phi1, phi2, phi3, phi4;
   long verbosity;
   /* for internal use */
   long initialized;
-  long NxHarm, NzHarm;
+  long NxHarm, NzHarm, ShimHarm;
   double C1, C2, C3, C4;
   double S1, S2, S3, S4;
   double **Cij, **kx, **ky, *kz;
   double **CoZ, **CxXoZ, **CxYoZ, **CxXoYZ, **CxX2oYZ;
   double **CxX2oZ, **CxXYoZ, **CxX3oYZ, **CxY2oZ;
-  double lz;  
+  double lz;
+  double kx_shim, *Ci_shim, *Si_shim;
   long drift;
   double BPeak[2], radiusInternal[2];
 } APPLE;

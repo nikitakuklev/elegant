@@ -24,9 +24,10 @@ void f_ijk(double *X, long End_Pole, double step,
 
 void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
 {
-  long ipart, istep, nleft; 
+  long ipart, istep, nleft, iHarm; 
   MALIGN malign;
   double X[6], denom, p, brho, eomc;
+  double intBx, intBy, tmpx, tmpy, tmpg;
   
   if (!apple->initialized) 
     InitializeAPPLE(apple->Input, apple);
@@ -43,6 +44,20 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
 
   eomc = -particleCharge/particleMass/c_mks;
   for (ipart=0; ipart<np; ipart++) {
+    p = (1.+coord[ipart][5])*pCentral;
+    brho = p/eomc;
+    if(apple->shimOn) {
+      intBx=intBy=0.;
+      for(iHarm=0; iHarm<apple->ShimHarm; iHarm++) {
+	tmpx=(double)iHarm * apple->kx_shim * coord[ipart][0];
+	tmpy=(double)iHarm * apple->kx_shim * coord[ipart][2];
+	tmpg=-(double)iHarm* apple->kx_shim * apple->dgap/2.;
+	intBx +=( apple->Ci_shim[iHarm]*sin(tmpx)*cosh(tmpy) + apple->Si_shim[iHarm]*cos(tmpx)*sinh(tmpy))*exp(tmpg);
+	intBy +=(-apple->Ci_shim[iHarm]*cos(tmpx)*sinh(tmpy) + apple->Si_shim[iHarm]*sin(tmpx)*cosh(tmpy))*exp(tmpg);
+      }
+      coord[ipart][1] += intBy/brho * apple->shimScale;
+      coord[ipart][3] -= intBx/brho * apple->shimScale;
+    }
     /* convert from elegant coordinates (x, x', y, y', s, delta) 
      * to Canonical coordinates (x, px, y, py, s, delta) 
      * d =  sqrt(1+sqr(xp)+sqr(yp))
@@ -50,8 +65,6 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
      * px = xp/d/p
      * py = yp/d/p
      */
-    p = (1.+coord[ipart][5])*pCentral;
-    brho = p/eomc;
     X[0] = coord[ipart][0];
     X[2] = coord[ipart][2];
     X[1] = coord[ipart][1]/(denom=sqrt(1+sqr(coord[ipart][1])+sqr(coord[ipart][3])));
@@ -100,6 +113,20 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
     coord[ipart][3] = X[3]/denom;
     coord[ipart][4] = X[4]; 
     coord[ipart][5] = X[5];
+
+    if(apple->shimOn) {
+      intBx=intBy=0.;
+      for(iHarm=0; iHarm<apple->ShimHarm; iHarm++) {
+	tmpx=(double)iHarm * apple->kx_shim * coord[ipart][0];
+	tmpy=(double)iHarm * apple->kx_shim * coord[ipart][2];
+	tmpg=-(double)iHarm* apple->kx_shim * apple->dgap/2.;
+	intBx +=( apple->Ci_shim[iHarm]*sin(tmpx)*cosh(tmpy) + apple->Si_shim[iHarm]*cos(tmpx)*sinh(tmpy))*exp(tmpg);
+	intBy +=(-apple->Ci_shim[iHarm]*cos(tmpx)*sinh(tmpy) + apple->Si_shim[iHarm]*sin(tmpx)*cosh(tmpy))*exp(tmpg);
+      }
+      coord[ipart][1] += intBy/brho * apple->shimScale;
+      coord[ipart][3] -= intBx/brho * apple->shimScale;
+    }
+    /*    fprintf(stdout,"ip=%ld,x=%g,xp=%g\n", ipart,coord[ipart][0],coord[ipart][1]); */
   }  
   if (apple->dx || apple->dy || apple->dz) {
     memset(&malign, 0, sizeof(malign));
@@ -269,6 +296,7 @@ void f_ijk(double *X, long End_Pole, double step,
     f003y *= pow(factor, 3.0);
   }
 
+  /* Change momenta to the canonical momenta at the entrance */
   Ax = Dx*factor;
   Ay = Dy*factor;
   X[1] = X[1] + Ax;
@@ -287,6 +315,26 @@ void f_ijk(double *X, long End_Pole, double step,
   }
   X[4] += step*apple->lz;
 
+  /* Change momenta from the canonical momenta back to the lab coordinate system at the exit */
+  xpp = X[0]+apple->x0;
+  xmm = X[0]-apple->x0;
+  for (j=0; j<apple->NzHarm; j++) {
+    Dx=Dy=0;
+    for (i=0; i<apple->NxHarm; i++) {
+      kx = apple->kx[i][j];
+      ky = apple->ky[i][j];
+      Cm = cos(kx*xmm);
+      Cp = cos(kx*xpp);
+      Sm = sin(kx*xmm);
+      Sp = sin(kx*xpp);
+      Em = exp(-ky*X[2]);
+      Ep = exp(ky*X[2]);
+      csp = Cm*Ep*apple->S1 + Cp*Ep*apple->S2 + Cp*Em*apple->S3 + Cm*Em*apple->S4;
+      ssm = Sm*Ep*apple->S1 + Sp*Ep*apple->S2 - Sp*Em*apple->S3 - Sm*Em*apple->S4;
+      Dx += apple->CoZ[i][j] * csp;
+      Dy += apple->CxXoYZ[i][j] * ssm;
+    }
+  }
   Ax = Dx*factor;
   Ay = Dy*factor;
   X[1] = X[1] - Ax;
@@ -297,15 +345,57 @@ void f_ijk(double *X, long End_Pole, double step,
 
 void InitializeAPPLE(char *file, APPLE *apple)
 {
-  SDDS_DATASET SDDSin;
+  SDDS_DATASET SDDSin, SDDSshim;
   double *Cmn, *kx, *ky, *kz, kw;
   double bo4, BxAmp, ByAmp;
-  long row, rows, j;
-  int32_t *xHarm, *zHarm;
+  long row, rows, j, ishim;
+  int32_t *xHarm, *zHarm, *sHarm;
+  double kx_shim, *c_shim, *s_shim;
   
   if (apple->initialized) 
     return;
   
+  if (apple->shimOn) {
+    if(!apple->shimInput) {
+      printf("Error: No shim input file provided.\n");
+      exitElegant(1);
+    }
+    if (!SDDS_InitializeInput(&SDDSshim, apple->shimInput) || !SDDS_ReadPage(&SDDSshim)) {
+      printf("Error: problem initializing file %s\n", apple->shimInput);
+      exitElegant(1);
+    }
+    if (!(rows=SDDS_RowCount(&SDDSshim))) {
+      printf("Error: no rows in file %s\n", apple->shimInput);
+      exitElegant(1);
+    }
+    if (!SDDS_GetParameters(&SDDSshim, "kx0", &kx_shim, NULL)) {
+      printf("Error: problem reading file kx0 %s\n",apple->shimInput );
+      exitElegant(1);
+    }
+    if (!(sHarm=SDDS_GetColumnInLong(&SDDSshim, "i")) ||
+	!(c_shim=SDDS_GetColumnInDoubles(&SDDSshim, "Ci")) ||
+	!(s_shim=SDDS_GetColumnInDoubles(&SDDSshim, "Si"))) {
+      printf("Error: problem reading file column data %s\n",apple->shimInput );
+      exitElegant(1);
+    }
+    if (!SDDS_Terminate(&SDDSshim))
+      printf("*** Warning: problem terminating APPLE shim_input file\n");
+    
+    apple->kx_shim = kx_shim;
+    for (row=0; row<rows; row++) {
+      if (sHarm[row]>apple->ShimHarm)
+	apple->ShimHarm = sHarm[row];
+    }
+    apple->ShimHarm = apple->ShimHarm + 1; /* include harm = 0 term */
+    apple->Ci_shim = calloc(sizeof(*apple->Ci_shim), apple->ShimHarm);
+    apple->Si_shim = calloc(sizeof(*apple->Si_shim), apple->ShimHarm);
+    for (row=0; row<rows; row++) {
+      j= (long)(sHarm[row]);
+      apple->Ci_shim[j] = c_shim[row];     
+      apple->Si_shim[j] = s_shim[row];     
+    }
+  }
+
   if (!file) {
     apple->drift = 1;
     return;
@@ -315,6 +405,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     printf("Error: problem initializing file %s\n", file);
     exitElegant(1);
   }
+  rows=0;
   if (!(rows=SDDS_RowCount(&SDDSin))) {
     printf("Error: no rows in file %s\n", file);
     exitElegant(1);
@@ -376,7 +467,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     kx[row] *=kw;
     ky[row] *=kw;
     kz[row] *=kw;
-    apple->Cij[xHarm[row]][j] = -Cmn[row]*bo4*exp(-ky[row]*apple->gap/2.);
+    apple->Cij[xHarm[row]][j] = -Cmn[row]*bo4*exp(-ky[row]*apple->dgap/2.);
     apple->BPeak[1] += apple->Cij[xHarm[row]][j];	
     apple->Cij[xHarm[row]][j] = apple->Cij[xHarm[row]][j]/cos(kx[row]*apple->x0);
     apple->BPeak[0] += apple->Cij[xHarm[row]][j]*sin(kx[row]*apple->x0)*kx[row]/ky[row];	
