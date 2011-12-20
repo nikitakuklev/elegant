@@ -69,6 +69,7 @@ extern long particleIsElectron;
 /* various user-controlled global flags (global_settings namelist) */
 extern long inhibitFileSync;
 extern long echoNamelists;
+extern long mpiRandomizationMode;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -3077,6 +3078,7 @@ void finishFrequencyMap();
 
 /* prototypes for elegant.c: */
 extern void getRunControlContext(VARY *context);
+extern void getRunSetupContext (RUN *context);
 extern char *compose_filename(char *templateString, char *root_name);
 char *compose_filename_occurence(char *templateString, char *root_name, long occurence);
 extern double find_beam_p_central(char *input);
