@@ -225,7 +225,7 @@ char *description[N_COMMANDS] = {
     "touschek_scatter                 calculate Touschek lifetime, simulate touschek scattering effects, find out momentum aperture through tracking", 
     "insert_elements                  insert elements into already defined beamline", 
     "change_particle                  change the particle type",
-    "global_settings                  change various global settigs",
+    "global_settings                  change various global settings",
     "replace_elements                 remove or replace elements inside beamline",
     "aperture_input                   provide an SDDS file with the physical aperture vs s (same as aperture_data)", 
     "modulate_elements                modulate values of elements as a function of time",
@@ -238,6 +238,7 @@ char *description[N_COMMANDS] = {
 #define DEBUG 0
 
 static VARY run_control;
+static RUN run_conditions;
 static char *semaphoreFile[3];
  
 long writePermitted = 1;
@@ -295,7 +296,6 @@ char **argv;
   SCANNED_ARG *scanned;
   char s[NAMELIST_BUFLEN], *ptr;
   long i;
-  RUN run_conditions;
   CORRECTION correct;
   ERRORVAL error_control;
   BEAM beam;
@@ -634,8 +634,6 @@ char **argv;
         fflush(stdout);
       }
       
-      seedElegantRandomNumbers(random_number_seed, 0);
-
       /* copy run data into run_conditions structure */
       run_conditions.ideal_gamma = sqrt(sqr(p_central)+1);
       run_conditions.p_central = p_central;
@@ -666,6 +664,9 @@ char **argv;
         run_conditions.rootname = rootname;
         run_conditions.runfile  = compose_filename(inputfile, rootname);
       }
+
+      seedElegantRandomNumbers(random_number_seed, 0);
+
       /* In the version with parallel I/O, these file names need to be known by all the processors, otherwise there
 	 will be a synchronization issue when calculated accumulated sum in do_tracking */
       run_conditions.acceptance = compose_filename(acceptance, rootname);
@@ -2152,6 +2153,11 @@ void getRunControlContext (VARY *context)
   *context = run_control;
 }
 
+void getRunSetupContext (RUN *context)
+{
+  *context = run_conditions;
+}
+
 void swapParticles(double *p1, double *p2)
 {
   double buffer[7];
@@ -2457,6 +2463,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
 
   inhibitFileSync = inhibit_fsync;
   echoNamelists = echo_namelists;
+  mpiRandomizationMode = mpi_randomization_mode;
   if (log_file)
     freopen(log_file, "w", stdout);
   if (error_log_file)
