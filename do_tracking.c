@@ -1425,6 +1425,7 @@ long do_tracking(
 	      break;
 	    case T_SCRIPT:
 #if !USE_MPI
+	if (nLeft<nMaximum)
 	      if (((SCRIPT*)eptr->p_elem)->verbosity>1)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
 			nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
@@ -1452,7 +1453,9 @@ long do_tracking(
 		}
 #endif
 	      }
-	      
+	      if (beam && lostParticles!=beam->lost)
+		lostParticles = beam->lost;
+
 	      if (nMaximum<beam->n_to_track)
 		nMaximum = beam->n_to_track;
 #if !USE_MPI
@@ -3011,6 +3014,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   long k, lostIndex;
 #else
   long npTotal=0, rootnameLength;
+
+  if (notSinglePart) { 
+    MPI_Allreduce (&np, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (!beam->n_to_track_total)
+       return 0;
+  }	
 #endif
 
   if (!script->rootname || !strlen(script->rootname)) {
@@ -3242,6 +3251,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     if (beam) {
       npTotal = beam->n_to_track_total;
       beam->n_to_track_total = SDDS_MPI_TotalRowCount(&SDDSin);
+      if (script->verbosity>0) {
+        fprintf(stdout, "%ld particles in script output file (was %ld)\n", beam->n_to_track_total, npTotal);
+        fflush(stdout);
+      }	
     }
   }
   if (beam && script->verbosity>0) {
@@ -3250,15 +3263,21 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
   if ((!notSinglePart && (npNew>np))||(notSinglePart && (beam->n_to_track_total>npTotal)))
 #endif
-  if ((!script->useParticleID) && script->noNewParticles)
-    bombElegant("The particle ID is not available, but the number of particles increased after the SCRIPT element without seting the correct flag.\n Please set the correct NO_NEW_PARTICLES flag for the SCRIPT element!", NULL);
+  if (script->noNewParticles)
+    bombElegant("The number of particles increased after the SCRIPT element without seting the correct flag.\n Please set the correct NO_NEW_PARTICLES flag for the SCRIPT element!", NULL);
 
   if (!script->useParticleID) {
     if ((!script->noNewParticles || (npNew!=np)) && (iPass==0)){
       fprintf (stdout, "Warning: There is no particle ID available to find which particles are lost. The particles lost in the SCRIPT element will not be recorded!\n");
     }
-    if ((!script->noNewParticles) && (npNew < np)) /* Do particle accounting only */
-      *nLost += (np-npNew);
+    if ((!script->noNewParticles) && (npNew < np)) {
+      /* Do particle accounting only */
+      beam->n_to_track = npNew+*nLost;
+      /* move lost particles into the upper part of the arrays */
+      for (i=0; i<np-npNew; i++) {
+        swapParticles(beam->lost[npNew+i], beam->lost[beam->n_to_track+i]);
+      }
+    }
   }    
       
   if (npNew>np) {
@@ -3278,6 +3297,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
       fprintf(stderr, "np = %ld, *nLost = %ld, beam->n_to_track = %ld, beam->n_particle=%ld\n",
               np, *nLost, beam->n_to_track, beam->n_particle);
+      fprintf(stderr, "This could happen if the particleID is not unique.\n");
       exitElegant(1);
     }
 
@@ -3368,11 +3388,11 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 	  if (j==npNew) { /* record the lost particle */
 	    /* Copy the lost particles in the SCRIPT element into the upper part of the arrays. */
 	    (*nLost)++;
-	    for (k=0; k<=7; k++) {
+	    for (k=0; k<7; k++) {
 	      beam->lost[lostIndex][k] = part[i][k];
-	    } 
+	    }
+            beam->lost[lostIndex][7] = (double) iPass; 
 	    lostIndex++;
-	    beam->lost[lostIndex][7] = (double) iPass;
 	  }
 	}
       }
@@ -3697,8 +3717,22 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 
 void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long nLeft,long  nToTrack, long pass)
 {
-  long ip, j;
-  
+  long ip, j, nLost0;
+  static FILE *fp = NULL;
+
+/*  if (fp==NULL) {
+    char s[1024];
+    RUN run;
+    getRunSetupContext(&run);
+    sprintf(s, "%s.losdeb", run.rootname);
+    fp = fopen(s, "w");
+    fprintf(fp, "SDDS1\n&column name=s type=double units=m &end\n");
+    fprintf(fp, "&column name=x type=double units=m &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+
+  nLost0 = *nLost;
+*/
   *nLost += (nToTrack - nLeft);
 
   if (!lossBuffer || !coord)
@@ -3707,6 +3741,9 @@ void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long 
   if (nLeft==nToTrack) /* no additional losses occurred */
     return;
   
+ /* printf("recording lost particles: nLost=%ld->%ld, nLeft=%ld, nToTrack=%ld\n", 
+	 nLost0, *nLost, nLeft, nToTrack);
+ */ 
   for (ip=nLeft; ip<nToTrack; ip++) {  /* copy the lost particle coordinates and pass information */
     for (j=0; j<7; j++)
       lossBuffer[ip][j] = coord[ip][j];
