@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.13  2011/03/14 15:06:15  shang
+fixed the current parameter units which should be mA instead of A
+
 Revision 1.12  2011/03/09 20:51:54  shang
 added the description for computing bending magnet spectra.
 
@@ -451,8 +454,8 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
       SDDS_DefineParameter(SDDSout, "Device", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "Period", NULL, "cm", "Period length of wiggler or undulator", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "NPeriod", NULL, NULL, "number of periods of wiggler", NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "Kx", NULL, "Tesla", "x field", NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "Ky", NULL, "Tesla", "y field", NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout, "Kx", NULL, NULL, "K value of horizontal field", NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout, "Ky", NULL, NULL, "K value of vertical field", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "PinholeDistance", NULL, "m", "pinhole distance from the source", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "PinholeXPos", NULL, isAngular ? "mrad": "mm",
                            "X-coordinate for center of pinhole (mm) or (mrad)", NULL, SDDS_DOUBLE, 0)<0 ||
