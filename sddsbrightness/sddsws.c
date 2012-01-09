@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.14  2012/01/08 21:26:02  borland
+Fixed units for Kx and Ky in output file.
+
 Revision 1.13  2011/03/14 15:06:15  shang
 fixed the current parameter units which should be mA instead of A
 
@@ -474,7 +477,7 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
       SDDS_DefineParameter(SDDSout, "e1", NULL, "keV", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "lamda1", NULL, "A", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "TotalPowerDensity",  NULL, 
-                           "Watts/mm^2 or mrad^2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+                           "Watts/mm$a2$n or mrad$a2$n", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "TotalPower",  NULL, "Watts", NULL, NULL, SDDS_DOUBLE, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   switch (mode) {
@@ -489,26 +492,26 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
                           "vertical position of pinhole",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (isAngular) {
-      if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad^2/0.1%bandwidth", "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
+      if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad$a2$n/0.1%BW", "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    } else if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL,"photons/s/mm^2/0.1%bandwidth", "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
+    } else if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL,"photons/s/mm$a2$n/0.1%BW", "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     break;
   case 2:
-    if (SDDS_DefineParameter(SDDSout, "IntegratedPowerDensity",  NULL, isAngular ? "Watts/mrad^2" : "Watts/mm^2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineParameter(SDDSout, "IntegratedFluxDensity",  NULL,  isAngular ? "ph/s/mr^2" : "ph/s/mm^2", NULL, NULL, SDDS_DOUBLE, 0))
+    if (SDDS_DefineParameter(SDDSout, "IntegratedPowerDensity",  NULL, isAngular ? "Watts/mrad$a2$n" : "Watts/mm$a2$n", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineParameter(SDDSout, "IntegratedFluxDensity",  NULL,  isAngular ? "ph/s/mr$a2$n" : "ph/s/mm$a2$n", NULL, NULL, SDDS_DOUBLE, 0))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", "photon energy",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (isAngular) {
-      if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad^2/0.1%bandwidth", "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
+      if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad$a2$n/0.1%BW", "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    } else if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm^2/0.1%bandwidth", "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
+    } else if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm$a2$n/0.1%BW", "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     break;
   case 3:
     if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", "photon energy",NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(SDDSout, "Brightness", NULL, "ph/s/mr^2/mm^2/0.1%bw", 
+        SDDS_DefineColumn(SDDSout, "Brightness", NULL, "ph/s/mr$a2$n/mm$a2$n/0.1%bw", 
                           "on axis brightness",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     break;
@@ -531,7 +534,7 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
         SDDS_DefineColumn(SDDSout, "Y", NULL, isAngular ? "mrad" : "mm", 
                           "vertical position of pinhole",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    if (SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, isAngular ? "Watts/mrad^2" : "Watts/mm^2", "power density distribution",NULL, SDDS_DOUBLE, 0)<0)
+    if (SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, isAngular ? "Watts/mrad$a2$n" : "Watts/mm$a2$n", "power density distribution",NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     break;
   }
