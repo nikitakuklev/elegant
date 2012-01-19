@@ -245,7 +245,7 @@ void track_through_rfmode(
         lastBin = lastBin_global;
       }
       if(isSlave) {
-        buffer = (double*)malloc(sizeof(double) * (lastBin+1)); 
+        buffer = (double*)tmalloc(sizeof(double) * (lastBin+1)); 
 	MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
         memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
 	free(buffer);
@@ -684,7 +684,8 @@ typedef struct {
   long lastBin_global, firstBin_global;
   long nonEmptyBins_total = 0, offset = 0;
   long i, j, map_j, ib;
-  SUB_HISTOGRAM *subHis; /* a compressed histogram with non-zero bins only */
+  static SUB_HISTOGRAM *subHis; /* a compressed histogram with non-zero bins only */
+  static long max_nonEmptyBins_total = 0;
   MPI_Status status;
 
   MPI_Reduce(lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -695,7 +696,7 @@ typedef struct {
   }
 
   if (!nonEmptyArray)
-    nonEmptyArray =(long*) malloc(sizeof(*nonEmptyArray)*n_processors);
+    nonEmptyArray =(long*) tmalloc(sizeof(*nonEmptyArray)*n_processors);
 
   MPI_Gather(&nonEmptyBins,1,MPI_LONG,nonEmptyArray,1,MPI_LONG,0,MPI_COMM_WORLD);
   if (isMaster){
@@ -703,9 +704,11 @@ typedef struct {
       nonEmptyBins_total += nonEmptyArray[i];
   }
   MPI_Bcast(&nonEmptyBins_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-  
-  if (!(subHis = (SUB_HISTOGRAM*) calloc(nonEmptyBins_total, sizeof(*subHis))))
-    bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
+ 
+  if (nonEmptyBins_total>max_nonEmptyBins_total) {
+    if (!(subHis = (SUB_HISTOGRAM*) trealloc(subHis, sizeof(*subHis)*(max_nonEmptyBins_total=nonEmptyBins_total))))
+      bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
+  }
 
   if (isSlave) {
     for (i=0,ib=firstBin; ib<=*lastBin; ib++) {
