@@ -879,7 +879,7 @@ VMATRIX *compute_matrix(
                                          quad->fse, quad->xkick, quad->ykick, 
                                          quad->edge1_effects, quad->edge2_effects,
                                          quad->fringeType, quad->ffringe,
-                                         quad->fringeIntM, quad->fringeIntP); 
+                                         quad->fringeIntM, quad->fringeIntP, quad->radial); 
         if (quad->dx || quad->dy || quad->dz)
           misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
         break;
@@ -1037,7 +1037,7 @@ VMATRIX *compute_matrix(
                                          kquad->fse, kquad->xkick, kquad->ykick,
                                          kquad->edge1_effects, kquad->edge2_effects,
                                          "integrals", 0.0,
-                                         kquad->fringeIntM, kquad->fringeIntP);
+                                         kquad->fringeIntM, kquad->fringeIntP, 0);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),

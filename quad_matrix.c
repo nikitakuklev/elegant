@@ -28,7 +28,8 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
                            double xkick, double ykick,
                            double edge1_effects, double edge2_effects,
                            char *fringeType, double ffringe,
-                           double *fringeIntM, double *fringeIntP
+                           double *fringeIntM, double *fringeIntP,
+			   long radial
                            )
 {
     VMATRIX *M;
@@ -357,7 +358,111 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         }
       }
     }
-    
+
+    if (radial) {
+      long i, j, k, l;
+      /* make a radially-focusing lens by copying the horizontal matrix to the vertical */ 
+      for (i=2; i<4; i++)
+	for (j=2; j<4; j++)
+	  M->R[i][j] = M->R[i-2][j-2];
+      if (M->order>1) {
+	for (i=0; i<2; i++) {
+	  for (j=0; j<6; j++) {
+	    if (j==2 || j==3) continue;
+	    for (k=0; k<=j; k++) {
+	      if (j<4 && k<4) { 
+		M->T[i+2][j+2][k+2] = M->T[i][j][k];
+		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
+		   i+2, j+2, k+2, i, j, k, M->T[i][j][k]); */
+	      }
+	      else if (k<4 && (k+2)<=j) {
+		M->T[i+2][j][k+2] = M->T[i][j][k];
+		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
+		   i+2, j, k+2, i, j, k, M->T[i][j][k]); */
+	      }
+	      else {
+		M->T[i+2][j][k] = M->T[i][j][k];
+		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
+		   i+2, j, k, i, j, k, M->T[i][j][k]); */
+	      }
+	    }
+	  }
+	}
+	for (i=4; i<6; i++) {
+	  for (j=0; j<6; j++) {
+	    if (j==2 || j==3) continue;
+	    for (k=0; k<=j; k++) {
+	      if (j<4 && k<4) {
+		M->T[i][j+2][k+2] = M->T[i][j][k];
+		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
+		   i, j+2, k+2, i, j, k, M->T[i][j][k]); */
+	      }
+	      else if (k<4 && (k+2)<=j) {
+		M->T[i][j][k+2] = M->T[i][j][k];
+		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
+		   i, j, k+2, i, j, k, M->T[i][j][k]); */
+	      }
+	    }
+	  }
+	}
+	if (M->order>2) {
+	  for (i=0; i<2; i++) {
+	    for (j=0; j<6; j++) {
+	      if (j==2 || j==3) continue;
+	      for (k=0; k<=j; k++) {
+		if (j<4 && k<4) { 
+		  for (l=0; l<=k; l++) {
+		    if (l<4 && (l+2)<=k) 
+		      M->Q[i+2][j+2][k+2][l+2] = M->Q[i][j][k][l];
+		    else
+		      M->Q[i+2][j+2][k+2][l] = M->Q[i][j][k][l];
+		  }
+		}
+		else if (k<4 && (k+2)<=j) {
+		  for (l=0; l<=k; l++) {
+		    if (l<4 && (l+2)<=k)
+		      M->Q[i+2][j][k+2][l+2] = M->Q[i][j][k][l];
+		    else
+		      M->Q[i+2][j][k+2][l] = M->Q[i][j][k][l];
+		  }
+		}
+		else {
+		  for (l=0; l<=k; l++) {
+		    if (l<4 && (l+2)<=k)
+		      M->Q[i+2][j][k][l+2] = M->Q[i][j][k][l];
+		    else
+		      M->Q[i+2][j][k][l] = M->Q[i][j][k][l];
+		  }
+		}
+	      }
+	    }
+	  }
+	  for (i=4; i<6; i++) {
+	    for (j=0; j<6; j++) {
+	      if (j==2 || j==3) continue;
+	      for (k=0; k<=j; k++) {
+		if (j<4 && k<4) {
+		  for (l=0; l<=k; l++) {
+		    if (l<4 && (l+2)<=k)
+		      M->Q[i][j+2][k+2][l+4] = M->Q[i][j][k][l];
+		    else
+		      M->Q[i][j+2][k+2][l+4] = M->Q[i][j][k][l];
+		  }
+		}
+		else if (k<4 && (k+2)<=j) {
+		  for (l=0; l<=k; l++) {
+		    if (l<4 && (l+2)<=k)
+		      M->Q[i][j][k+2][l+2] = M->Q[i][j][k][l];
+		    else
+		      M->Q[i][j][k+2][l] = M->Q[i][j][k][l];
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
 
     if (xkick || ykick) {
       /* put identical kicks at the entrance and exit */
