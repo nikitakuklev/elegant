@@ -592,7 +592,10 @@ void lorentz_setup(
                 nibend->zeta_offset = offset;
                 nibend->fse_adjust = fse_opt;
                 nibend->x_correction = traj_err_final_coord[0];
-                nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
+                if (nibend->fudgePathLength)
+                  nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
+                else
+                  nibend->s_offset = 0;
                 nibend->etilt = save[0]; 
                 nibend->dx = save[1];
                 nibend->dy = save[2];

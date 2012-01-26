@@ -1125,6 +1125,7 @@ PARAMETER nibend_param[N_NIBEND_PARAMS] = {
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&nibend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"ADJUST_BOUNDARY", "", IS_LONG, 0, (long)((char *)&nibend_example.adjustBoundary), NULL, 0.0, 1, "adjust fringe boundary position to make symmetric trajectory? (Not done if ADJUST_FIELD is nonzero.)"},
     {"ADJUST_FIELD", "", IS_LONG, 0, (long)((char *)&nibend_example.adjustField), NULL, 0.0, 0, "adjust central field strength to make symmetric trajectory?"},
+    {"FUDGE_PATH_LENGTH", "", IS_LONG, 0, (long)((char *)&nibend_example.fudgePathLength), NULL, 0.0, 1, "fudge central path length to force it to equal the nominal length L?"},
     };
 
 KPOLY kpoly_example;
