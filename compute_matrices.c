@@ -2040,6 +2040,12 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     R[5][0] = k*sphi*theta*R[5][5];
     R[5][1] = theta*cphi*R[5][5];
     R[5][4] = -k*cphi*sphi*sqr(theta)*R[5][5];
+
+    if (rfdf->tilt)
+      tilt_matrices(M, rfdf->tilt);
+    if (rfdf->dx || rfdf->dy || rfdf->dz)
+      misalign_matrix(M, rfdf->dx, rfdf->dy, rfdf->dz, 0.0);
+
     return(M);
   } else {
     VMATRIX *Mt, *Mc, *Md, *Ms, *Mtmp;
