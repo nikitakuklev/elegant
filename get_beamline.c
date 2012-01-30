@@ -403,23 +403,25 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   } 
 
   if (getAddElemFlag()) {
-  	long skip = 0;
-  	long nelem = 0;
-  	eptr = &(lptr->elem);
-  	while (eptr) {
-     if (insertElem(eptr->name, eptr->type, &skip, eptr->occurence)) {
-       add_element(eptr, eptr_add); 
-       eptr = eptr->succ;		/* move pointer to new added element */
-       nelem++;
-     }
-     if (eptr->succ==NULL && getAddEndFlag()) {	/* add element to the end of line if request */
-       add_element(eptr, eptr_add);
-       eptr = eptr->succ;				/* this is very impotant to get off the loop */
-       nelem++;
-     }   			
-     eptr = eptr->succ; 
-  	}
-  	lptr->n_elems += nelem;
+    long skip = 0;
+    long nelem = 0;
+    eptr = &(lptr->elem);
+    while (eptr) {
+      /* The end position will have been set in a previous call to get_beamline(), prior to 
+         definition of insertions */
+      if (insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos)) {
+        add_element(eptr, eptr_add); 
+        eptr = eptr->succ;		/* move pointer to new added element */
+        nelem++;
+      }
+      if (eptr->succ==NULL && getAddEndFlag()) {	/* add element to the end of line if request */
+        add_element(eptr, eptr_add);
+        eptr = eptr->succ;				/* this is very impotant to get off the loop */
+        nelem++;
+      }   			
+      eptr = eptr->succ; 
+    }
+    lptr->n_elems += nelem;
   } 
 
   if (getDelElemFlag()) {

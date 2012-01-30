@@ -15,6 +15,7 @@
 typedef struct {
   char **name, *type, *exclude, *elemDef;
   long nNames, nskip, add_end, total, occur[100];
+  double sStart, sEnd;
 } ADD_ELEM;
 
 static ADD_ELEM addElem;
@@ -115,6 +116,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   addElem.type = type;
   addElem.exclude = exclude;
   addElem.elemDef = element_def;
+  addElem.sStart = s_start;
+  addElem.sEnd = s_end;
   delete_spaces(addElem.elemDef);
   strncpy(elementDefCopy, element_def, COPYLEN);
 
@@ -132,7 +135,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   return;
 }
 
-long insertElem(char *name, long type, long *skip, long occurPosition) 
+long insertElem(char *name, long type, long *skip, long occurPosition, double endPosition) 
 {
   long i;
 
@@ -148,7 +151,11 @@ long insertElem(char *name, long type, long *skip, long occurPosition)
     if (i==addElem.nNames)
       return(0);
   }
-  
+
+  if ((addElem.sStart>=0 && endPosition<addElem.sStart) ||
+      (addElem.sEnd>=0 && endPosition>addElem.sEnd))
+    return 0;
+
   if (addElem.total) {
     for (i=0; i<addElem.total; i++) {
       if (occurPosition == addElem.occur[i]) {
