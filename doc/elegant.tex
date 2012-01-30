@@ -1879,6 +1879,8 @@ Use of this feature results in a doubling of the number of turns tracked.
         STRING name = NULL;
         STRING type = NULL;
         STRING exclude = NULL;
+        double s_start = -1;
+        double s_end = -1;
         long skip = 1;
         long disable = 0;
         long add_at_end = 0;
@@ -1896,6 +1898,9 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item \verb|exclude| --- Possibly wild-card containing string specifying 
    the names of elements to be excluded from the specification.
 \item \verb|skip| --- New elements are inserted at every $n^{th}$ specified location.
+\item \verb|s_start|, \verb|s_end| --- If positive, these give the starting and ending s locations for insertion of new elements.
+  Note that the s locations are not updated as elements are inserted, but only after completion of all insertions covered by
+  a single command.
 \item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|add_at_end| --- If nonzero, the element is also inserted to the end of the beamline.
 \item \verb|element_def| --- The definition of the new element should be just as it would be entered in 
