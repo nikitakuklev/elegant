@@ -55,7 +55,7 @@ Here is a summary of what's changed since release 24.1:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None
+\item Added the \verb|rf_setup| command, which sets up rf cavities (RFCA elements) for storage rings.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -636,6 +636,7 @@ Command name & Type & Description \\\hline
 \hyperref{{\tt parallel\_optimization\_setup}}{{\tt parallel\_optimization\_setup}}{}{subsec:paralleloptimizationsetup} & setup & Perform initial parallel optimization setup. \\ \hline
 \hyperref{{\tt print\_dictionary}}{{\tt print\_dictionary}}{}{subsec:printdictionary} & action & Print the element dictionary. \\ \hline
 \hyperref{{\tt ramp\_elements}}{{\tt ramp\_elements}}{}{subsec:rampelements} & setup & Set up turn-by-turn ramping of elements. \\ \hline
+\hyperref{{\tt rf\_setup}}{{\tt rf\_setup}}{}{subsec:rfsetup} & setup/action & Set up RF cavity elements for storage rings. \\ \hline
 \hyperref{{\tt rpn\_expression}}{{\tt rpn\_expression}}{}{subsec:rpnexpression} & action & Execute an expression in the rpn interpreter. \\ \hline
 \hyperref{{\tt rpn\_load}}{{\tt rpn\_load}}{}{subsec:rpnload} & action & Load values from SDDS file into rpn interpreter. \\ \hline
 \hyperref{{\tt run\_control}}{{\tt run\_control}}{}{subsec:runcontrol} & setup & Set up simulation steps and passes. \\ \hline
@@ -3198,6 +3199,65 @@ Note that $i=0$ on the first pass.
  that precede the named element in the beamline. 
 \item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
         made.  Use for debugging only, since otherwise it may slow the simulation.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|rf_setup|}\end{center}
+\end{latexonly}
+\subsection{rf\_setup\label{subsec:rfsetup}}
+
+\begin{itemize}
+\item type: setup/action command.
+\item function: set up rf cavity frequency, phase, and voltage for a storage ring
+\end{itemize}
+
+\begin{verbatim}
+&modulate_elements
+    STRING name = NULL;
+    long start_occurence = -1;
+    long end_occurence = -1;
+    double s_start = -1;
+    double s_end = -1;
+    long set_for_each_step = 0;
+    double near_frequency = 0; 
+    long harmonic = -1;
+    double bucket_half_height = 0;
+    double over_voltage = 0;
+&end
+\end{verbatim}
+
+This command must follow a \verb|twiss_output| command that includes radiation integral computation, since the 
+energy loss per turn is needed to set up the rf cavities.
+Note that the command includes features to allow selecting a subset of the RFCA elements in the beamline.
+The selected subset is assumed to include all of the cavities that will impart net energy to the beam.
+
+\begin{itemize}
+\item \verb|name| --- A possibly-wildcard-containing string giving the names of the
+        elements to set.  If not given, all RFCA elements are selected.
+\item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
+ ending occurrence numbers of elements that will be set. 
+\item \verb|s_start|, \verb|s_end| --- If non-negative, these give the gaving and ending position
+ limits for the end-of-element locations of elements to be set.
+\item \verb|set_for_each_step| --- If nonzero, then the setup is repeated at each simulation step.
+  In this case, one must also give \verb|output_at_each_step=1| for \verb|twiss_output|.
+\item \verb|near_frequency| -- If nonzero, then the rf frequency is chosen to be the closest harmonic
+  to the given frequency.
+\item \verb|harmonic| --- If nonzero, then the rf frequency is set to the given harmonic of the revolution
+  frequency.
+\item \verb|bucket_half_height| --- If nonzero, the voltage is computed so as to give the specified bucket
+  half height. 
+\begin{equation}
+\left(\frac{\Delta p}{p}\right)_{\rm bucket} = \sqrt{\frac{U_0}{\pi \alpha h E}}\sqrt{F(q)},
+\end{equation} 
+where $U_0$ is the energy loss per turn, $\alpha$ is the momentum compaction factor, $h$ is the harmonic, 
+$E$ is the beam energy, 
+\begin{equation}
+F(q) = 2 \left(\sqrt{q^2-1} - \arcsin \frac{1}{q}\right),
+\end{equation}
+and $q$ is the overvoltage factor, related to the rf voltage by $q = V/U_0$. (See Wiedemann, Vol. 1, 8.2.2.)
+\item \verb|over_voltage| --- If nonzero, the voltage is set to the given factor relative to the 
+energy loss per turn.
 \end{itemize}
 
 \begin{latexonly}
