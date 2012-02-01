@@ -151,7 +151,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define MODULATE_ELEMENTS 59
 #define PARALLEL_OPTIMIZATION_SETUP 60
 #define RAMP_ELEMENTS 61
-#define N_COMMANDS      62
+#define RF_SETUP 62
+#define N_COMMANDS      63
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -165,7 +166,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
-    "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements",
+    "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup"
   } ;
 
 char *description[N_COMMANDS] = {
@@ -231,6 +232,7 @@ char *description[N_COMMANDS] = {
     "modulate_elements                modulate values of elements as a function of time",
     "parallel_optimization_setup      requests running of parallel optimization mode and sets it up",
     "ramp_elements                    ramp values of elements as a function of pass",
+    "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -307,6 +309,7 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
+  long do_rf_setup = 0;
   long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0, moments_computed = 0;
@@ -589,7 +592,7 @@ char **argv;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
-      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = 0;
+      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = do_rf_setup = 0;
       linear_chromatic_tracking_setup_done = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -913,6 +916,8 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_rf_setup)
+          run_rf_setup(&run_conditions, beamline);
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
         if (do_response_output)
@@ -1010,6 +1015,8 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_rf_setup)
+          run_rf_setup(&run_conditions, beamline);
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (do_coupled_twiss_output &&
@@ -1114,6 +1121,11 @@ char **argv;
         reset_driftCSR();
         finish_twiss_output();
       }
+      break;
+    case RF_SETUP:
+      if (!run_setuped)
+        bombElegant("run_setup must precede rf_setup namelist", NULL);
+      setup_rf_setup(&namelist_text, &run_conditions, beamline, do_twiss_output, &do_rf_setup);
       break;
     case MOMENTS_OUTPUT:
       if (!run_setuped)

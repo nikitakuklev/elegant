@@ -848,3 +848,14 @@ long track_through_rfcw
 
 
 
+/* See H. Wiedemann, Particle Accelerator Physics I, 8.2.2 */
+double rfAcceptance_Fq(double q) 
+{
+  return 2*(sqrt(q*q-1)-acos(1/q));
+}
+
+double solveForOverVoltage(double F, double q0)
+{
+  return zeroNewton(&rfAcceptance_Fq, F, q0, 1e-6, 1000, 1e-12);
+}
+

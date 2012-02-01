@@ -4163,6 +4163,138 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   }
 }
 
+static  long nRfca = 0;
+static ELEMENT_LIST **rfcaElem = NULL;
 
+void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long do_twiss_output, long *do_rf_setup) 
+{
+  ELEMENT_LIST *eptr;
+  
+  /* process namelist input */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&rf_setup, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (echoNamelists) print_namelist(stdout, &rf_setup);
+  
+  if ((rf_setup_struct.start_occurence>0 && rf_setup_struct.end_occurence<1) ||
+      (rf_setup_struct.start_occurence<1 && rf_setup_struct.end_occurence>0) ||
+      rf_setup_struct.start_occurence>rf_setup_struct.end_occurence)
+    bombElegant("Invalid start and end occurence values", NULL);
+  if (rf_setup_struct.s_start>rf_setup_struct.s_end)
+    bombElegant("Invalid s_start and s_end values", NULL);
+  if (rf_setup_struct.near_frequency>0 && rf_setup_struct.harmonic>1)
+    bombElegant("Give non-zero near_frequency or harmonic value, not both", NULL);
+  if (rf_setup_struct.bucket_half_height>0 && rf_setup_struct.over_voltage>0)
+    bombElegant("Give non-zero bucket_half_height or over_voltage, not both", NULL);
+  
+  if (!do_twiss_output && rf_setup_struct.set_for_each_step)
+    bombElegant("If set_for_each_step is non-zero, must also ask for twiss output at each step", NULL);
+  if (do_twiss_output && !rf_setup_struct.set_for_each_step)
+    bombElegant("If set_for_each_step is zero, cannot also ask for twiss output at each step", NULL);
+
+  if (!matched || !radiation_integrals)
+    bombElegant("Need to compute matched twiss parameters with radiation integrals for RF setup", NULL);
+  
+  if (rf_setup_struct.name) {
+    str_toupper(rf_setup_struct.name);
+    if (has_wildcards(rf_setup_struct.name) && strchr(rf_setup_struct.name, '-'))
+      rf_setup_struct.name = expand_ranges(rf_setup_struct.name);
+  }
+
+  free(rfcaElem);
+  nRfca = 0;
+  rfcaElem = NULL;
+  
+  eptr = &(beamline->elem);
+  
+  while (eptr) {
+    if (eptr->type!=T_RFCA
+        || (rf_setup_struct.name && !wild_match(eptr->name, rf_setup_struct.name))
+        || (rf_setup_struct.start_occurence>0 && eptr->occurence<rf_setup_struct.start_occurence) 
+        || (rf_setup_struct.end_occurence>0 && eptr->occurence>rf_setup_struct.end_occurence)
+        || (rf_setup_struct.s_start>0 && eptr->end_pos<rf_setup_struct.s_start)
+        || (rf_setup_struct.s_end>0 && eptr->end_pos>rf_setup_struct.s_end)) {
+      eptr = eptr->succ;
+      continue;
+    }
+    rfcaElem = (ELEMENT_LIST**)SDDS_Realloc(rfcaElem, sizeof(*rfcaElem)*(nRfca+1));
+    rfcaElem[nRfca] = eptr;
+    nRfca ++;
+    eptr = eptr->succ;
+  }
+  
+  if (nRfca==0)
+    bombElegant("No RFCA elements found meeting requirements", NULL);
+
+  *do_rf_setup = 0;
+  if (!rf_setup_struct.set_for_each_step)
+    run_rf_setup(run, beamline);
+  else
+    *do_rf_setup = 1;
+}
+
+
+void run_rf_setup(RUN *run, LINE_LIST *beamline)
+{
+  double beta, T0, frf, q, voltage;
+  long harmonic, i;
+  RFCA *rfca;
+  long iFreq, iVolt, iPhase;
+
+  if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT))
+    bombElegant("twiss parameters and radiation integrals not up-to-date (do_rf_setup)", NULL);
+
+  if (beamline->revolution_length<=0)
+    bombElegant("Beamline length is undefined (do_rf_setup)", NULL);
+  
+  beta = run->p_central/sqrt(sqr(run->p_central)+1);
+  T0 = beamline->revolution_length/(beta*c_mks);
+  if (rf_setup_struct.harmonic)
+    harmonic = rf_setup_struct.harmonic;
+  else
+    harmonic = rf_setup_struct.near_frequency*T0+0.5;
+
+  iFreq = confirm_parameter("FREQ", T_RFCA);
+  iVolt = confirm_parameter("VOLT", T_RFCA);
+  iPhase = confirm_parameter("PHASE", T_RFCA);
+  frf = harmonic/T0;
+  printf("\nRf setup: frequency is %21.15e Hz (h=%ld)\n", frf, harmonic);
+  for (i=0; i<nRfca; i++) {
+    rfca = (RFCA*)(rfcaElem[i]->p_elem);
+    rfca->freq = frf;
+    change_defined_parameter(rfcaElem[i]->name, iFreq, T_RFCA, frf, NULL, LOAD_FLAG_ABSOLUTE);
+    if (rfcaElem[i]->matrix) {
+      free_matrices(rfcaElem[i]->matrix);
+      free(rfcaElem[i]->matrix);
+      rfcaElem[i]->matrix = NULL;
+    }
+  }
+  
+  voltage = 0;
+  if (rf_setup_struct.bucket_half_height>0) {
+    double F, E;
+    
+    E = sqrt(sqr(run->p_central)+1)*particleMassMV;
+    F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*beamline->alpha[0]*harmonic*E));
+    q = (F+2)/2;
+    voltage = (q=solveForOverVoltage(F,q))*beamline->radIntegrals.Uo*1e6/nRfca;
+  } else if (rf_setup_struct.over_voltage)
+    voltage = (q=rf_setup_struct.over_voltage)*beamline->radIntegrals.Uo*1e6/nRfca;
+  
+  if (voltage) {
+    double phase;
+    phase = 180-asin(1/q)*180/PI;
+    printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n", voltage, phase);
+    for (i=0; i<nRfca; i++) {
+      rfca = (RFCA*)(rfcaElem[i]->p_elem);
+      rfca->volt = voltage;
+      rfca->phase = phase;
+      change_defined_parameter(rfcaElem[i]->name, iVolt, T_RFCA, voltage, NULL, LOAD_FLAG_ABSOLUTE);
+      change_defined_parameter(rfcaElem[i]->name, iPhase, T_RFCA, phase, NULL, LOAD_FLAG_ABSOLUTE);
+    }
+  }
+  
+}
 
 
