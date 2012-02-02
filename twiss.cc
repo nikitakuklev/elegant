@@ -4242,9 +4242,12 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline)
   RFCA *rfca;
   long iFreq, iVolt, iPhase;
 
-  if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT))
-    bombElegant("twiss parameters and radiation integrals not up-to-date (do_rf_setup)", NULL);
-
+  if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT)) {
+    if (output_before_tune_correction)
+      bombElegant("twiss parameters and radiation integrals not up-to-date (do_rf_setup)", NULL);
+    return;
+  }       
+  
   if (beamline->revolution_length<=0)
     bombElegant("Beamline length is undefined (do_rf_setup)", NULL);
   
