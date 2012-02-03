@@ -867,7 +867,7 @@ extern char *entity_text[N_TYPES];
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
 #define N_SCATTER_PARAMS 6
-#define N_NIBEND_PARAMS 22
+#define N_NIBEND_PARAMS 23
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
 #define N_RAMPP_PARAMS 1
