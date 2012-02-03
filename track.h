@@ -862,7 +862,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 13
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 36
+#define N_KQUAD_PARAMS 37
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1790,6 +1790,7 @@ typedef struct {
     long integration_order, sqrtOrder, isr, isr1Particle;
     long edge1_effects, edge2_effects;
     double fringeIntP[5], fringeIntM[5];
+    long radial;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -3224,12 +3225,14 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial);
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial);
 
 /* prototypes for taylorseries.c: */
 extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,

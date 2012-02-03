@@ -20,6 +20,10 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
                                    double *sum_Fx, double *sum_Fy,
                                    double x, double y,
                                    long order, double KnL, long skew);
+void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
+					double *sum_Fx_return, double *sum_Fy_return,
+					double x, double y,
+					long order, double KnL, long skew);
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
                                       MULTIPOLE_DATA *randomMult,
@@ -260,7 +264,7 @@ long fmultipole_tracking(
 
     if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
                                        1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL,
-                                       &dummy, NULL)) {
+                                       &dummy, NULL, 0)) {
       is_lost = 1;
       break;
     }
@@ -867,13 +871,15 @@ long multipole_tracking2(
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL,
                                         n_parts, drift, 
                                         multData, steeringMultData,
-                                        &apertureData, &dzLoss, sigmaDelta2)) ||
+                                        &apertureData, &dzLoss, sigmaDelta2,
+					elem->type==T_KQUAD?kquad->radial:0)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL, 
                                         n_parts, drift,
                                         multData, steeringMultData,
-                                        &apertureData, &dzLoss, sigmaDelta2))) {
+                                        &apertureData, &dzLoss, sigmaDelta2,
+					elem->type==T_KQUAD?kquad->radial:0))) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -919,7 +925,8 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, 
                                   MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2) 
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -990,8 +997,11 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       coord[2] = y;
       return 0;
     }
-    
-    apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+
+    if (!radial)
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+    else
+      applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
 
     /* do kicks for spurious multipoles */
     if (multData) {
@@ -1104,7 +1114,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_parts, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2) 
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
+				  long radial) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -1186,8 +1197,14 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 
       if (!kickFrac[step])
         break;
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
-                                      order, KnL*kickFrac[step], 0);
+
+      if (!radial)
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+					order, KnL*kickFrac[step], 0);
+      else 
+	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+					   order, KnL*kickFrac[step], 0);
+	
       if (multData) {
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multData->orders; imult++) {
@@ -1318,6 +1335,52 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   for (sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
       sum_Fx += coef[i]*xypow;
+    else
+      sum_Fy += coef[i]*xypow;
+    xypow *= ratio;
+  }
+  if (skew) {
+    SWAP_DOUBLE(sum_Fx, sum_Fy);
+    sum_Fx = -sum_Fx;
+  }
+  /* add the kicks */
+  *qx -= KnL*sum_Fy;
+  *qy += KnL*sum_Fx;
+  if (sum_Fx_return)
+    *sum_Fx_return = sum_Fx;
+  if (sum_Fy_return)
+    *sum_Fy_return = sum_Fy;
+}
+
+void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
+					double *sum_Fx_return, double *sum_Fy_return,
+					double x, double y,
+					long order, double KnL, long skew)
+{
+  long i;
+  double sum_Fx, sum_Fy, xypow, ratio;
+  double *coef;
+  if (sum_Fx_return)
+    *sum_Fx_return = 0;
+  if (sum_Fy_return)
+    *sum_Fy_return = 0;
+  coef = expansion_coefficients(order);
+  if (x==0) {
+    if (y==0)
+      return;
+    xypow = ipow(y, order);
+    i = order;
+    ratio = 0;
+  }
+  else {
+    xypow = ipow(x, order);
+    ratio = y/x;
+    i = 0;
+  }
+  /* now sum up the terms for the multipole expansion */
+  for (sum_Fx=sum_Fy=0; i<=order; i++) {
+    if (ODD(i))
+      sum_Fx -= coef[i-1]*xypow;
     else
       sum_Fy += coef[i]*xypow;
     xypow *= ratio;

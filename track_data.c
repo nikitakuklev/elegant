@@ -1032,6 +1032,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"I2M", "M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntM[2]), NULL, 0.0, 0, "i2- fringe integral"},
     {"I3M", "M$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntM[3]), NULL, 0.0, 0, "i3- fringe integral"},
     {"LAMBDA2M", "M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntM[4]), NULL, 0.0, 0, "lambda2- fringe integral"},
+    {"RADIAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.radial), NULL, 0.0, 0, "If non-zero, converts the quadrupole into a radially-focusing lens"},
     };
 
 MAGNIFY magnify_example;
