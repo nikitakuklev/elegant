@@ -46,6 +46,9 @@ Here is a summary of what's changed since release 24.1:
 \begin{itemize}
 \item Fixed bug that caused \verb|floor_coordinates| command to sometimes give incorrect values for the survey angles $\psi$ and $\phi$. 
   This was reported by A. Petrenko (BINP).
+\item The expressions for the second-order resonance driving terms (\verb|twiss_output| command) were corrected. The original expressions, obtained from \cite{Bengtsson}, were
+determined to be in error. Thanks to J. Choi (BNL) for pointing this out. C. X. Wang (APS) derived the new expressions.
+Because the new method is slower than the previous method, it is now possible to turn off computation of higher-order terms.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -56,6 +59,9 @@ Here is a summary of what's changed since release 24.1:
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item Added the \verb|rf_setup| command, which sets up rf cavities (RFCA elements) for storage rings.
+\item The effect of octupoles (\verb|OCT| and \verb|KOCT| elements) is now included in computing the resonance driving terms and the
+ tune shifts with amplitude derived from these terms. This was requested by F. Lin (TJNAF), who also provided explicit expressions.
+ J. Bengtsson (BNL) also assisted with understanding the expressions.
 \end{itemize}
 
 \subsection{Other Changes}
@@ -4105,6 +4111,7 @@ unit parameter change for the element.
     long reflect_reference_values = 0;
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
+    long leading_order_driving_terms_only = 0;
     long local_dispersion = 1;
 &end
 \end{verbatim}
@@ -4168,10 +4175,14 @@ used that gives the second-order chromaticity only.
   results are generally small, but the default behavior disagrees with the results of \verb|moments_output|.
   This feature is not available for cavities that change the beam energy (\verb|CHANGE_P0=1| in element definition 
   or \verb|always_change_p0=1| on \verb|run_setup|).
-\item \verb|compute_driving_terms| --- If nonzero, then resonance driving terms \cite{Bengtsson} and
- tune shifts with amplitude are computed by summing over dipole, quadrupole, and sextupole elements.  For dipoles, only the effects of gradients and
+\item \verb|compute_driving_terms| --- If nonzero, then resonance driving terms \cite{Bengtsson, WangCXDrivingTerms, Bengtsson-SSC232} and
+ tune shifts with amplitude are computed by summing over dipole, quadrupole, sextupole, and octupole elements.  For dipoles, only the effects of gradients and
  sextupole terms are included; curvature effects are not present in the theory.   In addition, these quantities may be optimized 
  by using those names in optimization terms (see list below).
+\item \verb|leading_order_driving_terms_only| --- If nonzero, only the leading order driving terms are computed. I.e., terms involving double sums
+  over sextupole and quadrupole strengths are not computed. However, leading-order octupole terms are computed, even though they affect the same
+  terms as the second-order sextupole and quadrupole terms. This option is provided because computing the higher-order terms is time-consuming and
+  not always worthwhile.
 \item \verb|local_dispersion| ---  Normally, {\tt elegant} will ignore acceleration in computing the
   dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
   was the local fractional momentum deviation.  In a linac or other systems with rf elements, one might also be interested in the ``global'' dispersion
@@ -6083,6 +6094,12 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 
 \bibitem{Irwin-PAC95}
   J. Irwin {\em et al.}, ``Explicit soft fringe maps of a quadrupole,'' Proc. PAC95.
+
+\bibitem{WangCXDrivingTerms}
+ C. X. Wang, ``Second-order driving terms due to sextupoles and chromatic effects of quadrupoles'', AOP-TN-2009-020.
+
+\bibitem{Bengtsson-SSC232}
+  J. Bengtsson and J. Irwin, ``Analytical Calculations of Smear and Tune Shift,'' SSC-232, Feb. 1990.
 
 \end{thebibliography}
 
