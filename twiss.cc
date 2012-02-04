@@ -3897,23 +3897,36 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
+/* Revised to follow C. X. Wang AOP-TN-2009-020 for second-order terms */
 {
   std::complex <double> h11001, h00111, h20001, h00201, h10002;
   std::complex <double> h21000, h30000, h10110, h10020, h10200;
-  std::complex <double> h22000, h11110, h00220, h31000, h40000, h12000;
+  std::complex <double> h22000, h11110, h00220, h31000, h40000;
   std::complex <double> h20110, h11200, h20020, h20200, h00310, h00400;
   std::complex <double> t1, t2, t3, t4;
-  double betax1, betay1, phix1, phiy1, etax1;
+  std::complex <double> ii;
+  double betax1, betay1, phix1, phiy1, etax1, termSign;
   double betax2, betay2, phix2, phiy2;
-  double coef, b2L, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
+  double coef, b2L, b3L1, b3L2, b4L1, sqrt_betax, sqrt3_betax, nux, nuy;
+  double b2L1, b2L2;
   ELEMENT_LIST *eptr1, *eptr2;
-  
+  double two=2, three=3, four=4;
+  ELEMENT_LIST **pickedElem = NULL;
+  long nElems=0, iElem, jElem;
+
+  ii = std::complex<double>(0,1);
+
   /* accumulate real and imaginary parts */
   h11001 = h00111 = h20001 = h00201 = h10002 = std::complex<double>(0,0);
   h21000 = h30000 = h10110 = h10020 = h10200 = std::complex<double>(0,0);
+  h22000 = h11110 = h00220 = h31000 = h40000 = std::complex<double>(0,0);
+  h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = std::complex<double>(0,0);
+  
+  d->dnux_dJx = d->dnux_dJy = d->dnuy_dJy = 0;
+
   eptr1 = elem;
   while (eptr1) {
-    b2L = b3L1 = 0;
+    b2L = b3L1 = b4L1 = 0;
     switch (eptr1->type) {
     case T_SEXT:
       b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
@@ -3944,10 +3957,18 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     case T_KQUAD:
       b2L = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length;
       break;
+    case T_OCT:
+      b4L1 = ((OCTU*)eptr1->p_elem)->k3 * ((OCTU*)eptr1->p_elem)->length/3;
+      break;
+    case T_KOCT:
+      b4L1 = ((KOCT*)eptr1->p_elem)->k3 * ((OCTU*)eptr1->p_elem)->length/3;
+      break;
     default:
       break;
     }      
-    if (b2L || b3L1) {
+    if (b2L || b3L1 || b4L1) {
+      pickedElem = (ELEMENT_LIST**)SDDS_Realloc(pickedElem, sizeof(*pickedElem)*(nElems+1));
+      pickedElem[nElems++] = eptr1;
       if (eptr1->pred) {
         betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
         etax1  = (eptr1->twiss->etax + eptr1->pred->twiss->etax)/2;
@@ -3971,31 +3992,83 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       h00111 += -coef*betay1/4;
 
       /* h20001, h00201 */
-      h20001 += coef/8*betax1*cos(2*phix1) + std::complex<double>(0,1)*coef/8.0*betax1*sin(2*phix1);
-      h00201 += -coef/8*betay1*cos(2*phiy1) + std::complex<double>(0,1)*(-coef/8*betay1*sin(2*phiy1));
+      h20001 += coef/8*betax1*cos(2*phix1) + ii*coef/8.0*betax1*sin(2*phix1);
+      h00201 += -coef/8*betay1*cos(2*phiy1) + ii*(-coef/8*betay1*sin(2*phiy1));
 
       /* h10002 */
       coef = b2L-b3L1*etax1;
-      h10002 += coef/2*etax1*sqrt_betax*cos(phix1) + std::complex<double>(0,1)*coef/2.0*etax1*sqrt_betax*sin(phix1);
+      h10002 += coef/2*etax1*sqrt_betax*cos(phix1) + ii*coef/2.0*etax1*sqrt_betax*sin(phix1);
 
       if (b3L1) {
-        /* first-order geometric terms */
+        /* first-order geometric terms from sextupoles */
         /* h21000 */
         coef = -b3L1/8*sqrt3_betax;
-        h21000 += coef*cos(phix1) + std::complex<double>(0,1)*coef*sin(phix1);
+        h21000 += coef*cos(phix1) + ii*coef*sin(phix1);
         
         /* h30000 */
         coef = coef/3;
-        h30000 += coef*cos(3*phix1) + std::complex<double>(0,1)*coef*sin(3*phix1);
+        h30000 += coef*cos(3*phix1) + ii*coef*sin(3*phix1);
         
         /* h10110 */
         coef = b3L1/4*sqrt_betax*betay1;
-        h10110 += coef*cos(phix1) + std::complex<double>(0,1)*coef*sin(phix1);
+        h10110 += coef*cos(phix1) + ii*coef*sin(phix1);
         
         /* h10020 and h10200 */
         coef = coef/2;
-        h10020 += coef*cos(phix1-2*phiy1) + std::complex<double>(0,1)*coef*sin(phix1-2*phiy1);
-        h10200 += coef*cos(phix1+2*phiy1) + std::complex<double>(0,1)*coef*sin(phix1+2*phiy1);
+        h10020 += coef*cos(phix1-2*phiy1) + ii*coef*sin(phix1-2*phiy1);
+        h10200 += coef*cos(phix1+2*phiy1) + ii*coef*sin(phix1+2*phiy1);
+      }
+      if (b4L1) {
+        /* second-order terms from leading order effects of octupoles */
+        d->dnux_dJx += 3*b4L1*sqr(betax1)/(16*PI);
+        d->dnux_dJy -= 3*b4L1*betax1*betay1/(8*PI);
+        d->dnuy_dJy += 3*b4L1*sqr(betay1)/(16*PI);
+
+        /* These terms are ignored for now because there are no
+         * corresponding terms from sextupoles...
+
+	 h00004 += b4L1*ipow(etax1,4)/4;
+	 h00022 += -3*b4L1*betay1*ipow(etax1,2)/4*exp(-2*ii*phiy1);
+	 h00040 += b4L1*sqr(betay1)/16*exp(-4*ii*phiy1);
+	 h00112 += -3*b4L1*betay1*ipow(etax1,2)/2;
+	 h00130 += b4L1*sqr(betay1)/4*exp(-2*ii*phiy1);
+	 h00202 += -3*b4L1*betay1*ipow(etax1,2)/4*exp(2*ii*phiy1);
+	 h01003 += b4L1*sqrt(betax1)*ipow(etax1,3)/sqrt(2)*exp(-1*ii*phix1);
+	 h01021 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*2*exp(-1*ii*phix1+-2*ii*phiy1);
+	 h01111 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*exp(-1*ii*phix1);
+	 h01201 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*2*exp(-1*ii*phix1+2*ii*phiy1);
+	 h02002 += 3*b4L1*betax1*ipow(etax1,2)/4*exp(-2*ii*phix1);
+	 h02020 += -3*b4L1*betax1*betay1/8*exp(-2*ii*phix1+-2*ii*phiy1);
+	 h02110 += -3*b4L1*betax1*betay1/4*exp(-2*ii*phix1);
+	 h02200 += -3*b4L1*betax1*betay1/8*exp(-2*ii*phix1+2*ii*phiy1);
+	 h03001 += b4L1*sqrt(betax1)*betax1*etax1/sqrt(2)*2*exp(-3*ii*phix1);
+	 h04000 += b4L1*sqr(betax1)/16*exp(-4*ii*phix1);
+	 h10003 += b4L1*sqrt(betax1)*ipow(etax1,3)/sqrt(2)*exp(1*ii*phix1);
+	 h10021 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*2*exp(1*ii*phix1+-2*ii*phiy1);
+	 h10111 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*exp(1*ii*phix1);
+	 h10201 += -3*b4L1*sqrt(betax1)*betay1*etax1/sqrt(2)*2*exp(1*ii*phix1+2*ii*phiy1);
+	 h11002 += 3*b4L1*betax1*ipow(etax1,2)/2;
+	 h11020 += -3*b4L1*betax1*betay1/4*exp(-2*ii*phiy1);
+	 h12001 += 3*b4L1*sqrt(betax1)*betax1*etax1/sqrt(2)*2*exp(-1*ii*phix1);
+	 h13000 += b4L1*sqr(betax1)/4*exp(-2*ii*phix1);
+	 h20002 += 3*b4L1*betax1*ipow(etax1,2)/4*exp(2*ii*phix1);
+	 h21001 += 3*b4L1*sqrt(betax1)*betax1*etax1/sqrt(2)*2*exp(1*ii*phix1);
+	 h30001 += b4L1*sqrt(betax1)*betax1*etax1/sqrt(2)*2*exp(3*ii*phix1);
+
+        */
+
+	 h22000 += 3*b4L1*sqr(betax1)/8;
+	 h11110 += -3*b4L1*betax1*betay1/2;
+	 h00220 += 3*b4L1*sqr(betay1)/8;
+	 h31000 += b4L1*sqr(betax1)/4*exp(ii*two*phix1);
+	 h40000 += b4L1*sqr(betax1)/16*exp(four*ii*phix1);
+	 h20110 += -3*b4L1*betax1*betay1/4*exp(two*ii*phix1);
+	 h11200 += -3*b4L1*betax1*betay1/4*exp(two*ii*phiy1);
+	 h20020 += -3*b4L1*betax1*betay1/8*exp(two*ii*phix1+-two*ii*phiy1);
+	 h20200 += -3*b4L1*betax1*betay1/8*exp(two*ii*phix1+two*ii*phiy1);
+	 h00310 += b4L1*sqr(betay1)/4*exp(two*ii*phiy1);
+	 h00400 += b4L1*sqr(betay1)/16*exp(four*ii*phiy1);
+
       }
     }
     eptr1 = eptr1->succ;
@@ -4013,155 +4086,209 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   d->h10020 = std::abs<double>(h10020);
   d->h10200 = std::abs<double>(h10200);
 
-  /* compute second-order geomeric terms */
-  h12000 = std::conj(h21000);
-  h22000 = (3*sqr(std::abs<double>(h21000)) + sqr(std::abs<double>(h30000)))/64;
-  d->h22000 = std::abs<double>(h22000);
+  if (!leading_order_driving_terms_only) {
+    /* compute second-order terms */
 
-  t1 = 2.0*h21000*std::conj(h10110);
-  t2 = h10020*std::conj(h10020);
-  t3 = h10200*std::conj(h10200);
-  h11110 = (t1+t2+t3)/16.0;
-  d->h11110 = std::abs<double>(h11110);
-
-  h00220 = (4*sqr(std::abs<double>(h10110)) + sqr(std::abs<double>(h10020)) + sqr(std::abs<double>(h10200)))/64;
-  d->h00220 = std::abs<double>(h00220);
- 
-  h31000 = h30000*std::conj(h21000)/32.0;
-  d->h31000 = std::abs<double>(h31000);
-
-  h40000 = h30000*h21000/64.0;
-  d->h40000 = std::abs<double>(h40000);
-  
-  t1 = 2.0*h30000*std::conj(h10110);
-  t2 = 2.0*h21000*h10110;
-  t3 = 4.0*h10200*h10020;
-  h20110 = (t1+t2+t3)/64.0;
-  d->h20110 = std::abs<double>(h20110);
-
-  t1 = 2.0*h10200*h12000;
-  t2 = 2.0*h21000*std::conj(h10020);
-  t3 = 4.0*h10200*std::conj(h10110);
-  t4 = 4.0*h10110*std::conj(h10020);
-  h11200 = (t1+t2+t3+t4)/64.0;
-  d->h11200 = std::abs<double>(h11200);
-
-  t1 = h21000*h10020;
-  t2 = h30000*std::conj(h10200);
-  t3 = 4.0*h10110*h10020;
-  h20020 = (t1+t2+t3)/64.0;
-  d->h20020 = std::abs<double>(h20020);
-
-  t1 = h30000*std::conj(h10020)/64.0;
-  t2 = h10200*h21000/64.0;
-  t3 = h10110*h10200/16.0;
-  h20200 = t1+t2+t3;
-  d->h20200 = std::abs<double>(h20200);
-  
-  t1 = h10200*std::conj(h10110);
-  t2 = h10110*std::conj(h10020);
-  h00310 = (t1+t2)/32.0;
-  d->h00310 = std::abs<double>(h00310);
-  
-  h00400 = h10200*std::conj(h10020)/64.0;
-  d->h00400 = std::abs<double>(h00400);
-  
-  nux = tune[0];
-  nuy = tune[1];
-  eptr1 = elem;
-  d->dnux_dJx = d->dnux_dJy = d->dnuy_dJy = 0;
-  while (eptr1) {
-    b3L1 = 0;
-    switch (eptr1->type) {
-    case T_SEXT:
-      b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
-      break;
-    case T_KSEXT:
-      b3L1 = ((KSEXT*)eptr1->p_elem)->k2 * ((KSEXT*)eptr1->p_elem)->length/2;
-      break;
-    case T_KQUSE:
-      b3L1 = ((KQUSE*)eptr1->p_elem)->k2 * ((KQUSE*)eptr1->p_elem)->length/2;
-      break;
-    case T_RBEN:
-    case T_SBEN:
-      b3L1 = ((BEND*)eptr1->p_elem)->k2 * ((BEND*)eptr1->p_elem)->length/2;
-      break;
-    case T_CSBEND:
-      b3L1 = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
-      break;
-    case T_CSRCSBEND:
-      b3L1 = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
-      break;
-    default:
-      break;
-    }      
-    if (b3L1) {
-      if (eptr1->pred) {
-        betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
-        phix1  = (eptr1->twiss->phix + eptr1->pred->twiss->phix)/2;
-        betay1 = (eptr1->twiss->betay + eptr1->pred->twiss->betay)/2;
-        phiy1  = (eptr1->twiss->phiy + eptr1->pred->twiss->phiy)/2;
-      } else {
-        betax1 = (eptr1->twiss->betax + twiss0->betax)/2;
-        phix1  = (eptr1->twiss->phix + twiss0->phix)/2;
-        betay1 = (eptr1->twiss->betay + twiss0->betay)/2;
-        phiy1  = (eptr1->twiss->phiy + twiss0->phiy)/2;
-      }
-      eptr2 = elem;
-      while (eptr2) {
-        b3L2 = 0;
-        switch (eptr2->type) {
-        case T_SEXT:
-          b3L2 = ((SEXT*)eptr2->p_elem)->k2 * ((SEXT*)eptr2->p_elem)->length/2;
-          break;
-        case T_KSEXT:
-          b3L2 = ((KSEXT*)eptr2->p_elem)->k2 * ((KSEXT*)eptr2->p_elem)->length/2;
-          break;
-        case T_KQUSE:
-          b3L2 = ((KQUSE*)eptr2->p_elem)->k2 * ((KQUSE*)eptr2->p_elem)->length/2;
-          break;
-        case T_RBEN:
-        case T_SBEN:
-          b3L2 = ((BEND*)eptr2->p_elem)->k2 * ((BEND*)eptr2->p_elem)->length/2;
-          break;
-        case T_CSBEND:
-          b3L2 = ((CSBEND*)eptr2->p_elem)->k2 * ((CSBEND*)eptr2->p_elem)->length/2;
-          break;
-        case T_CSRCSBEND:
-          b3L2 = ((CSRCSBEND*)eptr2->p_elem)->k2 * ((CSRCSBEND*)eptr2->p_elem)->length/2;
-          break;
-        default:
-          break;
+    nux = tune[0];
+    nuy = tune[1];
+    for (iElem=0; iElem<nElems; iElem++) {
+      eptr1 = pickedElem[iElem];
+      b2L1 = b3L1 = 0;
+      switch (eptr1->type) {
+      case T_SEXT:
+        b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
+        break;
+      case T_KSEXT:
+        b3L1 = ((KSEXT*)eptr1->p_elem)->k2 * ((KSEXT*)eptr1->p_elem)->length/2;
+        break;
+      case T_KQUSE:
+        b2L1 = ((KQUSE*)eptr1->p_elem)->k1 * ((KQUSE*)eptr1->p_elem)->length;
+        b3L1 = ((KQUSE*)eptr1->p_elem)->k2 * ((KQUSE*)eptr1->p_elem)->length/2;
+        break;
+      case T_RBEN:
+      case T_SBEN:
+        b2L1 = ((BEND*)eptr1->p_elem)->k1 * ((BEND*)eptr1->p_elem)->length;
+        b3L1 = ((BEND*)eptr1->p_elem)->k2 * ((BEND*)eptr1->p_elem)->length/2;
+        break;
+      case T_CSBEND:
+        b2L1 = ((CSBEND*)eptr1->p_elem)->k1 * ((CSBEND*)eptr1->p_elem)->length;
+        b3L1 = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
+        break;
+      case T_CSRCSBEND:
+        b2L1 = ((CSRCSBEND*)eptr1->p_elem)->k1 * ((CSRCSBEND*)eptr1->p_elem)->length;
+        b3L1 = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
+        break;
+      case T_QUAD:
+        b2L1 = ((QUAD*)eptr1->p_elem)->k1 * ((QUAD*)eptr1->p_elem)->length;
+        break;
+      case T_KQUAD:
+        b2L1 = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length;
+        break;
+      default:
+        break;
+      }      
+      if (b3L1 || b2L1) {
+        if (eptr1->pred) {
+          betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
+          phix1  = (eptr1->twiss->phix + eptr1->pred->twiss->phix)/2;
+          betay1 = (eptr1->twiss->betay + eptr1->pred->twiss->betay)/2;
+          phiy1  = (eptr1->twiss->phiy + eptr1->pred->twiss->phiy)/2;
+        } else {
+          betax1 = (eptr1->twiss->betax + twiss0->betax)/2;
+          phix1  = (eptr1->twiss->phix + twiss0->phix)/2;
+          betay1 = (eptr1->twiss->betay + twiss0->betay)/2;
+          phiy1  = (eptr1->twiss->phiy + twiss0->phiy)/2;
         }
-        if (b3L2) {
-          if (eptr2->pred) {
-            betax2 = (eptr2->twiss->betax + eptr2->pred->twiss->betax)/2;
-            phix2  = (eptr2->twiss->phix + eptr2->pred->twiss->phix)/2;
-            betay2 = (eptr2->twiss->betay + eptr2->pred->twiss->betay)/2;
-            phiy2  = (eptr2->twiss->phiy + eptr2->pred->twiss->phiy)/2;
-          } else {
-            betax2 = (eptr2->twiss->betax + twiss0->betax)/2;
-            phix2  = (eptr2->twiss->phix + twiss0->phix)/2;
-            betay2 = (eptr2->twiss->betay + twiss0->betay)/2;
-            phiy2  = (eptr2->twiss->phiy + twiss0->phiy)/2;
+	for (jElem=0; jElem<nElems; jElem++) {
+	  eptr2 = pickedElem[jElem];
+          b2L2 = b3L2 = 0;
+          termSign = SIGN(eptr1->end_pos - eptr2->end_pos);
+          switch (eptr2->type) {
+          case T_SEXT:
+            b3L2 = ((SEXT*)eptr2->p_elem)->k2 * ((SEXT*)eptr2->p_elem)->length/2;
+            break;
+          case T_KSEXT:
+            b3L2 = ((KSEXT*)eptr2->p_elem)->k2 * ((KSEXT*)eptr2->p_elem)->length/2;
+            break;
+          case T_KQUSE:
+            b2L2 = ((KQUSE*)eptr2->p_elem)->k1 * ((KQUSE*)eptr2->p_elem)->length;
+            b3L2 = ((KQUSE*)eptr2->p_elem)->k2 * ((KQUSE*)eptr2->p_elem)->length/2;
+            break;
+          case T_RBEN:
+          case T_SBEN:
+            b2L2 = ((BEND*)eptr2->p_elem)->k1 * ((BEND*)eptr2->p_elem)->length;
+            b3L2 = ((BEND*)eptr2->p_elem)->k2 * ((BEND*)eptr2->p_elem)->length/2;
+            break;
+          case T_CSBEND:
+            b2L2 = ((CSBEND*)eptr2->p_elem)->k1 * ((CSBEND*)eptr2->p_elem)->length;
+            b3L2 = ((CSBEND*)eptr2->p_elem)->k2 * ((CSBEND*)eptr2->p_elem)->length/2;
+            break;
+          case T_CSRCSBEND:
+            b2L2 = ((CSRCSBEND*)eptr2->p_elem)->k1 * ((CSRCSBEND*)eptr2->p_elem)->length;
+            b3L2 = ((CSRCSBEND*)eptr2->p_elem)->k2 * ((CSRCSBEND*)eptr2->p_elem)->length/2;
+            break;
+          case T_QUAD:
+            b2L2 = ((QUAD*)eptr2->p_elem)->k1 * ((QUAD*)eptr2->p_elem)->length;
+            break;
+          case T_KQUAD:
+            b2L2 = ((KQUAD*)eptr2->p_elem)->k1 * ((KQUAD*)eptr2->p_elem)->length;
+            break;
+          default:
+            break;
           }
-          d->dnux_dJx += b3L1*b3L2/(-16*PI)*pow(betax1*betax2, 1.5)*
-                          (3*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) + cos(fabs(3*(phix1-phix2))-3*PI*nux)/sin(3*PI*nux));
-          d->dnux_dJy += b3L1*b3L2/(8*PI)*sqrt(betax1*betax2)*betay1*
-            (2*betax2*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
-             - betay2*cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy))
-             + betay2*cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
-          d->dnuy_dJy += b3L1*b3L2/(-16*PI)*sqrt(betax1*betax2)*betay1*betay2*
-            (4*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
-             + cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy)) 
-             + cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
+          
+          if (b3L2 || b2L2) {
+            if (eptr2->pred) {
+              betax2 = (eptr2->twiss->betax + eptr2->pred->twiss->betax)/2;
+              phix2  = (eptr2->twiss->phix + eptr2->pred->twiss->phix)/2;
+              betay2 = (eptr2->twiss->betay + eptr2->pred->twiss->betay)/2;
+              phiy2  = (eptr2->twiss->phiy + eptr2->pred->twiss->phiy)/2;
+            } else {
+              betax2 = (eptr2->twiss->betax + twiss0->betax)/2;
+              phix2  = (eptr2->twiss->phix + twiss0->phix)/2;
+              betay2 = (eptr2->twiss->betay + twiss0->betay)/2;
+              phiy2  = (eptr2->twiss->phiy + twiss0->phiy)/2;
+            }
+	    if (b3L1 && b3L2) {
+	      d->dnux_dJx += b3L1*b3L2/(-16*PI)*pow(betax1*betax2, 1.5)*
+		(3*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) + cos(fabs(3*(phix1-phix2))-3*PI*nux)/sin(3*PI*nux));
+	      d->dnux_dJy += b3L1*b3L2/(8*PI)*sqrt(betax1*betax2)*betay1*
+		(2*betax2*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
+		 - betay2*cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy))
+		 + betay2*cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
+	      d->dnuy_dJy += b3L1*b3L2/(-16*PI)*sqrt(betax1*betax2)*betay1*betay2*
+		(4*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
+		 + cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy)) 
+		 + cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
+	    }
+            if (termSign && b3L1 && b3L2) {
+              /* geometric terms */
+              h22000 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betax1*betax2*
+                (exp(ii*three*(phix1-phix2)) + three*exp(ii*(phix1-phix2)));
+              h31000 += (1./32)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betax1*betax2*
+                exp(ii*(three*phix1-phix2));
+              h11110 += (1./16)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*
+                (betax2*(exp(-ii*(phix1-phix2)) - 
+                         exp(ii*(phix1-phix2)))
+                 + betay2*(exp(ii*(phix1-phix2+2*phiy1-2*phiy2)) +
+                           exp(-ii*(phix1-phix2-2*phiy1+2*phiy2)))
+                 );
+              h11200 += (1./32)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*
+                (betax2*(exp(-ii*(phix1-phix2-2*phiy1))
+                         -exp(ii*(phix1-phix2+2*phiy1)))
+                 +two*betay2*(exp(ii*(phix1-phix2+2*phiy1))
+                              +exp(-ii*(phix1-phix2-2*phiy1))));
+              h40000 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betax1*betax2*
+                exp(ii*(three*phix1+phix2));
+              h20020 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*
+                (betax2*exp(-ii*(phix1-three*phix2+2*phiy1)) 
+                 -(betax2+four*betay2)*exp(ii*(phix1+phix2-2*phiy1)));
+              h20110 += (1./32)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*
+                (betax2*(exp(-ii*(phix1-three*phix2)) 
+                         - exp(ii*(phix1+phix2))) 
+                 + two*betay2*exp(ii*(phix1+phix2+2*phiy1-2*phiy2)));
+              h20200 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*
+                (betax2*exp(-ii*(phix1-three*phix2-2*phiy1)) 
+                 -(betax2-four*betay2)*exp(ii*(phix1+phix2+2*phiy1)));
+              h00220 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*betay2*
+                (exp(ii*(phix1-phix2+2*phiy1-2*phiy2))
+                 + four*exp(ii*(phix1-phix2)) 
+                 - exp(-ii*(phix1-phix2-2*phiy1+2*phiy2)));
+              h00310 += (1./32)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*betay2*
+                (exp(ii*(phix1-phix2+2*phiy1))
+                 -exp(-ii*(phix1-phix2-2*phiy1)));
+              h00400 += (1./64)*termSign*ii*b3L1*b3L2*
+                sqrt(betax1*betax2)*betay1*betay2*
+                exp(ii*(phix1-phix2+2*phiy1+2*phiy2));
+	    }
+	    if (b3L1) {
+              /* chromatic terms (incomplete)
+              h21001 += (-1./32)*ii*b3L1*b2L2*sqrt(betax1)*betax1*betax2*
+                (exp(ii*phix1)+exp(ii*(3*phix1-2*phix2))-two*exp(-ii*(phix1-2*phix2))) 
+                - (1./16)*ii*b3L1*b3L2*betax1*sqrt(betax2)*betax2*etax1*
+                (exp(ii*phix1)-2*exp(ii*(2*phix1-phix2))+exp(-ii*(2*phix1-3*phix2)));
+              h30001 += (-1./32)*ii*b3L1*b2L2*sqrt(betax1)*betax1*betax2*
+                (exp(ii*3*phix1)-exp(ii*(phix1+2*phix2))) 
+                - (1./16)*ii*b3L1*b3L2*betax1*sqrt(betax2)*betax2*etax1*
+                (exp(ii*3*phix2)-exp(ii*(2*phix1+phix2)));
+              */
+            }
+          }
         }
-        eptr2 = eptr2->succ;
       }
     }
-    eptr1 = eptr1->succ;
+
+
   }
+
+  d->h22000 = std::abs<double>(h22000);
+  d->h11110 = std::abs<double>(h11110);
+  d->h00220 = std::abs<double>(h00220);
+  d->h31000 = std::abs<double>(h31000);
+  d->h40000 = std::abs<double>(h40000);
+  d->h20110 = std::abs<double>(h20110);
+  d->h11200 = std::abs<double>(h11200);
+  d->h20020 = std::abs<double>(h20020);
+  d->h20200 = std::abs<double>(h20200);
+  d->h00310 = std::abs<double>(h00310);
+  d->h00400 = std::abs<double>(h00400);
+
+  if (pickedElem)
+    free(pickedElem);
 }
+
+
+
 
 static  long nRfca = 0;
 static ELEMENT_LIST **rfcaElem = NULL;
