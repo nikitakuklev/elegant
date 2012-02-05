@@ -3895,13 +3895,12 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 }
 
 typedef struct {
-  short type;
   double betax, betay;
   double rbetax, rbetay;           /* rbetax = sqrt(betax) */
   double betax2, betay2;           /* betax2 = betax^2 */
   double phix, phiy;
   std::complex <double> px[5], py[5];    /* px[j]=(exp(i*phix))^j j>0 */
-  double b2L, b3L, b4L, s;
+  double b2L, b3L, s;
 } ELEMDATA;
 
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
@@ -3992,8 +3991,6 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       ed[nE].s = eptr1->end_pos;
       ed[nE].b2L = b2L;
       ed[nE].b3L = b3L;
-      ed[nE].b4L = b4L;
-      ed[nE].type = eptr1->type;
       ed[nE].betax = betax1;
       ed[nE].betax2 = sqr(betax1);
       ed[nE].rbetax = sqrt(betax1);
@@ -4012,59 +4009,53 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       ed[nE].py[4] = ed[nE].py[1]*ed[nE].py[3];
 
 
-      /* first-order chromatic terms */
-      /* h11001 and h00111 */
-      coef = ed[nE].b2L-2*ed[nE].b3L*etax1;
-      h11001 += coef*betax1/4;
-      h00111 += -coef*betay1/4;
-
-      /* h20001, h00201 */
-      h20001 += coef/8*betax1*cos(2*phix1) + ii*coef/8.0*betax1*sin(2*phix1);
-      h00201 += -coef/8*betay1*cos(2*phiy1) + ii*(-coef/8*betay1*sin(2*phiy1));
-
-      /* h10002 */
-      coef = ed[nE].b2L-ed[nE].b3L*etax1;
-      h10002 += coef/2*etax1*ed[nE].rbetax*(cos(phix1)+ii*sin(phix1));
-
+      if (b2L || b3L) {
+	/* first-order chromatic terms */
+	/* h11001 and h00111 */
+	h11001 += b3L*betax1*etax1/2-b2L*betax1/4;
+	h00111 += b2L*betay1/4-b3L*betay1*etax1/2;
+	
+	/* h20001, h00201 */
+	h20001 += (b3L*betax1*etax1/2-b2L*betax1/4)/2*ed[nE].px[2];
+	h00201 += (b2L*betay1/4-b3L*betay1*etax1/2)/2*ed[nE].py[2];
+	
+	/* h10002 */
+	h10002 += (b3L*ed[nE].rbetax*ipow(etax1,2)-b2L*ed[nE].rbetax*etax1)/2*ed[nE].px[1];
+      }
       if (ed[nE].b3L) {
         /* first-order geometric terms from sextupoles */
         /* h21000 */
-        coef = -ed[nE].b3L/8*ed[nE].betax*ed[nE].rbetax;
-        h21000 += coef*ed[nE].px[1];
-        
+	h21000 += b3L*ed[nE].rbetax*betax1/8*ed[nE].px[1];
+
         /* h30000 */
-        coef = coef/3;
-        h30000 += coef*ed[nE].px[3];
+	h30000 += b3L*ed[nE].rbetax*betax1/24*ed[nE].px[3];
         
         /* h10110 */
-        coef = ed[nE].b3L/4*ed[nE].rbetax*betay1;
-        h10110 += coef*ed[nE].px[1];
-        
+	h10110 += -b3L*ed[nE].rbetax*betay1/4*ed[nE].px[1];
+
         /* h10020 and h10200 */
-        coef = coef/2;
-        h10020 += coef*ed[nE].px[1]*conj(ed[nE].py[2]);
-        h10200 += coef*ed[nE].px[1]*ed[nE].py[2];
+	h10020 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*conj(ed[nE].py[2]);
+	h10200 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*ed[nE].py[2];
       }
-      if (ed[nE].b4L) {
+      if (b4L) {
         /* second-order terms from leading order effects of octupoles */
 	/* Ignoring a large number of terms that are not also driven by sextupoles */
 
-        d->dnux_dJx += 3*ed[nE].b4L*ed[nE].betax2/(16*PI);
-        d->dnux_dJy -= 3*ed[nE].b4L*betax1*betay1/(8*PI);
-        d->dnuy_dJy += 3*ed[nE].b4L*ed[nE].betay2/(16*PI);
-
-  	 h22000 += 3*ed[nE].b4L*ed[nE].betax2/8;
-	 h11110 += -3*ed[nE].b4L*betax1*betay1/2;
-	 h00220 += 3*ed[nE].b4L*ed[nE].betay2/8;
-	 h31000 += ed[nE].b4L*ed[nE].betax2/4*ed[nE].px[2];
-	 h40000 += ed[nE].b4L*ed[nE].betax2/16*ed[nE].px[4];
-	 h20110 += -3*ed[nE].b4L*betax1*betay1/4*ed[nE].px[2];
-	 h11200 += -3*ed[nE].b4L*betax1*betay1/4*ed[nE].py[2];
-	 h20020 += -3*ed[nE].b4L*betax1*betay1/8*ed[nE].px[2]*conj(ed[nE].py[2]);
-	 h20200 += -3*ed[nE].b4L*betax1*betay1/8*ed[nE].px[2]*ed[nE].py[2];
-	 h00310 += ed[nE].b4L*ed[nE].betay2/4*ed[nE].py[2];
-	 h00400 += ed[nE].b4L*ed[nE].betay2/16*ed[nE].py[4];
-
+        d->dnux_dJx += 3*b4L*ed[nE].betax2/(16*PI);
+        d->dnux_dJy -= 3*b4L*betax1*betay1/(8*PI);
+        d->dnuy_dJy += 3*b4L*ed[nE].betay2/(16*PI);
+	
+	h22000 += 3*b4L*ed[nE].betax2/32;
+	h11110 += -3*b4L*betax1*betay1/8;
+	h00220 += 3*b4L*ed[nE].betay2/32;
+	h31000 += b4L*ed[nE].betax2/16*ed[nE].px[2];
+	h40000 += b4L*ed[nE].betax2/64*ed[nE].px[4];
+	h20110 += -3*b4L*betax1*betay1/16*ed[nE].px[2];
+	h11200 += -3*b4L*betax1*betay1/16*ed[nE].py[2];
+	h20020 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*conj(ed[nE].py[2]);
+	h20200 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*ed[nE].py[2];
+	h00310 += b4L*ed[nE].betay2/16*ed[nE].py[2];
+	h00400 += b4L*ed[nE].betay2/64*ed[nE].py[4];
       }
       nE++;
     }
