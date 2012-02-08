@@ -62,12 +62,14 @@ void freeInputObjects();
 #define DEFINE_MACRO 1
 #define DEFINE_CPU_LIST 2
 #define DEFINE_PIPE 3
-#define N_OPTIONS 4
+#define DEFINE_RPN_DEFNS 4
+#define N_OPTIONS 5
 char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
     "cpulist",
     "pipe",
+    "rpndefns",
   };
 
 #define SHOW_USAGE    0x0001
@@ -76,10 +78,10 @@ char *option[N_OPTIONS] = {
 void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
-  char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
+  char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 24.2Beta1, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
-  char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]]";
+  char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 24.2Beta1, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
@@ -318,6 +320,7 @@ char **argv;
   long namelists_read = 0, failed, firstPass;
   unsigned long pipeFlags = 0;
   double apertureReturn;
+  char *rpnDefns;
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
@@ -433,10 +436,6 @@ char **argv;
   showUsageOrGreeting(SHOW_GREETING);
   fflush(stdout);
   link_date();
-  if (getenv("RPN_DEFNS")) {
-    rpn(getenv("RPN_DEFNS"));
-    if (rpn_check_error()) exitElegant(1);
-  }
 
   inputfile = NULL;
   for (i=1; i<argc; i++) {
@@ -504,6 +503,10 @@ char **argv;
         printf("warning: CPU list ignored\n");
 #endif /*(!USE_MPI && defined(linux)) */
         break;
+      case DEFINE_RPN_DEFNS:
+        if (scanned[i].n_items!=2 || !strlen(rpnDefns=scanned[i].list[1]))
+          bombElegant("invalid -rpnDefns syntax", NULL);
+        break;
       default:
         fprintf(stdout, "Unknown option given.\n");
         showUsageOrGreeting(SHOW_USAGE);
@@ -519,6 +522,22 @@ char **argv;
         showUsageOrGreeting(SHOW_USAGE);
         exitElegant(1);
       }
+    }
+  }
+
+  if (!rpnDefns) {
+    if (getenv("RPN_DEFNS")) {
+      rpn(getenv("RPN_DEFNS"));
+      if (rpn_check_error()) {
+        bombElegant("RPN_DEFNS environment variable invalid", NULL);
+      }
+    } else {
+      bombElegant("RPN_DEFNS environment variable undefined. Must define or provide -rpnDefns commandline option.", NULL);
+    }
+  } else {
+    rpn(rpnDefns);
+    if (rpn_check_error()) {
+      bombElegant("rpn definitions file invalid", NULL);
     }
   }
 
