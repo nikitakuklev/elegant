@@ -4066,6 +4066,7 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     eptr1 = eptr1->succ;
   }
 
+  /* Done with the leading-order quad and sext terms */
   d->h11001 = std::abs<double>(h11001)*(OPA_convention?4.:1.);
   d->h00111 = std::abs<double>(h00111)*(OPA_convention?4.:1.);
   d->h20001 = std::abs<double>(h20001)*(OPA_convention?4.:1.);
@@ -4079,7 +4080,7 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   d->h10200 = std::abs<double>(h10200)*(OPA_convention?sqrt32:1.);
 
   if (!leading_order_driving_terms_only) {
-    /* compute second-order terms */
+    /* compute sextupole contributions to second-order terms */
 
     nux = tune[0];
     nuy = tune[1];
