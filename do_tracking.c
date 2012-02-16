@@ -846,7 +846,7 @@ long do_tracking(
 	      }
 	      break;
 	    case T_RFDF:
-	      if (!(flags&TIME_DEPENDENCE_OFF))
+	      if (!(flags&TIME_DEPENDENCE_OFF) || (flags&CLOSED_ORBIT_TRACKING))
 		track_through_rf_deflector(coord, (RFDF*)eptr->p_elem,
                                            coord, nToTrack, *P_central,
                                            beamline->revolution_length, eptr->end_pos,
