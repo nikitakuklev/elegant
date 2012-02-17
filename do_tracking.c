@@ -3274,9 +3274,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       /* Do particle accounting only */
       beam->n_to_track = npNew+*nLost;
       /* move lost particles into the upper part of the arrays */
-      for (i=0; i<np-npNew; i++) {
-        swapParticles(beam->lost[npNew+i], beam->lost[beam->n_to_track+i]);
-      }
+      if (beam->lost)
+	for (i=0; i<np-npNew; i++) {
+	  swapParticles(beam->lost[npNew+i], beam->lost[beam->n_to_track+i]);
+	}
     }
   }    
       
@@ -3323,8 +3324,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       beam->n_particle = npNew+*nLost;
 #if !USE_MPI
       /* move lost particles into the upper part of the arrays */
-      for (i=*nLost-1; i>=0; i--) {
-        swapParticles(beam->lost[np+i], beam->lost[npNew+i]);
+      if (beam->lost)
+	for (i=*nLost-1; i>=0; i--) {
+	  swapParticles(beam->lost[np+i], beam->lost[npNew+i]);
       }
 #endif
     }
@@ -3343,7 +3345,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI
   /* Particles could be redistributed, move lost particles into the upper part of the arrays */
-  if ((np != npNew) && beam && nLost)
+  if ((np != npNew) && beam && nLost && beam->lost)
     for (i=0; i<=*nLost-1; i++) {
       swapParticles(beam->lost[np+i], beam->lost[npNew+i]);
     }
@@ -3388,11 +3390,13 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 	  if (j==npNew) { /* record the lost particle */
 	    /* Copy the lost particles in the SCRIPT element into the upper part of the arrays. */
 	    (*nLost)++;
-	    for (k=0; k<7; k++) {
-	      beam->lost[lostIndex][k] = part[i][k];
+	    if (beam->lost) {
+	      for (k=0; k<7; k++) {
+		beam->lost[lostIndex][k] = part[i][k];
+	      }
+	      beam->lost[lostIndex][7] = (double) iPass; 
+	      lostIndex++;
 	    }
-            beam->lost[lostIndex][7] = (double) iPass; 
-	    lostIndex++;
 	  }
 	}
       }
