@@ -2011,15 +2011,15 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
   double k, theta, omega, L, phi, beta;
   double cphi, sphi;
 
-  if (rfdf->voltage==0)
+  if (rfdf->voltage==0 || rfdf->fse==-1)
     return drift_matrix(rfdf->length, 1);
-
+  
   beta = pReference/sqrt(sqr(pReference)+1);
-  theta = (particleCharge*rfdf->voltage)/(particleMass*sqr(c_mks)*pReference*beta);
+  theta = (particleCharge*rfdf->voltage*(1+rfdf->fse))/(particleMass*sqr(c_mks)*pReference*beta);
   omega = rfdf->frequency*PIx2;
   k = omega/c_mks;
   L = rfdf->length;
-  
+
   if (L==0) {
     phi = rfdf->phase*PI/180.;
     cphi = cos(phi);

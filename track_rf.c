@@ -82,6 +82,8 @@ void track_through_rf_deflector(
     voltFactor = 1;
   }
 
+  voltFactor *= (1+rf_param->fse);
+
   voltFactor *= (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
      (rf_param->voltageNoiseGroup
       ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)
@@ -117,7 +119,7 @@ void track_through_rf_deflector(
 
   cos_tilt = cos(rf_param->tilt);
   sin_tilt = sin(rf_param->tilt);
-  Estrength = (particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
+  Estrength = voltFactor*(particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
   k = omega/c_mks;
 
   if (isSlave || !notSinglePart) {

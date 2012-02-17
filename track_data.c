@@ -554,6 +554,7 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"FREQUENCY", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
     {"VOLTAGE", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.voltage), NULL, 0.0, 0, "voltage"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.fse), NULL, 0.0, 0, "Fractional Strength Error"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&rfdf_example.time_offset), NULL, 0.0, 0, "time offset (adds to phase)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1, "number of kicks (odd integer)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},

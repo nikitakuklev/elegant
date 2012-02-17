@@ -14,7 +14,6 @@
     STRING statistics = NULL;
     double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};
-
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
     long remove_smallest_SVs[2] = {0, 0};
@@ -39,5 +38,6 @@
     long closed_orbit_iterations = 40;
     double closed_orbit_iteration_fraction = 0.9;
     long use_perturbed_matrix = 0;
+    long use_response_from_computed_orbits = 0;
 #end
 
