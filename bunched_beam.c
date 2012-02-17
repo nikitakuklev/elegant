@@ -834,7 +834,7 @@ void setup_output(
     long n_elements;
     n_elements = beamline->n_elems;
 #if USE_MPI
-  if (runInSinglePartMode) {
+  if (runInSinglePartMode && (!enableOutput)) {
     if (run->acceptance || run->centroid || run->sigma || run->final || run->output || run->losses ) {
       printf ("\nWarning: Tracking will be done independently on each processor for this simulation\n");
       printf ("Pelegant does not provide intermediate output for optimization now.\n\n");

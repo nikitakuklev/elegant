@@ -75,6 +75,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       log_file = NULL;
     optimization_data->random_factor = random_factor;
     runInSinglePartMode = 1;  /* To be compatible with the original simplex method setup */
+    /* The output files are disabled for most of the optimization methods in Pelegant except for the simplex method, which runs in serial mode */ 	
+    if (optimization_data->method==OPTIM_METHOD_SIMPLEX) 
+      enableOutput = 1;
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
@@ -2093,7 +2096,7 @@ double optimization_function(double *value, long *invalid)
 	optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
 
 #if USE_MPI
-      if (notSinglePart) /* Disable the beam output when all the processors track independently */
+      if (notSinglePart || enableOutput) /* Disable the beam output (except for simplex) when all the processors track independently */
 #endif
 	if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0)) {
           if (center_on_orbit)

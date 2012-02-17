@@ -261,6 +261,7 @@ int dumpAcceptance = 0;
 parallelMode parallelStatus = trueParallel; 
 int partOnMaster = 1; /* indicate if the particle information is available on master */
 long watch_not_allowed = 0;
+long enableOutput = 0; /* This flag is used to enforce output for the simplex method in Pelegant  */
 long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
 MPI_Comm workers;
 int fd; /* save the duplicated file descriptor stdout to use it latter */

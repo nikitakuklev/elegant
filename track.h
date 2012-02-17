@@ -100,6 +100,8 @@ extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic ap
 extern long watch_not_allowed; /* A flag to indicate the watch point is not allowed for aperture searching for Pelegant */
 extern long last_optimize_function_call; /* A flag used to indicate if it is the last optimization function call (after exiting the optimization loop)  */
 extern int min_value_location; /* The location (which processor) of the optimization value */
+/* A flag used to specify if the output will be enabled for some special cases. E.g., simplex method in Pelegant */
+extern long enableOutput;
 #endif
 
 #ifndef __cplusplus
