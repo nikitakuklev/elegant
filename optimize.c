@@ -74,7 +74,6 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     if (!writePermitted)
       log_file = NULL;
     optimization_data->random_factor = random_factor;
-    runInSinglePartMode = 1;  /* To be compatible with the original simplex method setup */
     /* The output files are disabled for most of the optimization methods in Pelegant except for the simplex method, which runs in serial mode */ 	
     if (optimization_data->method==OPTIM_METHOD_SIMPLEX) 
       enableOutput = 1;
@@ -123,8 +122,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 
 #if USE_MPI
 void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
-{ 
-  runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
+{
+  if (optimization_data->method!=OPTIM_METHOD_SIMPLEX) 
+    runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
 
   do_optimization_setup(optimization_data, nltext, run, beamline);  
   if (optimization_data->method==OPTIM_METHOD_SWARM || optimization_data->method==OPTIM_METHOD_GENETIC) {
@@ -1148,7 +1148,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	if (population_log)
 	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, worst_result, median, average, spread, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
       }
-#else
+#else 
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       force_output = 1;
@@ -1501,6 +1501,9 @@ double optimization_function(double *value, long *invalid)
   double XYZ[3], Angle[3], XYZMin[3], XYZMax[3];
   double startingOrbitCoord[6] = {0,0,0,0,0,0};
   long rpnError = 0;
+#if USE_MPI
+  long beamNoToTrack;
+#endif
   
   log_entry("optimization_function");
   
@@ -1933,11 +1936,23 @@ double optimization_function(double *value, long *invalid)
 #endif
       if (!output->sums_vs_z)
         bombElegant("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
+#if USE_MPI
+      if (notSinglePart)
+	beamNoToTrack = beam->n_to_track_total;
+      else
+	beamNoToTrack = beam->n_to_track;
+      if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
+				      beamNoToTrack, beam->p0, M, beam->particle, 
+				      control->i_step, control->indexLimitProduct*control->n_steps,
+				      charge))
+	  != final_property_values) {
+#else
       if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
                                       beam->n_to_track, beam->p0, M, beam->particle, 
                                       control->i_step, control->indexLimitProduct*control->n_steps,
                                       charge))
           != final_property_values) {
+#endif
         fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
                 i, final_property_values);
         fflush(stdout);
@@ -2049,7 +2064,7 @@ double optimization_function(double *value, long *invalid)
 	  if (isnan(result) || isinf(result)) {
 	    *invalid = 1;
 	  } else {
-#if !USE_MPI /* The information here is from a processor locally, we print the result across all the processors after an iteration */
+#if !USE_MPI  /* The information here is from a processor locally, we print the result across all the processors after an iteration */
 	    if (optimization_data->verbose && optimization_data->fp_log) {
 	      fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
 	      fflush(optimization_data->fp_log);
