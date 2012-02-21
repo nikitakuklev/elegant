@@ -23,6 +23,19 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
 VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
 
+void checkMatrices(char *label, ELEMENT_LIST *elem)
+{
+  ELEMENT_LIST *eptr;
+  eptr = elem;
+  printf("Matrix check %s\n", label);
+  while (eptr) {
+    if ((entity_description[eptr->type].flags&HAS_MATRIX) && !(eptr->matrix)) {
+      printf("%s #%ld has no matrix\n", eptr->name, eptr->occurence);
+    }
+    eptr = eptr->succ;
+  }
+}
+
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
 
@@ -60,6 +73,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
     copy_matrices1(M1, M0);
   
   member = elem;
+
   while (member) {
     if (member->type<0 || member->type>=N_TYPES) {
       fprintf(stdout, "error: bad element type %ld (accumulate_matrices)\n", member->type);
@@ -73,13 +87,15 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
       Pref_input = member->pred->Pref_output;
     else
       Pref_input = member->Pref_input;
-    if (!member->matrix || Pref_input!=member->Pref_input)
-      compute_matrix(member, run, NULL);
-    if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
-      fprintf(stdout, "programming error: matrix not computed for element %s\n",
-              member->name);
-      fflush(stdout);
-      abort();
+    if (entity_description[member->type].flags&HAS_MATRIX) {
+      if (!member->matrix || Pref_input!=member->Pref_input)
+        compute_matrix(member, run, NULL);
+      if (!member->matrix) {
+        fprintf(stdout, "programming error: matrix not computed for element %s\n",
+                member->name);
+        fflush(stdout);
+        abort();
+      }
     }
     if (member->matrix) {
       concat_matrices(M2, member->matrix, M1,
@@ -285,8 +301,6 @@ long fill_in_matrices(
     ELEMENT_LIST *member;
     long n_elements;
     
-    log_entry("fill_in_matrices");
-    
     n_elements = 0;
     member = elem;
     while (member) {
@@ -305,7 +319,7 @@ long fill_in_matrices(
         }
         member = member->succ;
         }
-    log_exit("fill_in_matrices");    
+
     return(n_elements);
     }
 
