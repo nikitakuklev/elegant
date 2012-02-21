@@ -5855,6 +5855,14 @@ Hence, when referring to element names in commands, the user must
 enter the names in upper case unless they are protected by double
 quotes in the lattice file.  
 
+When the lattice file is very complex, it is sometimes convenient to 
+separate it into several files. These can then be imported into a main lattice file
+using the \verb|#INCLUDE| directive, as in
+\begin{verbatim}
+#INCLUDE: part1.lte
+#INCLUDE: part2.lte
+\end{verbatim}
+
 The rules for naming elements and beamlines are as follows:
 \begin{itemize}
 \item The name should start with an alphabetic character (i.e., a-z A-Z).
