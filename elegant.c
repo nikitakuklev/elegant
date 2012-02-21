@@ -321,7 +321,7 @@ char **argv;
   long namelists_read = 0, failed, firstPass;
   unsigned long pipeFlags = 0;
   double apertureReturn;
-  char *rpnDefns;
+  char *rpnDefns = NULL;
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
