@@ -2875,9 +2875,10 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 /* prototypes for compute_matrices13.c: */
 extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
 extern VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order);
-VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only);
+extern VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only);
+extern void checkMatrices(char *label, ELEMENT_LIST *elem);
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
-VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices);
+extern VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double dx, double dy, double dz,
