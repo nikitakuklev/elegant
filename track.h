@@ -222,6 +222,7 @@ typedef struct element_list {
     double Pref_input, Pref_output;
     double Pref_output_fiducial;
     VMATRIX *matrix;      /* pure matrix of this element */
+    VMATRIX *savedMatrix; /* saved matrix of this element */
     VMATRIX *accumMatrix; /* accumulated matrix to the end of this element */
     TWISS *twiss;         /* computed from the above matrices */
     VMATRIX *Mld;         /* linear damping matrix (on-orbit, with trajectory ) */
