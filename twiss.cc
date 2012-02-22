@@ -2116,11 +2116,8 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
 {
   while (eptr) {
     if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW || eptr->type==T_RFDF) {
-      if (eptr->matrix) {
-        free_matrices(eptr->matrix);
-        tfree(eptr->matrix);
-        eptr->matrix = NULL;
-      }
+      eptr->savedMatrix = eptr->matrix;
+      eptr->matrix = NULL;
       switch (eptr->type) {
       case T_RFCA:
         if (((RFCA*)eptr->p_elem)->change_p0)
@@ -2155,6 +2152,10 @@ void reset_rfca_matrices(ELEMENT_LIST *eptr, long order)
         tfree(eptr->matrix);
         eptr->matrix = NULL;
       }
+      if (eptr->savedMatrix) {
+        eptr->matrix = eptr->savedMatrix;
+        eptr->savedMatrix = NULL;
+      } 
     }
     eptr = eptr->succ;
   }
