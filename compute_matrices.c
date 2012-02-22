@@ -87,9 +87,9 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
       Pref_input = member->pred->Pref_output;
     else
       Pref_input = member->Pref_input;
+    if (!member->matrix || Pref_input!=member->Pref_input)
+      compute_matrix(member, run, NULL);
     if (entity_description[member->type].flags&HAS_MATRIX) {
-      if (!member->matrix || Pref_input!=member->Pref_input)
-        compute_matrix(member, run, NULL);
       if (!member->matrix) {
         fprintf(stdout, "programming error: matrix not computed for element %s\n",
                 member->name);
