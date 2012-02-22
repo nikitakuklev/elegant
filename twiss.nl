@@ -71,7 +71,6 @@
     double chromatic_tune_spread_half_range = 0;
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
-    long OPA_convention = 0;
     long leading_order_driving_terms_only = 0;
     long local_dispersion = 1;
 #end

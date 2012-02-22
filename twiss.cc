@@ -4068,17 +4068,17 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   }
 
   /* Done with the leading-order quad and sext terms */
-  d->h11001 = std::abs<double>(h11001)*(OPA_convention?2.:1.);
-  d->h00111 = std::abs<double>(h00111)*(OPA_convention?2.:1.);
-  d->h20001 = std::abs<double>(h20001)*(OPA_convention?2.:1.);
-  d->h00201 = std::abs<double>(h00201)*(OPA_convention?2.:1.);
-  d->h10002 = std::abs<double>(h10002)*(OPA_convention?sqrt2:1.);
+  d->h11001 = std::abs<double>(h11001);
+  d->h00111 = std::abs<double>(h00111);
+  d->h20001 = std::abs<double>(h20001);
+  d->h00201 = std::abs<double>(h00201);
+  d->h10002 = std::abs<double>(h10002);
 
-  d->h21000 = std::abs<double>(h21000)*(OPA_convention?sqrt8:1.);
-  d->h30000 = std::abs<double>(h30000)*(OPA_convention?sqrt8:1.);
-  d->h10110 = std::abs<double>(h10110)*(OPA_convention?sqrt8:1.);
-  d->h10020 = std::abs<double>(h10020)*(OPA_convention?sqrt8:1.);
-  d->h10200 = std::abs<double>(h10200)*(OPA_convention?sqrt8:1.);
+  d->h21000 = std::abs<double>(h21000);
+  d->h30000 = std::abs<double>(h30000);
+  d->h10110 = std::abs<double>(h10110);
+  d->h10020 = std::abs<double>(h10020);
+  d->h10200 = std::abs<double>(h10200);
 
   if (!leading_order_driving_terms_only) {
     /* compute sextupole contributions to second-order terms */
@@ -4120,9 +4120,9 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
 	      t2 = conj(t1);
               h11200 += (1./32)*termSign*ii*ed[iE].b3L*ed[jE].b3L*
                 ed[iE].rbetax*ed[jE].rbetax*ed[iE].betay*exp(ii*(2*ed[iE].phiy))*
-                (ed[jE].betax*(t1-conj(t1))
+                (ed[jE].betax*(t1 - t2)
                  + 
-		 two*ed[jE].betay*(t2 + conj(t2))
+		 two*ed[jE].betay*(t2 + t1)
 		 );
               h40000 += (1./64)*termSign*ii*ed[iE].b3L*ed[jE].b3L*
                 ed[iE].rbetax*ed[jE].rbetax*ed[iE].betax*ed[jE].betax*
@@ -4169,17 +4169,17 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     }
   }
 
-  d->h22000 = std::abs<double>(h22000)*(OPA_convention?4.:1.);
-  d->h11110 = std::abs<double>(h11110)*(OPA_convention?4.:1.);
-  d->h00220 = std::abs<double>(h00220)*(OPA_convention?4.:1.);
-  d->h31000 = std::abs<double>(h31000)*(OPA_convention?4.:1.);
-  d->h40000 = std::abs<double>(h40000)*(OPA_convention?4.:1.);
-  d->h20110 = std::abs<double>(h20110)*(OPA_convention?4.:1.);
-  d->h11200 = std::abs<double>(h11200)*(OPA_convention?4.:1.);
-  d->h20020 = std::abs<double>(h20020)*(OPA_convention?4.:1.);
-  d->h20200 = std::abs<double>(h20200)*(OPA_convention?4.:1.);
-  d->h00310 = std::abs<double>(h00310)*(OPA_convention?4.:1.);
-  d->h00400 = std::abs<double>(h00400)*(OPA_convention?4.:1.);
+  d->h22000 = std::abs<double>(h22000);
+  d->h11110 = std::abs<double>(h11110);
+  d->h00220 = std::abs<double>(h00220);
+  d->h31000 = std::abs<double>(h31000);
+  d->h40000 = std::abs<double>(h40000);
+  d->h20110 = std::abs<double>(h20110);
+  d->h11200 = std::abs<double>(h11200);
+  d->h20020 = std::abs<double>(h20020);
+  d->h20200 = std::abs<double>(h20200);
+  d->h00310 = std::abs<double>(h00310);
+  d->h00400 = std::abs<double>(h00400);
 
   if (ed)
     free(ed);
