@@ -4046,9 +4046,9 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
         /* second-order terms from leading order effects of octupoles */
 	/* Ignoring a large number of terms that are not also driven by sextupoles */
 
-        d->dnux_dJx += 3*b4L*ed[nE].betax2/(16*PI);
-        d->dnux_dJy -= 3*b4L*betax1*betay1/(8*PI);
-        d->dnuy_dJy += 3*b4L*ed[nE].betay2/(16*PI);
+        d->dnux_dJx += 3*b4L*ed[nE].betax2/(8*PI);
+        d->dnux_dJy -= 3*b4L*betax1*betay1/(4*PI);
+        d->dnuy_dJy += 3*b4L*ed[nE].betay2/(8*PI);
 	
 	h22000 += 3*b4L*ed[nE].betax2/32;
 	h11110 += -3*b4L*betax1*betay1/8;
