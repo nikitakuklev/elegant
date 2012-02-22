@@ -29,7 +29,7 @@ ifdef WIN32
     CC := $(CC) $(USER_MPI_FLAGS)
     CCC := $(CCC) $(USER_MPI_FLAGS)
 else
-    #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
+    #OP_SYS_LDLIBS += -mpe=mpilog        # visualize the performance of the parallel elegant 
     #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
     #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
