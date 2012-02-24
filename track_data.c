@@ -140,7 +140,7 @@ beam path.",
     "A simulation of a beam-driven TM dipole mode of an RF cavity.",
     "A simulation of a single-pass broad-band or functionally specified longitudinal\n\
 impedance.",
-    "Simulation of synchrotron radiation effects (damping and quantum excitation).",
+    "Lumped simulation of synchrotron radiation effects (damping and quantum excitation) for rings.",
     "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude\n\
 and phase modulation.",
     "A map of Bx and By vs x and y.",
