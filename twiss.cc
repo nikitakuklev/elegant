@@ -941,32 +941,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_COUPLINGINTEGRAL 48
 #define IP_COUPLINGOFFSET 49
 #define IP_EMITRATIO 50
-#define IP_H11001 51
-#define IP_H00111 52
-#define IP_H20001 53
-#define IP_H00201 54
-#define IP_H10002 55
-#define IP_H21000 56
-#define IP_H30000 57
-#define IP_H10110 58
-#define IP_H10020 59
-#define IP_H10200 60
-#define IP_H22000 61
-#define IP_H11110 62
-#define IP_H00220 63
-#define IP_H31000 64
-#define IP_H40000 65
-#define IP_H20110 66
-#define IP_H11200 67
-#define IP_H20020 68
-#define IP_H20200 69
-#define IP_H00310 70
-#define IP_H00400 71 
-#define IP_DNUXDJX 72
-#define IP_DNUXDJY 73
-#define IP_DNUYDJY 74
-#define IP_ALPHAC2 75
-#define IP_ALPHAC  76
+#define IP_ALPHAC2 51
+#define IP_ALPHAC  52
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -1038,30 +1014,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"couplingIntegral", (char*)"&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
 {(char*)"couplingDelta", (char*)"&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
 {(char*)"emittanceRatio", (char*)"&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
-{(char*)"h11001", (char*)"&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term (x chromaticity)\", &end"},
-{(char*)"h00111", (char*)"&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term (y chromaticity)\", &end"},
-{(char*)"h20001", (char*)"&parameter name=h20001, type=double, description=\"Magnitude of chromatic driving term (synchro-betatron resonances)\", &end"},
-{(char*)"h00201", (char*)"&parameter name=h00201, type=double, description=\"Magnitude of chromatic driving term (momentum-dependence of beta functions)\", &end"},
-{(char*)"h10002", (char*)"&parameter name=h10002, type=double, description=\"Magnitude of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
-{(char*)"h21000", (char*)"&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
-{(char*)"h30000", (char*)"&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
-{(char*)"h10110", (char*)"&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
-{(char*)"h10020", (char*)"&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
-{(char*)"h10200", (char*)"&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
-{(char*)"h22000", (char*)"&parameter name=h22000, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{(char*)"h11110", (char*)"&parameter name=h11110, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{(char*)"h00220", (char*)"&parameter name=h00220, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{(char*)"h31000", (char*)"&parameter name=h31000, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
-{(char*)"h40000", (char*)"&parameter name=h40000, type=double, description=\"Magnitude of geometric driving term (4 nux)\", units=\"1/m\" &end"},
-{(char*)"h20110", (char*)"&parameter name=h20110, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
-{(char*)"h11200", (char*)"&parameter name=h11200, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
-{(char*)"h20020", (char*)"&parameter name=h20020, type=double, description=\"Magnitude of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
-{(char*)"h20200", (char*)"&parameter name=h20200, type=double, description=\"Magnitude of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
-{(char*)"h00310", (char*)"&parameter name=h00310, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
-{(char*)"h00400", (char*)"&parameter name=h00400, type=double, description=\"Magnitude of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
-{(char*)"dnux/dJx", (char*)"&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
-{(char*)"dnux/dJy", (char*)"&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
-{(char*)"dnuy/dJy", (char*)"&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
 {(char*)"alphac2", (char*)"&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {(char*)"alphac", (char*)"&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {(char*)"I1", (char*)"&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -1080,6 +1032,102 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"Jdelta", (char*)"&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
 {(char*)"U0", (char*)"&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
 } ;
+
+#define IP_DNUXDJX 0
+#define IP_DNUXDJY 1
+#define IP_DNUYDJY 2
+#define IP_H11001 3
+#define IP_H00111 4
+#define IP_H21000 5
+#define IP_H30000 6
+#define IP_H10110 7
+#define IP_H10020 8
+#define IP_H10200 9
+#define IP_H20001 10
+#define IP_H00201 11
+#define IP_H10002 12
+#define IP_H22000 13
+#define IP_H11110 14
+#define IP_H00220 15
+#define IP_H31000 16
+#define IP_H40000 17
+#define IP_H20110 18
+#define IP_H11200 19
+#define IP_H20020 20
+#define IP_H20200 21
+#define IP_H00310 22
+#define IP_H00400 23
+#define N_DT_PARAMETERS (3*21+3)
+static SDDS_DEFINITION driving_term_parameter_definition[N_DT_PARAMETERS] = {
+{(char*)"dnux/dJx", (char*)"&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
+{(char*)"dnux/dJy", (char*)"&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
+{(char*)"dnuy/dJy", (char*)"&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
+{(char*)"h11001", (char*)"&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term (x chromaticity)\", &end"},
+{(char*)"h00111", (char*)"&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"h21000", (char*)"&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h30000", (char*)"&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10110", (char*)"&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10020", (char*)"&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10200", (char*)"&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h20001", (char*)"&parameter name=h20001, type=double, description=\"Magnitude of chromatic driving term (synchro-betatron resonances)\", &end"},
+{(char*)"h00201", (char*)"&parameter name=h00201, type=double, description=\"Magnitude of chromatic driving term (momentum-dependence of beta functions)\", &end"},
+{(char*)"h10002", (char*)"&parameter name=h10002, type=double, description=\"Magnitude of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h22000", (char*)"&parameter name=h22000, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h11110", (char*)"&parameter name=h11110, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h00220", (char*)"&parameter name=h00220, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h31000", (char*)"&parameter name=h31000, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"h40000", (char*)"&parameter name=h40000, type=double, description=\"Magnitude of geometric driving term (4 nux)\", units=\"1/m\" &end"},
+{(char*)"h20110", (char*)"&parameter name=h20110, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"h11200", (char*)"&parameter name=h11200, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h20020", (char*)"&parameter name=h20020, type=double, description=\"Magnitude of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h20200", (char*)"&parameter name=h20200, type=double, description=\"Magnitude of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h00310", (char*)"&parameter name=h00310, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h00400", (char*)"&parameter name=h00400, type=double, description=\"Magnitude of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
+
+{(char*)"Reh11001", (char*)"&parameter name=Reh11001, type=double, description=\"Real part of chromatic driving term (x chromaticity)\", &end"},
+{(char*)"Reh00111", (char*)"&parameter name=Reh00111, type=double, description=\"Real part of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"Reh21000", (char*)"&parameter name=Reh21000, type=double, description=\"Real part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Reh30000", (char*)"&parameter name=Reh30000, type=double, description=\"Real part of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Reh10110", (char*)"&parameter name=Reh10110, type=double, description=\"Real part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Reh10020", (char*)"&parameter name=Reh10020, type=double, description=\"Real part of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Reh10200", (char*)"&parameter name=Reh10200, type=double, description=\"Real part of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Reh20001", (char*)"&parameter name=Reh20001, type=double, description=\"Real part of chromatic driving term (synchro-betatron resonances)\", &end"},
+{(char*)"Reh00201", (char*)"&parameter name=Reh00201, type=double, description=\"Real part of chromatic driving term (momentum-dependence of beta functions)\", &end"},
+{(char*)"Reh10002", (char*)"&parameter name=Reh10002, type=double, description=\"Real part of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Reh22000", (char*)"&parameter name=Reh22000, type=double, description=\"Real part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Reh11110", (char*)"&parameter name=Reh11110, type=double, description=\"Real part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Reh00220", (char*)"&parameter name=Reh00220, type=double, description=\"Real part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Reh31000", (char*)"&parameter name=Reh31000, type=double, description=\"Real part of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"Reh40000", (char*)"&parameter name=Reh40000, type=double, description=\"Real part of geometric driving term (4 nux)\", units=\"1/m\" &end"},
+{(char*)"Reh20110", (char*)"&parameter name=Reh20110, type=double, description=\"Real part of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"Reh11200", (char*)"&parameter name=Reh11200, type=double, description=\"Real part of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Reh20020", (char*)"&parameter name=Reh20020, type=double, description=\"Real part of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Reh20200", (char*)"&parameter name=Reh20200, type=double, description=\"Real part of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Reh00310", (char*)"&parameter name=Reh00310, type=double, description=\"Real part of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Reh00400", (char*)"&parameter name=Reh00400, type=double, description=\"Real part of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
+
+{(char*)"Imh11001", (char*)"&parameter name=Imh11001, type=double, description=\"Imaginary part of chromatic driving term (x chromaticity)\", &end"},
+{(char*)"Imh00111", (char*)"&parameter name=Imh00111, type=double, description=\"Imaginary part of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"Imh21000", (char*)"&parameter name=Imh21000, type=double, description=\"Imaginary part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Imh30000", (char*)"&parameter name=Imh30000, type=double, description=\"Imaginary part of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Imh10110", (char*)"&parameter name=Imh10110, type=double, description=\"Imaginary part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Imh10020", (char*)"&parameter name=Imh10020, type=double, description=\"Imaginary part of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Imh10200", (char*)"&parameter name=Imh10200, type=double, description=\"Imaginary part of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Imh20001", (char*)"&parameter name=Imh20001, type=double, description=\"Imaginary part of chromatic driving term (synchro-betatron resonances)\", &end"},
+{(char*)"Imh00201", (char*)"&parameter name=Imh00201, type=double, description=\"Imaginary part of chromatic driving term (momentum-dependence of beta functions)\", &end"},
+{(char*)"Imh10002", (char*)"&parameter name=Imh10002, type=double, description=\"Imaginary part of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"Imh22000", (char*)"&parameter name=Imh22000, type=double, description=\"Imaginary part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Imh11110", (char*)"&parameter name=Imh11110, type=double, description=\"Imaginary part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Imh00220", (char*)"&parameter name=Imh00220, type=double, description=\"Imaginary part of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"Imh31000", (char*)"&parameter name=Imh31000, type=double, description=\"Imaginary part of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"Imh40000", (char*)"&parameter name=Imh40000, type=double, description=\"Imaginary part of geometric driving term (4 nux)\", units=\"1/m\" &end"},
+{(char*)"Imh20110", (char*)"&parameter name=Imh20110, type=double, description=\"Imaginary part of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"Imh11200", (char*)"&parameter name=Imh11200, type=double, description=\"Imaginary part of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Imh20020", (char*)"&parameter name=Imh20020, type=double, description=\"Imaginary part of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Imh20200", (char*)"&parameter name=Imh20200, type=double, description=\"Imaginary part of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Imh00310", (char*)"&parameter name=Imh00310, type=double, description=\"Imaginary part of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"Imh00400", (char*)"&parameter name=Imh00400, type=double, description=\"Imaginary part of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
+  };
 
 void dump_twiss_parameters(
   LINE_LIST *beamline,
@@ -1162,30 +1210,6 @@ void dump_twiss_parameters(
 			  IP_NUXTSWAMAX, beamline->nuxTswaExtrema[1],
 			  IP_NUYTSWAMIN, beamline->nuyTswaExtrema[0],
 			  IP_NUYTSWAMAX, beamline->nuyTswaExtrema[1],
-                          IP_H11001, beamline->drivingTerms.h11001,
-                          IP_H00111, beamline->drivingTerms.h00111,
-                          IP_H20001, beamline->drivingTerms.h20001,
-                          IP_H00201, beamline->drivingTerms.h00201,
-                          IP_H10002, beamline->drivingTerms.h10002,
-                          IP_H21000, beamline->drivingTerms.h21000,
-                          IP_H30000, beamline->drivingTerms.h30000,
-                          IP_H10110, beamline->drivingTerms.h10110,
-                          IP_H10020, beamline->drivingTerms.h10020,
-                          IP_H10200, beamline->drivingTerms.h10200,
-                          IP_H22000, beamline->drivingTerms.h22000,
-                          IP_H11110, beamline->drivingTerms.h11110,
-                          IP_H00220, beamline->drivingTerms.h00220,
-                          IP_H31000, beamline->drivingTerms.h31000,
-                          IP_H40000, beamline->drivingTerms.h40000,
-                          IP_H20110, beamline->drivingTerms.h20110,
-                          IP_H11200, beamline->drivingTerms.h11200,
-                          IP_H20020, beamline->drivingTerms.h20020,
-                          IP_H20200, beamline->drivingTerms.h20200,
-                          IP_H00310, beamline->drivingTerms.h00310,
-                          IP_H00400, beamline->drivingTerms.h00400,
-                          IP_DNUXDJX, beamline->drivingTerms.dnux_dJx,
-                          IP_DNUXDJY, beamline->drivingTerms.dnux_dJy,
-                          IP_DNUYDJY, beamline->drivingTerms.dnuy_dJy,
                           IP_ETAX2, beamline->eta2[0],
                           IP_ETAY2, beamline->eta2[2],
                           IP_ETAX3, beamline->eta3[0],
@@ -1194,6 +1218,89 @@ void dump_twiss_parameters(
     SDDS_SetError((char*)"Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+
+  if (compute_driving_terms) {
+    long offset;
+    if (radiation_integrals)
+      offset = IP_U0+1;
+    else
+      offset = IP_ALPHAC+1;
+    if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+			    IP_DNUXDJX+offset, beamline->drivingTerms.dnux_dJx,
+			    IP_DNUXDJY+offset, beamline->drivingTerms.dnux_dJy,
+			    IP_DNUYDJY+offset, beamline->drivingTerms.dnuy_dJy,
+			    /* magnitudes of driving terms */
+			    IP_H11001+offset, beamline->drivingTerms.h11001[0],
+			    IP_H00111+offset, beamline->drivingTerms.h00111[0],
+			    IP_H20001+offset, beamline->drivingTerms.h20001[0],
+			    IP_H00201+offset, beamline->drivingTerms.h00201[0],
+			    IP_H10002+offset, beamline->drivingTerms.h10002[0],
+			    IP_H21000+offset, beamline->drivingTerms.h21000[0],
+			    IP_H30000+offset, beamline->drivingTerms.h30000[0],
+			    IP_H10110+offset, beamline->drivingTerms.h10110[0],
+			    IP_H10020+offset, beamline->drivingTerms.h10020[0],
+			    IP_H10200+offset, beamline->drivingTerms.h10200[0],
+			    IP_H22000+offset, beamline->drivingTerms.h22000[0],
+			    IP_H11110+offset, beamline->drivingTerms.h11110[0],
+			    IP_H00220+offset, beamline->drivingTerms.h00220[0],
+			    IP_H31000+offset, beamline->drivingTerms.h31000[0],
+			    IP_H40000+offset, beamline->drivingTerms.h40000[0],
+			    IP_H20110+offset, beamline->drivingTerms.h20110[0],
+			    IP_H11200+offset, beamline->drivingTerms.h11200[0],
+			    IP_H20020+offset, beamline->drivingTerms.h20020[0],
+			    IP_H20200+offset, beamline->drivingTerms.h20200[0],
+			    IP_H00310+offset, beamline->drivingTerms.h00310[0],
+			    IP_H00400+offset, beamline->drivingTerms.h00400[0],
+			    /* real parts */
+			    IP_H11001+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h11001[1],
+			    IP_H00111+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00111[1],
+			    IP_H20001+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h20001[1],
+			    IP_H00201+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00201[1],
+			    IP_H10002+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10002[1],
+			    IP_H21000+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h21000[1],
+			    IP_H30000+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h30000[1],
+			    IP_H10110+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10110[1],
+			    IP_H10020+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10020[1],
+			    IP_H10200+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10200[1],
+			    IP_H22000+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h22000[1],
+			    IP_H11110+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h11110[1],
+			    IP_H00220+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00220[1],
+			    IP_H31000+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h31000[1],
+			    IP_H40000+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h40000[1],
+			    IP_H20110+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h20110[1],
+			    IP_H11200+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h11200[1],
+			    IP_H20020+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h20020[1],
+			    IP_H20200+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h20200[1],
+			    IP_H00310+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00310[1],
+			    IP_H00400+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00400[1],
+			    /* imaginary parts */
+			    IP_H11001+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h11001[2],
+			    IP_H00111+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00111[2],
+			    IP_H20001+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h20001[2],
+			    IP_H00201+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00201[2],
+			    IP_H10002+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10002[2],
+			    IP_H21000+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h21000[2],
+			    IP_H30000+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h30000[2],
+			    IP_H10110+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10110[2],
+			    IP_H10020+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10020[2],
+			    IP_H10200+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10200[2],
+			    IP_H22000+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h22000[2],
+			    IP_H11110+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h11110[2],
+			    IP_H00220+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00220[2],
+			    IP_H31000+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h31000[2],
+			    IP_H40000+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h40000[2],
+			    IP_H20110+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h20110[2],
+			    IP_H11200+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h11200[2],
+			    IP_H20020+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h20020[2],
+			    IP_H20200+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h20200[2],
+			    IP_H00310+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00310[2],
+			    IP_H00400+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00400[2],
+			    -1)) {
+      SDDS_SetError((char*)"Problem setting SDDS parameters (dump_twiss_parameters 1.5)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+
   if (radIntegrals) {
     if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                             IP_I1, radIntegrals->RI[0],
@@ -1412,7 +1519,26 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
                             run->runfile, run->lattice, parameter_definition, 
                             (radiation_integrals?N_PARAMETERS:IP_ALPHAC+1),
                             column_definition, (radiation_integrals?N_COLUMNS_WRI:N_COLUMNS), (char*)"setup_twiss_output",
-                            SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+                            SDDS_EOS_NEWFILE);
+    if (compute_driving_terms) {
+      long i, index;
+      for (i=0; i<N_DT_PARAMETERS; i++) {
+        if (!SDDS_ProcessParameterString(&SDDS_twiss, driving_term_parameter_definition[i].text, 0) ||
+            (SDDS_GetParameterIndex(&SDDS_twiss, driving_term_parameter_definition[i].name))<0) {
+            fprintf(stdout, "Unable to define SDDS parameter for driving terms--string was:\n%s\n", 
+                    parameter_definition[i].text);
+            fflush(stdout);
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            exitElegant(1);
+	}
+      }
+    }
+    if (!SDDS_WriteLayout(&SDDS_twiss)) {
+      fprintf(stdout, "Unable to write SDDS layout for file %s\n", filename);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
     SDDS_twiss_initialized = 1;
     twiss_count = 0;
   }
@@ -1749,11 +1875,12 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     for (j=0; j<N_TSWA; j++)
       beamline->dnux_dA[i][j] = beamline->dnuy_dA[i][j] = 0;
 
-  beamline->drivingTerms.h21000 = beamline->drivingTerms.h30000 = beamline->drivingTerms.h10110 =
-    beamline->drivingTerms.h10020 = beamline->drivingTerms.h10200 = 
-      beamline->drivingTerms.h22000 = beamline->drivingTerms.h11110 = beamline->drivingTerms.h00220 = beamline->drivingTerms.h31000 = 
-        beamline->drivingTerms.h40000 = beamline->drivingTerms.h20110 = beamline->drivingTerms.h11200 = beamline->drivingTerms.h20020 = 
-          beamline->drivingTerms.h20200 = beamline->drivingTerms.h00310 = beamline->drivingTerms.h00400 = 0;
+  for (i=0; i<3; i++)
+    beamline->drivingTerms.h21000[i] = beamline->drivingTerms.h30000[i] = beamline->drivingTerms.h10110[i] =
+      beamline->drivingTerms.h10020[i] = beamline->drivingTerms.h10200[i] = 
+      beamline->drivingTerms.h22000[i] = beamline->drivingTerms.h11110[i] = beamline->drivingTerms.h00220[i] = beamline->drivingTerms.h31000[i] = 
+      beamline->drivingTerms.h40000[i] = beamline->drivingTerms.h20110[i] = beamline->drivingTerms.h11200[i] = beamline->drivingTerms.h20020[i] = 
+      beamline->drivingTerms.h20200[i] = beamline->drivingTerms.h00310[i] = beamline->drivingTerms.h00400[i] = 0;
   
   if (periodic) {
     if (!(M = beamline->matrix))
@@ -4068,17 +4195,37 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   }
 
   /* Done with the leading-order quad and sext terms */
-  d->h11001 = std::abs<double>(h11001);
-  d->h00111 = std::abs<double>(h00111);
-  d->h20001 = std::abs<double>(h20001);
-  d->h00201 = std::abs<double>(h00201);
-  d->h10002 = std::abs<double>(h10002);
+  d->h11001[0] = std::abs<double>(h11001);
+  d->h11001[1] = h11001.real();
+  d->h11001[2] = h11001.imag();
+  d->h00111[0] = std::abs<double>(h00111);
+  d->h00111[1] = h00111.real();
+  d->h00111[2] = h00111.imag();
+  d->h20001[0] = std::abs<double>(h20001);
+  d->h20001[1] = h20001.real();
+  d->h20001[2] = h20001.imag();
+  d->h00201[0] = std::abs<double>(h00201);
+  d->h00201[1] = h00201.real();
+  d->h00201[2] = h00201.imag();
+  d->h10002[0] = std::abs<double>(h10002);
+  d->h10002[1] = h10002.real();
+  d->h10002[2] = h10002.imag();
 
-  d->h21000 = std::abs<double>(h21000);
-  d->h30000 = std::abs<double>(h30000);
-  d->h10110 = std::abs<double>(h10110);
-  d->h10020 = std::abs<double>(h10020);
-  d->h10200 = std::abs<double>(h10200);
+  d->h21000[0] = std::abs<double>(h21000);
+  d->h21000[1] = h21000.real();
+  d->h21000[2] = h21000.imag();
+  d->h30000[0] = std::abs<double>(h30000);
+  d->h30000[1] = h30000.real();
+  d->h30000[2] = h30000.imag();
+  d->h10110[0] = std::abs<double>(h10110);
+  d->h10110[1] = h10110.real();
+  d->h10110[2] = h10110.imag();
+  d->h10020[0] = std::abs<double>(h10020);
+  d->h10020[1] = h10020.real();
+  d->h10020[2] = h10020.imag();
+  d->h10200[0] = std::abs<double>(h10200);
+  d->h10200[1] = h10200.real();
+  d->h10200[2] = h10200.imag();
 
   if (!leading_order_driving_terms_only) {
     /* compute sextupole contributions to second-order terms */
@@ -4169,17 +4316,39 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     }
   }
 
-  d->h22000 = std::abs<double>(h22000);
-  d->h11110 = std::abs<double>(h11110);
-  d->h00220 = std::abs<double>(h00220);
-  d->h31000 = std::abs<double>(h31000);
-  d->h40000 = std::abs<double>(h40000);
-  d->h20110 = std::abs<double>(h20110);
-  d->h11200 = std::abs<double>(h11200);
-  d->h20020 = std::abs<double>(h20020);
-  d->h20200 = std::abs<double>(h20200);
-  d->h00310 = std::abs<double>(h00310);
-  d->h00400 = std::abs<double>(h00400);
+  d->h22000[0] = std::abs<double>(h22000);
+  d->h22000[1] = h22000.real();
+  d->h22000[2] = h22000.imag();
+  d->h11110[0] = std::abs<double>(h11110);
+  d->h11110[1] = h11110.real();
+  d->h11110[2] = h11110.imag();
+  d->h00220[0] = std::abs<double>(h00220);
+  d->h00220[1] = h00220.real();
+  d->h00220[2] = h00220.imag();
+  d->h31000[0] = std::abs<double>(h31000);
+  d->h31000[1] = h31000.real();
+  d->h31000[2] = h31000.imag();
+  d->h40000[0] = std::abs<double>(h40000);
+  d->h40000[1] = h40000.real();
+  d->h40000[2] = h40000.imag();
+  d->h20110[0] = std::abs<double>(h20110);
+  d->h20110[1] = h20110.real();
+  d->h20110[2] = h20110.imag();
+  d->h11200[0] = std::abs<double>(h11200);
+  d->h11200[1] = h11200.real();
+  d->h11200[2] = h11200.imag();
+  d->h20020[0] = std::abs<double>(h20020);
+  d->h20020[1] = h20020.real();
+  d->h20020[2] = h20020.imag();
+  d->h20200[0] = std::abs<double>(h20200);
+  d->h20200[1] = h20200.real();
+  d->h20200[2] = h20200.imag();
+  d->h00310[0] = std::abs<double>(h00310);
+  d->h00310[1] = h00310.real();
+  d->h00310[2] = h00310.imag();
+  d->h00400[0] = std::abs<double>(h00400);
+  d->h00400[1] = h00400.real();
+  d->h00400[2] = h00400.imag();
 
   if (ed)
     free(ed);
