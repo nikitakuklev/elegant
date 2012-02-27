@@ -2029,7 +2029,8 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     return drift_matrix(rfdf->length, 1);
   
   beta = pReference/sqrt(sqr(pReference)+1);
-  theta = (particleCharge*rfdf->voltage*(1+rfdf->fse))/(particleMass*sqr(c_mks)*pReference*beta);
+/*  theta = (particleCharge*rfdf->voltage*(1+rfdf->fse))/(particleMass*sqr(c_mks)*pReference*beta); */
+  theta = (particleCharge*rfdf->voltage*(1+rfdf->fse))/(particleMass*sqr(c_mks)*pReference); 
   omega = rfdf->frequency*PIx2;
   k = omega/c_mks;
   L = rfdf->length;
@@ -2048,12 +2049,12 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     C[5] = sqrt(sqr(C[1])+1)-1;
     R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
     R[1][0] = -cphi*sphi*k*sqr(theta);
-    R[1][4] = -k*sphi*theta;
+    R[1][4] = -k*sphi*theta/beta;
     R[1][5] = -theta*cphi;
     R[5][5] = 1/sqrt(1 + sqr(cphi*theta));
     R[5][0] = k*sphi*theta*R[5][5];
     R[5][1] = theta*cphi*R[5][5];
-    R[5][4] = -k*cphi*sphi*sqr(theta)*R[5][5];
+    R[5][4] = -k*cphi*sphi*sqr(theta)*R[5][5]/beta;
 
     if (rfdf->tilt)
       tilt_matrices(M, rfdf->tilt);
@@ -2085,13 +2086,13 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
     theta3 = theta*theta2;
     theta4 = theta2*theta2;
     k2 = k*k;
-    z = -rfdf->length/2+dz;
+    z = -rfdf->length/(2*beta)+dz;
     Mt->C[4] = -rfdf->length/2;
     for (i=0; i<n; i++) {
       if (rfdf->standingWave)
-        phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz);
+        phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz)/beta;
       else
-        phase = rfdf->phase*PI/180;
+        phase = rfdf->phase*PI/180 + k*(Mt->C[4]+dz)*(1/beta-1);
       
       cphi = cos(phase);
       sphi = sin(phase);
@@ -2102,13 +2103,13 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double pReference)
       C[5] = sqrt(cphi2*theta2+1)-1;
 
       R[1][0] = -k*cphi*sphi*theta2;
-      R[1][4] = -k*sphi*theta;
+      R[1][4] = -k*sphi*theta/beta;
       R[1][5] = -cphi*theta;
 
       R[5][0] = k*sphi*theta/sqrt(cphi2*theta2+1);
       R[5][1] = cphi*theta/sqrt(cphi2*theta2+1);
 
-      R[5][4] = -k*cphi*sphi*theta2/sqrt(cphi2*theta2+1);
+      R[5][4] = -k*cphi*sphi*theta2/sqrt(cphi2*theta2+1)/beta;
 
       R[5][5] = 1/sqrt(cphi2*theta2+1);
 
