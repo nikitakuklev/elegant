@@ -150,6 +150,14 @@ Changes to the parallel version are made by Y. Wang (ANL), unless otherwise note
  \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
  V. Sajaev (ANL).
 \item Computation of radiation integrals does not include the effect of steering magnets.
+\item There is a bug related to using {\tt ILMATRIX} that will result in a crash
+if one does not request computation of the twiss parameters. If you encounter this
+problem, just add the following statement after the \verb|run_setup| command:
+\begin{verbatim}
+&twiss_output
+        matched = 1
+&end
+\end{verbatim}
 \end{itemize}
 
 \section{Credits}
