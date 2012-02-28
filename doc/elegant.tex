@@ -3029,7 +3029,7 @@ a significant difference in the optimization speed.
 \end{verbatim}
 
 \begin{itemize}
-\item \verb|method| --- May be one of ``genetic'', ``hybridsimplex'' or ``swarm''. If the default ``simplex'' method is chosen, all the processors will do the same optimization as the serial version and then track in parallel. All algorithms can be used for global optimization. ``swarm'' is recommended when there is sufficient computation resource available, so it can reach the optimization target fast. ``hybridsimplex'' is recommended when the initial point is close to the optimal result. ``genetic'' can be chosen for a global optimizer with a random start point (0 should be avoided for any initial coordinate). 
+\item \verb|method| --- May be one of ``genetic'', ``hybridsimplex'' or ``swarm''. If the default ``simplex'' method is chosen, all the processors will do the same optimization as the serial version if there is only one particle for optimization tracking, or do optimization tracking in parallel if the number of particles is larger than the number of CPUs. All algorithms can be used for global optimization. ``swarm'' is recommended when there is sufficient computation resource available, so it can reach the optimization target fast. ``hybridsimplex'' is recommended when the initial point is close to the optimal result. ``genetic'' can be chosen for a global optimizer with a random start point (0 should be avoided for any initial coordinate). 
 
 \item \verb|random_factor| --- The factor to scale the step size for both parallel swarm and genetic methods.
 
