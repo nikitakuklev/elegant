@@ -32,48 +32,90 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 24.2}
+\section{Highlights of What's New in Version 25.1}
 
 Here is a summary of what's changed since release 24.1:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None
+\item The {\tt SREFFECTS} element would ignore the {\tt COUPLING} parameter if {\tt PREF} was nonzero. Also, if {\tt PREF=0}, then internally computed
+  values would be copied to the saved lattice or parameter files. Both bugs were fixed.
+\item For the {\tt GFWIGGLER} element, fixed bug in translation of canonical momentum back into the mechanical momentum, as well as bugs
+  in computation of Twiss parameters. (A. Xiao, ANL)
+\item Fixed bugs in the {\tt TILT} control for {\tt RFDF}. Although the tracking results were correct, analyses related to the matrix were not.
+  This was reported by J. Rudolph (HZB).
+\item The matrix for the RFDF element was incorrect in the case when $\beta$ was not very close to 1. This is now improved, but still not
+  ideal if $\beta\gamma$ is too small. Tracking was unaffected by this bug, which was reported by P. Piot (NIU/FNAL).
+\item Fixed problem with {\tt SCRIPT} element that caused a crash when the \verb|loss| file was not requested from \verb|run_setup|.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
+\item The expressions for the second-order resonance driving terms from sextupoles (\verb|twiss_output| command) were corrected.
+  The original expressions, obtained from \cite{Bengtsson}, were determined to be in error. 
+  Thanks to J. Choi (BNL) for bringing this to our attention, C. X. Wang (ANL) for deriving the new expressions, and A. Streun (author of OPA, PSI) for consultations.
+  Because the new method is slower than the previous method, it is now possible to turn off computation of higher-order terms.
+\item The output of \verb|twiss_output| no longer includes unused parameters for the resonance driving terms when the user has not requested computation of those terms.
+  In addition, when the driving terms are requested, the real and imaginary parts are included in addition to the magnitudes.
+\item A bug was fixed in the main tracking loop that resulted in erroneous closed orbits in multi-step simulations if one of the conditions resulted
+  in a failure to find a closed orbit.
 \item Fixed bug that caused \verb|floor_coordinates| command to sometimes give incorrect values for the survey angles $\psi$ and $\phi$. 
   This was reported by A. Petrenko (BINP).
-\item The expressions for the second-order resonance driving terms (\verb|twiss_output| command) were corrected. The original expressions, obtained from \cite{Bengtsson}, were
-determined to be in error. Thanks to J. Choi (BNL) for pointing this out. C. X. Wang (APS) derived the new expressions.
-Because the new method is slower than the previous method, it is now possible to turn off computation of higher-order terms.
+\item Fixed bug that caused incorrect \verb|moments_output| results when quadrupole elements with edge effects were split using the \verb|divide_elements| command
+  or \verb|element_division| parameter in the \verb|run_setup| command.
+\item LSC computations now detect whether the number of bins is less than 2. If so, an error message is issued instead of crashing. This bug was reported
+  by P. Piot (NIU/FNAL).
+\item Fixed a problem that would result in incorrect ``anti-binding'' (i.e., alternating signs) of random errors in some circumstances.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None
+\item The {\tt QUAD} and {\tt KQUAD} elements can now be made to behave as a radially-focusing lens, using the new {\tt RADIAL} option. This was suggested by E. Adli (SLAC) for
+  modeling of plasma lenses.
+\item Added shim simulation For the {\tt GFWIGGLER} element. (A. Xiao, ANL)
+\item Improvements to {\tt RFDF}: added the {\tt FSE} (Fractional Strength Error) parameter. Added the ability to use the {\tt PHASE}, {\tt VOLTAGE}, and {\tt FSE} parameters
+  of {\tt RFDF} as beam steering controls. Added misalignments {\tt DX}, {\tt DY}, and {\tt DZ}. Added the \verb|DRIFT_MATRIX| control, which allows using a drift-space
+  matrix for cases where the actual matrix is not of interest for optics computations (e.g., a weak RFDF in a storage ring). 
+  Added ability to control whether deflection is due to electric (default) or magnetic field.
+\item Added {\tt FOCUSING} parameter to the {\tt WIGGLER} element to allow turning off vertical focusing effects.
+\item Added the {\tt MRFDF} element, which allows simulation of Multipole RF DeFlectors. This was request by Y. Chae (ANL).
+\item The {\tt NIBEND} element now allows the user to select whether to suppress or include the additional path length due to the fringe fields.
+  This was requested by N. Nakamura (KEK).
+\item The default \verb|FLUSH_INTERVAL| for \verb|WATCH| elements now 100, as it seems to provide better performance than the previous default
+  (effectively turn).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|rf_setup| command, which sets up rf cavities (RFCA elements) for storage rings.
 \item The effect of octupoles (\verb|OCT| and \verb|KOCT| elements) is now included in computing the resonance driving terms and the
  tune shifts with amplitude derived from these terms. This was requested by F. Lin (TJNAF), who also provided explicit expressions.
  J. Bengtsson (BNL) also assisted with understanding the expressions.
+\item Added the \verb|rf_setup| command, which sets up rf cavities (RFCA elements) for storage rings.
+\item Added the ability to use closed orbits in the determination of the response matrices, as opposed to using approximate formulae.
+\item Added the \verb|s_start| and \verb|s_end| parameters to \verb|insert_elements|. Also added the ability to accept a list of names
+  for the places to insert new elements.
+\item Added the \verb|refresh_matrix| parameter to the \verb|modulate_elements| command. Setting this to zero can give a significant speed-up of simulations that
+  don't require refreshing the matrix. Also added an output file to record modulation-related data.
 \end{itemize}
 
 \subsection{Other Changes}
 \begin{itemize}
-\item None
+\item Added the \verb|-rpnDefns| commandline option as an alternative way of naming the RPN definitions file. It may help some users who have
+  issues with environment variables.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
-These changes are by Y. Wang (ANL), unless otherwise noted.
+Changes to the parallel version are made by Y. Wang (ANL), unless otherwise noted.
 \begin{itemize}
-\item None
+\item In the last release, the ability to track in parallel while running the serial optimizer was inadvertently removed. This was restored.
+\item Several modes are now supported for parallel random number generation, having to do with the offset between the seeds for generators on different
+  processors. The previous mode was found to produce odd results in some simulations for large numbers of cores (e.g., 500).
+  This is controlled by the \verb|mpi_randomization_mode| parameter in \verb|global_settings|. (M. Borland)
+\item For parallel otpimization, added a minimal mutation variance value to stop the iterations, so the genetic optimization doesn't hang.
+  Added an option for genetic optimization to allow user to choose a crossover type from ``onepoint'', ``twopoint'', and ``uniform''.
+  If the dimension is 2, it will be set to onepoint crossover automatically.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -84,12 +126,17 @@ These changes are by Y. Wang (ANL), unless otherwise noted.
   by R. Bosch (SRC).
 \item {\tt view3dGeometry:} This is a new script, which is a slight adaptation of scripts posted on the forum by A. Petrenko.
   It allows viewing a beamline geometry in 3D using the freeWRL viewer.
+\item {\tt sddsbrightness} and {\tt sddsfluxcurve} now optionally accept undulator K values from an input file.
+\item Some units issues were fixed in the program {\tt sddsws}.
+\item A bug was fixed in the {\tt -coupling} option of {\tt ibsEmittance}.
+\item The programs {\tt sddscompton}, {\tt sddsxra}, and {\tt sddsxrf} were added for computation of Compton scattering spectra,
+  x-ray absorption spectra, and fluorescence spectra. (H. Shang, B. Yang, ANL).
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
-\item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, tune spreads
-  due to chromaticity and amplitude, and resonance driving terms {\em even when these are not calculated}, which is potentially
+\item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, and tune spreads
+  due to chromaticity and amplitude {\em even when these are not calculated}, which is potentially
   misleading.   The values are zero when the calculation is not requested.
 \item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
@@ -108,8 +155,8 @@ These changes are by Y. Wang (ANL), unless otherwise noted.
 \section{Credits}
 
 Contributors to {\tt elegant} include M. Borland, W. Guo, R. Soliday, V. Sajaev, C. Wang, Y. Wang, Y. Wu, and A. Xiao.
-Contributors to related programs include M. Borland, R. Dejus, L. Emery, A. Petrenko, H. Shang, Y. Wang, and
-A. Xiao.
+Contributors to related programs include M. Borland, R. Dejus, L. Emery, A. Petrenko, H. Shang, Y. Wang, 
+A. Xiao, and B. Yang.
 R. Soliday is responsible for multi-platform builds and distribution.
 Of course, we also appreciate the many suggestions, comments, and bug reports from users.
 
@@ -415,12 +462,14 @@ next in the file and react appropriately.
 
 The commandline syntax for {\tt elegant} is of the form
 \begin{flushleft}{\tt
-elegant \{{\em inputfile}|-pipe=in\} -macro={\em tag1}={\em value1}[,{\em
+elegant \{{\em inputfile}|-pipe=in\} [-rpnDefns={\em filename}] -macro={\em tag1}={\em value1}[,{\em
 tag2}={\em value2}...]  }\end{flushleft} 
 {\em inputfile} is the name of the command input file, which is a series of
 namelist commands directing the calculations.
 Alternatively, one may give the \verb|-pipe=in| option, allowing {\tt elegant } to be
 fed a stream of commands by another program or script.
+The \verb|-rpnDefns| option allows providing the name of the RPN definitions file as an alternative
+to defining the \verb|RPN_DEFNS| environment variable.
 The \verb|-macro| option allows performing text substitutions in the command stream.
 Multiple \verb|-macro| options may be given.
 Usage is described in more detail below.
@@ -1242,6 +1291,7 @@ during the computations.
     double closed_orbit_iteration_fraction = 1;
     long use_perturbed_matrix = 0;
     long disable = 0;
+    long use_response_from_computed_orbits = 0;
 &end
 \end{verbatim}
 
@@ -1304,6 +1354,8 @@ use at each iteration.
 	correction \verb|elegant| shall recompute the response matrix.  This
 	is useful if the lattice is changing significantly between corrections.
 \item \verb|disable| --- If nonzero, the command is ignored.
+\item \verb|use_response_from_computed_orbits| --- If nonzero, in-plane response matrices are computed
+  using differences of closed orbits, which is slower but may be more accurate. For cross-plane matrices, this is always the case.
 \end{itemize}
 
 \begin{latexonly}
@@ -1327,6 +1379,7 @@ use at each iteration.
     long output_before_tune_correction = 0;
     long fixed_length = 0;
     long coupled = 0;
+    long use_response_from_computed_orbits = 0;
 &end
 \end{verbatim}
 
@@ -1350,6 +1403,8 @@ each simulation step.  By default, the data is output immediately for the define
 \item \verb|fixed_length| --- Flag that, if set, specifies output of the fixed-path-length
 matrix.
 \item \verb|coupled| --- If nonzero, the cross-plane response matrices are computed.
+\item \verb|use_response_from_computed_orbits| --- If nonzero, in-plane response matrices are computed
+  using differences of closed orbits, which is slower but may be more accurate. For cross-plane matrices, this is always the case.
 \end{itemize}
 
 \begin{latexonly}
@@ -1849,6 +1904,7 @@ Use of this feature results in a doubling of the number of turns tracked.
     long echo_namelists = 1;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
+    long mpi_randomization_mode = 1;
 &end
 \end{verbatim}
 
@@ -1864,7 +1920,15 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item \verb|error_log_file| --- By default, \verb|elegant| writes error messages to the terminal.  If a filename is supplied
   for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
   the output being discarded.
-\end{itemize}
+\item \verb|mpi_randomization_mode| --- Controls how the random numbers are seeded on multiple processors
+  \begin{itemize}
+    \item[1] --- This is the original default, which showed issues in some simulations. The seed on the $i^{th}$ processor is $s_0+2*i$.
+    \item[2] --- The seed on the $i^{th}$ processor is $s_0+2*i^2$.
+    \item[3] --- This is the new default. The seed on the $i^{th}$ processor is $s_0+i*(i+1)$.
+    \item[4] --- The seed on the $i^{th}$ processor is $s_0+R_i$, where $R_i$ is the $i^{th}$ random integer returned by
+      the system rand() function.
+    \end{itemize}
+  \end{itemize}
 
 \begin{latexonly}
 \newpage
