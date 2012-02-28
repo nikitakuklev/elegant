@@ -30,11 +30,6 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
       savedRandomNumberSeed[1] = FABS(iseed+2*myid*myid  ); 
       savedRandomNumberSeed[3] = FABS(iseed+2*myid*myid+4);
       break;
-    case 3:
-      /* Quadratic dependence of seed on processor ID, but guaranteed to have an even offset */
-      savedRandomNumberSeed[1] = FABS(iseed+myid*(myid+1)  );
-      savedRandomNumberSeed[3] = FABS(iseed+myid*(myid+1)+4);
-      break;
     case 4:
       /* Use system generator to create modified seed for each processor */
       srand(FABS(iseed));
@@ -50,10 +45,16 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
       iseed += offset;
       savedRandomNumberSeed[3] = iseed;
       break;
-    default:
+    case 1:
       /* Original method */
       savedRandomNumberSeed[1] = FABS(iseed+2*myid  );
       savedRandomNumberSeed[3] = FABS(iseed+2*myid+4);
+      break;
+    case 3:
+    default:
+      /* Quadratic dependence of seed on processor ID, but guaranteed to have an even offset */
+      savedRandomNumberSeed[1] = FABS(iseed+myid*(myid+1)  );
+      savedRandomNumberSeed[3] = FABS(iseed+myid*(myid+1)+4);
       break;
     }
 #endif
