@@ -2204,6 +2204,7 @@ assigned to the target parameter.
         long clear_settings = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
+        long allow_missing_files = 0;
 	long force_occurence_data = 0;
         long verbose = 0;
         long use_first = 0;
@@ -2289,6 +2290,9 @@ data is simply ignored.
 
 \item \verb|allow_missing_parameters| --- If set, it is not an error
 if any element in the lattice lacks a parameter that exists in the file.
+
+\item \verb|allow_missing_files| --- If set, it is not an error
+if any listed file is missing.
 
 \item \verb|verbose| --- If set, provide informational printouts about
 changes to parameters.
