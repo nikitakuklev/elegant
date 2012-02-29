@@ -87,13 +87,14 @@ void track_through_rfmode(
       if (np)
         rfmode->mp_charge = rfmode->charge/np;
 #else
-      if (USE_MPI) {
-	if (isSlave) {
-	  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-	  if (np_total)
-	    rfmode->mp_charge = rfmode->charge/np_total; 
-	}
-      } 
+      if (notSinglePart) {
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	if (np_total)
+	  rfmode->mp_charge = rfmode->charge/np_total; 
+      } else {
+        if (np)
+          rfmode->mp_charge = rfmode->charge/np;
+      }
 #endif
     }
 
