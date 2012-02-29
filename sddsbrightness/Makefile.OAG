@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.10  2011/03/10 15:29:31  soliday
+# Updated the USR_CFLAGS
+#
 # Revision 1.9  2011/03/09 20:46:04  shang
 # added sddssyncflux
 #
@@ -69,7 +72,7 @@ USR_CFLAGS_DEFAULT = 	-DUNIX
 #USR_CFLAGS_WIN32 = 	-DpgiFortran
 
 ifdef WIN32
-USR_LIBS = oagphy mdbcommon matlib fftpack gs; SDDS1 rpnlib mdbmth namelist mdblib z fftpack
+USR_LIBS = oagphy mdbcommon matlib fftpack gsl SDDS1 rpnlib mdbmth namelist mdblib z fftpack
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = oagphy mdbcommon matlib fftpack gsl SDDS1 rpnlib mdbmth namelist mdblib
