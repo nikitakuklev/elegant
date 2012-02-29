@@ -4049,8 +4049,8 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   long nE=0, iE, jE;
   double sqrt8, sqrt2;
 
-  sqrt8 = sqrt(8);
-  sqrt2 = sqrt(2);
+  sqrt8 = sqrt((double)8);
+  sqrt2 = sqrt((double)2);
   ii = std::complex<double>(0,1);
 
   /* accumulate real and imaginary parts */
