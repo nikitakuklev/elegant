@@ -1,6 +1,9 @@
 /*
  *
  *  $Log: not supported by cvs2svn $
+ *  Revision 1.3  2011/03/16 19:11:47  borland
+ *  Fixed units for on-axis flux.
+ *
  *  Revision 1.2  2011/03/16 19:09:10  borland
  *  Fixed calculation of total flux for dipole.  Cf. Attwood, 5.8 (multiply by
  *  2*pi since we want the flux in a full circle, not per mrad).
@@ -86,7 +89,7 @@ char *USAGE1 = "sddssyncflux <outputFile> -verbose \n\
    [-fileValues=<filename>[,energy=<columnName or wavelength=columnName>] \n\
    [-mode=energy(wavelength),linear(logarithmic),start=<value>,end=<value>,step(factor)=<value>] \n\
    [-source=bendMagnet[,field=xx[,radius=yy][,criticalEnergy=ZZ]] \n\
-     [-source=wiggler(undulator),period=xx[,field=yy][,K=zz],numberOfPerions=<n>] \n\
+     [-source=wiggler(undulator),period=xx[,field=yy][,K=zz],numberOfPeriods=<n>] \n\
    [-eBeamEnergy=<value> [-eBeamCurrent=<value>] [-eBeamGamma=<value>] \n\
 <outputFile>       the results are written into the output file. \n\
 -verbose           flag for printing messages. \n\
