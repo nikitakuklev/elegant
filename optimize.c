@@ -123,10 +123,11 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 #if USE_MPI
 void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
+  do_optimization_setup(optimization_data, nltext, run, beamline);
+
   if (optimization_data->method!=OPTIM_METHOD_SIMPLEX) 
     runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
-
-  do_optimization_setup(optimization_data, nltext, run, beamline);  
+  
   if (optimization_data->method==OPTIM_METHOD_SWARM || optimization_data->method==OPTIM_METHOD_GENETIC) {
     if (population_size < n_processors) {
       fprintf (stdout, "Warning: The population size (%ld) can not be less than the number of processors (%d). The population size will be set as %d.\n",
