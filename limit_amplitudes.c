@@ -336,8 +336,8 @@ long elliptical_collimator(
     lost = 0;
     ini[0] += length*ini[1];
     ini[2] += length*ini[3];
-    xo = ini[0]/xsize;
-    yo = ini[2]/ysize;
+    xo = (ini[0]-dx)/xsize;
+    yo = (ini[2]-dy)/ysize;
     if ((ipow(xo, ecol->exponent) + ipow(yo, ecol->exponent))>1)
       lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, 1, 1) : 1;
     else if (isinf(ini[0]) || isinf(ini[2]) ||
