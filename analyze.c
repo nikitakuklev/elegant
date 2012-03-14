@@ -618,7 +618,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   VMATRIX *M1, *M2, *Ml1, *Mtmp;
   ELEMENT_LIST elem;
   MATRIX *Ms;
-  
+  long ignoreRadiation = 0;
+
   /* Accumulated diffusion matrix */
   accumD1 = tmalloc(21*sizeof(*(accumD1)));
   memset(accumD1, 0, 21*sizeof(*(accumD1)));
@@ -777,6 +778,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       ksext.isr = 0;
       ksext.n_kicks = 4;
       length = (ksext.length /= nSlices);
+      if (length<1e-6) {
+	ignoreRadiation = 1;
+	ksext.synch_rad = 0;
+      }
       elem.type = T_KSEXT;
       elem.p_elem = (void*)&ksext;
       break;
@@ -786,6 +791,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       ksext.isr = 0;
       ksext.synch_rad = 1;
       length = (ksext.length = sext->length/nSlices);
+      if (length<1e-6) {
+	ignoreRadiation = 1;
+	ksext.synch_rad = 0;
+      }
       ksext.k2 = sext->k2;
       ksext.tilt = sext->tilt;
       ksext.dx = sext->dx;
@@ -848,7 +857,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     }
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
-    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2); 
+    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation); 
     /*    print_matrices(stdout, "matrix1:", Ml1); */
 
     /* Step 2: Propagate the diffusion matrix */
@@ -898,7 +907,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 }
 
 
-void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D)
+void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation)
 {
   CSBEND *csbend;
   KQUAD *kquad;
@@ -975,7 +984,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     exitElegant(1);
     break;
   }
-  
+  if (ignoreRadiation)
+    sigmaDelta2 = 0;
+
   R = Mr->R;
   C = Mr->C;
   for (i=0; i<6; i++) {
