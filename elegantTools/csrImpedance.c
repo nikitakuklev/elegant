@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  2009/04/24 18:58:10  soliday
+ * Updated to work with the gsl library that we now include with CVS.
+ *
  * Revision 1.7  2008/08/21 14:53:55  borland
  * Added option to change the bending angle.
  *
@@ -35,6 +38,9 @@
 #include "scan.h"
 #include "mdb.h"
 #include <math.h>
+#ifndef USE_GSL
+#error The GSL library must be available to build csrImpedance.
+#endif
 #include "gsl/gsl_complex_math.h"
 #include "gsl/gsl_sf_airy.h"
 
