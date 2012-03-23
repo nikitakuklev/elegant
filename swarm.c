@@ -14,6 +14,9 @@
  *            Proc. IEEE Int'l. Conf. on Neural Networks (Perth, Australia)
  */
 
+#ifndef USE_GSL
+#error The GSL library must be available to build Pelegant.
+#endif
 #include "gsl_vector.h"
 #include "gsl_matrix.h"
 #include "track.h"
