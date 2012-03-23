@@ -1187,10 +1187,11 @@ char **argv;
     case STOP:
       lorentz_report();
       finish_load_parameters();
-      if (semaphore_file)
+      /* if (semaphore_file)
         createSemaphoreFile(semaphore_file);
       if (semaphoreFile[1])
         createSemaphoreFile(semaphoreFile[1]);
+      */
       free_beamdata(&beam);
       printFarewell(stdout);
       exitElegant(0);
@@ -2214,6 +2215,9 @@ void createSemaphoreFile(char *filename)
   if (!(fp = fopen(filename, "w"))) {
     fprintf(stdout, "Problem creating semaphore file %s\n", filename);
     exitElegant(1);
+  } else { /* Put the CPU time in the .done file */
+    if (wild_match(filename, "*.done"))
+      fprintf(fp, "%8.2f\n", cpu_time()/100.0); 
   }
   fclose(fp);
 }
