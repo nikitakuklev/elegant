@@ -15,7 +15,9 @@
 #include "mdb.h"
 #include "mdbsun.h"
 #include "track.h"
-#include "gsl_poly.h"
+#ifdef USE_GSL
+#include "gsl/gsl_poly.h"
+#endif
 /* #include "smath.h" */
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd);
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
@@ -51,6 +53,13 @@ void interpolateFTable(double *B, double *xyz, FTABLE *ftable);
 void rotate_coordinate(double **A, double *x, long inverse);
 void ftable_frame_converter(double **coord, long np, FTABLE *ftable, long entrance_exit);
 double choose_theta(double rho, double x0, double x1, double x2);
+void track_through_multipole_deflector(
+                                double **final, 
+                                MRFDF *rf_param,
+                                double **initial,
+                                long n_particles,
+                                double pc_central
+                                );
 
 #if USE_MPI
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
@@ -4544,7 +4553,11 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
           tm_a =  3.0*A[0][2]/A[2][2];
           tm_b = -6.0*A[1][2]*p[1]/p[2]/A[2][2]-6.0;
           tm_c =  6.0*step/rho/A[2][2];
+#ifdef USE_GSL
           gsl_poly_solve_cubic (tm_a, tm_b, tm_c, &theta0, &theta1, &theta2);
+#else
+          bombElegant("gsl_poly_solve_cubic function is not available becuase this version of elegant was not built against the gsl library", NULL);
+#endif
         } else if (A[0][2]) {
           tm_a = A[1][2]*p[1]/p[2]+A[2][2];
           theta0 = (tm_a-sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
