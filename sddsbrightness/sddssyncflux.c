@@ -1,6 +1,9 @@
 /*
  *
  *  $Log: not supported by cvs2svn $
+ *  Revision 1.4  2012/03/01 21:22:12  soliday
+ *  Fixed a typo in the usage message.
+ *
  *  Revision 1.3  2011/03/16 19:11:47  borland
  *  Fixed units for on-axis flux.
  *
@@ -40,6 +43,9 @@
 #include "SDDS.h"
 #include "scan.h"
 #include <ctype.h>
+#ifndef USE_GSL
+#error The GSL library must be available to build sddssyncflux.
+#endif
 #include "gsl/gsl_sf_bessel.h"
 
 #define max(a,b) ((a) >= (b) ? (a) : (b))
