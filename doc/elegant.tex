@@ -4724,17 +4724,25 @@ astra2elegant [{\em inputFile}] [{\em outputFile}] [-centerReference] [-pipe=[in
 \subsection{coreEmittance}
 
 \begin{itemize}
-\item {\bf description:} Computes the slice emittance for various fractions of the beam.
+\item {\bf description:} Computes the slice emittance for 80\%, 85\%, 90\%, 95\%, and 100\% fractions of the beam.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
-coreEmittance {\em inputFilename} {\em numberOfSlices}
+coreEmittance -input {\em inputFilename} [-nSlices {\em numberOfSlices}] [-pngRoot <string>] [-pngThickness <integer>(2)]
 }
 \end{flushleft}
 
 \item {\bf files:}
 \begin{itemize}
 \item The input file is a particle output file from {\tt elegant} or a compatible program.
+\end{itemize}
+
+\item {\bf switches}
+\begin{itemize}
+\item \verb|-input| --- Specify the name of the input file.
+\item \verb|-nSlices| --- Optionally specify the number of longitudinal slices. The default is 100.
+\item \verb|-pngRoot| --- Optionally specify the file rootname for PNG graphics files. If omitted, no PNG files are created.
+\item \verb|-pngThickness| --- Optionally change the thickness of lines for PNG graphics.  The default is 2.
 \end{itemize}
 
 \item {\bf author:} X. Dong.
