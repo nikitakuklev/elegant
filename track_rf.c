@@ -42,7 +42,17 @@ void track_through_rf_deflector(
   double length;
   long ip, is, n_kicks;
 
-  n_kicks = rf_param->n_kicks;
+  omega = 2*PI*rf_param->frequency;
+  k = omega/c_mks;
+
+  if ((n_kicks = rf_param->n_kicks)<=0) {
+    if ((n_kicks = (rf_param->length/(PIx2/k)*100))<1) {
+      if (rf_param->length==0)
+        n_kicks = 1;
+      else
+        n_kicks = 11;
+    }
+  }
   if (n_kicks%2==0)
     n_kicks += 1;
   
@@ -94,7 +104,6 @@ void track_through_rf_deflector(
     return;
   }
   
-  omega = 2*PI*rf_param->frequency;
   t_first = rf_param->t_first_particle;
   length = rf_param->length/n_kicks;
   Ephase = (rf_param->phase
@@ -120,7 +129,6 @@ void track_through_rf_deflector(
   cos_tilt = cos(rf_param->tilt);
   sin_tilt = sin(rf_param->tilt);
   Estrength = voltFactor*(particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
-  k = omega/c_mks;
 
   if (isSlave || !notSinglePart) {
     if (rf_param->dx || rf_param->dy || rf_param->dz)
