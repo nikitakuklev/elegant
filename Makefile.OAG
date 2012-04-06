@@ -138,6 +138,45 @@ endif
 
 
 
+#Look for private version of LEVMAR used here at APS
+LEVMAR = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/levmar))
+ifeq ($(LEVMAR), 1)
+USR_CFLAGS += -I$(EPICS_EXTENSIONS)/src/SDDS/levmar -DUSE_LEVMAR
+LEVMARLIB = levmar
+SYS_LEVMARLIB = 
+levmar_DIR = $(EPICS_EXTENSIONS_LIB)
+else
+
+#Look for system version of LEVMAR
+SYSLEVMAR = $(words $(notdir $(wildcard \
+/usr/lib/liblevmar.a \
+/usr/lib/liblevmar.so \
+/usr/lib64/liblevmar.a \
+/usr/lib64/liblevmar.so \
+/lib/liblevmar.a \
+/lib/liblevmar.so \
+/lib64/liblevmar.a \
+/lib64/liblevmar.so \
+/sw/lib/liblevmar.a \
+/sw/lib/liblevmar.dylib \
+/usr/sfw/lib/liblevmar.a \
+/usr/sfw/lib/liblevmar.so )))
+
+ifneq ($(SYSLEVMAR), 0)
+USR_CFLAGS += -DUSE_LEVMAR -DUSE_LEVMAR_H
+LEVMARLIB = 
+SYS_LEVMARLIB = -llevmar
+STATIC_BUILD=NO
+else
+
+#No LEVMAR library found. Build without it.
+LEVMARLIB = 
+SYS_LEVMARLIB = 
+endif
+endif
+
+
+
 ifdef WIN32
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
@@ -385,5 +424,7 @@ endif
 
 madto_LIBS += $(GSLLIB)
 madto_LDFLAGS += $(SYS_GSLLIB)
-elegant_LIBS += $(GSLLIB)
-elegant_LDFLAGS += $(SYS_GSLLIB)
+elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
+elegant_LDFLAGS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
+Pelegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
+Pelegant_LDFLAGS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
