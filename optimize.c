@@ -30,8 +30,10 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
 #if USE_MPI
 /* Find the global minimal value and its location across all the processors */
 void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
-/* Print out the best individual and value after each iteration */
-void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables);
+/* Print out the best individuals for all the processors */
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variable, long dimensions); 
+/* Print statistics after each iteration */
+void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
 #endif
 
 #if !USE_MPI
@@ -908,7 +910,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
 	  fprintf (stdout, "minimal value is %g on %d\n", result, myid);
 #endif
-	  if (population_log) {
+	  if (optimization_data->print_all_individuals)
+	    SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
+          if (population_log) {
 	    /* Compute statistics of the results over all processors */
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1047,7 +1051,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
           fprintf (stdout, "minimal value is %g for iteration %ld on %d\n", result, optimization_data->n_restarts+1-startsLeft, myid);
 #endif
-	  if (population_log) {
+	  if (optimization_data->print_all_individuals)
+	    SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
+           if (population_log) { 
 	    /* Compute statistics of the results over all processors */
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1147,7 +1153,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	}
 #endif
 	if (population_log)
-	  SDDS_PrintPopulations(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, worst_result, median, average, spread, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables);
+	  SDDS_PrintStatistics(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, worst_result, median, average, spread, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables, optimization_data->print_all_individuals);
       }
 #else 
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
@@ -2328,28 +2334,60 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
 	  !SDDS_DefineSimpleParameter(popLogPtr, "AverageOptimizationValue", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "OptimizationValueSpread", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameters(popLogPtr, optim->n_variables, optim->varied_quan_name, 
+				       optim->varied_quan_unit, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(popLogPtr, "OptimizationValue", NULL, SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumns(popLogPtr,  optim->n_variables, optim->varied_quan_name, 
 				    optim->varied_quan_unit, SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleParameters(popLogPtr, co_optim->n_covariables,co_optim->varied_quan_name, 
-				    co_optim->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_WriteLayout(popLogPtr)) {
-	    fprintf(stdout, "Problem setting up population output file %s\n", population_log);
-	    fflush(stdout);
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	    exitElegant(1);
+	fprintf(stdout, "Problem setting up population output file %s\n", population_log);
+	fflush(stdout);
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	exitElegant(1);
       }
     }
   }
 }
 
 /* Function to print populations */
-void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double average, double spread, double *best_individual, long dimensions, double *covariable, long n_covariables) {
+void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result, double *variable, long dimensions) {
+  static double **individuals=NULL, *results=NULL;
+  /* For both the swarm and hybrid simplex methods, only one best individual from each process will be printed */
+  long pop_size = n_processors;
+  long row, j;
+  printf (" SDDS_PrintPopulations is called\n");
+  if (!individuals)
+    individuals = (double**)czarray_2d(sizeof(double), pop_size, dimensions);
+  if (!results)
+    results = (double*)tmalloc(sizeof(double)*pop_size);
+
+  MPI_Gather(variable, dimensions, MPI_DOUBLE, &individuals[0][0], dimensions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Gather(&result, 1, MPI_DOUBLE, results, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  if (isMaster && log_file) {
+    if (!SDDS_StartPage(popLogPtr, pop_size))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+    for(row=0; row<pop_size; row++) {
+      if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row, 0, results[row], -1))
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); fflush(stderr);
+      for(j=0; j<dimensions; j++) {
+	if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,  j+1, individuals[row][j], -1))
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); fflush(stderr);	
+      }
+    }
+  }
+}
+
+/* Function to print the statistics of the populations after each optimization iteration */ 
+void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double average, double spread, double *best_individual, long dimensions, double *covariable, long n_covariables, long print_all) {
   int i;
   long offset = 6;
 
   if (isMaster && log_file) {
-    if (!SDDS_StartPage(popLogPtr, 1))
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-
+    if (!print_all)
+      if (!SDDS_StartPage(popLogPtr, 1))
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
     if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    "Iteration", iteration , NULL) ||
 	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -2369,12 +2407,14 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, long iteration, double best_va
 	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
 
+    /* The covariable information won't be printed to be consistent with the genetic optimization
     if (n_covariables) {
       for (i=0; i<n_covariables; i++) {
 	if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, offset+dimensions+i, covariable[i], -1))
 	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-    }
+    } 
+    */
 
     if (!SDDS_WritePage(popLogPtr))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
