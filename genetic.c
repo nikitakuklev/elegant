@@ -67,10 +67,12 @@ long geneticMin(
   print_all = printAllPopulations;
   last_reduced_iter = 0;
   sparsing_factor = printFrequency;
-  popLogPtr = logPtr;
-
-  if (population_log)
-    SDDS_PopulationSetup(population_log, popLogPtr, optim, co_optim);
+  
+  if (!popLogPtr) {	
+     popLogPtr = logPtr;
+     if (population_log)
+        SDDS_PopulationSetup(population_log, popLogPtr, optim, co_optim);
+  }
 
   ctx = PGACreate(&argc, argv, PGA_DATATYPE_REAL, dimensions, PGA_MINIMIZE);
 
@@ -102,7 +104,8 @@ long geneticMin(
     PGASetCrossoverType(ctx, PGA_CROSSOVER_ONEPT); 
 
   /* The number of genes to be replaced for each iteration */
-  PGASetNumReplaceValue (ctx,  PGAGetPopSize(ctx)-1); 
+  PGASetNumReplaceValue (ctx,  PGAGetPopSize(ctx)*0.8);	
+/*  PGASetNumReplaceValue (ctx,  PGAGetPopSize(ctx)-1); */
 
   /* String duplication will not be allowed in the population */
   PGASetNoDuplicatesFlag(ctx, PGA_TRUE);	
@@ -144,9 +147,9 @@ long geneticMin(
 
   /* Get the best string from genetic optimizer */
   if (isMaster) {
-    best_p = PGAGetBestIndex(ctx, PGA_NEWPOP);
-    PGARealGetString (ctx, xGuess, best_p, PGA_NEWPOP);
-    *yReturn = PGAGetEvaluation (ctx, best_p, PGA_NEWPOP);
+    best_p = PGAGetBestIndex(ctx, PGA_OLDPOP);
+    PGARealGetString (ctx, xGuess, best_p, PGA_OLDPOP);
+    *yReturn = PGAGetEvaluation (ctx, best_p, PGA_OLDPOP);
   }	
 #if USE_MPI
   MPI_Bcast(xGuess, dimensions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
