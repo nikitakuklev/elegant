@@ -126,6 +126,8 @@ void setupMomentumApertureSearch(
         SDDS_DefineColumn(&SDDSma, "xLostPositive", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "yLostPositive", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaLostPositive", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuxLostPositive", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuyLostPositive", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaNegativeFound", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaNegative", "$gd$R$bneg$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "lostOnPassNegative", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
@@ -133,6 +135,8 @@ void setupMomentumApertureSearch(
         SDDS_DefineColumn(&SDDSma, "xLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "yLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuxLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuyLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -150,6 +154,8 @@ void setupMomentumApertureSearch(
         SDDS_DefineColumn(&SDDSma, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuxLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuyLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -192,6 +198,7 @@ long doMomentumApertureSearch(
   double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
   double deltaStart1[2];
   double **xLost, **yLost, **deltaSurvived, **sLost, deltaLost;
+  double **xTuneSurvived, **yTuneSurvived;
   double *sStart;
   double nominalTune[2], tune[2];
   char **ElementName, **ElementType;
@@ -233,10 +240,7 @@ long doMomentumApertureSearch(
     fireOnPass = 0;
   else
     fireOnPass = 1;
-  if (forbid_resonance_crossing)
-    turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
-  else
-    turnByTurnCoord = NULL;
+  turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
   
   /* determine how many elements will be tracked */
   elem = &(beamline->elem);
@@ -276,6 +280,8 @@ long doMomentumApertureSearch(
   loserFound = (short**)czarray_2d(sizeof(**loserFound), (output_mode?1:2), (output_mode?2:1)*nElem);
   survivorFound = (short**)czarray_2d(sizeof(**survivorFound), (output_mode?1:2), (output_mode?2:1)*nElem);
   deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), (output_mode?1:2), (output_mode?2:1)*nElem);
+  xTuneSurvived = (double**)czarray_2d(sizeof(**xTuneSurvived), (output_mode?1:2), (output_mode?2:1)*nElem);
+  yTuneSurvived = (double**)czarray_2d(sizeof(**yTuneSurvived), (output_mode?1:2), (output_mode?2:1)*nElem);
   xLost = (double**)czarray_2d(sizeof(**xLost), (output_mode?1:2), (output_mode?2:1)*nElem);
   yLost = (double**)czarray_2d(sizeof(**yLost), (output_mode?1:2), (output_mode?2:1)*nElem);
   deltaWhenLost = (double**)czarray_2d(sizeof(**deltaWhenLost), (output_mode?1:2), (output_mode?2:1)*nElem);
@@ -398,7 +404,8 @@ long doMomentumApertureSearch(
         loserFound[slot][outputRow] = survivorFound[slot][outputRow] = 0;
         xLost[slot][outputRow] = yLost[slot][outputRow] = 
           deltaWhenLost[slot][outputRow] = sLost[slot][outputRow] = 
-            deltaSurvived[slot][outputRow] =  0;
+            deltaSurvived[slot][outputRow] =  xTuneSurvived[slot][outputRow] =
+              yTuneSurvived[slot][outputRow] = 0;
         deltaLost = deltaSign*DBL_MAX/2;
         deltaInterval = delta_step_size*deltaSign;
         
@@ -469,16 +476,19 @@ long doMomentumApertureSearch(
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
                                (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
-            if (forbid_resonance_crossing && code) {
+            if (code) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
-                if (verbosity>3)
-                  fprintf(stdout, "   Resonance crossing detected (no tunes).  Particle lost\n");
-                code = 0; /* lost */
+                if (forbid_resonance_crossing) {
+                  if (verbosity>3)
+                    fprintf(stdout, "   Resonance crossing detected (no tunes).  Particle lost\n");
+                  code = 0; /* lost */
+                }
               } else {
                 if (verbosity>3) 
                   fprintf(stdout, "   Tunes: %e, %e\n", tune[0], tune[1]);
-                if ( ( ((long)(2*tune[0])) - ((long)(2*nominalTune[0])) )!=0 ||
-                    ( ((long)(2*tune[1])) - ((long)(2*nominalTune[1])) )!=0) {
+                if (forbid_resonance_crossing &&
+                    ( (((long)(2*tune[0])) - ((long)(2*nominalTune[0])))!=0 ||
+                     (((long)(2*tune[1])) - ((long)(2*nominalTune[1])))!=0) ) {
                   /* crossed integer or half integer */
                   if (verbosity>3)
                     fprintf(stdout, "   Resonance crossing detected (%e, %e -> %e, %e).  Particle lost\n",
@@ -513,6 +523,8 @@ long doMomentumApertureSearch(
                         coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
               deltaSurvived[slot][outputRow] = delta;
               survivorFound[slot][outputRow] = 1;
+              xTuneSurvived[slot][outputRow] = tune[0];
+              yTuneSurvived[slot][outputRow] = tune[1];
             }
             delta += deltaInterval;
           } /* delta search */
@@ -600,7 +612,11 @@ long doMomentumApertureSearch(
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], outputRow, "sLostNegative") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], outputRow, "xLostNegative") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], outputRow, "yLostNegative") ||
-        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], outputRow, "deltaLostNegative"))) ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], outputRow, "deltaLostNegative") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xTuneSurvived[0], outputRow, "nuxLostNegative") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xTuneSurvived[1], outputRow, "nuxLostPositive") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yTuneSurvived[0], outputRow, "nuyLostNegative") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yTuneSurvived[1], outputRow, "nuyLostPositive"))) ||
       (output_mode==1 && 
        (!SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, outputRow, "ElementName") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, outputRow, "s") ||
@@ -613,7 +629,9 @@ long doMomentumApertureSearch(
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], outputRow, "sLost") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], outputRow, "xLost") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], outputRow, "yLost") ||
-        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], outputRow, "deltaLost")))) {
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], outputRow, "deltaLost") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xTuneSurvived[0], outputRow, "nuxLost") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yTuneSurvived[0], outputRow, "nuyLost")))) {
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -639,12 +657,14 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)yLost, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)deltaWhenLost, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)sLost, (output_mode?1:2), (output_mode?2:1)*nElem);
+  free_czarray_2d((void**)xTuneSurvived, (output_mode?1:2), (output_mode?2:1)*nElem);
+  free_czarray_2d((void**)yTuneSurvived, (output_mode?1:2), (output_mode?2:1)*nElem);
+  free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
+
   free(sStart);
   free(ElementName);
   free(ElementType);
   free(ElementOccurence);
-  if (turnByTurnCoord) 
-    free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
   return 1;
 }
 
