@@ -236,12 +236,6 @@ long doMomentumApertureSearch(
 #endif
 #endif
 
-  if (control->n_passes==1)
-    fireOnPass = 0;
-  else
-    fireOnPass = 1;
-  turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
-  
   /* determine how many elements will be tracked */
   elem = &(beamline->elem);
   elem0 = NULL;
@@ -297,6 +291,12 @@ long doMomentumApertureSearch(
   deltaStart1[0] = delta_negative_start;
   deltaStart1[1] = delta_positive_start;
 
+  if (control->n_passes==1)
+    fireOnPass = 0;
+  else
+    fireOnPass = 1;
+  turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
+  
   /* need to do this because do_tracking() in principle may realloc this pointer */
   lostParticles = (double**)czarray_2d(sizeof(double),1, 8);	 
  
@@ -660,7 +660,8 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)xTuneSurvived, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)yTuneSurvived, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
-
+  turnByTurnCoord = NULL;
+  
   free(sStart);
   free(ElementName);
   free(ElementType);
