@@ -55,7 +55,7 @@ double teyEfficiency = 2.0e-8;	/* Proportional constant for total electron yield
 double pi_const=3.141592653589793238462643;	/* constant */
 double degToRad = 0.0174532925199433;	/* Conversion factor from degree to radian */	
 
-static char *matTable="/home/oxygen/SHANG/oag/apps/src/elegant/sddsbrightness/elementProperties.sdds";
+static char *matTable="/home/oxygen/OAG/generalData/elementProperties.sdds";
 
 #define modes 10
 static int availableMode[modes]={0, 1, 2, 4, 6, 10, 11, 12, 14, 20};
