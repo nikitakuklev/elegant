@@ -13,12 +13,6 @@
 #
 
 TOP=../../..
-#If epics/extensions/configure directory exists, build with it.
-#Otherwise use epics/extensions/config.
-ifeq (0, $(words $(notdir $(wildcard $(TOP)/configure))))
-include $(TOP)/config/CONFIG_APPS
-include $(TOP)/config/RULES_ARCHS
-else
 include $(TOP)/configure/CONFIG
 include $(TOP)/src/elegant/sddsbrightness/Makefile.OAG
 include $(TOP)/configure/RULES
@@ -168,4 +162,3 @@ sddsfluxcurve$(EXE): $(FLUXCURVE_OBJNAMES)
 	$(F77) -o $@ $(FLUXCURVE_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
 endif
 
-endif

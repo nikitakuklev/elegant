@@ -71,12 +71,6 @@
 #
 
 TOP=../..
-#If epics/extensions/configure directory exists, build with it.
-#Otherwise use epics/extensions/config.
-ifeq (0, $(words $(notdir $(wildcard $(TOP)/configure))))
-include $(TOP)/config/CONFIG_APPS
-include $(TOP)/config/RULES_ARCHS
-else
 include $(TOP)/configure/CONFIG
 include $(TOP)/src/elegant/Makefile.OAG
 include $(TOP)/configure/RULES
@@ -364,7 +358,6 @@ all buildInstall:
 
 endif
 
-endif
 
 
 clean::
