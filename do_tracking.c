@@ -1159,7 +1159,7 @@ long do_tracking(
 	      break;
 	    case T_MATR:
 	      if (!eptr->matrix)
-		eptr->matrix = &(((MATR*)eptr->p_elem)->M);
+		eptr->matrix = compute_matrix(eptr, run, NULL);
 	      matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, nToTrack,
 				    z);
 	      break;
