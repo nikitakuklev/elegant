@@ -73,12 +73,12 @@
 
 static char *USAGE = "touschekLifetime <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
- {-charge=<nC>|-particles=<number>} -coupling=<value>\n\
+ {-charge=<nC>|-particles=<number>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
  [-ignoreMismatch]\n\
-Program by A. Xiao.  (This is version 4, October 2011, M. Borland)";
+Program by A. Xiao.  (This is version 5, May 2012. M. Borland)";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -93,7 +93,8 @@ Program by A. Xiao.  (This is version 4, October 2011, M. Borland)";
 #define DELTALIMIT 10
 #define IGNORE_MISMATCH 11
 #define EMITXINPUT 12
-#define N_OPTIONS 13
+#define EMITYINPUT 13
+#define N_OPTIONS 14
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -108,7 +109,8 @@ char *option[N_OPTIONS] = {
   "aperture",
   "deltalimit",
   "ignoreMismatch",
-  "emitxinput"
+  "emitxinput",
+  "emityinput"
 };
 
 void TouschekLifeCalc();  
@@ -143,7 +145,7 @@ int main( int argc, char **argv)
   double etaymin, etaymax;
   long i;
   unsigned long rfFlags;
-  double emitInput, sigmaDeltaInput, rfVoltage, rfHarmonic;
+  double emitInput, sigmaDeltaInput, rfVoltage, rfHarmonic, eyInput;
   double alphac, U0, circumference, EMeV;
   double coupling, emitx0, charge;
   short has_ex0 = 0, has_Sdelta0 = 0;
@@ -170,6 +172,7 @@ int main( int argc, char **argv)
   sigmaDeltaInput = 0;
   rfVoltage = rfHarmonic = 0;
   rfFlags = 0;
+  eyInput = 0;
   
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
@@ -209,6 +212,11 @@ int main( int argc, char **argv)
           bomb("invalid -coupling syntax/values", "-coupling=<value>");        
         get_double(&coupling, scanned[i].list[1]);
         break;
+      case EMITYINPUT:
+        if (scanned[i].n_items != 2 )
+          bomb("invalid -eyInput syntax/values", "-eyInput=<meters>");
+        get_double(&eyInput, scanned[i].list[1]);
+        break;
       case PARTICLES:
         if (scanned[i].n_items != 2 )
           bomb("invalid -particles syntax/values", "-particles=<value>");        
@@ -245,7 +253,9 @@ int main( int argc, char **argv)
 	ignoreMismatch = 1;
 	break;
       default:
-        bomb("unknown option given.", NULL);  
+        fprintf(stderr, "unknown option \"%s\" given\n", scanned[i].list[0]);
+        exit(1);
+        break;
       }
     }
     else {
@@ -265,8 +275,8 @@ int main( int argc, char **argv)
     charge /= 1e9; 
     NP = charge/ e_mks;
   }
-  if (!coupling) 
-    bomb("Coupling value not specified.",NULL);
+  if ((!coupling && !eyInput) || (coupling && eyInput))
+    bomb("Give one and only one of coupling or eyInput",NULL);
   if (!sz && !rfVoltage) 
     bomb("Specify either the bunch length or the rf voltage.", NULL);
   
@@ -408,7 +418,10 @@ int main( int argc, char **argv)
     emitx = emitx0/ ( 1 + coupling);
     has_ex0 = 1;
   }
-  emity = emitx * coupling;
+  if (eyInput)
+    emity = eyInput;
+  else
+    emity = emitx * coupling;
   if (sigmaDeltaInput) {
     sigmap = sigmaDeltaInput;
   } else {
