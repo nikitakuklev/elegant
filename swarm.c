@@ -17,8 +17,8 @@
 #ifndef USE_GSL
 #error The GSL library must be available to build Pelegant.
 #endif
-#include "gsl_vector.h"
-#include "gsl_matrix.h"
+#include "gsl/gsl_vector.h"
+#include "gsl/gsl_matrix.h"
 #include "track.h"
 #include "mdb.h"
 
