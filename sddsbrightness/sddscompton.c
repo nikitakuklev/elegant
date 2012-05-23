@@ -1445,7 +1445,7 @@ void SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode,  SDDS_D
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 }
 
-static char *matTable="/home/oxygen/SHANG/oag/apps/src/elegant/sddsbrightness/elementProperties.sdds";
+static char *matTable="/home/oxygen/OAG/generalData/elementProperties.sdds";
 #define Z_COL 0
 #define FORMULA_COL 1
 #define NAME_COL 2
