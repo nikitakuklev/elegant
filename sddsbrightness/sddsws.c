@@ -184,9 +184,9 @@ int main(int argc, char **argv)
 {
   char  *outputfile=NULL;
   double energy=7.0, current=100.0, emax=-1, emin=-1, xpc=0, ypc=0, xsize=-1, ysize=-1, kx=0, ky=-1, period=-1, pdistance=0;
-  long mode=-1, nxp=20, nyp=20, nE=500, i, j, k, bendingMagnet=0, i_arg, nowarnings=0, mode_index=-1, isAngular=0, total_rows=0, index;
+  long mode=-1, nxp=20, nyp=20, nE=500, bendingMagnet=0, i_arg, nowarnings=0, mode_index=-1, isAngular=0, total_rows=0, index=0;
   double nPeriod;
-  SDDS_DATASET SDDSin, SDDSout;
+  SDDS_DATASET SDDSout;
   SCANNED_ARG *s_arg;
   unsigned long dummyFlags=0, pipeFlags=0;
   
@@ -570,7 +570,7 @@ void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysiz
     exit(1);
   }
   if (nE>10000) {
-    fprintf(stderr, "Enery array (nE) out of bounds; number of points %d is greater than allowed (10000).\n", nE);
+    fprintf(stderr, "Enery array (nE) out of bounds; number of points %ld is greater than allowed (10000).\n", nE);
     exit(1);
   }
   if (kx !=0) {
@@ -682,7 +682,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
 void compute_irradiance(long nxp, long nyp, long bendingMagnet, double kx, double ky, double p_e, long mode, double *ra0, double *ra1,  double *ra3)
 {
   long i, j, k;
-  double  xg, yg, vp, vpmax, ecp, yg2, yg1, cc, cpi, cpis, y2, eta, y, asigma, api, area, fc, e1;
+  double  xg, yg, vp, vpmax, ecp, yg2, yg1, cc, cpi, cpis, y2, eta, y, asigma, api, fc, e1;
   
   vpmax = sqrt(1.0 - ECP_FRAC);
   for (j=0; j<nyp; j++) {
@@ -730,7 +730,7 @@ void space_distribution(long mode, long bendingMagnet, long nxp, long nyp, long 
                         double **p1, double **p2, double **p3, double **p4, double *flux, double *power)
 {
   long i, j, k;
-  double *ra1, *ra3, *ra0, fc, a1, a2, a3, ra2;
+  double *ra1, *ra3, *ra0, a1, a2, a3, ra2;
 
   *xpp = calloc(sizeof(**xpp), nxp*nyp);
   *ypp = calloc(sizeof(**ypp), nxp*nyp);
@@ -802,9 +802,9 @@ void spectral_distribution(long mode, long nE,  long nxp, long nyp, long bending
                            double **irradiance,  double **p1, double **p2, double **p3, double **p4, double *flux, double *power)
 {
   /*units ph/s/mr^2.0.1%bw for angular flux density and ph/s/mm^2/0.1%bw for spatial flux density */
-  double vpmax, *ra0=NULL, *ra1=NULL, *ra2=NULL, *ra3=NULL, area0, area1, area3=0, we=0;
-  double spec0, spec1, spec2, spec3, a1, a3;
-  long ix, iy, ie;
+  double *ra0=NULL, *ra1=NULL, *ra3=NULL, area0, area1, area3=0, we=0;
+  double spec0=0, spec1=0, spec3=0, a1, a3;
+  long ie;
   
   
   *p1 = calloc(sizeof(**p1), nE);
@@ -858,7 +858,7 @@ void spectral_distribution(long mode, long nE,  long nxp, long nyp, long bending
 void angle_integration(long lopt, long nE, 
                        double **irradiance, double **p1, double **p2, double **p3, double **p4, double *flux, double *power) 
 {
-  double vp, dvs, ec02, dec, *wgt, sum=0, spec0, spec1, spec3, vn, ecn, ecp, *ecpa, we, dvn, sumx;
+  double vp, dvs, ec02, dec, *wgt, spec0, spec3, vn, ecn, ecp, *ecpa, we, dvn, sumx;
   long nxa = 100; /* Number of steps for integration over horizontal angle */
   long ie, i;
   double  g1, y1;
@@ -1034,7 +1034,7 @@ void bendingMagnet_power_distribution(long nxp, long nyp, long nE, double ky, do
                                 double **irradiance, double **p1, double **p2, double **p3, double **p4, double *power)
 {
   long neta, ie, ix, iy, k;
-  double etamin, etamax, deta, vpmax, we, *eta, *asigma, *api, ra0, ra1,ra2, ra3, xg, yg, vp, ecp, yg2, yg1, cc, cpi, cpis, c1, fc, y, y2, a1, a2, a3;
+  double etamin, etamax, deta, vpmax, we, *eta, *asigma, *api, ra0, ra1,ra2, ra3, xg, yg, vp, ecp, yg2, yg1, cc, cpi, cpis, c1, fc, y, y2, a1, a3;
   
   asigma = api  = NULL;
   neta   = NETA_SZ;
@@ -1150,7 +1150,7 @@ c  Output: 	Stokes parameters
 c  Roger J. Dejus, XFD/APS, April, 1995. */
 void fk(double xg, double yg, double k_magnet, double *s0, double *s1, double *s2, double *s3)
 {
-  double gk, c, xc, yc, kc, A, B, eps, fkh, fkv;
+  double gk, c, A, B, eps, fkh, fkv;
   A=0;
   B=PI;
   eps = 1.0e-12;
