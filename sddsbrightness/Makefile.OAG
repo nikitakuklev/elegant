@@ -66,7 +66,7 @@ else
 PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs
 endif
 
-USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
+USR_CFLAGS =  -I$(EPICS_EXTENSIONS_INCLUDE) \
                 -DIEEE_MATH -DzLib
 
 USR_CFLAGS_DEFAULT = 	-DUNIX 
@@ -108,8 +108,28 @@ sddssyncflux_LDFLAGS += -lgsl -lgslcblas
 endif
 endif
 
+#Look for system version of xraylib
+SYSXRL = $(words $(notdir $(wildcard \
+/usr/lib/libxrl.a \
+/usr/lib/libxrl.so \
+/usr/lib64/libxrl.a \
+/usr/lib64/libxrl.so \
+/lib/libxrl.a \
+/lib/libxrl.so \
+/lib64/libxrl.a \
+/lib64/libxrl.so \
+/sw/lib/libxrl.a \
+/sw/lib/libxrl.dylib \
+/usr/sfw/lib/libxrl.a \
+/usr/sfw/lib/libxrl.so )))
 
-
+ifneq ($(SYSXRL), 0)
+STATIC_BUILD=NO
+PROD_HOST += sddscompton sddsxra sddsxrf
+sddscompton_LDFLAGS += -lxrl
+sddsxra_LDFLAGS += -lxrl
+sddsxrf_LDFLAGS += -lxrl
+endif
 
 ifdef WIN32
 USR_LIBS = oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib z fftpack
@@ -145,6 +165,12 @@ sddsurgent$(EXE)_SRCS = sddsurgent.c
 sddsws$(EXE)_SRCS = sddsws.c
 
 sddsbs$(EXE)_SRCS = sddsbs.c
+
+sddsxra$(EXE)_SRCS = sddsxra.c
+
+sddscompton(EXE)_SRCS = sddscompton.c
+
+sddsxrf(EXE)_SRCS = sddsxrf.c
 
 OBJNAMES = sddsbrightness$(OBJ) usb$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
