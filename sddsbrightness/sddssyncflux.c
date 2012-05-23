@@ -155,7 +155,7 @@ int main(int argc, char **argv)
   SDDS_TABLE SDDSout;
   SCANNED_ARG *s_arg;
   char *outputFile,*fileValuesFile,*energyColumn,*wavelengthColumn, *columnMode,*changeMode,*device,*columnName,*g1ValueFile;
-  long i_arg, i,energyStep,wavelengthStep,eGammaGiven,eCurrentGiven,eEnergyGiven,fieldGiven;
+  long i_arg, i,eGammaGiven,eCurrentGiven,eEnergyGiven,fieldGiven;
   long radiusGiven,criticalGiven,periodGiven,sourceGiven,mode,rows,changemode,columnmode,verbose,tmpfile_used;
   unsigned long pipeFlags,flags;
   double start,end,step,factor,eEnergy,eCurrent,eGamma,field,radius,criticalEnergy,period,K,totalPower;
@@ -179,6 +179,7 @@ int main(int argc, char **argv)
   pipeFlags=flags=0;
   eGammaGiven=eCurrentGiven=eEnergyGiven=0;
   columnMode=changeMode=device=NULL;
+  mode=changemode=columnmode=0;
   step=factor=0;
   field=radius=criticalEnergy=period=0;
   fieldGiven=radiusGiven=periodGiven=criticalGiven=sourceGiven=0;
@@ -499,8 +500,8 @@ long CalculatePhotonEnergyAndWavelengthFromRange(double start, double end, doubl
                                               long columnmode, long changemode,
                                               double **Energy, double **Wavelength)
 {
-  long rows,i;
-  double currentVal,changeVal;
+  long rows;
+  double currentVal;
   
   *Energy=*Wavelength=NULL;
   rows=0;
@@ -586,7 +587,7 @@ void GetG1ValuesFromFile (char *g1ValueFile, double **y, double **yGy, long *row
 long CalculateOnAxisPhotonFluxOfBendMagnet(double *energy, double **onAxisFlux, double criticalEnergy,
                                            long n,double eGamma, double eCurrent)
 {
-  double ri,rk,rip,rkp;
+  double rk;
   double xnu,x,factor;
   long i;
   
@@ -612,7 +613,7 @@ long CalculatePhotonFluxOfWiggler(double *energy, double **onAxisFlux, double **
   long N,i,j,rows=0;
   unsigned long interpCode;
   double deltaPhi, thetaMax, pasin,totalflux,onaxisflux,offaxisflux,phi,theta,B,criticalEnergy;
-  double totalflux1, onaxisflux1,g1,xnu,h2,sigma,deltaTheta,offaxisflux1;
+  double totalflux1, onaxisflux1,g1,xnu,h2,sigma,deltaTheta;
   double *y,*yGy;
   OUTRANGE_CONTROL belowRange,aboveRange;
 
