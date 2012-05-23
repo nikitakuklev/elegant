@@ -5,11 +5,11 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "xraylib.h"
-#include "xraylib-parser.h"
 #include "SDDS.h"
 #include "mdb.h"
 #include "scan.h"
+#include "xraylib/xraylib.h"
+#include "xraylib/xraylib-parser.h"
 
 /* Define global variables */
 #define MAXNPTS 16384

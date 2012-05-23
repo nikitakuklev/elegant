@@ -7,11 +7,11 @@
 #include <complex.h>
 
 
-#include "xraylib.h"
-#include "xraylib-parser.h"
 #include "SDDS.h"
 #include "mdb.h"
 #include "scan.h"
+#include "xraylib/xraylib.h"
+#include "xraylib/xraylib-parser.h"
 
 /* Define global variables */
 
@@ -313,7 +313,7 @@ int main ( int argc, char *argv[] )
   
   /* print minimum information about the calculation */
   if (verbose) {
-    fprintf(stdout, "sddsxra: verbose = %d, mode = %d, target = %s, density = %0.3f (g/cm^3)\n", verbose, mode, target, targetDensity);
+    fprintf(stdout, "sddsxra: verbose = %ld, mode = %d, target = %s, density = %0.3f (g/cm^3)\n", verbose, mode, target, targetDensity);
     if( mode==2 || mode==4 || mode==12 || mode==14 ) {
       fprintf(stdout, "sddsxra: Target thickness = %0.4f (mm), Incident angle = %0.1f (deg)\n", targetThickness, thetaIn);
     } else if( mode==6 ) {
@@ -689,7 +689,7 @@ void SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, int mode, SDDS_DAT
     }
     SDDS_FreeStringArray(par, pars);
   }
-  if (verbose > 1 ) { fprintf(stdout, "cols %d pars %d\n", cols, pars); }
+  if (verbose > 1 ) { fprintf(stdout, "cols %ld pars %ld\n", cols, pars); }
   if (!SDDS_DefineSimpleParameter(SDDSout, "sddsxra_mode", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(SDDSout, "TargetMaterial", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleParameter(SDDSout, "TargetFormula", NULL, SDDS_STRING) ||

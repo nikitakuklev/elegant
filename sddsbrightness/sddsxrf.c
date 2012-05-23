@@ -5,11 +5,11 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "xraylib.h"
-#include "xraylib-parser.h"
 #include "SDDS.h"
 #include "mdb.h"
 #include "scan.h"
+#include "xraylib/xraylib.h"
+#include "xraylib/xraylib-parser.h"
 
 /* Define global variables */
 #define MAXNPTS 16384
@@ -1270,7 +1270,7 @@ char *table_column[TABLE_COLS]={"Z", "Formula", "Name", "Group", "Period", "Mass
 				"Electronegativity", "Abundance"};
 
 long get_material_property(char *label, char *property, char **str_value, long *int_value, double *double_value) {
-  long rows=0, i, index, col_index=-1;
+  long rows=0, index, col_index=-1;
   SDDS_DATASET table;
   int32_t *intValue = NULL;
   char **formula, **name;
