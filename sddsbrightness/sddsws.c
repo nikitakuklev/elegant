@@ -591,7 +591,7 @@ void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysiz
     fprintf(stderr, "The pinhole distance can not be zero.\n");
     exit(1);
   }
-  if (mode=1) {
+  if (mode==1) {
     if (emin<0) {
       fprintf(stderr, "The minimum photon energy for mode=1 has to be provided.\n");
       exit(1);
