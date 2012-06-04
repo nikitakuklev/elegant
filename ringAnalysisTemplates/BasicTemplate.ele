@@ -50,8 +50,8 @@ sinclude(<ERRORPARAM>)
 
 &closed_orbit
 	output = %s.clo,
-	closed_orbit_iterations = 500,
-	iteration_fraction = 0.1,
+	closed_orbit_iterations = <orbitIterations>,
+	iteration_fraction =  <orbitIterationFraction>
 &end
 
 &correct
@@ -64,9 +64,9 @@ sinclude(<ERRORPARAM>)
         trajectory_output = "%s.orb",
         corrector_output = "%s.cor",
         statistics = "%s.scor",
-        closed_orbit_iteration_fraction = 0.5,
-        closed_orbit_iterations = 20,
-        closed_orbit_accuracy = 1e-9,
+        closed_orbit_iteration_fraction = <orbitIterationFraction>
+        closed_orbit_iterations = <orbitIterations>,
+        closed_orbit_accuracy = <orbitAccuracy>,
 	keep_largest_SVs[0] = <horizontalSVs>, <verticalSVs>
 &end
 
