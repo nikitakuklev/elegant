@@ -258,7 +258,7 @@ long doMomentumApertureSearch(
   if ((((output_mode==0?1:2)*nElem)<n_processors) && (myid==0)) {
     printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resource.\nThe number of elements is %ld. The number of processors is %d.\n", (output_mode==0?1:2)*nElem, n_processors);
     if (!output_mode) 
-      printf("Trip: You can utilize more processors efficiently but setting output_mode=1\n");
+      printf("Tip: You can utilize more processors efficiently but setting output_mode=1\n");
   }    
   if (verbosity) {
     verbosity = 0;
