@@ -333,6 +333,15 @@ proc FillErrorsFrame {widget args} {
 	-width 10 -orientation horizontal \
 	-variableList [list correction(horizontalSVs) correction(verticalSVs)]  -contextHelp \
 	"Enter the number of largest singular values to use for orbit correction.  If zero, chosen automatically, which is generally good unless the orbit correction configuration has issues."
+    APSLabeledEntry .accuracy -parent $w0 \
+	-label "Accuracy of orbit determination (m): " -width 10 -textVariable correction(orbitAccuracy) \
+	-contextHelp "Enter the required accuracy of orbit determination. If orbit is not found, try increasing this value." 
+    APSLabeledEntry .fraction -parent $w0 \
+	-label "Iteration fraction for orbit determination: " -width 10 -textVariable correction(orbitIterationFraction) \
+	-contextHelp "Enter the desired iteration fraction for orbit determination. If orbit is not found, try decreasing this value while increasing the number of iterations."
+    APSLabeledEntry .iterations -parent $w0 \
+	-label "Maximum iterations for orbit determination: " -width 10 -textVariable correction(orbitIterations) \
+	-contextHelp "Enter the maximum number of iterations for orbit determination. If orbit is not found, try increasing the number of iterations."
 
     APSFrame .f1 -parent $widget -label "Error control"
     set w0 $widget.f1.frame
