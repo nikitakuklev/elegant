@@ -158,7 +158,7 @@
 #include "SDDS.h"
 #include "constants.h"
 static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
- {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
+ {-charge=<nC>|-particles=<value>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-emitInput=<value>] [-deltaInput=<value>] \n\
  [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] \n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
@@ -184,7 +184,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define ISRING 15
 #define FORCECOUPLING 16
 #define EMITXINPUT 17
-#define N_OPTIONS 18
+#define EMITYINPUT 18
+#define N_OPTIONS 19
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -204,6 +205,7 @@ char *option[N_OPTIONS] = {
   "isRing",
   "forceCoupling",
   "emitxinput",  /* For backward compatibility---identical to -emitInput */
+  "emityinput", 
   };
 
 #include "zibs.h"
@@ -271,7 +273,7 @@ int main( int argc, char **argv)
   isRing = 1;
   particles = 0;
   charge = 0;
-  coupling = 0;
+  coupling = emityInput = 0;
   force = 1;
   length = 0;
   superperiods=1;
@@ -319,6 +321,9 @@ int main( int argc, char **argv)
         break;
       case COUPLING:
         get_double(&coupling, scanned[i].list[1]);
+        break;
+      case EMITYINPUT:
+        get_double(&emityInput, scanned[i].list[1]);
         break;
       case FORCECOUPLING:
         get_long(&force, scanned[i].list[1]);
@@ -376,7 +381,9 @@ int main( int argc, char **argv)
         noWarning = 1;
         break;
       default:
-        bomb("unknown option given.", NULL);  
+        fprintf(stderr, "Unknown option %s given", scanned[i].list[0]);
+        exit(1);
+        break;
       }
     }
     else {
@@ -398,8 +405,8 @@ int main( int argc, char **argv)
     charge /= 1e9; 
     particles = charge/ e_mks;
   }
-  if (!coupling) 
-    bomb("Coupling value not specified.",NULL);
+  if ((!coupling && !emityInput) || (coupling && emityInput))
+    bomb("Give -coupling or -emityInput (but not both)", NULL);
   if (!length && !rfVoltage) 
     bomb("Specify either the bunch length or the rf voltage.", NULL);
 
@@ -599,7 +606,10 @@ int main( int argc, char **argv)
     else 
       /* The emitxInput value is really emit=emitx+emity */
       emitxInput = emitxInput/ ( 1 + coupling);
-    emityInput = emitxInput * coupling;
+    if (!emityInput)
+      emityInput = emitxInput * coupling;
+    else
+      coupling = emityInput/emityInput;
     sigmaDelta = sigmaDeltaInput;
     if (length)
       sigmaz0 = length;
