@@ -476,7 +476,7 @@ long doMomentumApertureSearch(
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
                                (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
-            if (code) {
+            if (code && turnsStored>2) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
                 if (forbid_resonance_crossing) {
                   if (verbosity>3)
@@ -496,7 +496,8 @@ long doMomentumApertureSearch(
                   code = 0;
                 }
               }
-            }
+            } else 
+              tune[0] = tune[1] = -1;
             if (!code) {
               /* particle lost */
               if (verbosity>3) {
