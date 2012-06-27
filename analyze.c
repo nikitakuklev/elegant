@@ -539,6 +539,8 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
                             NULL, 0, 2);
     break;
+  case T_TWMTA:
+  case T_MAPSOLENOID:
   case T_TWLA:
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
