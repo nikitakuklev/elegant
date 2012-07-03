@@ -1417,7 +1417,7 @@ long do_tracking(
 	      break;
 	    case T_CORGPIPE:
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
-                                        nToTrack, accepted, z, *P_central, 1, 0, 2, 2);
+                                        nToTrack, accepted, z-((CORGPIPE*)eptr->p_elem)->length, *P_central, 0, 0, 2, 2);
 	      track_through_corgpipe(coord, nLeft, (CORGPIPE*)eptr->p_elem, P_central, run, i_pass,
 				 charge);
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 

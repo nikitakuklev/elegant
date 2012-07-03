@@ -475,7 +475,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
         dtBeam = (sMax-sMin)/(beta*c_mks);
         if (dtBeam<20*dt)
           dt = dtBeam/20;
-        n_bins = 1.1*dtBeam/dt;
+        n_bins = 1.5*dtBeam/dt;
         if (n_bins<10)
           n_bins = 10;
       } else
