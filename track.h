@@ -816,7 +816,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MRADINTEGRALS 106
 #define T_APPLE 107
 #define T_MRFDF 108
-#define N_TYPES   109
+#define T_CORGPIPE 109
+#define N_TYPES   110
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -932,6 +933,7 @@ extern char *entity_text[N_TYPES];
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
+#define N_CORGPIPE_PARAMS 15
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2360,6 +2362,18 @@ typedef struct {
     long wakePoints, isCopy;
     double *W, *t, macroParticleCharge, dt;
   } WAKE;
+
+/* names and storage structure for longitudinal corrugated-pipe wake physical parameters */
+extern PARAMETER corgpipe_param[N_CORGPIPE_PARAMS];
+
+typedef struct {
+    double length, radius, period, gap, depth, dt, tmax;
+    long n_bins;
+    long interpolate;          /* flag to turn on interpolation */
+    long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
+    long change_p0, allowLongBeam;
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
+  } CORGPIPE;
 
 /* names and storage structure for transverse wake physical parameters */
 extern PARAMETER trwake_param[N_TRWAKE_PARAMS];

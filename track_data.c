@@ -53,7 +53,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF",
+    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -190,7 +190,8 @@ and phase modulation.",
     "A canonical kick octupole.",
     "Multiplies radiation integrals by a given factor.  Use to compute emittance for collection of various types of cells.",
     "Tracks through a wiggler using generate function method of J. Bahrdt and G. Wuestefeld (BESSY, Berlin, Germany).",
-    "Zero-length Multipole RF DeFlector from dipole to decapole"
+    "Zero-length Multipole RF DeFlector from dipole to decapole",
+    "A corrugated round pipe, commonly used as a dechirper in linacs."
     } ;
 
 QUAD quad_example;
@@ -1602,6 +1603,26 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     };
 
+CORGPIPE corgpipe_example;
+/* CORGPIPE physical parameters */
+PARAMETER corgpipe_param[N_CORGPIPE_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.length), NULL, 0.0, 0, "length"},
+    {"RADIUS", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.radius), NULL, 0.0, 0, "pipe radius"},
+    {"PERIOD", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.period), NULL, 0.0, 0, "period of corrugations (<< radius recommended)"},
+    {"GAP", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.gap), NULL, 0.0, 0, "gap in corrugations (< period required)"},
+    {"DEPTH", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.depth), NULL, 0.0, 0, "depth of corrugations (<< radius, >~ period recommended)"},
+    {"DT", "S", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.dt), NULL, 0.0, 0, "maximum time duration of wake"},
+    {"TMAX", "S", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.tmax), NULL, 0.0, 0, "maximum time duration of wake (0 for autoscale)"},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&corgpipe_example.n_bins), NULL, 0.0, 0, "number of bins for charge histogram (0 for autoscale)"},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&corgpipe_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
+    {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&corgpipe_example.smoothing), NULL, 0.0, 0, "Use Savitzky-Golay filter to smooth current histogram?"},
+    {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&corgpipe_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter half-width for smoothing"},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&corgpipe_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
+    {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&corgpipe_example.change_p0), NULL, 0.0, 0, "change central momentum?"},
+    {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&corgpipe_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&corgpipe_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
+    };
+
 TRWAKE trwake_example;
 /* TRWAKE physical parameters */
 PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
@@ -2531,6 +2552,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {N_MRADITEGRALS_PARAMS, 0, sizeof(MRADINTEGRALS), mRadIntegrals_param },
     { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
     { N_MRFDF_PARAMS,  MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
+    { N_CORGPIPE_PARAMS, MAY_CHANGE_ENERGY|MPALGORITHM|MAT_LEN_NCAT, sizeof(CORGPIPE), corgpipe_param},
 } ;
 
 void compute_offsets()

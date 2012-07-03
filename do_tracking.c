@@ -1415,6 +1415,14 @@ long do_tracking(
 	      track_through_ztransverse(coord, nToTrack, (ZTRANSVERSE*)eptr->p_elem, *P_central, run, i_pass,
 					charge);
 	      break;
+	    case T_CORGPIPE:
+              nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
+                                        nToTrack, accepted, z, *P_central, 1, 0, 2, 2);
+	      track_through_corgpipe(coord, nLeft, (CORGPIPE*)eptr->p_elem, P_central, run, i_pass,
+				 charge);
+              nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
+                                        nLeft, accepted, z, *P_central, 1, 0, 2, 2);
+	      break;
 	    case T_WAKE:
 	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass,
 				 charge);
