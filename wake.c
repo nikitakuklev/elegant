@@ -473,8 +473,8 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
         gamma = sqrt(sqr(*Pcentral)+1);
         beta = *Pcentral/gamma;
         dtBeam = (sMax-sMin)/(beta*c_mks);
-        if (dtBeam<20*dt)
-          dt = dtBeam/20;
+        if (dtBeam<30*dt)
+          dt = dtBeam/30;
         n_bins = 1.5*dtBeam/dt;
         if (n_bins<10)
           n_bins = 10;
@@ -485,6 +485,9 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
         n_bins = 10;
     }
   }
+
+  if ((1.0*np)/n_bins<100)
+    printf("*** Warning: less than 100 particles per bin on average for CORGPIPE. Considering increasing the number of particles.\n");
   
   wakeData.factor = 1;
   wakeData.n_bins = n_bins;
