@@ -1611,7 +1611,7 @@ PARAMETER corgpipe_param[N_CORGPIPE_PARAMS] = {
     {"PERIOD", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.period), NULL, 0.0, 0, "period of corrugations (<< radius recommended)"},
     {"GAP", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.gap), NULL, 0.0, 0, "gap in corrugations (< period required)"},
     {"DEPTH", "M", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.depth), NULL, 0.0, 0, "depth of corrugations (<< radius, >~ period recommended)"},
-    {"DT", "S", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.dt), NULL, 0.0, 0, "maximum time duration of wake"},
+    {"DT", "S", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.dt), NULL, 0.0, 0, "maximum time duration of wake (0 for autoscale)"},
     {"TMAX", "S", IS_DOUBLE, 0, (long)((char *)&corgpipe_example.tmax), NULL, 0.0, 0, "maximum time duration of wake (0 for autoscale)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&corgpipe_example.n_bins), NULL, 0.0, 0, "number of bins for charge histogram (0 for autoscale)"},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&corgpipe_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
