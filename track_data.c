@@ -2536,7 +2536,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
     {    N_RFTM110_PARAMS,  0|MPALGORITHM,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
-    {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
+    {   N_EDRIFT_PARAMS, MAT_LEN|DIVIDE_OK, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
     {   N_TSCATTER_PARAMS,  NO_DICT_OUTPUT,       sizeof(TSCATTER),  tscatter_param     },   
