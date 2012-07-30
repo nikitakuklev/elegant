@@ -1875,7 +1875,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
 	  sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
 	DP -= dp_prime*X*tan(e2);
-        printf("change in DP from post-adjustment: %le\n", -dp_prime*X*tan(e2));
       }
 
       /* convert CT to distance traveled at final velocity */
