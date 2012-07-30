@@ -1870,11 +1870,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       coord = part[i_part];
       if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
 	/* post-adjust dp/p to correct error made by integrating over entire sector */
-        computeCSBENDFields(&Fx, &Fy, x, y);
+        computeCSBENDFields(&Fx, &Fy, X, Y);
         
 	dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
 	  sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
 	DP -= dp_prime*X*tan(e2);
+        printf("change in DP from post-adjustment: %le\n", -dp_prime*X*tan(e2));
       }
 
       /* convert CT to distance traveled at final velocity */
