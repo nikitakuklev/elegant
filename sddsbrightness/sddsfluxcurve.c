@@ -86,7 +86,7 @@ method           choose method for calculating flux \n\
                  neks=<value> number of points for peaking search. \n\
 mode             Choose calculation mode: \n\
                  mode=pinhole         Flux through defined pinhole (default)\n\
-                 mode=density         Flux density.\n\
+                 mode=density         Flux density (includes central-cone flux).\n\
                  mode=total           Total flux.\n\
 undulator        specify undulator parameters\n\
 electronBeam     specify electron beam parameters that are not in the twiss file.\n\
@@ -183,8 +183,8 @@ int main(int argc, char **argv)
   unsigned long pipeFlags;
   long harmonics, tmpFileUsed, i_arg, readCode, h, ih;
   unsigned long dummyFlags;
-  long method, nE, ihMin, ihMax, mode = 4;
-  double *KK, **FnOut, **Energy, **Flux, **LambdarOut, *TotalPower, *OnAxisPowerDensity;
+  long method, iE, nE, ihMin, ihMax, mode = 4;
+  double *KK, **FnOut, **Energy, **Flux, **LambdarOut, *TotalPower, *OnAxisPowerDensity, *CentralConeFlux;
   int32_t neks;
   PINHOLE_PARAM pinhole_param;
   UNDULATOR_PARAM undulator_param;
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  KK = TotalPower = OnAxisPowerDensity = NULL;
+  KK = TotalPower = OnAxisPowerDensity = CentralConeFlux = NULL;
   FnOut = Energy = Flux = LambdarOut = NULL;
 
   inputfile = outputfile = NULL;
@@ -402,6 +402,8 @@ int main(int argc, char **argv)
                   &KK, &TotalPower, &OnAxisPowerDensity,
                   &FnOut, &Energy, &Flux, &LambdarOut);
     electron_param.current /= 1e3; 
+    if (mode==2)
+      CentralConeFlux = tmalloc(sizeof(double)*nE);
     
 #ifdef DEBUG
     fprintf(stderr, "Returned from CalculateFlux\n");
@@ -413,11 +415,23 @@ int main(int argc, char **argv)
            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, TotalPower, nE, 1) ||
            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, OnAxisPowerDensity, nE, 2)))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*4+3) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*4+4) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, LambdarOut[ih], nE, ih*4+5) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Energy[ih], nE, ih*4+6))
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      if (mode==2) {
+        for (iE=0; iE<nE; iE++)
+          /* The 10^6 is to account for the fact that the flux density is per mrad^2 */
+          CentralConeFlux[iE] = Flux[ih][iE]*LambdarOut[ih][iE]/(2*undulator_param.period*undulator_param.nPeriods)*1e6;
+        if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*5+3) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, CentralConeFlux, nE, ih*5+4) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*5+5) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, LambdarOut[ih], nE, ih*5+6) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Energy[ih], nE, ih*5+7))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      } else {
+        if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*4+3) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*4+4) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, LambdarOut[ih], nE, ih*4+5) ||
+            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Energy[ih], nE, ih*4+6))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
     }
     if (!SDDS_SetParameters(&SDDSout, SDDS_BY_NAME|SDDS_PASS_BY_VALUE, "current", electron_param.current, 
                             "EnergySpread", electron_param.energySpread, 
@@ -458,6 +472,7 @@ int main(int argc, char **argv)
     free(KK);
     free(TotalPower);
     free(OnAxisPowerDensity);
+    free(CentralConeFlux);
   }
   return 0;
 }
@@ -495,6 +510,9 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
       /* flux density */
       sprintf(buffer, "FluxDensity%ld", h);
       if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/mrad$a2$n/0.1%BW", SDDS_DOUBLE))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      sprintf(buffer, "CentralConeFlux%ld", h);
+      if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/0.1%BW", SDDS_DOUBLE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       break;
     case 5:
