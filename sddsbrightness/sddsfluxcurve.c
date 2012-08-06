@@ -417,8 +417,10 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (mode==2) {
         for (iE=0; iE<nE; iE++)
+	  /* The central cone flux is approximately 2*pi*sigmarp^2*fluxDensity */
+	  /* where 2*pi is chosen to match KJK's formula in the x-ray data book */
           /* The 10^6 is to account for the fact that the flux density is per mrad^2 */
-          CentralConeFlux[iE] = Flux[ih][iE]*LambdarOut[ih][iE]/(2*undulator_param.period*undulator_param.nPeriods)*1e6;
+          CentralConeFlux[iE] = PI*Flux[ih][iE]*LambdarOut[ih][iE]/(2*undulator_param.period*undulator_param.nPeriods)*1e6;
         if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*5+3) ||
             !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, CentralConeFlux, nE, ih*5+4) ||
             !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*5+5) ||
