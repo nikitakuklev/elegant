@@ -895,7 +895,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 11
-#define N_CSRCSBEND_PARAMS 69
+#define N_CSRCSBEND_PARAMS 70
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -2051,7 +2051,7 @@ typedef struct {
     double binRangeFactor;
     long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
     char *histogramFile;
-    long outputInterval, outputLastWakeOnly, steadyState;
+    long outputInterval, outputLastWakeOnly, steadyState, integratedGreensFunction;
     long use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
     long isr, isr1Particle, csr, csrBlock;

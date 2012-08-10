@@ -1288,6 +1288,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputInterval), NULL, 0.0, 1, "interval (in kicks) of output to OUTPUT_FILE"},
     {"OUTPUT_LAST_WAKE_ONLY", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputLastWakeOnly), NULL, 0.0, 0, "output final wake only?"},
     {"STEADY_STATE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.steadyState), NULL, 0.0, 0, "use steady-state wake equations?"},
+    {"IGF", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.integratedGreensFunction), NULL, 0.0, 0, "use integrated Greens function (requires STEADY_STATE=1)?"},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.use_bn), NULL, 0.0, 0, "use b<n> instead of K<n>?"},
     {"EXPANSION_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.expansionOrder), NULL, 0.0, 0, "Order of field expansion. (0=auto)"},
     {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b1), NULL, 0.0, 0, "K1 = b1/rho, where rho is bend radius"},
