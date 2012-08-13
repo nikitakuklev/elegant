@@ -120,6 +120,8 @@ SYSGSL = $(words $(notdir $(wildcard \
 /lib64/libgsl.so \
 /sw/lib/libgsl.a \
 /sw/lib/libgsl.dylib \
+/opt/local/lib/libgsl.a \
+/opt/local/lib/libgsl.dylib \
 /usr/sfw/lib/libgsl.a \
 /usr/sfw/lib/libgsl.so )))
 
