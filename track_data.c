@@ -32,7 +32,7 @@ htab *load_hash;
 /* various user-controlled global flags (global_settings namelist) */
 long inhibitFileSync = 0;
 long echoNamelists = 1;
-long mpiRandomizationMode = 1;
+long mpiRandomizationMode = 3;
 
 long particleID = 1;
 
