@@ -1057,7 +1057,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
   short accumulatingAngle = 1;
-#define DEBUG_IGF 1
 #ifdef DEBUG_IGF
   FILE *fpdeb;
   fpdeb = fopen("csr.sdds","w");
