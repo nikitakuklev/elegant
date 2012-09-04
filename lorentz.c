@@ -515,7 +515,7 @@ void lorentz_setup(
             /* calculate slope and intercept for entrance plane */ 
             alpha = nibend->angle/2-nibend->e1;
             rentr_intercept = -nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
-            switch (nibend->boundaryPosition) {
+            switch (nibend->fringePosition) {
             case -1: /* Fringe inside */
               fentr_intercept = rentr_intercept + flen/cos(alpha);
               entr_intercept = rentr_intercept;
@@ -541,7 +541,7 @@ void lorentz_setup(
             /* calculate slope and intercept for exit plane */
             alpha = nibend->angle/2-nibend->e2;
             rexit_intercept = nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
-            switch (nibend->boundaryPosition) {
+            switch (nibend->fringePosition) {
             case -1: /* Fringe inside */
               fexit_intercept = rexit_intercept - flen/cos(alpha);
               exit_intercept = rexit_intercept;
@@ -940,7 +940,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         dqds[2] = dyds;
         /* find q coordinates of particle at entrance plane */
         alpha = nibend->angle/2 - nibend->e1;
-        switch (nibend->boundaryPosition) {
+        switch (nibend->fringePosition) {
         case -1 :
           q0I  = nibend->rho0*(cos_ah*tan(alpha) - sin_ah);
           break;

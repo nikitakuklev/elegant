@@ -1933,7 +1933,7 @@ typedef struct {
     double etilt;               /* error tilt angle */
     double accuracy;
     char *model, *method;
-    long synch_rad, adjustBoundary, adjustField, fudgePathLength, boundaryPosition;
+    long synch_rad, adjustBoundary, adjustField, fudgePathLength, fringePosition;
     /* for internal use only: */
     long initialized;       /* initialization done */
     double flen;            /* distance from iron edge to end of fringe field */
