@@ -135,6 +135,8 @@ Changes to the parallel version are made by Y. Wang (ANL), unless otherwise note
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
+\item Setting \verb|CHANGE_T=1| on \verb|RFCA| and \verb|RFCW| elements can give invalid results when tracking beams with very 
+  large time spread compared to the bunch length.
 \item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, and tune spreads
   due to chromaticity and amplitude {\em even when these are not calculated}, which is potentially
   misleading.   The values are zero when the calculation is not requested.
