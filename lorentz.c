@@ -212,7 +212,6 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 /* minimum number of steps to take */
 #define N_INTERIOR_STEPS 100
 
-#define DEBUG 1
 #ifdef DEBUG
 static FILE *fp_field = NULL;
 static long field_output_on = 1;
