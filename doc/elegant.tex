@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 25.0.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 25.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,105 +32,66 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 25.0}
+\section{Highlights of What's New in Version 25.1}
 
-Here is a summary of what's changed since release 24.1:
+Here is a summary of what's changed since release 25.0:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The {\tt SREFFECTS} element would ignore the {\tt COUPLING} parameter if {\tt PREF} was nonzero. Also, if {\tt PREF=0}, then internally computed
-  values would be copied to the saved lattice or parameter files. Both bugs were fixed.
-\item For the {\tt GFWIGGLER} element, fixed bug in translation of canonical momentum back into the mechanical momentum, as well as bugs
-  in computation of Twiss parameters. (A. Xiao, ANL)
-\item Fixed bugs in the {\tt TILT} control for {\tt RFDF}. Although the tracking results were correct, analyses related to the matrix were not.
-  This was reported by J. Rudolph (HZB).
-\item The matrix for the RFDF element was incorrect in the case when $\beta$ was not very close to 1. This is now improved, but still not
-  ideal if $\beta\gamma$ is too small. Tracking was unaffected by this bug, which was reported by P. Piot (NIU/FNAL).
-\item Fixed problem with {\tt SCRIPT} element that caused a crash when the \verb|loss| file was not requested from \verb|run_setup|.
+\item There was a bug in the \verb|ECOL| element when the length was nonzero and the offset (\verb|DX| or \verb|DY|) was nonzero.
+  This was fixed.
+\item To avoid numerical problems, synchrotron radiation is now disabled automatically for \verb|KSEXT| elements shorter than 1 $\mu$m
+  when performing beam moments calculations with radiation.
+\item In some cases, the matrix for the \verb|MATR| element would not get loaded prior to tracking, resulting in a crash. This was fixed.
+\item A bug was fixed in post-adjustment of synchrotron radiation losses in the \verb|CSRCSBEND| element, which made extremely small errors
+  in the results This was reported by K. Amyx (Tech-X).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The expressions for the second-order resonance driving terms from sextupoles (\verb|twiss_output| command) were corrected.
-  The original expressions, obtained from \cite{Bengtsson}, were determined to be in error. 
-  Thanks to J. Choi (BNL) for bringing this to our attention, C. X. Wang (ANL) for deriving the new expressions, and A. Streun (author of OPA, PSI) for consultations.
-  Because the new method is slower than the previous method, it is now possible to turn off computation of higher-order terms.
-\item The output of \verb|twiss_output| no longer includes unused parameters for the resonance driving terms when the user has not requested computation of those terms.
-  In addition, when the driving terms are requested, the real and imaginary parts are included in addition to the magnitudes.
-\item A bug was fixed in the main tracking loop that resulted in erroneous closed orbits in multi-step simulations if one of the conditions resulted
-  in a failure to find a closed orbit.
-\item Fixed bug that caused \verb|floor_coordinates| command to sometimes give incorrect values for the survey angles $\psi$ and $\phi$. 
-  This was reported by A. Petrenko (BINP).
-\item Fixed bug that caused incorrect \verb|moments_output| results when quadrupole elements with edge effects were split using the \verb|divide_elements| command
-  or \verb|element_division| parameter in the \verb|run_setup| command.
-\item LSC computations now detect whether the number of bins is less than 2. If so, an error message is issued instead of crashing. This bug was reported
-  by P. Piot (NIU/FNAL).
-\item Fixed a problem that would result in incorrect ``anti-binding'' (i.e., alternating signs) of random errors in some circumstances.
+\item Determination of the matrix for the \verb|MAPSOLENOID| and \verb|TWMTA| elements was broken in version 22. This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The {\tt QUAD} and {\tt KQUAD} elements can now be made to behave as a radially-focusing lens, using the new {\tt RADIAL} option. This was suggested by E. Adli (SLAC) for
-  modeling of plasma lenses.
-\item Added shim simulation For the {\tt GFWIGGLER} element. (A. Xiao, ANL)
-\item Improvements to {\tt RFDF}: added the {\tt FSE} (Fractional Strength Error) parameter. Added the ability to use the {\tt PHASE}, {\tt VOLTAGE}, and {\tt FSE} parameters
-  of {\tt RFDF} as beam steering controls. Added misalignments {\tt DX}, {\tt DY}, and {\tt DZ}. Added the \verb|DRIFT_MATRIX| control, which allows using a drift-space
-  matrix for cases where the actual matrix is not of interest for optics computations (e.g., a weak RFDF in a storage ring). 
-  Added ability to control whether deflection is due to electric (default) or magnetic field.
-\item Added {\tt FOCUSING} parameter to the {\tt WIGGLER} element to allow turning off vertical focusing effects.
-\item Added the {\tt MRFDF} element, which allows simulation of Multipole RF DeFlectors. This was request by Y. Chae (ANL).
-\item The {\tt NIBEND} element now allows the user to select whether to suppress or include the additional path length due to the fringe fields.
-  This was requested by N. Nakamura (KEK).
-\item The default \verb|FLUSH_INTERVAL| for \verb|WATCH| elements now 100, as it seems to provide better performance than the previous default
-  (effectively turn).
+\item Added the \verb|CORGPIPE| element, which implements a beam dechirper using a corrugated pipe wakefield, based on
+  the theoretical treatment of K. Bane \cite{Bane-SLAC14925}.  This was suggested by P. Emma (LBNL).
+\item If not set by the users, the \verb|N_KICKS| parameter of \verb|RFCA| and \verb|RFCW| will now be automatically set
+  in order to ensure a sufficient number of kicks, defined as 100 kicks per wavelength. This may be excessive for
+  high-energy beams.
+\item Automatic selection of the number of bins and bin size for the \verb|WAKE| element was modified to avoid warning
+  messages.
+\item The \verb|EDRIFT| element can now be subdivided using the usual element division commands.
+\item The \verb|CSRCSBEND| element was improved to support the integrated Green's function method for steady-state
+  wakes. This was done with the assistance of R. Ryne (LBNL).
+\item The \verb|NIBEND| element now allows positioning of the fringe region relative to the reference plane.
+  The fringe region may be inside, outside, or centered on the reference plane. This was added after discussions with
+  N. Nakamura (KEK).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The effect of octupoles (\verb|OCT| and \verb|KOCT| elements) is now included in computing the resonance driving terms and the
- tune shifts with amplitude derived from these terms. This was requested by F. Lin (TJNAF), who also provided explicit expressions.
- J. Bengtsson (BNL) also assisted with understanding the expressions.
-\item Added the \verb|rf_setup| command, which sets up rf cavities (RFCA elements) for storage rings.
-\item Added the ability to use closed orbits in the determination of the response matrices, as opposed to using approximate formulae.
-\item Added the \verb|s_start| and \verb|s_end| parameters to \verb|insert_elements|. Also added the ability to accept a list of names
-  for the places to insert new elements.
-\item Added the \verb|refresh_matrix| parameter to the \verb|modulate_elements| command. Setting this to zero can give a significant speed-up of simulations that
-  don't require refreshing the matrix. Also added an output file to record modulation-related data.
-\end{itemize}
-
-\subsection{Other Changes}
-\begin{itemize}
-\item Added the \verb|-rpnDefns| commandline option as an alternative way of naming the RPN definitions file. It may help some users who have
-  issues with environment variables.
+\item When determining momentum aperture (\verb|momentum\_aperture|) the tunes near the aperture boundary are now recorded.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 Changes to the parallel version are made by Y. Wang (ANL), unless otherwise noted.
 \begin{itemize}
-\item In the last release, the ability to track in parallel while running the serial optimizer was inadvertently removed. This was restored.
-\item Several modes are now supported for parallel random number generation, having to do with the offset between the seeds for generators on different
-  processors. The previous mode was found to produce odd results in some simulations for large numbers of cores (e.g., 500).
-  This is controlled by the \verb|mpi_randomization_mode| parameter in \verb|global_settings|. (M. Borland)
-\item For parallel otpimization, added a minimal mutation variance value to stop the iterations, so the genetic optimization doesn't hang.
-  Added an option for genetic optimization to allow user to choose a crossover type from ``onepoint'', ``twopoint'', and ``uniform''.
-  If the dimension is 2, it will be set to onepoint crossover automatically.
+\item In the last version, we added the ability to change the randomization mode for different processors. However, the default mode was not
+  changed to one of the improved methods, even though the documentation said it had been changed. The default mode has now been changed
+  mode 3 (see the documentation for \verb|global_settings|).
+\item Updated to get the correct latest result from genetic optimization by using the right population group. Improved population log file for multiple restarts.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item {\tt touschekLifetime:} Added ability to limit momentum aperture using the supplied rf voltage and harmonic number.  Also,
-  removed the confusing {\tt emitxInput} option and generally improved documentation.  These deficiencies were pointed out
-  by R. Bosch (SRC).
-\item {\tt view3dGeometry:} This is a new script, which is a slight adaptation of scripts posted on the forum by A. Petrenko.
-  It allows viewing a beamline geometry in 3D using the freeWRL viewer.
-\item {\tt sddsbrightness} and {\tt sddsfluxcurve} now optionally accept undulator K values from an input file.
-\item Some units issues were fixed in the program {\tt sddsws}.
-\item A bug was fixed in the {\tt -coupling} option of {\tt ibsEmittance}.
-\item The programs {\tt sddscompton}, {\tt sddsxra}, and {\tt sddsxrf} were added for computation of Compton scattering spectra,
-  x-ray absorption spectra, and fluorescence spectra. (H. Shang, B. Yang, ANL).
+\item The scripts \verb|radiationEnvelope| was added. It allows computing the envelope over harmonics of brightness and flux tuning curves, such as those
+  obtained from \verb|sddsbrightness| and \verb|sddsfluxcurve|.
+\item The program \verb|sddsfluxcurve| now computes the flux in the central cone if computation of the flux density is requested.
+\item The programs \verb|ibsEmittance| and \verb|touschekLifetime| now accept an argument giving the vertical emittance.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -4933,12 +4894,12 @@ ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=129
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 ibsEmittance {\em twissFile} {\em resultsFile}
- {-charge=<nC>|-particles=<value>} -coupling=<value>
- [-emitInput=<value>] [-deltaInput=<value>] 
- [-superperiods=<value>] [-isRing=1|0]
- \{-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>\}
- [-energy=<MeV>] 
- [\{-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>]\}]
+ {-charge={\em nC}|-particles={\em value} }\{-coupling={\em value}|-emityInput={\em value}\}
+ [-emitInput={\em value}] [-deltaInput={\em value}] 
+ [-superperiods={\em value}] [-isRing=1|0]
+ \{-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}\}
+ [-energy={\em MeV}] 
+ [\{-growthRatesOnly | -integrate=turns={\em number}[,stepSize={\em number}]\}]
  [-noWarning] 
 }\end{flushleft}
 
@@ -4951,6 +4912,7 @@ ibsEmittance {\em twissFile} {\em resultsFile}
 \item {\bf -charge}, {\bf -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
 \item {\bf -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
+\item {\tt -emityInput} --- Give the vertical emittance in meters.
 \item {\bf -emitInput} --- Give the initial total emittance in meters.  If not specified,
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\bf -deltaInput} --- Give the initial rms fractional momentum spread.  If not
@@ -5814,7 +5776,7 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 \begin{flushleft}{\tt 
 touschekLifetime {\em outputFile}
  -twiss={\em twissFile} -aperture={\em momentumApertureFile}
- {-charge={\em nC}|-particles={\em value}} -coupling={\em value}
+ {-charge={\em nC}|-particles={\em value}} \{-coupling={\em value}|-emityInput={\em value}\}
  {-RF=Voltage={\em MV},harmonic={\em value}[,limit] | -length={\em mm}} 
  [-emitInput={\em valueInMeters}] [-deltaInput={\em value}] [-verbosity={\em value}]
  [-ignoreMismatch] [-deltaLimit={\em valueInPercent}]
@@ -5837,6 +5799,7 @@ yield incorrect results.
  number of electrons.
 \item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.  This is
  used to compute the horizontal and vertical emittance from the natural emittance.
+\item {\tt -emityInput} --- Give the vertical emittance in meters.
 \item {\tt -RF=Voltage={\em MV},harmonic={\em value}[,limit]} --- Specify rf voltage and harmonic number.
  The {\tt limit} qualifier, if given means that the momentum acceptance is limited by the bucket
  half-height.
