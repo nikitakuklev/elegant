@@ -108,6 +108,21 @@ sddssyncflux_LDFLAGS += -lgsl -lgslcblas
 endif
 endif
 
+
+XRAYLIB = 
+
+#Look for private version of xraylib used here at APS
+XRAY = $(words $(wildcard $(OAG_APPS)/src/xraylib))
+ifeq ($(XRAY), 1)
+PROD_HOST += sddscompton sddsxra sddsxrf
+sddscompton_CFLAGS = -I$(OAG_APPS)/src/xraylib
+sddsxra_CFLAGS = -I$(OAG_APPS)/src/xraylib
+sddsxrf_CFLAGS = -I$(OAG_APPS)/src/xraylib
+XRAYLIB = xrl
+xrl_DIR = $(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
+else
+
+
 #Look for system version of xraylib
 SYSXRL = $(words $(notdir $(wildcard \
 /usr/lib/libxrl.a \
@@ -130,12 +145,13 @@ sddscompton_LDFLAGS += -lxrl
 sddsxra_LDFLAGS += -lxrl
 sddsxrf_LDFLAGS += -lxrl
 endif
+endif
 
 ifdef WIN32
-USR_LIBS = oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib z fftpack
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib z fftpack
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
-USR_LIBS = oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib
 SYS_PROD_LIBS_DEFAULT += z
 endif
 
