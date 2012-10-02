@@ -8,8 +8,8 @@
 #include "SDDS.h"
 #include "mdb.h"
 #include "scan.h"
-#include "xraylib/xraylib.h"
-#include "xraylib/xraylib-parser.h"
+#include "xraylib.h"
+#include "xraylib-parser.h"
 
 /* Define global variables */
 #define MAXNPTS 16384
