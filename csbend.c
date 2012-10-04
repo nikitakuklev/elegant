@@ -1057,6 +1057,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
   short accumulatingAngle = 1;
+#if USE_MPI
+  double *buffer;  
+#endif
 #ifdef DEBUG_IGF
   FILE *fpdeb;
   fpdeb = fopen("csr.sdds","w");
@@ -1072,8 +1075,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   gamma2 = Po*Po+1;
   gamma3 = pow(gamma2, 3./2);
 
-#if USE_MPI
-  double *buffer;  
+#if USE_MPI 
   if (notSinglePart)
     n_partMoreThanOne = 1; /* This is necessary to solve synchronization issue in parallel version*/
   else
