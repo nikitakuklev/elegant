@@ -1259,6 +1259,11 @@ proc FillMomentumApertureFrame {widget args} {
       -contextHelp \
       "Enter the number of jobs into which to divide the computation."
 
+    APSLabeledEntry .nproc -parent $widget \
+	-label "Number of cores per job: " -width 20 \
+	-textVariable momentumAperture(nCores) \
+	-contextHelp "Enter the number of cores per job.  If 1, then serial elegant is used."
+
     APSLabeledEntry .leaf -parent $widget \
       -label "Aperture file: " -width 80 -textVariable momentumAperture(apertureFile) \
       -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.sdds \
