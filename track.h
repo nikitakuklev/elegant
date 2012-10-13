@@ -3102,6 +3102,12 @@ long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
                     ERRORVAL *errcon, LINE_LIST *beamline);
 void finishFrequencyMap();
 
+/* chaosMap.c */
+void setupChaosMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+long doChaosMap(RUN *run, VARY *control, double *referenceCoord,
+                    ERRORVAL *errcon, LINE_LIST *beamline);
+void finishChaosMap();
+
 /* prototypes for elegant.c: */
 extern void getRunControlContext(VARY *context);
 extern void getRunSetupContext (RUN *context);

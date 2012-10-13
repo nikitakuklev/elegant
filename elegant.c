@@ -154,7 +154,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define PARALLEL_OPTIMIZATION_SETUP 60
 #define RAMP_ELEMENTS 61
 #define RF_SETUP 62
-#define N_COMMANDS      63
+#define CHAOS_MAP  63
+#define N_COMMANDS      64
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -168,7 +169,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
-    "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup"
+    "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -234,7 +235,8 @@ char *description[N_COMMANDS] = {
     "modulate_elements                modulate values of elements as a function of time",
     "parallel_optimization_setup      requests running of parallel optimization mode and sets it up",
     "ramp_elements                    ramp values of elements as a function of pass",
-    "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation"
+    "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation",
+    "chaos_map                        command to perform chaos map analysis"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1288,6 +1290,7 @@ char **argv;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
+    case CHAOS_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
@@ -1298,6 +1301,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
+        break;
+      case CHAOS_MAP:
+        setupChaosMap(&namelist_text, &run_conditions, &run_control);
         break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -1398,6 +1404,9 @@ char **argv;
           doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
                                    (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
+        case CHAOS_MAP:
+          doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+          break;
         }
       }
       fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
@@ -1411,6 +1420,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         finishMomentumApertureSearch();
+        break;
+      case CHAOS_MAP:
+        finishChaosMap();
         break;
       }
       if (do_closed_orbit)
@@ -1437,6 +1449,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
 	fprintf(stdout, "Finished momentum aperture search.\n");
+        break;
+      case CHAOS_MAP:
+	fprintf(stdout, "Finished chaos map analysis.\n");
         break;
       }
 #if DEBUG
