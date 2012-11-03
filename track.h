@@ -863,7 +863,7 @@ extern char *entity_text[N_TYPES];
 #define N_QFRING_PARAMS 9
 #define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 9
-#define N_KICKER_PARAMS 13
+#define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 37
@@ -1709,14 +1709,20 @@ extern PARAMETER kicker_param[N_KICKER_PARAMS];
 typedef struct {
     double length, angle, tilt, dx, dy, dz, b2, time_offset;
     long periodic, phase_reference, fire_on_pass, n_kicks;
-    char *waveform;
+    char *waveform, *deflectionMap;
     /* for internal use only: */
+    long initialized;
     double *t_wf, *amp_wf;         /* amplitude vs time for waveform */
     double tmin, tmax;
     long n_wf;                     /* number of points in waveform */
     long fiducial_seen;
     double t_fiducial;
     FILE *fpdebug;
+    /* for use with optional deflection map */
+    long points, nx, ny;
+    double *xpFactor, *ypFactor;
+    double xmin, xmax, dxg;
+    double ymin, ymax, dyg;
     } KICKER;
 
 /* names and storage structure for time-dependent multipole kicker */

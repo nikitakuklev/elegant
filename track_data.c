@@ -109,8 +109,9 @@ tracking",
     "A collimating element that sticks into the beam from one side only.  The\n\
 directions 0, 1, 2, and 3 are from +x, +y, -x, and -y, respectively.",
     "An element that centers the beam transversely on the ideal trajectory.",
-    "A time-dependent uniform-field rectangular kicker magnet with no fringe effects.\n\
-The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
+    "A time-dependent kicker magnet with optional spatial dependence of the kick and no fringe effects.\n\
+The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.\n\
+The optional spatial dependence is also specified as an SDDS file.",
     "A canonical kick sextupole, which differs from the MULT element with ORDER=2 in\n\
 that it can be used for chromaticity correction.",
     "A kick bending magnet which is NOT canonical, but is better than a 2nd order\n\
@@ -899,6 +900,7 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&kicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation. 0 uses an exact result but ignores b2."},
     {"WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&kicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
+    {"DEFLECTION_MAP", "", IS_STRING, IS_STRING, (long)((char *)&kicker_example.deflectionMap), NULL, 0.0, 0, "optional filename giving the spatial variation of the deflection"},
     } ;
 
 MKICKER mkicker_example;

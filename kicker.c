@@ -16,6 +16,8 @@
 #include "track.h"
 #include "table.h"
 
+void initializeDeflectionMap(KICKER *kicker);
+long interpolateDeflectionMap(double *xpFactor, double *ypFactor, KICKER *kicker, double x, double y);
 void set_up_kicker(KICKER *kicker);
 void set_up_mkicker(MKICKER *kicker);
 
@@ -27,6 +29,7 @@ void track_through_kicker(
     double time, time_offset, angle, t0, *coord, sum_amp, amplitude, ds;
     double x, xp, y, yp, dp, s, curv, dx;
     double theta_i, alpha_i, alpha_f;
+    double xpFactor, ypFactor;
 
     if (np<=0)
         return;
@@ -162,7 +165,7 @@ void track_through_kicker(
           xp = tan(theta_i - (alpha_f - alpha_i));
           y += kicker->length*yp;
         }
-        else {
+        else if (!kicker->deflectionMap) {
           double l1, x0, y0;
           l1 = kicker->length/kicker->n_kicks;
           for (i=0; i<kicker->n_kicks; i++) {
@@ -186,7 +189,35 @@ void track_through_kicker(
             y0 = (y+y0)/2;
             yp += -2*sin(angle)/kicker->length/(1+dp)*ds*x0*y0*kicker->b2;
           }
-        }
+        } else {
+          double l1, l2;
+          l1 = kicker->length/kicker->n_kicks;
+          l2 = kicker->length/kicker->n_kicks/2.;
+	  angle  = kicker->angle/kicker->n_kicks;
+	  /* deflection map mode */
+          for (i=0; i<kicker->n_kicks; i++) {
+	    if (i==0) {
+	      /* half drift */
+	      s += l2*(1+(sqr(xp)+sqr(yp))/2.);
+	      x += xp*l2;
+	      y += yp*l2;
+	    } else {
+	      /* full drift */
+	      s += l1*(1+(sqr(xp)+sqr(yp))/2.);
+	      x += xp*l1;
+	      y += yp*l1;
+	    }
+	    /* kick */
+	    interpolateDeflectionMap(&xpFactor, &ypFactor, kicker, x, y);
+	    xp += angle*xpFactor/(1+dp);
+	    yp += angle*ypFactor/(1+dp);
+
+	  }
+	  /* half drift */
+	  s += l2*(1+(sqr(xp)+sqr(yp))/2.);
+	  x += xp*l2;
+	  y += yp*l2;
+	}
     
         coord[0] = x;
         coord[1] = xp;
@@ -235,6 +266,16 @@ void set_up_kicker(KICKER *kicker)
     kicker->tmax = kicker->t_wf[kicker->n_wf-1];
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
+
+    kicker->xpFactor = kicker->ypFactor = NULL;
+    kicker->points = kicker->nx = kicker->ny = 0;
+    kicker->xmin = kicker->xmax = kicker->dxg = 0;
+    kicker->ymin = kicker->ymax = kicker->dyg = 0;
+    if (kicker->deflectionMap) {
+      if (kicker->n_kicks<1) 
+	bombElegant("Need to have n_kicks>0 for deflection map in KICKER element", NULL);
+      initializeDeflectionMap(kicker);
+    }
     log_exit("set_up_kicker");
     }
 
@@ -386,3 +427,99 @@ void set_up_mkicker(MKICKER *kicker)
   data.xlab = data.ylab = data.title = data.topline = NULL;
 }
 
+void initializeDeflectionMap(KICKER *kicker)
+{
+  SDDS_DATASET SDDSin;
+  double *x=NULL, *y=NULL, *xpFactor=NULL, *ypFactor=NULL;
+  long nx;
+
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, kicker->deflectionMap) ||
+      SDDS_ReadPage(&SDDSin)<=0 ||
+      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y"))) {
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!check_sdds_column(&SDDSin, "x", "m") ||
+      !check_sdds_column(&SDDSin, "y", "m")) {
+    fprintf(stderr, "KICKER deflection map input file must have x and y in m (meters)\n");
+    exitElegant(1);
+  }
+
+  if (!(xpFactor=SDDS_GetColumnInDoubles(&SDDSin, "xpFactor")) || !(ypFactor=SDDS_GetColumnInDoubles(&SDDSin, "ypFactor"))) {
+    fprintf(stderr, "KICKER input file must have both (xpFactor, ypFactor)\n");
+    exitElegant(1);
+  }
+  if (!check_sdds_column(&SDDSin, "xpFactor", "") ||
+      !check_sdds_column(&SDDSin, "ypFactor", "")) {
+    fprintf(stderr, "KICKER deflection map input file must have xpFactor and ypFactor with no units\n");
+    exitElegant(1);
+  }
+  
+  if (!(kicker->points=SDDS_CountRowsOfInterest(&SDDSin)) || kicker->points<2) {
+    fprintf(stdout, "file %s for KICKER element has insufficient data\n", kicker->deflectionMap);
+    fflush(stdout);
+    exitElegant(1);
+  }
+  SDDS_Terminate(&SDDSin);
+
+  /* It is assumed that the data is ordered so that x changes fastest.
+   * This can be accomplished with sddssort -column=y,incr -column=x,incr
+   * The points are assumed to be equipspaced.
+   */
+  nx = 1;
+  kicker->xmin = x[0];
+  while (nx<kicker->points) {
+    if (x[nx-1]>x[nx])
+      break;
+    nx ++;
+  }
+  if ((nx>=kicker->points) || nx<=1 || y[0]>y[nx] || (kicker->ny = kicker->points/nx)<=1) {
+    fprintf(stdout, "file %s for KICKER element doesn't have correct structure or amount of data\n",
+            kicker->deflectionMap);
+    fflush(stdout);
+    fprintf(stdout, "nx = %ld, ny=%ld\n", kicker->nx, kicker->ny);
+    fflush(stdout);
+    exitElegant(1);
+  }
+  kicker->nx = nx;
+  kicker->xmax = x[nx-1];
+  kicker->dxg = (kicker->xmax-kicker->xmin)/(nx-1);
+  kicker->ymin = y[0];
+  kicker->ymax = y[kicker->points-1];
+  kicker->dyg = (kicker->ymax-kicker->ymin)/(kicker->ny-1);
+  fprintf(stdout, "KICKER element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
+          kicker->deflectionMap, kicker->nx, kicker->ny, kicker->dxg, kicker->dyg, 
+          kicker->xmin, kicker->xmax, 
+          kicker->ymin, kicker->ymax);
+  free(x);
+  free(y);
+  kicker->xpFactor = xpFactor;
+  kicker->ypFactor = ypFactor;
+  kicker->initialized = 1;
+}
+
+long interpolateDeflectionMap(double *xpFactor, double *ypFactor, KICKER *kicker, double x, double y)
+{
+  double Fa, Fb, fx, fy;
+  long ix, iy;
+  
+  if (isnan(x) || isnan(y) || isinf(x) || isinf(y))
+    return 0;
+  
+  ix = (x-kicker->xmin)/kicker->dxg ;
+  iy = (y-kicker->ymin)/kicker->dyg ;
+  if (ix<0 || iy<0 || ix>kicker->nx-1 || iy>kicker->ny-1)
+    return 0;
+  
+  fx = (x-(ix*kicker->dxg+kicker->xmin))/kicker->dxg;
+  fy = (y-(iy*kicker->dyg+kicker->ymin))/kicker->dyg;
+
+  Fa = (1-fy)*kicker->xpFactor[ix+iy*kicker->nx] + fy*kicker->xpFactor[ix+(iy+1)*kicker->nx];
+  Fb = (1-fy)*kicker->xpFactor[ix+1+iy*kicker->nx] + fy*kicker->xpFactor[ix+1+(iy+1)*kicker->nx];
+  *xpFactor = (1-fx)*Fa+fx*Fb;
+
+  Fa = (1-fy)*kicker->ypFactor[ix+iy*kicker->nx] + fy*kicker->ypFactor[ix+(iy+1)*kicker->nx];
+  Fb = (1-fy)*kicker->ypFactor[ix+1+iy*kicker->nx] + fy*kicker->ypFactor[ix+1+(iy+1)*kicker->nx];
+  *ypFactor = (1-fx)*Fa+fx*Fb;
+
+  return 1;
+}
