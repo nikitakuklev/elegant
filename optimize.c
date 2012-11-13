@@ -873,9 +873,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       lastResult = result;
       switch (optimization_data->method) {
       case OPTIM_METHOD_SIMPLEX:	
+	fputs("Starting simplex optimization.\n", stdout);
 #if USE_MPI
       case OPTIM_METHOD_HYBSIMPLEX:
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
+	  fputs("Starting hybrid simplex optimization.\n", stdout);
 	  for (i=0; i<variables->n_variables; i++)
 	    variables->step[i] = (random_2(0)-0.5)*variables->orig_step[i]*scale_factor; 	
 	  /* Disabling the report from simplexMin routine, as it will print result from the Master only.
@@ -883,7 +885,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  optimization_report_ptr = NULL;
 	}
 #endif
-	fputs("Starting simplex optimization.\n", stdout);
 	if (simplexMin(&result, variables->varied_quan_value, variables->step, 
                        variables->lower_limit, variables->upper_limit, NULL, 
                        variables->n_variables, optimization_data->target, 
@@ -1152,8 +1153,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  fflush(stdout);
 	}
 #endif
-	if (population_log)
+	if (population_log) {
+	  fputs("Writing population statistics\n", stdout);
 	  SDDS_PrintStatistics(&(optimization_data->popLog), optimization_data->n_restarts+1-startsLeft, result, worst_result, median, average, spread, variables->varied_quan_value, variables->n_variables, covariables_global, covariables->n_covariables, optimization_data->print_all_individuals);
+	}
       }
 #else 
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
@@ -2363,7 +2366,7 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result, double *variabl
   MPI_Gather(variable, dimensions, MPI_DOUBLE, &individuals[0][0], dimensions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Gather(&result, 1, MPI_DOUBLE, results, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-  if (isMaster && log_file) {
+  if (isMaster) {
     if (!SDDS_StartPage(popLogPtr, pop_size))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
@@ -2383,7 +2386,7 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
   int i;
   long offset = 6;
 
-  if (isMaster && log_file) {
+  if (isMaster) {
     if (!print_all)
       if (!SDDS_StartPage(popLogPtr, 1))
 	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
