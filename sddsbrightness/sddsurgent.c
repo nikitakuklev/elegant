@@ -136,7 +136,7 @@ typedef struct {
 /*fortran subroutine*/
 void urgent_();
 void us_();
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_MINGW)
 #define urgent_() URGENT()
 #define us_() US()
 #endif

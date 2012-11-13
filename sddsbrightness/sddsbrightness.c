@@ -208,7 +208,7 @@ void ComputeBeamSize(double period, long Nu, double ex0, double ey0, double Sdel
 void getKValueData(double **Kvalue, int32_t *Kpoints, char *filename, char *columnName);
 /*fortran subroutine*/
 void usb_();
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_MINGW)
 #define usb_() USB()
 #endif
 
