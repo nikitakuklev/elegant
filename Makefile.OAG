@@ -103,13 +103,12 @@ endif
 GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
 ifeq ($(GSL), 1)
 USR_CFLAGS += -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
-GSLLIB = rpnlib gsl gslcblas
+GSLLIB = rpnlib gsl
 SYS_GSLLIB = 
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 gslcblas_DIR = $(EPICS_EXTENSIONS_LIB)
 ifdef WIN32
 GSLLIB += gslcblas
-gslcblas_DIR = $(EPICS_EXTENSIONS_LIB)
 endif
 else
 
