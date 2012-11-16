@@ -218,7 +218,9 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 start += dz*8;
                 break;
             case T_MATR:
-                dz = ((MATR*)eptr->p_elem)->length;
+            case T_SOLE:
+            case T_MAPSOLENOID:
+                dz = ((DRIFT*)eptr->p_elem)->length;
                 fprintf(fpm, "%s %s %e %e\n", eptr->name, entity_name[eptr->type], start, 0.5);
                 fprintf(fpm, "%s %s %e %e\n", eptr->name, entity_name[eptr->type], start+dz, -0.5);
                 fprintf(fpm, "%s %s %e %e\n", eptr->name, entity_name[eptr->type], start+dz, 0.5);
