@@ -369,7 +369,7 @@ PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS] = {
 SOLE sole_example;
 /* solenoid physical parameters */
 PARAMETER sole_param[N_SOLE_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&sole_example.length), NULL, 0.0, 0, "length"},
     {"KS", "RAD/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.ks), NULL, 0.0, 0, "geometric strength, -Bs/(B*Rho)"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.B), NULL, 0.0, 0, "field strength (used if KS is zero)"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dx), NULL, 0.0, 0, "misalignment"},
@@ -2440,7 +2440,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_SEXT_PARAMS,     MAT_LEN|DIVIDE_OK|IS_MAGNET|MATRIX_TRACKING,       sizeof(SEXT),    sext_param     },
     {    N_OCTU_PARAMS,     MAT_LEN|DIVIDE_OK|IS_MAGNET|MATRIX_TRACKING,       sizeof(OCTU),    octu_param     },
     {    N_MULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(MULT),    mult_param     }, 
-    {    N_SOLE_PARAMS,     MAT_LEN|IS_MAGNET|MAT_CHW_ENERGY,
+    {    N_SOLE_PARAMS,     MAT_LEN|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,
            sizeof(SOLE),    sole_param     }, 
     {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET,        sizeof(HCOR),    hcor_param     }, 
     {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET,        sizeof(VCOR),    vcor_param     }, 
