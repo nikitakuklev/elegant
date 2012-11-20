@@ -147,6 +147,8 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   if (population_log && strlen(population_log)) {
     if (str_in(population_log, "%s"))
       population_log = compose_filename(population_log, run->rootname);
+  } else {
+    population_log = NULL;
   }
   if (optimization_data->method==OPTIM_METHOD_GENETIC)
     /* The crossover type defined in PGAPACK started from 1, instead of 0. */ 
@@ -911,9 +913,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
 	  fprintf (stdout, "minimal value is %g on %d\n", result, myid);
 #endif
-	  if (optimization_data->print_all_individuals)
-	    SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
           if (population_log) {
+	    if (optimization_data->print_all_individuals) 
+	      SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
 	    /* Compute statistics of the results over all processors */
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1052,9 +1054,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
           fprintf (stdout, "minimal value is %g for iteration %ld on %d\n", result, optimization_data->n_restarts+1-startsLeft, myid);
 #endif
-	  if (optimization_data->print_all_individuals)
-	    SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
-           if (population_log) { 
+	  if (population_log) { 
+	    if (optimization_data->print_all_individuals)
+	      SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
 	    /* Compute statistics of the results over all processors */
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -2358,6 +2360,8 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result, double *variabl
   long pop_size = n_processors;
   long row, j;
   printf (" SDDS_PrintPopulations is called\n");
+  if (!popLogPtr)
+    return;
   if (!individuals)
     individuals = (double**)czarray_2d(sizeof(double), pop_size, dimensions);
   if (!results)
@@ -2386,6 +2390,8 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
   int i;
   long offset = 6;
 
+  if (!popLogPtr)
+    return;
   if (isMaster) {
     if (!print_all)
       if (!SDDS_StartPage(popLogPtr, 1))
