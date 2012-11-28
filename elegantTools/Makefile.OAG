@@ -139,8 +139,9 @@ GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
 ifeq ($(GSL), 1)
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
-GSLLIB = gsl
+GSLLIB = gsl gslcblas
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
+gslcblas_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 
 #Look for system version of GSL
