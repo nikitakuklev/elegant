@@ -703,7 +703,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     double worst_result, median, average, spread = 0.0;
     static double *covariables_global = NULL, *result_array;
 #endif
-    
+
+#if MPI_DEBUG
+    FILE *fpdebug = NULL;
+    char sdebug[100];
+    long stepDebug = 0;
+#endif
     log_entry("do_optimize");
 
     optimRecords = ignoreOptimRecords = nextOptimRecordSlot = 0;
@@ -860,6 +865,17 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         optimization_data->UDFcreated = 1;
         }
 
+#if MPI_DEBUG
+    sprintf(sdebug, "debug-%03d.sdds", myid);
+    fpdebug = fopen(sdebug, "w");
+    fprintf(fpdebug, "SDDS1\n&column name=Stage type=string &end\n");
+    fprintf(fpdebug, "&column name=Step type=long &end\n");
+    fprintf(fpdebug, "&column name=Result type=double &end\n");
+    for (i=0; i<variables->n_variables; i++)
+      fprintf(fpdebug, "&column name=V%03ld type=double &end\n", i);
+    fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
+#endif
+    
     startsLeft = optimization_data->n_restarts+1;
     result = DBL_MAX;
     balanceTerms = 1;
@@ -886,6 +902,13 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	     We print the best result across all the processors in a higher level routine */
 	  optimization_report_ptr = NULL;
 	}
+#if MPI_DEBUG
+	fprintf(fpdebug, "Before %ld %g ", stepDebug, result);
+	for (i=0; i<variables->n_variables; i++)
+	  fprintf(fpdebug, "%g ", variables->varied_quan_value[i]);
+	fprintf(fpdebug, "\n");
+	fflush(fpdebug);
+#endif
 #endif
 	if (simplexMin(&result, variables->varied_quan_value, variables->step, 
                        variables->lower_limit, variables->upper_limit, NULL, 
@@ -910,6 +933,13 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if USE_MPI
       /* check if the result meets the requirement for each point across all the processors here */
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
+#if MPI_DEBUG
+	fprintf(fpdebug, "After %ld %g ", stepDebug, result);
+	for (i=0; i<variables->n_variables; i++)
+	  fprintf(fpdebug, "%g ", variables->varied_quan_value[i]);
+	fprintf(fpdebug, "\n");
+	fflush(fpdebug);
+#endif
 #if MPI_DEBUG
 	  fprintf (stdout, "minimal value is %g on %d\n", result, myid);
 #endif
@@ -939,6 +969,22 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
    	  find_global_min_index (&result, &min_location, MPI_COMM_WORLD);
 	  MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
+#if MPI_DEBUG
+	  fprintf(fpdebug, "Sync %ld %g ", stepDebug, result);
+	  for (i=0; i<variables->n_variables; i++)
+	    fprintf(fpdebug, "%g ", variables->varied_quan_value[i]);
+	  fprintf(fpdebug, "\n");
+	  fflush(fpdebug);
+
+	  result = optimization_function(variables->varied_quan_value, &i);
+	  fprintf(fpdebug, "Check %ld %g ", stepDebug, result);
+	  for (i=0; i<variables->n_variables; i++)
+	    fprintf(fpdebug, "%g ", variables->varied_quan_value[i]);
+	  fprintf(fpdebug, "\n");
+	  fflush(fpdebug);
+
+	  stepDebug++;
+#endif
 	  if (optimization_data->fp_log && optimization_data->verbose >1)
 	    optimization_report (result, variables->varied_quan_value, optimization_data->n_restarts+1-startsLeft, n_evaluations_made, variables->n_variables);
 	} 
@@ -2333,6 +2379,8 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
     if (population_log && strlen(population_log)) {
       if (!SDDS_InitializeOutput(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "Iteration", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "ElapsedTime", "s", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleParameter(popLogPtr, "ElapsedCoreTime", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "OptimizationValue", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "WorstOptimizationValue", NULL, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "MedianOptimizationValue", NULL, SDDS_DOUBLE) ||
@@ -2398,16 +2446,17 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
 	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
     if (!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "Iteration", iteration , NULL) ||
-	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "OptimizationValue", best_value, NULL) ||
-	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "WorstOptimizationValue", worst_value, NULL) ||
-	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "MedianOptimizationValue", median, NULL) ||
-	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    "AverageOptimizationValue", average, NULL) ||
-	!SDDS_SetParameters(popLogPtr, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    "Iteration", iteration , 
+			    "ElapsedTime", delapsed_time(), 
+#if USE_MPI
+		          "ElapsedCoreTime", delapsed_time()*n_processors,
+#else
+		          "ElapsedCoreTime", delapsed_time(),
+#endif
+			    "OptimizationValue", best_value, 
+			    "WorstOptimizationValue", worst_value,
+			    "MedianOptimizationValue", median,
+			    "AverageOptimizationValue", average, 
 			    "OptimizationValueSpread", spread, NULL))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
