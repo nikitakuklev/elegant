@@ -22,6 +22,7 @@ OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1 # 1 for parallel elegant, 0 for serial elegant  
+#  USER_MPI_FLAGS += -DMPI_DEBUG=1 
   USER_MPI_FLAGS += -DSDDS_MPI_IO=1
   PRODOAG = Pelegant
   STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
