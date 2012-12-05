@@ -99,4 +99,5 @@
         long harmonic = -1;
         double bucket_half_height = 0;
         double over_voltage = 0;
+	long disable = 0;
 #end

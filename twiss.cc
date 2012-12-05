@@ -4370,7 +4370,9 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
   if (processNamelist(&rf_setup, nltext)==NAMELIST_ERROR)
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &rf_setup);
-  
+  if (rf_setup_struct.disable)
+    return;
+
   if ((rf_setup_struct.start_occurence>0 && rf_setup_struct.end_occurence<1) ||
       (rf_setup_struct.start_occurence<1 && rf_setup_struct.end_occurence>0) ||
       rf_setup_struct.start_occurence>rf_setup_struct.end_occurence)
