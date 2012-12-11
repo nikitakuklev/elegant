@@ -5944,6 +5944,30 @@ B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
 \end{verbatim}
 (Note that {\tt pi} is already defined in the standard {\tt defns.rpn} file.)
 
+\subsection{Magnet Strength}
+
+Magnet strengths are frequently specified in terms of a series expansion.
+For normal multipoles and $y=0$, the expansion is \cite{MAD}
+\begin{equation}
+B_y(x,0)= \sum_{n=0}^\infty \frac{B_n x^n}{n!},
+\end{equation}
+where $B_0$ is the dipole, $B_1$ is the quadrupole, etc.
+In general,
+\begin{equation}
+B_n = \left(\frac{\partial^n B_y}{\partial x^n}\right)_{x=y=0}.
+\end{equation}
+For electrons, the deflection from a thin element is
+\begin{equation}
+\theta(x,y=0) = \frac{1}{H} \int B(x,y=0) dl,
+\end{equation}
+where $H = B\rho = -p/e$ is the beam rigidity and $p=m_e c \beta\gamma$ is the momentum.
+The geometric strengths $K_n$ are defined as
+\begin{equation}
+K_n = \frac{B_n}{H}.
+\end{equation}
+By convention in {\tt elegant}, a positive $K_n$ value deflects a particle at $x>0$ toward $x=0$.
+E.g., a positive $K_1$ value indicates a horizontally focusing quadrupole.
+
 \newpage
 \section{Element Dictionary}
 \include{dictionary}
