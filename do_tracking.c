@@ -73,7 +73,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack,
                      int myid, double *round);
 /* Avoid unnecessary communications by checking if an operation will be executed in advance*/
 int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass);
-balance checkBalance(double my_wtime, int myid, long n_processors);
+balance checkBalance(double my_wtime, int myid, long n_processors, int verbose);
 #endif
 
 #ifdef SORT   
@@ -1914,9 +1914,9 @@ long do_tracking(
  
 #if USE_MPI
     if (notSinglePart) {
-      if (run->load_balancing_on) {  /* User can choose if load balancing needs to be done */
+      if (run->load_balancing_on==1) {  /* User can choose if load balancing needs to be done */
 	if (balanceStatus==startMode) { 
-	  balanceStatus = checkBalance (my_wtime, myid, n_processors);  
+	  balanceStatus = checkBalance (my_wtime, myid, n_processors, 1);  
 	  /* calculate the rate for all of the slave processors */
 	  if (myid==0) {
 	    my_rate = 0.0;
@@ -1949,7 +1949,7 @@ long do_tracking(
 	  checkFlags = 1; /* the default option */
 #endif
 	  if (checkFlags)
-	    balanceStatus = checkBalance (my_wtime, myid, n_processors);   
+	    balanceStatus = checkBalance (my_wtime, myid, n_processors, 1);   
 	  if (balanceStatus == badBalance) {
 	    if (myid==0) {
 	      my_rate = 0.0;
@@ -1971,8 +1971,11 @@ long do_tracking(
 #endif
 	}
       }
-      else 
+      else {
         balanceStatus = goodBalance;
+        if (run->load_balancing_on==-1)
+          checkBalance(my_wtime, myid, n_processors, 1); /* Just to check and report, nothing done */
+      }
       if (myid==0)
 	old_nToTrack = nToTrack;
     }
@@ -2109,7 +2112,7 @@ long do_tracking(
     printf("Balance is checked for the first pass and when particles are lost only.\n"); 
     fflush(stdout);
   #else
-    if (run->load_balancing_on) {
+    if (run->load_balancing_on==1) {
       printf("Balance is checked for every pass.\n"); 
       fflush(stdout);
     }
@@ -4087,10 +4090,11 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   free(nLostCounts);
 }
 
-balance checkBalance (double my_wtime, int myid, long n_processors)
+balance checkBalance (double my_wtime, int myid, long n_processors, int verbose)
 {
   double maxTime, minTime, *time;
   int i, balanceFlag = 1; 
+  int iFastest, iSlowest;
   static int imbalanceCounter = 2; /* counter for the number of continuously imbalanced passes,
                                       the 1st pass is treated specially */
 
@@ -4099,11 +4103,16 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
   MPI_Gather (&my_wtime, 1, MPI_DOUBLE, time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); 
   if (myid==0) {
     maxTime = minTime = time[1];
+    iFastest = iSlowest = 1;
     for (i=2; i<n_processors; i++) {
-      if (maxTime<time[i])
+      if (maxTime<time[i]) {
+        iFastest = i;
         maxTime = time[i];
-      if (minTime>time[i])
+      }
+      if (minTime>time[i]) {
+        iSlowest = i;
         minTime = time[i]; 
+      }
     } 
     if ((maxTime-minTime)/minTime>0.10) {
       imbalanceCounter++;
@@ -4119,10 +4128,12 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
   }
   MPI_Bcast (&balanceFlag, 1, MPI_INT, 0, MPI_COMM_WORLD);     
 
-#ifdef MPI_DEBUG
-  if (myid==0) {
-    if ((maxTime-minTime)/minTime>0.10)
+  if (verbose && myid==0) {
+    if ((maxTime-minTime)/minTime>0.10) {
       printf("The balance is in bad status. ");
+      printf("The fastest time (id=%d) is %e\n", iFastest, minTime);
+      printf("The slowest time (id=%d) is %e\n", iSlowest, maxTime);
+    }
     else
       printf("The balance is in good status. ");
     if (balanceFlag==0)
@@ -4130,7 +4141,6 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
     printf("The difference is %4.2lf percent\n", (maxTime-minTime)/minTime*100);
     fflush(stdout);
   }
-#endif
 
   free(time);
 
