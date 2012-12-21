@@ -768,8 +768,8 @@ void (*set_up_derivatives(
     }
     Escale /= omega;
     Bscale /= omega;
-    twla->ErS    = -twla->Ez*twla->kz/2 * Escale * twla->focussing / (*kscale);
-    twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * twla->focussing / (*kscale);
+    twla->ErS    = -twla->Ez*twla->kz/2 * Escale * (twla->focussing?1:0) / (*kscale);
+    twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * (twla->focussing?1:0) / (*kscale);
     twla->EzS    = twla->Ez * Escale;
     twla->BsolS  = twla->B_solenoid * Bscale;
     /* calculate initial tau value, less omega*t: 
