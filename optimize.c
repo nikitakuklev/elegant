@@ -2436,7 +2436,7 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result, double *variabl
 /* Function to print the statistics of the populations after each optimization iteration */ 
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double average, double spread, double *best_individual, long dimensions, double *covariable, long n_covariables, long print_all) {
   int i;
-  long offset = 6;
+  long offset = 8;
 
   if (!popLogPtr)
     return;
