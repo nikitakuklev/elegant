@@ -118,7 +118,7 @@ void TouschekEffect(RUN *run,
 int TouschekRate(LINE_LIST *beamline)
 {
   double NP;
-  double tm=0, B1, B2, F, rate, IntR, IntLength;
+  double tmP=0, tmN=0, B1, B2, F, rate, rateP, rateN, IntR, IntLength;
   ELEMENT_LIST *eptr;
 
   double betagamma, gamma; 
@@ -134,7 +134,8 @@ int TouschekRate(LINE_LIST *beamline)
   eptr = &(beamline->elem);
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      tm = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->delta);
+      tmP = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
+      tmN = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaN);
       break;
     }
     eptr = eptr->succ;
@@ -151,7 +152,8 @@ int TouschekRate(LINE_LIST *beamline)
       ((TSCATTER*)eptr->p_elem)->total_scatter = IntR / c_mks * tsSpec->frequency;
       IntR = 0.;
       IntLength = 0.;
-      tm = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->delta);
+      tmP = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
+      tmN = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaN);
     }
     if(!(entity_description[eptr->type].flags&HAS_LENGTH) ||
        !(((DRIFT*)eptr->p_elem)->length)) {
@@ -193,9 +195,12 @@ int TouschekRate(LINE_LIST *beamline)
     }
     B2=sqrt(B2);   	  
 
-    FIntegral(tm, B1, B2, &F);
+    FIntegral(tmP, B1, B2, &F);
+    rateP = a0*sqrt(c0)*F/gamma/gamma/2.;
+    FIntegral(tmN, B1, B2, &F);
+    rateN = a0*sqrt(c0)*F/gamma/gamma/2.;
 
-    rate = a0*sqrt(c0)*F/gamma/gamma;
+    rate = rateP+rateN;
     IntR += rate * ((DRIFT*)eptr->p_elem)->length;
     IntLength +=  ((DRIFT*)eptr->p_elem)->length;
     eptr = eptr->succ; 
@@ -279,7 +284,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   long i, j, total_event, n_left, iElement=0;
   ELEMENT_LIST *eptr;
   TSCATTER *tsptr;
-  double p1[6], p2[6], dens1, dens2;
+  double pTemp[6], p1[6], p2[6], densTemp, dens1, dens2;
   double theta, phi, qa[3], qb[3], beta[3], qabs, gamma;
   double beta0, cross, temp;
   static SDDS_TABLE SDDS_bunch, SDDS_loss;
@@ -431,7 +436,16 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           selectPartGauss(tsptr, p1, p2, &dens1, &dens2, ran1);
         else
           selectPartReal(tsptr, p1, p2, &dens1, &dens2, ran1);
-
+	if (p1[5] > p2[5]) {
+	  for (j=0; j<6; j++) {
+	    ptemp[j] = p2[j];
+	    p2[j] = p1[j];
+	    p1[j] = ptemp[j];
+	  }	  
+	  densTemp = dens2;
+	  dens2 = dens1;
+	  dens1 = densTemp;
+	}
         if (initial) {
           chfill1m(iniBook, p1, dens1, bookBins, 6);
           chfill1m(iniBook, p2, dens2, bookBins, 6);
@@ -458,12 +472,12 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         p1[5] = (p1[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
         p2[5] = (p2[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
 	  
-        if(fabs(p1[5])>tsptr->delta || fabs(p2[5])>tsptr->delta) {
+        if(p1[5])<tsptr->deltaN || p2[5]>tsptr->deltaP) {
           beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
           cross = moeller(beta0,theta);
           temp *= cross*beta0/gamma/gamma;
 	    
-          if(fabs(p1[5])>tsptr->delta) {
+          if(p1[5]<tsptr->deltaN) {
             tsptr->totalWeight += temp;
             p1[3] /= tsptr->pCentral_mev;
             p1[4] /= tsptr->pCentral_mev;
@@ -486,7 +500,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           if(i>=n_simulated)
             break;
 	    
-          if(fabs(p2[5])>tsptr->delta) {
+          if(p2[5]>tsptr->deltaP) {
             tsptr->totalWeight += temp;
             p2[3] /= tsptr->pCentral_mev;
             p2[4] /= tsptr->pCentral_mev;
@@ -1028,8 +1042,8 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 	     (*Occurence == eptr->occurence &&
 	      strcmp(*Name,eptr->name) == 0 &&
 	      strcmp(*Type,entity_name[eptr->type]) == 0))) {
-          ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))
-            * Momentum_Aperture_scale;
+          ((TSCATTER*)eptr->p_elem)->deltaN =  (*dpm) * Momentum_Aperture_scale;
+          ((TSCATTER*)eptr->p_elem)->deltaP =  (*dpp) * Momentum_Aperture_scale;
 	  if (verbosity>1)
 	    printf("Matched by \"%s\"#%ld at s=%21.15e\n",
 		   *Name, (long)*Occurence, *s);
