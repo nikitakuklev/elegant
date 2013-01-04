@@ -1905,7 +1905,7 @@ typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s, betagamma, gamma,pCentral_mev, delta;
+  double s, betagamma, gamma,pCentral_mev, deltaP, deltaN;
   double AveR, p_rate, s_rate, i_rate, total_scatter;
   char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
