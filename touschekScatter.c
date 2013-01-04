@@ -438,9 +438,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           selectPartReal(tsptr, p1, p2, &dens1, &dens2, ran1);
 	if (p1[5] > p2[5]) {
 	  for (j=0; j<6; j++) {
-	    ptemp[j] = p2[j];
+	    pTemp[j] = p2[j];
 	    p2[j] = p1[j];
-	    p1[j] = ptemp[j];
+	    p1[j] = pTemp[j];
 	  }	  
 	  densTemp = dens2;
 	  dens2 = dens1;
@@ -472,7 +472,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         p1[5] = (p1[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
         p2[5] = (p2[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
 	  
-        if(p1[5])<tsptr->deltaN || p2[5]>tsptr->deltaP) {
+        if(p1[5] < tsptr->deltaN || p2[5] > tsptr->deltaP) {
           beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
           cross = moeller(beta0,theta);
           temp *= cross*beta0/gamma/gamma;
