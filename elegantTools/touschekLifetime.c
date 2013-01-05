@@ -124,7 +124,7 @@ long plane_orbit = 0;
 double *s, *s2, *dpp, *dpm;
 double *betax, *alphax, *etax, *etaxp;
 double *betay, *alphay, *etay, *etayp;
-double *tm, *B1, *B2, *F, *coeff;
+double *tmP, *tmN, *B1, *B2, *FP, *FN, *coeff;
 double tLife;
 long elements, elem2;
 long *eOccur1;
@@ -380,16 +380,20 @@ int main( int argc, char **argv)
       !SDDS_TransferColumnDefinition(&resultsPage, &twissPage, "ElementType", NULL) ||
       !SDDS_TransferColumnDefinition(&resultsPage, &twissPage, "ElementOccurence", NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (0>SDDS_DefineColumn(&resultsPage, "tm", NULL, NULL, 
-                          "Local momentum aperture (beta*dp/p)^2", NULL, SDDS_DOUBLE, 0) ||
+  if (0>SDDS_DefineColumn(&resultsPage, "tmP", NULL, NULL, 
+                          "Local positive momentum aperture (beta*dp/p)^2", NULL, SDDS_DOUBLE, 0) ||
+      0>SDDS_DefineColumn(&resultsPage, "tmN", NULL, NULL, 
+                          "Local negative momentum aperture (beta*dp/p)^2", NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(&resultsPage, "B1", NULL, NULL, 
                           "Piwinski's parameter B1", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "B2", NULL, NULL, 
                           "Piwinski's parameter B2", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "c0", NULL, NULL, 
                           "1/T=c0*F", NULL, SDDS_DOUBLE, 0) || 
-      0>SDDS_DefineColumn(&resultsPage, "F", NULL, NULL, 
-                          "Piwinski's parameter F", NULL, SDDS_DOUBLE, 0))
+      0>SDDS_DefineColumn(&resultsPage, "FP", NULL, NULL, 
+                          "Piwinski's parameter F for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
+      0>SDDS_DefineColumn(&resultsPage, "FN", NULL, NULL, 
+                          "Piwinski's parameter F for negative momentum particle", NULL, SDDS_DOUBLE, 0))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (!SDDS_WriteLayout(&resultsPage) )
@@ -477,10 +481,12 @@ int main( int argc, char **argv)
   if ((etaymax-etaymin) < 1e-6)
     plane_orbit=1; 
   
-  if (!(tm = SDDS_Malloc(sizeof(*tm)*elements)) ||
+  if (!(tmP = SDDS_Malloc(sizeof(*tmP)*elements)) ||
+      !(tmN = SDDS_Malloc(sizeof(*tmN)*elements)) ||
       !(B1 = SDDS_Malloc(sizeof(*B1)*elements)) ||
       !(B2 = SDDS_Malloc(sizeof(*B2)*elements)) ||
-      !(F = SDDS_Malloc(sizeof(*F)*elements)) ||
+      !(FP = SDDS_Malloc(sizeof(*FP)*elements)) ||
+      !(FN = SDDS_Malloc(sizeof(*FN)*elements)) ||
       !(coeff = SDDS_Malloc(sizeof(*coeff)*elements)))
     bomb("memory allocation failure (integration arrays)", NULL);
   
@@ -512,11 +518,13 @@ int main( int argc, char **argv)
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eName1, elements, "ElementName") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eType1, elements, "ElementType") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eOccur1, elements, "ElementOccurence") ||
-      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, tm, elements, "tm") ||
+      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, tmP, elements, "tmP") ||
+      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, tmN, elements, "tmN") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B1, elements, "B1") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B2, elements, "B2") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, coeff, elements, "c0") ||
-      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, F, elements, "F"))
+      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, FP, elements, "FP") ||
+      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, FN, elements, "FN"))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (has_ex0 && 
       !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -565,10 +573,12 @@ void TouschekLifeCalc(long verbosity)
 /* remove zero length elements from beamline. Except the first element. */
     if(i>0) {
       while(s[i]==s[i-1]) {
-        tm[i]=tm[i-1];
+        tmP[i]=tmP[i-1];
+        tmN[i]=tmN[i-1];
         B1[i]=B1[i-1];
         B2[i]=B2[i-1];
-        F[i]=F[i-1];
+        FP[i]=FP[i-1];
+        FN[i]=FN[i-1];
         coeff[i]=coeff[i-1];
         if(++i==elements) break;
       }
@@ -601,8 +611,8 @@ void TouschekLifeCalc(long verbosity)
     pp = linear_interpolation(dpp, s2, elem2, s[i], j-1); 
     pm = linear_interpolation(dpm, s2, elem2, s[i], j-1);
 
-    tm[i] = fabs(pp)>fabs(pm)?fabs(pm):fabs(pp);
-    tm[i] = beta2*tm[i]*tm[i];
+    tmP[i] = beta2*pp*pp;
+    tmN[i] = beta2*pm*pm;
 
     sxb2 = betax[i]*emitx;
     syb2 = betay[i]*emity;
@@ -651,7 +661,8 @@ void TouschekLifeCalc(long verbosity)
     coeff[i] = a0*c0;
     if (verbosity>1) 
       fprintf(stderr, "Computing F integral\n");
-    FIntegral(tm, B1, B2, F, i, verbosity);
+    FIntegral(tmP, B1, B2, FP, i, verbosity);
+    FIntegral(tmN, B1, B2, FN, i, verbosity);
   }
   if (verbosity>1) 
     fprintf(stderr, "Exited loop\n");
@@ -659,7 +670,7 @@ void TouschekLifeCalc(long verbosity)
   tLife = 0;  
   for (i = 1; i<elements; i++) {
     if (s[i]>s[i-1]) {
-      tLife += (s[i]-s[i-1])*(coeff[i]*F[i]+coeff[i-1]*F[i-1])/2;
+      tLife += (s[i]-s[i-1])*(coeff[i]*(FP[i]+FN[i])+coeff[i-1]*(FP[i-1]+FN[i-1]))/4.;
     }
   }
   if (verbosity>1) 
@@ -727,7 +738,7 @@ double Fvalue (double t, double tm, double b1, double b2)
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
   /* If overflow/underflow use approximate equation for modified bessel function. */
-  if (isnan(result) || result>FLT_MAX) {
+  if (isnan(result) || fabs(result)>FLT_MAX) {
     result=c0*exp(b2*t-b1*t)/sqrt(PIx2*b2*t);
   } 
   return result;
