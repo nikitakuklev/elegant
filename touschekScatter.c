@@ -261,7 +261,7 @@ double Fvalue (double t, double tm, double b1, double b2)
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
   /* If overflow/underflow use approximate equation for modified bessel function. */
-  if (isnan(result) || result>FLT_MAX) {
+  if (isnan(result) || fabs(result)>FLT_MAX) {
     result=c0*exp(b2*t-b1*t)/sqrt(PIx2*b2*t);
   } 
   return result;
