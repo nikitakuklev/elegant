@@ -939,7 +939,7 @@ char **argv;
           continue;
         }
         if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline);
+          run_rf_setup(&run_conditions, beamline, 0);
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
         if (do_response_output)
@@ -1038,7 +1038,7 @@ char **argv;
           continue;
         }
         if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline);
+          run_rf_setup(&run_conditions, beamline, 1);
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (do_coupled_twiss_output &&

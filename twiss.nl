@@ -89,6 +89,7 @@
 #end
 
 #namelist rf_setup,struct
+        STRING filename = NULL;
         STRING name = NULL;
         long start_occurence = -1;
         long end_occurence = -1;
@@ -100,4 +101,5 @@
         double bucket_half_height = 0;
         double over_voltage = 0;
 	long disable = 0;
+        long output_only = 0;
 #end

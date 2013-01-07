@@ -98,6 +98,9 @@ static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
 static short mustResetRfcaMatrices = 0;
 static short periodicTwissComputed = 0;
 static TWISS lastPeriodicTwiss;
+static long nRfca = 0;
+static ELEMENT_LIST **rfcaElem = NULL;
+static FILE *fpRf = NULL;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -1839,9 +1842,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 			     beamline->couplingFactor);
   
   if (radiation_integrals_inner_scope)
-    completeRadiationIntegralComputation(&(beamline->radIntegrals), run->p_central,
-                              beamline->revolution_length);
-  
+    completeRadiationIntegralComputation(&(beamline->radIntegrals), beamline, run->p_central);
+
 #ifdef DEBUG
   fprintf(stdout, (char*)"finding acceptance\n");
   fflush(stdout);
@@ -2795,22 +2797,26 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 }
 
 
-void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, double revolutionLength)
+void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *beamline, double Po)
 {    
     double Rce, gamma;
+
     gamma = sqrt(sqr(Po)+1);
     Rce = sqr(particleCharge)/(1e7*particleMass);
     RI->Uo = particleMassMV*Rce*RI->RI[1]*2./3.*ipow(gamma,4);
     RI->Jx = 1 - RI->RI[3]/RI->RI[1];
     RI->Jdelta = 3 - RI->Jx;
     RI->Jy = 1;
-    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/revolutionLength*RI->RI[1]);
+    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/beamline->revolution_length*RI->RI[1]);
     RI->taux = RI->tauy*RI->Jy/RI->Jx;
     RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
     RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[2]/(2*RI->RI[1]+RI->RI[3]));
     RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[4]/(RI->RI[1]-RI->RI[3]);
+
+    
     RI->computed = 1;
-  }
+}
+    
 
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etaxp, double *etay, double *etayp,
@@ -4354,12 +4360,6 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     free(ed);
 }
 
-
-
-
-static  long nRfca = 0;
-static ELEMENT_LIST **rfcaElem = NULL;
-
 void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long do_twiss_output, long *do_rf_setup) 
 {
   ELEMENT_LIST *eptr;
@@ -4401,42 +4401,63 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
   free(rfcaElem);
   nRfca = 0;
   rfcaElem = NULL;
+
+  if (!rf_setup_struct.output_only) {
+    eptr = &(beamline->elem);
   
-  eptr = &(beamline->elem);
-  
-  while (eptr) {
-    if (eptr->type!=T_RFCA
-        || (rf_setup_struct.name && !wild_match(eptr->name, rf_setup_struct.name))
-        || (rf_setup_struct.start_occurence>0 && eptr->occurence<rf_setup_struct.start_occurence) 
-        || (rf_setup_struct.end_occurence>0 && eptr->occurence>rf_setup_struct.end_occurence)
-        || (rf_setup_struct.s_start>0 && eptr->end_pos<rf_setup_struct.s_start)
-        || (rf_setup_struct.s_end>0 && eptr->end_pos>rf_setup_struct.s_end)) {
+    while (eptr) {
+      if (eptr->type!=T_RFCA
+          || (rf_setup_struct.name && !wild_match(eptr->name, rf_setup_struct.name))
+          || (rf_setup_struct.start_occurence>0 && eptr->occurence<rf_setup_struct.start_occurence) 
+          || (rf_setup_struct.end_occurence>0 && eptr->occurence>rf_setup_struct.end_occurence)
+          || (rf_setup_struct.s_start>0 && eptr->end_pos<rf_setup_struct.s_start)
+          || (rf_setup_struct.s_end>0 && eptr->end_pos>rf_setup_struct.s_end)) {
+        eptr = eptr->succ;
+        continue;
+      }
+      rfcaElem = (ELEMENT_LIST**)SDDS_Realloc(rfcaElem, sizeof(*rfcaElem)*(nRfca+1));
+      rfcaElem[nRfca] = eptr;
+      nRfca ++;
       eptr = eptr->succ;
-      continue;
     }
-    rfcaElem = (ELEMENT_LIST**)SDDS_Realloc(rfcaElem, sizeof(*rfcaElem)*(nRfca+1));
-    rfcaElem[nRfca] = eptr;
-    nRfca ++;
-    eptr = eptr->succ;
+  
+    if (nRfca==0)
+      bombElegant("No RFCA elements found meeting requirements", NULL);
+  } else {
+    if (rf_setup_struct.filename == NULL || strlen(rf_setup_struct.filename)==0) 
+      bombElegant("No filename provided but output_only requested.", NULL);
+  }
+
+  if (fpRf)
+    fclose(fpRf);
+  fpRf = NULL;
+  if (rf_setup_struct.filename) {
+    rf_setup_struct.filename = compose_filename(rf_setup_struct.filename, run->rootname);
+    fpRf = fopen(rf_setup_struct.filename, "w");
+    fprintf(fpRf, "SDDS1\n&parameter name=PhiSynch, type=double, units=deg &end\n");
+    fprintf(fpRf, "&parameter name=BucketHalfHeight, type=double &end\n");
+    fprintf(fpRf, "&parameter name=nuSynch, type=double &end\n");
+    fprintf(fpRf, "&parameter name=Sz0, type=double, units=m &end\n");
+    fprintf(fpRf, "&parameter name=St0, type=double, units=s &end\n");
+    fprintf(fpRf, "&data mode=ascii &end\n");
   }
   
-  if (nRfca==0)
-    bombElegant("No RFCA elements found meeting requirements", NULL);
-
   *do_rf_setup = 0;
   if (!rf_setup_struct.set_for_each_step)
-    run_rf_setup(run, beamline);
+    run_rf_setup(run, beamline, 1);
   else
     *do_rf_setup = 1;
+      
 }
 
 
-void run_rf_setup(RUN *run, LINE_LIST *beamline)
+void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
 {
   double beta, T0, frf, q, voltage;
   long harmonic, i;
   RFCA *rfca;
   long iFreq, iVolt, iPhase;
+  double phase;
 
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT)) {
     if (output_before_tune_correction)
@@ -4469,7 +4490,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline)
       rfcaElem[i]->matrix = NULL;
     }
   }
-  
+
   voltage = 0;
   if (rf_setup_struct.bucket_half_height>0) {
     double F, E;
@@ -4482,9 +4503,8 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline)
     voltage = (q=rf_setup_struct.over_voltage)*beamline->radIntegrals.Uo*1e6/nRfca;
   
   if (voltage) {
-    double phase;
     phase = 180-asin(1/q)*180/PI;
-    printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n", voltage, phase);
+    printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n\n", voltage, phase);
     for (i=0; i<nRfca; i++) {
       rfca = (RFCA*)(rfcaElem[i]->p_elem);
       rfca->volt = voltage;
@@ -4493,7 +4513,32 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline)
       change_defined_parameter(rfcaElem[i]->name, iPhase, T_RFCA, phase, NULL, LOAD_FLAG_ABSOLUTE);
     }
   }
-  
+
+  if (writeToFile) {
+    if (fpRf) {
+      double St0, Sz0, nus, rfAcceptance = -1;
+      double wrf = frf*PIx2;
+      double w0 = PIx2*c_mks/beamline->revolution_length;
+      long h = wrf/w0+0.5;
+      double Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
+      double E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
+    
+      if (Vdot<=0) {
+        nus = sqrt(beamline->alpha[0]/PIx2*(-Vdot/w0)/E);
+        St0 = beamline->radIntegrals.sigmadelta*beamline->alpha[0]/(nus*w0);
+        Sz0 = St0*c_mks;
+        if ((q = nRfca*voltage/(1e6*beamline->radIntegrals.Uo))>1)
+          rfAcceptance = sqrt(2*beamline->radIntegrals.Uo*1e6/(PI*beamline->alpha[0]*h*E)*(sqrt(q*q-1)-acos(1/q)));
+      } else {
+        q = rfAcceptance = nus = St0 = Sz0 = -1;
+      }
+    
+      fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n",
+              phase, rfAcceptance, nus, Sz0, St0);
+    }
+  }
 }
+
+
 
 

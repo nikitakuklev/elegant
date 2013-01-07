@@ -3085,13 +3085,13 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
 void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
-void run_rf_setup(RUN *run, LINE_LIST *beamline);
+void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile);
 void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long do_twiss_output, long *do_rf_setup) ;
 double rfAcceptance_Fq(double q) ;
 double solveForOverVoltage(double F, double q0);
 
 void copy_doubles(double *source, double *target, long n);
-void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
+void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *beamline, double Po);
 void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
                                LINE_LIST *beamline);
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
