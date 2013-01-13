@@ -150,6 +150,14 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   } else {
     population_log = NULL;
   }
+  if (interrupt_file && strlen(interrupt_file)) {
+    if (str_in(interrupt_file, "%s"))
+      interrupt_file = compose_filename(interrupt_file, run->rootname);
+    if (fexists(interrupt_file))
+	remove(interrupt_file);
+  } else {
+    interrupt_file = NULL;
+  }
   if (optimization_data->method==OPTIM_METHOD_GENETIC)
     /* The crossover type defined in PGAPACK started from 1, instead of 0. */ 
     if ((optimization_data->crossover_type=(match_string(crossover, crossover_type, N_CROSSOVER_TYPES, EXACT_MATCH)+1))<1)
@@ -1264,6 +1272,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           fprintf(stdout, "Redoing optimization\n");
           fflush(stdout);
 	}
+      }
+      if (interrupt_file && fexists(interrupt_file)) {
+	fprintf(stdout, "Interrupt file %s detected---terminating optimization loop\n", interrupt_file);
+	startsLeft = 0;
+	break;
       }
     }
 
