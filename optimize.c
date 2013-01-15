@@ -104,6 +104,14 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       bombElegant("restart_worst_term_factor <= 0", NULL);
     if ((optimization_data->restart_worst_terms=restart_worst_terms)<=0)
       bombElegant("restart_worst_terms <= 0", NULL);
+    if (interrupt_file && strlen(interrupt_file)) {
+      if (str_in(interrupt_file, "%s"))
+	interrupt_file = compose_filename(interrupt_file, run->rootname);
+      if (fexists(interrupt_file))
+	remove(interrupt_file);
+    } else {
+      interrupt_file = NULL;
+    }
     
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
@@ -1137,7 +1145,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
           MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
-        }	 
+        }
         if (optimAbort(0))
           stopOptimization = 1;
         break;
@@ -1215,6 +1223,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	}
       }
 #else 
+
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       force_output = 1;
@@ -1239,6 +1248,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  break;
 	}    
       lastResult = result;
+      if (interrupt_file && fexists(interrupt_file)) {
+	fprintf(stdout, "Interrupt file %s detected---terminating optimization loop\n", interrupt_file);
+	startsLeft = 0;
+	break;
+      }
       if (startsLeft && !stopOptimization) {
         for (i=0; i<variables->n_variables; i++) {
           variables->step[i] = variables->orig_step[i];
@@ -1268,15 +1282,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             for (i=0; i<optimization_data->terms; i++)
               optimization_data->termWeight[i] /= optimization_data->termWeight[imin];
         }
-	if (optimization_data->verbose>1) { 
+	if (optimization_data->verbose>1 && startsLeft>1) { 
           fprintf(stdout, "Redoing optimization\n");
           fflush(stdout);
 	}
-      }
-      if (interrupt_file && fexists(interrupt_file)) {
-	fprintf(stdout, "Interrupt file %s detected---terminating optimization loop\n", interrupt_file);
-	startsLeft = 0;
-	break;
       }
     }
 
