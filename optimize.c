@@ -36,6 +36,17 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variab
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
 #endif
 
+#include <sys/types.h>
+static time_t interrupt_file_mtime = 0;
+#include <sys/stat.h>
+time_t get_mtime(char *filename)
+{
+  struct stat statbuf;
+  if (stat(filename, &statbuf) == -1)
+    return 0;
+  return statbuf.st_mtime;
+}
+
 #if !USE_MPI
 long myid=0;
 #endif
@@ -107,10 +118,14 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     if (interrupt_file && strlen(interrupt_file)) {
       if (str_in(interrupt_file, "%s"))
 	interrupt_file = compose_filename(interrupt_file, run->rootname);
-      if (fexists(interrupt_file))
-	remove(interrupt_file);
+      if (fexists(interrupt_file)) {
+	interrupt_file_mtime = get_mtime(interrupt_file);
+      } else {
+	interrupt_file_mtime = 0;
+      }
     } else {
       interrupt_file = NULL;
+      interrupt_file_mtime = 0;
     }
     
     /* reset flags for elements that may have been varied previously */
@@ -161,11 +176,16 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
   if (interrupt_file && strlen(interrupt_file)) {
     if (str_in(interrupt_file, "%s"))
       interrupt_file = compose_filename(interrupt_file, run->rootname);
-    if (fexists(interrupt_file))
-	remove(interrupt_file);
+    if (fexists(interrupt_file)) {
+      interrupt_file_mtime = get_mtime(interrupt_file);
+    } else {
+      interrupt_file_mtime = 0;
+    }
   } else {
     interrupt_file = NULL;
+    interrupt_file_mtime = 0;
   }
+
   if (optimization_data->method==OPTIM_METHOD_GENETIC)
     /* The crossover type defined in PGAPACK started from 1, instead of 0. */ 
     if ((optimization_data->crossover_type=(match_string(crossover, crossover_type, N_CROSSOVER_TYPES, EXACT_MATCH)+1))<1)
@@ -1248,8 +1268,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  break;
 	}    
       lastResult = result;
-      if (interrupt_file && fexists(interrupt_file)) {
-	fprintf(stdout, "Interrupt file %s detected---terminating optimization loop\n", interrupt_file);
+      if (interrupt_file && fexists(interrupt_file) && 
+	  (interrupt_file_mtime==0 || interrupt_file_mtime<get_mtime(interrupt_file))) {
+	fprintf(stdout, "Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
 	startsLeft = 0;
 	break;
       }
@@ -2503,3 +2524,4 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
   }
 }
 #endif
+

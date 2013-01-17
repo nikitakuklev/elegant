@@ -61,7 +61,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     long population_size = 100;
     long print_all_individuals = 0;	
     STRING population_log = NULL;	
-    STRING interrupt_file = NULL;
+    STRING interrupt_file = "%s.interrupt";
 #end
 
 #namelist optimization_variable static
