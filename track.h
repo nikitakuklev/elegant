@@ -281,6 +281,8 @@ typedef struct {
   double h21000[3], h30000[3], h10110[3], h10020[3], h10200[3];
   /* First order chromatic terms */
   double h11001[3], h00111[3], h20001[3], h00201[3], h10002[3];
+  /* First order coupling terms */
+  double h10010[3], h10100[3];
   /* Second-order geometric terms */
   double h22000[3], h11110[3], h00220[3], h31000[3], h40000[3];
   double h20110[3], h11200[3], h20020[3], h20200[3], h00310[3], h00400[3];

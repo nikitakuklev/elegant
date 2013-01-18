@@ -1041,32 +1041,36 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 #define IP_DNUYDJY 2
 #define IP_H11001 3
 #define IP_H00111 4
-#define IP_H21000 5
-#define IP_H30000 6
-#define IP_H10110 7
-#define IP_H10020 8
-#define IP_H10200 9
-#define IP_H20001 10
-#define IP_H00201 11
-#define IP_H10002 12
-#define IP_H22000 13
-#define IP_H11110 14
-#define IP_H00220 15
-#define IP_H31000 16
-#define IP_H40000 17
-#define IP_H20110 18
-#define IP_H11200 19
-#define IP_H20020 20
-#define IP_H20200 21
-#define IP_H00310 22
-#define IP_H00400 23
-#define N_DT_PARAMETERS (3*21+3)
+#define IP_H10100 5
+#define IP_H10010 6
+#define IP_H21000 7
+#define IP_H30000 8
+#define IP_H10110 9
+#define IP_H10020 10
+#define IP_H10200 11
+#define IP_H20001 12
+#define IP_H00201 13
+#define IP_H10002 14
+#define IP_H22000 15
+#define IP_H11110 16
+#define IP_H00220 17
+#define IP_H31000 18
+#define IP_H40000 19
+#define IP_H20110 20
+#define IP_H11200 21
+#define IP_H20020 22
+#define IP_H20200 23
+#define IP_H00310 24
+#define IP_H00400 25
+#define N_DT_PARAMETERS (3*23+3)
 static SDDS_DEFINITION driving_term_parameter_definition[N_DT_PARAMETERS] = {
 {(char*)"dnux/dJx", (char*)"&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
 {(char*)"dnux/dJy", (char*)"&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
 {(char*)"dnuy/dJy", (char*)"&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
 {(char*)"h11001", (char*)"&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term (x chromaticity)\", &end"},
 {(char*)"h00111", (char*)"&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"h10100", (char*)"&parameter name=h10100, type=double, description=\"Magnitude of coupling driving term (difference resonance)\", &end"},
+{(char*)"h10010", (char*)"&parameter name=h10010, type=double, description=\"Magnitude of chromatic driving term (sum resonance)\", &end"},
 {(char*)"h21000", (char*)"&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"h30000", (char*)"&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"h10110", (char*)"&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
@@ -1089,6 +1093,8 @@ static SDDS_DEFINITION driving_term_parameter_definition[N_DT_PARAMETERS] = {
 
 {(char*)"Reh11001", (char*)"&parameter name=Reh11001, type=double, description=\"Real part of chromatic driving term (x chromaticity)\", &end"},
 {(char*)"Reh00111", (char*)"&parameter name=Reh00111, type=double, description=\"Real part of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"Reh10100", (char*)"&parameter name=Reh10100, type=double, description=\"Real part of coupling driving term (difference resonance)\", &end"},
+{(char*)"Reh10010", (char*)"&parameter name=Reh10010, type=double, description=\"Real part of chromatic driving term (sum resonance)\", &end"},
 {(char*)"Reh21000", (char*)"&parameter name=Reh21000, type=double, description=\"Real part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"Reh30000", (char*)"&parameter name=Reh30000, type=double, description=\"Real part of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"Reh10110", (char*)"&parameter name=Reh10110, type=double, description=\"Real part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
@@ -1111,6 +1117,8 @@ static SDDS_DEFINITION driving_term_parameter_definition[N_DT_PARAMETERS] = {
 
 {(char*)"Imh11001", (char*)"&parameter name=Imh11001, type=double, description=\"Imaginary part of chromatic driving term (x chromaticity)\", &end"},
 {(char*)"Imh00111", (char*)"&parameter name=Imh00111, type=double, description=\"Imaginary part of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"Imh10100", (char*)"&parameter name=Imh10100, type=double, description=\"Imaginary part of coupling driving term (difference resonance)\", &end"},
+{(char*)"Imh10010", (char*)"&parameter name=Imh10010, type=double, description=\"Imaginary part of chromatic driving term (sum resonance)\", &end"},
 {(char*)"Imh21000", (char*)"&parameter name=Imh21000, type=double, description=\"Imaginary part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"Imh30000", (char*)"&parameter name=Imh30000, type=double, description=\"Imaginary part of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
 {(char*)"Imh10110", (char*)"&parameter name=Imh10110, type=double, description=\"Imaginary part of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
@@ -1235,6 +1243,8 @@ void dump_twiss_parameters(
 			    /* magnitudes of driving terms */
 			    IP_H11001+offset, beamline->drivingTerms.h11001[0],
 			    IP_H00111+offset, beamline->drivingTerms.h00111[0],
+			    IP_H10010+offset, beamline->drivingTerms.h10010[0],
+			    IP_H10100+offset, beamline->drivingTerms.h10100[0],
 			    IP_H20001+offset, beamline->drivingTerms.h20001[0],
 			    IP_H00201+offset, beamline->drivingTerms.h00201[0],
 			    IP_H10002+offset, beamline->drivingTerms.h10002[0],
@@ -1257,6 +1267,8 @@ void dump_twiss_parameters(
 			    /* real parts */
 			    IP_H11001+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h11001[1],
 			    IP_H00111+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00111[1],
+			    IP_H10010+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10010[1],
+			    IP_H10100+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10100[1],
 			    IP_H20001+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h20001[1],
 			    IP_H00201+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h00201[1],
 			    IP_H10002+(IP_H00400-IP_H11001+1)+offset, beamline->drivingTerms.h10002[1],
@@ -1279,6 +1291,8 @@ void dump_twiss_parameters(
 			    /* imaginary parts */
 			    IP_H11001+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h11001[2],
 			    IP_H00111+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00111[2],
+			    IP_H10010+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10010[2],
+			    IP_H10100+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10100[2],
 			    IP_H20001+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h20001[2],
 			    IP_H00201+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h00201[2],
 			    IP_H10002+(IP_H00400-IP_H11001+1)*2+offset, beamline->drivingTerms.h10002[2],
@@ -1529,7 +1543,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
         if (!SDDS_ProcessParameterString(&SDDS_twiss, driving_term_parameter_definition[i].text, 0) ||
             (SDDS_GetParameterIndex(&SDDS_twiss, driving_term_parameter_definition[i].name))<0) {
             fprintf(stdout, "Unable to define SDDS parameter for driving terms--string was:\n%s\n", 
-                    parameter_definition[i].text);
+                    driving_term_parameter_definition[i].text);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
@@ -4041,19 +4055,19 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 /* Revised to follow C. X. Wang AOP-TN-2009-020 for second-order terms */
 {
-  std::complex <double> h11001, h00111, h20001, h00201, h10002;
+  std::complex <double> h11001, h00111, h20001, h00201, h10002, h10010, h10100;
   std::complex <double> h21000, h30000, h10110, h10020, h10200;
   std::complex <double> h22000, h11110, h00220, h31000, h40000;
   std::complex <double> h20110, h11200, h20020, h20200, h00310, h00400;
   std::complex <double> t1, t2, t3, t4;
   std::complex <double> ii;
   double betax1, betay1, phix1, phiy1, etax1, termSign;
-  double coef, b2L, b3L, b4L, nux, nuy;
+  double coef, b2L, a2L, b3L, b4L, nux, nuy;
   ELEMENT_LIST *eptr1;
   double two=2, three=3, four=4;
   ELEMDATA *ed = NULL;
   long nE=0, iE, jE;
-  double sqrt8, sqrt2;
+  double sqrt8, sqrt2, tilt;
 
   sqrt8 = sqrt((double)8);
   sqrt2 = sqrt((double)2);
@@ -4064,12 +4078,13 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   h21000 = h30000 = h10110 = h10020 = h10200 = std::complex<double>(0,0);
   h22000 = h11110 = h00220 = h31000 = h40000 = std::complex<double>(0,0);
   h20110 = h11200 = h20020 = h20200 = h00310 = h00400 = std::complex<double>(0,0);
-  
+  h10100 = h10010 = std::complex<double>(0,0);
+
   d->dnux_dJx = d->dnux_dJy = d->dnuy_dJy = 0;
 
   eptr1 = elem;
   while (eptr1) {
-    b2L = b3L = b4L = 0;
+    a2L = b2L = b3L = b4L = 0;
     switch (eptr1->type) {
     case T_SEXT:
       b3L = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
@@ -4095,10 +4110,14 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       b3L = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
       break;
     case T_QUAD:
-      b2L = ((QUAD*)eptr1->p_elem)->k1 * ((QUAD*)eptr1->p_elem)->length;
+      tilt = ((QUAD*)eptr1->p_elem)->tilt;
+      b2L = ((QUAD*)eptr1->p_elem)->k1 * ((QUAD*)eptr1->p_elem)->length*cos(2*tilt);
+      a2L = ((QUAD*)eptr1->p_elem)->k1 * ((QUAD*)eptr1->p_elem)->length*sin(2*tilt);
       break;
     case T_KQUAD:
-      b2L = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length;
+      tilt = ((KQUAD*)eptr1->p_elem)->tilt;
+      b2L = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length*cos(2*tilt);
+      a2L = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length*sin(2*tilt);
       break;
     case T_OCT:
       b4L = ((OCTU*)eptr1->p_elem)->k3 * ((OCTU*)eptr1->p_elem)->length/6;
@@ -4109,7 +4128,7 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     default:
       break;
     }      
-    if (b2L || b3L || b4L) {
+    if (a2L || b2L || b3L || b4L) {
       if (eptr1->pred) {
         betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
         etax1  = (eptr1->twiss->etax + eptr1->pred->twiss->etax)/2;
@@ -4146,6 +4165,11 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       ed[nE].py[4] = ed[nE].py[1]*ed[nE].py[3];
 
 
+      if (a2L) {
+	/* linear coupling terms */
+	h10010 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]/ed[nE].py[1];
+	h10100 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]*ed[nE].py[1];
+      }
       if (b2L || b3L) {
 	/* first-order chromatic terms */
 	/* h11001 and h00111 */
@@ -4216,6 +4240,13 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   d->h10002[0] = std::abs<double>(h10002);
   d->h10002[1] = h10002.real();
   d->h10002[2] = h10002.imag();
+
+  d->h10100[0] = std::abs<double>(h10100);
+  d->h10100[1] = h10100.real();
+  d->h10100[2] = h10100.imag();
+  d->h10010[0] = std::abs<double>(h10010);
+  d->h10010[1] = h10010.real();
+  d->h10010[2] = h10010.imag();
 
   d->h21000[0] = std::abs<double>(h21000);
   d->h21000[1] = h21000.real();
