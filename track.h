@@ -847,7 +847,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 26
+#define N_RFDF_PARAMS 27
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -1311,7 +1311,7 @@ typedef struct {
 extern PARAMETER rfdf_param[N_RFDF_PARAMS] ;
    
 typedef struct {
-  double length, phase, tilt, frequency, voltage, fse;
+  double length, phase, tilt, frequency, voltage, fse, b2;
   double time_offset;             /* equivalent to phase */
   long n_kicks, phase_reference;
   long standingWave;

@@ -171,7 +171,7 @@ void track_through_rf_deflector(
 	fprintf(stdout, "ip=%ld  is=%ld  dphase=%f, phase=%f\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
-	px += Estrength*cos((t_part-tLight)*omega + Ephase);
+	px += Estrength*cos((t_part-tLight)*omega + Ephase)*(1+rf_param->b2*(x*x-y*y)/2.0);
         if (rf_param->magneticDeflection)
           pz = sqrt(sqr(pc)-sqr(px)-sqr(py));
         pz += Estrength*k*x*sin((t_part-tLight)*omega + Ephase);

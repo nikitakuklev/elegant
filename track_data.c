@@ -557,6 +557,7 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"FREQUENCY", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
     {"VOLTAGE", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.voltage), NULL, 0.0, 0, "voltage"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfdf_example.fse), NULL, 0.0, 0, "Fractional Strength Error"},
+    {"B2", "", IS_DOUBLE, 0, (long)((char *)&rfdf_example.b2), NULL, 0.0, 0, "Normalized sextupole strength, kick=(1+b2*(x^2-y^2)/2)..."},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&rfdf_example.time_offset), NULL, 0.0, 0, "time offset (adds to phase)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 0, "number of kicks (0=autoscale)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
