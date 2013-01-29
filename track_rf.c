@@ -152,6 +152,7 @@ void track_through_rf_deflector(
 	      ip, x, xp, y, yp, initial[ip][4], initial[ip][5]);
 #endif
       for (is=0; is<=n_kicks; is++) {
+	double cos_phase;
 	beta_z = pz/pc;
 	if (is==0 || is==n_kicks) {
 	  /* first half-drift and last half-drift */
@@ -171,10 +172,13 @@ void track_through_rf_deflector(
 	fprintf(stdout, "ip=%ld  is=%ld  dphase=%f, phase=%f\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
-	px += Estrength*cos((t_part-tLight)*omega + Ephase)*(1+rf_param->b2*(x*x-y*y)/2.0);
+	cos_phase = cos((t_part-tLight)*omega + Ephase);
+	px += Estrength*cos_phase*(1+rf_param->b2*(x*x-y*y)/2.0);
+	if (rf_param->b2)
+	  py -= Estrength*cos_phase*rf_param->b2*x*y;
         if (rf_param->magneticDeflection)
           pz = sqrt(sqr(pc)-sqr(px)-sqr(py));
-        pz += Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
+        pz += Estrength*k*x*(1 + rf_param->b2*(x*x-3*y*y)/6)*sin((t_part-tLight)*omega + Ephase);
 	xp = px/pz;
 	yp = py/pz;
 	pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
