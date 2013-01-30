@@ -191,6 +191,8 @@ double HermitePolynomial(double x, long n);
 double HermitePolynomialDeriv(double x, long n);
 double HermitePolynomial2ndDeriv(double x, long n);
 
+static short twlaBeenWarned = 0;
+
 long motion(
     double **part,
     long n_part,
@@ -772,6 +774,14 @@ void (*set_up_derivatives(
     twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * (twla->focussing?1:0) / (*kscale);
     twla->EzS    = twla->Ez * Escale;
     twla->BsolS  = twla->B_solenoid * Bscale;
+    twla->FrP = 4*sqr(particleCharge*twla->Ez/omega)/gamma*twla->sum_bn2;
+    if (!twlaBeenWarned && twla->sum_bn2!=0 && fabs(particleCharge*twla->Ez*PI/(2*twla->kz*me_mks*sqr(c_mks))/P_central_inner_scope)>0.1) {
+      fprintf(stdout, "****\n");
+      fprintf(stdout, "Warning: TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.");
+      fprintf(stdout, "         No further warnings of this type will be issued.\n");
+      fprintf(stdout, "****\n");
+      twlaBeenWarned = 1;
+    }
     /* calculate initial tau value, less omega*t: 
      *    tau_start = omega*(t_offset-t_fid)+phase 
      *              = omega*t_offset + phase + phase0
@@ -1262,7 +1272,7 @@ void derivatives_tw_linac(
     )
 {
     register double gamma, *P, *Pp;
-    static double E[3], B[3];
+    static double E[3], B[3], FrP[2];
     double phase, X, Y, Z, cos_phase, sin_phase, droop;
     TW_LINAC *twla;
 
@@ -1280,6 +1290,7 @@ void derivatives_tw_linac(
     /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
     Pp = qp+3;
     twla = (TW_LINAC*)field_global;
+    FrP[0] = FrP[1] = 0;
     droop = 1;
     if ((Z=q[2])<=Z_end && Z>=0) {
         E[2] = twla->EzS*(sin_phase=sin(phase=Z/twla->beta_wave - tau));
@@ -1302,11 +1313,18 @@ void derivatives_tw_linac(
         B[0]  = -B[1]*Y;
         B[1] *= X;
 
-        /* The sign of the electron is taken care of here. */
+        if (twla->FrP!=0) {
+          /* Ponderomotive force from n!=0 space harmonics (Hartman et al, PRE 47, March 93 */
+          FrP[0] = -X*twla->FrP*sqr(cos_phase);
+          FrP[1] = -Y*twla->FrP*sqr(cos_phase);
+        }
+        
         if (twla->alphaS)
             droop = exp(-twla->alphaS*Z);
-        Pp[0] = -(E[0] + P[1]*B[2] - P[2]*B[1])*droop;
-        Pp[1] = -(E[1] + P[2]*B[0] - P[0]*B[2])*droop;
+        /* The sign of the electron is taken care of here. */
+        /* Also, the Ponderomotive force is always focusing */
+        Pp[0] = -(E[0] + P[1]*B[2] - P[2]*B[1] - FrP[0])*droop;
+        Pp[1] = -(E[1] + P[2]*B[0] - P[0]*B[2] - FrP[1])*droop;
         Pp[2] = -(E[2] + P[0]*B[1] - P[1]*B[0])*droop;
         }
     else

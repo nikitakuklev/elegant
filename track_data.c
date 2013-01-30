@@ -785,6 +785,7 @@ PARAMETER twla_param[N_TWLA_PARAMS] = {
     {"METHOD", " ", IS_STRING, 0, (long)((char *)&twla_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&twla_example.fiducial), DEFAULT_FIDUCIAL_MODE, 0.0, 0, "{t|p},{median|min|max|ave|first|light} (e.g., \"t,median\")"},
     {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&twla_example.change_p0), NULL, 0.0, 0, "does element change central momentum?"},
+    {"SUM_BN2", "", IS_DOUBLE, 0, (long)((char *)&twla_example.sum_bn2), NULL, 0.0, 0, "sum of squares of amplitudes of n!=0 space harmonics"},
     } ;
 
 PEPPOT peppot_example;

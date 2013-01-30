@@ -855,7 +855,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWPL_PARAMS 16
 #define N_WATCH_PARAMS 15
 #define N_MALIGN_PARAMS 10
-#define N_TWLA_PARAMS 19
+#define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
 #define N_MAXAMP_PARAMS 6
@@ -1583,11 +1583,13 @@ typedef struct {
     long phase_reference, n_steps, focussing;
     char *method, *fiducial; 
     long change_p0;
-
+    double sum_bn2;
+  
     /* variables for internal use only: */
     double *fiducial_part;            
     double EzS, BsolS;
     double ErS, BphiS;    /* calculated from Ez */
+    double FrP;           /* Ponderomotive force coeffcience, from sum_bn2, see Hartman et al, PRE 47 (3), 1993. */
     double phase0;        /* phase at which fiducial particle reaches center of
                              first cell */
     double kz;            /* omega/(c*beta_wave) */
