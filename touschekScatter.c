@@ -436,16 +436,6 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           selectPartGauss(tsptr, p1, p2, &dens1, &dens2, ran1);
         else
           selectPartReal(tsptr, p1, p2, &dens1, &dens2, ran1);
-	if (p1[5] > p2[5]) {
-	  for (j=0; j<6; j++) {
-	    pTemp[j] = p2[j];
-	    p2[j] = p1[j];
-	    p1[j] = pTemp[j];
-	  }	  
-	  densTemp = dens2;
-	  dens2 = dens1;
-	  dens1 = densTemp;
-	}
         if (initial) {
           chfill1m(iniBook, p1, dens1, bookBins, 6);
           chfill1m(iniBook, p2, dens2, bookBins, 6);
@@ -471,6 +461,14 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         cm2bunch(p1,p2,qb,beta,&gamma);
         p1[5] = (p1[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
         p2[5] = (p2[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
+
+	if (p1[5] > p2[5]) {
+	  for (j=0; j<6; j++) {
+	    pTemp[j] = p2[j];
+	    p2[j] = p1[j];
+	    p1[j] = pTemp[j];
+	  }	  
+	}
 	  
         if(p1[5] < tsptr->deltaN || p2[5] > tsptr->deltaP) {
           beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
@@ -519,6 +517,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
             weight[i] = temp;
             i++;
           }
+	  /*          fprintf(stdout, "scatted particles %ld.\n", tsptr->simuCount); */
         }
         if (total_event*11 > (long)2e9)  {
           fprintf(stdout, "warning: The total random number used > 2e9. Use less n_simulated or use small delta");
