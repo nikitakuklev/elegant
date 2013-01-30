@@ -4412,9 +4412,11 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
     bombElegant("Invalid s_start and s_end values", NULL);
   if (rf_setup_struct.near_frequency>0 && rf_setup_struct.harmonic>1)
     bombElegant("Give non-zero near_frequency or harmonic value, not both", NULL);
-  if (rf_setup_struct.bucket_half_height>0 && rf_setup_struct.over_voltage>0)
-    bombElegant("Give non-zero bucket_half_height or over_voltage, not both", NULL);
-  
+  if (rf_setup_struct.bucket_half_height>0 && rf_setup_struct.over_voltage>0 && rf_setup_struct.total_voltage>0)
+    bombElegant("Give non-zero value for only one of bucket_half_height, over_voltage, or total_voltage", NULL);
+  if (rf_setup_struct.bucket_half_height<=0 && rf_setup_struct.over_voltage<=0 && rf_setup_struct.total_voltage<=0)
+    bombElegant("Give non-zero value for one of bucket_half_height, over_voltage, or total_voltage", NULL);
+
   if (!do_twiss_output && rf_setup_struct.set_for_each_step)
     bombElegant("If set_for_each_step is non-zero, must also ask for twiss output at each step", NULL);
   if (do_twiss_output && !rf_setup_struct.set_for_each_step)
@@ -4466,6 +4468,7 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
     rf_setup_struct.filename = compose_filename(rf_setup_struct.filename, run->rootname);
     fpRf = fopen(rf_setup_struct.filename, "w");
     fprintf(fpRf, "SDDS1\n&parameter name=PhiSynch, type=double, units=deg &end\n");
+    fprintf(fpRf, "&parameter name=Voltage, type=double, units=V &end\n");
     fprintf(fpRf, "&parameter name=BucketHalfHeight, type=double &end\n");
     fprintf(fpRf, "&parameter name=nuSynch, type=double &end\n");
     fprintf(fpRf, "&parameter name=Sz0, type=double, units=m &end\n");
@@ -4522,7 +4525,6 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     }
   }
 
-  voltage = 0;
   if (rf_setup_struct.bucket_half_height>0) {
     double F, E;
     
@@ -4532,7 +4534,11 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     voltage = (q=solveForOverVoltage(F,q))*beamline->radIntegrals.Uo*1e6/nRfca;
   } else if (rf_setup_struct.over_voltage)
     voltage = (q=rf_setup_struct.over_voltage)*beamline->radIntegrals.Uo*1e6/nRfca;
-  
+  else {
+    voltage = rf_setup_struct.total_voltage/nRfca;
+    q = voltage/(beamline->radIntegrals.Uo*1e6);
+  }
+
   if (voltage) {
     phase = 180-asin(1/q)*180/PI;
     printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n\n", voltage, phase);
@@ -4564,8 +4570,8 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
         q = rfAcceptance = nus = St0 = Sz0 = -1;
       }
     
-      fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n",
-              phase, rfAcceptance, nus, Sz0, St0);
+      fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n",
+              phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0);
     }
   }
 }
