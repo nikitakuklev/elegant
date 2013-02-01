@@ -1022,11 +1022,11 @@ void Dejus_CalculateBrightness(double current,long nE,
   reducedE=c_evang/lamdar; /*reduced energy ev */
   kx=0.0;
   if (device==HELICAL) {
-    kMin=kMin/sqrt(2.0);
-    kMax=kMax/sqrt(2.0);
+    kMin=kMin*sqrt(2.0);
+    kMax=kMax*sqrt(2.0);
     if (Kvalue) {
       for (j=0; j<nE; j++)
-	Kvalue[j] /=sqrt(2.0);
+	Kvalue[j] *= sqrt(2.0);
     }
   }
   eMin=reducedE/(1+kMax*kMax/2.0);
