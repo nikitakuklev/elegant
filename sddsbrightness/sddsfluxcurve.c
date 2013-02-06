@@ -71,7 +71,7 @@ char *option[N_OPTIONS] = {
 char *USAGE1="sddsfluxcurve [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
     [-harmonics=<integer>] [-method=<methodName>[,neks=<integer>]]\n\
     [-mode={pinhole|density|total}]\n\
-    -undulator=period=<meters>,numberOfPeriods=<integer>{,kmin=<value>,kmax=<value>[,points=<number>]kfilename=<string>,kcolumn=<string>}\n\
+    -undulator=period=<meters>,numberOfPeriods=<integer>{,kmin=<value>,kmax=<value>[,points=<number>]kfilename=<string>,kcolumn=<string>[,{helical|planar}]]}\n\
     [-electronBeam=current=<amps>,[,{coupling=<value> | emittanceRatio=<value>}]]\n\
     [-pinhole=distance=<meters>,xsize=<meters>,ysize=<meters>[,xnumber=<integer>][,ynumber=<integer>][,xposition=<meters>][,yposition=<meters>]]\n\
     [-nowarnings]\n\n\
@@ -134,6 +134,8 @@ typedef struct {
 #define UNDULATOR_POINTS_GIVEN            0x00010U
 #define UNDULATOR_KFILENAME_GIVEN         0x00020U
 #define UNDULATOR_KCOLUMN_GIVEN           0x00040U
+#define UNDULATOR_HELICAL_GIVEN           0x00080U
+#define UNDULATOR_PLANAR_GIVEN            0x00100U
 
 #define ELECTRON_CURRENT_GIVEN            0x00080U
 #define ELECTRON_COUPLING_GIVEN           0x00100U
@@ -246,6 +248,8 @@ int main(int argc, char **argv)
                           "points", SDDS_LONG, &undulator_param.nPoints, 1, UNDULATOR_POINTS_GIVEN,
 			  "kfilename", SDDS_STRING, &undulator_param.kfilename, 1, UNDULATOR_KFILENAME_GIVEN,
 			  "kcolumn", SDDS_STRING, &undulator_param.kcolumn, 1, UNDULATOR_KCOLUMN_GIVEN,
+                          "helical", -1, NULL, 0, UNDULATOR_HELICAL_GIVEN,
+                          "planar", -1, NULL, 0, UNDULATOR_PLANAR_GIVEN,
                           NULL) ||
             undulator_param.period<=0 || undulator_param.nPeriods<=10)
           SDDS_Bomb("invalid -undulator parameters/values");
@@ -258,6 +262,9 @@ int main(int argc, char **argv)
 	    SDDS_Bomb("invalid -undulator syntax: kcolumn provided.");
 	  getKValueDataFromFile(&undulator_param);
 	}
+        if (undulator_param.flags&UNDULATOR_HELICAL_GIVEN &&
+            undulator_param.flags&UNDULATOR_PLANAR_GIVEN)
+          SDDS_Bomb("give helical or planar, not both");
         break;
       case SET_PINHOLE:
         if (s_arg[i_arg].n_items<2)
@@ -757,6 +764,8 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
   double *L1, *L2, *L3, *L4, *spec1;
   double ptot1, ftot;
   long isub, iang, min_harmonic=0, max_harmonic=0, nEE;
+  double Kmin, Kmax;
+  static double *Kvalue = NULL;
   
 #ifdef DEBUG
   fprintf(stderr, "In CalculateFlux\n");
@@ -826,8 +835,19 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
   lambdar = period*1.0E8/(2.0*sqr(eBeam.gamma)); /*reduced wavelength A */
   reducedE = c_evang/lambdar; /*reduced energy ev */
   kx = 0.0;
-  eMin = reducedE/(1+sqr(undulator.KMax)/2.0);
-  eMax = reducedE/(1+sqr(undulator.KMin)/2.0);
+  Kmin = undulator.KMin;
+  Kmax = undulator.KMax;
+  Kvalue = undulator.kvalue;
+  if (undulator.flags&UNDULATOR_HELICAL_GIVEN) {
+    Kmin = sqrt(2)*Kmin;
+    Kmax = sqrt(2)*Kmax;
+    Kvalue = SDDS_Realloc(Kvalue, sizeof(*Kvalue)*undulator.nPoints);
+    if (undulator.flags&UNDULATOR_KFILENAME_GIVEN) 
+      for (i=0; i<undulator.nPoints; i++)
+        Kvalue[i] = undulator.kvalue[i]*sqrt(2);
+  }
+  eMin = reducedE/(1+sqr(Kmax)/2.0);
+  eMax = reducedE/(1+sqr(Kmin)/2.0);
 #ifdef DEBUG
   fprintf(stderr, "eMin = %e eV, eMax = %e eV, lambda = %e A\n", eMin, eMax, lambdar);
 #endif
@@ -841,7 +861,7 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
   nYP0 = pinhole.nYP;
 
   /* Compute peak shifts at minimum K */
-  ky = undulator.KMin;
+  ky = Kmin;
 
   /* First we figure out the offsets, dep1 and dep2, between the ideal
    * position of the flux peak vs. photon energy and the actual position.
@@ -922,6 +942,9 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
       else
 	ek = reducedE/(1+sqr(undulator.kvalue[je])/2.0);
       ky = sqrt(2.0*(reducedE/ek-1.0));
+      kx = 0;
+      if (undulator.flags&UNDULATOR_HELICAL_GIVEN)
+        kx = ky = ky/sqrt(2);
       if (ih == 0)
         kyb[je] = ky;
       if (i%2) {
@@ -1004,6 +1027,9 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
       else
 	ek = reducedE/(1+sqr(undulator.kvalue[j])/2.0);
       ky = sqrt(2.0*(reducedE/ek-1.0));
+      kx = 0;
+      if (undulator.flags&UNDULATOR_HELICAL_GIVEN)
+        kx = ky = ky/sqrt(2);
       if (ih == 0) 
         kyb[j] = ky;
       if (i%2) 
