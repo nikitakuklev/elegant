@@ -13,6 +13,7 @@
     long end_pass = LONG_MAX;
     double start_value = 0;
     double end_value = 0;
+    long refresh_matrix = 0;
     long differential = 1;
     long multiplicative = 0;
     long start_occurence = 0;

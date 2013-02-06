@@ -75,65 +75,21 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   if (has_wildcards(name)) {
     if (strchr(name, '-'))
       name = expand_ranges(name);
-    str_toupper(name);
-    firstIndexInGroup = -1;
-    while ((context=wfind_element(name, &context, &(beamline->elem)))) {
-      if (type && !wild_match(entity_name[context->type], type))
-        continue;
-      if ((sMin>=0 && context->end_pos<sMin) ||
-          (sMax>=0 && context->end_pos>sMax) ||
-          (s_start>=0 && context->end_pos<s_start) ||
-          (s_end>=0 && context->end_pos>s_end) ||
-          (start_occurence && context->occurence<start_occurence) ||
-          (end_occurence && context->occurence>end_occurence) )
-        continue;
-
-      rampData->element          = SDDS_Realloc(rampData->element, sizeof(*rampData->element)*(n_items+1));
-      rampData->parameterNumber  = SDDS_Realloc(rampData->parameterNumber, sizeof(*rampData->parameterNumber)*(n_items+1));
-      rampData->flags            = SDDS_Realloc(rampData->flags, sizeof(*rampData->flags)*(n_items+1));
-      rampData->unperturbedValue = SDDS_Realloc(rampData->unperturbedValue, sizeof(*rampData->unperturbedValue)*(n_items+1));
-      rampData->startPass        = SDDS_Realloc(rampData->startPass, sizeof(*rampData->startPass)*(n_items+1));
-      rampData->endPass          = SDDS_Realloc(rampData->endPass, sizeof(*rampData->endPass)*(n_items+1));
-      rampData->startValue       = SDDS_Realloc(rampData->startValue, sizeof(*rampData->startValue)*(n_items+1));
-      rampData->endValue         = SDDS_Realloc(rampData->endValue, sizeof(*rampData->endValue)*(n_items+1));
-      rampData->exponent         = SDDS_Realloc(rampData->exponent, sizeof(*rampData->exponent)*(n_items+1));
-
-      rampData->element[n_items] = context;
-      rampData->flags[n_items] = (multiplicative?MULTIPLICATIVE_RAMP:0) + (differential?DIFFERENTIAL_RAMP:0) 
-        + (verbose?VERBOSE_RAMP:0);
-      rampData->startPass[n_items] = start_pass;
-      rampData->endPass[n_items] = end_pass;
-      rampData->startValue[n_items] = start_value;
-      rampData->endValue[n_items] = end_value;
-      rampData->exponent[n_items] = exponent;
-      
-      if ((rampData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
-        fprintf(stdout, "error: cannot ramp %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
-        fflush(stdout);
-        exitElegant(1);
-      }
-
-      rampData->unperturbedValue[n_items] 
-        = parameter_value(context->name, context->type, rampData->parameterNumber[n_items], beamline);
-
-      if (rampData->unperturbedValue[n_items]==0 && rampData->flags[n_items]&MULTIPLICATIVE_RAMP) {
-        fprintf(stdout, "***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-                context->name, item);
-        fflush(stdout);
-      }
-      rampData->nItems = ++n_items;
-      n_added++;
-      if (firstIndexInGroup==-1)
-        firstIndexInGroup = n_items-1;
-    }
   }
-  else {
-    str_toupper(name);
-    if (!(context=find_element(name, &context, &(beamline->elem)))) {
-      fprintf(stdout, "error: cannot ramp element %s--not in beamline\n", name);
-      fflush(stdout);
-      exitElegant(1);
-    }
+  
+  str_toupper(name);
+  firstIndexInGroup = -1;
+  while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+    if (type && !wild_match(entity_name[context->type], type))
+      continue;
+    if ((sMin>=0 && context->end_pos<sMin) ||
+        (sMax>=0 && context->end_pos>sMax) ||
+        (s_start>=0 && context->end_pos<s_start) ||
+        (s_end>=0 && context->end_pos>s_end) ||
+        (start_occurence && context->occurence<start_occurence) ||
+        (end_occurence && context->occurence>end_occurence) )
+      continue;
+
     rampData->element          = SDDS_Realloc(rampData->element, sizeof(*rampData->element)*(n_items+1));
     rampData->parameterNumber  = SDDS_Realloc(rampData->parameterNumber, sizeof(*rampData->parameterNumber)*(n_items+1));
     rampData->flags            = SDDS_Realloc(rampData->flags, sizeof(*rampData->flags)*(n_items+1));
@@ -143,33 +99,35 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
     rampData->startValue       = SDDS_Realloc(rampData->startValue, sizeof(*rampData->startValue)*(n_items+1));
     rampData->endValue         = SDDS_Realloc(rampData->endValue, sizeof(*rampData->endValue)*(n_items+1));
     rampData->exponent         = SDDS_Realloc(rampData->exponent, sizeof(*rampData->exponent)*(n_items+1));
-    
+
+    rampData->element[n_items] = context;
     rampData->flags[n_items] = (multiplicative?MULTIPLICATIVE_RAMP:0) + (differential?DIFFERENTIAL_RAMP:0) 
-      + (verbose?VERBOSE_RAMP:0);
+      + (verbose?VERBOSE_RAMP:0) + (refresh_matrix?REFRESH_MATRIX_RAMP:0);
     rampData->startPass[n_items] = start_pass;
     rampData->endPass[n_items] = end_pass;
     rampData->startValue[n_items] = start_value;
     rampData->endValue[n_items] = end_value;
     rampData->exponent[n_items] = exponent;
-
-    rampData->element[n_items] = context;
     
     if ((rampData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
-      fprintf(stdout, "error: cannot ramp %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+      fprintf(stdout, "error: cannot ramp %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
       fflush(stdout);
       exitElegant(1);
     }
+
     rampData->unperturbedValue[n_items] 
       = parameter_value(context->name, context->type, rampData->parameterNumber[n_items], beamline);
+
     if (rampData->unperturbedValue[n_items]==0 && rampData->flags[n_items]&MULTIPLICATIVE_RAMP) {
       fprintf(stdout, "***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
-              context->name,  item);
+              context->name, item);
       fflush(stdout);
     }
-    rampData->nItems += 1;
+    rampData->nItems = ++n_items;
     n_added++;
+    if (firstIndexInGroup==-1)
+      firstIndexInGroup = n_items-1;
   }
-  
 
   if (!n_added) {
     fprintf(stdout, "error: no match given modulation\n");
@@ -236,7 +194,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 
-        entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX) {
+        entity_description[type].parameter[param].flags&PARAM_CHANGES_MATRIX &&
+        ((rampData->flags[iMod]&REFRESH_MATRIX_RAMP) ||
+         (entity_description[type].flags&MATRIX_TRACKING))) {
       /* update the matrix */
       if (rampData->element[iMod]->matrix) {
         free_matrices(rampData->element[iMod]->matrix);

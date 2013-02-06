@@ -378,6 +378,7 @@ typedef struct {
 #define DIFFERENTIAL_RAMP   0x01
 #define MULTIPLICATIVE_RAMP 0x02
 #define VERBOSE_RAMP        0x04
+#define REFRESH_MATRIX_RAMP 0x08
     double *unperturbedValue;    /* value without modulation */
     long *startPass, *endPass;
     double *startValue, *endValue, *exponent;
