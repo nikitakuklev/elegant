@@ -174,7 +174,7 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
                    long method, long mode,
                    double **K, double **TotalPower, double **OnAxisPowerDensity, double ***FnOut,
                    double ***Energy, double ***Flux, double ***LambdarOut);
-
+void UndulatorCentralConeFlux(ELECTRON_BEAM_PARAM eBeam, UNDULATOR_PARAM undulator, int h, double *K, double *CentralConeFlux);
 void getKValueDataFromFile(UNDULATOR_PARAM *undulator_param);
 
 int main(int argc, char **argv)
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
   unsigned long pipeFlags;
   long harmonics, tmpFileUsed, i_arg, readCode, h, ih;
   unsigned long dummyFlags;
-  long method, iE, nE, ihMin, ihMax, mode = 4;
+  long method, nE, ihMin, ihMax, mode = 4;
   double *KK, **FnOut, **Energy, **Flux, **LambdarOut, *TotalPower, *OnAxisPowerDensity, *CentralConeFlux;
   int32_t neks;
   PINHOLE_PARAM pinhole_param;
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
 	      undulator_param.nPoints<1)
 	    SDDS_Bomb("invalid -undulator syntax: invalid k values provided.");
 	} else {
-	  if (!undulator_param.flags&UNDULATOR_KCOLUMN_GIVEN)
+	  if (!(undulator_param.flags&UNDULATOR_KCOLUMN_GIVEN))
 	    SDDS_Bomb("invalid -undulator syntax: kcolumn provided.");
 	  getKValueDataFromFile(&undulator_param);
 	}
@@ -409,25 +409,23 @@ int main(int argc, char **argv)
                   &KK, &TotalPower, &OnAxisPowerDensity,
                   &FnOut, &Energy, &Flux, &LambdarOut);
     electron_param.current /= 1e3; 
-    if (mode==2)
+    if (mode==2) {
       CentralConeFlux = tmalloc(sizeof(double)*nE);
+    }
     
 #ifdef DEBUG
     fprintf(stderr, "Returned from CalculateFlux\n");
 #endif
     for (ih=0; ih<harmonics; ih++) {
       h = ih*2+1;
+      if (mode==2)
+        UndulatorCentralConeFlux(electron_param, undulator_param, h, KK, CentralConeFlux);
       if (h==1 && 
           (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, KK, nE, 0) ||
            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, TotalPower, nE, 1) ||
            !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, OnAxisPowerDensity, nE, 2)))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (mode==2) {
-        for (iE=0; iE<nE; iE++)
-	  /* The central cone flux is approximately 2*pi*sigmarp^2*fluxDensity */
-	  /* where 2*pi is chosen to match KJK's formula in the x-ray data book */
-          /* The 10^6 is to account for the fact that the flux density is per mrad^2 */
-          CentralConeFlux[iE] = PI*Flux[ih][iE]*LambdarOut[ih][iE]/(2*undulator_param.period*undulator_param.nPeriods)*1e6;
         if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*5+3) ||
             !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, CentralConeFlux, nE, ih*5+4) ||
             !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*5+5) ||
@@ -1265,3 +1263,44 @@ void getKValueDataFromFile(UNDULATOR_PARAM *undulator_param)
     SDDS_Bomb("Invalid k values provided for undulator-- has to at least two points, and in increasing order."); 
   
 }
+
+double Undulator_QnK(int n, double K) {
+  double x, sJJ;
+  
+  x = n*K*K/(4 + 2*K*K);
+  sJJ = jn((n-1)/2, x) - jn((n+1)/2, x);
+
+  return n*sqr(K*sJJ)/(1+K*K/2);
+}
+
+double Undulator_QnKK(int n, double Kx, double Ky) {
+  /* After J. Clarke's 2010 Lecture */
+  double Y, K2p, K2m, Jp, Jm;
+
+  K2p = sqr(Kx)+sqr(Ky);
+  K2m = sqr(Ky)-sqr(Kx);
+  Y = n*K2m/(4+2*K2p);
+  Jp = jn((n+1)/2, Y);
+  Jm = jn((n-1)/2, Y);
+  
+  return n*(sqr(Kx*(Jp+Jm)) + sqr(Ky*(Jp-Jm)))/(1+K2p/2);
+}
+
+
+void UndulatorCentralConeFlux(ELECTRON_BEAM_PARAM eBeam, UNDULATOR_PARAM undulator, int h, double *K, double *CentralConeFlux) 
+{
+  long iK;
+
+  if (undulator.flags&UNDULATOR_HELICAL_GIVEN) {
+    for (iK=0; iK<undulator.nPoints; iK++) {
+      CentralConeFlux[iK] = 1.431e14*eBeam.current*undulator.nPeriods*Undulator_QnKK(h, K[iK], K[iK]);
+    }
+  } else {
+    for (iK=0; iK<undulator.nPoints; iK++) 
+      CentralConeFlux[iK] = 1.431e14*eBeam.current*undulator.nPeriods*Undulator_QnK(h, K[iK]);
+  }
+  
+}
+
+
+
