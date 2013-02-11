@@ -119,6 +119,7 @@ if {[lsearch -exact $columnList OnAxisPowerDensity]!=-1 && [lsearch -exact $colu
     eval exec sddsxref $fileList -pipe=out -take=* \
 	| sddsprocess -pipe \
 	"{-define=column,$name,$BList $count maxn,units=$units}" \
+        "{-redefine=column,K,$KList $count maxn}" \
         | sddsconvert -pipe=in $output.tmp  \
         -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??
 }
