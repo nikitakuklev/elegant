@@ -124,12 +124,7 @@ if {[lsearch -exact $columnList OnAxisPowerDensity]!=-1 && [lsearch -exact $colu
 }
     
 if $breakPages {
-    exec sddsprocess $output.tmp -pipe=out \
-      "-define=column,Break1,$name 1e6 < ? 1 : 0  \$ "  \
-      "-define=column,Break2,i_row 0 == ? 0 : $name i_row 1 - &$name \[ 1e-16 + / 1.1 / int \$ " \
-      "-define=column,Break,Break1 Break2 +" \
-      | sddsbreak -pipe -change=Break \
-      | sddsprocess -pipe=in -nowarning -filter=col,Break,0,0 "-test=parameter,n_rows 1 > " $output
+    exec sddsbreak $output.tmp $output -increase=K 
 } else {
     file rename $output.tmp $output
 }
