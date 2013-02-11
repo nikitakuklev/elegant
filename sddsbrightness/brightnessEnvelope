@@ -51,6 +51,7 @@ if [expr $PEMin==$PEMax] {
 }
 
 set fileList ""
+
 set BList ""
 set count 0
 switch $mode {
@@ -69,26 +70,23 @@ switch $mode {
     default -
     brightness {
         set name Brightness
+	return -code "not ready for brightness yet"
         set units "photons/s/mrad\$a2\$n/mm\$a2\$n/0.1%BW"
     }
 }
 
 set extraInterpList "K"
 set columnList [APSGetSDDSNames -class column -fileName $input]
-if [lsearch -exact $columnList OnAxisPowerDensity]!=-1 {
-    lappend extraInterpList OnAxisPowerDensity
-} 
-if [lsearch -exact $columnList TotalPower]!=-1 {
-    lappend extraInterpList TotalPower
-} 
+foreach extraItem {OnAxisPowerDensity TotalPower} {
+    if [lsearch -exact $columnList $extraItem]!=-1 {
+	lappend extraInterpList $extraItem
+    } 
+}
 
 for {set h 1} {$h<=$hmax} {incr h 2} {
     set interpList $extraInterpList
     lappend interpList $name$h
-    set renameList [list photonEnergy$h=photonEnergy]
-    foreach item $extraInterpList {
-	lappend renameList $item=${item}$h
-    }
+    set renameList [list photonEnergy$h=photonEnergy $name$h=$name]
     if [catch {exec sddssort $input -pipe=out -column=photonEnergy$h,incr \
                  | sddsprocess -pipe "-test=column,photonEnergy$h 0 >" \
                  | sddsinterp -pipe \
@@ -98,34 +96,20 @@ for {set h 1} {$h<=$hmax} {incr h 2} {
         break
     } else {
         lappend fileList $input.$h
-        lappend BList $name$h
-        lappend PDList OnAxisPowerDensity$h
-        lappend TPList TotalPower$h
-        lappend KList K$h
         incr count
     }
 }
 
-if {[lsearch -exact $columnList OnAxisPowerDensity]!=-1 && [lsearch -exact $columnList TotalPower]!=-1} {
-    eval exec sddsxref $fileList -pipe=out -take=* \
-	| sddsprocess -pipe \
-	"{-define=column,$name,$BList $count maxn,units=$units}" \
-	"{-redefine=column,OnAxisPowerDensity,$PDList $count maxn,units=W/mrad\$a2\$n}" \
-	"{-redefine=column,TotalPower,$TPList $count maxn,units=W}" \
-        "{-redefine=column,K,$KList $count maxn}" \
-	| sddsconvert -pipe=in $output.tmp  \
-	-delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??
-} else {
-    eval exec sddsxref $fileList -pipe=out -take=* \
-	| sddsprocess -pipe \
-	"{-define=column,$name,$BList $count maxn,units=$units}" \
-        "{-redefine=column,K,$KList $count maxn}" \
-        | sddsconvert -pipe=in $output.tmp  \
-        -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??
-}
+eval exec sddscombine $fileList -pipe=out \
+    | sddsprocess -pipe "{-define=column,harmonic,i_page 2 * 1 -,type=long}" \
+    | sddscombine -pipe -merge \
+    | sddssort -pipe -column=photonEnergy,incr -column=$name,incr \
+    | sddsbreak -pipe -change=photonEnergy \
+    | sddsprocess -pipe -clip=0,1,invert \
+    | sddscombine -merge -pipe=in $output.tmp
     
 if $breakPages {
-    exec sddsbreak $output.tmp $output -increase=K 
+    exec sddsbreak $output.tmp $output -change=harmonic
 } else {
     file rename $output.tmp $output
 }
