@@ -902,7 +902,7 @@ void angle_integration(long lopt, long nE,
   *p2 = calloc(sizeof(**p2), nE);
   *p3 = calloc(sizeof(**p3), nE);
   *p4 = calloc(sizeof(**p4), nE);
-  fprintf(stderr, "dec=%f\n", dec);
+  /* fprintf(stderr, "dec=%f\n", dec); */
   ecpa[0] = ec0;
   for (i=0; i<nxa; i++) {
     if (lopt==1 || lopt==2) {
