@@ -381,7 +381,8 @@ int main(int argc, char **argv)
                           "PinholeDistance", pdistance, "PinholeXPos", xpc, "PinholeYPos", ypc, 
                           "PinholeXSize", xsize, "PinholeYSize", ysize, "PinholeXPoints", nxp, "PinholeYPoints", nyp,
                           "b0", b0, "ec0", ec0/1.0e3, "e1", e1z, "lamda1", lamda1, 
-                          "TotalPowerDensity", isAngular ? totalPowerDensity : totalPowerDensity/d2, "TotalPower", totalPower, NULL))
+                          "TotalPowerDensity", isAngular ? totalPowerDensity : totalPowerDensity/d2, "TotalPower", totalPower, 
+			  "Mode", mode, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);  
   switch (mode) {
   case 1:
@@ -478,7 +479,8 @@ void SetupOutputFile(char *filename, SDDS_DATASET *SDDSout, long mode, long isAn
       SDDS_DefineParameter(SDDSout, "lamda1", NULL, "A", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "TotalPowerDensity",  NULL, 
                            "Watts/mm$a2$n or mrad$a2$n", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "TotalPower",  NULL, "Watts", NULL, NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_DefineParameter(SDDSout, "TotalPower",  NULL, "Watts", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout, "Mode", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   switch (mode) {
   case 1:
@@ -553,10 +555,10 @@ void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysiz
                   long bendingMagnet, long *isAngular, double *pdistance,
                   double *xps, double *yps, long *nxp, long *nyp, double emin, double emax)
 {
-  /* if (mode==3) {
+  if (mode==3) {
     fprintf(stderr, "On-axis brightness spectrum (mode=3) not implemented in ws!\n");
     exit(1);
-    } */
+  }
   if (mode<1) {
     fprintf(stderr, "Error(sddsws): the computation mode is not provided.\n");
     exit(1);
