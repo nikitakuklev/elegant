@@ -307,9 +307,9 @@ int main(int argc, char **argv)
   if (outputfile && pipeFlags) 
     SDDS_Bomb("Too many files provided.");
   if (!nowarnings) {
-    fprintf(stdout, "Warning: the polarization parameters (P1, P2, P3 and P4 in the output file) are provided although not thoroughly tested, use with caution.\n");
+    fprintf(stderr, "Warning: the polarization parameters (P1, P2, P3 and P4 in the output file) are provided although not thoroughly tested, use with caution.\n");
     if (bendingMagnet) 
-      fprintf(stdout, "Warning: the result may be inaccurate for bending magnet, use with caution.\n");
+      fprintf(stderr, "Warning: the result may be inaccurate for bending magnet, use with caution.\n");
   }
   checkWSInput(mode, &xpc, &ypc, xsize, ysize, nE, kx, ky, bendingMagnet, &isAngular, &pdistance, &xsize, &ysize, &nxp, &nyp, emin, emax);
   compute_constants(nE, nxp, nyp, nPeriod, energy, current, kx, ky, period, pdistance, emax, emin, xpc, ypc, xsize, ysize);
