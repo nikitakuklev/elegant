@@ -227,7 +227,7 @@ C  output parameters
 	REAL*8          EU_O(*)
 C       Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 	INTEGER*4	RECL_SZ,BLOCK_SZ,BUFFER_SZ
 	PARAMETER	(BLOCK_SZ=12288,BUFFER_SZ=1) ! Blocksize in bytes
 	
@@ -1107,7 +1107,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1279,7 +1279,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE1,LE2
@@ -1549,7 +1549,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1693,7 +1693,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1844,7 +1844,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE
@@ -2065,7 +2065,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	ICALC,I,IC,ID
@@ -2130,7 +2130,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=500001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	I,IC,ID
@@ -2312,7 +2312,7 @@ C  Common blocks:
 C[subroutine_header_comments]
 C  Size parameters:
 	INTEGER*4	E_SZ
-	PARAMETER	(E_SZ=50001)
+	PARAMETER	(E_SZ=500001)
 
 C  Declarations of scalars:
 	INTEGER*4	IE,IW
@@ -2358,7 +2358,7 @@ c  Return in original array
 C[subroutine_header_comments]
 C  Size parameters:
 	INTEGER*4	E_SZ
-	PARAMETER	(E_SZ=50001)
+	PARAMETER	(E_SZ=500001)
 
 C  Declarations of scalars:
 	INTEGER*4	IE,IEU,J1,J2
