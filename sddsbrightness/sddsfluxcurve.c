@@ -251,7 +251,7 @@ int main(int argc, char **argv)
                           "helical", -1, NULL, 0, UNDULATOR_HELICAL_GIVEN,
                           "planar", -1, NULL, 0, UNDULATOR_PLANAR_GIVEN,
                           NULL) ||
-            undulator_param.period<=0 || undulator_param.nPeriods<=10)
+            undulator_param.period<=0 || undulator_param.nPeriods<10)
           SDDS_Bomb("invalid -undulator parameters/values");
 	if (!(undulator_param.flags&UNDULATOR_KFILENAME_GIVEN)) {
 	  if (undulator_param.KMin<=0 || undulator_param.KMax<undulator_param.KMax ||
