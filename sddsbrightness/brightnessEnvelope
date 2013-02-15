@@ -6,7 +6,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSStandardSetup
 
-set usage {usage: brightnessEnvelope -input <filename> -output <filename> -mode {brightness|flux|fluxdensity|centralconeflux} [-hmax <integer>(9)] [-spacing <keV>(0.1)] [-range <min>,<max>] [-breakPages {0|1}(1)] [-fast 1]}
+set usage {usage: brightnessEnvelope -input <filename> -output <filename> -mode {brightness|flux|fluxdensity|centralconeflux|pinholeflux} [-hmax <integer>(9)] [-spacing <keV>(0.1)] [-range <min>,<max>] [-breakPages {0|1}(1)] [-fast 1]}
 set input ""
 set output ""
 set mode brightness
@@ -66,6 +66,10 @@ switch $mode {
     }
     centralconeflux {
         set name CentralConeFlux
+        set units "photons/s/0.1%BW"
+    }
+    pinholeflux {
+        set name PinholeFlux
         set units "photons/s/0.1%BW"
     }
     default -
@@ -160,13 +164,13 @@ if $fast {
 	    "{-redefine=column,TotalPower,$TPList $count maxn,units=W}" \
 	    "{-redefine=column,K,$KList $count maxn}" \
 	    | sddsconvert -pipe=in $output.tmp  \
-	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??
+	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??,PinholeFlux?,PinholeFlux??
     } else {
 	eval exec sddsxref $fileList -pipe=out -take=* \
 	    | sddsprocess -pipe \
 	    "{-define=column,$name,$BList $count maxn,units=$units}" \
 	    | sddsconvert -pipe=in $output.tmp  \
-	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??
+	    -delete=column,OnAxisPowerDensity?,OnAxisPowerDensity??,TotalPower?,TotalPower??,K?,K??,Brightness?,Brightness??,CentralConeFlux?,CentralConeFlux??,PinholeFlux?,PinholeFlux??
     }
     
     if $breakPages {
