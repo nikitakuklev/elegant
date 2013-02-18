@@ -4536,7 +4536,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     voltage = (q=rf_setup_struct.over_voltage)*beamline->radIntegrals.Uo*1e6/nRfca;
   else {
     voltage = rf_setup_struct.total_voltage/nRfca;
-    q = voltage/(beamline->radIntegrals.Uo*1e6);
+    q = rf_setup_struct.total_voltage/(beamline->radIntegrals.Uo*1e6);
   }
 
   if (voltage) {
