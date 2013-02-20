@@ -972,7 +972,11 @@ typedef struct {
 #define DEFAULT_N_SECTIONS 10
 #define DEFAULT_ACCURACY 1e-4
 #define DEFAULT_INTEG_METHOD "runge-kutta"
+#if USE_MPI
+#define DEFAULT_FIDUCIAL_MODE "t,ave"
+#else
 #define DEFAULT_FIDUCIAL_MODE "t,median"
+#endif
 #define DEFAULT_RAMP_TIME 1e-9
 #define DEFAULT_RADIAL_OFFSET 1.0
 #define DEFAULT_BETA_WAVE 1.0
