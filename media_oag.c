@@ -69,8 +69,15 @@
    return 1;               
  }
 
+
 long find_median_of_row_p(double *best_particle, double **x, long index, long n, long n_total)
 {
+/******
+
+This routine does not work. If, for example, the particles are presorted on the processors due to being
+sorted in the input file, it will fail. Plus, it was never adapted for the non-working-master implementation
+
+*****/
     static double **data = NULL;
     static long last_n = 0;
     long i, j, global_median_position = n_total/2, last_index, first_index, median_found, best_i;
