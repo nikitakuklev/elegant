@@ -774,7 +774,7 @@ void (*set_up_derivatives(
     twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * (twla->focussing?1:0) / (*kscale);
     twla->EzS    = twla->Ez * Escale;
     twla->BsolS  = twla->B_solenoid * Bscale;
-    twla->FrP = 4*sqr(particleCharge*twla->Ez/omega)/gamma*twla->sum_bn2;
+    twla->FrP = 4*sqr(particleCharge*twla->Ez/(omega*particleMass*c_mks))/gamma*twla->sum_bn2;
     if (!twlaBeenWarned && twla->sum_bn2!=0 && fabs(particleCharge*twla->Ez*PI/(2*twla->kz*me_mks*sqr(c_mks))/P_central_inner_scope)>0.1) {
       fprintf(stdout, "****\n");
       fprintf(stdout, "Warning: TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.");
