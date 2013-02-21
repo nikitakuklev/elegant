@@ -88,10 +88,10 @@ void quadFringe(double **coord, long np, double K1,
 		  + 27*ipow(a,3)*ipow(y,6)))))/8;
 
       } else {
-        dx  = a*(ipow(x,3) + 3*x*ipow(y,2))/3;
-        dpx = a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
-        dy  = a*(-ipow(x,2)*y - ipow(y,3)/3);
-        dpy = a*(-py*ipow(x,2) - 2*px*x*y - py*ipow(y,2));
+        dx  = a*(ipow(x,3) + 3*x*ipow(y,2));
+        dpx = 3*a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
+        dy  = a*(-3*ipow(x,2)*y - ipow(y,3));
+        dpy = 3*a*(py*ipow(x,2) - 2*px*x*y + py*ipow(y,2));
       }
       ds  = (a/(1+delta))*(3*py*y*ipow(x,2) - px*ipow(x,3) - 3*px*x*ipow(y,2) + py*ipow(y,3));
     }
@@ -109,7 +109,7 @@ void quadFringe(double **coord, long np, double K1,
     vec[1] = M->R[1][0]*x + M->R[1][1]*px;
     vec[2] = M->R[2][2]*y + M->R[2][3]*py;
     vec[3] = M->R[3][2]*y + M->R[3][3]*py;
-    vec[4] += ds;
+    vec[4] -= ds;
   }
   free_matrices(M);
   free(M);
