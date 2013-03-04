@@ -4504,7 +4504,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   
   beta = run->p_central/sqrt(sqr(run->p_central)+1);
   T0 = beamline->revolution_length/(beta*c_mks);
-  if (rf_setup_struct.harmonic)
+  if (rf_setup_struct.harmonic>0)
     harmonic = rf_setup_struct.harmonic;
   else
     harmonic = rf_setup_struct.near_frequency*T0+0.5;
