@@ -63,37 +63,52 @@ void quadFringe(double **coord, long np, double K1,
     dx = dpx = dy = dpy = ds = 0;
     
     if (higherOrder>0) {
+      double xpow[9], ypow[9], apow[4];
+      long i;
+      xpow[0] = ypow[0] = 1;
+      apow[0] = 1;
+
       if (higherOrder>1) {
-        dx  = (a*x*(8*(ipow(x,2) + 3*ipow(y,2)) + 4*ipow(a,2)*(5*ipow(x,6) + 21*ipow(x,4)*ipow(y,2) 
-		  - 25*ipow(x,2)*ipow(y,4) - ipow(y,6)) + ipow(a,3)*(35*ipow(x,8) + 84*ipow(x,6)*ipow(y,2) 
-		  + 498*ipow(x,4)*ipow(y,4) - 108*ipow(x,2)*ipow(y,6) + 3*ipow(y,8)) + 12*a*ipow(ipow(x,2)
-		  - ipow(y,2),2)))/8;
-        dpx = (a*(12*a*(-4*py*x*y + px*(ipow(x,2) - 5*ipow(y,2)))*(ipow(x,2) - ipow(y,2)) 
-		  - 24*(-2*py*x*y + px*(ipow(x,2) + ipow(y,2))) + 4*ipow(a,2)*(-2*py*x*y*(3*ipow(x,4) 
-		  + 50*ipow(x,2)*ipow(y,2) - 21*ipow(y,4)) + px*(ipow(x,6) + 75*ipow(x,4)*ipow(y,2) 
-		  - 105*ipow(x,2)*ipow(y,4) - 35*ipow(y,6))) + 3*ipow(a,3)*(-8*py*x*y*(ipow(x,6) 
-		  - 27*ipow(x,4)*ipow(y,2) + 83*ipow(x,2)*ipow(y,4) + 7*ipow(y,6)) + px*(ipow(x,8) 
-		  - 108*ipow(x,6)*ipow(y,2) + 830*ipow(x,4)*ipow(y,4) + 196*ipow(x,2)*ipow(y,6) 
-		  + 105*ipow(y,8)))))/8;
-        dy  = (a*y*(-8*(3*ipow(x,2) + ipow(y,2)) + 4*ipow(a,2)*(ipow(x,6) + 25*ipow(x,4)*ipow(y,2) 
-		  - 21*ipow(x,2)*ipow(y,4) - 5*ipow(y,6)) + ipow(a,3)*(3*ipow(x,8) - 108*ipow(x,6)*ipow(y,2) 
-		  + 498*ipow(x,4)*ipow(y,4) + 84*ipow(x,2)*ipow(y,6) + 35*ipow(y,8)) + 12*a*ipow(ipow(x,2) 
-		  - ipow(y,2),2)))/8;
-        dpy = (a*(-8*px*x*y*(6 - 6*a*(ipow(x,2) - ipow(y,2)) + ipow(a,2)*(21*ipow(x,4) 
-		  - 50*ipow(x,2)*ipow(y,2) - 3*ipow(y,4)) + 3*ipow(a,3)*(7*ipow(x,6) + 83*ipow(x,4)*ipow(y,2)
-		  - 27*ipow(x,2)*ipow(y,4) + ipow(y,6))) + py*(315*ipow(a,3)*ipow(x,8) 
-		  + 28*ipow(a,2)*ipow(x,6)*(5 + 21*a*ipow(y,2)) + 30*a*ipow(x,4)*(2 + 14*a*ipow(y,2) 
-		  + 83*ipow(a,2)*ipow(y,4)) + ipow(y,2)*(24 + 12*a*ipow(y,2) - 4*ipow(a,2)*ipow(y,4)
-		  + 3*ipow(a,3)*ipow(y,6)) - 12*ipow(x,2)*(-2 + 6*a*ipow(y,2) + 25*ipow(a,2)*ipow(y,4) 
-		  + 27*ipow(a,3)*ipow(y,6)))))/8;
+        for (i=1; i<9; i++) {
+          xpow[i] = xpow[i-1]*x;
+          ypow[i] = ypow[i-1]*y;
+        }
+        for (i=1; i<4; i++)
+          apow[i] = apow[i-1]*a;
+        dx  = (a*x*(8*(xpow[2] + 3*ypow[2]) + 4*apow[2]*(5*xpow[6] + 21*xpow[4]*ypow[2] 
+		  - 25*xpow[2]*ypow[4] - ypow[6]) + apow[3]*(35*xpow[8] + 84*xpow[6]*ypow[2] 
+		  + 498*xpow[4]*ypow[4] - 108*xpow[2]*ypow[6] + 3*ypow[8]) + 12*a*ipow(xpow[2]
+		  - ypow[2],2)))/8;
+        dpx = (a*(12*a*(-4*py*x*y + px*(xpow[2] - 5*ypow[2]))*(xpow[2] - ypow[2]) 
+		  - 24*(-2*py*x*y + px*(xpow[2] + ypow[2])) + 4*apow[2]*(-2*py*x*y*(3*xpow[4] 
+		  + 50*xpow[2]*ypow[2] - 21*ypow[4]) + px*(xpow[6] + 75*xpow[4]*ypow[2] 
+		  - 105*xpow[2]*ypow[4] - 35*ypow[6])) + 3*apow[3]*(-8*py*x*y*(xpow[6] 
+		  - 27*xpow[4]*ypow[2] + 83*xpow[2]*ypow[4] + 7*ypow[6]) + px*(xpow[8] 
+		  - 108*xpow[6]*ypow[2] + 830*xpow[4]*ypow[4] + 196*xpow[2]*ypow[6] 
+		  + 105*ypow[8]))))/8;
+        dy  = (a*y*(-8*(3*xpow[2] + ypow[2]) + 4*apow[2]*(xpow[6] + 25*xpow[4]*ypow[2] 
+		  - 21*xpow[2]*ypow[4] - 5*ypow[6]) + apow[3]*(3*xpow[8] - 108*xpow[6]*ypow[2] 
+		  + 498*xpow[4]*ypow[4] + 84*xpow[2]*ypow[6] + 35*ypow[8]) + 12*a*ipow(xpow[2] 
+		  - ypow[2],2)))/8;
+        dpy = (a*(-8*px*x*y*(6 - 6*a*(xpow[2] - ypow[2]) + apow[2]*(21*xpow[4] 
+		  - 50*xpow[2]*ypow[2] - 3*ypow[4]) + 3*apow[3]*(7*xpow[6] + 83*xpow[4]*ypow[2]
+		  - 27*xpow[2]*ypow[4] + ypow[6])) + py*(315*apow[3]*xpow[8] 
+		  + 28*apow[2]*xpow[6]*(5 + 21*a*ypow[2]) + 30*a*xpow[4]*(2 + 14*a*ypow[2] 
+		  + 83*apow[2]*ypow[4]) + ypow[2]*(24 + 12*a*ypow[2] - 4*apow[2]*ypow[4]
+		  + 3*apow[3]*ypow[6]) - 12*xpow[2]*(-2 + 6*a*ypow[2] + 25*apow[2]*ypow[4] 
+		  + 27*apow[3]*ypow[6]))))/8;
 
       } else {
-        dx  = a*(ipow(x,3) + 3*x*ipow(y,2));
-        dpx = 3*a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
-        dy  = a*(-3*ipow(x,2)*y - ipow(y,3));
-        dpy = 3*a*(py*ipow(x,2) - 2*px*x*y + py*ipow(y,2));
+        for (i=1; i<4; i++) {
+          xpow[i] = xpow[i-1]*x;
+          ypow[i] = ypow[i-1]*y;
+        }
+        dx  = a*(xpow[3] + 3*x*ypow[2]);
+        dpx = 3*a*(-px*xpow[2] + 2*py*x*y - px*ypow[2]);
+        dy  = a*(-3*xpow[2]*y - ypow[3]);
+        dpy = 3*a*(py*xpow[2] - 2*px*x*y + py*ypow[2]);
       }
-      ds  = (a/(1+delta))*(3*py*y*ipow(x,2) - px*ipow(x,3) - 3*px*x*ipow(y,2) + py*ipow(y,3));
+      ds  = (a/(1+delta))*(3*py*y*xpow[2] - px*xpow[3] - 3*px*x*ypow[2] + py*ypow[3]);
     }
     
 
