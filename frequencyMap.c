@@ -74,6 +74,12 @@ void setupFrequencyMap(
     bombElegant("ymin > ymax", NULL);
   if (delta_min>delta_max)
     bombElegant("delta_min > delta_max", NULL);
+  if (quadratic_spacing) {
+    if (xmin<0)
+      xmin = 0;
+    if (ymin<0)
+      ymin = 0;
+  }
   if (nx<1)
     nx = 1;
   if (ny<1)
@@ -177,15 +183,14 @@ long doFrequencyMap(
     printf("Error: lost particle when fiducializing\n");
     exitElegant(1);
   }
-  
-  if (nx>1)
-    dx  = (xmax-xmin)/(nx-1);
-  else
-    dx = 0;
-  if (ny>1)
-    dy = (ymax-ymin)/(ny-1);
-  else
-    dy = 0;
+
+  dx = dy = 0;
+  if (!quadratic_spacing) {
+    if (nx>1)
+      dx  = (xmax-xmin)/(nx-1);
+    if (ny>1)
+      dy = (ymax-ymin)/(ny-1);
+  }
   if (ndelta>1)
     ddelta = (delta_max-delta_min)/(ndelta-1);
   else
@@ -198,9 +203,17 @@ long doFrequencyMap(
   for (idelta=0; idelta<ndelta; idelta++) {
     delta = delta_min + idelta*ddelta;
     for (ix=0; ix<nx; ix++) {
-      x = xmin + ix*dx;
+      if (quadratic_spacing) {
+        x = xmin + (xmax-xmin)*sqrt((ix+1.)/nx);
+      } else {
+        x = xmin + ix*dx;
+      }
       for (iy=0; iy<ny; iy++) {
-	y = ymin + iy*dy;
+        if (quadratic_spacing) {
+          y = ymin + (ymax-ymin)*sqrt((iy+1.)/ny);
+        } else {
+          y = ymin + iy*dy;
+        }
 	memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
 	if (myid == (idelta*nx*ny+ix*ny+iy)%n_processors) /* Partition the job according to particle ID */

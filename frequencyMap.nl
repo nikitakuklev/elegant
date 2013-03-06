@@ -18,5 +18,6 @@
     long ndelta = 1;
     long verbosity = 1;
     long include_changes = 0;
+    long quadratic_spacing = 0;
 #end
 
