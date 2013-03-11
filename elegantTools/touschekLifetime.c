@@ -78,7 +78,7 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
  [-ignoreMismatch]\n\
-Program by A. Xiao.  (This is version 5, May 2012. M. Borland)";
+Program by A. Xiao.  (This is version 6, January 2013, A. Xiao)";
 
 #define VERBOSE 0
 #define CHARGE 1
