@@ -79,7 +79,7 @@ switch $mode {
     }
 }
 
-if $fast {
+if !$fast {
     set extraInterpList "K"
     set columnList [APSGetSDDSNames -class column -fileName $input]
     foreach extraItem {OnAxisPowerDensity TotalPower} {
