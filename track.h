@@ -883,7 +883,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 48
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 25
-#define N_TRFMODE_PARAMS 21
+#define N_TRFMODE_PARAMS 22
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 26
 #define N_MODRF_PARAMS 15
@@ -2244,6 +2244,7 @@ typedef struct {
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     long binless;
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
+    long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     long doX, doY;

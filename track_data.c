@@ -1440,6 +1440,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"BINLESS", "", IS_LONG, 0, (long)((char *)&trfmode_example.binless), NULL, 0.0, 0, "If nonzero, use algorithm that doesn't requiring binning.  Best for few particles, widely spaced."},
     {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&trfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
+    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&trfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via TRWAKE or ZTRANSVERSE element."},
     };
 
 FTRFMODE ftrfmode_example;

@@ -37,6 +37,7 @@ void track_through_trfmode(
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
+  double tPrevious, VxPrevious, xPhasePrevious, VyPrevious, yPhasePrevious;
   long ip, ib;
   double tmin, tmax, tmean, dt, P;
   double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
@@ -238,6 +239,11 @@ void track_through_trfmode(
       free(buffer);
     }
 #endif
+    VxPrevious = trfmode->Vx;
+    VyPrevious = trfmode->Vy;
+    xPhasePrevious = trfmode->last_xphase;
+    yPhasePrevious = trfmode->last_yphase;
+    tPrevious = trfmode->last_t;
     for (ib=0; ib<=lastBin; ib++) {
       if (!count[ib] || (!xsum[ib] && !ysum[ib]))
 	continue;
@@ -247,7 +253,7 @@ void track_through_trfmode(
       /* advance cavity to this time */
       damping_factor = exp(-(t-trfmode->last_t)/tau);
       if (damping_factor>1) {
-        fprintf(stdout, "*** Warning: damping factor >1 for TRFMODE\n");
+        fprintf(stdout, "*** Warning: damping factor = %le (>1) for TRFMODE\n", damping_factor);
         fflush(stdout);
       }
       if (trfmode->doX) {
@@ -274,8 +280,12 @@ void track_through_trfmode(
       if (trfmode->doX) {
 	/* -- x plane (NB: ramp factor is already in k) */
 	Vxb = 2*k*trfmode->mp_charge*particleRelSign*xsum[ib]*trfmode->xfactor;
-	Vxbin[ib] = trfmode->Vxr;
-	Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
+	if (trfmode->long_range_only) 
+	  Vxbin[ib] = VxPrevious*exp(-(t-tPrevious)/tau)*cos(xPhasePrevious + omega*(t-tPrevious));
+	else {
+	  Vxbin[ib] = trfmode->Vxr;
+	  Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
+	}
 	/* add beam-induced voltage to cavity voltage---it is imaginary as
 	 * the voltage is 90deg out of phase 
 	 */
@@ -289,8 +299,12 @@ void track_through_trfmode(
       if (trfmode->doY) {
 	/* -- y plane (NB: ramp factor is already in k) */
 	Vyb = 2*k*trfmode->mp_charge*particleRelSign*ysum[ib]*trfmode->yfactor;
-	Vybin[ib] = trfmode->Vyr;
-	Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
+	if (trfmode->long_range_only)
+	  Vybin[ib] = VyPrevious*exp(-(t-tPrevious)/tau)*cos(yPhasePrevious + omega*(t-tPrevious));
+	else {
+	  Vybin[ib] = trfmode->Vyr;
+	  Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
+	}
 	/* add beam-induced voltage to cavity voltage---it is imaginary as
 	 * the voltage is 90deg out of phase 
 	 */
@@ -396,6 +410,10 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     bombElegant("bin_size must be positive for TRFMODE", NULL);
   if (trfmode->Ra && trfmode->Rs) 
     bombElegant("TRFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+  if (trfmode->long_range_only) {
+    if (trfmode->single_pass)
+      bombElegant((char*)"single-pass and long-range modes are incompatible in TRFMODE", NULL);
+  }
   if (trfmode->Ra)
     trfmode->RaInternal = trfmode->Ra;
   else
