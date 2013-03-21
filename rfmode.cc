@@ -51,9 +51,10 @@ void track_through_rfmode(
     static long *pbin = NULL;                /* array to record which bin each particle is in */
     static double *time = NULL;              /* array to record arrival time of each particle */
     static long max_np = 0;
-    long ip, ib, nb2, lastBin=0, n_binned=0;
+    long ip, ib, lastBin=0, n_binned=0;
     double tmin=0, tmax, tmean, dt=0, P;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
+    double VPrevious, tPrevious, phasePrevious;
     double V_sum, Vr_sum, phase_sum;
     double Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
@@ -156,7 +157,7 @@ void track_through_rfmode(
 #else
     tmean /= np;
 #endif
-
+    
    if (isSlave) {
       tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
       tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
@@ -189,7 +190,6 @@ void track_through_rfmode(
       }
       V_sum = Vr_sum = phase_sum = Q_sum = 0;
       n_summed = max_hist = n_occupied = 0;
-      nb2 = rfmode->n_bins/2;
     
       /* find frequency and Q at this time */
       omega = PIx2*rfmode->freq;
@@ -254,6 +254,12 @@ void track_through_rfmode(
       */
      
 #endif 
+      /* These values are fixed and can be used to compute the effect on the beam of
+       * the "long-range" fields (previous turns) only
+       */
+      VPrevious = rfmode->V;
+      tPrevious = rfmode->last_t;
+      phasePrevious = rfmode->last_phase;
       for (ib=0; ib<=lastBin; ib++) {
 	if (!Ihist[ib])
           continue;
@@ -274,7 +280,10 @@ void track_through_rfmode(
 
         /* compute beam-induced voltage for this bin */
         Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval*Ihist[ib];
-        Vbin[ib] = rfmode->Vr - Vb/2;
+	if (rfmode->long_range_only)
+	  Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
+	else 
+	  Vbin[ib] = rfmode->Vr - Vb/2;
         
         /* add beam-induced voltage to cavity voltage */
         rfmode->Vr -= Vb;
@@ -347,10 +356,16 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   
   if (rfmode->initialized)
     return;
-  
+
   rfmode->initialized = 1;
   if (rfmode->pass_interval<=0)
     bombElegant((char*)"pass_interval <= 0 for RFMODE", NULL);
+  if (rfmode->long_range_only) {
+    if (rfmode->binless)
+      bombElegant((char*)"binless and long-range modes are incompatible in RFMODE", NULL);
+    if (rfmode->single_pass)
+      bombElegant((char*)"single-pass and long-range modes are incompatible in RFMODE", NULL);
+  }      
 #if !SDDS_MPI_IO
   if (n_particles<1)
     bombElegant((char*)"too few particles in set_up_rfmode()", NULL);

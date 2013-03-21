@@ -1396,6 +1396,8 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"Q_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&rfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"BINLESS", "", IS_LONG, 0, (long)((char *)&rfmode_example.binless), NULL, 0.0, 0, "If nonzero, use algorithm that doesn't requiring binning.  Best for few particles, widely spaced."},
+    {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&rfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
+    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&rfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
     };
 
 FRFMODE frfmode_example;
@@ -1411,6 +1413,7 @@ PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&frfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&frfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&frfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
+    {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&frfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
     };
 
 TRFMODE trfmode_example;
@@ -1436,6 +1439,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.yfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"BINLESS", "", IS_LONG, 0, (long)((char *)&trfmode_example.binless), NULL, 0.0, 0, "If nonzero, use algorithm that doesn't requiring binning.  Best for few particles, widely spaced."},
+    {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&trfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
     };
 
 FTRFMODE ftrfmode_example;
@@ -1454,6 +1458,7 @@ PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&ftrfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
+    {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
     };
 
 ZLONGIT zlongit_example;
