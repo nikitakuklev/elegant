@@ -27,6 +27,7 @@ void track_through_frfmode(
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
+  double *VPrevious = NULL, *phasePrevious = NULL, tPrevious;
   long ip, ib, nb2, lastBin, n_binned;
   double tmin, tmax, tmean, dt, P;
   double Vb, V, omega, phase, t, k, damping_factor, tau;
@@ -85,6 +86,14 @@ void track_through_frfmode(
 #endif
 
   if (isSlave) {
+    if (rfmode->long_range_only) {
+      VPrevious = tmalloc(sizeof(*VPrevious)*rfmode->modes);
+      phasePrevious = tmalloc(sizeof(*phasePrevious)*rfmode->modes);
+      for (imode=0; imode<rfmode->modes; imode++) {
+	VPrevious[imode] = rfmode->V[imode];
+	phasePrevious[imode] = rfmode->last_phase[imode];
+      }
+    }
     tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
     tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
 
@@ -126,7 +135,7 @@ void track_through_frfmode(
       rampFactor = 1;
     else
       rampFactor = (pass+1.0)/rfmode->rampPasses;
-    
+    tPrevious = rfmode->last_t;
     for (ib=0; ib<=lastBin; ib++) {
       t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
       if (!Ihist[ib])
@@ -160,8 +169,12 @@ void track_through_frfmode(
 	
 	/* compute beam-induced voltage for this bin */
 	Vb = 2*k*particleRelSign*rfmode->mp_charge*Ihist[ib]*rampFactor; 
-	Vbin[ib] += rfmode->Vr[imode] - Vb/2;
-      
+	if (rfmode->long_range_only) {
+	  Vbin[ib] += VPrevious[imode]*exp(-(t-tPrevious)/tau)*cos(phasePrevious[imode]+omega*(t-tPrevious));
+	} else {
+	  Vbin[ib] += rfmode->Vr[imode] - Vb/2;
+	}
+
 	/* add beam-induced voltage to cavity voltage */
 	rfmode->Vr[imode] -= Vb;
 	rfmode->Vi[imode] -= Vb*VbImagFactor;
@@ -212,6 +225,8 @@ void track_through_frfmode(
   free(Vbin);
   free(pbin);
   free(time);
+  if (VPrevious) free(VPrevious);
+  if (phasePrevious) free(phasePrevious);
   Ihist = pbin = NULL;
   Vbin = time = NULL;
   max_n_bins = max_np = 0;

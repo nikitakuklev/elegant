@@ -280,9 +280,11 @@ void track_through_trfmode(
       if (trfmode->doX) {
 	/* -- x plane (NB: ramp factor is already in k) */
 	Vxb = 2*k*trfmode->mp_charge*particleRelSign*xsum[ib]*trfmode->xfactor;
-	if (trfmode->long_range_only) 
-	  Vxbin[ib] = VxPrevious*exp(-(t-tPrevious)/tau)*cos(xPhasePrevious + omega*(t-tPrevious));
-	else {
+	if (trfmode->long_range_only) {
+	  double Vd = VxPrevious*exp(-(t-tPrevious)/tau);
+	  Vxbin[ib] = Vd*cos(xPhasePrevious + omega*(t-tPrevious));
+	  Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*Vd*sin(xPhasePrevious + omega*(t-tPrevious));
+	} else {
 	  Vxbin[ib] = trfmode->Vxr;
 	  Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
 	}
@@ -299,9 +301,11 @@ void track_through_trfmode(
       if (trfmode->doY) {
 	/* -- y plane (NB: ramp factor is already in k) */
 	Vyb = 2*k*trfmode->mp_charge*particleRelSign*ysum[ib]*trfmode->yfactor;
-	if (trfmode->long_range_only)
-	  Vybin[ib] = VyPrevious*exp(-(t-tPrevious)/tau)*cos(yPhasePrevious + omega*(t-tPrevious));
-	else {
+	if (trfmode->long_range_only) {
+	  double Vd = VyPrevious*exp(-(t-tPrevious)/tau);
+	  Vybin[ib] = Vd*cos(yPhasePrevious + omega*(t-tPrevious));
+	  Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*Vd*sin(yPhasePrevious + omega*(t-tPrevious));
+	} else {
 	  Vybin[ib] = trfmode->Vyr;
 	  Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
 	}

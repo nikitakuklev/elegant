@@ -1461,19 +1461,19 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             }
             break;
           case T_RFMODE:
-            if (includeRF)
+            if (includeRF && ((RFMODE*)eptr->p_elem)->reset_for_each_step)
               ((RFMODE*)eptr->p_elem)->initialized = 0;
             break;
           case T_FRFMODE:
-            if (includeRF)
+            if (includeRF && ((FRFMODE*)eptr->p_elem)->reset_for_each_step)
               ((FRFMODE*)eptr->p_elem)->initialized = 0;
             break;
           case T_TRFMODE:
-            if (includeRF)
+            if (includeRF && ((TRFMODE*)eptr->p_elem)->reset_for_each_step)
               ((TRFMODE*)eptr->p_elem)->initialized = 0;
             break;
           case T_FTRFMODE:
-            if (includeRF)
+            if (includeRF && ((FTRFMODE*)eptr->p_elem)->reset_for_each_step)
               ((FTRFMODE*)eptr->p_elem)->initialized = 0;
             break;
           case T_RAMPRF:

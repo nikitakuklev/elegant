@@ -39,6 +39,7 @@ void track_through_ftrfmode(
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
+  double *VxPrevious = NULL, *VyPrevious = NULL, *xPhasePrevious = NULL, *yPhasePrevious = NULL, tPrevious;
   long ip, ib;
   double tmin, tmax, tmean, dt, P;
   double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
@@ -125,6 +126,20 @@ void track_through_ftrfmode(
 
     dt = (tmax - tmin)/trfmode->n_bins;
     lastBin = -1;
+
+    if (trfmode->long_range_only) {
+      VxPrevious = tmalloc(sizeof(*VxPrevious)*trfmode->modes);
+      VyPrevious = tmalloc(sizeof(*VyPrevious)*trfmode->modes);
+      xPhasePrevious = tmalloc(sizeof(*xPhasePrevious)*trfmode->modes);
+      yPhasePrevious = tmalloc(sizeof(*yPhasePrevious)*trfmode->modes);
+      tPrevious = trfmode->last_t;
+      for (imode=0; imode<trfmode->modes; imode++) {
+	VxPrevious[imode] = trfmode->Vx[imode];
+	VyPrevious[imode] = trfmode->Vy[imode];
+	xPhasePrevious[imode] = trfmode->lastPhasex[imode];
+	yPhasePrevious[imode] = trfmode->lastPhasey[imode];
+      }
+    }
 
   if (isSlave) {  
     for (ip=0; ip<np; ip++) {
@@ -290,12 +305,17 @@ void track_through_ftrfmode(
 	  trfmode->Vxr[imode] = V*cos(phase);
 	  trfmode->Vxi[imode] = V*sin(phase);
 	  trfmode->lastPhasex[imode] = phase;
-	  /* add this cavity's contribution to this bin */
-	  Vxbin[ib] += trfmode->Vxr[imode];
-
-	  /* compute beam-induced voltage for this bin */
 	  Vxb = 2*k*trfmode->mp_charge*particleRelSign*xsum[ib]*trfmode->xfactor*rampFactor; 
-          Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi[imode] - Vxb/2);
+
+	  /* add this cavity's contribution to this bin */
+	  if (trfmode->long_range_only) {
+	    double Vd = VxPrevious[imode]*exp(-(t-tPrevious)/tau);
+	    Vxbin[ib] += Vd*cos(xPhasePrevious[imode] + omega*(t-tPrevious));
+	    Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*Vd*sin(xPhasePrevious[imode] + omega*(t-tPrevious));
+	  } else {
+	    Vxbin[ib] += trfmode->Vxr[imode];
+	    Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi[imode] - Vxb/2);
+	  }
 
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
@@ -317,12 +337,17 @@ void track_through_ftrfmode(
 	  trfmode->Vyr[imode] = V*cos(phase);
 	  trfmode->Vyi[imode] = V*sin(phase);
 	  trfmode->lastPhasey[imode] = phase;
-	  /* add this cavity's contribution to this bin */
-	  Vybin[ib] += trfmode->Vyr[imode];
-
-	  /* compute beam-induced voltage for this bin */
 	  Vyb = 2*k*trfmode->mp_charge*particleRelSign*ysum[ib]*trfmode->yfactor*rampFactor;
-          Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi[imode] - Vyb/2);
+
+	  /* add this cavity's contribution to this bin */
+	  if (trfmode->long_range_only) {
+	    double Vd = VyPrevious[imode]*exp(-(t-tPrevious)/tau);
+	    Vybin[ib] += Vd*cos(yPhasePrevious[imode] + omega*(t-tPrevious));
+	    Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*Vd*sin(yPhasePrevious[imode] + omega*(t-tPrevious));
+	  } else {
+	    Vybin[ib] += trfmode->Vyr[imode];
+	    Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi[imode] - Vyb/2);
+	  }
 
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
@@ -443,6 +468,10 @@ void track_through_ftrfmode(
 #endif
 
 #if defined(MINIMIZE_MEMORY)
+  if (VxPrevious) free(VxPrevious);
+  if (xPhasePrevious) free(xPhasePrevious);
+  if (VyPrevious) free(VyPrevious);
+  if (yPhasePrevious) free(yPhasePrevious);
   free(pbin);
   free(time);
   time = NULL;

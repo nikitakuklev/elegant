@@ -1414,6 +1414,7 @@ PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&frfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&frfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&frfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
+    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&frfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
     };
 
 TRFMODE trfmode_example;
@@ -1460,6 +1461,7 @@ PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
+    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
     };
 
 ZLONGIT zlongit_example;

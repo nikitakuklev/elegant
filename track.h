@@ -912,8 +912,8 @@ extern char *entity_text[N_TYPES];
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
-#define N_FRFMODE_PARAMS  11
-#define N_FTRFMODE_PARAMS 14
+#define N_FRFMODE_PARAMS  12
+#define N_FTRFMODE_PARAMS 15
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  13
@@ -2208,6 +2208,7 @@ typedef struct {
     long flushInterval;       /* interval at which data is flushed */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
+    long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -2279,6 +2280,7 @@ typedef struct {
     long flushInterval;       /* interval at which data is flushed */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
+    long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
