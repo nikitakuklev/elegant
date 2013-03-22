@@ -205,6 +205,8 @@ void correction_setup(
     _correct->minimum_cycles = minimum_cycles;
     if (threading_divisor[0]<=1 ||  threading_divisor[1]<=1)
       bombElegant("threading_divisors must be >1", NULL);
+    _correct->xplane = do_correction[0];
+    _correct->yplane = do_correction[1];
 
     _correct->CMx = tmalloc(sizeof(*_correct->CMx));
     _correct->CMy = tmalloc(sizeof(*_correct->CMy));
@@ -640,18 +642,18 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   case TRAJECTORY_CORRECTION:
     x_failed = y_failed = 0;
     if (usePerturbedMatrix) {
-      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0))
+      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0) && correct->xplane)
         compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 
                                  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
                                  (flags&NO_OUTPUT_CORRECTION? COMPUTE_RESPONSE_SILENT : 0));
-      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0))
+      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0) && correct->yplane)
         compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline,
                                  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
                                  (flags&NO_OUTPUT_CORRECTION ? COMPUTE_RESPONSE_SILENT : 0));
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
-      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon) {
+      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
         switch (correct->method) {
         case GLOBAL_CORRECTION:
           if (!global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
@@ -702,7 +704,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
         }
       }
-      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon) {                    
+      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
         final_traj = 2;
 
         switch (correct->method) {
@@ -780,7 +782,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (usePerturbedMatrix) {
       if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
         fprintf(stdout, "Computing orbit correction matrices\n"); 
-      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0)) {
+      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0) && correct->xplane) {
 	if (!correct->use_response_from_computed_orbits)
 	  compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline,
 				  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
@@ -792,7 +794,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 				  (fixedLengthMatrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
 				  (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT));
       }
-      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0)) {
+      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0) && correct->yplane) {
 	if (!correct->use_response_from_computed_orbits)
 	  compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline,
 				  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
@@ -808,7 +810,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
-      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon) {
+      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon && correct->xplane) {
         if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
                                          correct->n_iterations, correct->clorb_accuracy, 
                                          correct->clorb_iterations, 
@@ -848,7 +850,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
         }
       }
-      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon) {
+      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {
         final_traj = 2;
         if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
                                          correct->n_iterations, correct->clorb_accuracy, 

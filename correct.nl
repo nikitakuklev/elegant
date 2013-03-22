@@ -18,6 +18,7 @@
     double correction_accuracy[2] = {1e-6, 1e-6};
     long remove_smallest_SVs[2] = {0, 0};
     long keep_largest_SVs[2] = {0, 0};
+    long do_correction[2] = {1, 1};
     double minimum_SV_ratio[2] = {0, 0};
     long auto_limit_SVs[2] = {1, 1};
     long threading_divisor[2] = {100, 100};
