@@ -22,5 +22,6 @@
         long force_occurence_data = 0;
         long verbose = 0;
         long use_first = 0;
+        long read_page = 0;
 #end
 

@@ -3548,7 +3548,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-long do_load_parameters(LINE_LIST *beamline, long change_definitions);
+long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage);
 #define NO_LOAD_PARAMETERS 0
 #define PARAMETERS_LOADED 1
 #define PARAMETERS_ENDED 2
