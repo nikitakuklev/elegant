@@ -256,12 +256,6 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
   fflush(stdout);
 #endif
 
-  /* load parameter files before vary parameters */
-  parameters_loaded = 0;
-  /* fprintf(stdout,"istep=%ld, nstep=%ld, nindices=%ld\n", _control->i_step,_control->n_steps,_control->n_indices); */
-  if (!(_control->i_step>=_control->n_steps && !_control->n_indices))
-    parameters_loaded = do_load_parameters(beamline, 0, (_control->i_step+1));
-
   if ((_control->bunch_frequency==0 && _control->reset_rf_each_step) || 
       _control->i_step==0)
     delete_phase_references();
@@ -396,6 +390,10 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     }
     log_exit("vary_beamline.2");
   }
+
+  parameters_loaded = 0;
+  if (!(_control->i_step>=_control->n_steps && !_control->n_indices))
+    parameters_loaded = do_load_parameters(beamline, 0);
 
   if (errcon->n_items && do_perturbations) {
 #if DEBUG

@@ -39,7 +39,6 @@ typedef struct {
     ELEMENT_LIST **element;
     long *element_flags;
     long values;
-    long skipFirstPage;
     } LOAD_PARAMETERS;
 
 /* variables to store and manage load_parameters requests */
@@ -133,7 +132,6 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].excludeNamePattern = exclude_name_pattern;
   load_request[load_requests].excludeItemPattern = exclude_item_pattern;
   load_request[load_requests].excludeTypePattern = exclude_type_pattern;
-  load_request[load_requests].skipFirstPage = 0;
 #ifdef USE_MPE /* use the MPE library */    
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -256,7 +254,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_requests++;
   if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
     /* do this right away so that it gets propagated into error and vary operations */
-    do_load_parameters(beamline, 1, 1);
+    do_load_parameters(beamline, 1);
     if (printingEnabled) {
       fprintf(stdout, "New length per pass: %21.15e m\n",
 	      compute_end_positions(beamline));
@@ -265,10 +263,8 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   MPE_Log_event(event1b, 0, "end load_parameters");
 #endif
     /* No reason to keep this, so just decrement the counter */
-    if (!read_page) {
-        SDDS_Terminate(&load_request[load_requests-1].table);
-        load_requests --;
-    }
+    SDDS_Terminate(&load_request[load_requests-1].table);
+    load_requests --;
     return 1;
   }
 #ifdef  USE_MPE
@@ -278,7 +274,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 }
 
 
-long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage)
+long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
   long i, j, mode_flags, code, rows,  param, allFilesRead, allFilesIgnored;
   char **element, **parameter, **type, **mode, *p_elem, *p_elem0, *ptr, lastMissingElement[100];
@@ -297,19 +293,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage
   allFilesRead = 1;
   allFilesIgnored = 1;
   
-  if (read_page && ipage>1) change_definitions = 1;  
-  if (!read_page) ipage = 1;  
-
   for (i=0; i<load_requests; i++) {
-    if (!read_page) {
     if ((load_request[i].flags&COMMAND_FLAG_IGNORE) || 
         (!(load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) && change_definitions) ||
         ((load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) && !change_definitions) )
       continue;
-    }
-    if (read_page && ipage==1 && load_request[i].skipFirstPage) continue;
     hash_table = hcreate(12); /* create a hash table with the size of 2^12, it can grow automatically if necessary */
-    load_request[i].skipFirstPage = 1;
+
     allFilesIgnored = 0;
     if (load_request[i].last_code) {
       for (j=0; j<load_request[i].values; j++) {
@@ -329,7 +319,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage
         }
       }
     }
-    while (1) {
     if ((code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table))<1) {
       free(load_request[i].reset_address);
       load_request[i].reset_address = NULL;
@@ -348,17 +337,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage
 	  fflush(stdout);
 	}
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
-        return;
+        continue;
       }
       if (printingEnabled) {
 	fprintf(stdout, "Error: problem reading data from load_parameters file %s\n", load_request[i].filename);
 	fflush(stdout);
       }
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
-    /*    fprintf(stdout, "istep code=%ld, ipage=%ld \n", code, ipage); */
-    if (code==ipage) 
-      break;
     }
     allFilesRead = 0;
     SDDS_SetRowFlags(&load_request[i].table, 1);
@@ -742,7 +727,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions, long ipage
     free(value);
     if (occurence)
       free(occurence);
-    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS && !read_page) {
+    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
       free(load_request[i].reset_address);
       load_request[i].reset_address = NULL;
       free(load_request[i].value_type);
