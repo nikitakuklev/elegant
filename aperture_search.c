@@ -112,6 +112,11 @@ void setup_aperture_search(
   }
   if ((mode_code=match_string(mode, search_mode, N_SEARCH_MODES, 0))<0)
     bombElegant("unknown search mode", NULL);
+#if USE_MPI
+  if (mode_code!=N_LINE_MODE) {
+    bombElegant("only mode=\"n-line\" is supported by parallel elegant", NULL);
+  }
+#endif
   if (optimization_mode && (mode_code<=TWO_LINE_MODE || (mode_code==LINE_MODE && n_lines<3)))
     bombElegant("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
   if (offset_by_orbit && mode_code==SP_MODE)
