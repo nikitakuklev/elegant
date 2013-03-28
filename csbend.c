@@ -2292,7 +2292,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         (csrDrift->useSaldin54?CSRDRIFT_SALDIN54:0) +
           (csrDrift->attenuationLength>0?CSRDRIFT_ATTENUATIONLENGTH:0) +
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
-  while (zStart<csrWake.zLast) {
+  while ((zStart+1e-12)<csrWake.zLast) {
     if (incrementWarningsLeft) {
       fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
               tContext.elementName, tContext.elementOccurrence);
