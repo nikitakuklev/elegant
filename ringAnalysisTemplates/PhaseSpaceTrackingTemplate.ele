@@ -36,6 +36,13 @@
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1, allow_missing_parameters=1 &end
 &alter_elements name=*, type=*SBEN*, item=ORDER, value=1, allow_missing_elements=1, allow_missing_parameters=1 &end
 
+&alter_elements name=*, type=*SBEN*, item=SYNCH_RAD, value=0, allow_missing_elements=1 &end
+&alter_elements name=*, type=*SBEN*, item=ISR, value=0, allow_missing_elements=1 &end
+&alter_elements name=*, type=KQUAD*, item=SYNCH_RAD, value=0, allow_missing_elements=1 &end
+&alter_elements name=*, type=KQUAD*, item=ISR, value=0, allow_missing_elements=1 &end
+&alter_elements name=*, type=KSEXT*, item=SYNCH_RAD, value=0, allow_missing_elements=1 &end
+&alter_elements name=*, type=KSEXT*, item=ISR, value=0, allow_missing_elements=1 &end
+
 ! May be needed if SREFFECTS elements are present
 &twiss_output
         radiation_integrals = 1
