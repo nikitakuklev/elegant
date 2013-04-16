@@ -33,13 +33,35 @@ void delete_spaces(char *s);
 void str_to_upper_quotes(char *s);
 char *cfgets1(char *s, long n, FILE *fpin, long strip, long start);
 
+long check_stray_comment(char *s) 
+{
+  char *ptr;
+  short inQuote = 0;
+  ptr = s;
+  while (*ptr) {
+    if (*ptr=='"') {
+      inQuote = !inQuote;
+    } else {
+      if (!inQuote && *ptr=='!')
+        return 0;
+    }
+    ptr++;
+  }
+  return 1;
+}
+
 char *cfgets(char *s, long n, FILE *fpin)
 {
   s[0] = 0;
   if (!cfgets1(s, n, fpin, 1, 1))
     return NULL;
-  if (s[0]!='%') 
+  if (s[0]!='%') {
     str_to_upper_quotes(s);
+    if (!check_stray_comment(s)) {
+      fprintf(stderr, "Error: comment character embedded in input line: %s\n", s);
+      exit(1);
+    }
+  }
   return s;
 }
 
@@ -56,6 +78,7 @@ char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
     chop_nl(s);
     if (strip)
       delete_spaces(s);
+    check_stray_comment(s);
     l = strlen(s);
     while (l!=0 && s[l]<27)
       l--;
@@ -70,6 +93,8 @@ char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
   }
   return NULL;
 }
+
+
 
 void delete_spaces(char *s)
 {
