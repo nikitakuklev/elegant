@@ -5931,8 +5931,11 @@ The present output of this command is listed in the next section.
 The reader is referred to the MAD manual\cite{MAD} for details on sign
 conventions for angles, focusing strength, and so forth.  
 
-Comments may be embedded in the lattice file by starting a line with 
-an exclamation point (``!'').  Rpn expressions may be embedded separately
+Comments may be embedded in the lattice file by {\em starting} a line with 
+an exclamation point (``!'').
+(Note that {\tt elegant} does not support comments that begin in positions other
+than the beginning of a line.)
+Rpn expressions may be embedded separately
 from an element definition by starting a line with a percent sign (``\%'').
 For example
 \begin{verbatim}
