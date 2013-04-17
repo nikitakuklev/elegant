@@ -36,8 +36,8 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin/ /share/mpich2_smpd_nemesis/bin/ /act/mvapich2/gnu/bin/ /data/mpich2-1.1.1p1/bin/ /usr/lib64/mpich2/bin/)
-    #MPI_PATH =  /home/helios/SOLIDAY/mpich2-1.2.1p1_darwin-x86/bin/
+    MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/)
+
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
     CC += $(USER_MPI_FLAGS)
     CCC += $(USER_MPI_FLAGS)
