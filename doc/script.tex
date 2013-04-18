@@ -10,7 +10,10 @@ beam charge in Coulombs. The file will contain a single data page.
 \item It must write the final particle distribution to an SDDS file.
 This file should have all of the columns and parameters that appear in the
 initial distribution file.  Additional columns and parameters will be ignored,
-as will all pages but the first.
+as will all pages but the first. N.B.: the {\tt Charge} parameter in the file
+is used to determine the total beam charge; the script must ensure that this parameter
+is set correctly; when particles are lost or created, simply copying or retaining the value
+from the input file will not be correct.
 \end{itemize}
 
 The {\tt SCRIPT} element works best if the script accepts commandline
