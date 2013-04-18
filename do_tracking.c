@@ -3462,7 +3462,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if ((!notSinglePart&&isMaster) || notSinglePart)
 #endif
   if (charge) {
-    double totalCharge;
+    double totalCharge, oldMacroParticleCharge;
+    oldMacroParticleCharge = charge->macroParticleCharge;
     if (!SDDS_GetParameterAsDouble(&SDDSin, "Charge", &totalCharge)) {
       SDDS_SetError("Unable to read Charge parameter from script output file");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -3479,7 +3480,11 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #else
     if (npNew)
       charge->macroParticleCharge = totalCharge/npNew;
-#endif 
+#endif
+    if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8) {
+      printf("*** Warning: macro-particle charge changed after SCRIPT element. This may indicate a problem.\n");
+      printf("             Please ensure that the Charge parameter is set correctly in the output file from your script.\n");
+    }
  }
 
 #if USE_MPI
