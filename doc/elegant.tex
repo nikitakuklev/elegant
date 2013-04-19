@@ -32,66 +32,43 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 25.1}
+\section{Highlights of What's New in Version 25.2}
 
-Here is a summary of what's changed since release 25.0:
+Here is a summary of what's changed since release 25.1:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item There was a bug in the \verb|ECOL| element when the length was nonzero and the offset (\verb|DX| or \verb|DY|) was nonzero.
-  This was fixed.
-\item To avoid numerical problems, synchrotron radiation is now disabled automatically for \verb|KSEXT| elements shorter than 1 $\mu$m
-  when performing beam moments calculations with radiation.
-\item In some cases, the matrix for the \verb|MATR| element would not get loaded prior to tracking, resulting in a crash. This was fixed.
-\item A bug was fixed in post-adjustment of synchrotron radiation losses in the \verb|CSRCSBEND| element, which made extremely small errors
-  in the results This was reported by K. Amyx (Tech-X).
+\item KQUAD nonlinear fringe effects
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Determination of the matrix for the \verb|MAPSOLENOID| and \verb|TWMTA| elements was broken in version 22. This was fixed.
+\item touschek scattering bug
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|CORGPIPE| element, which implements a beam dechirper using a corrugated pipe wakefield, based on
-  the theoretical treatment of K. Bane \cite{Bane-SLAC14925}.  This was suggested by P. Emma (LBNL).
-\item If not set by the users, the \verb|N_KICKS| parameter of \verb|RFCA| and \verb|RFCW| will now be automatically set
-  in order to ensure a sufficient number of kicks, defined as 100 kicks per wavelength. This may be excessive for
-  high-energy beams.
-\item Automatic selection of the number of bins and bin size for the \verb|WAKE| element was modified to avoid warning
-  messages.
-\item The \verb|EDRIFT| element can now be subdivided using the usual element division commands.
-\item The \verb|CSRCSBEND| element was improved to support the integrated Green's function method for steady-state
-  wakes. This was done with the assistance of R. Ryne (LBNL).
-\item The \verb|NIBEND| element now allows positioning of the fringe region relative to the reference plane.
-  The fringe region may be inside, outside, or centered on the reference plane. This was added after discussions with
-  N. Nakamura (KEK).
+\item RFCA/RFCW
+\item RFMODE/TRFMODE/FRFMODE/FTRFMODE
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item When determining momentum aperture (\verb|momentum\_aperture|) the tunes near the aperture boundary are now recorded.
+\item frequency map (quadratic spacing)
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
-Changes to the parallel version are made by Y. Wang (ANL), unless otherwise noted.
 \begin{itemize}
-\item In the last version, we added the ability to change the randomization mode for different processors. However, the default mode was not
-  changed to one of the improved methods, even though the documentation said it had been changed. The default mode has now been changed
-  mode 3 (see the documentation for \verb|global_settings|).
-\item Updated to get the correct latest result from genetic optimization by using the right population group. Improved population log file for multiple restarts.
+\item None
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The scripts \verb|radiationEnvelope| was added. It allows computing the envelope over harmonics of brightness and flux tuning curves, such as those
-  obtained from \verb|sddsbrightness| and \verb|sddsfluxcurve|.
-\item The program \verb|sddsfluxcurve| now computes the flux in the central cone if computation of the flux density is requested.
-\item The programs \verb|ibsEmittance| and \verb|touschekLifetime| now accept an argument giving the vertical emittance.
+\item touschekLifetime
+\item brightnessEnvelope
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
