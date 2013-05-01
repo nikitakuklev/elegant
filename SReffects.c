@@ -29,7 +29,6 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
     double deltaChange, cutoff;
     long active = 1;
     SREFFECTS SReffects;
-    
 
 #if USE_MPI
     if (isMaster && notSinglePart) /* This is a parallel element, the master will not track unless it is a single particle simulation */
@@ -50,7 +49,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
         bombElegant("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
       }
       /* take data from radiation integrals */
-      SReffects.pRef = Po;
+      SReffects.pRef = radIntegrals->Pref;
       SReffects.Jx = radIntegrals->Jx;
       SReffects.Jx = radIntegrals->Jx;
       SReffects.Jy = radIntegrals->Jy;
