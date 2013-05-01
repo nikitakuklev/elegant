@@ -69,8 +69,8 @@ void ramp_momentum(
       long np_total;
       double t0_total;
 
-      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers); 
-      MPI_Allreduce(&t0, &t0_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&t0, &t0_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       t0 = t0_total/np_total;
     } else {
       t0 /= np;
