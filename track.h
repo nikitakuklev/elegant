@@ -273,7 +273,7 @@ typedef struct {
   double RI[6];
   double Jx, Jy, Jdelta;
   double taux, tauy, taudelta;
-  double ex0, sigmadelta, Uo;
+  double ex0, sigmadelta, Uo, Pref;
 } RADIATION_INTEGRALS;
 
 typedef struct {

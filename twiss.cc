@@ -2815,6 +2815,7 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *be
 {    
     double Rce, gamma;
 
+    RI->Pref = Po;
     gamma = sqrt(sqr(Po)+1);
     Rce = sqr(particleCharge)/(1e7*particleMass);
     RI->Uo = particleMassMV*Rce*RI->RI[1]*2./3.*ipow(gamma,4);
@@ -2827,7 +2828,6 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *be
     RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[2]/(2*RI->RI[1]+RI->RI[3]));
     RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[4]/(RI->RI[1]-RI->RI[3]);
 
-    
     RI->computed = 1;
 }
     
