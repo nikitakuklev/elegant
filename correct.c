@@ -308,11 +308,11 @@ void correction_setup(
 	compute_orbcor_matrices1(_correct->CMx, &_correct->SLx, 0, run, beamline, 
 				 (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
 				 (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
+				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
 	compute_orbcor_matrices1(_correct->CMy, &_correct->SLy, 2, run, beamline, 
 				 (!_correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
 				 (fixed_length_matrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT));
+				 (verbose ? 0 : COMPUTE_RESPONSE_SILENT), _correct);
       }
     }
     else
@@ -792,7 +792,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  compute_orbcor_matrices1(correct->CMx, &correct->SLx, 0, run, beamline,
 				  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
 				  (fixedLengthMatrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				  (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT));
+				  (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT), correct);
       }
       if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0) && correct->yplane) {
 	if (!correct->use_response_from_computed_orbits)
@@ -804,7 +804,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  compute_orbcor_matrices1(correct->CMy, &correct->SLy, 2, run, beamline,
 				  (!correct->response_only ? COMPUTE_RESPONSE_INVERT : 0) |
 				  (fixedLengthMatrix ? COMPUTE_RESPONSE_FIXEDLENGTH : 0) |
-				  (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT));
+				  (correct->verbose && !(flags&NO_OUTPUT_CORRECTION) ? 0 : COMPUTE_RESPONSE_SILENT), correct);
       }
     }
 
@@ -2087,7 +2087,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 }
 
 /* Compute orbit response matrix from closed orbit, rather than using beta functions etc */
-void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags)
+void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags, CORRECTION *correct)
 {
   ELEMENT_LIST *corr, *start;
   TRAJECTORY *clorb0, *clorb1;
@@ -2166,8 +2166,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     compute_matrix(corr, run, NULL);
 
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb1, 1e-10, 500, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
-                           0.9, NULL)) {
+    if (!find_closed_orbit(clorb1, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+                           correct->clorb_iter_fraction, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
       return;
@@ -2177,8 +2177,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
     compute_matrix(corr, run, NULL);
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb0, 1e-10, 500, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
-                           0.9, NULL)) {
+    if (!find_closed_orbit(clorb0, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+                           correct->clorb_iter_fraction, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
       return;

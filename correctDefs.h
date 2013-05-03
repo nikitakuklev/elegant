@@ -70,7 +70,7 @@ typedef struct {
 #define COMPUTE_RESPONSE_FIXEDLENGTH 0x0008UL
 extern void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags);
 extern void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags);
-void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline,  unsigned long flags);
+void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline,  unsigned long flags, CORRECTION *correct);
 
 /*
 extern void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert);
