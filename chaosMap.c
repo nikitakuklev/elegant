@@ -114,7 +114,7 @@ long doChaosMap(
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip, turns;
   static double **one_part;
-  double p, dJx, dJy, oldPercentage;
+  double p, dJx, dJy, oldPercentage=0;
   long n_part;
 #if SDDS_MPI_IO
   long points;
