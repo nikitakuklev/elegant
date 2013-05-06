@@ -443,6 +443,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   /* E = -2*L*kappa*cos(k*s) */
   Z0 = 4*PI*1e-7*c_mks;
   k = sqrt(2*corgpipe->period/(corgpipe->radius*corgpipe->depth*corgpipe->gap));
+  omega = k*c_mks;
   kappa = Z0*c_mks/(2*PI*sqr(corgpipe->radius));
   
   dt = 0.1/(k*c_mks);
