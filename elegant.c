@@ -63,13 +63,15 @@ void freeInputObjects();
 #define DEFINE_CPU_LIST 2
 #define DEFINE_PIPE 3
 #define DEFINE_RPN_DEFNS 4
-#define N_OPTIONS 5
+#define DEFINE_VERBOSE 5
+#define N_OPTIONS 6
 char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
     "cpulist",
     "pipe",
     "rpndefns",
+    "verbose",
   };
 
 #define SHOW_USAGE    0x0001
@@ -84,6 +86,11 @@ void showUsageOrGreeting (unsigned long mode)
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 25.2.0Beta, "__DATE__", by M. Borland, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
+  time_t timeNow;
+  char *timeNowString;
+  timeNow = time(NULL);
+  timeNowString = ctime(&timeNow);
+  printf("Running elegant at %s\n", timeNowString?timeNowString:"?");
   if (mode&SHOW_GREETING)
     puts(GREETING);
   if (mode&SHOW_USAGE)
@@ -302,7 +309,7 @@ char **argv;
   char *inputfile;
   SCANNED_ARG *scanned;
   char s[NAMELIST_BUFLEN], *ptr;
-  long i;
+  long i, verbose = 0;
   CORRECTION correct;
   ERRORVAL error_control;
   BEAM beam;
@@ -444,6 +451,10 @@ char **argv;
   for (i=1; i<argc; i++) {
     if (scanned[i].arg_type==OPTION) {
       switch (match_string(scanned[i].list[0], option, N_OPTIONS, 0)) {
+      case DEFINE_VERBOSE:
+	printf("Set to verbose mode for argument processing\n");
+	verbose = 1;
+	break;
       case DESCRIBE_INPUT:
         show_namelists_fields(stdout, namelist_pointer, namelist_name, n_namelists);
         if (argc==2)
@@ -473,6 +484,12 @@ char **argv;
             }
             macroValue[macros][0] = 0;
             macroValue[macros] += 1;
+	    if (verbose) {
+#if USE_MPI
+	      if (myid==0)
+#endif
+	      printf("macro: %s --> %s\n", macroTag[macros], macroValue[macros]);
+	    }
             macros++;
           }
         }
