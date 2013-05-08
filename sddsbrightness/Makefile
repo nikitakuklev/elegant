@@ -84,6 +84,9 @@ endif
 ifeq ($(EPICS_HOST_ARCH),win32-x86-mingw)
 F77 = gfortran -m32 -ffixed-line-length-132
 endif
+ifeq ($(EPICS_HOST_ARCH),windows-x64-mingw)
+F77 = gfortran -m64 -ffixed-line-length-132
+endif
 
 #RATIONAL = purify
 #RATIONAL = quantify
