@@ -50,7 +50,9 @@
 #include <sunperf.h>
 #endif
 #ifdef CLAPACK
+#if !defined(_WIN32)
 #include "cblas.h"
+#endif
 #ifdef F2C
 #include "f2c.h"
 #if defined(_WIN32)
