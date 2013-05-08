@@ -313,7 +313,8 @@ endif #ifneq ($(SUNPERF), 0)
 ifneq ($(CLAPACK), 0)
   ifdef WIN32
     USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
-    USR_LIBS += clapack
+    USR_LDFLAGS += /nodefaultlib:libcmt $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/clapack.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/BLAS.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/libf2c.lib
+    #USR_LIBS += clapack
   else
     ifeq ($(OS_CLASS),solaris)
         # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
