@@ -1,4 +1,5 @@
-This element is similar to {\tt TRFMODE}, but it allows faster simulation of more than
+This element simulates a set of beam-driven dipole modes in a cavity using the fundamental theorem of beam loading and phasor rotation.
+It is similar to {\tt TRFMODE}, but it allows faster simulation of more than
 one mode.  Also, the mode data is specified in an SDDS file.  This file can be
 generated using the APS version of URMEL, or by hand. It must have the following
 columns and units:
@@ -34,3 +35,7 @@ switched on instantaneously.  This can give a false indication of the
 threshold for instability. The {\tt RAMP\_PASSES} parameter should
 be used to prevent this by slowly ramping the impedance to full
 strength.  This idea is from M. Blaskiewicz (BNL).
+
+Normally, the field dumped in the cavity by one particle affects trailing particles in the same turn.
+However, if one is also using a \verb|TRWAKE| or \verb|ZTRANSVSE| element to simulate the short-range wake of the cavity, this would be double-counting.
+In that case, one can use \verb|LONG_RANGE_ONLY=1| to suppress the same-turn effects of the \verb|RFMODE| element.

@@ -39,7 +39,16 @@ Here is a summary of what's changed since release 25.1:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item KQUAD nonlinear fringe effects
+\item The \verb|CORGPIPE| element had an error in the equation  for the wake, which made negligible changes in the
+  results.
+\item Corrections were made to the nonlinear fringe fields for \verb|KQUAD| elements, thanks to N. Carmignani (ESRF).
+  Also, the execution speed was optimized.
+\item The \verb|SREFFECTS| element was not being properly initialized for runs with momentum ramping. This bug was
+  introduced in a recent version.
+\item The default number of bins for LSC calcuations was an odd number, which resulted in an error message since an
+  even number was required. The default was changed. J. Lewellen (LANL) pointed out the problem.
+\item The lattice parser will now allow comments to be inside the definition of an element, i.e., at the end of the line.
+  L. Yang (BNL) pointed out the issue.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -51,6 +60,8 @@ Here is a summary of what's changed since release 25.1:
   values are stored in variables used by \verb|optimize| command.
 \item There was a bug in the \verb|ramp_elements| and \verb|modulate_elements| commands that resulted in problems
   handling multiple elements with the same name. This was fixed.
+\item Closed orbit correction was not respecting the closed orbit iteration parameters when computing the response matrix
+  from closed orbits. This bug was pointed out by V. Sajaev (ANL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -65,7 +76,7 @@ Here is a summary of what's changed since release 25.1:
 \item \verb|SOLENOID| elements may now be subdivided automatically using the \verb|divide_elements| command or the
   \verb|element_divisions| parameter of the \verb|run_setup| command.
 \item Added ponderomotive axial focusing for the \verb|TWLA| element, at the request of J. Lewellen (LANL). This feature is
-  experimental.
+  experimental, so please report any issues to me.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -1243,6 +1254,7 @@ during the computations.
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
+    long do_correction[2] = {1, 1};
     long remove_smallest_SVs[2] = {0, 0};
     long keep_largest_SVs[2] = {0, 0};
     double minimum_SV_ratio[2] = {0, 0};
@@ -1294,6 +1306,7 @@ small apertures.  If you get an error message about ``tracking failed for test p
 \item \verb|corrector_limit[2]| --- The maximum strength allowed for a corrector.
 \item \verb|correction_fraction[2]| --- The fraction of the computed correction strength to actually use for any one iteration.
 \item \verb|correction_accuracy[2]| --- The desired accuracy of the correction in terms of the RMS BPM values.
+\item \verb|do_correction[2]| --- Flags to allow disabling correction in one or both planes (if set to zero).
 \item \verb|remove_smallest_SVs|, \verb|keep_largest_SVs|, \verb|minimum_SV_ratio|, \verb|auto_limit_SVs| --- These parameters control the elimination of
   singular vectors from the inverse response matrix, which can help deal with degeneracy in the correctors and reduce corrector strength.
   By default, the number of singular vectors is limited to the number of BPMs, which is a basic condition for stability; this can be defeated by
@@ -5949,8 +5962,6 @@ conventions for angles, focusing strength, and so forth.
 
 Comments may be embedded in the lattice file by {\em starting} a line with 
 an exclamation point (``!'').
-(Note that {\tt elegant} does not support comments that begin in positions other
-than the beginning of a line.)
 Rpn expressions may be embedded separately
 from an element definition by starting a line with a percent sign (``\%'').
 For example
