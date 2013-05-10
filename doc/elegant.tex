@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 25.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 25.2.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -44,31 +44,58 @@ Here is a summary of what's changed since release 25.1:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item touschek scattering bug
+\item The \verb|touschek_scatter| command was using the minimum of the absolute values of the positive and negative
+  momentum aperture, rather than using both the positive and negative values. This resulted in pessimistic calculations
+  of the Touschek lifetime.
+\item The chromaticity command \verb|chrom| now performs a minimum of one correction step to ensure tht 
+  values are stored in variables used by \verb|optimize| command.
+\item There was a bug in the \verb|ramp_elements| and \verb|modulate_elements| commands that resulted in problems
+  handling multiple elements with the same name. This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|BUMPER| element (time-dependent kicker) now supports a kick-map-like feature, so the deflection as a function of x and y can
+  be specified.
+\item The \verb|RFDF| element (rf deflector) now allows specification of the transverse variation using a sextupole-like term.
 \item RFCA/RFCW
-\item RFMODE/TRFMODE/FRFMODE/FTRFMODE
+\item The \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE| have two new features: the ability to
+  retain voltage from a previous simulation step, and the ability to suppress same-turn effects on the beam in order
+  to allow combined use with short-range wake elements.
+\item \verb|SOLENOID| elements may now be subdivided automatically using the \verb|divide_elements| command or the
+  \verb|element_divisions| parameter of the \verb|run_setup| command.
+\item Added ponderomotive axial focusing for the \verb|TWLA| element, at the request of J. Lewellen (LANL). This feature is
+  experimental.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item frequency map (quadratic spacing)
+\item The \verb|frequency_map| command now supports quadratic spacing of the points in x and y.
+\item The \verb|optimize| command now accepts the name of an ``interrupt file.'' If this file is modifed or
+  created while the optimizer is running, the optimizer will complete on-going operations and then terminate
+  cleanly.
+\item The \verb|rf_setup| command now has an output file that records the rf parameters, synchrotron tune,
+  bunch length, and other quantities. This was requested by H. Owen (ASTeC).
+\item The \verb|magnets| output of the \verb|run_setup| command now includes profile data for
+  \verb|SOLENOID| and \verb|MAP_SOLENOID| elements.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item None
+\item A bug was fixed that prevented proper output of population data during parallel optimization.
+\item If the \verb|load_balancing| parameter of the \verb|run_setup| command is set to -1, the load balance is checked and reported
+  during tracking, but no rebalancing takes place.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item touschekLifetime
-\item brightnessEnvelope
+\item The \verb|touschekLifetime|  program  was using the minimum of the absolute values of the positive and negative
+  momentum aperture, rather than using both the positive and negative values. This resulted in pessimistic calculations
+  of the Touschek lifetime. This was reported by forum user Adrianea.
+\item The \verb|sddsfluxcurve| program now supports helical devices. In addition, computation of central cone flux now
+  ignores the electron beam dimensions, as is conventional.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -2744,6 +2771,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long include_simplex_1d_scans = 1;
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
+    STRING interrupt_file = "%s.interrupt";
 &end
 \end{verbatim}
 
@@ -2942,6 +2970,9 @@ a significant difference in the optimization speed.
  reset for each evaluation of the optimization function.  This is valuable if one is optimizing tracking
  results that involve random processes (e.g., ISR or scattering).
 
+\item \verb|interrupt_file| --- Gives the name of a file that will be monitored by the program as it runs.
+  If the file is created or modified while optimization is running, the optimizer will complete the present
+  step and cleanly terminate, allowing subsequent commands, if any, to proceed.
 \end{itemize}
 
 \begin{latexonly}
@@ -3236,6 +3267,7 @@ Note that $i=0$ on the first pass.
 
 \begin{verbatim}
 &rf_setup
+    STRING filename = NULL;
     STRING name = NULL;
     long start_occurence = -1;
     long end_occurence = -1;
@@ -3246,6 +3278,7 @@ Note that $i=0$ on the first pass.
     long harmonic = -1;
     double bucket_half_height = 0;
     double over_voltage = 0;
+    double total_voltage = 0;
 &end
 \end{verbatim}
 
@@ -3255,6 +3288,7 @@ Note that the command includes features to allow selecting a subset of the RFCA 
 The selected subset is assumed to include all of the cavities that will impart net energy to the beam.
 
 \begin{itemize}
+\item \verb|filename| --- Name of a file to which data related to the rf settings will be written.
 \item \verb|name| --- A possibly-wildcard-containing string giving the names of the
         elements to set.  If not given, all RFCA elements are selected.
 \item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
@@ -3280,6 +3314,8 @@ F(q) = 2 \left(\sqrt{q^2-1} - \arcsin \frac{1}{q}\right),
 and $q$ is the overvoltage factor, related to the rf voltage by $q = V/U_0$. (See Wiedemann, Vol. 1, 8.2.2.)
 \item \verb|over_voltage| --- If nonzero, the voltage is set to the given factor relative to the 
 energy loss per turn.
+\item \verb|total_voltage| --- If nonzero, the total rf voltage is set to the given value. The frequency and
+  phase are computed for this voltage.
 \end{itemize}
 
 \begin{latexonly}
@@ -3592,12 +3628,13 @@ tracking.
 \item \verb|element_divisions| --- Specify how many pieces to split elements into.  Only 
  certain elements (basically, those with a matrix) are split.  Results in creation of 
  \verb|element_divisions| new elements having the same name as each split element.
-\item \verb|load_balancing_on| --- If non-zero, load-balancing is performed for parallel mode.
+\item \verb|load_balancing_on| --- If 1, load-balancing is performed for parallel mode.
  This can result in non-deterministic results if the load-balancing is different on two
  otherwise identical runs.  Load-balancing variations may occur in heterogeneous clusters,
  clusters with multiple users, or for other reasons.  In such situations, turning off 
  load balancing can be useful if, for example, one is performing parameter scans and
  wishes to eliminate spurious sources of variation.
+ If -1, then the load balance is checked and reported, but no rebalancing takes place.
 \end{itemize}
 
 \begin{latexonly}
@@ -4573,6 +4610,9 @@ given with no arguments.
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
         data.  (Program by M. Borland.)
+\item {\tt radiationEnvelope} --- A tool for use with the output of {\tt sddsbrightness} and {\tt sddsfluxcurve}.
+  It analyzes data for many harmonics and produces a single curve that shows the envelope of maximum
+  brightness or flux over all harmonics.
 \item {\tt sddsanalyzebeam} --- Analyzes a beam of macro-particles and produces an SDDS file
         containing beam moments, emittances, equivalent beta functions, etc.  The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
