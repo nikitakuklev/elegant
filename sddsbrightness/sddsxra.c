@@ -281,7 +281,7 @@ int main ( int argc, char *argv[] )
     else if (targetFormula)
       SDDS_CopyString(&target, targetFormula);
     if (!targetDensity)
-      // targetDensity = 2.7;
+      /* targetDensity = 2.7; */
       get_material_property(target, "density", NULL, NULL, &targetDensity);
   } else if  (!targetDensity)
     get_material_property(target, "density", NULL, NULL, &targetDensity);
@@ -521,8 +521,8 @@ int getRefraction (int mode)
         sAmpReflect     = ( cosThetaIn - n * cosThetaOut ) / (cosThetaIn + n * cosThetaOut );
         pAmpReflect     = ( cosThetaOut - n * cosThetaIn ) / (cosThetaOut + n * cosThetaIn );
         reflectivity[i] = 0.5 * (1.0 + polarization) * cabs(pAmpReflect * pAmpReflect) + 0.5 * (1.0 - polarization) * cabs(sAmpReflect * sAmpReflect);
-        // fprintf(stdout, "\n n = %f,%f, determ = %f, %f", n, determ); 
-        // fprintf(stdout, "\n sAmpReflect = %f, %f, pAmpReflect = %f, %f, reflectivity = %f", sAmpReflect, pAmpReflect, reflectivity[i]); 
+        /* fprintf(stdout, "\n n = %f,%f, determ = %f, %f", n, determ); */
+        /* fprintf(stdout, "\n sAmpReflect = %f, %f, pAmpReflect = %f, %f, reflectivity = %f", sAmpReflect, pAmpReflect, reflectivity[i]); */
         if (verbose>2) { fprintf(stdout, "%12.4g", reflectivity[i]); }
       }
     } else { /* Atomic scattering factor */

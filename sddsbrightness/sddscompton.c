@@ -668,7 +668,7 @@ int main ( int argc, char *argv[] )
       if (SDDS_ReadPage(&SDDSin)<1)
 	break;
       rows=SDDS_CountRowsOfInterest(&SDDSin);
-      // if (!rows && (energyCol || phiCol || thetaCol)) continue;
+      /* if (!rows && (energyCol || phiCol || thetaCol)) continue;*/
       if (energyCol) {
 	if (!(energyInput = SDDS_GetColumnInDoubles(&SDDSin, energyCol)))
 	  SDDS_Bomb("Error in reading energy column value from input file.");
@@ -908,9 +908,9 @@ double getComptonDCS (long mode, char *targetFormula, int Z, double polarization
     } else {
       value = KNElectronDensity(targetFormula) * DCS_KN (energy_keV, thetaOut0);
     }
-    // fprintf(stdout, "\ngetComptonDCS: polarization = %f, thetaOut0 = %f, value = %f\n", polarization, thetaOut0, value);
+    /* fprintf(stdout, "\ngetComptonDCS: polarization = %f, thetaOut0 = %f, value = %f\n", polarization, thetaOut0, value);*/
   } else if ( polarization > 0.999 ) {
-    // fprintf(stdout, "getComptonDCS: polarization = %f, phiOut_Rad = %f\n", polarization, phiOut_Rad);
+    /* fprintf(stdout, "getComptonDCS: polarization = %f, phiOut_Rad = %f\n", polarization, phiOut_Rad);*/
     if ( mode < 10 ) {
       value = DCSP_Compt_CP (targetFormula, energy_keV, thetaOut0, phiOut_Rad);
     } else if ( mode < 20 ) {
@@ -985,10 +985,10 @@ int getDetectorSignal (long mode)
   } else { 
     Z = Z1 = 0; 
   }
-  filterMassThickness    = 0.1 * filterThickness * filterDensity;	// Upstream filter mass thickness in g/cm^2
-  massThickness          = 0.1 * targetThickness * targetDensity;	// Target mass thickness in g/cm^2
-  detMassThickness       = 0.1 * detectThickness * detectDensity;	// Detector mass thickness in g/cm^2
-  detFilterMassThickness = 0.1 * detectFilterThickness * detectFilterDensity;	// Detector filter mass thickness in g/cm^2
+  filterMassThickness    = 0.1 * filterThickness * filterDensity;	/* Upstream filter mass thickness in g/cm^2 */
+  massThickness          = 0.1 * targetThickness * targetDensity;	/* Target mass thickness in g/cm^2 */
+  detMassThickness       = 0.1 * detectThickness * detectDensity;	/* Detector mass thickness in g/cm^2 */
+  detFilterMassThickness = 0.1 * detectFilterThickness * detectFilterDensity;	/* Detector filter mass thickness in g/cm^2 */
   filterTotalCS          = 0;
   filterCompTotalCS      = 0;
   if ( calc_mode==3 ) { 
@@ -1208,7 +1208,7 @@ int getScatterCS (long mode)
   cosThetaY  = cos (targetThetaY * degToRad);
   cosThetaZ  = cos (targetThetaZ * degToRad);
   cosTargetThetaIn = cosThetaZ;
-  massThickness = 0.1 * targetThickness * targetDensity;	// Target mass thickness in g/cm^2
+  massThickness = 0.1 * targetThickness * targetDensity;	/* Target mass thickness in g/cm^2 */
 
   /* Calculate scattered photon angle of exit from the target */
   cosTargetThetaOut  = (xDet*cosThetaX + yDet*cosThetaY + zDet*cosThetaZ ) / sqrt(xDet*xDet + yDet*yDet + zDet*zDet);

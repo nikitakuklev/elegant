@@ -1033,14 +1033,14 @@ int getXRFCS (int mode)
   } else { 
     Z0 = Z1 = 0; 
   }
-  targetMassThickness            = 0.1 * targetThickness * targetDensity;	// Target mass thickness in g/cm^2
-  frontFilterMassThickness = 0.1 * frontFilterThickness * frontFilterDensity;	// Upstream filter mass thickness in g/cm^2
-  detectMassThickness      = 0.1 * detectThickness * detectDensity;	// Detector mass thickness in g/cm^2
-  angleFactor              = 0.25 / pi_const;				// Inverse of 4-PI solid angle
+  targetMassThickness            = 0.1 * targetThickness * targetDensity;	/* Target mass thickness in g/cm^2 */
+  frontFilterMassThickness = 0.1 * frontFilterThickness * frontFilterDensity;	/* Upstream filter mass thickness in g/cm^2 */
+  detectMassThickness      = 0.1 * detectThickness * detectDensity;	/* Detector mass thickness in g/cm^2 */
+  angleFactor              = 0.25 / pi_const;				/* Inverse of 4-PI solid angle */
   if (detectDownstream < 1) {
-    backFilterMassThickness = frontFilterMassThickness;			// XRF photon goes through front filter in reflective geometry
+    backFilterMassThickness = frontFilterMassThickness;			/* XRF photon goes through front filter in reflective geometry*/
   } else {
-    backFilterMassThickness = 0.1 * backFilterThickness * backFilterDensity;	// downstream filter mass thickness in g/cm^2
+    backFilterMassThickness = 0.1 * backFilterThickness * backFilterDensity;	/* downstream filter mass thickness in g/cm^2 */
   }
 
   /* Integration parameters for detector */
