@@ -183,9 +183,9 @@ endif
 endif
 
 csrImpedance_LIBS += $(GSLLIB)
-csrImpedance_SYS_GSLLIB += $(SYS_GSLLIB)
+csrImpedance_SYS_LIBS += $(SYS_GSLLIB)
 sddsrandmult_LIBS += $(GSLLIB)
-sddsrandmult_SYS_GSLLIB += $(SYS_GSLLIB)
+sddsrandmult_SYS_LIBS += $(SYS_GSLLIB)
 
 
 
