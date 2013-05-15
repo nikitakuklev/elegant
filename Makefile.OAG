@@ -130,7 +130,7 @@ SYSGSL = $(words $(notdir $(wildcard \
 ifneq ($(SYSGSL), 0)
 USR_CFLAGS += -DUSE_GSL
 GSLLIB = 
-SYS_GSLLIB = -lgsl -lgslcblas
+SYS_GSLLIB = gsl gslcblas
 STATIC_BUILD=NO
 else
 
@@ -169,7 +169,7 @@ SYSLEVMAR = $(words $(notdir $(wildcard \
 ifneq ($(SYSLEVMAR), 0)
 USR_CFLAGS += -DUSE_LEVMAR -DUSE_LEVMAR_H
 LEVMARLIB = 
-SYS_LEVMARLIB = -llevmar
+SYS_LEVMARLIB = levmar
 STATIC_BUILD=NO
 else
 
@@ -428,8 +428,8 @@ endif
 
 
 madto_LIBS += $(GSLLIB)
-madto_LDFLAGS += $(SYS_GSLLIB)
+madto_SYS_LIBS += $(SYS_GSLLIB)
 elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
-elegant_LDFLAGS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
+elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
 Pelegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
-Pelegant_LDFLAGS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
+Pelegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
