@@ -76,14 +76,13 @@ USR_CFLAGS_DEFAULT = 	-DUNIX
 #USR_CFLAGS_WIN32 = 	-DpgiFortran
 
 
-GSLLIB = 
-
 #Look for private version of GSL used here at APS
 GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
 ifeq ($(GSL), 1)
 PROD_HOST += sddssyncflux
 sddssyncflux_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
-GSLLIB = gsl gslcblas
+GSLLIB = rpnlib gsl gslcblas
+SYS_GSLLIB = 
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 gslcblas_DIR = $(EPICS_EXTENSIONS_LIB)
 else
@@ -94,12 +93,22 @@ SYSGSL = $(words $(notdir $(wildcard \
 /usr/lib/libgsl.so \
 /usr/lib64/libgsl.a \
 /usr/lib64/libgsl.so \
+/usr/lib/i386-linux-gnu/libgsl.so \
+/usr/lib/i386-linux-gnu/libgsl.a \
+/usr/lib/x86_64-linux-gnu/libgsl.so \
+/usr/lib/x86_64-linux-gnu/libgsl.a \
+/lib/i386-linux-gnu/libgsl.so \
+/lib/i386-linux-gnu/libgsl.a \
+/lib/x86_64-linux-gnu/libgsl.so \
+/lib/x86_64-linux-gnu/libgsl.a \
 /lib/libgsl.a \
 /lib/libgsl.so \
 /lib64/libgsl.a \
 /lib64/libgsl.so \
 /sw/lib/libgsl.a \
 /sw/lib/libgsl.dylib \
+/opt/local/lib/libgsl.a \
+/opt/local/lib/libgsl.dylib \
 /usr/sfw/lib/libgsl.a \
 /usr/sfw/lib/libgsl.so )))
 
@@ -107,9 +116,18 @@ ifneq ($(SYSGSL), 0)
 STATIC_BUILD=NO
 PROD_HOST += sddssyncflux
 sddssyncflux_CFLAGS = -DUSE_GSL
-sddssyncflux_LDFLAGS += -lgsl -lgslcblas
+GSLLIB = 
+SYS_GSLLIB = gsl gslcblas
+else
+
+#No GSL library found. Build without it.
+GSLLIB = 
+SYS_GSLLIB = 
 endif
 endif
+
+sddssyncflux_LIBS += $(GSLLIB)
+sddssyncflux_SYS_LIBS += $(SYS_GSLLIB)
 
 
 XRAYLIB = 
@@ -151,10 +169,10 @@ endif
 endif
 
 ifdef WIN32
-USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib z fftpack
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib z fftpack
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
-USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack $(GSLLIB) SDDS1 rpnlib mdbmth namelist mdblib
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib
 SYS_PROD_LIBS_DEFAULT += z
 endif
 
