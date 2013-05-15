@@ -116,6 +116,14 @@ SYSGSL = $(words $(notdir $(wildcard \
 /usr/lib/libgsl.so \
 /usr/lib64/libgsl.a \
 /usr/lib64/libgsl.so \
+/usr/lib/i386-linux-gnu/libgsl.so \
+/usr/lib/i386-linux-gnu/libgsl.a \
+/usr/lib/x86_64-linux-gnu/libgsl.so \
+/usr/lib/x86_64-linux-gnu/libgsl.a \
+/lib/i386-linux-gnu/libgsl.so \
+/lib/i386-linux-gnu/libgsl.a \
+/lib/x86_64-linux-gnu/libgsl.so \
+/lib/x86_64-linux-gnu/libgsl.a \
 /lib/libgsl.a \
 /lib/libgsl.so \
 /lib64/libgsl.a \
@@ -157,12 +165,22 @@ SYSLEVMAR = $(words $(notdir $(wildcard \
 /usr/lib/liblevmar.so \
 /usr/lib64/liblevmar.a \
 /usr/lib64/liblevmar.so \
+/usr/lib/i386-linux-gnu/liblevmar.so \
+/usr/lib/i386-linux-gnu/liblevmar.a \
+/usr/lib/x86_64-linux-gnu/liblevmar.so \
+/usr/lib/x86_64-linux-gnu/liblevmar.a \
+/lib/i386-linux-gnu/liblevmar.so \
+/lib/i386-linux-gnu/liblevmar.a \
+/lib/x86_64-linux-gnu/liblevmar.so \
+/lib/x86_64-linux-gnu/liblevmar.a \
 /lib/liblevmar.a \
 /lib/liblevmar.so \
 /lib64/liblevmar.a \
 /lib64/liblevmar.so \
 /sw/lib/liblevmar.a \
 /sw/lib/liblevmar.dylib \
+/opt/local/lib/liblevmar.a \
+/opt/local/lib/liblevmar.dylib \
 /usr/sfw/lib/liblevmar.a \
 /usr/sfw/lib/liblevmar.so )))
 
@@ -282,7 +300,7 @@ USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 SYS_PROD_LIBS_Linux += lapack blas
 
-GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.*)))
+GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.* /usr/lib/i386-linux-gnu/libgfortran.* /usr/lib/x86_64-linux-gnu/libgfortran.* )))
 ifeq ($(GFORTRAN), 0)
 SYS_PROD_LIBS_Linux += g2c
 else
