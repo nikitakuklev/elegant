@@ -39,10 +39,11 @@ Here is a summary of what's changed since release 25.1:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
+\item Corrections were made to the nonlinear fringe fields for \verb|KQUAD| elements, thanks to N. Carmignani (ESRF).
+  Prior simulations using this feature should be repeated to assess the impact of these corrections.
+  Also, the execution speed was optimized.
 \item The \verb|CORGPIPE| element had an error in the equation  for the wake, which made negligible changes in the
   results.
-\item Corrections were made to the nonlinear fringe fields for \verb|KQUAD| elements, thanks to N. Carmignani (ESRF).
-  Also, the execution speed was optimized.
 \item The \verb|SREFFECTS| element was not being properly initialized for runs with momentum ramping. This bug was
   introduced in a recent version.
 \item The default number of bins for LSC calcuations was an odd number, which resulted in an error message since an
