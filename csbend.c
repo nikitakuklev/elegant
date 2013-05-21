@@ -20,6 +20,7 @@
 void convolveArrays1(double *output, long n, double *a1, double *a2);
 
 static long negativeWarningsLeft = 100;
+static long dipoleFringeWarning = 0;
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
@@ -453,9 +454,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
     
-    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1)
-      dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2);
-  
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1) {
+      if (dipoleFringeWarning==0) {
+        printf("*** \n");
+        printf("*** Warning: nonlinear dipole fringe effects are experimental and may give incorrect or misleading results.\n");
+        printf("*** \n");
+        dipoleFringeWarning = 1;
+      }
+      dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2, csbend->b[0]/rho0);
+    }
+    
+
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
@@ -464,9 +473,16 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
 
-    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1)
-      dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2);
-
+    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1) {
+      if (dipoleFringeWarning==0) {
+        printf("*** \n");
+        printf("*** Warning: nonlinear dipole fringe effects are experimental and may give incorrect or misleading results.\n");
+        printf("*** \n");
+        dipoleFringeWarning = 1;
+      }
+      dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
+    }
+    
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
     if (particle_lost) {

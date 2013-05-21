@@ -3327,7 +3327,7 @@ extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, 
 
 /* prototypes for fringe.c */
 void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, int inFringe, int higherOrder);
-void dipoleFringe(double *vec, double h, long inFringe, long higherOrder);
+void dipoleFringe(double *vec, double h, long inFringe, long higherOrder, double K1);
 VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeIntM, double *fringeIntP);
 VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *fringeInt, long part);
 

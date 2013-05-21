@@ -58,7 +58,7 @@ void quadFringe(double **coord, long np, double K1,
     y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
     py = M->R[3][2]*vec[2] + M->R[3][3]*vec[3];
     
-    a = inFringe*K1/(12*(1 + delta));
+    a = -inFringe*K1/(12*(1 + delta));
 
     dx = dpx = dy = dpy = ds = 0;
     
@@ -131,7 +131,7 @@ void quadFringe(double **coord, long np, double K1,
 }
 
 
-void dipoleFringe(double *vec, double h, long inFringe, long higherOrder)
+void dipoleFringe(double *vec, double h, long inFringe, long higherOrder, double K1)
 {
   /* vec = {x, qx, y, qy, s, delta} */
   double x, px, y, py, delta;
@@ -144,67 +144,76 @@ void dipoleFringe(double *vec, double h, long inFringe, long higherOrder)
   delta = vec[5];
   dx = dpx = dy = dpy = ds = 0;
   
-  a = inFringe*h/(8*(1 + delta));
-
-  if (higherOrder) {
-    double xr[11], yr[11], ar[11];
-    long i, j;
-    xr[0] = yr[0] = ar[0] = 1;
-    for (j=0, i=1; i<11; i++, j++) {
-      xr[i] = xr[j]*x;
-      yr[i] = yr[j]*y;
-      ar[i] = ar[j]*a;
-    }
-    dx  = (a*(7*ar[7]*xr[9] + 7*ar[8]*xr[10] + ar[5]*xr[7]*(7 + 27*ar[2]*yr[2]) 
-		  + ar[6]*xr[8]*(7 + 30*ar[2]*yr[2]) + ar[4]*xr[6]*(7 + 24*ar[2]*yr[2]
-		  + 30*ar[4]*yr[4]) + ar[3]*xr[5]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
-		  + 3*a*x*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
-		  + ar[2]*xr[4]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
-		  + xr[3]*(7*a + 189*ar[5]*yr[4] - 975*ar[7]*yr[6]) 
-		  + 3*yr[2]*(7 - 7*ar[2]*yr[2] + 21*ar[4]*yr[4] - 39*ar[6]*yr[6] 
-		  + 82*ar[8]*yr[8]) - 7*xr[2]*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] 
-		  - 96*ar[6]*yr[6] + 315*ar[8]*yr[8])))/7;
-    dpx = (a*(2*py*y*(7 - 7*a*x - 28*ar[2]*yr[2] + 70*x*ar[3]*yr[2] + 56*x*ar[5]*(xr[2]
-		  - 6*yr[2])*yr[2] + 84*ar[4]*yr[2]*(-xr[2] + yr[2]) 
-		  + 3*x*ar[7]*yr[2]*(xr[4] - 262*xr[2]*yr[2] + 409*yr[4])
-		  - 4*ar[6]*(5*xr[4]*yr[2] - 162*xr[2]*yr[4] + 57*yr[6])
-		  + 20*ar[8]*(33*xr[4]*yr[4] - 162*xr[2]*yr[6] + 29*yr[8]))
-		  + px*(-3*ar[7]*xr[6]*yr[2] - 24*ar[6]*xr[5]*yr[2]*(-1 + 55*ar[2]*yr[2])
-		  + 3*ar[5]*xr[4]*yr[2]*(-28 + 655*ar[2]*yr[2])
-		  + 24*ar[4]*xr[3]*yr[2]*(7 - 90*ar[2]*yr[2] + 630*ar[4]*yr[4])
-		  + 3*a*yr[2]*(-21 + 70*ar[2]*yr[2] - 196*ar[4]*yr[4] + 513*ar[6]*yr[6])
-		  - 7*a*xr[2]*(-1 + 30*ar[2]*yr[2] - 240*ar[4]*yr[4] + 1227*ar[6]*yr[6])
-		  - 2*x*(7 - 84*ar[2]*yr[2] + 420*ar[4]*yr[4] - 1596*ar[6]*yr[6]
-		  + 5220*ar[8]*yr[8]))))/7;
-    dy  = -(a*y*(ar[7]*xr[6]*yr[2] + 8*ar[6]*xr[5]*yr[2]*(-1 + 33*ar[2]*yr[2])
-		  - 8*ar[4]*xr[3]*yr[2]*(7 - 54*ar[2]*yr[2] + 270*ar[4]*yr[4])
-		  + xr[4]*(28*ar[5]*yr[2] - 393*ar[7]*yr[4]) + 3*a*yr[2]*(7 - 14*ar[2]*yr[2]
-		  + 28*ar[4]*yr[4] - 57*ar[6]*yr[6]) + a*xr[2]*(-7 + 70*ar[2]*yr[2]
-		  - 336*ar[4]*yr[4] + 1227*ar[6]*yr[6]) + 2*x*(7 - 28*ar[2]*yr[2] 
-		  + 84*ar[4]*yr[4] - 228*ar[6]*yr[6] + 580*ar[8]*yr[8])))/7;
-    dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ar[2]*(xr[2] - yr[2]) + 70*x*ar[3]*yr[2] 
-		  + 7*ar[4]*(xr[4] - 14*xr[2]*yr[2] + 9*yr[4]) + 7*ar[5]*(xr[5]
-		  + 18*xr[3]*yr[2] - 39*x*yr[4]) + 4*ar[6]*(2*xr[6] - 15*xr[4]*yr[2]
-		  + 168*xr[2]*yr[4] - 39*yr[6]) + ar[7]*(9*xr[7] + 66*xr[5]*yr[2]
-		  - 975*xr[3]*yr[4] + 984*x*yr[6]) + 10*ar[8]*(xr[8] + 2*xr[6]*yr[2] 
-		  + 114*xr[4]*yr[4] - 294*xr[2]*yr[6] + 41*yr[8])) + py*(63*ar[7]*xr[8]
-		  + 70*ar[8]*xr[9] + 7*ar[5]*xr[6]*(7 + 27*ar[2]*yr[2]) 
-		  + 8*ar[6]*xr[7]*(7 + 30*ar[2]*yr[2]) + 6*ar[4]*xr[5]*(7 + 24*ar[2]*yr[2]
-		  + 30*ar[4]*yr[4]) + 5*ar[3]*xr[4]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
-		  + 3*a*xr[2]*(7 + 189*ar[4]*yr[4] - 975*ar[6]*yr[6])
-		  + 3*a*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
-		  + 4*ar[2]*xr[3]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
-		  - 14*x*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] - 96*ar[6]*yr[6]
-		  + 315*ar[8]*yr[8]))))/7;
+  if (K1!=0.0) {
+    /* Modifications by Nicola Carmignani */
+    a = -inFringe*K1/(12*(1 + delta));
+    dx  = a*(ipow(x,3) + 3*x*ipow(y,2));
+    dpx = 3*a*(-px*ipow(x,2) + 2*py*x*y - px*ipow(y,2));
+    dy  = a*(-3*ipow(x,2)*y - ipow(y,3));
+    dpy = 3*a*(py*ipow(x,2) - 2*px*x*y + py*ipow(y,2));
+    ds  = (a/(1+delta))*(3*py*y*ipow(x,2) - px*ipow(x,3) - 3*px*x*ipow(y,2) + py*ipow(y,3));
   } else {
-    dx  = a*(ipow(x,2) + 3*ipow(y,2));
-    dpx = 2*a*(-px*x + py*y);
-    dy  = -2*a*x*y;
-    dpy = 2*a*(py*x - 3*px*y);
+    a = inFringe*h/(8*(1 + delta));
+    if (higherOrder) {
+      double xr[11], yr[11], ar[11];
+      long i, j;
+      xr[0] = yr[0] = ar[0] = 1;
+      for (j=0, i=1; i<11; i++, j++) {
+        xr[i] = xr[j]*x;
+        yr[i] = yr[j]*y;
+        ar[i] = ar[j]*a;
+      }
+      dx  = (a*(7*ar[7]*xr[9] + 7*ar[8]*xr[10] + ar[5]*xr[7]*(7 + 27*ar[2]*yr[2]) 
+                + ar[6]*xr[8]*(7 + 30*ar[2]*yr[2]) + ar[4]*xr[6]*(7 + 24*ar[2]*yr[2]
+                                                                  + 30*ar[4]*yr[4]) + ar[3]*xr[5]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
+                + 3*a*x*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
+                + ar[2]*xr[4]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
+                + xr[3]*(7*a + 189*ar[5]*yr[4] - 975*ar[7]*yr[6]) 
+                + 3*yr[2]*(7 - 7*ar[2]*yr[2] + 21*ar[4]*yr[4] - 39*ar[6]*yr[6] 
+                           + 82*ar[8]*yr[8]) - 7*xr[2]*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] 
+                                                        - 96*ar[6]*yr[6] + 315*ar[8]*yr[8])))/7;
+      dpx = (a*(2*py*y*(7 - 7*a*x - 28*ar[2]*yr[2] + 70*x*ar[3]*yr[2] + 56*x*ar[5]*(xr[2]
+                                                                                    - 6*yr[2])*yr[2] + 84*ar[4]*yr[2]*(-xr[2] + yr[2]) 
+                        + 3*x*ar[7]*yr[2]*(xr[4] - 262*xr[2]*yr[2] + 409*yr[4])
+                        - 4*ar[6]*(5*xr[4]*yr[2] - 162*xr[2]*yr[4] + 57*yr[6])
+                        + 20*ar[8]*(33*xr[4]*yr[4] - 162*xr[2]*yr[6] + 29*yr[8]))
+                + px*(-3*ar[7]*xr[6]*yr[2] - 24*ar[6]*xr[5]*yr[2]*(-1 + 55*ar[2]*yr[2])
+                      + 3*ar[5]*xr[4]*yr[2]*(-28 + 655*ar[2]*yr[2])
+                      + 24*ar[4]*xr[3]*yr[2]*(7 - 90*ar[2]*yr[2] + 630*ar[4]*yr[4])
+                      + 3*a*yr[2]*(-21 + 70*ar[2]*yr[2] - 196*ar[4]*yr[4] + 513*ar[6]*yr[6])
+                      - 7*a*xr[2]*(-1 + 30*ar[2]*yr[2] - 240*ar[4]*yr[4] + 1227*ar[6]*yr[6])
+                      - 2*x*(7 - 84*ar[2]*yr[2] + 420*ar[4]*yr[4] - 1596*ar[6]*yr[6]
+                             + 5220*ar[8]*yr[8]))))/7;
+      dy  = -(a*y*(ar[7]*xr[6]*yr[2] + 8*ar[6]*xr[5]*yr[2]*(-1 + 33*ar[2]*yr[2])
+                   - 8*ar[4]*xr[3]*yr[2]*(7 - 54*ar[2]*yr[2] + 270*ar[4]*yr[4])
+                   + xr[4]*(28*ar[5]*yr[2] - 393*ar[7]*yr[4]) + 3*a*yr[2]*(7 - 14*ar[2]*yr[2]
+                                                                           + 28*ar[4]*yr[4] - 57*ar[6]*yr[6]) + a*xr[2]*(-7 + 70*ar[2]*yr[2]
+                                                                                                                         - 336*ar[4]*yr[4] + 1227*ar[6]*yr[6]) + 2*x*(7 - 28*ar[2]*yr[2] 
+                                                                                                                                                                      + 84*ar[4]*yr[4] - 228*ar[6]*yr[6] + 580*ar[8]*yr[8])))/7;
+      dpy = (a*(-6*px*y*(7 - 7*a*x + 14*ar[2]*(xr[2] - yr[2]) + 70*x*ar[3]*yr[2] 
+                         + 7*ar[4]*(xr[4] - 14*xr[2]*yr[2] + 9*yr[4]) + 7*ar[5]*(xr[5]
+                                                                                 + 18*xr[3]*yr[2] - 39*x*yr[4]) + 4*ar[6]*(2*xr[6] - 15*xr[4]*yr[2]
+                                                                                                                           + 168*xr[2]*yr[4] - 39*yr[6]) + ar[7]*(9*xr[7] + 66*xr[5]*yr[2]
+                                                                                                                                                                  - 975*xr[3]*yr[4] + 984*x*yr[6]) + 10*ar[8]*(xr[8] + 2*xr[6]*yr[2] 
+                                                                                                                                                                                                               + 114*xr[4]*yr[4] - 294*xr[2]*yr[6] + 41*yr[8])) + py*(63*ar[7]*xr[8]
+                                                                                                                                                                                                                                                                      + 70*ar[8]*xr[9] + 7*ar[5]*xr[6]*(7 + 27*ar[2]*yr[2]) 
+                                                                                                                                                                                                                                                                      + 8*ar[6]*xr[7]*(7 + 30*ar[2]*yr[2]) + 6*ar[4]*xr[5]*(7 + 24*ar[2]*yr[2]
+                                                                                                                                                                                                                                                                                                                            + 30*ar[4]*yr[4]) + 5*ar[3]*xr[4]*(7 + 21*ar[2]*yr[2] + 99*ar[4]*yr[4])
+                                                                                                                                                                                                                                                                      + 3*a*xr[2]*(7 + 189*ar[4]*yr[4] - 975*ar[6]*yr[6])
+                                                                                                                                                                                                                                                                      + 3*a*yr[2]*(-7 + 35*ar[2]*yr[2] - 91*ar[4]*yr[4] + 246*ar[6]*yr[6])
+                                                                                                                                                                                                                                                                      + 4*ar[2]*xr[3]*(7 + 21*ar[2]*yr[2] - 90*ar[4]*yr[4] + 1140*ar[6]*yr[6])
+                                                                                                                                                                                                                                                                      - 14*x*(-1 - 6*ar[2]*yr[2] + 21*ar[4]*yr[4] - 96*ar[6]*yr[6]
+                                                                                                                                                                                                                                                                              + 315*ar[8]*yr[8]))))/7;
+    } else {
+      dx  = a*(ipow(x,2) + 3*ipow(y,2));
+      dpx = 2*a*(-px*x + py*y);
+      dy  = -2*a*x*y;
+      dpy = 2*a*(py*x - 3*px*y);
+    }
+    
+    ds  = (a/(1+delta))*(2*py*x*y - px*ipow(x,2) - 3*px*ipow(y,2));
   }
   
-  ds  = (a/(1+delta))*(2*py*x*y - px*ipow(x,2) - 3*px*ipow(y,2));
-
   vec[0] += dx;
   vec[1] += dpx;
   vec[2] += dy;
