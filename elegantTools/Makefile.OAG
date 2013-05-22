@@ -137,7 +137,7 @@ GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
 ifeq ($(GSL), 1)
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
-GSLLIB = rpnlib gsl gslcblas
+GSLLIB = gsl gslcblas
 SYS_GSLLIB = 
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 gslcblas_DIR = $(EPICS_EXTENSIONS_LIB)
@@ -182,21 +182,21 @@ SYS_GSLLIB =
 endif
 endif
 
-csrImpedance_LIBS += $(GSLLIB)
+#csrImpedance_LIBS += $(GSLLIB)
 csrImpedance_SYS_LIBS += $(SYS_GSLLIB)
-sddsrandmult_LIBS += $(GSLLIB)
+#sddsrandmult_LIBS = $(GSLLIB)
 sddsrandmult_SYS_LIBS += $(SYS_GSLLIB)
 
 
 
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		namelist rpnlib mdbmth mdblib \
+		namelist rpnlib $(GSLLIB) mdbmth mdblib \
 		meschach z fdlibm
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		namelist rpnlib mdbmth mdblib \
+		namelist rpnlib $(GSLLIB) mdbmth mdblib \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z
