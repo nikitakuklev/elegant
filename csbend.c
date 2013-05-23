@@ -1779,7 +1779,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	      iBin = (f=(CT-ctLower)/dct);
 	      f -= iBin;
 	      if (iBin>=0 && iBin<nBins1)
-		DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
+		DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po*(1+X/rho0);
 	    }
 	  }
 	}
