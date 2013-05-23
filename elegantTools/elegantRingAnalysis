@@ -389,6 +389,7 @@ proc FillErrorsFrame {widget args} {
 
 
 proc FillMainFrame {widget args} {
+    global env
     APSLabeledEntry .le1 -parent $widget -label "Momentum (MeV/c): " \
       -width 60 -textVariable momentum -contextHelp \
       "Enter the beam momentum in MeV/c."
@@ -436,9 +437,15 @@ proc FillMainFrame {widget args} {
       -width 80 -textVariable mainPrefix \
       -contextHelp "Enter an optional prefix to use in creating output filenames."
 
-    APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-      -variable gridEngine -buttonList "Yes No" -valueList "1 0" \
-      -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
+    if {[info exists env(SGE_CLUSTER_NAME)] && [string compare $env(SGE_CLUSTER_NAME) "weed"]==0} {
+	APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
+	    -variable gridEngine -buttonList "Yes(main) Yes(hive) No" -valueList "1 2 0" \
+	    -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
+    } else {
+	APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
+	    -variable gridEngine -buttonList "Yes No" -valueList "1 0" \
+	    -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
+    }
 
     APSRadioButtonFrame .rb2 -parent $widget -label "Make PNG files? " \
       -orientation horizontal \
