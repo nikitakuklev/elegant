@@ -1469,11 +1469,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
     }
 
-    if (!csbend->useMatrix) {
-      /* transform to curvilinear coordinates */
-      XP *= (1+X/rho0);
-      YP *= (1+X/rho0);
-    }
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
       computeCSBENDFields(&Fx, &Fy, x, y);
@@ -1957,12 +1952,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       beta1 = p1/sqrt(sqr(p1)+1);
       coord[4] = CT*beta1;
 
-      if (!csbend->useMatrix) {
-	/* transform to cartesian coordinates */
-	XP /= (1+X/rho0);
-	YP /= (1+X/rho0);
-      }
-    
       if (particleLost[i_part] || p1<=0) {
 	if (!part[i_top]) {
 	  fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
@@ -3368,9 +3357,6 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
   for (ip=0; ip<np; ip++) {
     coord = part[ip];
 
-    XP /= (1+X/rho0);
-    YP /= (1+X/rho0);
-    
     x  =  X*cos_ttilt -  Y*sin_ttilt;
     y  =  X*sin_ttilt +  Y*cos_ttilt;
     xp = XP*cos_ttilt - YP*sin_ttilt;
@@ -3409,9 +3395,6 @@ void convertToCSBendCoords(double **part, long np, double rho0,
     Y  = y;
     XP = xp;
     YP = yp;
-
-    XP *= (1+X/rho0);
-    YP *= (1+X/rho0);
 
     if (ctMode)
       coord[4] *= c_mks;
