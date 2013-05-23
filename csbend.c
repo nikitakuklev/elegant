@@ -437,10 +437,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
     }
 
-    /* transform to curvilinear coordinates */
-    xp *= (1+x/rho0);
-    yp *= (1+x/rho0);
-
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
@@ -541,10 +537,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       s += Qf[4];
     x = Qf[0];  xp = Qf[1];  y = Qf[2];  yp = Qf[3];  dp = Qf[5];
 
-    /* transform to cartesian coordinates */
-    xp /= (1+x/rho0);
-    yp /= (1+x/rho0);
-
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
@@ -589,7 +581,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 {
   double f;
-  f = (1 + Qi[5])/EXSQRT(sqr(1+Qi[0]/rho) + sqr(Qi[1]) + sqr(Qi[3]), sqrtOrder);
+  f = (1 + Qi[5])/EXSQRT(1 + sqr(Qi[1]) + sqr(Qi[3]), sqrtOrder);
   Qi[1] *= f;
   Qi[3] *= f;
 }
@@ -597,7 +589,7 @@ void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 {
   double f, delta;
-  f = (1 + Qi[0]/rho)/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
+  f = 1/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
   Qi[1] *= f;
   Qi[3] *= f;
 }
