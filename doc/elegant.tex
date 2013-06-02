@@ -1148,6 +1148,8 @@ particles.
     long change_defined_values = 0;
     double strength_limit = 0;
     long use_perturbed_matrix = 0;    
+    long exit_on_failure = 0;
+    long verbosity = 2;
 &end
 \end{verbatim}
 
@@ -1168,9 +1170,13 @@ This means that when the lattice is saved (using \verb|save_lattice|), the sextu
 have the corrected values.  This would be used for correcting the chromaticity of a design
 lattice, for example, but not for correcting chromaticity of a perturbed lattice.
 \item \verb|strength_limit| --- Limit on the absolute value of sextupole strength ($K_2$).
-`\item \verb|use_perturbed_matrix| --- If nonzero, requests use of the perturbed correction matrix in
+\item \verb|use_perturbed_matrix| --- If nonzero, requests use of the perturbed correction matrix in
 performing correction.  For difficult lattices with large errors, this may be necessary
 to obtain correction.  In general, it is not necessary and only slows the simulation.
+\item \verb|exit_on_failure| --- If nonzero, then failure to reach the desired chromaticities within the
+  tolerance results in the program exiting.
+\item \verb|verbosity| --- Increasing positive values result in increasing amounts of information printed during
+  execution.
 \end{itemize}
 
 \begin{latexonly}
