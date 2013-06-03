@@ -63,7 +63,8 @@
 &correct
     mode = "orbit", method = "global",
     verbose = 0, n_iterations = 0, n_xy_cycles = 1,
-    fixed_length = 1
+    fixed_length = 1,
+    closed_orbit_accuracy = 1e-10
 &end
 
 &correction_matrix_output
