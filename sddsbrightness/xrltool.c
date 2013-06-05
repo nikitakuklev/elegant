@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <ctype.h>
 
-#include "xraylib.h"
-#include "xraylib-parser.h"
+#include "xraylib/xraylib.h"
+#include "xraylib/xraylib-parser.h"
 
 /* Define global variables */
 #define MAXVAR 16
@@ -14,6 +14,8 @@ char  units[16];		/* Units of the output quantities */
 char  strVar[MAXVAR][64];	/* Command line arguments in strings */
 int   intVar[MAXVAR];		/* Command line arguments in integers */
 float floatVar[MAXVAR];		/* Command line arguments in floating numbers */
+
+struct compoundData  	compData;
 
 typedef struct {
   int    Z;
@@ -137,7 +139,62 @@ MatEntry materialTable[MAX_ENTRY] = {
   {99, "Es",  "Einsteinium", 0, 7, 252,        13.5,         1133.15,     0,    0,      1.3,   0     },
   {18, "H2O", "Water",      0,  0,  18.016,    1.00,          271.15,   371.15, 0.0,    0.0,   0.0   },
 };
-  
+
+
+char *USAGE=\
+"Usage:   xrltool <full_function_call> \n Example: xrltool CSb_Total(15, 2000.0) \n\n\
+List of functions by purpose: \n\
+  Look up material properties in build-in database: \n\
+    getMatPropertyString( Diamond, Formula), getMatPropertyFloat( Diamond, Density)\n\
+  Compound parser (enhanced version): \n\
+    CompoundParser(C3H7OH) \n\
+  Atomic number, symbol, weight information:\n\
+    SymbolToAtomicNumber( Cu ), AtomicNumberToSymbol( 29 ), AtomicWeight( 29 ), AtomicWeight_CP( Cu )\n\
+  Electronic configuration: \n\
+    ElectronConfig( 29, L2), ElectronConfig_CP( Cu, L2)\n\
+  Scattering variables: \n\
+    MomentTransf( 9.0_keV, 1.57_radian ), ComptonEnergy( 9.0_keV, 1.57_radian ) \n\
+  Scattering functions and form factors: \n\
+    FF_Rayl( 29(Cu), 1.5 (q) ), SF_Compt( 29, 1.5) \n\
+  Anomalous scattering factors and Refractive indices: \n\
+    Fi( 29(Cu), 1.5(q) ), Fii( 29, 1.5), Refractive_Index_Re( CuO, 9.0, 1.25), Refractive_Index_Im( CuO, 9.0, 1.25 ) \n\
+  Compton profiles: \n\
+    ComptonProfile( 29(Cu), 1.5(q) ), ComptonProfile_Partial (29, L3, 1.5) \n\
+  Absorption edge data: \n\
+    EdgeEnergy( 29(Cu), K_shell), EdgeEnergy_CP (Cu, L2), FluorYield (29, K), FluorYield_CP (Cu, K) \n\
+    JumpFactor( 29, K ), JumpFactor_CP( Cu, K), AtomicLevelWidth( 29, K), AtomicLevelWidth_CP( Cu, K)\n\
+  Transition data: \n\
+    LineEnergy( 29(Cu), KA_line ),  LineEnergy_CP( Cu, KL1), RadRate( 29, KL2), RadRate_CP( Cu, KL3) \n\
+  Nonradiative rate: \n\
+    AugerRate(29, KL1L1), CosKronTransProb(29, F12) \n\
+  Cross section data (cm2/g) using atomic number: \n\
+    CS_Total( 29, 9.0_keV), CS_Photo( 29, 9.0), CS_Rayl( 29, 9.0), CS_Compt( 29, 9.0), CS_FluorLine( 29, KA, 9.0) \n\
+  Cross section data (cm2/g) using element symbol: \n\
+    CS_Total_CP( Cu, 9.0_keV), CS_Photo_CP(Cu, 9.0), CS_Rayl_CP(Cu, 9.0), CS_Compt_CP(Cu, 9.0)\n\
+  Cross section data (barn/atom) using atomic number: \n\
+    CS_KN(9.0_keV), CSb_Total(29, 9.0_keV), CSb_Photo(29, 9.0), CSb_Rayl(29, 9.0), CSb_Compt(29, 9.0), CSb_FluorLine(29, KL1, 9.0)\n\
+  Cross section data (barn/atom) using element symbol: \n\
+    CSb_Total_CP(Cu, 9.0_keV), CSb_Photo_CP(Cu, 9.0), CSb_Rayl_CP(Cu, 9.0), CSb_Compt_CP(Cu, 9.0) \n\
+  Differential unpolarized cross sections (cm2/g/sterad): \n\
+    DCS_Rayl(29, 9.0_keV, 1.57_radian), DCS_Compt(29, 9.0, 1.57), DCS_Rayl_CP(Cu, 9.0, 1.57) \n\
+    DCS_Compt_CP(Cu, 9.0, 1.57), DCS_Thoms(9.0), DCS_KN(9.0, 1.57) \n\
+  Differential unpolarized cross sections (barns/atom/sterad): \n\
+    DCSb_Rayl(29, 9.0_keV, 1.57_radian), DCSb_Compt(29, 9.0, 1.57), DCSb_Rayl_CP(Cu, 9.0, 1.57), DCSb_Compt_CP(Cu, 9.0, 1.57) \n\
+  Differential polarized cross sections (cm2/g/sterad): \n\
+    DCSP_Rayl(29, 9.0_keV, 1.57_theta, 0.0_phi), DCSP_Compt(29,9.0,1.57,0.0), DCSP_Rayl_CP(Cu,9.0,1.57,0.0), DCSP_Compt_CP(Cu,9.0,1.57,0.0) \n\
+  Differential polarized cross sections (barns/atom/sterad): \n\
+    DCSP_Thoms (1.57_theta, 0.0_phi), DCSP_KN(9.0_keV,1.57,0.0), DCSPb_Rayl(29,9.0,1.57,0.0), DCSPb_Compt(29,9.0,1.57,0.0) \n\
+    DCSPb_Rayl_CP (Cu, 9.0_keV, 1.57_theta, 0.0_phi), DCSPb_Compt_CP(Cu,9.0,1.57,0.0) \n\
+  KISSEL photoelectric cross sections (cm2/g): \n\
+    CS_Total_Kissel(29, 9.0_keV), CS_Photo_Total(29, 9.0), CS_Photo_Partial(29, K_shell, 9.0), CS_Photo_Total_CP(Cu, 9.0) \n\
+  KISSEL photoelectric cross sections (barn/atom): \n\
+    CSb_Total_Kissel(29, 9.0_keV), CSb_Photo_Total(29, 9.0), CSb_Photo_Partial(29, K_shell, 9.0), CSb_Photo_Total_CP(Cu, K_shell, 9.0) \n\
+  XRF CS using KISSEL partial photo CS (cm2/g): \n\
+    CS_FluorLine_Kissel(29, KL2, 9.0_keV), CS_FluorLine_Kissel_no_Cascade(29, KL2, 9.0_keV), CS_FluorLine_Kissel_Cascade(29, KL2, 9.0_keV)\n\
+    CS_FluorLine_Kissel_Nonradiative_Cascade(29, KL2, 9.0), CS_FluorLine_Kissel_Radiative_Cascade(29, KL2, 9.0) \n\
+  XRF CS using KISSEL partial photo CS (barn/atom): \n\
+    CSb_FluorLine_Kissel(29, KL2, 9.0_keV), CSb_FluorLine_Kissel_no_Cascade(29, KL2, 9.0_keV), CSb_FluorLine_Kissel_Cascade(29, KL2, 9.0_keV)\n\
+    CSb_FluorLine_Kissel_Nonradiative_Cascade(29, KL2, 9.0_keV), CSb_FluorLine_Kissel_Radiative_Cascade(29, KL2, 9.0) \n\n ";
 
 
 /************************************
@@ -207,22 +264,23 @@ char* getUnits (char *name)
   return units;
 }
 
-int printXrlFloat (float value)
+int printXrlFloat (float value, char *notes)
 {
-  // printf( "xrltest option: verbose = %d\n", verbose);
+  // printf( "xrltool option: verbose = %d\n", verbose);
   if(verbose <= 0)         { printf( "%f\n", value);
   } else if(verbose == 1)  { printf( "%s = %f\n", strVar[0], value);
-  } else if(verbose >  1)  { printf( "%s = %f (%s)\n", strVar[0], value, getUnits(strVar[0]) );
+  } else if(verbose == 2)  { printf( "%s = %f (%s)\n", strVar[0], value, getUnits(strVar[0]) );
+  } else if(verbose >  2)  { printf( "%s:\n%s = %f (%s)\n", notes, strVar[0], value, getUnits(strVar[0]) );
   }
   exit (0);
 }
 
-int printXrlStr (char *value)
+int printXrlStr (char *value, char *notes)
 {
-  // printf( "xrltest option: verbose = %d\n", verbose);
+  // printf( "xrltool option: verbose = %d\n", verbose);
   if(verbose <= 0)         { printf( "%s\n", value);
   } else if(verbose == 1)  { printf( "%s = %s\n", strVar[0], value);
-  } else if(verbose >  1)  { printf( "%s = %s (%s)\n", strVar[0], value, getUnits(strVar[0]) );
+  } else if(verbose >  1)  { printf( "%s\n%s = %s (%s)\n", notes, strVar[0], value, getUnits(strVar[0]) );
   }
   exit (0);
 }
@@ -969,20 +1027,19 @@ int getCKTransID (char *name)
 int main ( int argc, char *argv[] )
 {
   char   xrlCommand[256], *endp;
-  int    i;
+  int    i, nAtoms[64];
+  float  scaleNAtoms[64], sumScales, compWeight;
 
   /* Print flag if only one argument */
   if ( argc < 2 ) {
-    /* We print argv[0] assuming it is the program name */
-    printf( "usage:   xrltest <full_function_call> \n");
-    printf( "Example: xrltest \"CSb_Total(15, 2000.0)\"\n\n");
+    printf("%s", USAGE);
     return 0;
   }
   
   /* parse the xraylib command as the second argument */
   strcpy(xrlCommand, argv[1]);
   if ( getXRLFunctions (xrlCommand) != 0 ) {
-    printf( "xrltest error: parsing xraylib function failed: %s\n", xrlCommand);
+    printf( "xrltool error: parsing xraylib function failed: %s\n", xrlCommand);
     return -999;
   }
 
@@ -999,123 +1056,233 @@ int main ( int argc, char *argv[] )
   // printf( "Function %s, variables = %g, \n", strVar[0], floatVar[1]);
   /*  Related APS functions */
   if(strcmp(strVar[0], "getMatPropertyFloat") == 0)        { 
-    printXrlFloat ( getMatPropertyFloat ( strVar[1], strVar[2] )); 
+    printXrlFloat ( getMatPropertyFloat ( strVar[1], strVar[2] ), "Look up material property in the database using atomic number"); 
   } else if(strcmp(strVar[0], "getMatPropertyString") == 0) { 
-    printXrlStr ( getMatPropertyString ( strVar[1], strVar[2] )); 
+    printXrlStr ( getMatPropertyString ( strVar[1], strVar[2] ), "Look up material property in the database using element symbol"); 
   }
 
   /* Initialize xraylib */
   XRayInit();
 
   /*  Atomic number and symbol conversion */
-  if(strcmp(strVar[0], "SymbolToAtomicNumber") == 0)        { printXrlFloat ( SymbolToAtomicNumber ( strVar[1] )); 
-  } else if(strcmp(strVar[0], "AtomicNumberToSymbol") == 0) { printXrlStr   ( AtomicNumberToSymbol ( intVar[1] )); 
+  if(strcmp(strVar[0], "SymbolToAtomicNumber") == 0)        { printXrlFloat ( SymbolToAtomicNumber ( strVar[1] ), 
+  		"Convert element symbol to atomic number"); 
+  } else if(strcmp(strVar[0], "AtomicNumberToSymbol") == 0) { printXrlStr   ( AtomicNumberToSymbol ( intVar[1] ), 
+  		"Convert atomic number to element symbol"); 
   /*  Atomic Weight */
-  } else if(strcmp(strVar[0], "AtomicWeight") == 0)    { printXrlFloat ( AtomicWeight ( intVar[1] )); 
-  } else if(strcmp(strVar[0], "AtomicWeight_CP") == 0) { printXrlFloat ( AtomicWeight ( SymbolToAtomicNumber(strVar[1]) )); 
+  } else if(strcmp(strVar[0], "AtomicWeight") == 0)    { printXrlFloat ( AtomicWeight ( intVar[1] ), 
+  		"Look up atomic wieght using atomic number");
+  } else if(strcmp(strVar[0], "AtomicWeight_CP") == 0) { printXrlFloat ( AtomicWeight ( SymbolToAtomicNumber(strVar[1]) ), 
+  		"Look up atomic wieght using element symbol");
   /*  ELECTRONIC CONFIGURATION */
-  } else if(strcmp(strVar[0], "ElectronConfig") == 0)    { printXrlFloat ( ElectronConfig ( intVar[1], getShellID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "ElectronConfig_CP") == 0) { printXrlFloat ( ElectronConfig ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ));
+  } else if(strcmp(strVar[0], "ElectronConfig") == 0)    { printXrlFloat ( ElectronConfig ( intVar[1], getShellID(strVar[2]) ), 
+  		"Look up electronic configuration using atomic number");
+  } else if(strcmp(strVar[0], "ElectronConfig_CP") == 0) { printXrlFloat ( ElectronConfig ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ), 
+  		"Look up electronic configuration using element symbol");
   /*  SCATTERING FUNCTIONS AND FORM FACTORS */
-  } else if(strcmp(strVar[0], "MomentTransf") == 0)  { printXrlFloat ( MomentTransf ( floatVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "ComptonEnergy") == 0) { printXrlFloat ( ComptonEnergy( floatVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "FF_Rayl") == 0)       { printXrlFloat ( FF_Rayl ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "SF_Compt") == 0)      { printXrlFloat ( SF_Compt ( intVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "MomentTransf") == 0)  { printXrlFloat ( MomentTransf ( floatVar[1], floatVar[2] ), 
+  		"Photon momentum transfer in scattering"); 
+  } else if(strcmp(strVar[0], "ComptonEnergy") == 0) { printXrlFloat ( ComptonEnergy( floatVar[1], floatVar[2] ), 
+  		"Compton scattered photon energy"); 
+  } else if(strcmp(strVar[0], "FF_Rayl") == 0)       { printXrlFloat ( FF_Rayl ( intVar[1], floatVar[2] ), 
+    		"Rayleigh scatering amplitude"); 
+  } else if(strcmp(strVar[0], "SF_Compt") == 0)      { printXrlFloat ( SF_Compt ( intVar[1], floatVar[2] ), 
+  		"What is it?"); 
   /*  ANOMALOUS SCATTERING FACTOR */
-  } else if(strcmp(strVar[0], "Fi") == 0)   { printXrlFloat ( Fi  ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "Fii") == 0)  { printXrlFloat ( Fii ( intVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "Fi") == 0)   { printXrlFloat ( Fi  ( intVar[1], floatVar[2] ), 
+  		"Scattering amplitude f1"); 
+  } else if(strcmp(strVar[0], "Fii") == 0)  { printXrlFloat ( Fii ( intVar[1], floatVar[2] ), 
+  		"Scattering amplitude f2"); 
   /*  REFRACTIVE INDICES FUNCTIONS */
-  } else if(strcmp(strVar[0], "Refractive_Index_Re") == 0)   { printXrlFloat ( Refractive_Index_Re ( strVar[1], floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "Refractive_Index_Im") == 0)   { printXrlFloat ( Refractive_Index_Im ( strVar[1], floatVar[2], floatVar[3] )); 
+  } else if(strcmp(strVar[0], "Refractive_Index_Re") == 0)   { printXrlFloat ( Refractive_Index_Re ( strVar[1], floatVar[2], floatVar[3] ), 
+  		"Real part of scattering amplitude"); 
+  } else if(strcmp(strVar[0], "Refractive_Index_Im") == 0)   { printXrlFloat ( Refractive_Index_Im ( strVar[1], floatVar[2], floatVar[3] ), 
+  		"Imaginary part of scattering amplitude"); 
   /*  COMPTON PROFILES */
-  } else if(strcmp(strVar[0], "ComptonProfile") == 0)         { printXrlFloat ( ComptonProfile ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "ComptonProfile_Partial") == 0) { printXrlFloat ( ComptonProfile_Partial ( intVar[1], getShellID(strVar[2]), floatVar[2] )); 
+  } else if(strcmp(strVar[0], "ComptonProfile") == 0)         { printXrlFloat ( ComptonProfile ( intVar[1], floatVar[2] ), 
+  		"Compton scattering profile"); 
+  } else if(strcmp(strVar[0], "ComptonProfile_Partial") == 0) { printXrlFloat ( ComptonProfile_Partial ( intVar[1], getShellID(strVar[2]), floatVar[2] ), 
+  		"Partial Compton scattering profile"); 
   /*  ABSORPTION EDGES AND TRANSITIONS DATA */
-  } else if(strcmp(strVar[0], "EdgeEnergy") == 0)    { printXrlFloat ( EdgeEnergy ( intVar[1], getShellID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "EdgeEnergy_CP") == 0) { printXrlFloat ( EdgeEnergy ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "FluorYield") == 0)    { printXrlFloat ( FluorYield ( intVar[1], getShellID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "FluorYield_CP") == 0) { printXrlFloat ( FluorYield ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "JumpFactor") == 0)    { printXrlFloat ( JumpFactor ( intVar[1], getShellID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "JumpFactor_CP") == 0) { printXrlFloat ( JumpFactor ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "AtomicLevelWidth") == 0)    { printXrlFloat ( AtomicLevelWidth ( intVar[1], getShellID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "AtomicLevelWidth_CP") == 0) { printXrlFloat ( AtomicLevelWidth ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "LineEnergy") == 0)    { printXrlFloat ( LineEnergy ( intVar[1], getLineID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "LineEnergy_CP") == 0) { printXrlFloat ( LineEnergy ( SymbolToAtomicNumber(strVar[1]), getLineID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "RadRate") == 0)       { printXrlFloat ( RadRate ( intVar[1], getLineID(strVar[2]) )); 
-  } else if(strcmp(strVar[0], "RadRate_CP") == 0)    { printXrlFloat ( RadRate ( SymbolToAtomicNumber(strVar[1]), getLineID(strVar[2]) ));
+  } else if(strcmp(strVar[0], "EdgeEnergy") == 0)    { printXrlFloat ( EdgeEnergy ( intVar[1], getShellID(strVar[2]) ), 
+  		"Look up x-ray absorption edge energy by atomic number"); 
+  } else if(strcmp(strVar[0], "EdgeEnergy_CP") == 0) { printXrlFloat ( EdgeEnergy ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ), 
+  		"Look up x-ray absorption edge energy by element symbol");
+  } else if(strcmp(strVar[0], "FluorYield") == 0)    { printXrlFloat ( FluorYield ( intVar[1], getShellID(strVar[2]) ), 
+  		"X-ray fluorescence yield of the Line by atomic number"); 
+  } else if(strcmp(strVar[0], "FluorYield_CP") == 0) { printXrlFloat ( FluorYield ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ), 
+  		"X-ray fluorescence yield of the Line by element symbol");
+  } else if(strcmp(strVar[0], "JumpFactor") == 0)    { printXrlFloat ( JumpFactor ( intVar[1], getShellID(strVar[2]) ), 
+  		"X-ray absorption edge jump factor by atomic number");
+  } else if(strcmp(strVar[0], "JumpFactor_CP") == 0) { printXrlFloat ( JumpFactor ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ), 
+  		"X-ray absorption edge jump factor by element symbol");
+  } else if(strcmp(strVar[0], "AtomicLevelWidth") == 0)    { printXrlFloat ( AtomicLevelWidth ( intVar[1], getShellID(strVar[2]) ), 
+  		"X-ray absorption level width by atomic number"); 
+  } else if(strcmp(strVar[0], "AtomicLevelWidth_CP") == 0) { printXrlFloat ( AtomicLevelWidth ( SymbolToAtomicNumber(strVar[1]), getShellID(strVar[2]) ),
+  		"X-ray absorption level width by element symbol");
+  } else if(strcmp(strVar[0], "LineEnergy") == 0)    { printXrlFloat ( LineEnergy ( intVar[1], getLineID(strVar[2]) ), 
+  		"X-ray fluorescence line energy by atomic number");
+  } else if(strcmp(strVar[0], "LineEnergy_CP") == 0) { printXrlFloat ( LineEnergy ( SymbolToAtomicNumber(strVar[1]), getLineID(strVar[2]) ), 
+  		"X-ray fluorescence line energy by element symbol");
+  } else if(strcmp(strVar[0], "RadRate") == 0)       { printXrlFloat ( RadRate ( intVar[1], getLineID(strVar[2]) ), 
+  		"Radiation rate by atomic number"); 
+  } else if(strcmp(strVar[0], "RadRate_CP") == 0)    { printXrlFloat ( RadRate ( SymbolToAtomicNumber(strVar[1]), getLineID(strVar[2]) ), 
+  		"Radiation rate by element symbol");
   /*  CROSS SECTIONS: (cm2/g) */
-  } else if(strcmp(strVar[0], "CS_Total") == 0)    { printXrlFloat ( CS_Total ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Photo") == 0)    { printXrlFloat ( CS_Photo ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Rayl")  == 0)    { printXrlFloat ( CS_Rayl  ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Compt") == 0)    { printXrlFloat ( CS_Compt ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_FluorLine") == 0){ printXrlFloat ( CS_FluorLine  ( intVar[1], getLineID(strVar[2]), floatVar[3] )); 
-  } else if(strcmp(strVar[0], "CS_Total_CP") == 0) { printXrlFloat ( CS_Total_CP ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Photo_CP") == 0) { printXrlFloat ( CS_Photo_CP ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Rayl_CP")  == 0) { printXrlFloat ( CS_Rayl_CP  ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Compt_CP") == 0) { printXrlFloat ( CS_Compt_CP ( strVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "CS_Total") == 0)    { printXrlFloat ( CS_Total ( intVar[1], floatVar[2] ), 
+  		"Total photon cross section by atomic number");
+  } else if(strcmp(strVar[0], "CS_Photo") == 0)    { printXrlFloat ( CS_Photo ( intVar[1], floatVar[2] ), 
+  		"Photoabsorption cross section by atomic number");
+  } else if(strcmp(strVar[0], "CS_Rayl")  == 0)    { printXrlFloat ( CS_Rayl  ( intVar[1], floatVar[2] ), 
+  		"Rayleigh (elastic) scattering cross section by atomic number");
+  } else if(strcmp(strVar[0], "CS_Compt") == 0)    { printXrlFloat ( CS_Compt ( intVar[1], floatVar[2] ), 
+  		"Compton (inelastic) scattering cross section by atomic number");
+  } else if(strcmp(strVar[0], "CS_FluorLine") == 0){ printXrlFloat ( CS_FluorLine( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"X-ray fluorescance line cross section by atomic number");
+  } else if(strcmp(strVar[0], "CS_Total_CP") == 0) { printXrlFloat ( CS_Total_CP ( strVar[1], floatVar[2] ), 
+  		"Total photon cross section by element symbol");
+  } else if(strcmp(strVar[0], "CS_Photo_CP") == 0) { printXrlFloat ( CS_Photo_CP ( strVar[1], floatVar[2] ), 
+  		"Photoabsorption cross section by element symbol");
+  } else if(strcmp(strVar[0], "CS_Rayl_CP")  == 0) { printXrlFloat ( CS_Rayl_CP  ( strVar[1], floatVar[2] ), 
+  		"Rayleigh (elastic) scattering cross section by element symbol"); 
+  } else if(strcmp(strVar[0], "CS_Compt_CP") == 0) { printXrlFloat ( CS_Compt_CP ( strVar[1], floatVar[2] ), 
+  		"Compton (inelastic) scattering cross section by element symbol");
   /*  CROSS SECTIONS: (barn/atom) */
-  } else if(strcmp(strVar[0], "CS_KN") == 0)        { printXrlFloat ( CS_KN     ( floatVar[1] )); 
-  } else if(strcmp(strVar[0], "CSb_Total") == 0)    { printXrlFloat ( CSb_Total ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Photo") == 0)    { printXrlFloat ( CSb_Photo ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Rayl")  == 0)    { printXrlFloat ( CSb_Rayl  ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Compt") == 0)    { printXrlFloat ( CSb_Compt ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_FluorLine") == 0){ printXrlFloat ( CSb_FluorLine ( intVar[1], getLineID(strVar[2]), floatVar[3] )); 
-  } else if(strcmp(strVar[0], "CSb_Total_CP") == 0) { printXrlFloat ( CSb_Total_CP ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Photo_CP") == 0) { printXrlFloat ( CSb_Photo_CP ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Rayl_CP")  == 0) { printXrlFloat ( CSb_Rayl_CP  ( strVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Compt_CP") == 0) { printXrlFloat ( CSb_Compt_CP ( strVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "CS_KN") == 0)        { printXrlFloat ( CS_KN     ( floatVar[1] ), 
+  		"One-electron Klein-Nishina Compton (inelastic) scattering cross section");
+  } else if(strcmp(strVar[0], "CSb_Total") == 0)    { printXrlFloat ( CSb_Total ( intVar[1], floatVar[2] ), 
+  		"Total photon cross section by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Photo") == 0)    { printXrlFloat ( CSb_Photo ( intVar[1], floatVar[2] ), 
+  		"Photoabsorption cross section by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Rayl")  == 0)    { printXrlFloat ( CSb_Rayl  ( intVar[1], floatVar[2] ), 
+  		"Rayleigh (elastic) scattering cross section by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Compt") == 0)    { printXrlFloat ( CSb_Compt ( intVar[1], floatVar[2] ), 
+  		"Compton (inelastic) scattering cross section by atomic number");
+  } else if(strcmp(strVar[0], "CSb_FluorLine") == 0){ printXrlFloat ( CSb_FluorLine ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"X-ray fluorescance line cross section by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Total_CP") == 0) { printXrlFloat ( CSb_Total_CP ( strVar[1], floatVar[2] ), 
+  		"Total photon cross section by element symbol");
+  } else if(strcmp(strVar[0], "CSb_Photo_CP") == 0) { printXrlFloat ( CSb_Photo_CP ( strVar[1], floatVar[2] ), 
+  		"Photoabsorption cross section by element symbol");
+  } else if(strcmp(strVar[0], "CSb_Rayl_CP")  == 0) { printXrlFloat ( CSb_Rayl_CP  ( strVar[1], floatVar[2] ), 
+  		"Rayleigh (elastic) scattering cross section by element symbol"); 
+  } else if(strcmp(strVar[0], "CSb_Compt_CP") == 0) { printXrlFloat ( CSb_Compt_CP ( strVar[1], floatVar[2] ), 
+  		"Compton (inelastic) scattering cross section by element symbol");
   /*  DIFFERENTIAL UNPOLARIZED CROSS SECTIONS: (cm2/g/sterad) */
-  } else if(strcmp(strVar[0], "DCS_Rayl") == 0)     { printXrlFloat ( DCS_Rayl  ( intVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCS_Compt") == 0)    { printXrlFloat ( DCS_Compt ( intVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCS_Rayl_CP") == 0)  { printXrlFloat ( DCS_Rayl_CP  ( strVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCS_Compt_CP") == 0) { printXrlFloat ( DCS_Compt_CP ( strVar[1],   floatVar[2], floatVar[3] )); 
+  } else if(strcmp(strVar[0], "DCS_Rayl") == 0)     { printXrlFloat ( DCS_Rayl  ( intVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Rayleigh cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCS_Compt") == 0)    { printXrlFloat ( DCS_Compt ( intVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Compton cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCS_Rayl_CP") == 0)  { printXrlFloat ( DCS_Rayl_CP  ( strVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Rayleigh cross section by element symbol");
+  } else if(strcmp(strVar[0], "DCS_Compt_CP") == 0) { printXrlFloat ( DCS_Compt_CP ( strVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Compton cross section by element symbol");
   /*  DIFFERENTIAL UNPOLARIZED CROSS SECTIONS: (barns/atom/sterad) */
-  } else if(strcmp(strVar[0], "DCS_Thoms") == 0)    { printXrlFloat ( DCS_Thoms ( floatVar[1] )); 
-  } else if(strcmp(strVar[0], "DCS_KN") == 0)       { printXrlFloat ( DCS_KN    ( floatVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "DCSb_Rayl") == 0)    { printXrlFloat ( DCSb_Rayl ( intVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCSb_Compt") == 0)   { printXrlFloat ( DCSb_Compt( intVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCSb_Rayl_CP") == 0) { printXrlFloat ( DCSb_Rayl_CP  ( strVar[1],   floatVar[2], floatVar[3] )); 
-  } else if(strcmp(strVar[0], "DCSb_Compt_CP") == 0){ printXrlFloat ( DCSb_Compt_CP ( strVar[1],   floatVar[2], floatVar[3] )); 
+  } else if(strcmp(strVar[0], "DCS_Thoms") == 0)    { printXrlFloat ( DCS_Thoms ( floatVar[1] ), 
+  		"One-electron differential unpolarized Thomason cross section");
+  } else if(strcmp(strVar[0], "DCS_KN") == 0)       { printXrlFloat ( DCS_KN    ( floatVar[1], floatVar[2] ), 
+  		"One-electron Klein-Nishina differential unpolarized Compton cross section");
+  } else if(strcmp(strVar[0], "DCSb_Rayl") == 0)    { printXrlFloat ( DCSb_Rayl ( intVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Rayleigh cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSb_Compt") == 0)   { printXrlFloat ( DCSb_Compt( intVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Compton cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSb_Rayl_CP") == 0) { printXrlFloat ( DCSb_Rayl_CP  ( strVar[1],   floatVar[2], floatVar[3] ), 
+  		"Differential unpolarized Rayleigh cross section by element symbol");
+  } else if(strcmp(strVar[0], "DCSb_Compt_CP") == 0){ printXrlFloat ( DCSb_Compt_CP ( strVar[1],   floatVar[2], floatVar[3] ), "Differential unpolarized Compton cross section by element symbol");
   /*  DIFFERENTIAL POLARIZED CROSS SECTIONS: (cm2/g/sterad) */
-  } else if(strcmp(strVar[0], "DCSP_Rayl") == 0)     { printXrlFloat ( DCSP_Rayl  ( intVar[1], floatVar[2], floatVar[3], floatVar[4] )); 
-  } else if(strcmp(strVar[0], "DCSP_Compt") == 0)    { printXrlFloat ( DCSP_Compt ( intVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
-  } else if(strcmp(strVar[0], "DCSP_Rayl_CP") == 0)  { printXrlFloat ( DCSP_Rayl_CP  ( strVar[1], floatVar[2], floatVar[3], floatVar[4] )); 
-  } else if(strcmp(strVar[0], "DCSP_Compt_CP") == 0) { printXrlFloat ( DCSP_Compt_CP ( strVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
+  } else if(strcmp(strVar[0], "DCSP_Rayl") == 0)     { printXrlFloat ( DCSP_Rayl  ( intVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Rayleigh cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSP_Compt") == 0)    { printXrlFloat ( DCSP_Compt ( intVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Compton cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSP_Rayl_CP") == 0)  { printXrlFloat ( DCSP_Rayl_CP  ( strVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Rayleigh cross section by element symbol");
+  } else if(strcmp(strVar[0], "DCSP_Compt_CP") == 0) { printXrlFloat ( DCSP_Compt_CP ( strVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Compton cross section by element symbol");
   /*  DIFFERENTIAL POLARIZED CROSS SECTIONS: (barns/atom/sterad) */
-  } else if(strcmp(strVar[0], "DCSP_Thoms") == 0)    { printXrlFloat ( DCSP_Thoms ( floatVar[1], floatVar[2]  )); 
-  } else if(strcmp(strVar[0], "DCSP_KN") == 0)       { printXrlFloat ( DCSP_KN    ( floatVar[1], floatVar[2], floatVar[3]  )); 
-  } else if(strcmp(strVar[0], "DCSPb_Rayl") == 0)    { printXrlFloat ( DCSPb_Rayl ( intVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
-  } else if(strcmp(strVar[0], "DCSPb_Compt") == 0)   { printXrlFloat ( DCSPb_Compt( intVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
-  } else if(strcmp(strVar[0], "DCSPb_Rayl_CP") == 0) { printXrlFloat ( DCSPb_Rayl_CP ( strVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
-  } else if(strcmp(strVar[0], "DCSPb_Compt_CP") == 0){ printXrlFloat ( DCSPb_Compt_CP( strVar[1], floatVar[2], floatVar[3], floatVar[4]  )); 
+  } else if(strcmp(strVar[0], "DCSP_Thoms") == 0)    { printXrlFloat ( DCSP_Thoms ( floatVar[1], floatVar[2] ), 
+  		"One-electron differential polarized Thomason cross section");
+  } else if(strcmp(strVar[0], "DCSP_KN") == 0)       { printXrlFloat ( DCSP_KN    ( floatVar[1], floatVar[2], floatVar[3]  ), 
+  		"One-electron Klein-Nishina differential polarized Compton cross section");
+  } else if(strcmp(strVar[0], "DCSPb_Rayl") == 0)    { printXrlFloat ( DCSPb_Rayl ( intVar[1], floatVar[2], floatVar[3], floatVar[4]  ),
+  		"Differential polarized Rayleigh cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSPb_Compt") == 0)   { printXrlFloat ( DCSPb_Compt( intVar[1], floatVar[2], floatVar[3], floatVar[4]  ),
+  		"Differential polarized Compton cross section by atomic number");
+  } else if(strcmp(strVar[0], "DCSPb_Rayl_CP") == 0) { printXrlFloat ( DCSPb_Rayl_CP ( strVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Rayleigh cross section by element symbol");
+  } else if(strcmp(strVar[0], "DCSPb_Compt_CP") == 0){ printXrlFloat ( DCSPb_Compt_CP( strVar[1], floatVar[2], floatVar[3], floatVar[4] ),
+  		"Differential polarized Compton cross section by element symbol");
   /*  KISSEL PHOTOELECTRIC CROSS SECTIONS  (cm2/g) */
-  } else if(strcmp(strVar[0], "CS_Total_Kissel") == 0)  { printXrlFloat ( CS_Total_Kissel  ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Photo_Total") == 0)   { printXrlFloat ( CS_Photo_Total   ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CS_Photo_Partial") == 0) { printXrlFloat ( CS_Photo_Partial ( intVar[1], getShellID(strVar[2]), floatVar[3] )); 
-  } else if(strcmp(strVar[0], "CS_Photo_Total_CP") == 0){ printXrlFloat ( CS_Photo_Total_CP ( strVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "CS_Total_Kissel") == 0)  { printXrlFloat ( CS_Total_Kissel  ( intVar[1], floatVar[2] ), 
+  		"Total cross section using KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CS_Photo_Total") == 0)   { printXrlFloat ( CS_Photo_Total   ( intVar[1], floatVar[2] ), 
+  		"KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CS_Photo_Partial") == 0) { printXrlFloat ( CS_Photo_Partial ( intVar[1], getShellID(strVar[2]), floatVar[3] ), 
+  		"Sub-shell KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CS_Photo_Total_CP") == 0){ printXrlFloat ( CS_Photo_Total_CP ( strVar[1], floatVar[2] ), 
+  		"KISSEL photoelectric cross sections by element symbol");
   /*  KISSEL PHOTOELECTRIC CROSS SECTIONS  (barn/atom) */
-  } else if(strcmp(strVar[0], "CSb_Total_Kissel") == 0) { printXrlFloat ( CSb_Total_Kissel ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Photo_Total") == 0)  { printXrlFloat ( CSb_Photo_Total  ( intVar[1], floatVar[2] )); 
-  } else if(strcmp(strVar[0], "CSb_Photo_Partial") == 0){ printXrlFloat ( CSb_Photo_Partial( intVar[1], getShellID(strVar[2]), floatVar[3] )); 
-  } else if(strcmp(strVar[0], "CSb_Photo_Total_CP") == 0)  { printXrlFloat ( CSb_Photo_Total_CP  ( strVar[1], floatVar[2] )); 
+  } else if(strcmp(strVar[0], "CSb_Total_Kissel") == 0) { printXrlFloat ( CSb_Total_Kissel ( intVar[1], floatVar[2] ), 
+  		"Total cross section using KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Photo_Total") == 0)  { printXrlFloat ( CSb_Photo_Total  ( intVar[1], floatVar[2] ), 
+  		"KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Photo_Partial") == 0){ printXrlFloat ( CSb_Photo_Partial( intVar[1], getShellID(strVar[2]), floatVar[3] ), 
+  		"Sub-shell KISSEL photoelectric cross sections by atomic number");
+  } else if(strcmp(strVar[0], "CSb_Photo_Total_CP") == 0)  { printXrlFloat ( CSb_Photo_Total_CP  ( strVar[1], floatVar[2] ), 
+  		"KISSEL photoelectric cross sections by element symbol");
   /*  XRF CROSS SECTIONS USING KISSEL PARTIAL PHOTOELECTRIC CROSS SECTIONS  (cm2/g) */
-  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel") == 0)             { printXrlFloat ( CS_FluorLine_Kissel ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_no_Cascade") == 0)  { printXrlFloat ( CS_FluorLine_Kissel_no_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Cascade") == 0)     { printXrlFloat ( CS_FluorLine_Kissel_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Nonradiative_Cascade") == 0){ printXrlFloat ( CS_FluorLine_Kissel_Nonradiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Radiative_Cascade") == 0)   { printXrlFloat ( CS_FluorLine_Kissel_Radiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
+  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel") == 0)             { printXrlFloat ( CS_FluorLine_Kissel ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_no_Cascade") == 0)  { printXrlFloat ( CS_FluorLine_Kissel_no_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Cascade") == 0)     { printXrlFloat ( CS_FluorLine_Kissel_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Nonradiative_Cascade") == 0){ printXrlFloat ( CS_FluorLine_Kissel_Nonradiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CS_FluorLine_Kissel_Radiative_Cascade") == 0)   { printXrlFloat ( CS_FluorLine_Kissel_Radiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
   /*  XRF CROSS SECTIONS USING KISSEL PARTIAL PHOTOELECTRIC CROSS SECTIONS  (barn/atom) */
-  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel") == 0)            { printXrlFloat ( CSb_FluorLine_Kissel ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_no_Cascade") == 0) { printXrlFloat ( CSb_FluorLine_Kissel_no_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Cascade") == 0)    { printXrlFloat ( CSb_FluorLine_Kissel_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Nonradiative_Cascade") == 0)  { printXrlFloat ( CSb_FluorLine_Kissel_Nonradiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
-  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Radiative_Cascade") == 0)     { printXrlFloat ( CSb_FluorLine_Kissel_Radiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ));
+  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel") == 0)            { printXrlFloat ( CSb_FluorLine_Kissel ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_no_Cascade") == 0) { printXrlFloat ( CSb_FluorLine_Kissel_no_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Cascade") == 0)    { printXrlFloat ( CSb_FluorLine_Kissel_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Nonradiative_Cascade") == 0)  { printXrlFloat ( CSb_FluorLine_Kissel_Nonradiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
+  } else if(strcmp(strVar[0], "CSb_FluorLine_Kissel_Radiative_Cascade") == 0)     { printXrlFloat ( CSb_FluorLine_Kissel_Radiative_Cascade ( intVar[1], getLineID(strVar[2]), floatVar[3] ), 
+  		"XRF CS using KISSEL partial photo CS");
   /*  NONRADIATIVE RATE */
-  } else if(strcmp(strVar[0], "AugerRate") == 0)        { printXrlFloat ( AugerRate ( intVar[1], getAugerTransID(strVar[2]) ));
-  } else if(strcmp(strVar[0], "CosKronTransProb") == 0) { printXrlFloat ( CosKronTransProb ( intVar[1], getCKTransID(strVar[2]) ));
-  /*  UNRECOGNIZED FUNCTION */
+  } else if(strcmp(strVar[0], "AugerRate") == 0)        { printXrlFloat ( AugerRate ( intVar[1], getAugerTransID(strVar[2]) ), 
+  		"Auger transition rate");
+  } else if(strcmp(strVar[0], "CosKronTransProb") == 0) { printXrlFloat ( CosKronTransProb ( intVar[1], getCKTransID(strVar[2]) ), 
+  		"Coster-Kronig transotion probability");
+  /*  ENHANCEMENT: COMPOUND PARSER. The other parser, CompoundParserSimple, is not accessible */
+  } else if(strcmp(strVar[0], "CompoundParser") == 0)        { 
+    i = CompoundParser(strVar[1], &compData);
+    if (i == 0) {
+      printf("Error parsing the formula %s\n", strVar[1]);
+    } else {
+      sumScales = 0.0;
+      for ( i = 0; i < compData.nElements; i++ ) {
+       scaleNAtoms[i] = compData.massFractions[i] / AtomicWeight(compData.Elements[i]);
+       sumScales = sumScales + scaleNAtoms[i];
+      }
+      compWeight = compData.nAtomsAll / sumScales;
+      for ( i = 0; i < compData.nElements; i++ ) nAtoms[i] = scaleNAtoms[i] * compWeight;
+      /* Print function info */
+      if (verbose > 2) printf("Enhanced CompoundParser function: nElements, nAllAtoms, molWeight + {AtomicNumber, nAtoms, massFractions}\n");
+      /* Print total numbers of elements, total numbers of atoms and molecular weight */
+      printf("%d %d %f", compData.nElements, compData.nAtomsAll, compWeight);
+      /* Print atomic number, number of atoms and weight fraction of each elements */
+      for ( i = 0; i < compData.nElements; i++ ) printf(" %d %d %f", compData.Elements[i], nAtoms[i], compData.massFractions[i]);
+      printf("\n");
+    }
+  } else if(strcmp(strVar[0], "?")==0 || strstr(strVar[0],"H")!=NULL || strstr(strVar[0],"h")!=NULL) { 
+    /* Print help information if ?, H or h */
+    printf("%s", USAGE);
   } else {
-    printf( "xrltest error: XRL function not recognized, %s\n", strVar[0]);
+    /*  UNRECOGNIZED FUNCTION */
+    printf( "xrltool error: XRL function not recognized, %s\n", strVar[0]);
     return -999;
   }
 
