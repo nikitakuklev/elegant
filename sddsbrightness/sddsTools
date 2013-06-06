@@ -1,0 +1,726 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+# For sample command see /home/oxygen/BXYANG/program/bxyTools/doc/sddsTools.txt
+
+#########################
+# 	Functions	#
+#########################
+
+# Functions parsing commandline arguments
+proc getStrArg {var default} {
+  global argv
+  set value $default
+  set nPos  [lsearch $argv "-$var"]
+  if { $nPos >= 0 } { set value [lindex $argv [expr $nPos + 1] ] }
+  return $value
+}
+proc getNumArg {var default} { return [expr [getStrArg $var $default] ] }
+proc getListArg {var default} {
+  global argv
+  set value $default
+  set nPos  [lsearch $argv "-$var"]
+  if { $nPos >= 0 } { set value [lindex $argv [expr $nPos + 1] ] }
+  return $value
+}
+proc getStrArgShortTwo {var1 var2 default} {
+  global argv
+  set value $default
+  set minLen1   3
+  set totalLen [string length ${var1}]
+  if { $totalLen <= $minLen1 } { set minLen1 [expr $totalLen - 1] }
+  for { set i $minLen1 } { $i < $totalLen } { incr i } {
+    # (magic in)
+    if { $var2 < 0 } { 
+      set var   "[string range ${var1} 0 $i]" 
+    } else { 
+      set var   "[string range ${var1} 0 $i]${var2}" 
+    }
+    set nPos  [lsearch $argv "-$var"]
+    if { $nPos >= 0 } { 
+      set value [lindex $argv [expr $nPos + 1] ] 
+      return $value
+    }
+  }
+  return $value
+}
+
+
+# Function deleting temp files
+proc deleteTempFiles {tempFileList} {
+  global verbose
+  foreach tempFile $tempFileList {
+    if ![file exists $tempFile] { return }
+    if { $verbose > 1 } { puts "Delete temp file $tempFile" }
+    file delete $tempFile
+  }
+  return
+}
+
+# Function test whether the list var starts with 0, NO, or NONE (Magic word in)
+proc semiPositive { option optionValue } {
+  global verbose
+  set testFlag [string range [string toupper [lindex $optionValue 0] ] 0 1]
+  if { $verbose > 1 } { puts " semiPositive: $option = $optionValue, testFlag = $testFlag" }
+  if { ($testFlag != 0) && ($testFlag!="NO") } { return 1 }
+  return 0
+}
+
+proc deleteTempFile {tempFile} {
+  global verbose
+  if [file exists $tempFile] { 
+    if { $verbose > 1 } { puts "Delete temp file $tempFile" }
+    file delete $tempFile
+  }
+  return
+}
+
+
+# Run EXEC command or print it 
+proc runExec {echo commandline} {
+  global dryRun verbose
+
+  set msg ""
+  if $dryRun {
+    puts "eval exec $commandline" 
+  } else {
+    set msg [eval exec $commandline]
+    # if { $echo && [llength $msg] > 0 } { puts $msg } else { puts " " }
+    if { $echo && [llength $msg] > 0 } { puts $msg }
+  }  
+  return
+}  
+
+
+# Search and replace substrings
+proc substitute {inputString oldSubstring newSubstring} {
+  global verbose
+    
+  set outputString $inputString
+  set maxIter 100
+  
+  for {set i 0} {$i < $maxIter} {incr i} {
+    set nPos [string first $oldSubstring $outputString]
+    if { $nPos < 0 } {
+      set i $maxIter
+    } else {
+      set nPos1 [expr $nPos + [string len $oldSubstring] - 1 ]
+      set outputString [string replace $outputString $nPos $nPos1 $newSubstring]
+    }
+  }
+  return $outputString
+}
+
+
+# Functions parse specifications of scan variables  (Magic word in)
+proc findScanVars {axis} {
+  global verbose pidTag tempDir
+  global xVar nxVars xValueLists nxSteps xVarStart xVarStop xVarFormat
+  global yVar nyVars yValueLists nySteps yVarStart yVarStop yVarFormat
+  global zVar nzVars zValueLists nzSteps zVarStart zVarStop zVarFormat
+  
+  # Search the command line for each keyword within the list
+  set maxVarNumber 100
+  set nVars  0
+  set nSteps 0
+  for {set i "-1"} {$i < $maxVarNumber} {incr i} { 
+    if { $i < 0 } { set keyword ${axis}Var } else { set keyword ${axis}Var$i }
+    # Look for scan variables  (Magic word in)
+    set result [getStrArg $keyword NONE]
+    if { [semiPositive $keyword $result] > 0 } {
+      set thisVar $result
+
+      # Found xVar, look for value list
+      if { $i < 0 } { set keyword ${axis}ValueList } else { set keyword ${axis}ValueList$i }
+      set thisValueList [getListArg $keyword "None"]
+      # Replace semicolon with space to separate items
+      set thisValueList [substitute $thisValueList ","  " "]
+      set thisValueList [substitute $thisValueList ";"  " "]
+
+      # If the value list is valid, save and print information
+      if { [string len $thisValueList] >= 1 && [string toupper $thisValueList] != "NONE" } {
+        if $verbose { puts "${axis}Var($nVars) $thisVar, value list = $thisValueList" }
+      } else {
+        # If the value list is not valid, look for range parameters and generate a list
+        if { $i < 0 } { set keyword ${axis}VarStart } else { set keyword ${axis}VarStart$i }
+        set thisScanStart [getStrArg $keyword 0.0]
+        if { $i < 0 } { set keyword ${axis}VarStop }  else { set keyword ${axis}VarStop$i }
+        set thisScanStop [getStrArg $keyword  1.0]
+        if { $nVars < 1 } { 
+          # Obtain steps only from the first variable
+          if { $i < 0 } { set keyword n${axis}Steps } else { set keyword n${axis}Steps$i }
+          set nSteps [getStrArg $keyword 1]
+        } 
+        if { $i < 0 } { set keyword ${axis}VarFormat } else { set keyword ${axis}VarFormat$i }
+        set thisVarFormat [getStrArg $keyword "NONE"]
+        if { $nSteps <= 1 } {
+          set thisValueList "$thisScanStart"
+        } else {
+          # Make value list
+          set thisVarStep [expr ($thisScanStop - $thisScanStart * 1.0) / ($nSteps - 1.0)]
+          set thisValueList ""
+          for {set iStep 0} {$iStep < $nSteps} {incr iStep} {
+            set oneXVarValue [expr $thisScanStart + $thisVarStep * $iStep]
+            if { [string len $thisVarFormat] > 2 && [string toupper $thisVarFormat] != "NONE" } {
+              set oneXVarValue [format $thisVarFormat $oneXVarValue]
+            }
+            lappend thisValueList $oneXVarValue
+          }
+        }
+        # Save range information  (Magic word in)
+        eval set ${axis}VarStart($nVars)  $thisScanStart
+        eval set ${axis}VarStop($nVars)   $thisScanStop
+        eval set ${axis}VarFormat($nVars) $thisVarFormat
+        if $verbose { puts "${axis}Var($nVars) $thisVar, ${axis}VarStart = $thisScanStart, ${axis}VarStop = $thisScanStop" }
+        # puts "thisValueList = $thisValueList"
+      }
+
+      # Check nSteps
+      set nStepsOne [llength $thisValueList]
+      if { $nVars == 0 } {
+        set nSteps $nStepsOne
+      } elseif {$nStepsOne!=$nSteps} {
+        puts "\nThis list contains $nStepsOne elements, which does not match the previous nSteps = $nSteps"
+        exit
+      }
+
+      # Save xVar and list information
+      eval set ${axis}Var($nVars)        $thisVar
+      eval set ${axis}ValueLists($nVars) { $thisValueList }
+
+      # Advance the valid variable count
+      set nVars [expr $nVars + 1]
+    }
+  }
+  
+  eval set n${axis}Steps $nSteps
+  eval set n${axis}Vars  $nVars
+  if { $nVars > 0 || $verbose > 0 } { puts "scanVar = ${axis}Var; valid n${axis}Vars = $nVars; scan steps = $nSteps" }
+  return $nVars
+}
+
+
+# Functions reflect one parameter or column
+proc sddsreflect {inputDataFile outputDataFile commandArg} {
+  global verbose pidTag tempDir
+
+  # Temp files
+  set pidTag	 [pid]
+  set junkFile00 $tempDir/junksddsRefelectFile00-$pidTag.sdds
+  set junkFile11 $tempDir/junksddsRefelectFile11-$pidTag.sdds
+  set junkFile0  $tempDir/junksddsRefelectFile0-$pidTag.sdds
+  set junkFile1  $tempDir/junksddsRefelectFile1-$pidTag.sdds
+  set junkFile2  $tempDir/junksddsRefelectFile2-$pidTag.sdds
+  
+  # Copy input file to output (default)
+  if [file exist $inputDataFile] { exec sddsprocess $inputDataFile $outputDataFile }
+
+  # dataset = POSITIVE (default), NEGATIVE, ALL
+  set dataset POSITVE
+  set nPos  [lsearch $commandArg "-dataset"]
+  if { $nPos >= 0 } { set dataset [lindex $commandArg [expr $nPos + 1] ] }
+
+  # Symmetrically extraplolate data by column if requested
+  set index0 [string first "-col" $commandArg]
+  if { $index0 > -1 } { 
+    set tempString [string range $commandArg $index0 end]
+    set index1     [string first " " $tempString]
+    if { $index1 > -1 } { set tempString [string range $tempString $index0 $index1] }
+    set index0     [expr [string first "\=" $tempString] + 1]
+    set tempString [string range $tempString $index0 end]
+    set nChars     [string length $tempString]
+    set tempString [substitute $tempString ","  " "]
+
+    set reflectList $tempString
+    set nReflect   [llength $reflectList]
+    if $verbose { puts " -col reflectList = $reflectList" }
+    set varlist    [exec sddsquery -columnlist $inputDataFile]
+    exec sddsprocess $inputDataFile $junkFile00 -noWarning
+    exec sddsprocess $inputDataFile $junkFile11 -noWarning
+    for {set i 0} {$i < $nReflect} {incr i} {
+      # Reflect the choosen data range (Magic word in)
+      set reflect  [lindex $reflectList $i]
+      if { [lsearch $varlist $reflect] < 0 } {
+        puts " Refelction column $reflect is not found within the file. Nothing is done."
+      } else {
+        if { [string first [string toupper $dataset] ALL] > -1 } {
+          puts " Symmetric extrapolation of all data with respect to $reflect "
+        } elseif { [string first [string toupper $dataset] NEGATIVE] > -1 } {
+          puts " Symmetric extrapolation of negative-side data with respect to $reflect "
+          exec sddsprocess $junkFile00 $junkFile0  -noWarning "-filter=col,${reflect},-1e99,0.0"
+          exec sddsprocess $junkFile0  $junkFile00 -noWarning
+          exec sddsprocess $junkFile11 $junkFile0  -noWarning "-filter=col,${reflect},-1e99,-1e-50"
+          exec sddsprocess $junkFile0  $junkFile11 -noWarning
+        } else {
+          puts " Symmetric extrapolation of positive-side data with respect to $reflect "
+          exec sddsprocess $junkFile00 $junkFile0  -noWarning "-filter=col,${reflect},0.0,1e99"
+          exec sddsprocess $junkFile0  $junkFile00 -noWarning
+          exec sddsprocess $junkFile11 $junkFile0  -noWarning "-filter=col,${reflect},1e-50,1e99"
+          exec sddsprocess $junkFile0  $junkFile11 -noWarning
+        }
+        exec sddsprocess $junkFile11 $junkFile0  -noWarning "-def=col,${reflect}Neg,0.0 ${reflect} -"
+        exec sddsprocess $junkFile0  $junkFile1  -noWarning "-del=col,${reflect}"
+        exec sddsprocess $junkFile1  $junkFile0  -noWarning "-def=col,${reflect},${reflect}Neg"
+        exec sddsprocess $junkFile0  $junkFile11 -noWarning "-del=col,${reflect}Neg"
+      }
+    }
+    exec sddscombine $junkFile00 $junkFile11 $junkFile0 -overWrite -merge
+    exec sddssort    $junkFile0 $outputDataFile -col=${reflect},increasing
+  }
+  
+  # Symmetrically extraplolate data by parameter if requested
+  set index0     [string first "-par" $commandArg]
+  if { $index0 > -1 } {
+    set tempString [string range $commandArg $index0 end]
+    set index1     [string first " " $tempString]
+    if { $index1 > -1 } { set tempString [string range $tempString $index0 $index1] }
+    set index0     [expr [string first "\=" $tempString] + 1]
+    set tempString [string range $tempString $index0 end]
+    set nChars     [string length $tempString]
+    set tempString [substitute $tempString ","  " "]
+
+    set reflectList $tempString
+    set nReflect   [llength $reflectList]
+    if $verbose { puts " -par reflectList = $reflectList" }
+    set varlist    [exec sddsquery -parameterlist $inputDataFile]
+    exec sddsprocess $inputDataFile $junkFile00 -noWarning
+    exec sddsprocess $inputDataFile $junkFile11 -noWarning
+    for {set i 0} {$i < $nReflect} {incr i} {
+      # reflect the chosen data range  (Magic word in)
+      set reflect  [lindex $reflectList $i]
+      if { [lsearch $varlist $reflect] < 0 } {
+        puts " Refelction parameter $reflect is not found within the file. Nothing is done."
+      } else {
+        if { [string first [string toupper $dataset] ALL] > -1 } {
+          puts " Symmetric extrapolation of all parameter data with respect to $reflect "
+        } elseif { [string first [string toupper $dataset] NEGATIVE] > -1 } {
+          puts " Symmetric extrapolation of negative-side parameter data with respect to $reflect "
+          exec sddsprocess $junkFile00 $junkFile0  -noWarning "-filter=par,${reflect},-1e99,0.0"
+          exec sddsprocess $junkFile0  $junkFile00 -noWarning
+          exec sddsprocess $junkFile11 $junkFile0  -noWarning "-filter=par,${reflect},-1e99,-1e-50"
+          exec sddsprocess $junkFile0  $junkFile11 -noWarning
+        } else {
+          puts " Symmetric extrapolation of positive-side parameter data with respect to $reflect "
+          exec sddsprocess $junkFile00 $junkFile0  -noWarning "-filter=par,${reflect},0.0,1e99"
+          exec sddsprocess $junkFile0  $junkFile00 -noWarning
+          exec sddsprocess $junkFile11 $junkFile0  -noWarning "-filter=par,${reflect},1e-50,1e99"
+          exec sddsprocess $junkFile0  $junkFile11 -noWarning
+        }
+        exec sddsprocess $junkFile11 $junkFile0  -noWarning "-def=par,${reflect}Neg,0.0 ${reflect} -"
+        exec sddsprocess $junkFile0  $junkFile1  -noWarning "-del=par,${reflect}"
+        exec sddsprocess $junkFile1  $junkFile0  -noWarning "-def=par,${reflect},${reflect}Neg"
+        exec sddsprocess $junkFile0  $junkFile11 -noWarning "-del=par,${reflect}Neg"
+      }
+    }
+    exec sddscombine $junkFile00 $junkFile11 $junkFile0 -overWrite -merge
+    exec sddssort    $junkFile0 $outputDataFile -par=${reflect},increasing
+  }
+  
+  # clean up
+  if { $verbose > 1 } { puts "\nClean up temp files" }
+  deleteTempFile $junkFile00
+  deleteTempFile $junkFile11
+  deleteTempFile $junkFile0
+  deleteTempFile $junkFile1
+  deleteTempFile $junkFile2
+  return
+}
+
+
+# Functions processing one file in multiple steps
+proc processOneFile {inputDataFile outputDataFile keyword} {
+  global dryRun verbose pidTag tempDir firstCommand
+  global nVars varList valueList
+
+  # Constant settings
+  set maxToolNumber 100
+
+  # Temp files and file stacks
+  set pidTag	[pid]
+  set junkFileS0  $tempDir/junksddsToolsProcFileS0-$pidTag.sdds
+  set junkFileS1  $tempDir/junksddsToolsProcFileS1-$pidTag.sdds
+  set junkFileS2  $tempDir/junksddsToolsProcFileS2-$pidTag.sdds
+  set junkFile0   $tempDir/junksddsToolsProcFile0-$pidTag.sdds
+  set junkFile1   $tempDir/junksddsToolsProcFile1-$pidTag.sdds
+  set junkFile2   $tempDir/junksddsToolsProcFile2-$pidTag.sdds
+
+  set waitTime 0
+  
+  # Copy input file to file stack
+  puts "processOneFile: Process $inputDataFile"
+  if { [file exists $inputDataFile] } { exec cp -f $inputDataFile $junkFileS0 }
+  
+  # Apply the command chain to one file
+  for {set tooIndex "-1"} {$tooIndex < $maxToolNumber} {incr tooIndex} { 
+    # Try matching the shorthand version of the keywords  (Magic word in)
+    # puts " $keyword $tooIndex"
+    set thisCommandLine [getStrArgShortTwo $keyword $tooIndex NONE]
+
+    if { [semiPositive $keyword$tooIndex $thisCommandLine] > 0 } {
+      # Remove unwanted white characters from the command line 
+      set thisCommandLine [substitute $thisCommandLine "\n"  " "]
+      set thisCommandLine [substitute $thisCommandLine "\f"  " "]
+      set thisCommandLine [substitute $thisCommandLine "\b"  " "]
+      set thisCommandLine [substitute $thisCommandLine "\t"  " "]
+      set thisCommandLine [substitute $thisCommandLine "  "  " "]
+      # if $verbose { puts "$thisCommandLine" }
+      
+      # Print comments
+      set thisComment [getStrArg "comment$tooIndex" $thisCommandLine]
+      puts " $keyword $tooIndex: $thisComment"
+      
+      # Parse sdds tool name and decide whether to use eval
+      set sddsTool    [lindex $thisCommandLine 0]
+      set commandArg  [lrange $thisCommandLine 1 end]
+      set evalThis 1
+      if { [string first "NOEVAL" $commandArg] >= 0 } {
+        set evalThis 0
+        set commandArg  [substitute $commandArg "NOEVAL"  " "]
+      } elseif { [string first "noeval" $commandArg] >= 0 } {
+        set evalThis 0
+        set commandArg  [substitute $commandArg "noeval"  " "]
+      } elseif { $sddsTool=="sddsprocess" } { 
+        # if { [string first -def $commandArg] > -1 } { set evalThis 0 }
+        if { [string first - $thisCommandLine]==[string last - $thisCommandLine] } { set evalThis 0 }
+      }
+
+      # Parse sdds argument for input files
+      set inputOnlyCmdList { sddscontour sddsprintout sddsquery sddsplot }
+      set inputOnly  0
+      if { [lsearch $inputOnlyCmdList $sddsTool] >= 0 } { set inputOnly 1 }
+      if { [string first "NOOUTPUT" $commandArg] >= 0 } {
+        set inputOnly 1
+        set commandArg  [substitute $commandArg "NOOUTPUT"  " "]
+      }
+      if { [string first "nooutput" $commandArg] >= 0 } {
+        set inputOnly 1
+        set commandArg  [substitute $commandArg "nooutput"  " "]
+      }
+
+      set twoInputCmdList { sddscombine sddsxref }
+      set twoInputs  0
+      if { [lsearch $twoInputCmdList $sddsTool] >= 0 } { set twoInputs 1 }
+
+      # Parse sdds argument for output files
+      set outputOnlyCmdList { sddscongen sddssequence }
+      set outputOnly 0
+      if { [lsearch $outputOnlyCmdList $sddsTool] >= 0 } { set outputOnly 1 }
+      if { [string first "NOINPUT" $commandArg] >= 0 } {
+        set outputOnly 1
+        set commandArg  [substitute $commandArg "NOINPUT"  " "]
+      }
+      if { [string first "noinput" $commandArg] >= 0 } {
+        set outputOnly 1
+        set commandArg  [substitute $commandArg "noinput"  " "]
+      }
+      
+      # Substitute all scan variables with values
+      set substitutionList { command loop loopcommand loopprocess process }
+      if { [lsearch $substitutionList $keyword] >= 0 } {
+        puts "varList = $varList, valueList = $valueList"
+        for {set i 0} {$i < $nVars} {incr i} { 
+          set commandArg [ substitute $commandArg [lindex $varList $i] [lindex $valueList $i] ] 
+        }
+      }
+
+      # Assign default option  (Magic word in)
+      set waitTime   0
+      set skip       0
+      set leadOption ""
+      set endOption  ""
+      switch $sddsTool {
+        sddscombine      { set leadOption  "-overwrite" }
+        sddscontour      { 
+                           set endOption   "\&"
+                           # set waitTime    1.0
+                         }	
+        sddsplot         { 
+                           set leadOption  "-graph=line,vary"
+                           set endOption   "\&"
+                           # set waitTime    1.0
+                         }	
+        sddsstack        { 
+                           # File stack operations: PUSH, POP, and SWAP
+                           if { [string toupper [lindex $commandArg 0]] == "PUSH" } {
+                             if { [file exists $junkFileS1] }     { exec cp -f $junkFileS1     $junkFileS2 }
+                             if { [file exists $junkFileS0] }     { exec cp -f $junkFileS0     $junkFileS1 }
+                           } elseif { [string toupper [lindex $commandArg 0]] == "POP" } {
+                             if { [file exists $junkFileS1] }     { exec cp -f $junkFileS1     $junkFileS0 }
+                             if { [file exists $junkFileS2] }     { exec cp -f $junkFileS2     $junkFileS1 }
+                           } elseif { [string toupper [lindex $commandArg 0]] == "SWAP" } {
+                             if { [file exists $junkFileS1] && [file exists $junkFileS0] } {
+                               exec cp -f $junkFileS0  $junkFile0
+                               exec cp -f $junkFileS1  $junkFileS0
+                               exec cp -f $junkFile0   $junkFileS1
+                             }
+                           } 
+                           set skip 1
+                         }
+        sddsreflect      { 
+                           if $dryRun {
+                             puts "sddsreflect $junkFileS0 $junkFile1 $commandArg"
+                           } else {
+                             sddsreflect $junkFileS0 $junkFile1 "$commandArg"
+                           }
+                           set skip 1
+                         }
+      }
+      
+      # None-sdds programs does not use implied input/output files (magic in)
+      set notSDDSCmd  0
+      if { [string first "sdds" [file tail $sddsTool] ] < 0 } { 
+        set notSDDSCmd  1
+        set specialSDDSCmdList { text2sdds }
+        if { [lsearch $specialSDDSCmdList $sddsTool] >= 0 } { set notSDDSCmd 0 }
+      }
+      if $verbose { puts " sddsTool = $sddsTool, notSDDSCmd = $notSDDSCmd, evalThis = $evalThis, inputOnly = $inputOnly, outputOnly = $outputOnly \n commandArg: $commandArg" }
+      
+      # run sddsTool
+      set printmsg 1
+      if $notSDDSCmd {
+        puts "$sddsTool is not an sdds program. Use explicit INPUTFILE OUTPUTFILE arguments to show their locations in the command."
+        set commandArg  [substitute $commandArg "INPUTFILE"  $junkFileS0]
+        set commandArg  [substitute $commandArg "OUTPUTFILE" $junkFile1 ]
+        runExec $printmsg "$sddsTool $commandArg"
+      } elseif $skip {
+        # Nothing is done if skip == 1
+      } elseif $outputOnly {
+        runExec $printmsg "$sddsTool $leadOption $junkFile1 $commandArg"
+      } elseif $inputOnly {
+        runExec $printmsg "$sddsTool $leadOption $junkFileS0 $commandArg"
+      } elseif $twoInputs {
+        if { [file exists $junkFileS1] } { 
+          runExec $printmsg "$sddsTool $leadOption $junkFileS1 $junkFileS0 $junkFile1 $commandArg $endOption"
+        } else {
+          puts "Only one file is present, run: $sddsTool $junkFileS0 $junkFile1"
+          runExec $printmsg "$sddsTool $leadOption $junkFileS0 $junkFile1 $commandArg $endOption"
+        }
+        if { [file exists $junkFileS2] } { exec cp -f $junkFileS2 $junkFileS1 }
+      } elseif $evalThis {
+        runExec $printmsg "$sddsTool $leadOption $junkFileS0 $junkFile1 $commandArg $endOption"
+      } else {
+        # remove leading space from the argument to avoid sdds error message
+        set commandArg  [lrange $commandArg 0 end]
+        if $dryRun {
+          puts "exec $sddsTool $junkFileS0 $junkFile1 $commandArg"
+        } else {
+          set msg [exec $sddsTool $junkFileS0 $junkFile1 "$commandArg"]
+          puts $msg
+        }
+      }
+
+      # Push the output up to the file stack
+      if !$inputOnly { runExec $printmsg "sddsprocess $junkFile1 $junkFileS0 -nowarning" }
+    }
+  }
+  
+  # Copy top stack file to outputFile
+  # puts "processOneFile: Save $outputDataFile"
+  if { [file exists $junkFileS0] } { exec cp -f $junkFileS0  $outputDataFile }
+    
+  # clean up
+  if { $verbose > 1 } { puts "\nClean up temp files" }
+  deleteTempFile $junkFile0
+  deleteTempFile $junkFile1
+  deleteTempFile $junkFile2
+  deleteTempFile $junkFileS0
+  deleteTempFile $junkFileS1
+  deleteTempFile $junkFileS2
+  return $waitTime
+}
+
+
+# Usage Information
+set usageInfo "sddsTools -inputFile <inputFile> -outputFile <outputFile> \
+\n -tempDir <tmp> -verbose <0,1,2> -dryRun <0,1> \
+\n -tool<n> <program> \
+\n -preprocess<n> <program> \
+\n -xVar1 XVAR -xValueList1 <xvlist> -xVarFormat1 <format> \
+\n -xVar2 XVAR -xVarStart2 <xstart> -xVarStop2 <xstop> -nxSteps2 <npts1> -xVarFormat2 <format> \
+\n -yVar YVAR  -yValueList <yvlist> -yVarFormat <format> \
+\n -zVar XVAR  -zVarStart <zstart> -zVarStop <zstop> -nzSteps <npts3> -zVarFormat <format> \
+\n -loopcommand<n> <program> \
+\n -postprocess<n> <program> \
+\n \
+\n<inputFile>   filename for data input, required if the first program requires it. \
+\n<outputFile>  filename for data output, required if saving the output is desired. \
+\n<program>     unix command line minus the input and output filenames \
+\n<XVAR>,...    Unique strings to identify the scan variables \
+\n \
+\nThis script runs the program commands in the following sequence: \
+\n  Read <inputFile> - tool - proprocess - zVar_Loop\{ yVar_Loop\{ xVar_Loop\{...\} \} \} - postprocess - Save <outputFile> \n \
+\nOutside loops, the input file is the output file of the previous program. \
+Inside a loop, the input file is the output file before the loop, the output files are saved in multi-page sdds format \
+\nProgram by Bingxin Yang and Hairong Shang.  ANL \n"
+
+#########################
+# 	Main Program	#
+#########################
+
+# define command and input / output files
+set tempDir	[getStrArg  tempDir	"/tmp" ]
+set inputFile	[getStrArg  inputFile  	"None" ]
+set outputFile  [getStrArg  outputFile 	"/tmp/junksddsToolsOutput.sdds" ]
+set dryRun	[getStrArg  dryRun  	0 ]
+set verbose	[getStrArg  verbose  	1 ]
+
+# Temp files
+set pidTag	[pid]
+set junkFile00  $tempDir/junksddsToolsFile00-$pidTag.sdds
+set junkFile0   $tempDir/junksddsToolsFile0-$pidTag.sdds
+set junkFile1   $tempDir/junksddsToolsFile1-$pidTag.sdds
+set junkFile2   $tempDir/junksddsToolsFile2-$pidTag.sdds
+
+######### Print Help Info if argument list is too short ##########
+if { $argc < 3 } {
+  puts $usageInfo
+  exit
+}
+
+######### Search for valid input files ##########
+set nInputFiles  0
+if { [string toupper $inputFile] != "NONE" } {
+  set fileList0 [lsort [glob $inputFile] ]
+  set fileList  { }
+  foreach oneFile $fileList0 {
+    if [file exists $oneFile] { lappend fileList $oneFile }
+  }
+  set nInputFiles    [llength $fileList]
+  if { $nInputFiles > 0 } {
+    puts "\nsddsTools: $nInputFiles input files to be processed. The inputFile list:"
+    foreach oneFile $fileList { puts " $oneFile" }
+    puts " "
+  }
+}
+if { $nInputFiles < 1 } {
+  set fileList  { None }
+  puts "\nsddsTools: No inputFile is provided."
+}
+puts "\nsddsTools: outputFile = $outputFile"
+
+######### Prepare for loops if specified ##########
+
+# scan command line for loop variables. Make value list for each valid variables
+findScanVars x
+findScanVars y
+findScanVars z
+
+# nSteps is the length of the serialized loop
+if { $nxVars < 1 && $nyVars < 1 && $nzVars < 1 } {
+  set nSteps 0
+} else {
+  # Some loop commands are given. Run loop commands
+  set varList { }
+  if { $nzSteps > 0 } { 
+    for {set i 0} {$i < $nzVars} {incr i} { lappend varList $xVar($i) }
+  }
+  if { $nyVars > 0 } { 
+    for {set i 0} {$i < $nyVars} {incr i} { lappend varList $yVar($i) }
+  }
+  if { $nxVars > 0 } { 
+    for {set i 0} {$i < $nxVars} {incr i} { lappend varList $xVar($i) }
+  }
+  set nVars [llength $varList]
+  puts "sddsTools: Serialized single loop: nVars = $nVars, varList = $varList"
+
+  # Serialize the nested loops into a single loop  (Magic word in)
+  if { $nxSteps < 1 } { set nxSteps 1 }
+  if { $nySteps < 1 } { set nySteps 1 }
+  if { $nzSteps < 1 } { set nzSteps 1 }
+  set valueLists { }
+
+  # Slowest loop 
+  if $verbose { puts " i   j   k   $varList" }
+  for {set k 0} {$k < $nzSteps} {incr k} {
+    # Slowest loop  (Magic word in)
+    set zValueList { }
+    if { $nzVars > 0 } { 
+      for {set iz 0} {$iz < $nzVars} {incr iz} { lappend zValueList [lindex $zValueLists($iz) $k] }
+    }
+    # Slow loop  (Magic word in)
+    for {set j 0} {$j < $nySteps} {incr j} {
+      set yzValueList $zValueList
+      if { $nyVars > 0 } { 
+        for {set iy 0} {$iy < $nyVars} {incr iy} { lappend yzValueList [lindex $yValueLists($iy) $j] }
+      }
+      # Fast loop  (Magic word in)
+      for {set i 0} {$i < $nxSteps} {incr i} {
+        set oneValueList $yzValueList
+        if { $nxVars > 0 } { 
+          for {set ix 0} {$ix < $nxVars} {incr ix} { lappend oneValueList [lindex $xValueLists($ix) $i] }
+        }
+        
+        if { $verbose > 1 } { puts " $i   $j   $k   $oneValueList" }
+        lappend valueLists $oneValueList
+      }
+    }
+  }
+  set nSteps [llength $valueLists]
+}
+puts "\nsddsTools: nSteps = $nSteps"
+
+######  Main Loops: file-loop and user-loop  (in) #####
+
+set firstInputFile 1
+set firstCommand   1
+foreach oneInputFile $fileList {
+  # Process inputFile (chain mode)  (Magic word in)
+  set waitTime [processOneFile $oneInputFile $junkFile1 "tool"]
+  after [format %0.0f [expr 1000 * $waitTime] ]
+
+  # Preprocess inputFile before the loop
+  set waitTime [processOneFile $junkFile1 $junkFile0 "preprocess"]
+  after [format %0.0f [expr 1000 * $waitTime] ]
+
+  if { $nSteps < 1 } {
+    if $verbose { puts "No loop variables is specified. Skip loop commands." }
+    if { [file exists $junkFile0] } { exec cp -f $junkFile0 $junkFile00 }
+  }
+
+  # Run the serialized single loop
+  set firstFile 1
+  for {set i 0} {$i < $nSteps} {incr i} {
+    # Load the values to global valueList  (Magic word in)
+    set valueList [lindex $valueLists $i]
+
+    # Run loop processes on one file
+    set waitTime [processOneFile $junkFile0 $junkFile1 "loopcommand"]
+    if { $waitTime > 1.0 } { puts "waitTime = $waitTime (sec)" }
+    after [format %0.0f [expr 1000 * $waitTime] ]
+
+    # Collect data 
+    set printmsg 0
+    if $firstFile {
+      set firstFile 0
+      runExec $printmsg "sddsprocess $junkFile1 $junkFile00 -nowarning"
+    } else {
+      runExec $printmsg "sddscombine $junkFile00 $junkFile1 $junkFile2 -overWrite"
+      runExec $printmsg "sddsprocess $junkFile2 $junkFile00 -nowarning -del=par,Filename,NumberCombined"
+    }
+  }
+
+  # Preprocess outputFile after the user loop
+  processOneFile $junkFile00 $junkFile1 "postprocess"
+
+  # Save result to output file after processing each input file
+  set printmsg 1
+  if $firstInputFile {
+    set firstInputFile 0
+    runExec $printmsg "sddsprocess $junkFile1 $outputFile -nowarning"
+  } else {
+    runExec $printmsg "sddscombine $outputFile $junkFile1 $junkFile2 -overWrite"
+    runExec $printmsg "sddsprocess $junkFile2  $outputFile -nowarning"
+  }
+}
+puts "\nOutput saved to $outputFile \n"
+
+# clean up
+if { $verbose > 1 } { puts "\nClean up temp files" }
+deleteTempFiles "$junkFile00 $junkFile0 $junkFile1 $junkFile2"
+
+exit
+
+
+
+
