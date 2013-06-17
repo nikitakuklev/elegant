@@ -1805,15 +1805,11 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     VMATRIX *M1;
     if (twissConcatOrder>1 && starting_coord) {
       M1 = (VMATRIX*)tmalloc(sizeof(*M1));
-      initialize_matrices(M1, 1);
-      M1->C[0] = starting_coord[0];
-      M1->C[1] = starting_coord[0];
-      M1->C[2] = starting_coord[0];
-      M1->C[3] = starting_coord[0];
-      M1->C[4] = starting_coord[0];
-      M1->C[5] = starting_coord[0];
-      for (i=0; i<6; i++)
+      initialize_matrices(M1, twissConcatOrder);
+      for (i=0; i<6; i++) {
+	M1->C[i] = starting_coord[i];
         M1->R[i][i] = 1;
+      }
       fill_in_matrices(beamline->elem_twiss, run);
       beamline->matrix = append_full_matrix(beamline->elem_twiss, run, M1, twissConcatOrder);
     }
