@@ -24,7 +24,7 @@ if ( -e $output ) then
     exit 1
 endif
 
-set tmpRoot = `tmpname`
+set tmpRoot = tmp-`date +%s%N`
 
 # Define momentum columns and z column. 
 sddsconvert $input -pipe=out -retain=column,t,p,x,xp,y,yp \
