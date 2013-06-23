@@ -30,14 +30,15 @@ long track_through_matter(
                           )
 {
   long ip;
-  double L, Nrad, *coord, theta_rms, beta, P, gamma=0.0;
+  double L, Nrad, *coord, theta_rms=0, beta, P, gamma=0.0;
   double z1, z2, dx, dy, ds, t=0.0, dGammaFactor;
   double K1, K2=0.0, sigmaTotal, probScatter=0.0, dgamma;
   double Xo, probBSScatter = 0;
   long nScatters=0, i_top, isLost;
   long sections, sections0=1, intervalBS=1;
   double L1, prob, probBS;  
-
+  long multipleScattering = 0;
+  
   log_entry("track_through_matter");
 
   if (particleIsElectron==0)
@@ -61,6 +62,7 @@ long track_through_matter(
     Xo = matter->Xo;
   
   Nrad = matter->length/Xo;
+  dGammaFactor = 1-exp(-Nrad);
   
   if (Nrad<1e-3 || matter->nuclearBrehmsstrahlung) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
@@ -77,15 +79,13 @@ long track_through_matter(
     }
     sections0 = probScatter/matter->pLimit+1;
     Nrad /= sections0;
+    multipleScattering = 0;    
     /* printf("Splitting MATTER element into %ld sections\n", sections0); */
   } else {
-    if (matter->nuclearBrehmsstrahlung)
-      bombElegant("MATTER element requires X0=0 and specification of A, Z, and rho to perform nuclear brehmsstrahlung simulation.", NULL);
+    multipleScattering = 1;
+    theta_rms = 13.6/particleMassMV/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
   }
   
-  theta_rms = 13.6/particleMassMV/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
-  dGammaFactor = 1-exp(-Nrad);
-
   L1 = L/sections0;
   prob = probScatter/sections0;
   probBS = probBSScatter/sections0;
@@ -104,8 +104,8 @@ long track_through_matter(
         beta = P/gamma;
         t = coord[4]/beta;
       }
-      if (Nrad>=1e-3) {
-        /* multiple scattering */
+      if (multipleScattering) {
+        /* use the multiple scattering formula */
         z1 = gauss_rn(0, random_2);
         z2 = gauss_rn(0, random_2);
         coord[0] += (dx=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[1]);
@@ -115,8 +115,8 @@ long track_through_matter(
         coord[2] += (dy=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[3]);
         coord[3] += z2*theta_rms;
         ds = sqrt(sqr(L)+sqr(dx)+sqr(dy));
-      }
-      else {
+      } else {
+        /* model scattering using the cross section */
         double F, theta, phi, zs, dxp, dyp;
         long is;
         ds = dgamma = 0;
