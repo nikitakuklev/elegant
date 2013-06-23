@@ -864,7 +864,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
-#define N_SCRAPER_PARAMS 13
+#define N_SCRAPER_PARAMS 14
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
@@ -881,7 +881,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 48
-#define N_MATTER_PARAMS 8
+#define N_MATTER_PARAMS 9
 #define N_RFMODE_PARAMS 25
 #define N_TRFMODE_PARAMS 22
 #define N_TWMTA_PARAMS 17
@@ -1674,7 +1674,7 @@ extern PARAMETER scraper_param[N_SCRAPER_PARAMS];
 typedef struct {
   double length;
   double Xo;
-  long elastic, energyStraggle, Z;
+  long energyDecay, energyStraggle, nuclearBrehmsstrahlung, Z;
   double A, rho, pLimit;
   double position;
   double dx, dy;
@@ -2143,7 +2143,7 @@ extern PARAMETER matter_param[N_MATTER_PARAMS];
 typedef struct {
     double length;
     double Xo;       /* radiation length */
-    long elastic, energyStraggle, Z;
+    long energyDecay, energyStraggle, nuclearBrehmsstrahlung, Z;
     double A, rho, pLimit;
     } MATTER;
 
@@ -3475,7 +3475,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamli
 void reset_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline);
 void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline);
 
-void track_through_matter(double **part, long np, MATTER *matter, double Po);
+long track_through_matter(double **part, long np, MATTER *matter, double Po, double **accepted, double z0);
 
 void track_through_rfmode(double **part, long np, RFMODE *rfmode, double Po,
     char *element_name, double element_z, long pass, long n_passes, CHARGE *charge);

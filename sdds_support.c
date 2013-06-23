@@ -477,10 +477,8 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
-#if SDDS_MPI_IO
     if ((watch->useDisconnect) && (!SDDS_DisconnectFile(SDDS_table)))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-#endif
     break;
   case WATCH_CENTROIDS:
     if (isMaster)

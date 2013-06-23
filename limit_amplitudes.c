@@ -500,8 +500,9 @@ long beam_scraper(
     MATTER matter;
     matter.length = scraper->length;
     matter.Xo = scraper->Xo;
-    matter.elastic = scraper->elastic;
+    matter.energyDecay = scraper->energyDecay;
     matter.energyStraggle = scraper->energyStraggle;
+    matter.nuclearBrehmsstrahlung = scraper->nuclearBrehmsstrahlung;
     matter.Z = scraper->Z;
     matter.A = scraper->A;
     matter.rho = scraper->rho;
@@ -512,7 +513,8 @@ long beam_scraper(
       if ((do_x && do_x*(ini[0]-scraper->dx)>limit) ||
           (do_y && do_y*(ini[2]-scraper->dy)>limit)) {
         /* scatter and/or absorb energy */
-        track_through_matter(&ini, 1, &matter, Po);
+        if (!track_through_matter(&ini, 1, &matter, Po, NULL, z))
+          ini[5] = -1;
       } else {
         ini[0] = ini[0] + ini[1]*scraper->length;
         ini[2] = ini[2] + ini[3]*scraper->length;
@@ -528,7 +530,7 @@ long beam_scraper(
   for (ip=0; ip<np; ip++) {
     ini = initial[ip];
     if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
-        (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
+        (do_y && do_y*(ini[2]-scraper->dy) > limit) || ini[5]<=-1) {
       swapParticles(initial[ip], initial[itop]);
       if (accepted)
         swapParticles(accepted[ip], accepted[itop]);

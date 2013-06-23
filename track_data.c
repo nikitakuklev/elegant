@@ -859,8 +859,9 @@ SCRAPER scraper_example;
 PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&scraper_example.length), NULL, 0.0, 0, "length"},
     {"XO", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&scraper_example.Xo), NULL, 0.0, 0, "radiation length"},
-    {"ELASTIC", "", IS_LONG, 0, (long)((char *)&scraper_example.elastic), NULL, 0.0, 0, "elastic scattering? If zero, then particles will lose energy due to material."},
-    {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&scraper_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model?  Ignored for ELASTIC scattering."},
+    {"ENERGY_DECAY", "", IS_LONG, 0, (long)((char *)&scraper_example.energyDecay), NULL, 0.0, 0, "If nonzero, then particles will lose energy due to material using a simple exponential model."},
+    {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&scraper_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model coupled with ENERGY_DECAY=1?"},
+    {"NUCLEAR_BREHMSSTRAHLUNG", "", IS_LONG, 0, (long)((char *)&scraper_example.nuclearBrehmsstrahlung), NULL, 0.0, 0, "Model energy loss to nuclear brehmsstrahlung? If enabled, set ENERGY_DECAY=0 to disable simpler model."},
     {"Z", "", IS_LONG, 0, (long)((char *)&scraper_example.Z), NULL, 0.0, 0, "Atomic number"},
     {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&scraper_example.A), NULL, 0.0, 0, "Atomic mass"},
     {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&scraper_example.rho), NULL, 0.0, 0, "Density"},       
@@ -1362,8 +1363,9 @@ MATTER matter_example;
 PARAMETER matter_param[N_MATTER_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.length), NULL, 0.0, 0, "length"},
     {"XO", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.Xo), NULL, 0.0, 0, "radiation length"},
-    {"ELASTIC", "", IS_LONG, 0, (long)((char *)&matter_example.elastic), NULL, 0.0, 0, "elastic scattering? If zero, then particles will lose energy due to material."},
-    {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&matter_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model?  Ignored for ELASTIC scattering."},
+    {"ENERGY_DECAY", "", IS_LONG, 0, (long)((char *)&matter_example.energyDecay), NULL, 0.0, 0, "If nonzero, then particles will lose energy due to material using a simple exponential model."},
+    {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&matter_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model coupled with ENERGY_DECAY=1?"},
+    {"NUCLEAR_BREHMSSTRAHLUNG", "", IS_LONG, 0, (long)((char *)&matter_example.nuclearBrehmsstrahlung), NULL, 0.0, 0, "Model energy loss to nuclear brehmsstrahlung? If enabled, set ENERGY_DECAY=0 to disable simpler model."},
     {"Z", "", IS_LONG, 0, (long)((char *)&matter_example.Z), NULL, 0.0, 0, "Atomic number"},
     {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&matter_example.A), NULL, 0.0, 0, "Atomic mass"},
     {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&matter_example.rho), NULL, 0.0, 0, "Density"},       

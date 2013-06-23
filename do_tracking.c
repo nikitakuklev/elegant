@@ -1367,7 +1367,7 @@ long do_tracking(
 	      track_particles(coord, eptr->matrix, coord, nToTrack);
 	      break;
 	    case T_MATTER:
-	      track_through_matter(coord, nToTrack, (MATTER*)eptr->p_elem, *P_central);
+	      nLeft = track_through_matter(coord, nToTrack, (MATTER*)eptr->p_elem, *P_central, accepted, z);
 	      break;
 	    case T_RFMODE:
 	      rfmode = (RFMODE*)eptr->p_elem;
