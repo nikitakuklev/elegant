@@ -33,10 +33,10 @@ long track_through_matter(
   double L, Nrad, *coord, theta_rms=0, beta, P, gamma=0.0;
   double z1, z2, dx, dy, ds, t=0.0, dGammaFactor;
   double K1, K2=0.0, sigmaTotal, probScatter=0.0, dgamma;
-  double Xo, probBSScatter = 0;
+  double Xo, probBSScatter = 0, probERScatter=0;
   long nScatters=0, i_top, isLost;
-  long sections, sections0=1, intervalBS=1;
-  double L1, prob, probBS;  
+  long sections, sections0=1, impulseMode;
+  double L1, prob, probBS, probER;  
   long multipleScattering = 0;
   
   log_entry("track_through_matter");
@@ -44,11 +44,18 @@ long track_through_matter(
   if (particleIsElectron==0)
     bombElegant("MATTER element doesn't work for particles other than electrons", NULL);
   
-  if ((L=matter->length)==0)
+  if (matter->length!=0) {
+    L = matter->length;
+    impulseMode = 0;
+  } else if (matter->lEffective!=0) {
+    L = matter->lEffective;
+    impulseMode = 1;
+  }
+  else 
     return np;
 
-  if (matter->energyDecay && matter->nuclearBrehmsstrahlung)
-    bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 options to MATTER element are mutually exclusive", NULL);
+  if (matter->energyDecay && (matter->nuclearBrehmsstrahlung || matter->electronRecoil))
+    bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 or ELECTRON_RECOIL=1 options to MATTER/SCATTER element are mutually exclusive", NULL);
 
   beta = Po/sqrt(sqr(Po)+1);
   if (matter->Xo==0) {
@@ -63,11 +70,11 @@ long track_through_matter(
   
   Nrad = matter->length/Xo;
   dGammaFactor = 1-exp(-Nrad);
-  
-  if (Nrad<1e-3 || matter->nuclearBrehmsstrahlung) {
+  prob = probBS = probER = 0;
+  if (Nrad<1e-3 || matter->nuclearBrehmsstrahlung || matter->electronRecoil) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
       bombElegant("MATTER element is too thin---provide Z, A, and rho for single-scattering calculation.", NULL);
-    K1 = 4*sqr(matter->Z*particleRadius/(beta*Po));
+    K1 = 4*matter->Z*(matter->Z+1)*sqr(particleRadius/(beta*Po));
     K2 = sqr(pow(matter->Z, 1./3.)*ALPHA/Po);
     sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
     probScatter = matter->rho/(AMU*matter->A)*matter->length*sigmaTotal;
@@ -75,25 +82,26 @@ long track_through_matter(
     probBSScatter = 0;
     if (matter->nuclearBrehmsstrahlung) {
       probBSScatter = 4*matter->length/(3*Xo)*(-log(BS_Y0)-(1-BS_Y0)+3./8.*(1-BS_Y0*BS_Y0));
-      /* printf("Expected number of brehmsstrahlung events is %le\n", probBSScatter); */
+    }
+    if (matter->electronRecoil) {
+      probERScatter = matter->length*matter->rho/(AMU*matter->A)*PIx2*matter->Z*sqr(re_mks)/Po*(1/BS_Y0-1);
     }
     sections0 = probScatter/matter->pLimit+1;
     Nrad /= sections0;
     multipleScattering = 0;    
-    /* printf("Splitting MATTER element into %ld sections\n", sections0); */
+    L1 = L/sections0;
+    prob = probScatter/sections0;
+    probBS = probBSScatter/sections0;
+    probER = probERScatter/sections0;
+    printf("Sections=%ld, L1 = %le, probIS = %le, probBS = %le, probER = %le\n", sections0, L1, prob, probBS, probER);
   } else {
     multipleScattering = 1;
     theta_rms = 13.6/particleMassMV/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
   }
   
-  L1 = L/sections0;
-  prob = probScatter/sections0;
-  probBS = probBSScatter/sections0;
-  /* printf("L1 = %le, probIS = %le, probBS = %le\n",
-         L1, prob, probBS);
-         */
-
   i_top = np-1;
+  if (impulseMode)
+    L = L1 = 0;
   for (ip=0; ip<=i_top; ip++) {
     coord = part[ip];
     isLost = 0;
@@ -147,12 +155,13 @@ long track_through_matter(
             coord[0] += coord[1]*L1;
             coord[2] += coord[3]*L1;
           }
-          if (probBS!=0 && random_2(1)<probBS) {
+          if (probBS!=0 && random_2(1)<probBS)
             gamma -= gamma*solveBrehmsstrahlungCDF(random_2(1));
-            if (gamma<=1) {
-              isLost = 1;
-              break;
-            }
+          if (probER!=0 && random_2(1)<probER)
+            gamma -= BS_Y0/(1-random_2(1)*(1-BS_Y0));
+          if (gamma<=1) {
+            isLost = 1;
+            break;
           }
         }
       }
@@ -221,7 +230,7 @@ double inelasticGasScattering(double Z, double gamma, double nL, double P)
 
 
 double radiationLength(long Z, double A, double rho)
-/* Returns radiation length for electrons in m for given Z and A (in AMUs). See PhysRevD.86.010001, page 329 */
+/* Returns radiation length for electrons in m for given Z and A (in AMUs). See PhysRevD.86.010001, page 329 */ 
 {
   double fZ;
   double alpha, a2;

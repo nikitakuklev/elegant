@@ -499,10 +499,12 @@ long beam_scraper(
      */
     MATTER matter;
     matter.length = scraper->length;
+    matter.lEffective = 0;
     matter.Xo = scraper->Xo;
     matter.energyDecay = scraper->energyDecay;
     matter.energyStraggle = scraper->energyStraggle;
     matter.nuclearBrehmsstrahlung = scraper->nuclearBrehmsstrahlung;
+    matter.electronRecoil = scraper->electronRecoil;
     matter.Z = scraper->Z;
     matter.A = scraper->A;
     matter.rho = scraper->rho;

@@ -864,7 +864,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
-#define N_SCRAPER_PARAMS 14
+#define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
@@ -881,7 +881,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 48
-#define N_MATTER_PARAMS 9
+#define N_MATTER_PARAMS 11
 #define N_RFMODE_PARAMS 25
 #define N_TRFMODE_PARAMS 22
 #define N_TWMTA_PARAMS 17
@@ -1674,7 +1674,7 @@ extern PARAMETER scraper_param[N_SCRAPER_PARAMS];
 typedef struct {
   double length;
   double Xo;
-  long energyDecay, energyStraggle, nuclearBrehmsstrahlung, Z;
+  long energyDecay, energyStraggle, nuclearBrehmsstrahlung, electronRecoil, Z;
   double A, rho, pLimit;
   double position;
   double dx, dy;
@@ -2141,9 +2141,9 @@ typedef struct {
 extern PARAMETER matter_param[N_MATTER_PARAMS];
 
 typedef struct {
-    double length;
+    double length, lEffective;
     double Xo;       /* radiation length */
-    long energyDecay, energyStraggle, nuclearBrehmsstrahlung, Z;
+    long energyDecay, energyStraggle, nuclearBrehmsstrahlung, electronRecoil, Z;
     double A, rho, pLimit;
     } MATTER;
 
