@@ -64,7 +64,7 @@ long track_through_matter(
     Xo = radiationLength(matter->Z, matter->A, matter->rho);
     /* printf("Computed radiation length for Z=%ld, A=%le, rho=%le is %le m\n",
            matter->Z, matter->A, matter->rho, Xo);
-           */
+    */
   } else 
     Xo = matter->Xo;
   
@@ -155,18 +155,20 @@ long track_through_matter(
             coord[0] += coord[1]*L1;
             coord[2] += coord[3]*L1;
           }
-          if (probBS!=0 && random_2(1)<probBS)
-            gamma -= gamma*solveBrehmsstrahlungCDF(random_2(1));
-          if (probER!=0 && random_2(1)<probER)
-            gamma -= BS_Y0/(1-random_2(1)*(1-BS_Y0));
-          if (gamma<=1) {
-            isLost = 1;
-            break;
+          if (matter->energyDecay || matter->nuclearBrehmsstrahlung) {
+            if (probBS!=0 && random_2(1)<probBS)
+              gamma -= gamma*solveBrehmsstrahlungCDF(random_2(1));
+            if (probER!=0 && random_2(1)<probER)
+              gamma -= BS_Y0/(1-random_2(1)*(1-BS_Y0));
+            if (gamma<=1) {
+              isLost = 1;
+              break;
+            }
           }
         }
       }
       if (!isLost) {
-        if (probBSScatter) {
+        if (matter->energyDecay || matter->nuclearBrehmsstrahlung) {
           P = sqrt(sqr(gamma)-1);
           coord[5] = (P-Po)/Po;
           beta = P/gamma;
