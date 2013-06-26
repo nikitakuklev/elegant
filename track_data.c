@@ -862,6 +862,7 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"ENERGY_DECAY", "", IS_LONG, 0, (long)((char *)&scraper_example.energyDecay), NULL, 0.0, 0, "If nonzero, then particles will lose energy due to material using a simple exponential model."},
     {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&scraper_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model coupled with ENERGY_DECAY=1?"},
     {"NUCLEAR_BREHMSSTRAHLUNG", "", IS_LONG, 0, (long)((char *)&scraper_example.nuclearBrehmsstrahlung), NULL, 0.0, 0, "Model energy loss to nuclear brehmsstrahlung? If enabled, set ENERGY_DECAY=0 to disable simpler model."},
+    {"ELECTRON_RECOIL", "", IS_LONG, 0, (long)((char *)&scraper_example.electronRecoil), NULL, 0.0, 0, "If non-zero, electron recoil during Coulomb scattering is included (results in energy change)."},
     {"Z", "", IS_LONG, 0, (long)((char *)&scraper_example.Z), NULL, 0.0, 0, "Atomic number"},
     {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&scraper_example.A), NULL, 0.0, 0, "Atomic mass"},
     {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&scraper_example.rho), NULL, 0.0, 0, "Density"},       
