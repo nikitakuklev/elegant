@@ -68,7 +68,7 @@ long track_through_matter(
   } else 
     Xo = matter->Xo;
   
-  Nrad = matter->length/Xo;
+  Nrad = L/Xo;
   dGammaFactor = 1-exp(-Nrad);
   prob = probBS = probER = 0;
   if (Nrad<1e-3 || matter->nuclearBrehmsstrahlung || matter->electronRecoil) {
@@ -77,14 +77,14 @@ long track_through_matter(
     K1 = 4*matter->Z*(matter->Z+1)*sqr(particleRadius/(beta*Po));
     K2 = sqr(pow(matter->Z, 1./3.)*ALPHA/Po);
     sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
-    probScatter = matter->rho/(AMU*matter->A)*matter->length*sigmaTotal;
+    probScatter = matter->rho/(AMU*matter->A)*L*sigmaTotal;
     /* printf("K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter); */
     probBSScatter = 0;
     if (matter->nuclearBrehmsstrahlung) {
-      probBSScatter = 4*matter->length/(3*Xo)*(-log(BS_Y0)-(1-BS_Y0)+3./8.*(1-BS_Y0*BS_Y0));
+      probBSScatter = 4*L/(3*Xo)*(-log(BS_Y0)-(1-BS_Y0)+3./8.*(1-BS_Y0*BS_Y0));
     }
     if (matter->electronRecoil) {
-      probERScatter = matter->length*matter->rho/(AMU*matter->A)*PIx2*matter->Z*sqr(re_mks)/Po*(1/BS_Y0-1);
+      probERScatter = L*matter->rho/(AMU*matter->A)*PIx2*matter->Z*sqr(re_mks)/Po*(1/BS_Y0-1);
     }
     sections0 = probScatter/matter->pLimit+1;
     Nrad /= sections0;

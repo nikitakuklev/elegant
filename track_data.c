@@ -1363,7 +1363,7 @@ MATTER matter_example;
 /* matter physical parameters */
 PARAMETER matter_param[N_MATTER_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.length), NULL, 0.0, 0, "length"},
-    {"LEFFECTIVE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.length), NULL, 0.0, 0, "effective length (used if L=0)"},
+    {"LEFFECTIVE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.lEffective), NULL, 0.0, 0, "effective length (used if L=0)"},
     {"XO", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.Xo), NULL, 0.0, 0, "radiation length"},
     {"ENERGY_DECAY", "", IS_LONG, 0, (long)((char *)&matter_example.energyDecay), NULL, 0.0, 0, "If nonzero, then particles will lose energy due to material using a simple exponential model."},
     {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&matter_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model coupled with ENERGY_DECAY=1?"},
