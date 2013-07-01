@@ -84,7 +84,7 @@ else
 PROD_HOST = $(PRODOAG)
 endif
 
-USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
+USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -DWL=32
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
@@ -202,11 +202,11 @@ endif
 ifdef WIN32
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
-		rpnlib mdbmth namelist mdblib \
+		rpnlib mdbmth namelist mdblib lzma \
 		meschach z fdlibm pgapack
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		rpnlib mdbmth namelist mdblib \
+		rpnlib mdbmth namelist mdblib lzma \
 		meschach z fdlibm 
 endif
 z_DIR = $(EPICS_EXTENSIONS_LIB)
@@ -222,11 +222,11 @@ endif
 else
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
-		rpnlib mdbmth namelist mdblib \
+		rpnlib mdbmth namelist mdblib lzma \
 		meschach pgapack 
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		rpnlib mdbmth namelist mdblib \
+		rpnlib mdbmth namelist mdblib lzma \
 		meschach 
 endif
 SYS_PROD_LIBS_DEFAULT += z 
@@ -403,6 +403,7 @@ rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 pgapack_DIR = $(EPICS_EXTENSIONS_LIB)
+lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 
 elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
 		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \

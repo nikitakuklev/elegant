@@ -131,6 +131,7 @@ sddsbrightness$(EXE) : $(OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\lzma.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 sddsurgent$(EXE) : $(URGENT_OBJNAMES)
 	ifort /exe:sddsurgent$(EXE) /threads /libs:dll \
@@ -144,6 +145,7 @@ sddsurgent$(EXE) : $(URGENT_OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\lzma.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 sddsfluxcurve$(EXE) : $(FLUXCURVE_OBJNAMES)
 	ifort /exe:sddsfluxcurve$(EXE) /threads /libs:dll \
@@ -157,15 +159,16 @@ sddsfluxcurve$(EXE) : $(FLUXCURVE_OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\lzma.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 else
 sddsbrightness$(EXE): $(OBJNAMES)
-	$(F77) -o $@ $(OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
+	$(F77) -o $@ $(OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -llzma -lz $(solaris_libs) $(linux_libs)
 
 sddsurgent$(EXE): $(URGENT_OBJNAMES)
-	$(F77) -o $@ $(URGENT_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
+	$(F77) -o $@ $(URGENT_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -llzma -lz $(solaris_libs) $(linux_libs)
 
 sddsfluxcurve$(EXE): $(FLUXCURVE_OBJNAMES)
-	$(F77) -o $@ $(FLUXCURVE_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
+	$(F77) -o $@ $(FLUXCURVE_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -llzma -lz $(solaris_libs) $(linux_libs)
 endif
 

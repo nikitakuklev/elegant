@@ -68,7 +68,7 @@ endif
 
 SCRIPTS = brightnessEnvelope
 
-USR_CFLAGS =  -I$(EPICS_EXTENSIONS_INCLUDE) \
+USR_CFLAGS =  -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma \
                 -DIEEE_MATH -DzLib
 
 USR_CFLAGS_DEFAULT = 	-DUNIX 
@@ -169,10 +169,10 @@ endif
 endif
 
 ifdef WIN32
-USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib z fftpack
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib lzma z fftpack
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
-USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib
+USR_LIBS = $(XRAYLIB) oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib lzma
 SYS_PROD_LIBS_DEFAULT += z
 endif
 
@@ -188,6 +188,7 @@ fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
 matlib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
+lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 oagphy_DIR = $(OAG_APPS)/lib/$(EPICS_HOST_ARCH)

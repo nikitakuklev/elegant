@@ -128,7 +128,7 @@ SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2showe
 
 PROD_HOST = $(PRODOAG)
 
-USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
+USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE
 
 
@@ -191,12 +191,12 @@ sddsrandmult_SYS_LIBS += $(SYS_GSLLIB)
 
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		namelist rpnlib $(GSLLIB) mdbmth mdblib \
+		namelist rpnlib $(GSLLIB) mdbmth mdblib lzma \
 		meschach z fdlibm
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		namelist rpnlib $(GSLLIB) mdbmth mdblib \
+		namelist rpnlib $(GSLLIB) mdbmth mdblib lzma \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z
@@ -209,6 +209,7 @@ fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
 matlib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
+lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
