@@ -567,6 +567,14 @@ proc FillCollectiveEffectsFrame {widget args} {
       -label "Broad-band impedance limits (Ohm):                                     " \
       -width 10 -orientation horizontal \
       -variableList [list collectiveEffects(BBImpedance0) collectiveEffects(BBImpedance1)]
+    APSLabeledEntryFrame .harmv -parent $widget -type real \
+      -label "Harmonic cavity voltage (MV):                                           " \
+      -width 10 -orientation horizontal \
+      -variableList [list collectiveEffects(VHarmonic0) collectiveEffects(VHarmonic1)] \
+        -contextHelp "Negative voltage is lengthening, positive is shortening."
+    APSLabeledEntry .harmh -parent $widget -type real \
+        -label "Harmonic cavity freq. ratio to main: " \
+        -width 10 -textVariable collectiveEffects(harmonicRatio)
 
     APSLabeledEntry .prefix -parent $widget \
       -label "Run prefix: " -width 30 -textVariable collectiveEffects(prefix)
