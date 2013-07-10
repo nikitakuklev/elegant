@@ -285,6 +285,7 @@ int main( int argc, char **argv)
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "voltage", SDDS_DOUBLE, &rfHigherHarmonicVoltage, 1, 0,
                           "harmonic", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
+                          "factor", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
                           NULL) ||
             rfHigherHarmonic<=0)
           bomb("invalid -harmonicCavity syntax/values", 
