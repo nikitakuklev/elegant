@@ -31,7 +31,7 @@
 #include "twiss.h"
 #include <stddef.h>
 
-void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune);
+void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
@@ -57,9 +57,9 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
 void computeTuneShiftWithAmplitude(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
 				   double *nuxExtrema, double *nuyExtrema,
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline,
-				   RUN *run, double *startingCoord);
+				   RUN *run, double *startingCoord, long nPeriods);
 void computeTuneShiftWithAmplitudeM(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
-                                    TWISS *twiss, double *tune, VMATRIX *M);
+                                    TWISS *twiss, double *tune, VMATRIX *M, long nPeriods);
 void processTwissAnalysisRequests(ELEMENT_LIST *elem);
 
 static long twissConcatOrder = 3;
@@ -699,9 +699,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     elem = elem->succ;
   }
   
-  tune[0] = phi[0]/PIx2;
-  tune[1] = phi[1]/PIx2;
-
+  tune[0] = phi[0]/PIx2*n_periods;
+  tune[1] = phi[1]/PIx2*n_periods;
   if (couplingFactor) {
     /* Compute linear coupling based on 187 of Handbook of Accelerator Physics and Engineering 
      * and P.J. Bryant, "A Simple Theory for Weak Betatron Coupling", CERN 94-01, Vol 1., 207-217.
@@ -719,6 +718,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     fprintf(fp, (char*)"&column name=K1 , type=double &end\n");
     fprintf(fp, (char*)"&column name=Tilt , type=double &end\n");
     fprintf(fp, (char*)"&column name=ks , type=double &end\n");
+    fprintf(fp, (char*)"&column name=phase1 type=double &end\n");
+    fprintf(fp, (char*)"&column name=phase2 type=double &end\n");
     fprintf(fp, (char*)"&column name=phase type=double &end\n");
     fprintf(fp, (char*)"&column name=exp0, type=double &end\n");
     fprintf(fp, (char*)"&column name=exp1 , type=double &end\n");
@@ -732,75 +733,74 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     elem = elemOrig;
     q = (long)(tune[0] - tune[1] + 0.5);
     couplingFactor[1] = (tune[0] - tune[1]) - q;
-    while (elem) {
-      if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
-	   elem->type==T_KSEXT || elem->type==T_SOLE) && (length = *((double*)elem->p_elem))) {
-        if (elem->pred) {
-          beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
-          beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
-          alpha[0] = (elem->twiss->alphax + elem->pred->twiss->alphax)/2;
-          alpha[1] = (elem->twiss->alphay + elem->pred->twiss->alphay)/2;
-          phi[0]  = (elem->twiss->phix + elem->pred->twiss->phix)/2;
-          phi[1]  = (elem->twiss->phiy + elem->pred->twiss->phiy)/2;
-          y = (elem->twiss->Cy + elem->pred->twiss->Cy)/2;
-        }
-        else {
-          beta[0] = (elem->twiss->betax + twiss0->betax)/2;
-          beta[1] = (elem->twiss->betay + twiss0->betay)/2;
-          alpha[0] = (elem->twiss->alphax + twiss0->alphax)/2;
-          alpha[1] = (elem->twiss->alphay + twiss0->alphay)/2;
-          phi[0]  = (elem->twiss->phix + twiss0->phix)/2;
-          phi[1]  = (elem->twiss->phiy + twiss0->phiy)/2;
-          y = (elem->twiss->Cy + twiss0->Cy)/2;
-        }
-	ks = K1r = K1 = 0;
-	switch (elem->type) {
-	case T_QUAD:
-	  K1r = (K1=((QUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((QUAD*)(elem->p_elem))->tilt));
-	  break;
-	case T_KQUAD:
-	  K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
-	  break;
-	case T_SEXT:
-	  K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
-	  break;
-	case T_KSEXT:
-	  K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
-	  break;
-        case T_SOLE:
-          ks = -((SOLE*)(elem->p_elem))->ks;
-          break;
-	}
-        if (K1r!=0 || ks!=0) {
-          phase = phi[0] - phi[1] 
-            - (tune[0] - tune[1] - q)*2*PI*
-              (elem->end_pos-length/2)/sTotal;
-          phaseFactor = cexpi(phase);
-
-
-          integrand = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2 - std::complex<double>(0,1)*(1/beta[0]+1/beta[1])*ks/2.0;
-          kappa = kappa + integrand*phaseFactor*sqrt(beta[0]*beta[1])/PIx2*length;
-
+    if (n_periods==1) {
+        while (elem) {
+            if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
+                 elem->type==T_KSEXT || elem->type==T_SOLE) && (length = *((double*)elem->p_elem))) {
+                if (elem->pred) {
+                    beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
+                    beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
+                    alpha[0] = (elem->twiss->alphax + elem->pred->twiss->alphax)/2;
+                    alpha[1] = (elem->twiss->alphay + elem->pred->twiss->alphay)/2;
+                    phi[0]  = (elem->twiss->phix + elem->pred->twiss->phix)/2;
+                    phi[1]  = (elem->twiss->phiy + elem->pred->twiss->phiy)/2;
+                    y = (elem->twiss->Cy + elem->pred->twiss->Cy)/2;
+                }
+                else {
+                    beta[0] = (elem->twiss->betax + twiss0->betax)/2;
+                    beta[1] = (elem->twiss->betay + twiss0->betay)/2;
+                    alpha[0] = (elem->twiss->alphax + twiss0->alphax)/2;
+                    alpha[1] = (elem->twiss->alphay + twiss0->alphay)/2;
+                    phi[0]  = (elem->twiss->phix + twiss0->phix)/2;
+                    phi[1]  = (elem->twiss->phiy + twiss0->phiy)/2;
+                    y = (elem->twiss->Cy + twiss0->Cy)/2;
+                }
+                ks = K1r = K1 = 0;
+                switch (elem->type) {
+                    case T_QUAD:
+                    K1r = (K1=((QUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((QUAD*)(elem->p_elem))->tilt));
+                    break;
+                    case T_KQUAD:
+                    K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
+                    break;
+                    case T_SEXT:
+                    K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                    break;
+                    case T_KSEXT:
+                    K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                    break;
+                    case T_SOLE:
+                    ks = -((SOLE*)(elem->p_elem))->ks;
+                    break;
+                }
+                if (K1r!=0 || ks!=0) {
+                    integrand = (K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2 - std::complex<double>(0,1)*(1/beta[0]+1/beta[1])*ks/2.0)*sqrt(beta[0]*beta[1])/PIx2*length;
+                    phase = phi[0] - phi[1] - (tune[0] - tune[1] - q)*PIx2*(elem->end_pos-length/2)/sTotal;
+                    phaseFactor = cexpi(phase);
+                    kappa = kappa + integrand*phaseFactor;
+                }
 #ifdef DEBUG_COUPLING
-          fprintf(fp, (char*)"%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
-                  elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
-                  phase, phaseFactor.real(), phaseFactor.imag(), 
-                  integrand.real(), integrand.imag(),
-                  kappa.real(), kappa.imag());
+                fprintf(fp, (char*)"%s %e %e %e %e %e %e %e %e %e %e %e %e %e %e\n",
+                        elem->name, elem->end_pos-length/2+i*sTotal, length, K1r, tilt, ks,
+                        (phi[0]+i*(tune[0]/n_periods)) - (phi[1]+i*(tune[1]/n_periods)),
+                        (tune[0] - tune[1] - q)*PIx2*(elem->end_pos-length/2 + i*sTotal)/(n_periods*sTotal),
+                        phase, phaseFactor.real(), phaseFactor.imag(), 
+                        integrand.real(), integrand.imag(),
+                        kappa.real(), kappa.imag());
 #endif
-
+            }
+            elem = elem->succ;
         }
-      }
-      elem = elem->succ;
+        if ((couplingFactor[0] = std::abs<double>(kappa)))
+          couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
+        else
+          couplingFactor[2] = 0;
+#ifdef DEBUG_COUPLING
+        fclose(fp);
+#endif
+    } else {
+      couplingFactor[0] = couplingFactor[2] = 0;
     }
-    if ((couplingFactor[0] = std::abs<double>(kappa)))
-      couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
-    else
-      couplingFactor[2] = 0;
-
-#ifdef DEBUG_COUPLING
-    fclose(fp);
-#endif
   }
 
   if (radIntegrals)
@@ -1915,14 +1915,20 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
                                          higher_order_chromaticity_points, quick_higher_order_chromaticity);
+      beamline->chromaticity[0] *= n_periods;
+      beamline->chromaticity[1] *= n_periods;
+      beamline->chrom2[0] *= n_periods;
+      beamline->chrom3[0] *= n_periods;
+      beamline->chrom2[1] *= n_periods;
+      beamline->chrom3[1] *= n_periods;
       computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
-                                      starting_coord); 
+                                      starting_coord, n_periods); 
       if (compute_driving_terms)
-        computeDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune);
+        computeDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune, n_periods);
     }
   }
   else {
@@ -1956,12 +1962,18 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
                                          higher_order_chromaticity_points, quick_higher_order_chromaticity);
+      beamline->chromaticity[0] *= n_periods;
+      beamline->chromaticity[1] *= n_periods;
+      beamline->chrom2[0] *= n_periods;
+      beamline->chrom3[0] *= n_periods;
+      beamline->chrom2[1] *= n_periods;
+      beamline->chrom3[1] *= n_periods;
       computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
-                                      starting_coord); 
+                                      starting_coord, n_periods); 
 #ifdef DEBUG
       fprintf(stdout, (char*)"chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -1972,7 +1984,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->dbeta_dPoP[1] = dbetay;
   beamline->dalpha_dPoP[0] = dalphax;
   beamline->dalpha_dPoP[1] = dalphay;
-  
+
   alpha1 = alpha2 = 0;
   if (beamline->matrix->C[4]!=0) {
     alpha1 = (beamline->matrix->R[4][5] +
@@ -2528,11 +2540,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 				 eta0, etap0, 
 				 beta0, alpha0,
 				 &I1, &I2, &I3, &I4, &I5);
-    radIntegrals->RI[0] += I1;
-    radIntegrals->RI[1] += I2;
-    radIntegrals->RI[2] += I3;
-    radIntegrals->RI[3] += I4;
-    radIntegrals->RI[4] += I5;
+    radIntegrals->RI[0] += I1*n_periods;
+    radIntegrals->RI[1] += I2*n_periods;
+    radIntegrals->RI[2] += I3*n_periods;
+    radIntegrals->RI[3] += I4*n_periods;
+    radIntegrals->RI[4] += I5*n_periods;
   } else if (elem->type==T_CWIGGLER) {
     CWIGGLER *wiggler;
     wiggler = (CWIGGLER*)(elem->p_elem);
@@ -2542,11 +2554,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[1],
                                    eta0, etap0, beta0, alpha0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->RI[0] += I1;
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
-      radIntegrals->RI[3] += I4;
-      radIntegrals->RI[4] += I5;
+      radIntegrals->RI[0] += I1*n_periods;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
+      radIntegrals->RI[3] += I4*n_periods;
+      radIntegrals->RI[4] += I5*n_periods;
     }
     if (wiggler->BPeak[0]) {
       /* Bx */
@@ -2555,8 +2567,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[0],
                                    etay0, etapy0, betay0, alphay0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
     }
   } else if (elem->type==T_APPLE) {
     APPLE *wiggler;
@@ -2567,11 +2579,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[1],
                                    eta0, etap0, beta0, alpha0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->RI[0] += I1;
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
-      radIntegrals->RI[3] += I4;
-      radIntegrals->RI[4] += I5;
+      radIntegrals->RI[0] += I1*n_periods;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
+      radIntegrals->RI[3] += I4*n_periods;
+      radIntegrals->RI[4] += I5*n_periods;
     }
     if (wiggler->BPeak[0]) {
       /* Bx */
@@ -2580,8 +2592,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[0],
                                    etay0, etapy0, betay0, alphay0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
     }
   } else if (elem->type==T_UKICKMAP) {
     UKICKMAP *ukmap;
@@ -2591,11 +2603,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    eta0, etap0,
                                    beta0, alpha0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->RI[0] += I1;
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
-      radIntegrals->RI[3] += I4;
-      radIntegrals->RI[4] += I5;
+      radIntegrals->RI[0] += I1*n_periods;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
+      radIntegrals->RI[3] += I4*n_periods;
+      radIntegrals->RI[4] += I5*n_periods;
     }
   } else {
     isBend = 1;
@@ -2790,19 +2802,19 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       I3 = I2/fabs(rho);
       I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
       I5 = HAve*I3;
-      radIntegrals->RI[0] += I1;
-      radIntegrals->RI[1] += I2;
-      radIntegrals->RI[2] += I3;
-      radIntegrals->RI[3] += I4;
-      radIntegrals->RI[4] += I5;
+      radIntegrals->RI[0] += I1*n_periods;
+      radIntegrals->RI[1] += I2*n_periods;
+      radIntegrals->RI[2] += I3*n_periods;
+      radIntegrals->RI[3] += I4*n_periods;
+      radIntegrals->RI[4] += I5*n_periods;
     }
   }
   if (dI) {
-    dI[0] = I1;
-    dI[1] = I2;
-    dI[2] = I3;
-    dI[3] = I4;
-    dI[4] = I5;
+    dI[0] = I1*n_periods;
+    dI[1] = I2*n_periods;
+    dI[2] = I3*n_periods;
+    dI[3] = I4*n_periods;
+    dI[4] = I5*n_periods;
   }
 }
 
@@ -2818,7 +2830,7 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *be
     RI->Jx = 1 - RI->RI[3]/RI->RI[1];
     RI->Jdelta = 3 - RI->Jx;
     RI->Jy = 1;
-    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/beamline->revolution_length*RI->RI[1]);
+    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/(beamline->revolution_length*n_periods)*RI->RI[1]);
     RI->taux = RI->tauy*RI->Jy/RI->Jx;
     RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
     RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[2]/(2*RI->RI[1]+RI->RI[3]));
@@ -2953,7 +2965,7 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
 void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_dA[N_TSWA][N_TSWA],
 				   double *xTuneExtrema, double *yTuneExtrema, 
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
-                                   RUN *run, double *startingCoord)
+                                   RUN *run, double *startingCoord, long nPeriods)
 {
 #define TSWA_TRACKING_EXTRA_PTS 15
 #define TSWA_TRACKING_PTS (N_TSWA+TSWA_TRACKING_EXTRA_PTS)
@@ -2974,7 +2986,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     /* use the matrix only without tracking */
     xTuneExtrema[0] = xTuneExtrema[1] = 0;
     yTuneExtrema[0] = yTuneExtrema[1] = 0;
-    computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
+    computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M, nPeriods);
     return;
   }
 
@@ -3037,7 +3049,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y, 0,
                                       tune_shift_with_amplitude_struct.turns, 0, NULL,
-				      tuneLowerLimit, tuneUpperLimit, 0)) {
+				      tuneLowerLimit, tuneUpperLimit, 0, nPeriods)) {
 	  lost[ix][iy] = 1;
 	  nLost ++;
         }
@@ -3352,7 +3364,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      double xAmplitude, double yAmplitude, double deltaOffset, long turns,
                               long useMatrix,
                               double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit,
-			      long allowLosses)
+			      long allowLosses, long nPeriods)
 {
   double **oneParticle, dummy;
   double frequency[4], amplitude[4], phase[4];
@@ -3444,14 +3456,16 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
   for (i=1; i<turns; i++) {
-    if (useMatrix)
-      track_particles(oneParticle, M, oneParticle, one);
-    else {
+    if (useMatrix) {
+      long j;
+      for (j=0; j<nPeriods; j++)
+        track_particles(oneParticle, M, oneParticle, one);
+    } else {
       if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, 
 		       (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, 
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
-                       1, i-1, NULL, NULL, NULL, NULL, NULL)) {
+                       nPeriods, i-1, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses) {
 	  fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	  fflush(stdout);
@@ -3598,7 +3612,7 @@ double adjustTuneHalfPlane(double frequency, double phase0, double phase1)
 }
 
 void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_dA[N_TSWA][N_TSWA],
-                                    TWISS *twiss, double *tune, VMATRIX *M)
+                                    TWISS *twiss, double *tune, VMATRIX *M, long nPeriods)
 {
   VMATRIX M1, M2;
   long tplane, splane;
@@ -3678,13 +3692,13 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
     }
     if (tplane==0) {
       /* nux */
-      dnux_dA[1][0] = shift[0]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns);
-      dnux_dA[0][1] = shift[1]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns);
+      dnux_dA[1][0] = shift[0]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns)/nPeriods;
+      dnux_dA[0][1] = shift[1]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns)/nPeriods;
     }
     else {
       /* nuy */
-      dnuy_dA[1][0] = shift[0]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns);
-      dnuy_dA[0][1] = shift[1]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns);
+      dnuy_dA[1][0] = shift[0]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns)/nPeriods;
+      dnuy_dA[0][1] = shift[1]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns)/nPeriods;
     }
   }
 
@@ -4047,7 +4061,7 @@ typedef struct {
   double b2L, b3L, s;
 } ELEMDATA;
 
-void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
+void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune, long nPeriods)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 /* Revised to follow C. X. Wang AOP-TN-2009-020 for second-order terms */
 {
@@ -4057,12 +4071,14 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   std::complex <double> h20110, h11200, h20020, h20200, h00310, h00400;
   std::complex <double> t1, t2, t3, t4;
   std::complex <double> ii;
+  std::complex <double> periodicFactor[9][9];
+#define PF(i,j) (periodicFactor[4+i][4+j])
   double betax1, betay1, phix1, phiy1, etax1, termSign;
   double coef, b2L, a2L, b3L, b4L, nux, nuy;
   ELEMENT_LIST *eptr1;
   double two=2, three=3, four=4;
   ELEMDATA *ed = NULL;
-  long nE=0, iE, jE;
+  long nE=0, iE, jE, i, j;
   double sqrt8, sqrt2, tilt;
 
   sqrt8 = sqrt((double)8);
@@ -4077,6 +4093,21 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   h10100 = h10010 = std::complex<double>(0,0);
 
   d->dnux_dJx = d->dnux_dJy = d->dnuy_dJy = 0;
+
+  if (nPeriods!=1) {
+    double a1, a2;
+    for (i=0; i<9; i++) {
+      for (j=0; j<9; j++) {
+        a1 = PIx2*(tune[0]*(i-4)+tune[1]*(j-4));
+        a2 = a1/nPeriods;
+        periodicFactor[i][j] = (exp(ii*a1)-1.0)/(exp(ii*a2)-1.0);
+      }
+    }
+  } else {
+    for (i=0; i<9; i++)
+      for (j=0; j<9; j++)
+        periodicFactor[i][j] = 1;
+  }
 
   eptr1 = elem;
   while (eptr1) {
@@ -4160,60 +4191,59 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       ed[nE].py[3] = ed[nE].py[1]*ed[nE].py[2];
       ed[nE].py[4] = ed[nE].py[1]*ed[nE].py[3];
 
-
       if (a2L) {
 	/* linear coupling terms */
-	h10010 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]/ed[nE].py[1];
-	h10100 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]*ed[nE].py[1];
+	h10010 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]/ed[nE].py[1]*PF(1, -1);
+	h10100 += (a2L/4)*ed[nE].rbetax*ed[nE].rbetay*ed[nE].px[1]*ed[nE].py[1]*PF(1, 1);
       }
       if (b2L || b3L) {
 	/* first-order chromatic terms */
 	/* h11001 and h00111 */
-	h11001 += b3L*betax1*etax1/2-b2L*betax1/4;
-	h00111 += b2L*betay1/4-b3L*betay1*etax1/2;
+	h11001 += (b3L*betax1*etax1/2-b2L*betax1/4)*nPeriods;
+	h00111 += (b2L*betay1/4-b3L*betay1*etax1/2)*nPeriods;
 	
 	/* h20001, h00201 */
-	h20001 += (b3L*betax1*etax1/2-b2L*betax1/4)/2*ed[nE].px[2];
-	h00201 += (b2L*betay1/4-b3L*betay1*etax1/2)/2*ed[nE].py[2];
+	h20001 += (b3L*betax1*etax1/2-b2L*betax1/4)/2*ed[nE].px[2]*PF(2,0);
+	h00201 += (b2L*betay1/4-b3L*betay1*etax1/2)/2*ed[nE].py[2]*PF(0,2);
 
 	/* h10002 */
-	h10002 += (b3L*ed[nE].rbetax*ipow(etax1,2)-b2L*ed[nE].rbetax*etax1)/2*ed[nE].px[1];
+	h10002 += (b3L*ed[nE].rbetax*ipow(etax1,2)-b2L*ed[nE].rbetax*etax1)/2*ed[nE].px[1]*PF(1,0);
       }
       if (ed[nE].b3L) {
         /* first-order geometric terms from sextupoles */
         /* h21000 */
-	h21000 += b3L*ed[nE].rbetax*betax1/8*ed[nE].px[1];
+	h21000 += b3L*ed[nE].rbetax*betax1/8*ed[nE].px[1]*PF(1,0);
 
         /* h30000 */
-	h30000 += b3L*ed[nE].rbetax*betax1/24*ed[nE].px[3];
+	h30000 += b3L*ed[nE].rbetax*betax1/24*ed[nE].px[3]*PF(3,0);
         
         /* h10110 */
-	h10110 += -b3L*ed[nE].rbetax*betay1/4*ed[nE].px[1];
+	h10110 += -b3L*ed[nE].rbetax*betay1/4*ed[nE].px[1]*PF(1,0);
 
         /* h10020 and h10200 */
-	h10020 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*conj(ed[nE].py[2]);
+	h10020 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*conj(ed[nE].py[2])*PF(1,-2);
 
-	h10200 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*ed[nE].py[2];
+	h10200 += -b3L*ed[nE].rbetax*betay1/8*ed[nE].px[1]*ed[nE].py[2]*PF(1,2);
       }
       if (b4L) {
         /* second-order terms from leading order effects of octupoles */
 	/* Ignoring a large number of terms that are not also driven by sextupoles */
 
-        d->dnux_dJx += 3*b4L*ed[nE].betax2/(8*PI);
-        d->dnux_dJy -= 3*b4L*betax1*betay1/(4*PI);
-        d->dnuy_dJy += 3*b4L*ed[nE].betay2/(8*PI);
+        d->dnux_dJx += 3*b4L*ed[nE].betax2/(8*PI)*nPeriods;
+        d->dnux_dJy -= 3*b4L*betax1*betay1/(4*PI)*nPeriods;
+        d->dnuy_dJy += 3*b4L*ed[nE].betay2/(8*PI)*nPeriods;
 	
-	h22000 += 3*b4L*ed[nE].betax2/32;
-	h11110 += -3*b4L*betax1*betay1/8;
-	h00220 += 3*b4L*ed[nE].betay2/32;
-	h31000 += b4L*ed[nE].betax2/16*ed[nE].px[2];
-	h40000 += b4L*ed[nE].betax2/64*ed[nE].px[4];
-	h20110 += -3*b4L*betax1*betay1/16*ed[nE].px[2];
-	h11200 += -3*b4L*betax1*betay1/16*ed[nE].py[2];
-	h20020 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*conj(ed[nE].py[2]);
-	h20200 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*ed[nE].py[2];
-	h00310 += b4L*ed[nE].betay2/16*ed[nE].py[2];
-	h00400 += b4L*ed[nE].betay2/64*ed[nE].py[4];
+	h22000 += 3*b4L*ed[nE].betax2/32*nPeriods;
+	h11110 += -3*b4L*betax1*betay1/8*nPeriods;
+	h00220 += 3*b4L*ed[nE].betay2/32*nPeriods;
+	h31000 += b4L*ed[nE].betax2/16*ed[nE].px[2]*PF(2,0);
+	h40000 += b4L*ed[nE].betax2/64*ed[nE].px[4]*PF(4,0);
+	h20110 += -3*b4L*betax1*betay1/16*ed[nE].px[2]*PF(2,0);
+	h11200 += -3*b4L*betax1*betay1/16*ed[nE].py[2]*PF(0,2);
+	h20020 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*conj(ed[nE].py[2])*PF(2,-2);
+	h20200 += -3*b4L*betax1*betay1/32*ed[nE].px[2]*ed[nE].py[2]*PF(2,2);
+	h00310 += b4L*ed[nE].betay2/16*ed[nE].py[2]*PF(0,2);
+	h00400 += b4L*ed[nE].betay2/64*ed[nE].py[4]*PF(0,4);
       }
       nE++;
     }

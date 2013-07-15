@@ -3116,7 +3116,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      double xAmplitude, double yAmplitude, double deltaOffset, long turns,
                               long useMatrix, double *endingCoord,
 			      double *lowerLimit, double *upperLimit,
-			      long allowLosses);
+			      long allowLosses, long nPeriods);
 double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 
 /* frequencyMap.c */
