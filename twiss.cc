@@ -4292,6 +4292,8 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
 
   if (!leading_order_driving_terms_only) {
     /* compute sextupole contributions to second-order terms */
+    if (nPeriods!=1) 
+      bombElegant("Computating of higher-order driving terms not available when n_periods!=1", NULL);
 
     nux = tune[0];
     nuy = tune[1];
