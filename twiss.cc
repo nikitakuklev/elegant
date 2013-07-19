@@ -4520,6 +4520,9 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   RFCA *rfca;
   long iFreq, iVolt, iPhase;
   double phase;
+  double St0, Sz0, nus, rfAcceptance = -1;
+  double wrf, w0, Vdot, E;
+  long h;
 
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT)) {
     if (output_before_tune_correction)
@@ -4579,28 +4582,30 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     }
   }
 
-  if (writeToFile) {
-    if (fpRf) {
-      double St0, Sz0, nus, rfAcceptance = -1;
-      double wrf = frf*PIx2;
-      double w0 = PIx2*c_mks/beamline->revolution_length;
-      long h = wrf/w0+0.5;
-      double Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
-      double E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
-    
-      if (Vdot<=0) {
-        nus = sqrt(beamline->alpha[0]/PIx2*(-Vdot/w0)/E);
-        St0 = beamline->radIntegrals.sigmadelta*beamline->alpha[0]/(nus*w0);
-        Sz0 = St0*c_mks;
-        if ((q = nRfca*voltage/(1e6*beamline->radIntegrals.Uo))>1)
-          rfAcceptance = sqrt(2*beamline->radIntegrals.Uo*1e6/(PI*beamline->alpha[0]*h*E)*(sqrt(q*q-1)-acos(1/q)));
-      } else {
-        q = rfAcceptance = nus = St0 = Sz0 = -1;
-      }
-    
-      fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n",
-              phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0);
-    }
+  rfAcceptance = -1;
+  wrf = frf*PIx2;
+  w0 = PIx2*c_mks/beamline->revolution_length;
+  h = wrf/w0+0.5;
+  Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
+  E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
+  
+  if (Vdot<=0) {
+    nus = sqrt(beamline->alpha[0]/PIx2*(-Vdot/w0)/E);
+    St0 = beamline->radIntegrals.sigmadelta*beamline->alpha[0]/(nus*w0);
+    Sz0 = St0*c_mks;
+    if ((q = nRfca*voltage/(1e6*beamline->radIntegrals.Uo))>1)
+      rfAcceptance = sqrt(2*beamline->radIntegrals.Uo*1e6/(PI*beamline->alpha[0]*h*E)*(sqrt(q*q-1)-acos(1/q)));
+  } else {
+    q = rfAcceptance = nus = St0 = Sz0 = -1;
+  }
+
+  rpn_store(Sz0, NULL, rpn_create_mem("Sz0", 0));
+  rpn_store(St0, NULL, rpn_create_mem("St0", 0));
+  rpn_store(beamline->radIntegrals.sigmadelta, NULL, rpn_create_mem("Sdelta0", 0));
+  
+  if (writeToFile && fpRf) {
+    fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n",
+            phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0);
   }
 }
 
