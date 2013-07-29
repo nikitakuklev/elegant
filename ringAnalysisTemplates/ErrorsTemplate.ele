@@ -45,3 +45,7 @@
 &error_element  name=*, element_type=*BEN*,
 	item=FSE, amplitude=<fseBend>, type = "gaussian", cutoff=2.0, 
         bind=0, fractional=0, allow_missing_elements=1 &end
+
+&error_element  name=*, element_type=*BEN*,
+	item=K1, amplitude=<fseQuad>, type = "gaussian", cutoff=2.0, 
+        bind=0, fractional=0, allow_missing_elements=1, fractional=1 &end
