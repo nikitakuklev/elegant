@@ -211,8 +211,8 @@ long do_aperture_search(
   log_entry("do_aperture_search");
   switch (mode_code) {
   case N_LINE_MODE:
-    if (n_lines%2==0)
-      bombElegant("n_lines must be an odd number for aperture search", NULL);
+    if (n_lines<=2)
+      bombElegant("n_lines must be greater than 2 for aperture search", NULL);
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, n_lines, returnValue);
     break;
   case MP_MODE:
