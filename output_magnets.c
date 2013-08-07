@@ -41,6 +41,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     eptr = &(beamline->elem);
     fprintf(fpm, "_BEGIN_ MARK 0 0\n");
     while (eptr) {
+         fprintf(fpm, "%s %s %e  0\n", eptr->name, entity_name[eptr->type], end);
          switch (eptr->type) {
             case T_QUAD:
                 qptr = (QUAD*)eptr->p_elem;
