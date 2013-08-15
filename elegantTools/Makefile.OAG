@@ -200,7 +200,7 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z
-SYS_PROD_LIBS_solaris += z curses rt 
+SYS_PROD_LIBS_solaris += z rt 
 endif
 
 SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)

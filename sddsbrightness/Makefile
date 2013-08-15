@@ -46,34 +46,34 @@ F77 = /sw/bin/gfortran
 endif
 ifeq ($(HOST_ARCH),solaris)
 F77 = g77
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(HOST_ARCH),solaris-sparc)
 F77 = g77
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-sparc)
 F77 = g77
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 ifdef RATIONAL
 F77 = $(RATIONAL) f77 -g
 endif
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-sparc64)
 F77 = g77 -m64
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-x86)
 F77 = f77
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-x86-gnu)
 F77 = f77
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-x86_64)
 F77 = f77 -m64
-solaris_libs = -lcurses -lrt
+solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
 F77 = gfortran -m64 -ffixed-line-length-132

@@ -231,7 +231,7 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 endif
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z 
-SYS_PROD_LIBS_solaris += z curses rt 	
+SYS_PROD_LIBS_solaris += z rt 	
 endif
 
 MAKE = make
