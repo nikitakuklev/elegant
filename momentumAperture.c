@@ -26,6 +26,7 @@ static long turnsStored = 0;
 
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
+long multiparticleLocalMomentumAcceptance(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -49,6 +50,57 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
     turnByTurnCoord[3][turnsStored] = coord[0][3]; 
     turnByTurnCoord[4][turnsStored] = coord[0][5]; 
     turnsStored++;
+  }
+}
+
+#ifdef DEBUG
+FILE *fpd = NULL;
+#endif
+static long nElements, nDelta;
+static double deltaStep;
+static ELEMENT_LIST **elementArray = NULL;
+static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
+{
+  long id, ie, ip, particleID;
+  MALIGN mal;
+  if (pass==fireOnPass) {
+    if (include_name_pattern) {
+      if (strcmp(eptr->name, include_name_pattern)!=0) return;
+      ie = eptr->occurence;
+    }
+    else {
+      ie = i_elem;
+    }
+    if (s_start<s_end && (eptr->end_pos<s_start || eptr->end_pos>s_end)) return;
+#ifdef DEBUG
+    if (fpd) {
+      fprintf(fpd, "Momentum kick firing on processor %d for %ld particles, element %s#%ld\n", myid, np, eptr->name, eptr->occurence);
+      fflush(fpd);
+    }
+#endif
+    elementArray[ie] = eptr;
+    mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
+    mal.dx = x_initial;
+    mal.dy = y_initial;
+    for (ip=0; ip<np; ip++) {
+      particleID = coord[ip][6];
+      id = particleID%nDelta;
+      if ((particleID-id)/nDelta!=ie) continue;
+      if (id>nDelta) 
+        bombElegant("invalid id value (>nDelta)", NULL);
+      mal.dp = delta_negative_limit + id*deltaStep;
+      offset_beam(coord+ip, 1, &mal, *pCentral);
+#ifdef DEBUG
+      if (fpd)
+        fprintf(fpd, "Imparted error %le to particle %ld (ie=%ld, pId=%ld) on processor %d\n", mal.dp, ip, ie, (long)coord[ip][6], myid);
+#endif
+    }
+#ifdef DEBUG
+    if (fpd) {
+      fprintf(fpd, "Momentum kick done on processor %d\n", myid);
+      fflush(fpd);
+    }
+#endif
   }
 }
 
@@ -100,21 +152,78 @@ void setupMomentumApertureSearch(
   if (process_elements<=0)
     bombElegant("process_elements <= 0", NULL);
   
+  nElements = 0;
+  if (output_mode==2) {
+    /* Massively parallel algorithm using acceptance feature */
+    if (include_name_pattern && has_wildcards(include_name_pattern))
+      bombElegant("Can't have wildcards in name pattern for output_mode=2", NULL);
+    if (include_type_pattern)
+      bombElegant("Can't used include_type_pattern for output_mode=2", NULL);
+  }
+  
   output = compose_filename(output, run->rootname);
   sprintf(description, "Momentum aperture search");
 #if SDDS_MPI_IO
-  SDDS_MPI_Setup(&SDDSma, 1, n_processors, myid, MPI_COMM_WORLD, 1);
-  if (!SDDS_Parallel_InitializeOutput(&SDDSma, description, "momentum aperture",  output)) {
+  if (output_mode!=2) {
+    SDDS_MPI_Setup(&SDDSma, 1, n_processors, myid, MPI_COMM_WORLD, 1);
+    if (!SDDS_Parallel_InitializeOutput(&SDDSma, description, "momentum aperture",  output)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+  } else if (myid==0) {
+    /* master only writes */
+    if (!SDDS_InitializeOutput(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+  }
 #else
   if (!SDDS_InitializeOutput(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
-#endif
-
-
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
+#endif
 
-  if (output_mode==0) {
+  switch (output_mode) {
+  case 1:
+    if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "direction", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "deltaFound", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "delta", "$gd$R$bpos$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "lostOnPass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "sLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuxLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&SDDSma, "nuyLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    break;
+  case 2:
+#if USE_MPI
+    if (myid==0) {
+      if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+          SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
+          SDDS_DefineColumn(&SDDSma, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
+          SDDS_DefineColumn(&SDDSma, "deltaPositive", "$gd$R$bpos$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&SDDSma, "deltaNegative", "$gd$R$bneg$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exitElegant(1);
+      }
+    }
+#else
+    bombElegant("output_mode=2 not available in serial elegant.",  NULL);
+#endif
+    break;
+  default:
     if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
@@ -141,34 +250,25 @@ void setupMomentumApertureSearch(
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
-  } else {
-    if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "direction", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "deltaFound", NULL, NULL, NULL, NULL, SDDS_SHORT, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "delta", "$gd$R$bpos$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "lostOnPass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "sLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "nuxLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&SDDSma, "nuyLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exitElegant(1);
-    }
-  } 
+    break;
+  }
+  
+  
 #if !SDDS_MPI_IO
   /* In the version with parallel IO, the layout will be written later */
   if(!SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)){
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
-#endif
-  
+#else 
+  if (output_mode==2 && myid==0) {
+    /* In output_mode==2, the master does the IO */
+    if(!SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)){
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+  }
+#endif  
 }
 
 void finishMomentumApertureSearch()
@@ -240,32 +340,65 @@ long doMomentumApertureSearch(
   elem = &(beamline->elem);
   elem0 = NULL;
   nElem = 0;
+  elementArray = NULL;
   while (elem) {
+#ifdef DEBUG
+    printf("checking element %s\n", elem->name); fflush(stdout);
+#endif
     if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
         (!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern)) ) {
       if (!elem0)
 	elem0 = elem;
       nElem++;
+      elementArray = SDDS_Realloc(elementArray, sizeof(*elementArray)*(nElem+10));
+      elementArray[nElem-1] = elem;
+#ifdef DEBUG
+      printf("  including element %s\n", elem->name); fflush(stdout);
+#endif
     } else if (elem->end_pos>s_end)
       break;
     elem = elem->succ;
   }
+  nElements = nElem;
+
 #if !USE_MPI
   if (nElem==0) 
     SDDS_Bomb("no elements found between s_start and s_end for momentum aperture computation");
 #else
-  if ((((output_mode==0?1:2)*nElem)<n_processors) && (myid==0)) {
-    printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resource.\nThe number of elements is %ld. The number of processors is %d.\n", (output_mode==0?1:2)*nElem, n_processors);
-    if (!output_mode) 
-      printf("Tip: You can utilize more processors efficiently by setting output_mode=1\n");
-  }    
+  switch (output_mode) {
+  case 1:
+    if ((2*nElem<n_processors) && (myid==0)) {
+      printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resources.\nThe effective number of elements is %ld. The number of processors is %d.\n", 
+             2*nElem, n_processors);
+    }    
+    break;
+  case 2:
+    break;
+  default:
+    if (nElem<n_processors && (myid==0)) {
+      printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resources.\nThe number of elements is %ld. The number of processors is %d.\n",
+             nElem, n_processors);
+    }    
+    break;
+  }
+  
   if (verbosity) {
     verbosity = 0;
     if (myid == 0)
       printf ("Warning: In parallel version, limited intermediate information will be provided\n");
   }
 #endif
+
+  if (output_mode==2) {
+    printf("Branching multiple particle mode\n");
+    multiparticleLocalMomentumAcceptance(run, control, errcon, beamline, startingCoord);
+    printf("Returning from LMA search main routine.\n");
+    fflush(stdout);
+    return 1;
+  }
+  printf("Running in search mode\n");
+  
   /* allocate arrays for tracking */
   coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
 
@@ -321,6 +454,7 @@ long doMomentumApertureSearch(
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     }
+    printf("Fiducialization completed\n");
   }
 
   outputRow = -1;
@@ -566,7 +700,7 @@ long doMomentumApertureSearch(
 #endif
 #endif
         if (verbosity>0) {
-          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
+          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is%e \n", elem->name, elem->occurence, elem->end_pos,
                   deltaSurvived[slot][outputRow]);
           fflush(stdout);
         }
@@ -667,6 +801,242 @@ long doMomentumApertureSearch(
   free(ElementName);
   free(ElementType);
   free(ElementOccurence);
+  return 1;
+}
+
+long multiparticleLocalMomentumAcceptance(
+                              RUN *run,
+                              VARY *control,
+                              ERRORVAL *errcon,
+                              LINE_LIST *beamline,
+                              double *startingCoord
+                              )
+{    
+#if USE_MPI
+  double **coord, **accepted;
+  double round = 0.5;
+  long nTotal, ip, ie, idelta, id, nLeft, nLost, nElem, nEachProcessor, code;
+  double pCentral, delta;
+  ELEMENT_LIST *elem, *elem0;
+  char s[1000];
+  double *sStart, **deltaSurvived;
+  char **ElementName, **ElementType;
+  int32_t *ElementOccurence;
+  short **survivorFound;
+  char logFile[100];
+  long n_working_processors = n_processors - 1;
+
+#ifdef DEBUG
+  sprintf(logFile, "mmap-%03d.log", myid);
+  fpd = fopen(logFile, "w");
+  fprintf(fpd, "Started LMA algorithm for processor %d\n", myid);
+#endif
+  if (myid==0) {
+    printf("Started multi-particle  LMA algorithm\n");
+    fflush(stdout);
+  }
+  
+  nElem = nElements;
+  nDelta = (delta_positive_limit-delta_negative_limit)/delta_step_size+1;
+  deltaStep = (delta_positive_limit-delta_negative_limit)/(nDelta-1);
+  nTotal = nElem*nDelta;
+  if (nTotal%n_working_processors!=0) {
+    fprintf(stdout, "Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
+            n_working_processors, nDelta, nElem);
+    nDelta = (nDelta/n_working_processors+1)*n_working_processors;
+    deltaStep = (delta_positive_limit-delta_negative_limit)/(nDelta-1);
+    nTotal = nElements*nDelta;
+    fprintf(stdout, "Changed nDelta to %ld, delta step to %le\n", nDelta, deltaStep);
+  }
+  nEachProcessor = nTotal/n_working_processors;
+#ifdef DEBUG
+  fprintf(fpd, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
+          nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
+#endif
+  if (myid==0) {
+    fprintf(stdout, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
+            nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
+    fflush(stdout);
+  }
+  
+  /* allocate and initialize array for tracking */
+  if (myid==0) {
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, 7);
+    accepted = (double**)czarray_2d(sizeof(**accepted), nEachProcessor*n_working_processors, 7);
+  } else {
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, 7);
+    accepted = (double**)czarray_2d(sizeof(**accepted), nEachProcessor, 7);
+  }
+  
+#ifdef DEBUG
+  fprintf(fpd, "Arrays allocated\n");
+  fflush(fpd);
+#endif
+
+  if (control->n_passes==1)
+    fireOnPass = 0;
+  else
+    fireOnPass = 1;
+  
+  setTrackingOmniWedgeFunction(NULL);
+  if (startingCoord)
+    memcpy(coord[0], startingCoord, sizeof(double)*6);
+  else
+    memset(coord[0], 0, sizeof(**coord)*6);
+  coord[0][6] = 1;
+  pCentral = run->p_central;
+  if (verbosity>1) {
+    fprintf(stdout, "Tracking fiducial particle\n");
+    fflush(stdout);
+  }
+  code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                     NULL, NULL, NULL, NULL, run, control->i_step, 
+                     FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
+  if (!code) {
+    if (myid==0)
+      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+    exitElegant(1);
+  }
+  if (myid==0) {
+    fprintf(stdout, "Fiducial particle tracked.\n");
+    fflush(stdout);
+  }
+  
+#ifdef DEBUG
+  fprintf(fpd, "Fiducialized\n"); fflush(fpd);
+#endif
+  MPI_Barrier(MPI_COMM_WORLD);
+  printf("Fiducalization completed\n");
+  fflush(stdout);
+
+  if (myid!=0) {
+    for (ip=0; ip<nEachProcessor; ip++) {
+      if (startingCoord)
+        memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
+      else
+        memset(coord[ip], 0, sizeof(**coord)*6);
+      coord[ip][6] = (myid-1)*nEachProcessor + ip;
+    }
+    
+    setTrackingOmniWedgeFunction(momentumOffsetFunctionOmni); 
+#ifdef DEBUG
+    fprintf(fpd, "Tracking\n");
+    fflush(fpd);
+#endif
+    printf("Tracking\n");
+    fflush(stdout);
+    nLeft = do_tracking(NULL, coord, nEachProcessor, NULL, beamline, &pCentral, 
+                        accepted, NULL, NULL, NULL, run, control->i_step, 
+                        (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
+                        control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
+    nLost = nEachProcessor - nLeft;
+#ifdef DEBUG
+    fprintf(fpd, "Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
+    fflush(fpd);
+#endif
+    printf("Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
+    fflush(stdout);
+    setTrackingOmniWedgeFunction(NULL);
+  }
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  /* gather particle data to master */
+  gatherParticles(&coord, NULL, &nLeft, &nLost, &accepted, n_processors, myid, &round);
+  printf("Master processor gather done\n"); fflush(stdout);
+  
+  if (myid==0) {
+    if (!SDDS_StartPage(&SDDSma, nElem) ||
+        !SDDS_SetParameters(&SDDSma, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
+                            control->i_step, NULL)) {
+      SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
+    /* allocate arrays for storing data for negative and positive momentum limits for each element */
+    long slot;
+    deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), 2, nElem);
+    sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
+    ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
+    ElementType = (char**)tmalloc(sizeof(*ElementType)*nElem);
+    ElementOccurence = (int32_t*)tmalloc(sizeof(*ElementOccurence)*nElem);
+    survivorFound = (short**)czarray_2d(sizeof(**survivorFound), 2, nElem);
+
+    /* Figure out the delta limits for each element */
+    printf("%ld particles remain after LMA tracking.\n", nLeft); fflush(stdout);
+#ifdef DEBUG
+    if (1) {
+      FILE *fpd2;
+      fpd2 = fopen("accepted.sdds", "w");
+      fprintf(fpd2, "SDDS1\n&column name=particleID, type=long &end\n");
+      fprintf(fpd2, "&column name=s units=m type=double &end\n");
+      fprintf(fpd2, "&column name=delta type=double &end\n");
+      fprintf(fpd2, "&data mode=ascii no_row_counts=1 &end\n");
+      for (ip=0; ip<nLeft; ip++) {
+        idelta = ((long)accepted[ip][6])%nDelta;
+        ie = (accepted[ip][6]-idelta)/nDelta;
+        delta = delta_negative_limit + idelta * deltaStep;
+        fprintf(fpd2, "%ld %le %le\n", (long)accepted[ip][6], elementArray[ie]->end_pos, delta);
+      }
+      fclose(fpd2);
+    }
+#endif
+    
+    for (ip=0; ip<nLeft; ip++) {
+      idelta = ((long)accepted[ip][6])%nDelta;
+      ie = (accepted[ip][6]-idelta)/nDelta;
+      delta = delta_negative_limit + idelta * deltaStep;
+      if (delta>=0) {
+        slot = 1;
+        if (!survivorFound[slot][ie] || delta>deltaSurvived[slot][ie]) {
+          survivorFound[slot][ie] = 1;
+          deltaSurvived[slot][ie] = delta;
+        }
+      } else {
+        slot = 0;
+        if (!survivorFound[slot][ie] || delta<deltaSurvived[slot][ie]) {
+          survivorFound[slot][ie] = 1;
+          deltaSurvived[slot][ie] = delta;
+        }
+      }
+      sStart[ie] = elementArray[ie]->end_pos;
+      ElementName[ie] = elementArray[ie]->name;
+      ElementType[ie] = entity_name[elementArray[ie]->type];
+      ElementOccurence[ie] = elementArray[ie]->occurence;
+    }
+    if (!SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, nElem, "ElementName") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, nElem, "s") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementType, nElem, "ElementType") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementOccurence, nElem, "ElementOccurence") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[1], nElem, "deltaPositive") ||
+        !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], nElem, "deltaNegative")) {
+      SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!SDDS_WritePage(&SDDSma)) {
+      SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!inhibitFileSync)
+      SDDS_DoFSync(&SDDSma);
+
+    free(ElementType);
+    free(ElementName);
+    free(ElementOccurence);
+    free(elementArray);
+    free(sStart);
+    free_czarray_2d((void**)deltaSurvived, 2, nElem);
+    free_czarray_2d((void**)coord, nEachProcessor*n_working_processors, 7);
+    free_czarray_2d((void**)accepted, nEachProcessor*n_working_processors, 7);
+  } else {
+    free_czarray_2d((void**)coord, nEachProcessor, 7);
+    free_czarray_2d((void**)accepted, nEachProcessor, 7);
+  }
+  
+  MPI_Barrier(MPI_COMM_WORLD);
+#else
+  bombElegant("This LMA method is only available in Pelegant.", NULL);
+#endif
   return 1;
 }
 

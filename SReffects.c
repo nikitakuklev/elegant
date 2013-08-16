@@ -39,6 +39,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
       printf("Problem with SREFFECTS: no twiss parameters were computed\n");
       printf("It may be necessary to pre-compute twiss parameters using an additional\n");
       printf("twiss_output command with output_at_each_step=0\n");
+      fflush(stdout);
       exitElegant(1);
     }
     

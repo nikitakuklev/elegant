@@ -102,6 +102,15 @@ void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pas
   trackingWedgeElement = eptr;
 }
 
+/* This is used if one needs to wedge a function after each element location
+ */
+
+static void (*trackingOmniWedgeFunction)(double **part, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral);
+void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral))
+{
+  trackingOmniWedgeFunction = wedgeFunc;
+}
+
 long do_tracking(
                  /* Either the beam pointer or the coord pointer must be supplied, but not both */
                  BEAM *beam,  
@@ -143,7 +152,7 @@ long do_tracking(
   long nMaximum=0;  /* maximum number of particles seen */
   long show_dE, maxampOpenCode=0, maxampExponent=0, maxampYExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
-  long i, j, i_traj=0, i_sums, i_pass, isConcat;
+  long i, j, i_traj=0, i_sums, i_pass, isConcat, i_elem;
   long i_sums_recirc, saveISR=0;
   long watch_pt_seen, feedbackDriverSeen;
   double sum, x_max, y_max;
@@ -242,7 +251,7 @@ long do_tracking(
 #else 
   if (isMaster)
 #endif
-    if (accepted)
+    if (accepted) 
       copy_particles(accepted, coord, nOriginal);
 
 #ifdef VAX_VMS
@@ -526,7 +535,10 @@ long do_tracking(
       startElem = NULL; 
     }
 
+    i_elem = 0;
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+      if (trackingOmniWedgeFunction) 
+        (*trackingOmniWedgeFunction)(coord, nToTrack, i_pass, i_elem, beamline->n_elems, eptr, P_central);
       if (trackingWedgeFunction && eptr==trackingWedgeElement)
         (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
 
@@ -1786,6 +1798,7 @@ long do_tracking(
       last_type = eptr->type;
       eptrPred = eptr;
       eptr = eptr->succ;
+      i_elem++;
       nToTrack = nLeft;
     } /* end of the while loop */
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
@@ -4031,11 +4044,13 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
 
   MPI_Reduce (&my_nToTrack, &nToTrack_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce (&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
   if (isMaster) {
     if(*coord==NULL)
       *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, 7);
-    if(dumpAcceptance && (*accepted==NULL))
+    if ((dumpAcceptance && (*accepted==NULL)) || (accepted && *accepted)) {
       *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, 7); 
+    }
   }
 
   if (myid==0) {
@@ -4066,14 +4081,14 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
       displs = my_nToTrack;
       my_nToTrack = 0;
       for (i=1; i<=work_processors; i++) {
-        /* gather information for lost particles */  
+        /* gather information for lost particles */
   	displs = displs+nLostCounts[i-1];
         nItems = nLostCounts[i]*COORDINATES_PER_PARTICLE;
         MPI_Recv (&(*coord)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
         if (*accepted!=NULL){
           MPI_Recv (&(*accepted)[my_nToTrack][0], nToTrackCounts[i]*COORDINATES_PER_PARTICLE, MPI_DOUBLE, i, 101, MPI_COMM_WORLD, &status); 
           MPI_Recv (&(*accepted)[displs][0], nItems, MPI_DOUBLE, i, 103, MPI_COMM_WORLD, &status);
-        my_nToTrack = my_nToTrack+nToTrackCounts[i];
+          my_nToTrack = my_nToTrack+nToTrackCounts[i];
 	}
       }
       /* update the round parameter to avoid more particles are distributed 
