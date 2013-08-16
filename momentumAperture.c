@@ -83,7 +83,7 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
     mal.dx = x_initial;
     mal.dy = y_initial;
     for (ip=0; ip<np; ip++) {
-      particleID = coord[ip][6];
+      if ((particleID = coord[ip][6])<0) continue;
       id = particleID%nDelta;
       if ((particleID-id)/nDelta!=ie) continue;
       if (id>nDelta) 
@@ -843,12 +843,11 @@ long multiparticleLocalMomentumAcceptance(
   if (nTotal%n_working_processors!=0) {
     fprintf(stdout, "Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
             n_working_processors, nDelta, nElem);
-    nDelta = (nDelta/n_working_processors+1)*n_working_processors;
-    deltaStep = (delta_positive_limit-delta_negative_limit)/(nDelta-1);
-    nTotal = nElements*nDelta;
-    fprintf(stdout, "Changed nDelta to %ld, delta step to %le\n", nDelta, deltaStep);
+    nEachProcessor =  (nTotal/n_working_processors)+1;
+  } else {
+    nEachProcessor = nTotal/n_working_processors;
   }
-  nEachProcessor = nTotal/n_working_processors;
+  
 #ifdef DEBUG
   fprintf(fpd, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
           nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
@@ -916,6 +915,11 @@ long multiparticleLocalMomentumAcceptance(
       else
         memset(coord[ip], 0, sizeof(**coord)*6);
       coord[ip][6] = (myid-1)*nEachProcessor + ip;
+      if (coord[ip][6]>=nTotal) {
+        /* Don't track more buffer particles than needed */
+        coord[ip][6] = -1;
+        nEachProcessor = ip+1;
+      }
     }
     
     setTrackingOmniWedgeFunction(momentumOffsetFunctionOmni); 
@@ -983,6 +987,10 @@ long multiparticleLocalMomentumAcceptance(
 #endif
     
     for (ip=0; ip<nLeft; ip++) {
+      if (accepted[ip][6]<0) {
+        /* buffer particle, ignore */
+        continue;
+      }
       idelta = ((long)accepted[ip][6])%nDelta;
       ie = (accepted[ip][6]-idelta)/nDelta;
       delta = delta_negative_limit + idelta * deltaStep;
