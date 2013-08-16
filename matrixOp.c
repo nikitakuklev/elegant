@@ -73,6 +73,10 @@ int f2c_dgemm(char* transA, char* transB, integer* M, integer* N, integer* K,
 #ifdef LAPACK
 #include "f2c.h"
 #endif
+#ifdef ESSL
+#include "essl.h"
+#include "f2c.h"
+#endif
 #include "matrixOp.h"
 
 
@@ -333,7 +337,7 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2)
   long lda, kk, ldb;
   double alpha=1.0, beta=0.0; 
 #endif
-#if defined(LAPACK)
+#if defined(LAPACK) || defined(ESSL)
   integer lda, kk, ldb;
   doublereal alpha=1.0, beta=0.0;  
 #endif
@@ -342,7 +346,7 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2)
   if (mat1->n !=mat2->m)
     SDDS_Bomb("The columns of A and rows of B do not match, can not do A X B operation(matrix_mult)!");
   
-#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF)
+#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF) || defined(ESSL)
   kk =  MAX(1, mat1->n);
   lda = MAX(1, mat1->m);
   ldb = MAX(1, mat2->m);
@@ -357,9 +361,15 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2)
         new_mat->m, new_mat->n, kk, alpha, mat1->base,
         lda, mat2->base, ldb, beta, new_mat->base, new_mat->m);
 #else
+#if defined(ESSL)
+  esvdgemm("N", "N",
+         new_mat->m, new_mat->n, kk, alpha, mat1->base,
+         lda, mat2->base, ldb, beta, new_mat->base, new_mat->m);
+#else
   dgemm_("N", "N",
          &new_mat->m, &new_mat->n, &kk, &alpha, mat1->base,
          &lda, mat2->base, &ldb, &beta, new_mat->base, &new_mat->m);
+#endif
 #endif
 #endif
 #else
@@ -377,7 +387,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
 {
   MAT *Inv=NULL;
   MAT *A;
-#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF)
+#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF) || defined(ESSL)
   MAT *U=NULL, *V=NULL, *Vt=NULL, *Invt=NULL;
   int32_t i, j, NSVUsed=0, m, n, firstdelete=1;   
   VEC *SValue=NULL, *SValueUsed=NULL, *InvSValue=NULL;
@@ -401,7 +411,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
   double alpha=1.0, beta=0.0;
   int kk, ldb;
 #endif
-#if defined(LAPACK)
+#if defined(LAPACK) || defined(ESSL)
   doublereal *work;
   integer lwork;
   integer lda;
@@ -411,7 +421,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
 
   A = matrix_copy(Ain);  /* To avoid changing users matrix */
 
-#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF)
+#if defined(CLAPACK) || defined(LAPACK) || defined(SUNPERF) || defined(ESSL)
   if (!A || A->m<=0 || A->n<=0)
     SDDS_Bomb("Invalid matrix provided for invert (matrix_invert)!");
   n = A->n;
@@ -477,7 +487,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
           (long*)&info); 
   free (work);
 #endif
-#if defined(LAPACK)
+#if defined(LAPACK) || defined(ESSL)
   work = (doublereal*) malloc(sizeof(doublereal)*1);
   lwork = -1;
   lda = MAX(1,A->m); 
@@ -502,6 +512,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
           (integer*)&info); 
   free (work);
 #endif
+
   max = 0;
   min = HUGE;
   InvSValue->ve[0] = 1/SValue->ve[0];
@@ -713,13 +724,13 @@ double matrix_det(MAT *A)
 #if defined(CLAPACK)
   long i,lda, n, m, *ipvt, info; 
 #endif
-#if defined(LAPACK)
+#if defined(LAPACK) || defined(ESSL)
   integer i, lda, n, m,*ipvt, info;
 #endif
   
   if (A->m!=A->n)
     return 0;
-#if defined(LAPACK) || defined(CLAPACK) || defined(SUNPERF)
+#if defined(LAPACK) || defined(CLAPACK) || defined(SUNPERF) || defined(ESSL)
   lda = A->m;
   n = A->n;
   m =A->m;

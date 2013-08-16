@@ -247,7 +247,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   LDVL=1;
   LDVR=matDim;
   lwork=204;
-#if defined(SUNPERF) || defined(LAPACK) || defined(CLAPACK)
+#if defined(SUNPERF) || defined(LAPACK) || defined(CLAPACK) || defined(ESSL)
   dgeev_((char*)&JOBVL, (char*)&JOBVR, (int*)&N, (double*)&A,
          (int*)&LDA, (double*)&WR, (double*)&WI, (double*)&VL,
          (int*)&LDVL, (double*)&VR, (int*)&LDVR, (double*)&work,

@@ -36,7 +36,7 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/)
+    MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ )
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
     CC += $(USER_MPI_FLAGS)
@@ -268,6 +268,26 @@ ifeq ($(OS_CLASS),Darwin)
 LAPACK = 1
 endif
 
+ESSL = 0
+ifeq (vesta, $(findstring vesta, $(HOSTNAME)))
+ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
+LAPACK = 1
+OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
+endif
+ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
+ESSL = 1
+LAPACK = 0
+OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
+endif
+endif
+ifneq ($(ESSL), 0)
+USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
+USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
+endif
+
+
+
+
 CLAPACK = 0
 #Use CLAPACK on WIN32 by default.
 #This may make it harder for outside users to compile elegant but they
@@ -310,7 +330,9 @@ ifeq ($(gcc-version),$(gfortran-version))
 SYS_PROD_LIBS_Linux += gfortran
 else
   ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
+  ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
     SYS_PROD_LIBS_Linux += g2c
+  endif
   endif
 endif
 endif
