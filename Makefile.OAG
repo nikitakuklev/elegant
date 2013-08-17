@@ -280,6 +280,19 @@ LAPACK = 0
 OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
 endif
 endif
+
+ifeq (mira, $(findstring mira, $(HOSTNAME)))
+ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
+LAPACK = 1
+OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
+endif
+ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
+ESSL = 1
+LAPACK = 0
+OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
+endif
+endif
+
 ifneq ($(ESSL), 0)
 USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
 USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
@@ -331,7 +344,9 @@ SYS_PROD_LIBS_Linux += gfortran
 else
   ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
   ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
+  ifneq (mira,$(findstring mira, $(HOSTNAME)))
     SYS_PROD_LIBS_Linux += g2c
+  endif
   endif
   endif
 endif
