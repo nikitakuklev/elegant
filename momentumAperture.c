@@ -63,29 +63,38 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
 {
   long id, ie, ip, particleID;
   MALIGN mal;
+#ifdef DEBUG
+  if (i_elem==0)
+    fprintf(fpd, "processor %d has %ld particles on pass %ld\n",
+            myid, np, pass);
+#endif
   if (pass==fireOnPass) {
     if (include_name_pattern) {
       if (strcmp(eptr->name, include_name_pattern)!=0) return;
-      ie = eptr->occurence;
+      ie = eptr->occurence - 1;
     }
     else {
       ie = i_elem;
     }
     if (s_start<s_end && (eptr->end_pos<s_start || eptr->end_pos>s_end)) return;
-#ifdef DEBUG
-    if (fpd) {
-      fprintf(fpd, "Momentum kick firing on processor %d for %ld particles, element %s#%ld\n", myid, np, eptr->name, eptr->occurence);
-      fflush(fpd);
-    }
-#endif
     elementArray[ie] = eptr;
     mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
     mal.dx = x_initial;
     mal.dy = y_initial;
     for (ip=0; ip<np; ip++) {
-      if ((particleID = coord[ip][6])<0) continue;
+      if ((particleID = coord[ip][6])<0) {
+#ifdef DEBUG
+        fprintf(fpd, "particleID = %ld, excluded\n", particleID);
+#endif
+        continue;
+      }
       id = particleID%nDelta;
-      if ((particleID-id)/nDelta!=ie) continue;
+      if ((particleID-id)/nDelta!=ie) {
+#ifdef DEBUG
+        fprintf(fpd, "ie = %ld, computed ie is %ld, excluded\n", ie, (particleID-id)/nDelta);
+#endif
+        continue;
+      }
       if (id>nDelta) 
         bombElegant("invalid id value (>nDelta)", NULL);
       mal.dp = delta_negative_limit + id*deltaStep;
