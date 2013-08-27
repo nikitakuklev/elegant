@@ -1320,9 +1320,12 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
   if (x==0) {
-    if (y==0)
-      return;
-    xypow = ipow(y, order);
+    if (y==0) {
+      if (order!=0) 
+        return;
+      xypow = 1;
+    } else
+      xypow = ipow(y, order);
     i = order;
     ratio = 0;
   }

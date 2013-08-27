@@ -194,13 +194,11 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
         unique_name[i] = 1;
     for (i=0; i<CM->ncor; i++) {
         for (j=0; j<i; j++) {
-            if (!unique_name[j])
-                continue;
-            if (strcmp(CM->ucorr[i]->name, CM->ucorr[j]->name)==0)
-                unique_name[i] = unique_name[j] = 0;
-            }
+          if (strcmp(CM->ucorr[i]->name, CM->ucorr[j]->name)==0)
+            unique_name[i] = unique_name[j] = 0;
         }
-
+      }
+    
     for (i=0; i<CM->ncor; i++) {
         sl_index = CM->sl_index[i];
         eptr = CM->ucorr[i];
@@ -259,8 +257,6 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
         unique_name[i] = 1;
     for (i=0; i<CM->nmon; i++) {
         for (j=0; j<i; j++) {
-            if (!unique_name[j])
-                continue;
             if (strcmp(CM->umoni[i]->name, CM->umoni[j]->name)==0)
                 unique_name[i] = unique_name[j] = 0;
             }
