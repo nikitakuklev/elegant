@@ -1,0 +1,33 @@
+! 1. Track without errors to determine tune vs momentum
+
+&run_setup
+        lattice = <rootname>.new,
+        use_beamline = RINGW,
+        p_central_mev = <energy>
+        default_order = 2
+        rootname = <rootname>
+	semaphore_file = %s.done2
+&end
+
+&alter_elements name=W1, item=MODE, string_value="coordinate" &end
+
+&rpn_load
+	filename = <rootname>.twi
+	tag = ref
+&end
+
+&run_control
+	n_passes = 128
+&end
+
+&bunched_beam
+	n_particles_per_bunch = 256
+	distribution_type[2] = "line"
+	sigma_dp = <deltaLimit>,
+	distribution_cutoff[2] = 1,
+	eta_x = "(ref.etax)",
+	centroid[0] = 1e-6, 0, 1e-6,
+&end
+
+&track &end
+

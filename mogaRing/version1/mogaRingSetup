@@ -1,0 +1,12 @@
+#!/bin/bash
+
+ln -s ~borland/bin/mogaRing2/checkStatus 
+ln -s ~borland/bin/mogaRing2/computeDeltaLimit
+ln -s ~borland/bin/mogaRing2/computeLifetime  
+ln -s ~borland/bin/mogaRing2/genSubRunScript1
+ln -s ~borland/bin/mogaRing2/log2input
+ln -s ~borland/bin/mogaRing2/processJob1
+
+cp ~borland/bin/mogaRing2/mogaConfig.tcl .
+cp ~borland/bin/mogaRing2/optim1Template*.ele .
+
