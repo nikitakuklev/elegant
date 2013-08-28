@@ -9,6 +9,11 @@ set modeList [list p s p p p]
 # Ring parameters
 set sectors 40
 
+# Emittance constraint 
+set ex0Target 80e-12
+set exEffTarget 80e-12
+set exTargetQuantity ex0
+
 # Error levels
 set fseError 2e-4
 set tiltError 10e-4

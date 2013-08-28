@@ -6,7 +6,6 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 set auto_path [linsert $auto_path 0 $env(OAG_TOP_DIR)/oag/lib_patch/$env(HOST_ARCH)]
 APSStandardSetup
 
-set ex0Target 80e-12
 source mogaConfig.tcl
 
 set usage {usage: procTracking -valueList <list> -tagList <list> -rootname <string> -runID <integer>}
@@ -101,28 +100,40 @@ if [catch {exec computeLifetime -rootname $rootname -current $current -bunches $
 }
 puts $fd "Lifetime done"
 
+switch $exTargetQuantity {
+    ex0 {
+        set exTarget [set ex0Target]
+    }
+    exEff {
+        set exTarget [set exEffTarget]
+    }
+}
+
 if [catch {exec sddsprocess $rootname.mmap -pipe=out \
         "-define=column,deltaAbs,delta abs" \
         -process=deltaAbs,min,%sMin \
         | sddscollapse -pipe=in $rootname.mmapc 
-    exec sddscollapse $rootname.twi $rootname.twic
-    exec sddscollapse $rootname.ltime $rootname.ltimec 
-    exec sddsprocess $rootname.aper -pipe=out \
-	     "-define=column,xClipped1,xClipped $clipPositive > ? $clipPositive : xClipped $ ,units=m" \
-	     -process=yClipped,integral,Area1,functionOf=xClipped1 \
-             | sddscollapse -pipe \
-             | sddsxref $rootname.twic -pipe -take=* \
-	     | sddsxref $rootname.ltimec -pipe -take=* \
-             | sddsxref $rootname.inp -pipe -take=* \
-             | sddsxref $rootname.mmapc -pipe -take=* -nowarning \
-             | sddsprocess -pipe=in $rootname.proc1 \
-             "-redefine=column,deltaLimitLT,$deltaLimit" \
-             "-reprint=column,runName,$rootname" \
-             "-redefine=column,runID,$runID,type=long" \
-             "-redefine=column,ex0Penalty,ex0 $ex0Target 1e-12 segt" \
-             "-redefine=column,ChromPenalty,dnux/dp $xchrom .01 selt  dnuy/dp $ychrom .01 selt +" \
-             "-redefine=column,DAPenalty,Area1 chs" \
-             "-redefine=column,LTPenalty,tLifetime chs" } result] {
+            exec sddsprocess $rootname.twi -pipe=out \
+                "-process=*eta?,first,%s0" \
+                "-define=parameter,exEff,ex0 betax0 * Sdelta0 etax0 * sqr + ex0 betax0 / * sqrt,units=m" \
+                | sddscollapse -pipe=in $rootname.twic
+            exec sddscollapse $rootname.ltime $rootname.ltimec 
+            exec sddsprocess $rootname.aper -pipe=out \
+	        "-define=column,xClipped1,xClipped $clipPositive > ? $clipPositive : xClipped $ ,units=m" \
+	        -process=yClipped,integral,Area1,functionOf=xClipped1 \
+                | sddscollapse -pipe \
+                | sddsxref $rootname.twic -pipe -take=* \
+	        | sddsxref $rootname.ltimec -pipe -take=* \
+                | sddsxref $rootname.inp -pipe -take=* \
+                | sddsxref $rootname.mmapc -pipe -take=* -nowarning \
+                | sddsprocess -pipe=in $rootname.proc1 \
+                "-redefine=column,deltaLimitLT,$deltaLimit" \
+                "-reprint=column,runName,$rootname" \
+                "-redefine=column,runID,$runID,type=long" \
+                "-redefine=column,exPenalty,$useTarget $exTarget 1e-12 segt" \
+                "-redefine=column,ChromPenalty,dnux/dp $xchrom .01 selt  dnuy/dp $ychrom .01 selt +" \
+                "-redefine=column,DAPenalty,Area1 chs" \
+                "-redefine=column,LTPenalty,tLifetime chs" } result] {
     failAndExit "$result"
 }
 
