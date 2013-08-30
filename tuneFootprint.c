@@ -245,9 +245,9 @@ void setupTuneFootprintDataTypes ()
 
   oldType[0] = oldType[1] = oldType[2] = oldType[3] = MPI_DOUBLE;
   blockLength[0] = 2;
-  blockLength[0] = 3;
-  blockLength[0] = 2;
-  blockLength[0] = 2;
+  blockLength[1] = 3;
+  blockLength[2] = 2;
+  blockLength[3] = 2;
   MPI_Get_address(&tfExample.chromaticTuneRange, &offset[0]);
   MPI_Get_address(&tfExample.deltaRange, &offset[1]);
   MPI_Get_address(&tfExample.amplitudeTuneRange, &offset[2]);
@@ -311,7 +311,7 @@ long doTuneFootprint(
                     VARY *control,
                     double *referenceCoord,
                     LINE_LIST *beamline,
-                    TUNE_FOOTPRINTS *tfOutput
+                    TUNE_FOOTPRINTS *tfReturn
                     )
 {
   double firstTune[2], secondTune[2], startingCoord[6], endingCoord[6];
@@ -528,10 +528,10 @@ long doTuneFootprint(
       printf("nux/chromatic: tune range=%le  delta range = %le\nnuy/chromatic: tune range=%le  delta range = %le\n",
              chromTuneRange[0], chromDeltaRange[0],
              chromTuneRange[1], chromDeltaRange[1]);
-    if (tfOutput) {
-      memcpy(tfOutput->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
-      memcpy(tfOutput->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
-      tfOutput->deltaRange[2] = MIN(tfOutput->deltaRange[0], tfOutput->deltaRange[1]);
+    if (tfReturn) {
+      memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
+      memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
+      tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
     }
 #if USE_MPI
   }
@@ -664,9 +664,9 @@ long doTuneFootprint(
       printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\n",
              xyTuneRange[0], xyPositionRange[0],
              xyTuneRange[1], xyPositionRange[1]);
-    if (tfOutput) {
-      memcpy(tfOutput->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
-      memcpy(tfOutput->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
+    if (tfReturn) {
+      memcpy(tfReturn->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
+      memcpy(tfReturn->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
     }
 
 #ifdef DEBUG
@@ -698,13 +698,16 @@ long doTuneFootprint(
 #endif
 
 #if USE_MPI
-  /* Share tfOutput with other ranks */
-  if (myid==0) {
-    long id;
-    for (id=1; id<n_processors; id++)
-      MPI_Send(tfOutput, 1, tfReturnDataType, id, 1, MPI_COMM_WORLD);
-  } else {
-    MPI_Recv(tfOutput, 1, tfReturnDataType, 0, 1, MPI_COMM_WORLD, &mpiStatus);
+  /* Share tfReturn with other ranks */
+  if (tfReturn) {
+    if (myid==0) {
+      long id;
+      for (id=1; id<n_processors; id++)
+        MPI_Send(tfReturn, 1, tfReturnDataType, id, 1, MPI_COMM_WORLD);
+    } else {
+      MPI_Recv(tfReturn, 1, tfReturnDataType, 0, 1, MPI_COMM_WORLD, &mpiStatus);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 #endif
 

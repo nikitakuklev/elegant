@@ -2264,6 +2264,17 @@ double optimization_function(double *value, long *invalid)
     }
 #endif
  
+/*    printf("%s = %le, %le stored\n", tuneFootprintName[0], tuneFP.chromaticTuneRange[0], rpn(tuneFootprintName[0]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[1], tuneFP.chromaticTuneRange[1], rpn(tuneFootprintName[1]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[2], tuneFP.deltaRange[0], rpn(tuneFootprintName[2]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[3], tuneFP.deltaRange[1], rpn(tuneFootprintName[3]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[4], tuneFP.deltaRange[2], rpn(tuneFootprintName[4]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[5], tuneFP.amplitudeTuneRange[0], rpn(tuneFootprintName[5]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[6], tuneFP.amplitudeTuneRange[1], rpn(tuneFootprintName[6]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[7], tuneFP.positionRange[0], rpn(tuneFootprintName[7]));
+    printf("%s = %le, %le stored\n", tuneFootprintName[8], tuneFP.positionRange[1], rpn(tuneFootprintName[8]));
+*/
+
     storeOptimRecord(value, variables->n_variables, *invalid, result);
 
     log_exit("optimization_function");
