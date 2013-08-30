@@ -32,85 +32,41 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 25.2.1}
+\section{Highlights of What's New in Version 25.3.X}
 
-Here is a summary of what's changed since release 25.1:
+Here is a summary of what's changed since release 25.2:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Corrections were made to the nonlinear fringe fields for \verb|KQUAD| elements, thanks to N. Carmignani (ESRF).
-  Prior simulations using this feature should be repeated to assess the impact of these corrections.
-  Also, the execution speed was optimized.
-\item The \verb|CORGPIPE| element had an error in the equation  for the wake, which made negligible changes in the
-  results.
-\item The \verb|SREFFECTS| element was not being properly initialized for runs with momentum ramping. This bug was
-  introduced in a recent version.
-\item The default number of bins for LSC calcuations was an odd number, which resulted in an error message since an
-  even number was required. The default was changed. J. Lewellen (LANL) pointed out the problem.
-\item The lattice parser will now allow comments to be inside the definition of an element, i.e., at the end of the line.
-  L. Yang (BNL) pointed out the issue.
+\item In progress.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|touschek_scatter| command was using the minimum of the absolute values of the positive and negative
-  momentum aperture, rather than using both the positive and negative values. This resulted in pessimistic calculations
-  of the Touschek lifetime.
-\item The chromaticity command \verb|chrom| now performs a minimum of one correction step to ensure tht 
-  values are stored in variables used by \verb|optimize| command.
-\item There was a bug in the \verb|ramp_elements| and \verb|modulate_elements| commands that resulted in problems
-  handling multiple elements with the same name. This was fixed.
-\item Closed orbit correction was not respecting the closed orbit iteration parameters when computing the response matrix
-  from closed orbits. This bug was pointed out by V. Sajaev (ANL).
+\item In progress.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|BUMPER| element (time-dependent kicker) now supports a kick-map-like feature, so the deflection as a function of x and y can
-  be specified.
-\item The \verb|RFDF| element (rf deflector) now allows specification of the transverse variation using a sextupole-like term.
-\item RFCA/RFCW
-\item The \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE| have two new features: the ability to
-  retain voltage from a previous simulation step, and the ability to suppress same-turn effects on the beam in order
-  to allow combined use with short-range wake elements.
-\item \verb|SOLENOID| elements may now be subdivided automatically using the \verb|divide_elements| command or the
-  \verb|element_divisions| parameter of the \verb|run_setup| command.
-\item Added ponderomotive axial focusing for the \verb|TWLA| element, at the request of J. Lewellen (LANL). This feature is
-  experimental, so please report any issues to me.
-\item Coordinate transformations used by the \verb|CSBEND| and \verb|CSRCSBEND| elements were recoded to simplify the expressions
-  and improve accuracy. Very small changes in results may be observed in single-pass systems. In rings, small changes in the location 
-  of stability boundaries may be observed; the new version is considered more accurate.
+\item In progress.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|frequency_map| command now supports quadratic spacing of the points in x and y.
-\item The \verb|optimize| command now accepts the name of an ``interrupt file.'' If this file is modifed or
-  created while the optimizer is running, the optimizer will complete on-going operations and then terminate
-  cleanly.
-\item The \verb|rf_setup| command now has an output file that records the rf parameters, synchrotron tune,
-  bunch length, and other quantities. This was requested by H. Owen (ASTeC).
-\item The \verb|magnets| output of the \verb|run_setup| command now includes profile data for
-  \verb|SOLENOID| and \verb|MAP_SOLENOID| elements.
+\item Added the \verb|tune_footprint| command, which allows computing and optimizing the momentum and amplitude tune footprints.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item A bug was fixed that prevented proper output of population data during parallel optimization.
-\item If the \verb|load_balancing| parameter of the \verb|run_setup| command is set to -1, the load balance is checked and reported
-  during tracking, but no rebalancing takes place.
+\item In progress.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|touschekLifetime|  program  was using the minimum of the absolute values of the positive and negative
-  momentum aperture, rather than using both the positive and negative values. This resulted in pessimistic calculations
-  of the Touschek lifetime. This was reported by forum user Adrianea.
-\item The \verb|sddsfluxcurve| program now supports helical devices. In addition, computation of central cone flux now
-  ignores the electron beam dimensions, as is conventional.
+\item In progress.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -694,6 +650,7 @@ Command name & Type & Description \\\hline
 \hyperref{{\tt subprocess}}{{\tt subprocess}}{}{subsec:subprocess} & action & Execute a command in the shell. \\ \hline
 \hyperref{{\tt steering\_element}}{{\tt steering\_element}}{}{subsec:steeringelement} & setup & Define element parameters as steering correctors. \\ \hline
 \hyperref{{\tt transmute\_elements}}{{\tt transmute\_elements}}{}{subsec:transmuteelements} & setup & Transmute elements from one type to another. \\ \hline
+\hyperref{{\tt tune\_footprint}}{{\tt tune\_footprint}}{}{subsec:tunefootprint} & setup/action & Compute and optimize chromatic and amplitude tune footprints. \\ \hline
 \hyperref{{\tt twiss\_analysis}}{{\tt twiss\_analysis}}{}{subsec:twissanalysis} & setup & Define subset of beamline for twiss parameter analysis. \\ \hline
 \hyperref{{\tt twiss\_output}}{{\tt twiss\_output}}{}{subsec:twissoutput} & setup/action & Set up twiss parameter and related computation. \\ \hline
 \hyperref{{\tt track}}{{\tt track}}{}{subsec:track} & major action & Execute tracking of particles and other operations. \\ \hline
@@ -4102,6 +4059,79 @@ However, it will not work for orbit correction unless the user also sets \verb|u
 \item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|clear| --- If nonzero, all prior transmutation specifications are deleted.
 \end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|tune_footprint|}\end{center}
+\end{latexonly}
+\subsection{tune\_footprint \label{subsec:tunefootprint}}
+
+\begin{itemize}
+\item type: action/setup command.  
+\item function: compute frequency map from tracking and use it to determine the 
+  chromatic and amplitude tune footprints.
+  Note that the number of turns tracked is set by the \verb|run_control| command.
+\end{itemize}
+
+\begin{verbatim}
+&tune_footprint
+    STRING delta_output = NULL,
+    STRING xy_output = NULL,
+    double xmin =  -0.02,
+    double xmax =  0.02,
+    double ymin =  1e-6,
+    double ymax =  0.02,
+    double x_for_delta = 1e-6,
+    double y_for_delta = 1e-6,
+    double delta_min = 0,
+    double delta_max = 0,
+    long nx = 20,
+    long ny = 21,
+    long ndelta = 21,
+    long verbosity = 1,
+    long quadratic_spacing = 0,
+    long diffusion_rate_limit = -5,
+    long immediate = 0
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|delta_output| --- The optional (incomplete) name of an SDDS file to send tune and diffusion rate vs $\delta$ output to.  
+ Recommended value: ``\%s.dtf''.  If optimization is done, this file is written only at the end of optimization.
+\item \verb|xy_output| --- The optional (incomplete) name of an SDDS file to send tune and diffusion rate vs (x, y) output to.  
+ Recommended value: ``\%s.atf''.  If optimization is done, this file is written only at the end of optimization.
+\item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.             
+\item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.             
+ \verb|ymin| should typically be a small, positive value so that there                               
+ is some betatron oscillation from which to get the tune.                      
+\item \verb|delta_min|, \verb|delta_max| --- Limits of grid of initial $\delta$ coordinates
+for tracking.  Not that particles are not centered around the dispersive closed orbit.
+\item \verb|nx| --- Number of values of x coordinate in the grid.
+\item \verb|ny| --- Number of values of y coordinate in the grid.
+\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid.
+\item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
+\item \verb|quadratic_spacing| --- If nonzero, points are spaced ``quadratically,'' which actually means that
+  their squares are spaced linearly.
+\item \verb|diffusion_rate_limit| --- Value of the diffusion rate $d_r$ above which the particle is considered unstable,
+where
+\begin{equation}
+  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
+\end{equation}
+where $N$ is the number of turns tracked to determine each tune (equal to half of \verb|n_passes|).
+\item \verb|immediate| --- If nonzero, the calculations take place immediately, instead of only during optimization.
+\end{itemize}
+
+This command makes available the following quantities for optimization. All quantities are limited by 
+particle survival, crossing of integer and half-integer resonances,  and the diffusion rate limit.
+\begin{itemize}
+\item \verb|FP.nuxChromaticSpread|,\verb|FP.nuyChromaticSpread| --- Spread in tunes due to chromaticity.
+\item \verb|FP.deltaLimit| --- Minimum of absolute values of positive and negative $\delta$ limits. 
+\item \verb|FP.nuxAmplitudeSpread|, \verb|FP.nuyAmplitudeSpread| --- Spread in tunes due to amplitude.
+\item \verb|FP.xSpread|, \verb|FP.ySpread| --- Spread in x and y values.
+\end{itemize}
+Typically, one strives to minimize \verb|FP.nuxChromaticSpread|,\verb|FP.nuyChromaticSpread|, \verb|FP.nuxAmplitudeSpread|, \verb|FP.nuyAmplitudeSpread| 
+while maximizing \verb|FP.deltaLimit|, \verb|FP.xSpread|, and \verb|FP.ySpread|.
+I.e., one wants the maximum stable region for momentum and position deviations with the minimum spread in tunes.
 
 \begin{latexonly}
 \newpage
