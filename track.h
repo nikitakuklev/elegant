@@ -3134,7 +3134,7 @@ typedef struct {
   double amplitudeTuneRange[2]; /* range of tunes from amplitude variation */
   double positionRange[2]; /* span of x and y */
 } TUNE_FOOTPRINTS;
-void setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+long setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,
                      LINE_LIST *beamline, TUNE_FOOTPRINTS *tfOutput);
 void finishTuneFootprint();

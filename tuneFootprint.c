@@ -261,7 +261,7 @@ void setupTuneFootprintDataTypes ()
 
 static short tuneFootprintOn = 0;
 
-void setupTuneFootprint(
+long setupTuneFootprint(
     NAMELIST_TEXT *nltext,
     RUN *run,
     VARY *control
@@ -279,6 +279,8 @@ void setupTuneFootprint(
     bombElegant("xmin > xmax", NULL);
   if (ymin>ymax)
     bombElegant("ymin > ymax", NULL);
+  if (ymin<0)
+    ymin = 0;
   if (delta_min>delta_max)
     bombElegant("delta_min > delta_max", NULL);
   if (quadratic_spacing) {
@@ -286,6 +288,8 @@ void setupTuneFootprint(
       xmin = 0;
     if (ymin<0)
       ymin = 0;
+    if (delta_min<0)
+      delta_min = 0;
   }
   if (nx<1)
     nx = 1;
@@ -298,8 +302,9 @@ void setupTuneFootprint(
     delta_output = compose_filename(delta_output, run->rootname);
   if (xy_output)
     xy_output = compose_filename(xy_output, run->rootname);
-  
+
   tuneFootprintOn = 1;
+  return immediate;
 }
 
 /* Used to save results of last run for output after optimization */
@@ -326,7 +331,7 @@ long doTuneFootprint(
   DELTA_TF_DATA *deltaTfData;
   long my_nxy, my_ndelta;
   double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2];
-#define DEBUG 1
+
 #ifdef DEBUG
   FILE *fpdebug = NULL;
 #endif
@@ -401,7 +406,14 @@ long doTuneFootprint(
   else
     ddelta = 0;
   for (idelta=my_idelta=0; idelta<ndelta; idelta++) {
-    delta = delta_min + idelta*ddelta;
+    if (!quadratic_spacing)
+      delta = delta_min + idelta*ddelta;
+    else {
+      if (idelta<(ndelta-1.)/2)
+        delta = -((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
+      else
+        delta = ((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
+    }
     memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
     if (myid == idelta%n_processors) /* Partition the job according to particle ID */
@@ -501,7 +513,7 @@ long doTuneFootprint(
     qsort(allDeltaTfData, my_ndelta, sizeof(*allDeltaTfData), deltaTfDataCompare);
     for (idelta=0; idelta<my_ndelta; idelta++) {
       if (allDeltaTfData[idelta].used==0) {
-        my_ndelta = idelta+1;
+        my_ndelta = idelta;
         break;
       }
     }
@@ -548,13 +560,16 @@ long doTuneFootprint(
   oldPercentage = 0;
   for (ix=0; ix<nx; ix++) {
     if (quadratic_spacing) {
-      x = xmin + (xmax-xmin)*sqrt((ix+1.)/nx);
+      if (ix<nx/2) 
+        x = -((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
+      else
+        x = ((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
     } else {
       x = xmin + ix*dx;
     }
     for (iy=0; iy<ny; iy++) {
       if (quadratic_spacing) {
-        y = ymin + (ymax-ymin)*sqrt((iy+1.)/ny);
+        y = (ymax-ymin)*sqrt(iy/(ny-1.)) + ymin;
       } else {
         y = ymin + iy*dy;
       }

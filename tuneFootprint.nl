@@ -22,5 +22,6 @@
     long verbosity = 1;
     long quadratic_spacing = 0;
     long diffusion_rate_limit = -5;
+    long immediate = 0;
 #end
 

@@ -1307,7 +1307,10 @@ char **argv;
       fflush(stdout);
       break;
     case TUNE_FOOTPRINT:
-      setupTuneFootprint(&namelist_text, &run_conditions, &run_control);
+      if (setupTuneFootprint(&namelist_text, &run_conditions, &run_control)) {
+        doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
+        outputTuneFootprint();
+      }
       break;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
