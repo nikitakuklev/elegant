@@ -3127,6 +3127,18 @@ long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
                     ERRORVAL *errcon, LINE_LIST *beamline);
 void finishFrequencyMap();
 
+/* tune footprint */
+typedef struct {
+  double chromaticTuneRange[2]; /* range of tunes from momentum variation */
+  double deltaRange[3]; /* span of delta (x, y, minimum of both) */
+  double amplitudeTuneRange[2]; /* range of tunes from amplitude variation */
+  double positionRange[2]; /* span of x and y */
+} TUNE_FOOTPRINTS;
+void setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,
+                    ERRORVAL *errcon, LINE_LIST *beamline, TUNE_FOOTPRINTS *tfOutput);
+void finishTuneFootprint();
+
 /* chaosMap.c */
 void setupChaosMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doChaosMap(RUN *run, VARY *control, double *referenceCoord,

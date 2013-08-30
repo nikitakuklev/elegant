@@ -29,7 +29,8 @@
 #define IC_DX 8
 #define IC_DY 9
 #define IC_DIFFUSION 10
-#define N_COLUMNS 11
+#define IC_DIFFUSION_RATE 11
+#define N_COLUMNS 12
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
@@ -41,7 +42,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"dnu", "&column name=dnu, symbol=$gDn$r, type=double &end"},
     {"dx", "&column name=dx, symbol=$gD$rx, units=m, type=double &end"},
     {"dy", "&column name=dy, symbol=$gD$ry, units=m, type=double &end"},
-    {"diffusion", "&column name=diffusion, symbol=\"log$b10$n($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)\", type=double &end"}
+    {"diffusion", "&column name=diffusion, symbol=\"log$b10$n($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)\", type=double &end"},
+    {"diffusionRate", "&column name=diffusionRate, symbol=\"log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)\", type=double &end"}
     } ;
 
 #define IP_STEP 0
@@ -257,7 +259,9 @@ long doFrequencyMap(
 				     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
 				     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
 				     IC_DIFFUSION, 
-				     log10(sqr(secondTune[0]-firstTune[0])+SQR(secondTune[1]-firstTune[1])),
+				     log10(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])),
+				     IC_DIFFUSION_RATE, 
+				     log10((sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1]))/turns),
 				     -1)) {
 		SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

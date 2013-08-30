@@ -453,7 +453,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		orbtraj_output.c optimize.c output_magnets.c pepper_pot.c phase_reference.c \
 		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.cc \
 		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
-		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
+		tune.c tuneFootprint.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
 		ztransverse.c twiss.cc vary.c zlongit.c SReffects.c mod_rfca.c \
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \

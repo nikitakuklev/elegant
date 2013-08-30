@@ -1,0 +1,24 @@
+/* file: tuneFootprint.nl
+ * purpose: namelist definition for tune footprint analysis
+ *
+ * M.Borland, 1992 
+ */
+#include "namelist.h"
+
+#namelist tune_footprint static
+    double xmin =  -0.02;
+    double xmax =  0.02;
+    double ymin =  1e-6;
+    double ymax =  0.02;
+    double x_for_delta = 1e-6;
+    double y_for_delta = 1e-6;
+    double delta_min = 0;
+    double delta_max = 0;
+    long nx = 20;
+    long ny = 21;
+    long ndelta = 21;
+    long verbosity = 1;
+    long quadratic_spacing = 0;
+    long diffusion_rate_limit = -5;
+#end
+

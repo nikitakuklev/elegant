@@ -162,7 +162,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define RAMP_ELEMENTS 61
 #define RF_SETUP 62
 #define CHAOS_MAP  63
-#define N_COMMANDS      64
+#define TUNE_FOOTPRINT 64
+#define N_COMMANDS      65
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -177,6 +178,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
+    "tune_footprint",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -1308,6 +1310,7 @@ char **argv;
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
     case CHAOS_MAP:
+    case TUNE_FOOTPRINT:
       switch (commandCode) {
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
@@ -1321,6 +1324,9 @@ char **argv;
         break;
       case CHAOS_MAP:
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
+        break;
+      case TUNE_FOOTPRINT:
+        setupTuneFootprint(&namelist_text, &run_conditions, &run_control);
         break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -1423,6 +1429,9 @@ char **argv;
           break;
         case CHAOS_MAP:
           doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+          break;
+        case TUNE_FOOTPRINT:
+          doTuneFootprint(&run_conditions, &run_control, starting_coord, &error_control, beamline, NULL);
           break;
         }
       }
