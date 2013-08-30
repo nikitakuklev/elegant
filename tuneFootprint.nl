@@ -6,6 +6,8 @@
 #include "namelist.h"
 
 #namelist tune_footprint static
+    STRING delta_output = NULL;
+    STRING xy_output = NULL;
     double xmin =  -0.02;
     double xmax =  0.02;
     double ymin =  1e-6;

@@ -1345,6 +1345,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         change_defined_parameter_values(covariables->element, covariables->varied_param, covariables->varied_type,
             covariables->varied_quan_value, covariables->n_covariables);
 
+    outputTuneFootprint();
+    
 #if USE_MPI
     MPI_Reduce(&n_evaluations_made, &n_total_evaluations_made, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 #if MPI_DEBUG

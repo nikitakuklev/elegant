@@ -104,6 +104,11 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
     }
     deltaRange[coord] = MIN(fabs(delta1), fabs(delta2));
 
+    for (id=0; id<id1; id++)
+      deltaTfData[id].used = 0;
+    for (id=id2+1; id<nDelta; id++)
+      deltaTfData[id].used = 0;
+
     nuMin = 1;
     nuMax = 0;
     for (id=id1; id<=id2; id++) {
@@ -291,8 +296,17 @@ void setupTuneFootprint(
   if (ndelta<1)
     ndelta = 1;
 
+  if (delta_output)
+    delta_output = compose_filename(delta_output, run->rootname);
+  if (xy_output)
+    xy_output = compose_filename(xy_output, run->rootname);
+  
   tuneFootprintOn = 1;
 }
+
+/* Used to save results of last run for output after optimization */
+static XY_TF_DATA *allXyTfData = NULL;
+static DELTA_TF_DATA *allDeltaTfData = NULL;
 
 long doTuneFootprint(
                     RUN *run,
@@ -310,20 +324,28 @@ long doTuneFootprint(
   static double **one_part;
   double p, oldPercentage=0;
   long n_part, lost;
-  XY_TF_DATA *xyTfData, *allXyTfData;
-  DELTA_TF_DATA *deltaTfData, *allDeltaTfData;
+  XY_TF_DATA *xyTfData;
+  DELTA_TF_DATA *deltaTfData;
   long my_nxy, my_ndelta;
   double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2];
 #define DEBUG 1
 #ifdef DEBUG
   FILE *fpdebug = NULL;
 #endif
-#if USE_MPI  
+#if USE_MPI 
   MPI_Status mpiStatus;
 #endif
 
   if (!tuneFootprintOn)
     return 0;
+  if (allXyTfData) {
+    free(allXyTfData);
+    allXyTfData = NULL;
+  }
+  if (allDeltaTfData) {
+    free(allDeltaTfData);
+    allDeltaTfData = NULL;
+  }
   
 #if USE_MPI
   setupTuneFootprintDataTypes();
@@ -599,7 +621,7 @@ long doTuneFootprint(
   /* Collect data onto the master */
   MPI_Barrier(MPI_COMM_WORLD);
   if (myid==0) {
-    long id, iTotal, allComplete;
+    long id, iTotal;
     MPI_Status mpiStatus;
     allXyTfData  = calloc(my_nxy*n_processors, sizeof(*allXyTfData));
     memcpy(allXyTfData, xyTfData, sizeof(*xyTfData)*my_nxy);
@@ -688,11 +710,110 @@ long doTuneFootprint(
   }
 #endif
 
-  free(xyTfData);
-  free(deltaTfData);
-
+  /* Free arrays of data, but only if they are not being saved */
+  if (xyTfData!=allXyTfData)
+    free(xyTfData);
+  xyTfData = NULL;
+  if (deltaTfData!=allDeltaTfData)
+    free(deltaTfData);
+  deltaTfData = NULL;
+  
   return 1;
 }
+
+void outputTuneFootprint() 
+{
+  /* Output previously-saved tune footprint data */
+  /* For MPI, only the master writes */
+  SDDS_DATASET sddsOut;
+  long id, ix, iy, iRow;
+  
+  if (!tuneFootprintOn)
+    return;
+  
+  if (delta_output && allDeltaTfData) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, delta_output) ||
+          SDDS_DefineColumn(&sddsOut, "delta", "$gd$r", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          !SDDS_WriteLayout(&sddsOut) ||
+          !SDDS_StartPage(&sddsOut, ndelta)) {
+        SDDS_SetError("Problem setting up chromatic tune footprint output file");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      for (id=iRow=0; id<ndelta; id++) {
+        if (!allDeltaTfData[id].used)
+          continue;
+        if (!SDDS_SetRowValues(&sddsOut, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow,
+                               0, allDeltaTfData[id].delta,
+                               1, allDeltaTfData[id].nu[0],
+                               2, allDeltaTfData[id].nu[1],
+                               3, allDeltaTfData[id].diffusionRate,
+                               -1)) {
+          SDDS_SetError("Problem setting up chromatic tune footprint output values");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        iRow++;
+      }
+      if (!SDDS_WriteTable(&sddsOut) || !SDDS_Terminate(&sddsOut)) {
+          SDDS_SetError("Problem writing chromatic tune footprint output file");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+#if USE_MPI
+    }
+#endif
+  }
+  if (xy_output && allXyTfData) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, xy_output) ||
+          SDDS_DefineColumn(&sddsOut, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+          !SDDS_WriteLayout(&sddsOut) ||
+          !SDDS_StartPage(&sddsOut, nx*ny)) {
+        SDDS_SetError("Problem setting up amplitude tune footprint output file");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      for (ix=iRow=0; ix<nx; ix++) {
+        for (iy=0; iy<ny; iy++) {
+          id = ix + iy*nx;
+          if (!allXyTfData[id].used)
+            continue;
+          if (!SDDS_SetRowValues(&sddsOut, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow,
+                                 0, allXyTfData[id].position[0],
+                                 1, allXyTfData[id].position[1],
+                                 2, allXyTfData[id].nu[0],
+                                 3, allXyTfData[id].nu[1],
+                                 4, allXyTfData[id].diffusionRate,
+                               -1)) {
+            SDDS_SetError("Problem setting up amplitude tune footprint output values");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          iRow++;
+        }
+      }
+      if (!SDDS_WriteTable(&sddsOut) || !SDDS_Terminate(&sddsOut)) {
+          SDDS_SetError("Problem writing amplitude tune footprint output file");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+#if USE_MPI
+    }
+#endif
+  }
+
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
+
 
 void finishTuneFootprint()
 {
