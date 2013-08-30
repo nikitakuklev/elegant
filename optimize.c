@@ -1995,7 +1995,7 @@ double optimization_function(double *value, long *invalid)
     rpn_store(tuneFP.amplitudeTuneRange[0], NULL, tuneFootprintMem[5]);
     rpn_store(tuneFP.amplitudeTuneRange[1], NULL, tuneFootprintMem[6]);
     rpn_store(tuneFP.positionRange[0], NULL, tuneFootprintMem[7]);
-    rpn_store(tuneFP.positionRange[1], NULL, tuneFootprintMem[7]);
+    rpn_store(tuneFP.positionRange[1], NULL, tuneFootprintMem[8]);
   }
   
   if (floorCoord_mem[0]==-1) 
