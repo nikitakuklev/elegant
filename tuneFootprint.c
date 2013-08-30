@@ -138,6 +138,9 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
                 ix, iy, id, xyTfData[id].ix, xyTfData[id].iy);
         bombElegant("Indexing bug", NULL);
       }
+      if (xyTfData[id].nu[0]<=0 || xyTfData[id].nu[0]>=1 ||
+          xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || xyTfData[id].diffusionRate>diffusion_rate_limit)
+        xyTfData[id].used = 0;
     }
   }
 
@@ -145,13 +148,12 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
   bestDistance = DBL_MAX;
   ix0 = -1;
   for (ix=0; ix<nx; ix++) {
-    if (xyTfData[ix].nu[0]<=0 || xyTfData[ix].nu[0]>=1 ||
-        xyTfData[ix].nu[1]<=0 || xyTfData[ix].nu[1]>=1 || xyTfData[ix].diffusionRate>diffusion_rate_limit)
-      continue;
-    distance = fabs(xyTfData[ix].position[0]);
-    if (distance<bestDistance) {
-      ix0 = ix;
-      bestDistance = distance;
+    if (xyTfData[ix].used) {
+      distance = fabs(xyTfData[ix].position[0]);
+      if (distance<bestDistance) {
+        ix0 = ix;
+        bestDistance = distance;
+      }
     }
   }
   if (ix0==-1) {
@@ -159,30 +161,27 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
     return;
   }
 
-  ix1 = ix2 = -1;
   for (iy=0; iy<ny; iy++) {
     /* find limiting indices ix1 and ix2 of valid data for iy */
+    ix1 = ix2 = ix0;
     for (ix=ix0; ix>=0; ix--) {
       id = ix + nx*iy;
-      if (xyTfData[id].nu[0]<=0 || xyTfData[id].nu[0]>=1 ||
-          xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || xyTfData[id].diffusionRate>diffusion_rate_limit)
+      if (!xyTfData[id].used)
         break;
       ix1 = ix;
     }
     for (ix=ix0; ix<nx; ix++) {
       id = ix + nx*iy;
-      if (xyTfData[id].nu[0]<=0 || xyTfData[id].nu[0]>=1 ||
-          xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || xyTfData[id].diffusionRate>diffusion_rate_limit)
+      if (!xyTfData[id].used)
         break;
       ix2 = ix;
     }
     /* Mark all points at or above this iy value with ix<ix1 or ix>ix2 as bad */
     for (iy1=iy; iy1<ny; iy1++) {
-      for (ix=0; ix<nx; ix++) {
-        id = ix + nx*iy1;
-        if (ix<ix1 || ix>ix2)
-          xyTfData[id].diffusionRate = diffusion_rate_limit+1;
-      }
+      for (ix=0; ix<=ix1; ix++)
+        xyTfData[ix + nx*iy1].used = 0;
+      for (ix=ix2; ix<nx; ix++)
+        xyTfData[ix + nx*iy1].used = 0;
     }
   }
 
@@ -194,17 +193,16 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
     for (ix=0; ix<nx; ix++) {
       for (iy=0; iy<ny; iy++) {
         id = ix + nx*iy;
-        if (xyTfData[id].nu[0]<=0 || xyTfData[id].nu[0]>=1 ||
-            xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || xyTfData[id].diffusionRate>diffusion_rate_limit)
-          continue;
-        if (xyTfData[id].nu[ic]<nuMin)
-          nuMin = xyTfData[id].nu[ic];
-        if (xyTfData[id].nu[ic]>nuMax)
-          nuMax = xyTfData[id].nu[ic];
-        if (xyTfData[id].position[ic]<pMin)
-          pMin = xyTfData[id].position[ic];
-        if (xyTfData[id].position[ic]>pMax)
-          pMax = xyTfData[id].position[ic];
+        if (xyTfData[id].used) {
+          if (xyTfData[id].nu[ic]<nuMin)
+            nuMin = xyTfData[id].nu[ic];
+          if (xyTfData[id].nu[ic]>nuMax)
+            nuMax = xyTfData[id].nu[ic];
+          if (xyTfData[id].position[ic]<pMin)
+            pMin = xyTfData[id].position[ic];
+          if (xyTfData[id].position[ic]>pMax)
+            pMax = xyTfData[id].position[ic];
+        }
       }
     }
     tuneRange[ic] = nuMax - nuMin;
