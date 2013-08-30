@@ -3136,7 +3136,7 @@ typedef struct {
 } TUNE_FOOTPRINTS;
 void setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,
-                    ERRORVAL *errcon, LINE_LIST *beamline, TUNE_FOOTPRINTS *tfOutput);
+                     LINE_LIST *beamline, TUNE_FOOTPRINTS *tfOutput);
 void finishTuneFootprint();
 
 /* chaosMap.c */

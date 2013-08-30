@@ -208,38 +208,55 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
 }
 
 #if USE_MPI
-MPI_Datatype xyTfDataType, deltaTfDataType;
+MPI_Datatype xyTfDataType, deltaTfDataType, tfReturnDataType;
 void setupTuneFootprintDataTypes ()
 {
-  MPI_Datatype oldType[2];
-  int blockLength[2];
-  MPI_Aint offset[2];
+  MPI_Datatype oldType[4];
+  int blockLength[4];
+  MPI_Aint offset[4];
   XY_TF_DATA xyTfExample;
   DELTA_TF_DATA deltaTfExample;
+  TUNE_FOOTPRINTS tfExample;
   long i;
   
   oldType[0] = MPI_SHORT;
   oldType[1] = MPI_DOUBLE;
 
   blockLength[0] = 3;
+  blockLength[1] = 5;
   MPI_Get_address(&xyTfExample.ix, &offset[0]);
   MPI_Get_address(&xyTfExample.diffusionRate, &offset[1]);
   for (i=1; i>=0; i--)
     offset[i] -= offset[0];
-  blockLength[1] = 5;
   MPI_Type_create_struct(2, blockLength, offset, oldType, &xyTfDataType);
   MPI_Type_commit(&xyTfDataType);
   
   blockLength[0] = 2;
+  blockLength[1] = 4;
   MPI_Get_address(&deltaTfExample.idelta, &offset[0]);
   MPI_Get_address(&deltaTfExample.diffusionRate, &offset[1]);
   for (i=1; i>=0; i--)
     offset[i] -= offset[0];
-  blockLength[1] = 4;
   MPI_Type_struct(2, blockLength, offset, oldType, &deltaTfDataType);
   MPI_Type_commit(&deltaTfDataType);
+
+  oldType[0] = oldType[1] = oldType[2] = oldType[3] = MPI_DOUBLE;
+  blockLength[0] = 2;
+  blockLength[0] = 3;
+  blockLength[0] = 2;
+  blockLength[0] = 2;
+  MPI_Get_address(&tfExample.chromaticTuneRange, &offset[0]);
+  MPI_Get_address(&tfExample.deltaRange, &offset[1]);
+  MPI_Get_address(&tfExample.amplitudeTuneRange, &offset[2]);
+  MPI_Get_address(&tfExample.positionRange, &offset[3]);
+  for (i=3; i>=0; i--)
+    offset[i] -= offset[0];
+  MPI_Type_struct(4, blockLength, offset, oldType, &tfReturnDataType);
+  MPI_Type_commit(&tfReturnDataType);
 }
 #endif
+
+static short tuneFootprintOn = 0;
 
 void setupTuneFootprint(
     NAMELIST_TEXT *nltext,
@@ -274,14 +291,13 @@ void setupTuneFootprint(
   if (ndelta<1)
     ndelta = 1;
 
+  tuneFootprintOn = 1;
 }
-
 
 long doTuneFootprint(
                     RUN *run,
                     VARY *control,
                     double *referenceCoord,
-                    ERRORVAL *errcon,
                     LINE_LIST *beamline,
                     TUNE_FOOTPRINTS *tfOutput
                     )
@@ -304,6 +320,12 @@ long doTuneFootprint(
 #endif
 #if USE_MPI  
   MPI_Status mpiStatus;
+#endif
+
+  if (!tuneFootprintOn)
+    return 0;
+  
+#if USE_MPI
   setupTuneFootprintDataTypes();
   /* Note that the master is a working processor for this algorithm */
   if (ndelta<n_processors) {
@@ -365,7 +387,7 @@ long doTuneFootprint(
     if (myid == idelta%n_processors) /* Partition the job according to particle ID */
 #endif
 	  {
-            if (verbosity>=1) {
+            if (verbosity>=2) {
 #if USE_MPI
               if (myid==0)
 #endif
@@ -406,7 +428,7 @@ long doTuneFootprint(
               deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
             }
             my_idelta ++;
-	    if (verbosity) {
+	    if (verbosity>=2) {
 #if USE_MPI
 	      if (myid==0) {
 		double newPercentage = (100.0*idelta)/ndelta;
@@ -430,14 +452,15 @@ long doTuneFootprint(
   MPI_Barrier(MPI_COMM_WORLD);
   if (myid==0) {
     long id, iTotal;
+    MPI_Status mpiStatus;
     allDeltaTfData  = calloc(my_ndelta*n_processors, sizeof(*allDeltaTfData));
     memcpy(allDeltaTfData, deltaTfData, sizeof(*deltaTfData)*my_ndelta);
     /* receive data */
     iTotal = my_ndelta;
     for (id=1; id<n_processors; id++) {
       if (MPI_Recv(allDeltaTfData+iTotal, my_ndelta, deltaTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
-        printf("error receiving delta data from processor %ld\n", id);
-        exit(1);
+        printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
+        bombElegant("Communication error", NULL);
       }
       iTotal += my_ndelta;
     }
@@ -481,9 +504,10 @@ long doTuneFootprint(
 #endif
 
     determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange);
-    printf("nux/chromatic: tune range=%le  delta range = %le\nnuy/chromatic: tune range=%le  delta range = %le\n",
-           chromTuneRange[0], chromDeltaRange[0],
-           chromTuneRange[1], chromDeltaRange[1]);
+    if (verbosity)
+      printf("nux/chromatic: tune range=%le  delta range = %le\nnuy/chromatic: tune range=%le  delta range = %le\n",
+             chromTuneRange[0], chromDeltaRange[0],
+             chromTuneRange[1], chromDeltaRange[1]);
     if (tfOutput) {
       memcpy(tfOutput->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
       memcpy(tfOutput->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
@@ -551,7 +575,7 @@ long doTuneFootprint(
             }
             my_ixy ++;
 
-	    if (verbosity) {
+	    if (verbosity>=2) {
 #if USE_MPI
 	      if (myid==0) {
 		double newPercentage = 100*(ix*ny+iy+1.0)/(nx*ny);
@@ -575,15 +599,16 @@ long doTuneFootprint(
   /* Collect data onto the master */
   MPI_Barrier(MPI_COMM_WORLD);
   if (myid==0) {
-    long iTotal;
+    long id, iTotal, allComplete;
+    MPI_Status mpiStatus;
     allXyTfData  = calloc(my_nxy*n_processors, sizeof(*allXyTfData));
     memcpy(allXyTfData, xyTfData, sizeof(*xyTfData)*my_nxy);
     /* receive data */
     iTotal = my_nxy;
-    for (idelta=1; idelta<n_processors; idelta++) {
-      if (MPI_Recv(allXyTfData+iTotal, my_nxy, xyTfDataType, idelta, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
-        printf("error receiving xy data from processor %ld\n", idelta);
-        exit(1);
+    for (id=1; id<n_processors; id++) {
+      if (MPI_Recv(allXyTfData+iTotal, my_nxy, xyTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
+        printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
+        bombElegant("Communication error", NULL);
       }
       iTotal += my_nxy;
     }
@@ -615,9 +640,10 @@ long doTuneFootprint(
     }
 
     determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange);
-    printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\n",
-           xyTuneRange[0], xyPositionRange[0],
-           xyTuneRange[1], xyPositionRange[1]);
+    if (verbosity)
+      printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\n",
+             xyTuneRange[0], xyPositionRange[0],
+             xyTuneRange[1], xyPositionRange[1]);
     if (tfOutput) {
       memcpy(tfOutput->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
       memcpy(tfOutput->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
@@ -651,14 +677,25 @@ long doTuneFootprint(
   }
 #endif
 
+#if USE_MPI
+  /* Share tfOutput with other ranks */
+  if (myid==0) {
+    long id;
+    for (id=1; id<n_processors; id++)
+      MPI_Send(tfOutput, 1, tfReturnDataType, id, 1, MPI_COMM_WORLD);
+  } else {
+    MPI_Recv(tfOutput, 1, tfReturnDataType, 0, 1, MPI_COMM_WORLD, &mpiStatus);
+  }
+#endif
+
   free(xyTfData);
   free(deltaTfData);
 
-  return(1);
+  return 1;
 }
 
 void finishTuneFootprint()
 {
-  
+  tuneFootprintOn = 0;
 }
 

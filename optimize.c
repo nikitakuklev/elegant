@@ -1574,6 +1574,16 @@ static long floorStat_mem[6] = {
   -1, -1, -1, -1, -1, -1,
 };
 
+static char *tuneFootprintName[9] = {
+  "FP.nuxChromaticSpread", "FP.nuyChromaticSpread",
+  "FP.nuxDeltaLimit", "FP.nuyDeltaLimit", "FP.deltaLimit",
+  "FP.nuxAmplitudeSpread", "FP.nuyAmplitudeSpread",
+  "FP.nuxXSpread", "FP.nuyYSpread",
+};
+static long tuneFootprintMem[9] = {
+  -1, -1, -1, -1, -1, -1, -1, -1, -1
+};
+
 int showTwissMemories(FILE *fp)
 {
   long i;
@@ -1602,6 +1612,7 @@ double optimization_function(double *value, long *invalid)
   double XYZ[3], Angle[3], XYZMin[3], XYZMax[3];
   double startingOrbitCoord[6] = {0,0,0,0,0,0};
   long rpnError = 0;
+  TUNE_FOOTPRINTS tuneFP;
 #if USE_MPI
   long beamNoToTrack;
 #endif
@@ -1969,6 +1980,22 @@ double optimization_function(double *value, long *invalid)
 
   runMomentsOutput(run, beamline, startingOrbitCoord, 1, 0);
 
+  if (doTuneFootprint(run, control, startingOrbitCoord, beamline, &tuneFP)) {
+    if (tuneFootprintMem[0]==-1) {
+      for (i=0; i<9; i++)
+        tuneFootprintMem[i] = rpn_create_mem(tuneFootprintName[i], 0);
+    }
+    rpn_store(tuneFP.chromaticTuneRange[0], NULL, tuneFootprintMem[0]);
+    rpn_store(tuneFP.chromaticTuneRange[1], NULL, tuneFootprintMem[1]);
+    rpn_store(tuneFP.deltaRange[0], NULL, tuneFootprintMem[2]);
+    rpn_store(tuneFP.deltaRange[1], NULL, tuneFootprintMem[3]);
+    rpn_store(tuneFP.deltaRange[2], NULL, tuneFootprintMem[4]);
+    rpn_store(tuneFP.amplitudeTuneRange[0], NULL, tuneFootprintMem[5]);
+    rpn_store(tuneFP.amplitudeTuneRange[1], NULL, tuneFootprintMem[6]);
+    rpn_store(tuneFP.positionRange[0], NULL, tuneFootprintMem[7]);
+    rpn_store(tuneFP.positionRange[1], NULL, tuneFootprintMem[7]);
+  }
+  
   if (floorCoord_mem[0]==-1) 
     for (i=0; i<7; i++)
       floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i], 0);
