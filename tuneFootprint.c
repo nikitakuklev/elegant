@@ -56,7 +56,7 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
   return delta1->idelta - delta2->idelta;
 }
 
-void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange)
+void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax)
 {
   long id, id0, id1, id2, coord;
   double delta0, delta1, delta2, nu0[2];
@@ -119,15 +119,21 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
     }
     tuneRange[coord] = nuMax - nuMin;
   }
-  
+
+  *diffusionRateMax = -DBL_MAX;
+  for (id1=0; id<=id2; id++) {
+    if (*diffusionRateMax < deltaTfData[id].diffusionRate)
+      *diffusionRateMax = deltaTfData[id].diffusionRate;
+  }
+
 }
 
-void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tuneRange, double *positionRange)
+void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tuneRange, double *positionRange, double *diffusionRateMax, double *area)
 {
   long id;
   double nuMin, nuMax, pMin, pMax;
   double distance, bestDistance;
-  long ix0, ix1, ix2, ix, iy, iy1, ic;
+  long ix0, ix1, ix2, ix, iy, iy1, iy2, ic;
   
   /* check for indexing issues */
   for (ix=0; ix<nx; ix++) {
@@ -178,13 +184,43 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
     }
     /* Mark all points at or above this iy value with ix<ix1 or ix>ix2 as bad */
     for (iy1=iy; iy1<ny; iy1++) {
-      for (ix=0; ix<=ix1; ix++)
+      for (ix=0; ix<ix1; ix++)
         xyTfData[ix + nx*iy1].used = 0;
-      for (ix=ix2; ix<nx; ix++)
+      for (ix=ix2+1; ix<nx; ix++)
         xyTfData[ix + nx*iy1].used = 0;
     }
   }
 
+  /* find the area for points with acceptable characteristics */
+  for (ix1=0; ix1<nx; ix1++) {
+    if (xyTfData[ix1].used)
+      break;
+  }
+  for (ix2=nx-1; ix2>ix1; ix2--) {
+    if (xyTfData[ix2].used)
+      break;
+  }
+  iy1 = 0;
+  for (iy=0; iy<ny; iy++) {
+    id = ix + nx*iy;
+    if (!xyTfData[id].used)
+      break;
+    iy1 = iy;
+  }
+  *area = 0;
+  for (ix=ix1+1; ix<=ix2; ix++) {    
+    iy2 = 0;
+    for (iy=0; iy<ny; iy++) {
+      id = ix + nx*iy;
+      if (!xyTfData[id].used)
+        break;
+      iy2 = iy;
+    }
+    *area += (xyTfData[ix + nx*iy2].position[1] + xyTfData[ix-1 + nx*iy1].position[1])*
+      (xyTfData[ix].position[0] - xyTfData[ix-1].position[0])/2;
+    iy1 = iy2;
+  }
+  
   /* find the spread in tune and position for points with acceptable characteristics */
   for (ic=0; ic<2; ic++) {
     nuMin = 1;
@@ -208,15 +244,25 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
     tuneRange[ic] = nuMax - nuMin;
     positionRange[ic] = pMax - pMin;
   }
+
+  /* Find the maximum diffusino rate for points with acceptable characteristics */
+  *diffusionRateMax = -DBL_MAX;
+  for (ix=0; ix<nx; ix++) {
+    for (iy=0; iy<ny; iy++) {
+      id = ix + nx*iy;
+      if (xyTfData[id].used && *diffusionRateMax < xyTfData[id].diffusionRate)
+        *diffusionRateMax = xyTfData[id].diffusionRate;
+    }
+  }
 }
 
 #if USE_MPI
 MPI_Datatype xyTfDataType, deltaTfDataType, tfReturnDataType;
 void setupTuneFootprintDataTypes ()
 {
-  MPI_Datatype oldType[4];
-  int blockLength[4];
-  MPI_Aint offset[4];
+  MPI_Datatype oldType[5];
+  int blockLength[5];
+  MPI_Aint offset[5];
   XY_TF_DATA xyTfExample;
   DELTA_TF_DATA deltaTfExample;
   TUNE_FOOTPRINTS tfExample;
@@ -243,18 +289,20 @@ void setupTuneFootprintDataTypes ()
   MPI_Type_struct(2, blockLength, offset, oldType, &deltaTfDataType);
   MPI_Type_commit(&deltaTfDataType);
 
-  oldType[0] = oldType[1] = oldType[2] = oldType[3] = MPI_DOUBLE;
+  oldType[0] = oldType[1] = oldType[2] = oldType[3] = oldType[4] = MPI_DOUBLE;
   blockLength[0] = 2;
   blockLength[1] = 3;
   blockLength[2] = 2;
   blockLength[3] = 2;
+  blockLength[4] = 3;
   MPI_Get_address(&tfExample.chromaticTuneRange, &offset[0]);
   MPI_Get_address(&tfExample.deltaRange, &offset[1]);
   MPI_Get_address(&tfExample.amplitudeTuneRange, &offset[2]);
   MPI_Get_address(&tfExample.positionRange, &offset[3]);
-  for (i=3; i>=0; i--)
+  MPI_Get_address(&tfExample.chromaticDiffusionMaximum, &offset[4]);
+  for (i=4; i>=0; i--)
     offset[i] -= offset[0];
-  MPI_Type_struct(4, blockLength, offset, oldType, &tfReturnDataType);
+  MPI_Type_struct(5, blockLength, offset, oldType, &tfReturnDataType);
   MPI_Type_commit(&tfReturnDataType);
 }
 #endif
@@ -330,7 +378,7 @@ long doTuneFootprint(
   XY_TF_DATA *xyTfData;
   DELTA_TF_DATA *deltaTfData;
   long my_nxy, my_ndelta;
-  double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2];
+  double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2], diffusionRateMax, xyArea;
 
 #ifdef DEBUG
   FILE *fpdebug = NULL;
@@ -535,7 +583,7 @@ long doTuneFootprint(
     fclose(fpdebug);
 #endif
 
-    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange);
+    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax);
     if (verbosity)
       printf("nux/chromatic: tune range=%le  delta range = %le\nnuy/chromatic: tune range=%le  delta range = %le\n",
              chromTuneRange[0], chromDeltaRange[0],
@@ -543,6 +591,7 @@ long doTuneFootprint(
     if (tfReturn) {
       memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
       memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
+      tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
       tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
     }
 #if USE_MPI
@@ -674,14 +723,16 @@ long doTuneFootprint(
       bombElegant("Error: counting for nx*ny didn't work", NULL);
     }
 
-    determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange);
+    determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange, &diffusionRateMax, &xyArea);
     if (verbosity)
-      printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\n",
+      printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\nArea = %le\n",
              xyTuneRange[0], xyPositionRange[0],
-             xyTuneRange[1], xyPositionRange[1]);
+             xyTuneRange[1], xyPositionRange[1], xyArea);
     if (tfReturn) {
       memcpy(tfReturn->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
       memcpy(tfReturn->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
+      tfReturn->xyArea = xyArea;
+      tfReturn->amplitudeDiffusionMaximum = diffusionRateMax;
     }
 
 #ifdef DEBUG

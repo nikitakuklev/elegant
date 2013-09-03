@@ -4124,14 +4124,20 @@ where $N$ is the number of turns tracked to determine each tune (equal to half o
 This command makes available the following quantities for optimization. All quantities are limited by 
 particle survival, crossing of integer and half-integer resonances,  and the diffusion rate limit.
 \begin{itemize}
-\item \verb|FP.nuxChromaticSpread|,\verb|FP.nuyChromaticSpread| --- Spread in tunes due to chromaticity.
+\item \verb|FP.nuxSpreadChrom|,\verb|FP.nuySpreadChrom| --- Spread in tunes due to chromaticity.
 \item \verb|FP.deltaLimit| --- Minimum of absolute values of positive and negative $\delta$ limits. 
-\item \verb|FP.nuxAmplitudeSpread|, \verb|FP.nuyAmplitudeSpread| --- Spread in tunes due to amplitude.
+\item \verb|FP.nuxSpreadAmp|, \verb|FP.nuySpreadAmp| --- Spread in tunes due to amplitude.
 \item \verb|FP.xSpread|, \verb|FP.ySpread| --- Spread in x and y values.
+\item \verb|FP.xyArea| --- Area of the limited x-y region, comparable to a dynamic acceptance. However, this area is determined from a
+fixed grid and is not suitabl to optimization by itself.
+\item \verb|FP.diffusionRateMaxChrom|, \verb|FP.diffusionRateMaxAmp| --- Maximum diffusion rates in chromatic and amplitude scans.
 \end{itemize}
-Typically, one strives to minimize \verb|FP.nuxChromaticSpread|,\verb|FP.nuyChromaticSpread|, \verb|FP.nuxAmplitudeSpread|, \verb|FP.nuyAmplitudeSpread| 
-while maximizing \verb|FP.deltaLimit|, \verb|FP.xSpread|, and \verb|FP.ySpread|.
-I.e., one wants the maximum stable region for momentum and position deviations with the minimum spread in tunes.
+Typically, one strives to minimize \verb|FP.nuxSpreadChrom|,\verb|FP.nuySpreadChrom|, 
+\verb|FP.nuxSpreadAmp|, \verb|FP.nuySpreadAmp|, \verb|FP.diffusionRateMaxChrom|, 
+and/or \verb|FP.diffusionRateMaxAmp| 
+while maximizing \verb|FP.deltaLimit|, \verb|FP.xSpread|, and/or \verb|FP.ySpread|,  and
+ensuring that \verb|FP.xyArea|, at minimum, doesn't decrease.
+I.e., one wants the maximum stable region for momentum and position deviations with the minimum spread in tunes and minimum diffusion.
 
 \begin{latexonly}
 \newpage

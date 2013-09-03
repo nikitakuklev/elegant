@@ -3128,11 +3128,14 @@ long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
 void finishFrequencyMap();
 
 /* tune footprint */
+/*** Any changes to this structure require changes to setupTuneFootprintDataTypes in tuneFootprint.c ****/
 typedef struct {
   double chromaticTuneRange[2]; /* range of tunes from momentum variation */
   double deltaRange[3]; /* span of delta (x, y, minimum of both) */
   double amplitudeTuneRange[2]; /* range of tunes from amplitude variation */
   double positionRange[2]; /* span of x and y */
+  double chromaticDiffusionMaximum, amplitudeDiffusionMaximum;
+  double xyArea;
 } TUNE_FOOTPRINTS;
 long setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,

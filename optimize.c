@@ -1576,14 +1576,17 @@ static long floorStat_mem[6] = {
   -1, -1, -1, -1, -1, -1,
 };
 
-static char *tuneFootprintName[9] = {
-  "FP.nuxChromaticSpread", "FP.nuyChromaticSpread",
-  "FP.nuxDeltaLimit", "FP.nuyDeltaLimit", "FP.deltaLimit",
-  "FP.nuxAmplitudeSpread", "FP.nuyAmplitudeSpread",
-  "FP.nuxXSpread", "FP.nuyYSpread",
+static char *tuneFootprintName[10] = {
+  "FP.nuxSpreadChrom", "FP.nuySpreadChrom",
+  "FP.deltaLimit",
+  "FP.nuxSpreadAmp", "FP.nuySpreadAmp",
+  "FP.xSpread", "FP.ySpread",
+  "FP.diffusionRateMaxChrom",
+  "FP.diffusionRateMaxAmp",
+  "FP.xyArea"
 };
 static long tuneFootprintMem[9] = {
-  -1, -1, -1, -1, -1, -1, -1, -1, -1
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
 int showTwissMemories(FILE *fp)
@@ -1984,18 +1987,19 @@ double optimization_function(double *value, long *invalid)
 
   if (doTuneFootprint(run, control, startingOrbitCoord, beamline, &tuneFP)) {
     if (tuneFootprintMem[0]==-1) {
-      for (i=0; i<9; i++)
+      for (i=0; i<10; i++)
         tuneFootprintMem[i] = rpn_create_mem(tuneFootprintName[i], 0);
     }
     rpn_store(tuneFP.chromaticTuneRange[0], NULL, tuneFootprintMem[0]);
     rpn_store(tuneFP.chromaticTuneRange[1], NULL, tuneFootprintMem[1]);
-    rpn_store(tuneFP.deltaRange[0], NULL, tuneFootprintMem[2]);
-    rpn_store(tuneFP.deltaRange[1], NULL, tuneFootprintMem[3]);
-    rpn_store(tuneFP.deltaRange[2], NULL, tuneFootprintMem[4]);
-    rpn_store(tuneFP.amplitudeTuneRange[0], NULL, tuneFootprintMem[5]);
-    rpn_store(tuneFP.amplitudeTuneRange[1], NULL, tuneFootprintMem[6]);
-    rpn_store(tuneFP.positionRange[0], NULL, tuneFootprintMem[7]);
-    rpn_store(tuneFP.positionRange[1], NULL, tuneFootprintMem[8]);
+    rpn_store(tuneFP.deltaRange[2], NULL, tuneFootprintMem[2]);
+    rpn_store(tuneFP.amplitudeTuneRange[0], NULL, tuneFootprintMem[3]);
+    rpn_store(tuneFP.amplitudeTuneRange[1], NULL, tuneFootprintMem[4]);
+    rpn_store(tuneFP.positionRange[0], NULL, tuneFootprintMem[5]);
+    rpn_store(tuneFP.positionRange[1], NULL, tuneFootprintMem[6]);
+    rpn_store(tuneFP.chromaticDiffusionMaximum, NULL, tuneFootprintMem[7]);
+    rpn_store(tuneFP.amplitudeDiffusionMaximum, NULL, tuneFootprintMem[8]);
+    rpn_store(tuneFP.xyArea, NULL, tuneFootprintMem[9]);
   }
   
   if (floorCoord_mem[0]==-1) 
