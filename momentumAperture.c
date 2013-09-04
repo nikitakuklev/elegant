@@ -69,14 +69,11 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
             myid, np, pass);
 #endif
   if (pass==fireOnPass) {
-    if (include_name_pattern) {
-      if (strcmp(eptr->name, include_name_pattern)!=0) return;
-      ie = eptr->occurence - 1;
+    for (ie=0; ie<nElements; ie++) {
+      if (eptr==elementArray[ie])
+        break;
     }
-    else {
-      ie = i_elem;
-    }
-    if (s_start<s_end && (eptr->end_pos<s_start || eptr->end_pos>s_end)) return;
+    if (ie==nElements) return;
     elementArray[ie] = eptr;
     mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
     mal.dx = x_initial;
@@ -216,6 +213,12 @@ void setupMomentumApertureSearch(
     break;
   case 2:
 #if USE_MPI
+/*
+    if (skip_elements>0)
+      bombElegant("skip_elements can't be non-zero for output_mode=2.", NULL);
+    if (s_start>0)
+      bombElegant("s_start can't be non-zero for output_mode=2.", NULL);
+ */
     if (myid==0) {
       if (SDDS_DefineColumn(&SDDSma, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
           SDDS_DefineColumn(&SDDSma, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
@@ -351,7 +354,7 @@ long doMomentumApertureSearch(
   nElem = 0;
   elementArray = NULL;
   skipElements = skip_elements;
-  while (elem && nElem<process_elements) {
+  while (elem && nElem<process_elements && elem->end_pos<s_end) {
 #ifdef DEBUG
     printf("checking element %s\n", elem->name); fflush(stdout);
 #endif
@@ -371,8 +374,7 @@ long doMomentumApertureSearch(
 #ifdef DEBUG
       printf("  including element %s\n", elem->name); fflush(stdout);
 #endif
-    } else if (elem->end_pos>s_end)
-      break;
+    }
     elem = elem->succ;
   }
   nElements = nElem;
@@ -842,6 +844,7 @@ long multiparticleLocalMomentumAcceptance(
   long n_working_processors = n_processors - 1;
 
 #ifdef DEBUG
+  FILE *fpd;
   sprintf(logFile, "mmap-%03d.log", myid);
   fpd = fopen(logFile, "w");
   fprintf(fpd, "Started LMA algorithm for processor %d\n", myid);
