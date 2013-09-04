@@ -350,13 +350,19 @@ long doMomentumApertureSearch(
   elem0 = NULL;
   nElem = 0;
   elementArray = NULL;
-  while (elem) {
+  skipElements = skip_elements;
+  while (elem && nElem<process_elements) {
 #ifdef DEBUG
     printf("checking element %s\n", elem->name); fflush(stdout);
 #endif
     if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
         (!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern)) ) {
+      if (skipElements>0) {
+        skipElements --;
+        elem = elem->succ;
+        continue;
+      }
       if (!elem0)
 	elem0 = elem;
       nElem++;
