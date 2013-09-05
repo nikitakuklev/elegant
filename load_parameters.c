@@ -31,6 +31,7 @@ typedef struct {
 #define COMMAND_FLAG_USE_FIRST          0x0008UL
     char *includeNamePattern, *includeItemPattern, *includeTypePattern;
     char *excludeNamePattern, *excludeItemPattern, *excludeTypePattern;
+    char *editNameCommand;
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
@@ -251,6 +252,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].value_type = NULL;
   load_request[load_requests].element_flags = NULL;
   load_request[load_requests].values = 0;
+  load_request[load_requests].editNameCommand = edit_name_command;
   load_requests++;
   if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
     /* do this right away so that it gets propagated into error and vary operations */
@@ -416,16 +418,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
        * If use_first is not given, then we load all values, which is the slowest option
        * but also the original default behavior.
        */
-      if (load_request[i].flags&COMMAND_FLAG_USE_FIRST){
-        if (!occurence) {
-          strcpy(elem_param, element[j]);
-          strcat(elem_param, parameter[j]);
-        } else {
-          sprintf(elem_param, "%s%s%"PRId32, element[j], parameter[j], occurence[j]);
-        }
-        if (!hadd(hash_table, elem_param, strlen(elem_param), NULL))
-          continue;
-      }
       eptr = NULL;
       if (occurence) {
         if (occurence[j]<=lastMissingOccurence &&
@@ -454,6 +446,26 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           wild_match(type[j], load_request[i].excludeTypePattern))
         continue;
       element_missing = 0;
+
+      /* If edit command given, change the name now (after matching) */
+      if (load_request[i].editNameCommand) {
+	char buffer[16384];
+	strcpy(buffer, element[j]);
+	edit_string(buffer, load_request[i].editNameCommand);
+	free(element[j]);
+	cp_str(element+j, buffer);
+      }
+      /* Compare to hash table to see if we've already done this element/parameter */
+      if (load_request[i].flags&COMMAND_FLAG_USE_FIRST){
+        if (!occurence) {
+          strcpy(elem_param, element[j]);
+          strcat(elem_param, parameter[j]);
+        } else {
+          sprintf(elem_param, "%s%s%"PRId32, element[j], parameter[j], occurence[j]);
+        }
+        if (!hadd(hash_table, elem_param, strlen(elem_param), NULL))
+          continue;
+      }
 
       /* if occurence is available, we can take advantage of hash table */
       if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, &(beamline->elem)))) ||

@@ -14,6 +14,7 @@
         STRING exclude_name_pattern = NULL;
         STRING exclude_item_pattern = NULL;
         STRING exclude_type_pattern = NULL;
+	STRING edit_name_command = NULL;
         long change_defined_values = 0;
         long clear_settings = 0;
         long allow_missing_files = 0;
