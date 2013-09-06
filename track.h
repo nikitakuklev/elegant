@@ -1674,7 +1674,7 @@ extern PARAMETER scraper_param[N_SCRAPER_PARAMS];
 typedef struct {
   double length;
   double Xo;
-  long energyDecay, energyStraggle, nuclearBrehmsstrahlung, electronRecoil, Z;
+  long energyDecay, energyStraggle, nuclearBremsstrahlung, electronRecoil, Z;
   double A, rho, pLimit;
   double position;
   double dx, dy;
@@ -2143,7 +2143,7 @@ extern PARAMETER matter_param[N_MATTER_PARAMS];
 typedef struct {
     double length, lEffective;
     double Xo;       /* radiation length */
-    long energyDecay, energyStraggle, nuclearBrehmsstrahlung, electronRecoil, Z;
+    long energyDecay, energyStraggle, nuclearBremsstrahlung, electronRecoil, Z;
     double A, rho, pLimit;
     } MATTER;
 

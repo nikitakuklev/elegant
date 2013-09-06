@@ -23,7 +23,7 @@
 #define BS_Y0 (1e-8)
 
 double radiationLength(long Z, double A, double rho);
-double solveBrehmsstrahlungCDF(double F);
+double solveBremsstrahlungCDF(double F);
 
 long track_through_matter(
                           double **part, long np, MATTER *matter, double Po, double **accepted, double z0
@@ -54,7 +54,7 @@ long track_through_matter(
   else 
     return np;
 
-  if (matter->energyDecay && (matter->nuclearBrehmsstrahlung || matter->electronRecoil))
+  if (matter->energyDecay && (matter->nuclearBremsstrahlung || matter->electronRecoil))
     bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 or ELECTRON_RECOIL=1 options to MATTER/SCATTER element are mutually exclusive", NULL);
 
   beta = Po/sqrt(sqr(Po)+1);
@@ -71,7 +71,7 @@ long track_through_matter(
   Nrad = L/Xo;
   dGammaFactor = 1-exp(-Nrad);
   prob = probBS = probER = 0;
-  if (Nrad<1e-3 || matter->nuclearBrehmsstrahlung || matter->electronRecoil) {
+  if (Nrad<1e-3 || matter->nuclearBremsstrahlung || matter->electronRecoil) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
       bombElegant("MATTER element is too thin---provide Z, A, and rho for single-scattering calculation.", NULL);
     K1 = 4*matter->Z*(matter->Z+1)*sqr(particleRadius/(beta*Po));
@@ -80,7 +80,7 @@ long track_through_matter(
     probScatter = matter->rho/(AMU*matter->A)*L*sigmaTotal;
     /* printf("K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter); */
     probBSScatter = 0;
-    if (matter->nuclearBrehmsstrahlung) {
+    if (matter->nuclearBremsstrahlung) {
       probBSScatter = 4*L/(3*Xo)*(-log(BS_Y0)-(1-BS_Y0)+3./8.*(1-BS_Y0*BS_Y0));
     }
     if (matter->electronRecoil) {
@@ -106,7 +106,7 @@ long track_through_matter(
     coord = part[ip];
     isLost = 0;
     if (Nrad) {
-      if (matter->energyDecay || matter->nuclearBrehmsstrahlung) {
+      if (matter->energyDecay || matter->nuclearBremsstrahlung) {
         P = (1+coord[5])*Po;
         gamma = sqrt(sqr(P)+1);
         beta = P/gamma;
@@ -155,9 +155,9 @@ long track_through_matter(
             coord[0] += coord[1]*L1;
             coord[2] += coord[3]*L1;
           }
-          if (matter->energyDecay || matter->nuclearBrehmsstrahlung) {
+          if (matter->energyDecay || matter->nuclearBremsstrahlung) {
             if (probBS!=0 && random_2(1)<probBS)
-              gamma -= gamma*solveBrehmsstrahlungCDF(random_2(1));
+              gamma -= gamma*solveBremsstrahlungCDF(random_2(1));
             if (probER!=0 && random_2(1)<probER)
               gamma -= BS_Y0/(1-random_2(1)*(1-BS_Y0));
             if (gamma<=1) {
@@ -168,7 +168,7 @@ long track_through_matter(
         }
       }
       if (!isLost) {
-        if (matter->energyDecay || matter->nuclearBrehmsstrahlung) {
+        if (matter->nuclearBremsstrahlung) {
           P = sqrt(sqr(gamma)-1);
           coord[5] = (P-Po)/Po;
           beta = P/gamma;
@@ -267,7 +267,7 @@ double radiationLength(long Z, double A, double rho)
   return 1e-3/(4*alpha*sqr(re_mks)*NAvogadro/A*(Z*Z*(Lrad - fZ) + Z*Lradp))/rho;
 }
 
-double solveBrehmsstrahlungCDF(double F)
+double solveBremsstrahlungCDF(double F)
 /* Solve F == G(y)/G(1) where G(y)=(ln(y/y0) - (y-y0) + 3/8*(y^2-y0^2)
  */
 {
@@ -298,7 +298,7 @@ double solveBrehmsstrahlungCDF(double F)
   } else {
     if (!beenWarned)  {
       beenWarned = 1; 
-      printf("*** Warning: interpolation problem for brehmsstrahlung.\n");
+      printf("*** Warning: interpolation problem for bremsstrahlung.\n");
     }
     y = y0;
   }

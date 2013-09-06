@@ -503,7 +503,7 @@ long beam_scraper(
     matter.Xo = scraper->Xo;
     matter.energyDecay = scraper->energyDecay;
     matter.energyStraggle = scraper->energyStraggle;
-    matter.nuclearBrehmsstrahlung = scraper->nuclearBrehmsstrahlung;
+    matter.nuclearBremsstrahlung = scraper->nuclearBremsstrahlung;
     matter.electronRecoil = scraper->electronRecoil;
     matter.Z = scraper->Z;
     matter.A = scraper->A;
