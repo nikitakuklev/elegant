@@ -11,11 +11,11 @@ APSStandardSetup
 
 set usage "usage: view3dGeometry -rootname <string> -showNames <listOfElementTypes> -showCoordinates <listOfElementTypes> \nScript by Alexey Petrenko (Version 2, M. Borland)\n"
 set rootname ""
-set showNames *SBEN*
+set showNames ""
 set showCoordinates "MARK* WATCH*"
 set args $argv
 if {[APSStrictParseArguments {rootname showNames showCoordinates}] || ![string length $rootname] || \
-    ![string length $showNames] || ![string length $showCoordinates]} {
+    ![string length $showCoordinates]} {
     return -code error "$usage"
 }
 
@@ -440,20 +440,38 @@ proc element_par {element parameter} {
 
 proc get_bounding_box {} {
     set offset $::bounding_box_offset
-    foreach {Xmin Xmax Ymin Ymax Zmin Zmax} [exec \
+    foreach {Xmin Xmax Ymin Ymax Zmin Zmax X0 X1 Z0 Z1} [exec \
 	sddsprocess $::xyz -pipe=out \
 	    -process=X,minimum,Xmin -process=X,maximum,Xmax \
 	    -process=Y,minimum,Ymin -process=Y,maximum,Ymax \
-	    -process=Z,minimum,Zmin -process=Z,maximum,Zmax | \
+	    -process=Z,minimum,Zmin -process=Z,maximum,Zmax \
+            -process=\[XYZ\],first,%s0 \
+            -process=\[XYZ\],last,%s1 | \
 	sddsprocess -pipe \
 	    "-redefine=par,Xmin,Xmin $offset -" "-redefine=par,Xmax,Xmax $offset +" \
 	    "-redefine=par,Ymin,Ymin $offset -" "-redefine=par,Ymax,Ymax $offset +" \
 	    "-redefine=par,Zmin,Zmin $offset -" "-redefine=par,Zmax,Zmax $offset +" | \
-	sdds2stream -pipe=in -par=Xmin,Xmax,Ymin,Ymax,Zmin,Zmax
+	sdds2stream -pipe=in -par=Xmin,Xmax,Ymin,Ymax,Zmin,Zmax,X0,X1,Z0,Z1
     ] {
     # fieldOfView='0.1'
+        set viewPoints ""
+        set nZ 10
+        set dZ [expr ($Z1-$Z0)/($nZ-1.)]
+        set dX [expr ($X1-$X0)/($nZ-1.)]
+        for {set iZ 0} {$iZ<$nZ} {incr iZ} {
+            set Z [expr $Z0+$iZ*$dZ - ($Z0+$Z1)/2]
+            set X [expr $X0+$iZ*$dX - ($X0+$X1)/2 - 5.0]
+            append viewPoints "<Viewpoint description='sideView' position='$X 0.0 $Z' orientation='0 1 0 -1.570796' />\n"
+        }
+        append viewPoints "<Transform rotation='0 1 0 -1.57'>"
+        for {set iZ 0} {$iZ<$nZ} {incr iZ} {
+            set Z [expr $Z0+$iZ*$dZ - ($Z0+$Z1)/2]
+            set X [expr -1*($X0+$iZ*$dX - ($X0+$X1)/2 - 5.0)]
+            append viewPoints "<Viewpoint description='topView' position='$Z 5.0 $X' orientation='1 0 0 -0.78539' />\n"
+        }
+        append viewPoints "</Transform>"
 	return "
-    <!--Viewpoint description='distant1' position='[expr {2*$Xmax}] [expr {2*$Ymax}] [expr {2*$Zmax}]'/-->
+    $viewPoints
     <Scene>
      <Transform translation='[expr {-1*($Xmin+$Xmax)/2}] [expr {-1*($Ymin+$Ymax)/2}] [expr {-1*($Zmin+$Zmax)/2}]'>
 	<Shape>
