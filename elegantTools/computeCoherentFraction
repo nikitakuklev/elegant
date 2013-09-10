@@ -57,7 +57,7 @@ exec sddssequence -pipe=out -define=photonEnergy,units=eV,type=double \
   "-define=param,Length,$length,units=m" \
   "-define=column,wavelength,1.23956e-6 photonEnergy /,units=m" \
   "-define=col,Sgammap,wavelength 2 / Length / sqrt" \
-  "-define=col,Sgamma,wavelength 2 * Length * sqrt 4 / pi /,units=m" \
+  "-define=col,Sgamma,wavelength Length * 2 / sqrt pi /,units=m" \
   "-define=col,SxT,Sx  sqr Sgamma sqr + sqrt,units=m" \
   "-define=col,SxpT,Sxp  sqr Sgammap sqr + sqrt" \
   "-define=col,SyT,Sy  sqr Sgamma sqr + sqrt,units=m" \
