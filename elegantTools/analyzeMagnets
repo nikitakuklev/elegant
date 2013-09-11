@@ -5,14 +5,21 @@ exec oagtclsh "$0" "$@"
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 catch {APSStandardSetup}
 
-set usage {usage: analyzeMagnets -rootname <string> -H <T-m> [-caption <string>] [-groups <filename>}
+set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
 set H 0
 set rootname ""
 set caption ""
 set groups ""
+set useGroupData 0
 set args $argv
-if {[APSStrictParseArguments {rootname H caption groups}] || ![string length $rootname] || [expr $H<=0]} {
+if {[APSStrictParseArguments {rootname H caption useGroupData groups}] || ![string length $rootname]} {
     return -code error "$usage"
+}
+if {$useGroupData && [string length $groups]} {
+    puts stderr "Error: give either -useGroupData 1 or -groups <filename>, not both"
+    puts stderr "These options are used to group sub-elements into elements"
+    puts stderr "-useGroupData 1 ==> use ElementGroup data from the .param file"
+    puts stderr "-groups <filename> ==> use ElementName and PartOfElement columns from <filename>"
 }
 
 set found 0
@@ -29,6 +36,11 @@ if !$found {
 
 if ![file exists $rootname.twi] {
     return -code error "twi file not found"
+}
+if [expr $H<=0] {
+    set pCentral [exec sdds2stream -parameter=pCentral $rootname.twi]
+    set H [expr $pCentral*0.51099906e6/2.99792458e+08]
+    puts stderr "H=$H"
 }
 
 # combine repeated elements 
@@ -54,6 +66,8 @@ file delete -force $rootname.twi.1
 
 if [string length $groups] {
     set extraCmd "sddsxref -pipe $groups -match=ElementName -take=PartOfElement -reuse=row -nowarning"
+} elseif $useGroupData {
+    set extraCmd "sddsprocess -pipe -print=col,PartOfElement,%s,ElementGroup"
 } else {
     set extraCmd "sddsprocess -pipe -print=col,PartOfElement,%s,ElementName"
 }
