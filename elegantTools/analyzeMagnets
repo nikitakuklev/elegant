@@ -8,14 +8,16 @@ if {![info exists env(OAG_TOP_DIR)] || [string length $env(OAG_TOP_DIR)]==0} {
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 catch {APSStandardSetup}
 
-set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
+set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-beamCurrent <mA>] [-angleOffset <radians>] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
 set H 0
 set rootname ""
 set caption ""
 set groups ""
+set beamCurrent 200.0
 set useGroupData 0
+set angleOffset 0.0
 set args $argv
-if {[APSStrictParseArguments {rootname H caption useGroupData groups}] || ![string length $rootname]} {
+if {[APSStrictParseArguments {rootname H angleOffset caption useGroupData groups beamCurrent angleOffset}] || ![string length $rootname]} {
     return -code error "$usage"
 }
 if {$useGroupData && [string length $groups]} {
@@ -118,15 +120,23 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
   | sddsxref -pipe $rootname-B-K1 -match=ElementTag -take=ParameterValue -rename=col,ParameterValue=K1 -nowarning \
   | sddsxref -pipe $rootname-B-K2 -match=ElementTag -take=ParameterValue -rename=col,ParameterValue=K2 -nowarning \
   | sddsprocess -pipe \
+    "{-define=param,I0,$beamCurrent,units=mA}" \
+    "{-define=param,E,$H c_mks * 1e9 /,units=GeV}" \
     "{-define=col,Angle,ParameterValue PartCount *}" \
     "{-define=column,rho,Length Angle /}" "{-define=col,B,$H rho /,units=T}" \
     "{-define=col,AngleDeg,Angle rtod,units=deg}" \
     "{-define=col,B1,K1 $H *,units=T/m}" \
     "{-define=col,B2,K2 $H *,units=T/m^2}" \
+    "{-define=col,Ec,0.665 E sqr * B *,units=keV}" \
+    "{-define=col,PowerDensity,E 4 pow 8.846e4 * rho / I0 1e3 / * 2 / pi / 1e-3 *,units=W/mrad}" \
+    "{-define=col,PTotal,PowerDensity 1e3 * Angle * 1e3 /,units=kW}" \
   | sddssort -pipe -column=ElementName -unique=count  \
   | sddssort -pipe -column=s \
   | $extraCmd \
   | sddsprocess -pipe=in $rootname-B.sdds \
+    "-define=param,AngleSumOffset,$angleOffset" \
+    "{-rpnexpression=0 sto previousSum}" \
+    "{-define=col,AngleSum,Angle previousSum + sto previousSum AngleSumOffset -}" \
   -process=Ide*,sum,%sTotal \
   -process=B,largest,BLargest -process=Length,min,%sMin -process=Length,max,%sMax \
 
@@ -142,7 +152,8 @@ if ![string length $caption] {
 }
 exec sddsprintout -format=double=%10.3f $rootname-B.sdds $rootname-B.tex \
     "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
-    "-column=ElementName,label=Element Name" -column=Length "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 -col=IdenticalCount,label=Count
+    "-column=ElementName,label=Element Name" -column=Length "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 \
+    "-column=Ec,label=Critical energy" -column=PowerDensity -col=IdenticalCount,label=Count
 
 file delete -force $paramFile.1 $rootname-B1 $rootname-B-K1 $rootname-B-K2
 
