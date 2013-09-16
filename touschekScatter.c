@@ -526,6 +526,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         }
       }
       report_stats(stdout, "After particle generation: ");
+      if (tsptr->simuCount == 0)
+ 	  bombElegant("You must have a very large momentum aperture. No need on doing touscheck simulation.\n If you think this is a wrong statement, send your input to xiaoam@aps.anl.gov for debugging \n", NULL);
+   
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
           fprintf(stdout, "warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
