@@ -529,6 +529,36 @@ long do_tracking(
           maxampExponent = maxamp->exponent;
           maxampYExponent = maxamp->yExponent;
         }
+        if (eptr->type==T_CHARGE) {
+          if (elementsTracked!=0 && !warnedAboutChargePosition) {
+	    warnedAboutChargePosition = 1;
+            fprintf(stdout, "Warning: the CHARGE element is not at the start of the beamline.\n");
+	    fflush(stdout);
+	  }
+	  if (charge!=NULL) {
+	    fprintf(stdout, "Fatal error: multipole CHARGE elements in one beamline.\n");
+	    fflush(stdout);
+	    exitElegant(1);
+	  }
+  	  charge = (CHARGE*)eptr->p_elem;
+	  charge->macroParticleCharge = 0;
+#if !SDDS_MPI_IO
+	  if (nOriginal)
+	    charge->macroParticleCharge = charge->charge/(nOriginal);
+#else
+	  if (notSinglePart) {
+	    if (total_nOriginal)
+	      charge->macroParticleCharge = charge->charge/(total_nOriginal);
+	  } else {
+	    if (nOriginal)
+	      charge->macroParticleCharge = charge->charge/(nOriginal);
+	    }
+#endif
+	    if (charge->chargePerParticle)
+	      charge->macroParticleCharge = charge->chargePerParticle;
+            if (charge->macroParticleCharge<0) 
+              bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
+        }
         eptr = eptr->succ;
       }
       z = startElem->end_pos;
@@ -809,7 +839,7 @@ long do_tracking(
 	    case -1:
 	      break;
 	    case T_CHARGE:
-	      if (i_pass==0) {
+	      if (i_pass==0 && !startElem) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
 		  warnedAboutChargePosition = 1;
 		  fprintf(stdout, "Warning: the CHARGE element is not at the start of the beamline.\n");
