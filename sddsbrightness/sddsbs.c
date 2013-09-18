@@ -43,14 +43,13 @@ static char *option[N_OPTIONS] = {
 static char *spectra_options[SPECTRA_MODES]={"frequency", "spatial"};
 
 char *USAGE="sddsbs <outputFile> [-pipe[=out]] [-nowarnings] \n\
-     [-electronBeam=current=<value>(mA),energy=<value>(GeV)[,xemittance=<value>][,yemittance=<value>]] \n\
+     [-electronBeam=current=<value>(mA),energy=<value>(GeV)] \n\
      [-photonEnergy=minimum=<value>(eV),maximum=<value>(eV),points=<number>] \n\
      [-angle=start=<value>,end=<value>,steps=<value>] \n\
      [-magnetField=<B>(T)]  \n\
 electronBeam     Specifies the electron beam (storage ring) parameters: \n\
                  current  electron beam current in mA. (default is 100mA). \n\
                  energy   electron energy in Gev. (default is 7.0Gev).\n\
-                 for brightness calculation, the xemittance and yemittance must be provided.\n\
 photonEnergy     specifies the maximum and minimum photon energy in eV, \n\
                  and the number of energy points to be computed.\n\
 angle            provided the observation angle range in mrad unit, it is not need for brightness.\n\
@@ -102,6 +101,7 @@ int main(int argc, char **argv)
         if (s_arg[i_arg].n_items<2)
           SDDS_Bomb("invalid -electronBeam syntax.");
         s_arg[i_arg].n_items--;
+        /* The emittances are ignored and are here for backward compatibility */
         if (!scanItemList(&dummyFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "current", SDDS_DOUBLE, &current, 1, 0,
                           "energy", SDDS_DOUBLE, &energy, 1, 0,
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
     SDDS_Bomb("output file not provided.");
   if (outputFile && pipeFlags) 
     SDDS_Bomb("Too many files provided.");
-  processFilenames("sddsbrightness", &input, &outputFile, pipeFlags, 0, &tmpFileUsed);
+  processFilenames("sddsbs", &input, &outputFile, pipeFlags, 0, &tmpFileUsed);
   if (nE<=1)
     SDDS_Bomb("The number of photon energy points has to be greater than 1.");
   if (emax<emin)
@@ -245,8 +245,8 @@ void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout)
       SDDS_DefineParameter(SDDSout, "Gamma",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", "photon energy",NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDSout, "Flux", NULL, "ph/s/0.1%bw/mrad$a2$n", NULL,NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDSout, "IntegratedFlux", NULL, "ph/s/0.1%bw/mrad", NULL,NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_DefineColumn(SDDSout, "FluxDensity", NULL, "ph/s/0.1%bw/mrad$a2$n", NULL,NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "IntegratedFluxDensity", NULL, "ph/s/0.1%bw/mrad", NULL,NULL, SDDS_DOUBLE, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_WriteLayout(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
