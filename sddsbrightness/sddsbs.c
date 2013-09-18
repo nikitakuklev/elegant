@@ -34,10 +34,11 @@ First installation, per Shang.
 #define CLO_MAGNET 3
 #define CLO_PIPE 4
 #define CLO_NO_WARNINGS 5
-#define N_OPTIONS 6
+#define CLO_CRITICAL_ENERGY 6
+#define N_OPTIONS 7
 
 static char *option[N_OPTIONS] = {
-  "electronBeam", "photonEnergy", "angle", "magnetField", "pipe", "nowarnings" };
+  "electronBeam", "photonEnergy", "angle", "magnetField", "pipe", "nowarnings", "criticalenergy" };
 
 #define SPECTRA_MODES 2
 static char *spectra_options[SPECTRA_MODES]={"frequency", "spatial"};
@@ -46,27 +47,28 @@ char *USAGE="sddsbs <outputFile> [-pipe[=out]] [-nowarnings] \n\
      [-electronBeam=current=<value>(mA),energy=<value>(GeV)] \n\
      [-photonEnergy=minimum=<value>(eV),maximum=<value>(eV),points=<number>] \n\
      [-angle=start=<value>,end=<value>,steps=<value>] \n\
-     [-magnetField=<B>(T)]  \n\
+     [-magnetField=<B>(T) | -criticalEnergy=<eV>]  \n\
 electronBeam     Specifies the electron beam (storage ring) parameters: \n\
                  current  electron beam current in mA. (default is 100mA). \n\
                  energy   electron energy in Gev. (default is 7.0Gev).\n\
 photonEnergy     specifies the maximum and minimum photon energy in eV, \n\
                  and the number of energy points to be computed.\n\
 angle            provided the observation angle range in mrad unit, it is not need for brightness.\n\
-magnetField      specifies the magnetic field of bending magnet in Tesla unit. \n\n\
+magnetField      specifies the magnetic field of bending magnet in Tesla unit. \n\
+criticalEnergy   specifies the critical energy in electron volts.\n\n\
 sddsbs  computes bending magnet specral flux distribution for a specified \n\
         vertical angle plus the same flux integrated over all vertical angles.\n\n";
 
 void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout);
-void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE, 
-                          double energy, double current, double gamma, double *flux);
-void compute_integratedFlux_spectra(double *photonE, long nE, double cE, double energy, double current, double *integratedFlux);
+void computeFluxDensitySpectra(double *photonEnergy, long nE, double angle, double cE, 
+                          double energy, double current, double gamma, double *fluxDensity);
+void computeIntegratedFluxDensitySpectra(double *photonE, long nE, double cE, double energy, double current, double *integratedFluxDensity);
 
 int main(int argc, char **argv)
 {
   char  *outputFile=NULL;
-  double energy=7.0, current=100.0, xemittance=0, yemittance=0, startAngle, endAngle, emax, emin, bField;
-  double *photonE, *flux, *integratedFlux, deltaE, deltaA, cE=0, cLamda, ptot=0, angle, gamma;
+  double energy=7.0, current=100.0, xemittance=0, yemittance=0, startAngle, endAngle, emax, emin, bField, criticalEnergy;
+  double *photonE, *fluxDensity, *integratedFluxDensity, *divergence, deltaE, deltaA, cE=0, cLamda, ptot=0, angle, gamma;
   long nE, nAngles, i_arg, noWarnings=0, i, tmpFileUsed=0;
   SDDS_DATASET  SDDSout;
   SCANNED_ARG *s_arg;
@@ -80,14 +82,14 @@ int main(int argc, char **argv)
     fprintf(stderr, "%s", USAGE);
     exit(1);
   }
-  photonE = flux = NULL;
+  photonE = fluxDensity = integratedFluxDensity = divergence = NULL;
   nE  = 0;
   emax = emin = 0;
   startAngle = endAngle = 0;
   nAngles = 1;
   energy = 7; /* 7 GeV, APS */
   current = 100; /* 100mA, APS */
-  bField = 1.27;
+  bField = criticalEnergy = 0;
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
       switch (match_string(s_arg[i_arg].list[0], option, N_OPTIONS, 0)) {
@@ -138,8 +140,14 @@ int main(int argc, char **argv)
       case CLO_MAGNET:
         if (s_arg[i_arg].n_items!=2)
           SDDS_Bomb("invalid -magnet syntax.");
-        if (sscanf(s_arg[i_arg].list[1], "%lf", &bField)!=1)
-          SDDS_Bomb("Invalide -magnet field value provided.");
+        if (sscanf(s_arg[i_arg].list[1], "%lf", &bField)!=1 || bField<=0)
+          SDDS_Bomb("Invalid -magnetField value provided.");
+        break;
+      case CLO_CRITICAL_ENERGY:
+        if (s_arg[i_arg].n_items!=2)
+          SDDS_Bomb("invalid -criticalEnergy syntax.");
+        if (sscanf(s_arg[i_arg].list[1], "%lf", &criticalEnergy)!=1 || criticalEnergy<=0)
+          SDDS_Bomb("Invalid -criticalEnergy value provided.");
         break;
       case CLO_NO_WARNINGS:
         noWarnings = 0;
@@ -160,6 +168,12 @@ int main(int argc, char **argv)
   if (outputFile && pipeFlags) 
     SDDS_Bomb("Too many files provided.");
   processFilenames("sddsbs", &input, &outputFile, pipeFlags, 0, &tmpFileUsed);
+
+  if (criticalEnergy>0 && bField>0) 
+    SDDS_Bomb("give -magnetField or -criticalEnergy, not both");
+  if (bField==0 && criticalEnergy==0)
+    bField = 1.27;
+
   if (nE<=1)
     SDDS_Bomb("The number of photon energy points has to be greater than 1.");
   if (emax<emin)
@@ -178,26 +192,44 @@ int main(int argc, char **argv)
   
   nE +=1; /* add one step to compare with online data */
   deltaE = (emax - emin)/(nE - 1);
+
   /*critical energy = 0.665E[GeV]^2 * B[T] */
-  cE = CL2 * energy * energy * bField; /*eV */
+  if (bField) {
+    /* compute critical energy from magnetic field */
+    cE = CL2 * energy * energy * bField; /*eV */
+  } else {
+    /* compute magnetic field from critical energy */
+    cE = criticalEnergy;
+    bField = cE/(CL2 * energy * energy); /* T */
+  }
   cLamda = C_EVANG/(cE*1.0e3); /*units is A, 1KeV=12.4A, 1eV=C_EVANG A */
   cLamda *= 10; /* change the units to nm */
+   
   /*total radiation power = Cr *E^4/p = Cr * E^4/(3.333E/B) = Cr/3.333 * E^3 * B, Cr=8.85e-5 */
   ptot = 8.85e-5/3.333 * energy * energy * energy * bField * current * 1.0e6; /*units is Watts */
   current *= 1.0e-3; /*the input current is in mA, change it to A units */
   photonE = malloc(sizeof(*photonE)*nE);
-  flux = malloc(sizeof(*flux)*nE);
-  integratedFlux = malloc(sizeof(*integratedFlux)*nE);
+  divergence = malloc(sizeof(*divergence)*nE);
+  fluxDensity = malloc(sizeof(*fluxDensity)*nE);
+  integratedFluxDensity = malloc(sizeof(*integratedFluxDensity)*nE);
   for (i=0; i<nE; i++)
     photonE[i] = emin + deltaE*i;
   gamma = energy/me_mev*1.0e3;
   SetupOutputFile(outputFile, &SDDSout);
   sprintf(desc, "bending magnet radiation spectra.");
   for (i=0; i<nAngles; i++) {
+    long j;
     angle = startAngle + deltaA * i;
-    compute_flux_spectra(photonE, nE, angle, cE,  energy, current, gamma, flux);
-    compute_integratedFlux_spectra(photonE, nE, cE,  energy, current, integratedFlux);
-
+    computeFluxDensitySpectra(photonE, nE, angle, cE,  energy, current, gamma, fluxDensity);
+    computeIntegratedFluxDensitySpectra(photonE, nE, cE,  energy, current, integratedFluxDensity);
+    for (j=0; j<nE; j++) {
+      if (fluxDensity[j]>0)
+        divergence[j] = integratedFluxDensity[j]/(sqrt(PIx2)*fluxDensity[j]);
+      else
+        divergence[j] = 0;
+      
+    }
+    
     if (!SDDS_StartPage(&SDDSout, nE) ||
         !SDDS_SetParameters(&SDDSout, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Description", desc, 
@@ -213,15 +245,18 @@ int main(int argc, char **argv)
                             "ObservationAngle", angle, 
                             "Gamma", gamma, NULL) ||
         !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, photonE, nE, "Energy") ||
-        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, flux, nE, "Flux") ||
-        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, integratedFlux, nE, "IntegratedFlux") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, fluxDensity, nE, "FluxDensity") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, integratedFluxDensity, nE, "IntegratedFluxDensity") ||
+        !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_NAME, divergence, nE, "VerticalDivergence") ||
         !SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);  
   }
   if (!SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);  
   free(photonE);
-  free(flux);
+  free(fluxDensity);
+  free(integratedFluxDensity);
+  free(divergence);
   
   free_scanargs(&s_arg, argc);
   return 0;
@@ -246,17 +281,19 @@ void SetupOutputFile(char *outputFile, SDDS_DATASET *SDDSout)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", "photon energy",NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDSout, "FluxDensity", NULL, "ph/s/0.1%bw/mrad$a2$n", NULL,NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDSout, "IntegratedFluxDensity", NULL, "ph/s/0.1%bw/mrad", NULL,NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_DefineColumn(SDDSout, "IntegratedFluxDensity", NULL, "ph/s/0.1%bw/mrad", NULL,NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "VerticalDivergence", NULL, "mrad", NULL,NULL, SDDS_DOUBLE, 0)<0 
+      )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_WriteLayout(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 }
 
-/*bending magnet flux distribution ph/s/mrad^2/0.1%BW curent units is A in the formula 
+/*bending magnet flux density distribution ph/s/mrad^2/0.1%BW curent units is A in the formula 
   = Cn * E^2 * E^2/Ec^2 * I * K2/3^2(k) F(k, theta) while Cn = 1.3255e13 ph/s/mrad^2/GeV^2/A */ 
 /* F(k, theta) = (1+gamma^2*theta^2) * [ 1 + gamma^2*theta^2/(1+gamma^2*theta^2) * K1/3(k)^2/K2/3(k)^2] */
-void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE, 
-                          double energy, double current, double gamma, double *flux)
+void computeFluxDensitySpectra(double *photonEnergy, long nE, double angle, double cE, 
+                          double energy, double current, double gamma, double *fluxDensity)
 {
   double eta, Ftheta, k1, KI13, KI23, Cr, ratio;
   long i;
@@ -269,13 +306,13 @@ void compute_flux_spectra(double *photonEnergy, long nE, double angle, double cE
     KI13 = k13(eta);
     KI23 = k23(eta);
     Ftheta = k1 * k1 * (1 + gamma * gamma * angle * angle * KI13 * KI13 / (k1 * KI23 * KI23)); 
-    flux[i] = Cr * energy * energy * current * ratio * ratio * KI23 * KI23 * Ftheta; 
+    fluxDensity[i] = Cr * energy * energy * current * ratio * ratio * KI23 * KI23 * Ftheta; 
   }
 }
 
 /* formula taken from Xray data booklet p2-3. */
-void compute_integratedFlux_spectra(double *photonEnergy, long nE, double cE, 
-	double energy, double current, double *flux)
+void computeIntegratedFluxDensitySpectra(double *photonEnergy, long nE, double cE, 
+	double energy, double current, double *ifluxd)
 {
   double  C, ratio;
   long i;
@@ -283,6 +320,6 @@ void compute_integratedFlux_spectra(double *photonEnergy, long nE, double cE,
   C = 2.457e13;
   for (i=0; i<nE; i++) {
     ratio = photonEnergy[i]/cE;
-    flux[i] = C * energy * current * gy(1, ratio);
+    ifluxd[i] = C * energy * current * gy(1, ratio);
   }
 }
