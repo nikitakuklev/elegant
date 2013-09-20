@@ -158,8 +158,6 @@ chaosMap$(OBJ): chaosMap.h
 chaosMap.h: ../chaosMap.nl
 	nlpp ../chaosMap.nl chaosMap.h
 
-hashtab$(OBJ) : hashtab.c standard.h recycle.h lookupa.h hashtab.h
-
 insertSCeffects$(OBJ): insertSCeffects.h
 
 insertSCeffects.h: ../insertSCeffects.nl
@@ -184,8 +182,6 @@ link_elements$(OBJ): link_elements.h
 
 link_elements.h: ../link_elements.nl
 	nlpp ../link_elements.nl link_elements.h
-
-lookupa$(OBJ) : lookupa.c standard.h lookupa.h
 
 load_parameters$(OBJ): load_parameters.h
 
@@ -226,8 +222,6 @@ ramp$(OBJ): ramp.h
 
 ramp.h: ../ramp.nl
 	nlpp ../ramp.nl ramp.h
-
-recycle$(OBJ) : recycle.c standard.h recycle.h
 
 response$(OBJ): response.h
 
