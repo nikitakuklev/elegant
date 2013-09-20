@@ -398,11 +398,15 @@ int main( int argc, char **argv)
 
   if (!SDDS_WriteLayout(&resultsPage) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (verbosity)
+    fprintf( stdout, "Finished setting up \"%s\".\n", outputfile);
 
   /****************************************************\
    * read from twiss file                             *
    \****************************************************/
 
+  if (verbosity)
+    fprintf( stdout, "Reading twiss file...\n");
   if (!SDDS_GetParameters(&twissPage,
                           "pCentral", &pCentral,
                           NULL) )
@@ -465,6 +469,8 @@ int main( int argc, char **argv)
   eType1 = SDDS_GetColumn(&twissPage, "ElementType");
   eOccur1 = SDDS_GetColumn(&twissPage, "ElementOccurence");
 
+  if (verbosity)
+    fprintf( stdout, "Reading aperture file...\n");
   eName2 = SDDS_GetColumn(&aperPage, "ElementName");
   for (i=0; i<elem2; i++)
     trim_spaces(eName2[i]);
