@@ -1185,11 +1185,11 @@ proc APSTouschekLifetime {args} {
       {-defi=param,epsx,emit 1 coupling + /} \
       {-defi=param,epsy,epsx coupling *} \
       {-defi=col,sigmax,betax epsx * etax sigmap * sqr + sqrt} \
-      {-defi=col,sigmaxp,etaxp alphax betax / etax * + betax * sigmap * sqr sigmax sqr + sigmax sqr / epsx * betax / sqrt} \
+      {-defi=col,sigmaxp,1 alphax sqr + betax / epsx  * etaxp sigmap * sqr + sqrt} \
       {-defi=col,sigmay,betay epsy * sqrt} \
       {-defi=col,zeta,enAper gamma / sigmaxp / sqr}  \
       -process=zeta,min,zetaMin -process=zeta,max,zetaMax 
-    #catch {exec sdds2stream -parameter=zetaMin,zetaMax  $tmpFile.1 } result
+    # catch {exec sdds2stream -parameter=zetaMin,zetaMax  $tmpFile.1 } result
     # setStatus "zeta range: [lindex $result 0] -> [lindex $result 1]"
 
     exec sddsinterp $touschekIntegralFile \
