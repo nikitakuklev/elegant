@@ -730,6 +730,14 @@ long doMomentumApertureSearch(
 
   outputRow++;
 
+#if USE_MPI
+#if defined(DEBUG)
+  fprintf(fpdMpi, "Waiting on barrier after main loop.\n");
+  fflush(fpdMpi);
+#endif
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
 #if SDDS_MPI_IO
   /* Open file here for parallel IO */
   if (!SDDS_LayoutWritten(&SDDSma)) {
