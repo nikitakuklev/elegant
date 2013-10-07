@@ -245,7 +245,8 @@ char *description[N_COMMANDS] = {
     "parallel_optimization_setup      requests running of parallel optimization mode and sets it up",
     "ramp_elements                    ramp values of elements as a function of pass",
     "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation",
-    "chaos_map                        command to perform chaos map analysis"
+    "chaos_map                        command to perform chaos map analysis",
+    "tune_footprint                   command to perform tune footprint tracking",
   } ;
 
 #define NAMELIST_BUFLEN 65536
