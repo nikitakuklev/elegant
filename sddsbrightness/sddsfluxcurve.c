@@ -78,6 +78,7 @@ char *USAGE1="sddsfluxcurve [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputf
 harmonics        number of harmonics to compute\n\
 pinhole          specify the distance to the pinhole, plus the full size of\n\
                  the pinhole horizontal and vertical apertures.\n\
+                 Defaults to 50x50 grid centered on 0,0.\n\
 method           choose method for calculating flux \n\
                  method=dejus    Non-zero emittance, \n\
                                  infinite-N +convolution (Dejus' approach) (default) \n\
@@ -91,7 +92,6 @@ mode             Choose calculation mode: \n\
 undulator        specify undulator parameters\n\
 electronBeam     specify electron beam parameters that are not in the twiss file.\n\
                  Defaults to 0.1A.\n\
-pinhole          Specify pinhole parameters.  Defaults to 50x50 grid centered on 0,0.\n\
 Computes on-axis aperture-limited flux tuning curve for an undulator centered on the\n\
 end of the beamline the Twiss parameters for which are in the input file.  You should generate the\n\
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
