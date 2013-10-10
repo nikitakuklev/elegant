@@ -808,4 +808,39 @@ void matrix_scmul(MAT *mat1, double scalar)
     mat1->base[i] *= scalar;
 }
 
+VEC *vec_add(VEC *a, VEC *b, double as, double bs, VEC *diff)
+/* diff = as*a + bs*b */
+{
+  long i;
+  if (a->dim != b->dim || a->dim!=diff->dim)
+    return NULL;
+  for (i=0; i<a->dim; i++)
+    diff->ve[i] = as*a->ve[i] + bs*b->ve[i];
+  return diff;
+}
+
+double vec_dot(VEC *a, VEC *b)
+{
+  double sum;
+  long i;
+  
+  if (a->dim != b->dim)
+    return -1;
+  for (i=sum=0; i<a->dim ; i++)
+    sum += a->ve[i]*b->ve[i];
+}
+
+VEC *vec_cross(VEC *a, VEC *b, VEC *out) 
+/* out = a x b  for 3-vectors only */
+{
+  double o[3];
+  if (a->dim!=3 || b->dim!=3 || out->dim!=3)
+    return NULL;
+  o[0] = a->ve[1]*b->ve[2] - a->ve[2]*b->ve[1];
+  o[1] = a->ve[2]*b->ve[0] - a->ve[0]*b->ve[2];
+  o[2] = a->ve[0]*b->ve[1] - a->ve[1]*b->ve[0];
+  memcpy(out->ve, o, 3*sizeof(out->ve[0]));
+  return out;
+}
+
 

@@ -15,6 +15,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "matlib.h"
+#include "matrixOp.h"
 
 static SDDS_TABLE SDDS_floor;
 
@@ -244,18 +245,26 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
   double theta0, phi0, psi0, tilt;
+  static VEC *x1, *x2, *x3, *x4;
+  static short x1x2Ready = 0;
+  static double sVertex = 0;
 #ifdef INCLUDE_WIJ
   long iw, jw;
 #endif
   
   if (!matricesAllocated) {
+    matricesAllocated = 1;
     m_alloc(&temp33, 3, 3);
     m_alloc(&tempV, 3, 1);
     m_alloc(&R, 3, 1);
     m_alloc(&S, 3, 3);
     m_alloc(&T, 3, 3);
     m_alloc(&TInv, 3, 3);
-    matricesAllocated = 1;
+    /* These are used to determine the vertex point in the general case */
+    x1 = vec_get(3);
+    x2 = vec_get(3);
+    x3 = vec_get(3);
+    x4 = vec_get(3);
   }
   
   is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = is_mirror = 0;
@@ -345,12 +354,72 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       is_magnet = 1;
     break;
   }
+  if (include_vertices || vertices_only) {
+    if (is_bend) {
+      /* If last element was not a bend, need to record data for vertex computation */
+      if (elem->pred==NULL || !IS_BEND(elem->pred->type)) {
+        x2->ve[0] = V0->a[0][0];
+        x2->ve[1] = V0->a[1][0];
+        x2->ve[2] = V0->a[2][0];
+        x1->ve[0] = V0->a[0][0] - W0->a[0][2];
+        x1->ve[1] = V0->a[1][0] - W0->a[1][2];
+        x1->ve[2] = V0->a[2][0] - W0->a[2][2];
+        sVertex = elem->pred->end_pos - 1;
+        x1x2Ready = 1;
+      }
+    } else {
+      /* If this element is not a bend but was a bend, have all the required information for vertex computation */
+      if (elem->pred!=NULL && IS_BEND(elem->pred->type)) {
+        x3->ve[0] = V0->a[0][0];
+        x3->ve[1] = V0->a[1][0];
+        x3->ve[2] = V0->a[2][0];
+        x4->ve[0] = V0->a[0][0] + W0->a[0][2];
+        x4->ve[1] = V0->a[1][0] + W0->a[1][2];
+        x4->ve[2] = V0->a[2][0] + W0->a[2][2];
+        if (!x1x2Ready)
+          bombElegant("Problem with x1, x2 preparation for vertex computation", NULL);
+        else {
+          VEC *a, *b, *c, *cxb, *axb;
+          double ds;
+          x1x2Ready = 0;
+          a = vec_get(3);
+          b = vec_get(3);
+          c = vec_get(3);
+          axb = vec_get(3);
+          cxb = vec_get(3);
+          vec_add(x2, x1, 1, -1, a);
+          vec_add(x4, x3, 1, -1, b);
+          vec_add(x3, x1, 1, -1, c);
+          vec_cross(c, b, cxb);
+          vec_cross(a, b, axb);
+          ds = vec_dot(cxb, axb)/vec_dot(axb, axb);
+          vec_add(x1, a, 1, ds, c);
+          sprintf(label, "%s-VP", elem->pred->name);
+          if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+                                 IC_S, sVertex+ds,
+                                 IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
+                                 IC_THETA, *theta, IC_PHI, *phi, IC_PSI, *psi,
+                                 IC_ELEMENT, label, IC_OCCURENCE, elem->pred->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
+            SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          row_index++;
+          vec_free(a);
+          vec_free(b);
+          vec_free(c);
+          vec_free(axb);
+          vec_free(cxb);
+        }
+      }
+    }
+  }
   if (elem->type!=T_FLOORELEMENT) {
     theta0 = *theta;
     phi0 = *phi;
     psi0 = *psi;
     m_identity(S);
     if (is_bend || is_mirror) {
+#if 0==1      
       if (!is_mirror && SDDS_floor && (include_vertices || vertices_only)) {
 	/* vertex point is reached by drifting by distance rho*tan(angle/2) */
 	R->a[0][0] = R->a[1][0] = 0;
@@ -380,6 +449,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #endif
 	row_index++;
       }
+#endif
       if (angle && !isnan(rho)) {
         if (!is_mirror) {
           R->a[0][0] = rho*(cos(angle)-1);
