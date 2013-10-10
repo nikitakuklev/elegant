@@ -62,6 +62,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 
 #include "floor.h"
 
+ELEMENT_LIST *bendPreceeds(ELEMENT_LIST *elem);
+ELEMENT_LIST *bendFollows(ELEMENT_LIST *elem);
 long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              double *theta, double *phi, double *psi, double *s,
                              ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
@@ -354,9 +356,17 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     break;
   }
   if (include_vertices || vertices_only) {
+    ELEMENT_LIST *preceeds, *follow;
+    
     if (is_bend) {
       /* If last element was not a bend, need to record data for vertex computation */
-      if (elem->pred==NULL || !IS_BEND(elem->pred->type)) {
+#ifdef DEBUG
+      printf("%s is a bend\n", elem->name);
+#endif
+      if (elem->pred==NULL || bendPreceeds(elem)==NULL) {
+#ifdef DEBUG
+        printf("Setting x1 and x2\n");
+#endif
         x2->ve[0] = V0->a[0][0];
         x2->ve[1] = V0->a[1][0];
         x2->ve[2] = V0->a[2][0];
@@ -369,9 +379,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         anglesVertex[2] = *psi;
         x1x2Ready = 1;
       }
-    } else {
-      /* If this element is not a bend but was a bend, have all the required information for vertex computation */
-      if (elem->pred!=NULL && IS_BEND(elem->pred->type)) {
+    } else if (elem->type!=T_MARK && elem->type!=T_WATCH) {
+#ifdef DEBUG
+      printf("%s is not a bend\n", elem->name);
+#endif
+      /* If this element is not a bend but previous was a bend and next element is not a bend, have all the required information for vertex computation */
+      if (elem->pred!=NULL && (preceeds=bendPreceeds(elem))!=NULL && bendFollows(elem)==NULL) {
         x3->ve[0] = V0->a[0][0];
         x3->ve[1] = V0->a[1][0];
         x3->ve[2] = V0->a[2][0];
@@ -383,6 +396,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         else {
           VEC *a, *b, *c, *cxb, *axb;
           double ds;
+#ifdef DEBUG
+          printf("*** Computing vertex for %s\n", preceeds->name);
+#endif
           x1x2Ready = 0;
 
           a = vec_get(3);
@@ -410,7 +426,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 
           ds = vec_dot(cxb, axb)/vec_dot(axb, axb);
           vec_add(x1, a, 1, ds, c);
-          sprintf(label, "%s-VP", elem->pred->name);
+          sprintf(label, "%s-VP", preceeds->name);
           if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                                  IC_S, sVertex+ds,
                                  IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
@@ -761,3 +777,68 @@ void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W, cha
 #endif
 
 }
+
+ELEMENT_LIST *bendPreceeds(ELEMENT_LIST *elem)
+{
+  ELEMENT_LIST *eptr;
+  eptr = elem->pred;
+#ifdef DEBUG
+  printf("Checking bendPreceeds for %s\n", elem->name);
+#endif
+  while (eptr) {
+    if (IS_BEND(eptr->type)) {
+#ifdef DEBUG
+      printf("Returning bendPreceeds=1 for %s\n", elem->name);
+#endif
+      return eptr;
+    }
+    if (eptr->type==T_MARK || eptr->type==T_WATCH) {
+#ifdef DEBUG
+      printf("MARK/WATCH found for %s---continuing\n", elem->name);
+#endif
+      eptr = eptr->pred;
+    } else {
+#ifdef DEBUG
+      printf("Returning bendPreceeds=0 for %s (%s)\n", elem->name, eptr->name);
+#endif
+      return NULL;
+    }
+  }
+#ifdef DEBUG
+  printf("Returning bendPreceeds=0 for %s (end of line)\n", elem->name);
+#endif
+  return NULL;
+}
+
+ELEMENT_LIST *bendFollows(ELEMENT_LIST *elem)
+{
+  ELEMENT_LIST *eptr;
+  eptr = elem->succ;
+#ifdef DEBUG
+  printf("Checking bendFollows for %s\n", elem->name);
+#endif
+  while (eptr) {
+    if (IS_BEND(eptr->type)) {
+#ifdef DEBUG
+      printf("Returning bendFollows=1 for %s\n", elem->name);
+#endif
+      return eptr;
+    }
+    if (eptr->type==T_MARK || eptr->type==T_WATCH) {
+#ifdef DEBUG
+      printf("MARK/WATCH found for %s---continuing\n",elem->name);
+#endif
+      eptr = eptr->succ;
+    } else {
+#ifdef DEBUG
+      printf("Returning bendFollows=0 for %s (%s)\n", elem->name, eptr->name);
+#endif
+      return NULL;
+    }
+  }
+#ifdef DEBUG
+  printf("Returning bendFollows=0 for %s (end of line)\n", elem->name);
+#endif
+  return NULL;
+}
+
