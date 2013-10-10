@@ -385,6 +385,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #endif
       /* If this element is not a bend but previous was a bend and next element is not a bend, have all the required information for vertex computation */
       if (elem->pred!=NULL && (preceeds=bendPreceeds(elem))!=NULL && bendFollows(elem)==NULL) {
+        /* See http://mathworld.wolfram.com/Line-LineIntersection.html for an explanation of the method.
+           Also Hill, F. S. Jr. "The Pleasures of 'Perp Dot' Products." Ch. II.5 in Graphics Gems IV (Ed. P. S. Heckbert). San Diego: Academic Press, pp. 138-148, 1994. 
+           */
         x3->ve[0] = V0->a[0][0];
         x3->ve[1] = V0->a[1][0];
         x3->ve[2] = V0->a[2][0];
