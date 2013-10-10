@@ -19,7 +19,6 @@
 
 static SDDS_TABLE SDDS_floor;
 
-
 #define IC_S 0
 #define IC_X 1
 #define IC_Y 2
@@ -382,16 +381,30 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
           VEC *a, *b, *c, *cxb, *axb;
           double ds;
           x1x2Ready = 0;
+
           a = vec_get(3);
           b = vec_get(3);
           c = vec_get(3);
-          axb = vec_get(3);
-          cxb = vec_get(3);
           vec_add(x2, x1, 1, -1, a);
           vec_add(x4, x3, 1, -1, b);
           vec_add(x3, x1, 1, -1, c);
+          axb = vec_get(3);
+          cxb = vec_get(3);
           vec_cross(c, b, cxb);
           vec_cross(a, b, axb);
+
+#ifdef DEBUG
+          printf("x1 = (%le, %le, %le)\n", x1->ve[0],x1->ve[1],x1->ve[2]);
+          printf("x2 = (%le, %le, %le)\n", x2->ve[0],x2->ve[1],x2->ve[2]);
+          printf("x3 = (%le, %le, %le)\n", x3->ve[0],x3->ve[1],x3->ve[2]);
+          printf("x4 = (%le, %le, %le)\n", x4->ve[0],x4->ve[1],x4->ve[2]);
+          printf("a = (%le, %le, %le)\n", a->ve[0],a->ve[1],a->ve[2]);
+          printf("b = (%le, %le, %le)\n", b->ve[0],b->ve[1],b->ve[2]);
+          printf("c = (%le, %le, %le)\n", c->ve[0],c->ve[1],c->ve[2]);
+          printf("axb = (%le, %le, %le)\n", axb->ve[0],axb->ve[1],axb->ve[2]);
+          printf("cxb = (%le, %le, %le)\n", cxb->ve[0],cxb->ve[1],cxb->ve[2]);
+#endif
+
           ds = vec_dot(cxb, axb)/vec_dot(axb, axb);
           vec_add(x1, a, 1, ds, c);
           sprintf(label, "%s-VP", elem->pred->name);

@@ -808,15 +808,15 @@ void matrix_scmul(MAT *mat1, double scalar)
     mat1->base[i] *= scalar;
 }
 
-VEC *vec_add(VEC *a, VEC *b, double as, double bs, VEC *diff)
-/* diff = as*a + bs*b */
+VEC *vec_add(VEC *a, VEC *b, double as, double bs, VEC *sum)
+/* sum = as*a + bs*b */
 {
   long i;
-  if (a->dim != b->dim || a->dim!=diff->dim)
+  if (a->dim != b->dim || a->dim!=sum->dim)
     return NULL;
   for (i=0; i<a->dim; i++)
-    diff->ve[i] = as*a->ve[i] + bs*b->ve[i];
-  return diff;
+    sum->ve[i] = as*a->ve[i] + bs*b->ve[i];
+  return sum;
 }
 
 double vec_dot(VEC *a, VEC *b)
@@ -828,6 +828,7 @@ double vec_dot(VEC *a, VEC *b)
     return -1;
   for (i=sum=0; i<a->dim ; i++)
     sum += a->ve[i]*b->ve[i];
+  return sum;
 }
 
 VEC *vec_cross(VEC *a, VEC *b, VEC *out) 
