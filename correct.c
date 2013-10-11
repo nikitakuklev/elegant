@@ -1320,15 +1320,20 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       sl_index = CM->sl_index[i_corr];
       kick_offset = SL->param_offset[sl_index];
 #if defined(DEBUG)
-      fprintf(stdout, "before = %e, ", *((double*)(corr->p_elem+kick_offset)));
+      fprintf(stdout, "name = %s#%ld, before = %e, ", corr->name, corr->occurence, *((double*)(corr->p_elem+kick_offset)));
       fflush(stdout);
 #endif
       if (iteration==0)
         CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
       *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)*fraction;
+      if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
+        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen\n",
+               corr->name, corr->occurence, fabs(*((double*)(corr->p_elem+kick_offset))), SL->corr_limit[sl_index]);
+        printf("fraction=%e -> kick = %e\n", fraction, *((double*)(corr->p_elem+kick_offset)));
+      }
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
-      fprintf(stdout, "after = %e\n", *((double*)(corr->p_elem+kick_offset)));
+      fprintf(stdout, "after = %e, limit = %le, sl_index = %ld\n", *((double*)(corr->p_elem+kick_offset)), SL->corr_limit[sl_index], sl_index);
       fflush(stdout);
 #endif
       if (corr->matrix) {
@@ -1358,6 +1363,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
   return(1);
 }
+#undef DEBUG
 
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
                               LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method)
@@ -1372,6 +1378,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   double response;
   
   log_entry("one_to_one_trajcor_plane");
+#ifdef DEBUG
+  printf("Performing one-to-X correction of trajectory for plane %ld\n", coord);
+#endif
   
   if (!matrix_check(CM->C))
     bombElegant("corrupted correction matrix detected (one_to_one_trajcor_plane)", NULL);
@@ -1524,9 +1533,14 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       /* Record the new kick strength */
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
-      fprintf(stdout, ", param = %e, fraction=%e\n", param, fraction);
+      fprintf(stdout, ", param = %e, fraction=%e -> kick = %e\n", param, fraction, *((double*)(corr->p_elem+kick_offset)));
       fflush(stdout);
 #endif
+      if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
+        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen\n",
+               corr->name, corr->occurence, fabs(*((double*)(corr->p_elem+kick_offset))), SL->corr_limit[sl_index]);
+        printf("param = %e, fraction=%e -> kick = %e\n", param, fraction, *((double*)(corr->p_elem+kick_offset)));
+      }
       if (corr->matrix) {
         free_matrices(corr->matrix);
         tfree(corr->matrix);
@@ -1808,7 +1822,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     /* advance to position of next corrector */
     if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index)))
       break;
-    if (steering_corrector(corr, SL, plane) && match_string(corr->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0) {
+    if (steering_corrector(corr, SL, plane) && (index=match_string(corr->name, SL->corr_name, SL->n_corr_types, WILDCARD_MATCH))>=0) {
       *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
       (*ucorr)[*ncor] = corr;
       *sl_index = trealloc(*sl_index, sizeof(**sl_index)*(*ncor+1));
