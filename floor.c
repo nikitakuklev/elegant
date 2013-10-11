@@ -20,23 +20,25 @@
 static SDDS_TABLE SDDS_floor;
 
 #define IC_S 0
-#define IC_X 1
-#define IC_Y 2
-#define IC_Z 3
-#define IC_THETA 4
-#define IC_PHI 5
-#define IC_PSI 6
-#define IC_ELEMENT 7
-#define IC_OCCURENCE 8
-#define IC_TYPE 9
+#define IC_DS 1
+#define IC_X 2
+#define IC_Y 3
+#define IC_Z 4
+#define IC_THETA 5
+#define IC_PHI 6
+#define IC_PSI 7
+#define IC_ELEMENT 8
+#define IC_OCCURENCE 9
+#define IC_TYPE 10
 #ifdef INCLUDE_WIJ 
-#define IC_W11 10
-#define N_COLUMNS 19
+#define IC_W11 11
+#define N_COLUMNS 20
 #else
-#define N_COLUMNS 10
+#define N_COLUMNS 11
 #endif
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
+    {"ds", "&column name=ds, units=m, type=double, description=\"Distance change\" &end"},
     {"X", "&column name=X, units=m, type=double, description=\"Transverse survey coordinate\" &end"},
     {"Y", "&column name=Y, units=m, type=double, description=\"Transverse survey coordinate\" &end"},
     {"Z", "&column name=Z, units=m, type=double, description=\"Longitudinal survey coordinate\" &end"},
@@ -182,7 +184,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
 
   row_index = 0;
   if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-                         IC_S, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
+                         IC_S, (double)0.0, IC_DS, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
                          IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
                          IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
     SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0)");
@@ -367,12 +369,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #ifdef DEBUG
         printf("Setting x1 and x2\n");
 #endif
-        x2->ve[0] = V0->a[0][0];
-        x2->ve[1] = V0->a[1][0];
-        x2->ve[2] = V0->a[2][0];
-        x1->ve[0] = V0->a[0][0] - W0->a[0][2];
-        x1->ve[1] = V0->a[1][0] - W0->a[1][2];
-        x1->ve[2] = V0->a[2][0] - W0->a[2][2];
+        x1->ve[0] = V0->a[0][0];
+        x1->ve[1] = V0->a[1][0];
+        x1->ve[2] = V0->a[2][0];
+        x2->ve[0] = V0->a[0][0] - W0->a[0][2];
+        x2->ve[1] = V0->a[1][0] - W0->a[1][2];
+        x2->ve[2] = V0->a[2][0] - W0->a[2][2];
         sVertex = elem->pred->end_pos - 1;
         anglesVertex[0] = *theta;
         anglesVertex[1] = *phi;
@@ -431,7 +433,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
           vec_add(x1, a, 1, ds, c);
           sprintf(label, "%s-VP", preceeds->name);
           if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-                                 IC_S, sVertex+ds,
+                                 IC_S, sVertex+ds, IC_DS, ds,
                                  IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
                                  IC_THETA, anglesVertex[0], IC_PHI, anglesVertex[1], IC_PSI, anglesVertex[2],
                                  IC_ELEMENT, label, IC_OCCURENCE, elem->pred->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
@@ -454,37 +456,6 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     psi0 = *psi;
     m_identity(S);
     if (is_bend || is_mirror) {
-#if 0==1      
-      if (!is_mirror && SDDS_floor && (include_vertices || vertices_only)) {
-	/* vertex point is reached by drifting by distance rho*tan(angle/2) */
-	R->a[0][0] = R->a[1][0] = 0;
-	if (angle && rho)
-	  R->a[2][0] = fabs(rho*tan(angle/2));
-	else
-	  R->a[2][0] = length/2;
-	m_mult(tempV, W0, R);
-	m_add(V1, tempV, V0);
-	sprintf(label, "%s-VP", elem->name);
-	if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-			       IC_S, *s+R->a[2][0],
-			       IC_X, V1->a[0][0], IC_Y, V1->a[1][0], IC_Z, V1->a[2][0], 
-			       IC_THETA, *theta, IC_PHI, *phi, IC_PSI, *psi,
-			       IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
-	  SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-#ifdef INCLUDE_WIJ
-	for (iw=0; iw<3; iw++) 
-	  for (jw=0; jw<3; jw++) 
-	    if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-				   IC_W11+iw*3+jw, W1->a[iw][jw], -1)) {
-	      SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1a)");
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    }
-#endif
-	row_index++;
-      }
-#endif
       if (angle && !isnan(rho)) {
         if (!is_mirror) {
           R->a[0][0] = rho*(cos(angle)-1);
@@ -532,19 +503,26 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       sangle[0] = (*theta+theta0)/2;
       sangle[1] = (*phi+phi0)/2;
       sangle[2] = (*psi+psi0)/2;
-      *s += length/2;
       sprintf(label, "%s-C", elem->name);
+      if (SDDS_floor &&
+          (!vertices_only || (!last_elem || elem==last_elem))) {
+        if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+                               IC_S, *s+length/2, IC_DS, length, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
+                               IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
+                               IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
+                               entity_name[elem->type], -1)) {
+          SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+      row_index++;
     }
-    else {
-      for (i=0; i<3; i++)
-	coord[i] = V1->a[i][0];
-      sangle[0] = *theta;
-      sangle[1] = *phi;
-      sangle[2] = *psi;
-      *s += length;
-      length = 0;
-      strcpy_ss(label, elem->name);
-    }
+    for (i=0; i<3; i++)
+      coord[i] = V1->a[i][0];
+    sangle[0] = *theta;
+    sangle[1] = *phi;
+    sangle[2] = *psi;
+    strcpy_ss(label, elem->name);
   } else {
     /* floor coordinate reset */
     long i;
@@ -560,7 +538,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   if (SDDS_floor &&
       (!vertices_only || (!last_elem || elem==last_elem))) {
     if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-                           IC_S, *s, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
+                           IC_S, *s+length, IC_DS, length, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
                            IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
                            IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
                            entity_name[elem->type], -1)) {
@@ -578,7 +556,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #endif
     row_index++;
   }
-  *s += length/2;
+  *s += length;
   return row_index;
 }
 
