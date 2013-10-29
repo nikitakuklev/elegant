@@ -268,6 +268,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     csbend->b[6] = csbend->k7*rho0;
     csbend->b[7] = csbend->k8*rho0;
   }
+  if (csbend->xReference) {
+    double term = 1/csbend->xReference, f[8];
+    long i;
+    f[0] = csbend->f1;
+    f[1] = csbend->f2;
+    f[2] = csbend->f3;
+    f[3] = csbend->f4;
+    f[4] = csbend->f5;
+    f[5] = csbend->f6;
+    f[6] = csbend->f7;
+    f[7] = csbend->f8;
+    for (i=0; i<=8; i++) {
+      csbend->b[i] += f[i]*term;
+      term *= (i+2)/csbend->xReference;
+    }    
+  }
   
   he1 = csbend->h1;
   he2 = csbend->h2;

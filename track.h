@@ -880,7 +880,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 48
+#define N_CSBEND_PARAMS 56
 #define N_MATTER_PARAMS 11
 #define N_RFMODE_PARAMS 25
 #define N_TRFMODE_PARAMS 22
@@ -2045,6 +2045,7 @@ typedef struct {
     long kick_limit_scaling;
     long use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
+    double xReference, f1, f2, f3, f4, f5, f6, f7, f8;
     long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
     /* for internal use only: */
