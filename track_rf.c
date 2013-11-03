@@ -15,10 +15,8 @@
 #include "mdb.h"
 #include "track.h"
 
-long find_nearby_array_entry(double *entry, long n, double key);
 void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
 void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central);
-double linear_interpolation(double *y, double *t, long n, double t0, long i);
 void set_up_mrfdf(MRFDF *rf_param, double **initial, long n_particles, double pc_central);
 
 void track_through_rf_deflector(
