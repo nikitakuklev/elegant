@@ -820,7 +820,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_APPLE 107
 #define T_MRFDF 108
 #define T_CORGPIPE 109
-#define N_TYPES   110
+#define T_LRWAKE 110
+#define N_TYPES   111
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -937,6 +938,7 @@ extern char *entity_text[N_TYPES];
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
+#define N_LRWAKE_PARAMS 12
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2400,6 +2402,26 @@ typedef struct {
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
   } CORGPIPE;
 
+/* names and storage structure for long-range wake physical parameters */
+extern PARAMETER lrwake_param[N_LRWAKE_PARAMS];
+
+typedef struct {
+  char *inputFile;
+  char *WColumn[4]; /* t, Wx, Wy, Wz column names */
+  double factor;             /* factor to multiply by (e.g., number of cells) */
+  double xFactor, yFactor, zFactor;
+  long nBunches, turnsToKeep, rampPasses;
+  /* for internal use: */
+  long initialized;          /* indicates that files are loaded */
+  /* variables for holding data from users input file */
+  long wakePoints;
+  double *W[4];              /* t, Wx, Wy, Wz */
+  double dt;
+  /* bunch history data---centroids of prior bunches */
+  long nHistory; /* number of historical bunches */
+  double *tHistory, *QHistory, *xHistory, *yHistory;
+  } LRWAKE;
+
 /* names and storage structure for transverse wake physical parameters */
 extern PARAMETER trwake_param[N_TRWAKE_PARAMS];
 
@@ -3218,6 +3240,9 @@ long interpolateApertureData(double z, APERTURE_DATA *apData,
 long imposeApertureData(double **coord, long np, double **accepted,
                         double z, double Po, APERTURE_DATA *apData);
 void resetApertureData(APERTURE_DATA *apData);
+
+double linear_interpolation(double *y, double *t, long n, double t0, long i);
+long find_nearby_array_entry(double *entry, long n, double key);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,
@@ -3529,6 +3554,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
+void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
+			  RUN *run, long i_pass, double revolutionLength, CHARGE *charge);
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);

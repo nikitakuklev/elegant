@@ -1465,6 +1465,10 @@ long do_tracking(
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
                                         nLeft, accepted, z, *P_central, 1, 0, 2, 2);
 	      break;
+	    case T_LRWAKE:
+	      track_through_lrwake(coord, nToTrack, (LRWAKE*)eptr->p_elem, P_central, run, i_pass, beamline->revolution_length,
+				   charge);
+	      break;
 	    case T_WAKE:
 	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass,
 				 charge);

@@ -17,8 +17,6 @@
 #include "table.h"
 
 void set_up_ramped_rfca(RAMPRF *ramprf);
-long find_nearby_array_entry(double *entry, long n, double key);
-double linear_interpolation(double *y, double *t, long n, double t0, long i);
 
 long ramped_rf_cavity(
     double **part, long np, RAMPRF *ramprf, double P_central, double L_central, double zEnd, long pass

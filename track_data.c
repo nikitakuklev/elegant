@@ -53,7 +53,7 @@ char *entity_name[N_TYPES] = {
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
-    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE",
+    "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -192,7 +192,8 @@ and phase modulation.",
     "Multiplies radiation integrals by a given factor.  Use to compute emittance for collection of various types of cells.",
     "Tracks through a wiggler using generate function method of J. Bahrdt and G. Wuestefeld (BESSY, Berlin, Germany).",
     "Zero-length Multipole RF DeFlector from dipole to decapole",
-    "A corrugated round pipe, commonly used as a dechirper in linacs."
+    "A corrugated round pipe, commonly used as a dechirper in linacs.",
+    "Long-range (inter-bunch and inter-turn) longitudinal and transverse wake"
     } ;
 
 QUAD quad_example;
@@ -1651,6 +1652,23 @@ PARAMETER corgpipe_param[N_CORGPIPE_PARAMS] = {
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&corgpipe_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     };
 
+LRWAKE lrwake_example;
+/* LRWAKE physical parameters */
+PARAMETER lrwake_param[N_LRWAKE_PARAMS] = {
+    {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&lrwake_example.inputFile), NULL, 0.0, 0, "name of file giving Green function"},
+    {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[0]), NULL, 0.0, 0, "column in INPUTFILE containing time data"},
+    {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[1]), NULL, 0.0, 0, "column in INPUTFILE containing longitudinal Green function"},
+    {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[2]), NULL, 0.0, 0, "column in INPUTFILE containing horizontal Green function"},
+    {"WZCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[3]), NULL, 0.0, 0, "column in INPUTFILE containing vertical Green function"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.factor), NULL, 1.0, 0, "factor to multiply wakes by"},
+    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal"},
+    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal"},
+    {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical"},
+    {"N_BUNCHES", "", IS_LONG, 0, (long)((char *)&lrwake_example.nBunches), NULL, 0.0, 0, "number of bunches"},
+    {"TURNS_TO_KEEP", "", IS_LONG, 0, (long)((char *)&lrwake_example.turnsToKeep), NULL, 0.0, 128, "number of turns of data to retain"},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&lrwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
+};
+
 TRWAKE trwake_example;
 /* TRWAKE physical parameters */
 PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
@@ -2581,6 +2599,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
     { N_MRFDF_PARAMS,  MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
     { N_CORGPIPE_PARAMS, MAY_CHANGE_ENERGY|MPALGORITHM|MAT_LEN_NCAT, sizeof(CORGPIPE), corgpipe_param},
+    { N_LRWAKE_PARAMS, 0, sizeof(LRWAKE), lrwake_param},
 } ;
 
 void compute_offsets()
