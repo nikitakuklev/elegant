@@ -42,10 +42,9 @@ if !$found {
 if ![file exists $rootname.twi] {
     return -code error "twi file not found"
 }
-if [expr $H<=0] {
+if [expr $H==0] {
     set pCentral [exec sdds2stream -parameter=pCentral $rootname.twi]
-    set H [expr $pCentral*0.51099906e6/2.99792458e+08]
-    puts stderr "H=$H"
+    set H [expr -$pCentral*0.51099906e6/2.99792458e+08]
 }
 
 # combine repeated elements 
@@ -127,7 +126,7 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
     "{-define=col,AngleDeg,Angle rtod,units=deg}" \
     "{-define=col,B1,K1 $H *,units=T/m}" \
     "{-define=col,B2,K2 $H *,units=T/m^2}" \
-    "{-define=col,Ec,0.665 E sqr * B *,units=keV}" \
+    "{-define=col,Ec,0.665 E sqr * B * abs,units=keV}" \
     "{-define=col,TotalPower,E 4 pow 8.846e4 * rho / I0 1e3 / * 2 / pi / Angle *,units=W}" \
     "{-define=col,IntegratedPowerDensity,TotalPower Angle / 1e3 /,units=W/mrad}" \
     "{-define=col,PowerDensity,TotalPower Angle / 21 * 32 / $pCentral * 1e6 /,units=W/mrad\$a2\$n}" \
