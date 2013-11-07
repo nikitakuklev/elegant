@@ -17,28 +17,79 @@ void convolveArrays(double *output, long outputs,
                     double *a1, long n1,
                     double *a2, long n2);
 
-/* #define DEBUG 1 */
+/* #define DEBUG 1  */
+
+void determine_bucket_assignments(double **part, double P0, double **time, long **ibParticle, long np, long nBuckets, double revolutionLength) 
+{
+  double tmin, tmax, beta0;
+  double Trev, dtBucket, tStart;
+  long ip, ib;
+
+  /* Compute time coordinate of each particle */
+  *time = tmalloc(sizeof(**time)*np);
+  computeTimeCoordinates(*time, P0, part, np);
+
+  find_min_max(&tmin, &tmax, *time, np);
+
+  /* define boundaries of buckets */
+  beta0 = P0/sqrt(P0*P0+1);
+  Trev = revolutionLength/(beta0*c_mks);
+  dtBucket = Trev/nBuckets;
+  tStart = tmin-dtBucket/2;
+
+  *ibParticle = tmalloc(sizeof(**ibParticle)*np);
+  for (ip=0; ip<np; ip++) {
+    ib = ((*time)[ip]-tStart)/dtBucket;
+    if (ib<0 || ib>=nBuckets) {
+      fprintf(stderr, "Error: particle outside LRWAKE region, ib=%ld, nBuckets=%ld\n", ib, nBuckets);
+      fprintf(stderr, "t=%21.15e, tStart=%21.15e, dtBucket=%21.15e\n", (*time)[ip], tStart, dtBucket);
+      exitElegant(1);
+    }
+    (*ibParticle)[ip] = ib;
+#ifdef DEBUG
+    fprintf(stderr, "Particle %ld, t=%le assigned to bucket %ld\n", ip, (*time)[ip], ib);
+#endif
+  }
+}
 
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0Input,
 			  RUN *run, long i_pass, double revolutionLength, CHARGE *charge
                         )
 {
-  double *tBunch = NULL;     /* array for <t> for bunches */
-  double *xBunch = NULL;     /* array for Q*<x> for bnuches */
-  double *yBunch = NULL;     /* array for Q*<y> for bunches */
-  double *QBunch = NULL;     /* array for Q for bunches */
+  double *tBucket = NULL;     /* array for <t> for buckets */
+  double *xBucket = NULL;     /* array for Q*<x> for bnuches */
+  double *yBucket = NULL;     /* array for Q*<y> for buckets */
+  double *QBucket = NULL;     /* array for Q for buckets */
 
-  double *VzBunch, *VxBunch, *VyBunch; /* arrays of voltage at each bunch */
+  double *VzBucket, *VxBucket, *VyBucket; /* arrays of voltage at each bucket */
   double *time = NULL;        /* array to record arrival time of each particle */
-  double *ibParticle = NULL;  /* array of bunch indices for particles */
   long ib, ip;
-  double factor, tmin, tmax, tmean=0, P0, beta0, rampFactor, dt;
-  double tStart, dtBunch, Trev;
-#if USE_MPI
-  double *buffer;
+  double factor, P0, rampFactor;
+  long *ibParticle;
+#ifdef DEBUG
+  static FILE *fph = NULL, *fpw = NULL;
+  if (fph==NULL) {
+    fph = fopen("lrwake.history", "w");
+    fprintf(fph, "SDDS1\n");
+    fprintf(fph, "&parameter name=Pass type=long &end\n");
+    fprintf(fph, "&column name=ib type=long &end\n");
+    fprintf(fph, "&column name=tMean units=s type=double &end\n");
+    fprintf(fph, "&column name=QSum units=C type=double &end\n");
+    fprintf(fph, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+  if (fpw==NULL) {
+    fpw = fopen("lrwake.wake", "w");
+    fprintf(fpw, "SDDS1\n");
+    fprintf(fpw, "&parameter name=Pass type=long &end\n");
+    fprintf(fpw, "&column name=t units=s type=double &end\n");
+    fprintf(fpw, "&column name=Vz units=V type=double &end\n");
+    fprintf(fpw, "&data mode=ascii no_row_counts=1 &end\n");
+  }
 #endif
 
   set_up_lrwake(wakeData, run, i_pass, np, charge);
+  P0 = *P0Input;
+  determine_bucket_assignments(part, P0, &time, &ibParticle, np, wakeData->nBuckets, revolutionLength);
 #ifdef DEBUG
   fputs("set_up_lrwake returned\n", stderr);
 #endif
@@ -47,107 +98,94 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     rampFactor = 1;
   else
     rampFactor = (i_pass+1.0)/wakeData->rampPasses;
-  P0 = *P0Input;
-  beta0 = P0/sqrt(P0*P0+1);
 
-  /* Compute time coordinate of each particle */
-  time = tmalloc(sizeof(*time)*np);
-  tmean = computeTimeCoordinates(time, P0, part, np);
+  tBucket = tmalloc(sizeof(*tBucket)*wakeData->nBuckets);
+  xBucket = tmalloc(sizeof(*xBucket)*wakeData->nBuckets);
+  yBucket = tmalloc(sizeof(*yBucket)*wakeData->nBuckets);
+  QBucket = tmalloc(sizeof(*QBucket)*wakeData->nBuckets);
+  for (ib=0; ib<wakeData->nBuckets; ib++)
+    xBucket[ib] = yBucket[ib] = tBucket[ib] = QBucket[ib] = 0;
 
-  find_min_max(&tmin, &tmax, time, np);
-
-  /* define boundaries of bunches */
-  Trev = revolutionLength/(beta0*c_mks);
-  dtBunch = Trev/wakeData->nBunches;
-  tStart = tmin-dtBunch/2;
-
-  tBunch = tmalloc(sizeof(*tBunch)*wakeData->nBunches);
-  xBunch = tmalloc(sizeof(*xBunch)*wakeData->nBunches);
-  yBunch = tmalloc(sizeof(*yBunch)*wakeData->nBunches);
-  QBunch = tmalloc(sizeof(*QBunch)*wakeData->nBunches);
-  for (ib=0; ib<wakeData->nBunches; ib++)
-    xBunch[ib] = yBunch[ib] = tBunch[ib] = QBunch[ib] = 0;
-
-  ibParticle = tmalloc(sizeof(*ibParticle)*np);
   for (ip=0; ip<np; ip++) {
-    ib = (time[ip]-tStart)/dtBunch;
-    ibParticle[ip] = ib;
-    if (ib<0 || ib>=wakeData->nBunches) {
-      fprintf(stderr, "Error: particle outside LRWAKE region, ib=%ld, nBunches=%ld\n", ib, wakeData->nBunches);
-      fprintf(stderr, "t=%21.15e, tStart=%21.15e, dtBunch=%21.15e\n", time[ip], tStart, dtBunch);
-      exitElegant(1);
-    }
-    tBunch[ib]  += time[ip];
-    QBunch[ib]  += 1;
-    xBunch[ib] += part[ip][0];
-    yBunch[ib] += part[ip][2];
+    ib = ibParticle[ip];
+    tBucket[ib] += time[ip];
+    QBucket[ib] += 1;
+    xBucket[ib] += part[ip][0];
+    yBucket[ib] += part[ip][2];
   }
-  /* Compute mean time and space position of particles within bunches, multiplied by charge */
-  for (ib=0; ib<wakeData->nBunches; ib++) {
-    if (QBunch[ib]) {
-      tBunch[ib] /= QBunch[ib]; /* QBunch[ib] holds particle count right now */
-      xBunch[ib] /= QBunch[ib];
-      yBunch[ib] /= QBunch[ib];
-      QBunch[ib] *= charge->macroParticleCharge; 
+  /* Compute mean time and space position of particles within buckets, multiplied by charge */
+  for (ib=0; ib<wakeData->nBuckets; ib++) {
+    if (QBucket[ib]) {
+      /* QBucket[ib] holds particle count at this point */
+      tBucket[ib] /= QBucket[ib]; 
+      xBucket[ib] /= QBucket[ib];
+      yBucket[ib] /= QBucket[ib];
+      /* multiply by macro-particle charge to QBucket means what it says */
+      QBucket[ib] *= charge->macroParticleCharge; 
     }
   }
 
   /* Move the existing history data back */
-  memmove(wakeData->tHistory, wakeData->tHistory+wakeData->nBunches, sizeof(*(wakeData->tHistory))*(wakeData->nHistory-wakeData->nBunches));
-  memmove(wakeData->QHistory, wakeData->QHistory+wakeData->nBunches, sizeof(*(wakeData->QHistory))*(wakeData->nHistory-wakeData->nBunches));
-  memmove(wakeData->xHistory, wakeData->xHistory+wakeData->nBunches, sizeof(*(wakeData->xHistory))*(wakeData->nHistory-wakeData->nBunches));
-  memmove(wakeData->yHistory, wakeData->yHistory+wakeData->nBunches, sizeof(*(wakeData->yHistory))*(wakeData->nHistory-wakeData->nBunches));
+  memmove(wakeData->tHistory, wakeData->tHistory+wakeData->nBuckets, sizeof(*(wakeData->tHistory))*(wakeData->nHistory-wakeData->nBuckets));
+  memmove(wakeData->QHistory, wakeData->QHistory+wakeData->nBuckets, sizeof(*(wakeData->QHistory))*(wakeData->nHistory-wakeData->nBuckets));
+  memmove(wakeData->xHistory, wakeData->xHistory+wakeData->nBuckets, sizeof(*(wakeData->xHistory))*(wakeData->nHistory-wakeData->nBuckets));
+  memmove(wakeData->yHistory, wakeData->yHistory+wakeData->nBuckets, sizeof(*(wakeData->yHistory))*(wakeData->nHistory-wakeData->nBuckets));
 
   /* Move the new history data into the buffer */
-  memmove(wakeData->tHistory+wakeData->nHistory-wakeData->nBunches, tBunch, sizeof(*tBunch)*wakeData->nBunches);
-  memmove(wakeData->QHistory+wakeData->nHistory-wakeData->nBunches, QBunch, sizeof(*QBunch)*wakeData->nBunches);
-  memmove(wakeData->xHistory+wakeData->nHistory-wakeData->nBunches, xBunch, sizeof(*xBunch)*wakeData->nBunches);
-  memmove(wakeData->yHistory+wakeData->nHistory-wakeData->nBunches, yBunch, sizeof(*yBunch)*wakeData->nBunches);
+  memmove(wakeData->tHistory+wakeData->nHistory-wakeData->nBuckets, tBucket, sizeof(*tBucket)*wakeData->nBuckets);
+  memmove(wakeData->QHistory+wakeData->nHistory-wakeData->nBuckets, QBucket, sizeof(*QBucket)*wakeData->nBuckets);
+  memmove(wakeData->xHistory+wakeData->nHistory-wakeData->nBuckets, xBucket, sizeof(*xBucket)*wakeData->nBuckets);
+  memmove(wakeData->yHistory+wakeData->nHistory-wakeData->nBuckets, yBucket, sizeof(*yBucket)*wakeData->nBuckets);
 
 #ifdef DEBUG
-  fprintf(stderr, "History data\n");
-  for (ib=0; ib<wakeData->nHistory; ib++) {
-    fprintf(stderr, "ib=%ld, t=%e, Q=%e, x=%e, y=%e\n", 
-	    ib, wakeData->tHistory[ib], wakeData->QHistory[ib], wakeData->xHistory[ib], wakeData->yHistory[ib]);
-  }
+  fprintf(fph, "%ld\n", i_pass); 
+  for (ib=0; ib<wakeData->nHistory; ib++) 
+    fprintf(fph, "%ld %e %e\n", ib, wakeData->tHistory[ib], wakeData->QHistory[ib]);
+  fprintf(fph, "\n");
+  fflush(fph);
 #endif
 
-  /* Compute the wake function at each new bunch */
-  VxBunch = tmalloc(sizeof(*VxBunch)*wakeData->nBunches);
-  VyBunch = tmalloc(sizeof(*VyBunch)*wakeData->nBunches);
-  VzBunch = tmalloc(sizeof(*VzBunch)*wakeData->nBunches);
-  for (ib=0; ib<wakeData->nBunches; ib++) {
+  /* Compute the wake function at each new bucket */
+  VxBucket = tmalloc(sizeof(*VxBucket)*wakeData->nBuckets);
+  VyBucket = tmalloc(sizeof(*VyBucket)*wakeData->nBuckets);
+  VzBucket = tmalloc(sizeof(*VzBucket)*wakeData->nBuckets);
+  for (ib=0; ib<wakeData->nBuckets; ib++) {
     long ibh;
-    VxBunch[ib] = VyBunch[ib] = VzBunch[ib ] = 0;
+    VxBucket[ib] = VyBucket[ib] = VzBucket[ib ] = 0;
 #ifdef DEBUG
-    fprintf(stderr, "bin %ld: summing from %ld to %ld\n", ib, 0, (wakeData->nHistory-wakeData->nBunches+ib)-1);
+    fprintf(stderr, "bin %ld: summing from %ld to %ld\n", ib, 0, (wakeData->nHistory-wakeData->nBuckets+ib)-1);
 #endif
-    for (ibh=0; ibh<wakeData->nHistory-wakeData->nBunches+ib; ibh++) {
+    for (ibh=0; ibh<wakeData->nHistory-wakeData->nBuckets+ib; ibh++) {
       if (wakeData->QHistory[ibh]) {
 	long it;
-	dt = tBunch[ib] - wakeData->tHistory[ibh];
+	double dt;
+	dt = tBucket[ib] - wakeData->tHistory[ibh];
 	/* interpolate wake functions */
 	it = find_nearby_array_entry(wakeData->W[0], wakeData->wakePoints, dt);
+	/*
 #ifdef DEBUG
 	fprintf(stderr, "ib=%ld, ibh=%ld, dt=%le, it=%ld\n", ib, ibh, dt, it);
 #endif
+	*/
 	if (wakeData->W[1])
-	  VxBunch[ib] += wakeData->xFactor*wakeData->QHistory[ibh]*wakeData->xHistory[ibh]*
+	  VxBucket[ib] += wakeData->xFactor*wakeData->QHistory[ibh]*wakeData->xHistory[ibh]*
 	    linear_interpolation(wakeData->W[1], wakeData->W[0], wakeData->wakePoints, dt, it);
 	if (wakeData->W[2])
-	  VyBunch[ib] += wakeData->yFactor*wakeData->QHistory[ibh]*wakeData->yHistory[ibh]*
+	  VyBucket[ib] += wakeData->yFactor*wakeData->QHistory[ibh]*wakeData->yHistory[ibh]*
 	    linear_interpolation(wakeData->W[2], wakeData->W[0], wakeData->wakePoints, dt, it);
 	if (wakeData->W[3])
-	  VzBunch[ib] += wakeData->zFactor*wakeData->QHistory[ibh]*
+	  VzBucket[ib] += wakeData->zFactor*wakeData->QHistory[ibh]*
 	    linear_interpolation(wakeData->W[3], wakeData->W[0], wakeData->wakePoints, dt, it);
       }
     }
   }
 
 #ifdef DEBUG
-  fprintf(stderr, "Wake data\n");
-  for (ib=0; ib<wakeData->nBunches; ib++)
-    fprintf(stderr, "t=%e, Vx=%e, Vy=%e, Vz=%e\n", tBunch[ib], VxBunch[ib], VyBunch[ib], VzBunch[ib]);
+  fprintf(fpw, "%ld\n", i_pass);
+  for (ib=0; ib<wakeData->nBuckets; ib++)
+    fprintf(fpw, "%e %e\n", tBucket[ib], VzBucket[ib]);
+  fprintf(fpw, "\n");
+  fflush(fpw);
 #endif
 
   for (ip=0; ip<np; ip++) {
@@ -155,23 +193,23 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     double dgam, pz;
     factor = wakeData->factor*rampFactor;
     ib = ibParticle[ip];
-    dgam = VzBunch[ib]/(1e6*particleMassMV)*factor;
+    dgam = VzBucket[ib]/(1e6*particleMassMV)*factor;
     add_to_particle_energy(part[ip], time[ip], P0, -dgam);
     pz = P0*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
-    part[ip][1] += VxBunch[ib]*factor/(1e6*particleMassMV)/pz;
-    part[ip][3] += VyBunch[ib]*factor/(1e6*particleMassMV)/pz;
+    part[ip][1] += VxBucket[ib]*factor/(1e6*particleMassMV)/pz;
+    part[ip][3] += VyBucket[ib]*factor/(1e6*particleMassMV)/pz;
   }
 
   /* Free memory */
   free(time);
-  free(tBunch);
-  free(xBunch);
-  free(yBunch);
-  free(QBunch);
+  free(tBucket);
+  free(xBucket);
+  free(yBucket);
+  free(QBucket);
   free(ibParticle);
-  free(VxBunch);
-  free(VyBunch);
-  free(VzBunch);
+  free(VxBucket);
+  free(VyBucket);
+  free(VzBucket);
 }
 
 typedef struct {
@@ -204,8 +242,8 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 
   wakeData->initialized = 1;
 
-  if (wakeData->nBunches<1)
-    bombElegant("n_bunches must be >1 for LRWAKE element", NULL);
+  if (wakeData->nBuckets<1)
+    bombElegant("n_buckets must be >1 for LRWAKE element", NULL);
 
   if (!wakeData->inputFile || !strlen(wakeData->inputFile))
     bombElegant("supply inputFile for LRWAKE element", NULL);
@@ -356,7 +394,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 
-  wakeData->nHistory = wakeData->turnsToKeep*wakeData->nBunches;
+  wakeData->nHistory = wakeData->turnsToKeep*wakeData->nBuckets;
 
   wakeData->tHistory = tmalloc(sizeof(*(wakeData->tHistory))*wakeData->nHistory);
   wakeData->xHistory = tmalloc(sizeof(*(wakeData->xHistory))*wakeData->nHistory);

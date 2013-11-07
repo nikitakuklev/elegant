@@ -2410,15 +2410,15 @@ typedef struct {
   char *WColumn[4]; /* t, Wx, Wy, Wz column names */
   double factor;             /* factor to multiply by (e.g., number of cells) */
   double xFactor, yFactor, zFactor;
-  long nBunches, turnsToKeep, rampPasses;
+  long nBuckets, turnsToKeep, rampPasses;
   /* for internal use: */
   long initialized;          /* indicates that files are loaded */
   /* variables for holding data from users input file */
   long wakePoints;
   double *W[4];              /* t, Wx, Wy, Wz */
   double dt;
-  /* bunch history data---centroids of prior bunches */
-  long nHistory; /* number of historical bunches */
+  /* bucket history data---centroids of prior buckets */
+  long nHistory; /* number of historical buckets */
   double *tHistory, *QHistory, *xHistory, *yHistory;
   } LRWAKE;
 

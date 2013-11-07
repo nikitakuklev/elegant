@@ -1664,7 +1664,7 @@ PARAMETER lrwake_param[N_LRWAKE_PARAMS] = {
     {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal"},
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal"},
     {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical"},
-    {"N_BUNCHES", "", IS_LONG, 0, (long)((char *)&lrwake_example.nBunches), NULL, 0.0, 0, "number of bunches"},
+    {"N_BUCKETS", "", IS_LONG, 0, (long)((char *)&lrwake_example.nBuckets), NULL, 0.0, 0, "number of buckets in one revolution"},
     {"TURNS_TO_KEEP", "", IS_LONG, 0, (long)((char *)&lrwake_example.turnsToKeep), NULL, 0.0, 128, "number of turns of data to retain"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&lrwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
 };
