@@ -17,7 +17,7 @@ void convolveArrays(double *output, long outputs,
                     double *a1, long n1,
                     double *a2, long n2);
 
-/* #define DEBUG 1  */
+/* #define DEBUG 1 */
 
 void determine_bucket_assignments(double **part, double P0, double **time, long **ibParticle, long np, long nBuckets, double revolutionLength) 
 {
@@ -25,11 +25,25 @@ void determine_bucket_assignments(double **part, double P0, double **time, long 
   double Trev, dtBucket, tStart;
   long ip, ib;
 
+#if DEBUG
+    fprintf(stdout, "Performing bucket assignment\n");
+#endif
+#if USE_MPI
+  if (isSlave || !notSinglePart) {
+#if DEBUG
+    fprintf(stdout, "...performing bucket assignment\n");
+#endif
+#endif
   /* Compute time coordinate of each particle */
   *time = tmalloc(sizeof(**time)*np);
   computeTimeCoordinates(*time, P0, part, np);
 
   find_min_max(&tmin, &tmax, *time, np);
+#if USE_MPI
+    fprintf(stdout, "finding global min/max\n");
+    find_global_min_max(&tmin, &tmax, np, workers);
+    fprintf(stdout, "done finding global min/max\n");
+#endif
 
   /* define boundaries of buckets */
   beta0 = P0/sqrt(P0*P0+1);
@@ -41,15 +55,20 @@ void determine_bucket_assignments(double **part, double P0, double **time, long 
   for (ip=0; ip<np; ip++) {
     ib = ((*time)[ip]-tStart)/dtBucket;
     if (ib<0 || ib>=nBuckets) {
-      fprintf(stderr, "Error: particle outside LRWAKE region, ib=%ld, nBuckets=%ld\n", ib, nBuckets);
-      fprintf(stderr, "t=%21.15e, tStart=%21.15e, dtBucket=%21.15e\n", (*time)[ip], tStart, dtBucket);
+      fprintf(stdout, "Error: particle outside LRWAKE region, ib=%ld, nBuckets=%ld\n", ib, nBuckets);
+      fprintf(stdout, "t=%21.15e, tStart=%21.15e, dtBucket=%21.15e\n", (*time)[ip], tStart, dtBucket);
       exitElegant(1);
     }
     (*ibParticle)[ip] = ib;
 #ifdef DEBUG
-    fprintf(stderr, "Particle %ld, t=%le assigned to bucket %ld\n", ip, (*time)[ip], ib);
+    fprintf(stdout, "Particle %ld, t=%le assigned to bucket %ld\n", ip, (*time)[ip], ib);
 #endif
   }
+
+#if USE_MPI
+  }
+#endif
+
 }
 
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0Input,
@@ -60,13 +79,16 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   double *xBucket = NULL;     /* array for Q*<x> for bnuches */
   double *yBucket = NULL;     /* array for Q*<y> for buckets */
   double *QBucket = NULL;     /* array for Q for buckets */
+  double *buffer;
 
   double *VzBucket, *VxBucket, *VyBucket; /* arrays of voltage at each bucket */
   double *time = NULL;        /* array to record arrival time of each particle */
   long ib, ip;
   double factor, P0, rampFactor;
   long *ibParticle;
+
 #ifdef DEBUG
+#if DEBUG>1
   static FILE *fph = NULL, *fpw = NULL;
   if (fph==NULL) {
     fph = fopen("lrwake.history", "w");
@@ -86,13 +108,24 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     fprintf(fpw, "&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
+#endif
+
+  if (isSlave || !notSinglePart) {
+#ifdef DEBUG
+    fprintf(stdout, "Running track_through_lrwake, isSlave=%ld, notSinglePart=%ld\n", isSlave, notSinglePart);
+#endif
 
   set_up_lrwake(wakeData, run, i_pass, np, charge);
+#ifdef DEBUG
+  fputs("set_up_lrwake returned\n", stdout);
+#endif
+
   P0 = *P0Input;
   determine_bucket_assignments(part, P0, &time, &ibParticle, np, wakeData->nBuckets, revolutionLength);
 #ifdef DEBUG
-  fputs("set_up_lrwake returned\n", stderr);
+  fputs("determine_bucket_assignment returned\n", stdout);
 #endif
+
   rampFactor = 0;
   if (i_pass>=(wakeData->rampPasses-1))
     rampFactor = 1;
@@ -113,6 +146,30 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     xBucket[ib] += part[ip][0];
     yBucket[ib] += part[ip][2];
   }
+
+#if USE_MPI
+    /* sum data across processors */
+
+    buffer = tmalloc(sizeof(*buffer)*wakeData->nBuckets);
+    MPI_Allreduce(tBucket, buffer, wakeData->nBuckets, MPI_DOUBLE, MPI_SUM, workers);
+    memcpy(tBucket, buffer, sizeof(*tBucket)*wakeData->nBuckets);
+
+    MPI_Allreduce(QBucket, buffer, wakeData->nBuckets, MPI_DOUBLE, MPI_SUM, workers);
+    memcpy(QBucket, buffer, sizeof(*QBucket)*wakeData->nBuckets);
+
+    if (wakeData->xFactor && wakeData->WColumn[1]) {
+      MPI_Allreduce(xBucket, buffer, wakeData->nBuckets, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(xBucket, buffer, sizeof(*xBucket)*wakeData->nBuckets);
+    }
+
+    if (wakeData->yFactor && wakeData->WColumn[2]) {
+      MPI_Allreduce(yBucket, buffer, wakeData->nBuckets, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(yBucket, buffer, sizeof(*yBucket)*wakeData->nBuckets);
+    }
+
+    free(buffer);
+#endif
+
   /* Compute mean time and space position of particles within buckets, multiplied by charge */
   for (ib=0; ib<wakeData->nBuckets; ib++) {
     if (QBucket[ib]) {
@@ -138,11 +195,13 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   memmove(wakeData->yHistory+wakeData->nHistory-wakeData->nBuckets, yBucket, sizeof(*yBucket)*wakeData->nBuckets);
 
 #ifdef DEBUG
+#if DEBUG>1
   fprintf(fph, "%ld\n", i_pass); 
   for (ib=0; ib<wakeData->nHistory; ib++) 
     fprintf(fph, "%ld %e %e\n", ib, wakeData->tHistory[ib], wakeData->QHistory[ib]);
   fprintf(fph, "\n");
   fflush(fph);
+#endif
 #endif
 
   /* Compute the wake function at each new bucket */
@@ -153,7 +212,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     long ibh;
     VxBucket[ib] = VyBucket[ib] = VzBucket[ib ] = 0;
 #ifdef DEBUG
-    fprintf(stderr, "bin %ld: summing from %ld to %ld\n", ib, 0, (wakeData->nHistory-wakeData->nBuckets+ib)-1);
+    fprintf(stdout, "bin %ld: summing from %ld to %ld\n", ib, 0, (wakeData->nHistory-wakeData->nBuckets+ib)-1);
 #endif
     for (ibh=0; ibh<wakeData->nHistory-wakeData->nBuckets+ib; ibh++) {
       if (wakeData->QHistory[ibh]) {
@@ -164,7 +223,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 	it = find_nearby_array_entry(wakeData->W[0], wakeData->wakePoints, dt);
 	/*
 #ifdef DEBUG
-	fprintf(stderr, "ib=%ld, ibh=%ld, dt=%le, it=%ld\n", ib, ibh, dt, it);
+	fprintf(stdout, "ib=%ld, ibh=%ld, dt=%le, it=%ld\n", ib, ibh, dt, it);
 #endif
 	*/
 	if (wakeData->W[1])
@@ -181,11 +240,13 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   }
 
 #ifdef DEBUG
+#if DEBUG>1
   fprintf(fpw, "%ld\n", i_pass);
   for (ib=0; ib<wakeData->nBuckets; ib++)
     fprintf(fpw, "%e %e\n", tBucket[ib], VzBucket[ib]);
   fprintf(fpw, "\n");
   fflush(fpw);
+#endif
 #endif
 
   for (ip=0; ip<np; ip++) {
@@ -210,6 +271,12 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   free(VxBucket);
   free(VyBucket);
   free(VzBucket);
+  }
+
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
 }
 
 typedef struct {
@@ -268,48 +335,48 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (iw==storedWakes) {
     /* read new wake file */
 #ifdef DEBUG
-    fputs("Reading new wake file for LRWAKE\n", stderr);
+    fputs("Reading new wake file for LRWAKE\n", stdout);
 #endif
     if (!(storedWake = SDDS_Realloc(storedWake, sizeof(*storedWake)*(storedWakes+1)))) {
-      fprintf(stderr, "Error: memory allocation failur storing wake data from LRWAKE file %s\n", wakeData->inputFile);
+      fprintf(stdout, "Error: memory allocation failur storing wake data from LRWAKE file %s\n", wakeData->inputFile);
       exitElegant(1);
     }
     cp_str(&(storedWake[storedWakes].filename), wakeData->inputFile);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
-      fprintf(stderr, "Error: unable to open or read LRWAKE file %s\n", wakeData->inputFile);
+      fprintf(stdout, "Error: unable to open or read LRWAKE file %s\n", wakeData->inputFile);
       exitElegant(1);
     }
     if ((storedWake[storedWakes].points=SDDS_RowCount(&SDDSin))<0) {
-      fprintf(stderr, "Error: no data in LRWAKE file %s\n",  wakeData->inputFile);
+      fprintf(stdout, "Error: no data in LRWAKE file %s\n",  wakeData->inputFile);
       exitElegant(1);
     }
     if (storedWake[storedWakes].points<2) {
-      fprintf(stderr, "Error: too little data in LRWAKE file %s\n",  wakeData->inputFile);
+      fprintf(stdout, "Error: too little data in LRWAKE file %s\n",  wakeData->inputFile);
       exitElegant(1);
     }
     if (!(storedWake[storedWakes].columnName = SDDS_GetColumnNames(&SDDSin, &storedWake[storedWakes].nColumns)) ||
 	storedWake[storedWakes].nColumns<1) {
-      fprintf(stderr, "Error: too few columns in LRWAKE file %s\n",  wakeData->inputFile);
+      fprintf(stdout, "Error: too few columns in LRWAKE file %s\n",  wakeData->inputFile);
       exitElegant(1);
     }
     storedWake[storedWakes].data = tmalloc(sizeof(*(storedWake[storedWakes].data))*storedWake[storedWakes].nColumns);
     storedWake[storedWakes].units = tmalloc(sizeof(*(storedWake[storedWakes].units))*storedWake[storedWakes].nColumns);
 #ifdef DEBUG
-    fputs("Reading new wake file for LRWAKE (1)\n", stderr);
+    fputs("Reading new wake file for LRWAKE (1)\n", stdout);
 #endif
     for (ic=0; ic<storedWake[storedWakes].nColumns; ic++) {
       storedWake[storedWakes].data[ic] = NULL;
       storedWake[storedWakes].units[ic] = NULL;
-      if (SDDS_CheckColumn(&SDDSin, storedWake[storedWakes].columnName[ic], NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_WRONGTYPE &&
+      if (SDDS_CheckColumn(&SDDSin, storedWake[storedWakes].columnName[ic], NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_WRONGTYPE &&
 	  (!(storedWake[storedWakes].data[ic] = 
 	     SDDS_GetColumnInDoubles(&SDDSin, storedWake[storedWakes].columnName[ic])) ||
 	   !(SDDS_GetColumnInformation(&SDDSin, "units", &(storedWake[storedWakes].units[ic]), SDDS_BY_NAME, storedWake[storedWakes].columnName[ic])))) {
-	fprintf(stderr, "Error: problem reading column %s from LRWAKE file %s\n",  storedWake[storedWakes].columnName[ic], wakeData->inputFile);
+	fprintf(stdout, "Error: problem reading column %s from LRWAKE file %s\n",  storedWake[storedWakes].columnName[ic], wakeData->inputFile);
 	exitElegant(1);
       }
     }
 #ifdef DEBUG
-    fputs("Reading new wake file for LRWAKE (2)\n", stderr);
+    fputs("Reading new wake file for LRWAKE (2)\n", stdout);
 #endif
 
     SDDS_Terminate(&SDDSin);
@@ -321,44 +388,44 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     /* Scan over all stored wake input files */
     if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0) {
 #ifdef DEBUG
-      fprintf(stderr, "Using wakefile %ld (%s)\n", iw, storedWake[iw].filename);
+      fprintf(stdout, "Using wakefile %ld (%s)\n", iw, storedWake[iw].filename);
 #endif
       /* Found the right file */
       wakeData->wakePoints = storedWake[iw].points;
       for (icol=0; icol<4; icol++) {
 #ifdef DEBUG
-	fprintf(stderr, "Looking for column %ld \n", icol);
+	fprintf(stdout, "Looking for column %ld \n", icol);
 #endif
 	/* check for data for each type of data (t, Wx, Wy, Wz) */
 	if (wakeData->WColumn[icol]  && strlen(wakeData->WColumn[icol])) {
 #ifdef DEBUG
-	  fprintf(stderr, "Looking for column %s \n", wakeData->WColumn[icol]);
+	  fprintf(stdout, "Looking for column %s \n", wakeData->WColumn[icol]);
 #endif
 	  /* user has requested this type of data */
 	  long ic;
 	  for (ic=0; ic<storedWake[iw].nColumns; ic++) {
 #ifdef DEBUG
-	    fprintf(stderr, "Comparing data column %ld (%s) \n", ic, storedWake[iw].columnName[ic]);
+	    fprintf(stdout, "Comparing data column %ld (%s) \n", ic, storedWake[iw].columnName[ic]);
 #endif
 	    /* scan over all the columns for this file */
 	    if (strcmp(storedWake[iw].columnName[ic], wakeData->WColumn[icol])==0) {
 	      /* found the matching column, so check units */
 #ifdef DEBUG
-	      fprintf(stderr, "Found match\n");
+	      fprintf(stdout, "Found match\n");
 #endif
 	      if (!storedWake[iw].units[ic] || !strlen(storedWake[iw].units[ic]) || 
 		  strcmp(storedWake[iw].units[ic], expectedUnits[icol])!=0) {
 #ifdef DEBUG
-		fprintf(stderr, "Units don't match\n");
+		fprintf(stdout, "Units don't match\n");
 #endif
-		fprintf(stderr, "Expected units %s for column %s, but found %s, for LRWAKE file %s\n", 
+		fprintf(stdout, "Expected units %s for column %s, but found %s, for LRWAKE file %s\n", 
 			expectedUnits[icol], storedWake[iw].columnName[ic], storedWake[iw].units[ic], wakeData->inputFile);
 		exitElegant(1);
 	      }
 	      /* copy the data pointer */
 	      wakeData->W[icol] = storedWake[iw].data[ic];
 #ifdef DEBUG
-	      fprintf(stderr, "Stored %x for slot %ld\n", wakeData->W[icol], icol);
+	      fprintf(stdout, "Stored %x for slot %ld\n", wakeData->W[icol], icol);
 #endif
 	      break;
 	    }
@@ -369,27 +436,23 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     }
   }
 #ifdef DEBUG
-  fprintf(stderr, "Completed seerch loop\n");
+  fprintf(stdout, "Completed seerch loop\n");
 #endif
 
   for (icol=0; icol<4; icol++) {
     if (wakeData->WColumn[icol] && strlen(wakeData->WColumn[icol]) && !wakeData->W[icol]) {
-      fprintf(stderr, "Data for %s not found in LRWAKE file %s\n", wakeData->WColumn[icol], wakeData->inputFile);
+      fprintf(stdout, "Data for %s not found in LRWAKE file %s\n", wakeData->WColumn[icol], wakeData->inputFile);
       exitElegant(1);
     }
   }
 
   find_min_max(&tmin, &tmax, wakeData->W[0], wakeData->wakePoints);
-#if USE_MPI
-  if (isSlave && notSinglePart)
-    find_global_min_max(&tmin, &tmax, wakeData->wakePoints, workers);      
-#endif
   if (tmin>=tmax) {
-    fprintf(stderr, "Error: zero or negative time span in WAKE file %s\n",  wakeData->inputFile);
+    fprintf(stdout, "Error: zero or negative time span in WAKE file %s\n",  wakeData->inputFile);
     exitElegant(1);
   }
   if (tmin!=0) {
-    fprintf(stderr, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
+    fprintf(stdout, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
     exitElegant(1);
   }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
@@ -402,5 +465,8 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   wakeData->QHistory = tmalloc(sizeof(*(wakeData->QHistory))*wakeData->nHistory);
   for (iw=0; iw<wakeData->nHistory; iw++) 
     wakeData->tHistory[iw] = wakeData->xHistory[iw] = wakeData->yHistory[iw] = wakeData->QHistory[iw] = 0;
+#ifdef DEBUG
+  fprintf(stdout, "Returing from lrwake setup\n");
+#endif
 }
 

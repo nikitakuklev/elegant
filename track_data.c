@@ -2599,7 +2599,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_APPLE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(APPLE),    apple_param}, 
     { N_MRFDF_PARAMS,  MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
     { N_CORGPIPE_PARAMS, MAY_CHANGE_ENERGY|MPALGORITHM|MAT_LEN_NCAT, sizeof(CORGPIPE), corgpipe_param},
-    { N_LRWAKE_PARAMS, 0, sizeof(LRWAKE), lrwake_param},
+    { N_LRWAKE_PARAMS, MPALGORITHM, sizeof(LRWAKE), lrwake_param},
 } ;
 
 void compute_offsets()
