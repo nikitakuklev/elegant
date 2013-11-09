@@ -84,10 +84,12 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
       fprintf(stdout, "Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
       fprintf(stdout, "The beam length is %le s, while the wake length is %le s\n",
 	      tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+      /*
       if (abs(tmax-tmean)<abs(tmin-tmean)) 
 	tmin = tmax - (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
       else
 	tmax = tmin + (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+      */
     }
 
     dt = wakeData->dt;
@@ -104,6 +106,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
       tmin = tmean-dt*nb/2.0;
     }
     else {
+      /* If user has set nBunches!=0, then we can choose nb differently here. */
       nb = (tmax-tmin)/dt+3;
       tmin -= dt;
       tmax += dt;
