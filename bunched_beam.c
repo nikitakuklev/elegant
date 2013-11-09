@@ -577,6 +577,7 @@ long track_beam(
     printf("*************************************************************************************\n");
     printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
     printf("* Less number of processors are recommended!                                        *\n");
+    printf("* n_to_track = %ld                                                                  *\n", beam->n_to_track);
     printf("*************************************************************************************\n");
     /*  MPI_Abort(workers, 2); */
   }
