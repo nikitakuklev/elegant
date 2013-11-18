@@ -63,6 +63,7 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*QUAD,ElementT
   | sddsprocess -pipe -process=Element*,first,%s -process=ParameterValue,sum,Length \
   -process=ParameterValue,count,PartCount \
   -print=parameter,ElementTag,%s.%.0lf,ElementName,ElementOccurence \
+  -convert=parameter,Length,m,,1 \
   | sddscollapse -pipe \
   | sddsxref -pipe $rootname.twi.1 -match=ElementName -take=s \
   | sddssort -pipe=in -column=s $paramFile.1 
