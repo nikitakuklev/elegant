@@ -160,6 +160,7 @@
 static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-charge=<nC>|-particles=<value>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-emitInput=<value>] [-deltaInput=<value>] \n\
+ [-emit0=<value>] [-delta0=<value>] \n\
  [-superperiods=<value>] [-isRing=1|0] [-forceCoupling=1|0] \n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
@@ -185,7 +186,9 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define FORCECOUPLING 16
 #define EMITXINPUT 17
 #define EMITYINPUT 18
-#define N_OPTIONS 19
+#define EMIT0 19
+#define DELTA0 20
+#define N_OPTIONS 21
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -206,6 +209,8 @@ char *option[N_OPTIONS] = {
   "forceCoupling",
   "emitxinput",  /* For backward compatibility---identical to -emitInput */
   "emityinput", 
+  "emit0",
+  "delta0",
   };
 
 #include "zibs.h"
@@ -240,8 +245,8 @@ int main( int argc, char **argv)
   long verbosity, noWarning, i, elements, superperiods, growthRatesOnly, force;
   double pCentral0, I1, I2, I3, I4, I5, taux, tauy, taudelta;
   double EMeV;
-  double emitx0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
-  double sigmaDelta0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
+  double emitx0=0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
+  double sigmaDelta0=0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
   double xGrowthRateInitial, yGrowthRateInitial, zGrowthRateInitial;
   double emitxOld, sigmaDeltaOld;
   long method, converged;
@@ -284,6 +289,8 @@ int main( int argc, char **argv)
   integrationTurns = 0;
   rfVoltage = rfHarmonic = 0;
   noWarning = 0;
+  emitx0 = 0;
+  sigmaDelta0 = 0;
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
       delete_chars(scanned[i].list[0], "_");
@@ -314,6 +321,12 @@ int main( int argc, char **argv)
         break;
       case DELTAINPUT:
         get_double(&sigmaDeltaInput, scanned[i].list[1]);
+        break;
+      case EMIT0:
+        get_double(&emitx0, scanned[i].list[1]);
+        break;
+      case DELTA0:
+        get_double(&sigmaDelta0, scanned[i].list[1]);
         break;
       case LENGTH:
         get_double(&length, scanned[i].list[1]);
@@ -594,10 +607,12 @@ int main( int argc, char **argv)
        zibs requires to internally calculate the quantum excitation.
        (zibs doesn't use the radiation integrals but should!) 
        */
-    emitx0 = 55.0/ (32.*sqrt(3.)) * hbar_mks * sqr(pCentral0)/ (me_mks * c_mks)
-      * I5 / (I2 - I4);
-    sigmaDelta0 = sqrt(55.0/ (32.*sqrt(3.)) * hbar_mks * sqr(pCentral0)/ (me_mks * c_mks)
-      * I3 / (2 * I2 + I4));
+    if (!emitx0)
+      emitx0 = 55.0/ (32.*sqrt(3.)) * hbar_mks * sqr(pCentral0)/ (me_mks * c_mks)
+        * I5 / (I2 - I4);
+    if (!sigmaDelta0)
+      sigmaDelta0 = sqrt(55.0/ (32.*sqrt(3.)) * hbar_mks * sqr(pCentral0)/ (me_mks * c_mks)
+        * I3 / (2 * I2 + I4));
     /* use unperturbed quantities in no input supplied. */
     if (!sigmaDeltaInput)
       sigmaDeltaInput = sigmaDelta0;
