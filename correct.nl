@@ -14,7 +14,7 @@
     STRING statistics = NULL;
     double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};
-    double correction_fraction[2] = {1, 1};
+    double correction_fraction[2] = {0.9, 0.9};
     double correction_accuracy[2] = {1e-6, 1e-6};
     long do_correction[2] = {1, 1};
     long remove_smallest_SVs[2] = {0, 0};
@@ -28,9 +28,9 @@
     long verbose = 1;
     long fixed_length = 0;
     long fixed_length_matrix = 0;
-    long n_xy_cycles = 1;
+    long n_xy_cycles = 10;
     long minimum_cycles = 1;
-    long n_iterations = 1;
+    long n_iterations = 10;
     long prezero_correctors = 1;
     long track_before_and_after = 0;
     long start_from_centroid = 1;

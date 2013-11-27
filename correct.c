@@ -160,7 +160,9 @@ void correction_setup(
 
     usePerturbedMatrix = use_perturbed_matrix;
     fixedLengthMatrix = fixed_length_matrix;
-    
+    if ((fixed_length_matrix || fixed_length) && checkChangeT(beamline))
+      bombElegant("change_t is nonzero on one or more RF cavities. This is incompatible with fixed-length orbit computations.", NULL);
+
     /* check for valid input data */
     if ((_correct->mode=match_string(mode, correction_mode, N_CORRECTION_MODES, 0))<0)
         bombElegant("invalid correction mode", NULL);

@@ -63,7 +63,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 static TRAJECTORY *clorb = NULL;
 
-
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
 
@@ -99,8 +98,31 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                                 SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         SDDS_clorb_initialized = 1;
         }
+    if (fixed_length && checkChangeT(beamline))
+      bombElegant("change_t is nonzero on one or more RF cavities. This is incompatible with fixed-length orbit computations.", NULL);
+    
     log_exit("setup_closed_orbit");
+}
+
+long checkChangeT(LINE_LIST *beamline) {
+  ELEMENT_LIST *eptr;
+  long change_t = 0;
+  eptr = &(beamline->elem);
+  while (eptr && change_t==0) {
+    switch (eptr->type) {
+    case T_RFCA:
+      change_t = ((RFCA*)eptr->p_elem)->change_t;
+      break;
+    case T_RFCW:
+      change_t = ((RFCW*)eptr->p_elem)->change_t;
+      break;
+    default:
+      break;
     }
+    eptr = eptr->succ;
+  }
+  return change_t;
+}
 
 long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, unsigned long flags)
 {
@@ -501,6 +523,9 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     ds = clorb[nElems].centroid[4] - beamline->revolution_length;
     if (deviation)
       deviation[4] = ds;
+#ifdef DEBUG
+    printf("ds = %le\n", ds);
+#endif
     for (i=error=0; i<4; i++)
       error += sqr(clorb[nElems].centroid[i]-clorb[0].centroid[i]);
     /* The error for delta is scaled by 1/change_fraction so that it
