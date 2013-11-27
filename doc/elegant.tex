@@ -1263,7 +1263,8 @@ beam through a beamline with apertures; it is quite slow.  ``Global'' simply use
 choice if the trajectory is not lost on an aperture.
 For closed orbit, must be ``global''.
 \item \verb|trajectory_output| --- The (incomplete) name of an SDDS file to which the trajectories or orbits will be written.  Recommended value: ``\%s.traj'' or ``\%s.orb''.  
-\item \verb|corrector_output| --- The (incomplete) name of an SDDS file to which information about the final corrector strengths will be written. Recommended value: ``\%s.cor''.  
+\item \verb|corrector_output| --- The (incomplete) name of an SDDS file to which information about the final corrector strengths will be written. Recommended value: ``\%s.cor''.  N.B.: although this file looks as if it can be used with the \verb|load_parameters| command, care must be exercised because the data for the
+horizontal and vertical planes is on separate pages. Typically, one will need to use \verb|sddscombine -merge=Step ...| in order to place the data from both planes on the same page. Also, be aware that if all correctors have the same name, using \verb|change_defined_values=1| on \verb|load_parameters| will not produce the expected results. See the documentation for \verb|load_parameters| for more details.
 \item \verb|statistics| --- The (incomplete) name of an SDDS file to which statistical information about the
 trajectories (or orbits) and corrector strengths will be written.  Recommended value: ``\%s.scor''.
 \item \verb|corrector_tweek[2]| --- The amount by which to change the correctors in order to compute correction coefficients for
