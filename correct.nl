@@ -28,7 +28,7 @@
     long verbose = 1;
     long fixed_length = 0;
     long fixed_length_matrix = 0;
-    long n_xy_cycles = 10;
+    long n_xy_cycles = 2;
     long minimum_cycles = 1;
     long n_iterations = 10;
     long prezero_correctors = 1;
