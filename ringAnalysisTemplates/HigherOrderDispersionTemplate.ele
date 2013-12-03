@@ -23,6 +23,11 @@
         tracking_updates = 0
 &end
 
+&twiss_output
+        filename = %s.twi
+        output_at_each_step = 1
+&end
+
 &load_parameters
         filename_list = " <parameterFileList>",
 	force_occurence_data = <forceOccurence>,
