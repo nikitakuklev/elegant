@@ -149,14 +149,24 @@ foreach name {Brightness FluxDensity TotalFlux PinholeFlux CentralConeFlux} {
 }
 
 if $breakPages {
-    eval exec sddsxref -take=* $mainFileList -pipe=out \
-        | sddsprocess -pipe \
-        "{-define=column,Break1,$firstName 1e6 < ? 1 : 0  \$ }"  \
-        "{-define=column,Break2,i_row 0 == ? 0 : $firstName i_row 1 - &$firstName \[ 1e-16 + / 1.1 / int \$ }" \
-        "{-define=column,Break,Break1 Break2 +}" \
+    if [llength $mainFileList]!=1 {
+        set tmp1 /tmp/[APSTmpString]
+        APSAddToTempFileList $tmp1
+        eval exec sddsxref -take=* $mainFileList $tmp1
+    } else {
+        set tmp1 $mainFileList
+    }
+    exec sddsprocess $tmp1 -pipe=out \
+        "-define=column,Break1,$firstName 1e6 < ? 1 : 0  \$ "  \
+        "-define=column,Break2,i_row 0 == ? 0 : $firstName i_row 1 - &$firstName \[ 1e-16 + / 1.1 / int \$ " \
+        "-define=column,Break,Break1 Break2 +" \
         | sddsbreak -pipe -change=Break \
-        | sddsprocess -pipe=in -nowarning -filter=col,Break,0,0 "{-test=parameter,n_rows 1 > }" $finalOutput
+        | sddsprocess -pipe=in -nowarning -filter=col,Break,0,0 "-test=parameter,n_rows 1 > " $finalOutput
 } else {
-    eval exec sddsxref -take=* $mainFileList $finalOutput
+    if [llength $mainFileList]!=1 {
+        eval exec sddsxref -take=* $mainFileList $finalOutput
+    } else {
+        file copy $mainFileList $finalOutput
+    }
 }
 eval file delete -force $mainFileList
