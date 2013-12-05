@@ -253,7 +253,7 @@ int main( int argc, char **argv)
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
-  long dimensions = 15, maxEvaluations = 500, maxPasses = 2;
+  long dimensions = 17, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
@@ -676,70 +676,54 @@ int main( int argc, char **argv)
       disable = (short*) malloc(sizeof(short)*dimensions);
       xGuess[0] = MAX(emitx, emitx0/ (1 + coupling));
       xGuess[1] = MAX(sigmaDelta, sigmaDelta0);
+      xGuess[2] = coupling*xGuess[0];
       dxGuess[0] = emitx * 0.1;
       dxGuess[1] = sigmaDelta * 0.1;
-      xLowerLimit[0] = emitx0/ (1 + coupling);
+      dxGuess[2] = emitx*coupling*0.1;
+      xLowerLimit[0] = 0.5*emitx0/ (1 + coupling);
       xLowerLimit[1] = sigmaDelta0;
+      xLowerLimit[2] = xLowerLimit[0]*coupling;
       xUpperLimit[0] = emitx0/ (1 + coupling) * 200;
       xUpperLimit[1] = MIN(sigmaDelta0 * 100, 1.0);
+      xUpperLimit[2] = coupling*xUpperLimit[0];
       /* assign other variables to array which are not supoosed
          to be varied by simplex minimization
          */
-      xGuess[2] = pCentral0;
-      xGuess[3] = emity;
-      xGuess[4] = sigmaz0;
-      xGuess[5] = particles;
-      xGuess[6] = emitx0;
-      xGuess[7] = sigmaDelta0;
-      xGuess[8] = taux;
-      xGuess[9] = tauy;
-      xGuess[10] = taudelta;
-      xGuess[11] = coupling;
-      xGuess[12] = elements;
-      xGuess[13] = superperiods;
-      xGuess[14] = verbosity;
-      xLowerLimit[2] = pCentral0;
-      xLowerLimit[3] = emity;
-      xLowerLimit[4] = sigmaz0;
-      xLowerLimit[5] = particles;
-      xLowerLimit[6] = emitx0;
-      xLowerLimit[7] = sigmaDelta0;
-      xLowerLimit[8] = taux;
-      xLowerLimit[9] = tauy;
-      xLowerLimit[10] = taudelta;
-      xLowerLimit[11] = coupling;
-      xLowerLimit[12] = elements;
-      xLowerLimit[13] = superperiods;
-      xLowerLimit[14] = verbosity;
-      xUpperLimit[2] = pCentral0;
-      xUpperLimit[3] = emity;
-      xUpperLimit[4] = sigmaz0;
-      xUpperLimit[5] = particles;
-      xUpperLimit[6] = emitx0;
-      xUpperLimit[7] = sigmaDelta0;
-      xUpperLimit[8] = taux;
-      xUpperLimit[9] = tauy;
-      xUpperLimit[10] = taudelta;
-      xUpperLimit[11] = coupling;
-      xUpperLimit[12] = elements;
-      xUpperLimit[13] = superperiods;
-      xUpperLimit[14] = verbosity;
+      xGuess[3] = pCentral0;
+      xGuess[4] = emity;
+      xGuess[5] = sigmaz0;
+      xGuess[6] = particles;
+      xGuess[7] = emitx0;
+      xGuess[8] = sigmaDelta0;
+      xGuess[9] = taux;
+      xGuess[10] = tauy;
+      xGuess[11] = taudelta;
+      xGuess[12] = coupling;
+      xGuess[13] = elements;
+      xGuess[14] = superperiods;
+      xGuess[15] = verbosity;
+      xGuess[16] = force;
       disable[0] = 0;
       disable[1] = 0;
-      for (i=2 ; i<dimensions ; i++) {
+      disable[2] = force;
+      for (i=3 ; i<dimensions ; i++) {
         dxGuess[i] = 0.0;
         disable[i] = 1;
+        xUpperLimit[i] = xLowerLimit[i] = xGuess[i];
       }
       if (verbosity) {
         fprintf( stdout, "Doing simplex minimization...\n");
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses, 12, 3.0, 1.0, 0);
+                 maxEvaluations, maxPasses, 13, 3.0, 1.0, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
-      emity = emitx * coupling;
+      if (force)
+        emity = coupling*emitx;
+      else
+        emity = xGuess[2];
       sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
     }
 
@@ -830,25 +814,27 @@ double IBSequations(double *x, long *invalid) {
   double emitx, sigmaDelta;
   double pCentral0, emity, sigmaz, sigmaz0, particles, emitx0, 
   sigmaDelta0, taux, tauy, taudelta, coupling;
-  long elements, superperiods, verbosity;
+  long elements, superperiods, verbosity, forceCoupling;
   double xGrowthRate, yGrowthRate, zGrowthRate;
-  double a, b, c, d, e, f, func1, func2;
+  double ax, bx, cx, ay, by, cy, d, e, f, func1x, func1y, func2;
   
   emitx = x[0];
   sigmaDelta = x[1];
-  pCentral0 = x[2];
-  sigmaz0 = x[4];
-  particles = x[5];
-  emitx0 = x[6];
-  sigmaDelta0 = x[7];
-  taux = x[8];
-  tauy = x[9];
-  taudelta = x[10];
-  coupling = x[11];
-  elements = x[12];
-  superperiods = x[13];
-  verbosity = x[14];
-
+  emity = x[2];
+  pCentral0 = x[3];
+  sigmaz0 = x[5];
+  particles = x[6];
+  emitx0 = x[7];
+  sigmaDelta0 = x[8];
+  taux = x[9];
+  tauy = x[10];
+  taudelta = x[11];
+  coupling = x[12];
+  elements = x[13];
+  superperiods = x[14];
+  verbosity = x[15];
+  forceCoupling = x[16];
+  
     /* zap code requires damping rate for horizontal and longitudinal emittances
        which is twice the damping rate for one coordinate.
        The quantities emitx0 and 2/taux are used to determined
@@ -878,7 +864,7 @@ double IBSequations(double *x, long *invalid) {
                        (a constant)                                              
         SR             SR   0    k              IBS       1         IBS       k  
        g   e        = g    e   -----       +   g    e   -----  +   g    e   -----
-        y   y          y    y  1 + k            y    y  1 + k       x    x  1 + k
+        y   y          x    x  1 + k            y    y  1 + k       x    x  1 + k
      
        In the longitudinal plane,
        damping term     quantum excitation      IBS term
@@ -905,34 +891,44 @@ double IBSequations(double *x, long *invalid) {
        e^0_x     -> emitx0
        k         -> coupling
 
-       One can ignore the y equation and simply put emity = coupling * emitx 
-       during and after the calculation of emitx.
        */
-    
-  emity = emitx * coupling;
   sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
   IBSRate(particles, elements, superperiods, verbosity, isRing, 
           emitx, emity, sigmaDelta, sigmaz, 
           s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
           NULL, NULL, NULL, 
           &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
-  a = -2./taux*emitx - 2./tauy*emity;
-  b = 2./taux * emitx0;
-  c = xGrowthRate * emitx + yGrowthRate * emity;
+
+  if (forceCoupling) 
+    emity = coupling*emitx;
+
+  ax = -2./taux*emitx;
+  bx = 2./taux * emitx0/(1+coupling);
+  cx = xGrowthRate * emitx/(1+coupling) + yGrowthRate * emity*coupling/(1+coupling);
+
+  ay = -2./tauy*emity;
+  by = 2./taux * emitx0*coupling/(1+coupling);
+  cy = xGrowthRate * emitx*coupling/(1+coupling) + yGrowthRate * emity/(1+coupling);
+
   d = -2./taudelta * sqr(sigmaDelta);
   e = 2./taudelta * sqr(sigmaDelta0);
   f = zGrowthRate * sqr(sigmaDelta);
-  func1 = a + b + c;
+  func1x = ax + bx + cx;
+  func1y = ay + by + cy;
   func2 = d + e + f;
   *invalid = 0;
   /* returns an equation evaluation that, at the end of convergence, should be zero. */
-  return (sqr(func1/b) + sqr(func2/e));
+  if (!forceCoupling)
+    return (sqr(func1x/bx) + sqr(func1y/by) + sqr(func2/e));
+  else 
+    return (sqr((func1x+func1y)/(bx+by)) + sqr(func2/e));
 }
+
 
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims) {
   fprintf( stdout, "IBS Simplex Report:\nMinimum value obtained: %e.\n", ymin);
   fprintf( stdout, "    %ld passes, %ld evaluations.\n", pass, evals);
-  fprintf( stdout, "    emitx = %e   sigmaDelta = %e.\n", xmin[0], xmin[1]);
+  fprintf( stdout, "    emitx = %e   emity = %e  sigmaDelta = %e.\n", xmin[0], xmin[2], xmin[1]);
   return;
 }
 
