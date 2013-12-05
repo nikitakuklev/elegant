@@ -725,6 +725,8 @@ int main( int argc, char **argv)
       else
         emity = xGuess[2];
       sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
+      if (verbosity)
+        fprintf(stdout, "Final: emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n", emitx, emity, sigmaDelta, sigmaz);
     }
 
     /* calculate growth rates contributions at equilibrium or
