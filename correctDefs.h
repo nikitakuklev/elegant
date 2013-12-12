@@ -25,19 +25,22 @@ typedef struct {
 
 typedef struct {
     /* information on useful monitors and correctors */
-    long *mon_index;                       /* index of monitor in trajectory array */
-    int32_t nmon, ncor;                       /* numbers of monitors and correctors */
+    long *mon_index;                       /* index of monitor in trajectory array (which has trajectory at all elements) */
+    int32_t nmon, ncor;                    /* numbers of monitors and correctors */
     ELEMENT_LIST **umoni, **ucorr;         /* arrays of pointers to monitor and corrector elements */
     double *kick_coef;                     /* dkick/dparam (==1 for hkick, vkick, and hvkick elements) */
     long *sl_index;                        /* index of steering list entry for each corrector */
+    short *pegged;                         /* if non-zero, corrector is pegged */
+    double *weight;                        /* weights for monitors */
+    short equalW;                          /* if non-zero, all weights are equal */
 
     /* arrays for holding corrector information for output */
     double **kick, **posi;
     /* copies of input specifications for correction */
     double corr_fraction, corr_accuracy, corr_limit, bpm_noise, default_tweek, bpm_noise_cutoff;
     long fixed_length, bpm_noise_distribution, default_threading_divisor;
-    long remove_smallest_SVs, keep_largest_SVs, auto_limit_SVs;
-    double minimum_SV_ratio;
+    long remove_smallest_SVs, keep_largest_SVs, auto_limit_SVs, remove_pegged;
+    double minimum_SV_ratio, n_iterations;
     /* correction matrix and inverse, respectively: */
     /* Mij(C, i, j) = dX(monitor i)/dK(corrector j) */
     MAT *C, *T; 
@@ -55,12 +58,18 @@ typedef struct {
     long prezero_correctors, start_from_centroid, use_actual_beam, response_only, disable;
     long xplane, yplane;
     long use_response_from_computed_orbits;
+    long use_altered_matrices[2];
     double clorb_accuracy;
     double clorb_iterations;
     double clorb_iter_fraction;
     STEERING_LIST SLx, SLy;
-    CORMON_DATA *CMx, *CMy;
     TRAJECTORY **traj;
+    /* These structures store Full data for all correctors */
+    CORMON_DATA *CMFx, *CMFy;
+    /* These structure store "altered" data after removal of pegged correctors */
+    CORMON_DATA *CMAx, *CMAy;
+    /* These just point to the verison in use */
+    CORMON_DATA *CMx, *CMy;
     } CORRECTION ;
     
 
