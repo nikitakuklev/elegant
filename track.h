@@ -561,6 +561,8 @@ typedef struct {
     long max_no_change;           /* The number of iterations to stop when no change in the best solution found */
     long population_size;
     long print_all_individuals;
+    double hybrid_simplex_tolerance;
+    long hybrid_simplex_tolerance_count;
     SDDS_TABLE popLog;
     long crossover_type;          /* For genetic optimization only */
     } OPTIMIZATION_DATA;

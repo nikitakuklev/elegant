@@ -90,6 +90,10 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     /* The output files are disabled for most of the optimization methods in Pelegant except for the simplex method, which runs in serial mode */ 	
     if (optimization_data->method==OPTIM_METHOD_SIMPLEX) 
       enableOutput = 1;
+    if ((optimization_data->hybrid_simplex_tolerance=hybrid_simplex_tolerance)==0)
+        bombElegant("hybrid_simplex_tolerance == 0", NULL);
+    if ((optimization_data->hybrid_simplex_tolerance_count=hybrid_simplex_tolerance_count)<=0)
+        bombElegant("hybrid_simplex_tolerance_count <= 0", NULL);
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
@@ -731,7 +735,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     OPTIM_COVARIABLES *covariables;
     OPTIM_CONSTRAINTS *constraints;
     double result, lastResult;
-    long i, startsLeft, i_step_saved;
+    long i, startsLeft, i_step_saved, hybrid_simplex_tolerance_counter;
 #if USE_MPI
     long n_total_evaluations_made = 0;
     double scale_factor = optimization_data1->random_factor;
@@ -915,6 +919,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     startsLeft = optimization_data->n_restarts+1;
     result = DBL_MAX;
     balanceTerms = 1;
+    hybrid_simplex_tolerance_counter = 0;
 #if defined(UNIX)
     if (optimization_data->method!=OPTIM_METHOD_POWELL)
       signal(SIGINT, optimizationInterruptHandler);
@@ -1027,6 +1032,15 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
         if (simplexMinAbort(0))
           stopOptimization = 1;
+#if USE_MPI
+        if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX && optimization_data->hybrid_simplex_tolerance>0) {
+          if ((lastResult-result)<optimization_data->hybrid_simplex_tolerance) {
+            if (++hybrid_simplex_tolerance_counter > optimization_data->hybrid_simplex_tolerance_count)
+              stopOptimization = 1;
+          } else
+            hybrid_simplex_tolerance_counter = 0;
+        }
+#endif
         break;
       case OPTIM_METHOD_POWELL:
         fputs("Starting Powell optimization.\n", stdout);
@@ -1585,7 +1599,7 @@ static char *tuneFootprintName[10] = {
   "FP.diffusionRateMaxAmp",
   "FP.xyArea"
 };
-static long tuneFootprintMem[9] = {
+static long tuneFootprintMem[10] = {
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
