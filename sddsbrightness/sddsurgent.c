@@ -1243,14 +1243,14 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
         break;
       case 4:
         if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, irradiance, nEE, "Flux") ||
-            SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, power, nEE, "SpectralPower"))
+            !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, power, nEE, "SpectralPower"))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         break;
       }
     }
     if (isub==3) {
       if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, irradiance, nEE, "Flux") || 
-          SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, power, nEE, "SpectralPower"))
+          !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, power, nEE, "SpectralPower"))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (mode!=1) {
