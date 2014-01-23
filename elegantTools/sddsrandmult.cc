@@ -271,8 +271,12 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   }
   
   if (kmult_output) {
-    for (i=1; i<n_harm; i++)
-      fprintf(fpKMULT, "%ld %e %e\n", i, frms[i], grms[i]);
+    for (i=1; i<n_harm; i++) {
+      if (suppress_main_error && ((iN==INDEX_QUAD && i<=1) || (iN==INDEX_SEXT && i<=2))) {
+        fprintf(fpKMULT, "%ld 0 0\n", i);
+      } else
+        fprintf(fpKMULT, "%ld %e %e\n", i, frms[i], grms[i]);
+    }
   }
   
   if (elegant_output) {

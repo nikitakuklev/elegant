@@ -21,6 +21,7 @@
     double dphi_halves = 0;
     long n_cases = 1000;
     long n_harm = 0;
+    long suppress_main_error = 0;
     long random_number_seed = 123456789;
 #end
 
