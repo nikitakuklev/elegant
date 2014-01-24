@@ -32,6 +32,7 @@ typedef struct {
     char *includeNamePattern, *includeItemPattern, *includeTypePattern;
     char *excludeNamePattern, *excludeItemPattern, *excludeTypePattern;
     char *editNameCommand;
+    long skip_pages;         /* if >0, pages are skipped, used as counter */
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
@@ -133,6 +134,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].excludeNamePattern = exclude_name_pattern;
   load_request[load_requests].excludeItemPattern = exclude_item_pattern;
   load_request[load_requests].excludeTypePattern = exclude_type_pattern;
+  load_request[load_requests].skip_pages = skip_pages;
 #ifdef USE_MPE /* use the MPE library */    
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -320,6 +322,11 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           break;
         }
       }
+    }
+    while (load_request[i].skip_pages>0) {
+      fprintf(stdout, "Skipping page\n");
+      code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table);
+      load_request[i].skip_pages --;
     }
     if ((code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table))<1) {
       free(load_request[i].reset_address);

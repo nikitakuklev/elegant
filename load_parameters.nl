@@ -22,6 +22,7 @@
         long allow_missing_parameters = 0;
         long force_occurence_data = 0;
         long verbose = 0;
+        long skip_pages = 0;
         long use_first = 0;
 #end
 
