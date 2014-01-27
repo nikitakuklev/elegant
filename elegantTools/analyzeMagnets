@@ -100,9 +100,11 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
 	exec sddsprintout -format=double=%10.3f $rootname-$type.sdds $rootname-$type.tex \
              "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
 	    "-column=ElementName,label=Element Name" -column=Length -column=$parameter  -column=$grad -col=IdenticalCount,label=Count
-        exec sddsconvert $rootname-$type.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,$parameter,$grad,IdenticalCount \
+	# Don't insist on the XLS output, since -xls option isn't available on all systems
+	catch {file delete -force $rootname-$type.xls}
+        catch {exec sddsconvert $rootname-$type.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,$parameter,$grad,IdenticalCount \
             -delete=param,* "-description=contents=$typeName magnet parameters,text=[pwd]/$rootname"  \
-            | sdds2spreadsheet -pipe=in -excel $rootname-$type.xls
+            | sdds2spreadsheet -pipe=in -excel $rootname-$type.xls}
     }
 }
 
@@ -141,9 +143,11 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
   -process=Ide*,sum,%sTotal \
   -process=B,largest,BLargest -process=Length,min,%sMin -process=Length,max,%sMax \
 
-exec sddsconvert $rootname-B.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,AngleDeg,rho,B,B1,B2,IdenticalCount \
+# Don't insist on the XLS output, since -xls option isn't available on all systems
+catch {file delete -force $rootname-B.xls}
+catch {exec sddsconvert $rootname-B.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,AngleDeg,rho,B,B1,B2,IdenticalCount \
     -delete=param,* "-description=contents=Bend magnet parameters,text=[pwd]/$rootname"  \
-    | sdds2spreadsheet -pipe=in -excel $rootname-B.xls
+    | sdds2spreadsheet -pipe=in -excel $rootname-B.xls}
 
 set typeName Bend
 if ![string length $caption] {
