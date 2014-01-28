@@ -1035,7 +1035,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       if (rad_coef)
 	dp -= rad_coef*deltaFactor*F2*dsFactor;
       if (isr_coef>0)
-	dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+	dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
       if (sigmaDelta2)
         *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
       qx *= (1+dp);
@@ -1239,7 +1239,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 	if (rad_coef)
 	  dp -= rad_coef*deltaFactor*F2*dsFactor;
 	if (isr_coef>0)
-	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
         if (sigmaDelta2)
           *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
         qx *= (1+dp);

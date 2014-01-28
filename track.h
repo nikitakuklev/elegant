@@ -63,8 +63,10 @@ extern "C" {
 extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
 extern long particleIsElectron;
 
-
 #define COORDINATES_PER_PARTICLE 7
+
+/* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */
+#define SR_GAUSSIAN_LIMIT 5.0
 
 /* various user-controlled global flags (global_settings namelist) */
 extern long inhibitFileSync;

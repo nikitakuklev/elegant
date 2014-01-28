@@ -1148,11 +1148,15 @@ VMATRIX *compute_matrix(
         if (csbend->n_kicks<1)
             bombElegant("n_kicks must be > 0 for CSBEND element", NULL);
         csbend->edgeFlags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
+        if (csbend->length==0 && (csbend->use_bn || csbend->xReference)) 
+          bombElegant("Can't compute matrix for CSBEND with L=0 and USE_BN!=0 or XREFERENCE!=0", NULL);
         elem->matrix = 
             bend_matrix(csbend->length, csbend->angle, csbend->e1, csbend->e2, 
                         csbend->h1, csbend->h2, 
-                        csbend->use_bn ? csbend->b1/(csbend->length/csbend->angle) : csbend->k1,
-                        csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2,
+                        (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)
+                        + (csbend->xReference>0 ? csbend->f1*csbend->angle/csbend->length/csbend->xReference : 0),
+                        (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
+                        + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
                         csbend->tilt, csbend->fint, 
                         csbend->hgap*2, csbend->fse, csbend->etilt,
                         csbend->nonlinear?2:(run->default_order?run->default_order:1),

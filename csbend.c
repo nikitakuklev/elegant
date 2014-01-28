@@ -268,7 +268,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     csbend->b[6] = csbend->k7*rho0;
     csbend->b[7] = csbend->k8*rho0;
   }
-  if (csbend->xReference) {
+  if (csbend->xReference>0) {
     double term = 1/csbend->xReference, f[8];
     long i;
     f[0] = csbend->f1;
@@ -3755,7 +3755,7 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
       *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
     if (isrCoef>0)
       /* The minus sign is for consistency with the previous version. */
-      *dPoP -= isrCoef*deltaFactor*pow(F2,0.75)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      *dPoP -= isrCoef*deltaFactor*pow(F2,0.75)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
     if (sigmaDelta2)
       *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2,1.5)*dsISR*dsFactor;
     *Qx *= (1 + *dPoP);
@@ -3788,8 +3788,8 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                               + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
                                                                    -logy*6.181818621278201e-03)))/Po;
         /* Compute change in electron angle due to photon angle */
-        xp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-        yp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        xp += thetaRms*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
+        yp += thetaRms*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
       }
     }
     f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
@@ -3972,7 +3972,7 @@ void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long
     deltaFactor = sqr(1+dp);
     dp -= radCoef*deltaFactor*F2*length;
     if (isr)
-      dp += isrCoef*deltaFactor*pow(F2, 0.75)*sqrt(length)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      dp += isrCoef*deltaFactor*pow(F2, 0.75)*sqrt(length)*gauss_rn_lim(0.0, 1.0, SR_GAUSSIAN_LIMIT, random_2);
     if (sigmaDelta2)
       *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2, 1.5)*length;
     p = Po*(1+dp);
