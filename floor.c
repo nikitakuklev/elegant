@@ -361,7 +361,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     ELEMENT_LIST *preceeds, *follow;
     
     if (is_bend) {
-      /* If last element was not a bend, need to record data for vertex computation */
+      /* If this element is a bend, may need to record data for vertex computation */
 #ifdef DEBUG
       printf("%s is a bend\n", elem->name);
 #endif
@@ -375,7 +375,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         x2->ve[0] = V0->a[0][0] - W0->a[0][2];
         x2->ve[1] = V0->a[1][0] - W0->a[1][2];
         x2->ve[2] = V0->a[2][0] - W0->a[2][2];
-        sVertex = elem->pred->end_pos - 1;
+        sVertex = elem->pred->end_pos;
         anglesVertex[0] = *theta;
         anglesVertex[1] = *phi;
         anglesVertex[2] = *psi;
@@ -432,6 +432,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
           ds = vec_dot(cxb, axb)/vec_dot(axb, axb);
           vec_add(x1, a, 1, ds, c);
           sprintf(label, "%s-VP", preceeds->name);
+          ds *= -sqrt(vec_dot(a, a));
           if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                                  IC_S, sVertex+ds, IC_DS, ds,
                                  IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
@@ -440,6 +441,10 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
             SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
+#ifdef DEBUG
+          printf("skewness check (should be 0): %le\n",
+                 vec_dot(c, axb));
+#endif
           row_index++;
           vec_free(a);
           vec_free(b);
