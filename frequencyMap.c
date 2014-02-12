@@ -133,6 +133,12 @@ long doFrequencyMap(
 
 #if SDDS_MPI_IO
   long particles;
+  FILE *fpd = NULL;
+  if (verbosity<0) {
+    char s[100];
+    sprintf(s, "fma-debug%03d.txt", myid);
+    fpd = fopen(s, "w");
+  }
   /* Open file here for parallel IO */
   if (!SDDS_MPI_File_Open(SDDS_fmap.MPI_dataset, SDDS_fmap.layout.filename, SDDS_MPI_WRITE_ONLY)) 
     SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_fmap.MPI_dataset->MPI_file);
@@ -221,6 +227,12 @@ long doFrequencyMap(
 	if (myid == (idelta*nx*ny+ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
 #endif
 	  {
+#if USE_MPI
+            if (fpd) {
+              fprintf(fpd, "*** Starting tracking for idelta = %ld, ix = %ld, iy = %ld\n", idelta, ix, iy);
+              fflush(fpd);
+            }
+#endif
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
 					  startingCoord, x, y, delta, turns,
@@ -239,6 +251,12 @@ long doFrequencyMap(
 	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	    }
 	    if (include_changes) {
+#if USE_MPI
+              if (fpd) {
+                fprintf(fpd, "    Starting tracking for changes\n");
+                fflush(fpd);
+              }
+#endif
 	      memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
 	      if (!computeTunesFromTracking(secondTune, secondAmplitude,
 					    beamline->matrix, beamline, run,
@@ -270,6 +288,10 @@ long doFrequencyMap(
 	    ip++;
 	    if (verbosity) {
 #if USE_MPI
+              if (fpd) {
+                fprintf(fpd, "    Completed particle\n");
+                fflush(fpd);
+              }
 	      if (myid==1) {
 		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
 		if ((newPercentage-oldPercentage)>=1) {
@@ -288,6 +310,13 @@ long doFrequencyMap(
       }
     }
   }
+
+#if USE_MPI
+  if (fpd) {
+    fprintf(fpd, "*** Completed work for processor.\n");
+    fflush(fpd);
+  }
+#endif
 
   if (!inhibitFileSync)
     SDDS_DoFSync(&SDDS_fmap);
@@ -312,6 +341,10 @@ long doFrequencyMap(
 #endif
 
 #if USE_MPI
+  if (fpd) {
+    fprintf(fpd, "*** Waiting at barrier.\n");
+    fclose(fpd);
+  }
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
   return(1);
