@@ -147,6 +147,10 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 start = (end = start+((DRIFT*)eptr->p_elem)->length);
                 fprintf(fpm, "\"%s\" %s %e  0\n", eptr->name, entity_name[eptr->type], end);
                 break;
+            case T_EDRIFT:
+                start = (end = start+((EDRIFT*)eptr->p_elem)->length);
+                fprintf(fpm, "\"%s\" %s %e  0\n", eptr->name, entity_name[eptr->type], end);
+                break;
             case T_HMON:
                 dz = ((HMON*)eptr->p_elem)->length/2;
                 fprintf(fpm, "\"%s\" %s %e 0.125\n\"%s\" %s %e 0\n\"%s\" %s %e 0\n\"%s\" %s %e 0\n",
