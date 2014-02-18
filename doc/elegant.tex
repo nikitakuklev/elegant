@@ -1448,7 +1448,8 @@ to obtain correction.  In general, it is not necessary and only slows the simula
   command and results in computations occurring for each simulation
   step (e.g., for each perturbed machine if errors are included).  If
   zero, then this is an action command and computations are done
-  immediately (e.g., for the unperturbed machine).
+  immediately (e.g., for the unperturbed machine). If you wish to compute Twiss parameters on a closed orbit or after other calculations,
+  be sure to set this control to a nonzero value.
 \item \verb|emittances_from_twiss_command| --- If nonzero, then the values of the horizontal emittance
   and the momentum spread are taken from the uncoupled computation done with the \verb|twiss_output| command.
   In this case, the user must issue a \verb|twiss_output| command prior to the \verb|coupled_twiss_output|.
@@ -2419,6 +2420,7 @@ is modulated.
 \item \verb|filename| --- The (incomplete) name of a file to which the moments results will be written.
   Recommended value: ``\%s.mom''.
 \item \verb|output_at_each_step| --- A flag indicating, if set, that computations and/or output is desired at each step of the simulation.
+  If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to a nonzero value.
 \item \verb|output_before_tune_correction| --- A flag indicating, if set, that output is desired both before and after
 tune correction.
 \item \verb|final_values_only| --- A flag indicating, if set, that only the final values of the Twiss parameters should
@@ -4120,6 +4122,7 @@ where
 \end{equation}
 where $N$ is the number of turns tracked to determine each tune (equal to half of \verb|n_passes|).
 \item \verb|immediate| --- If nonzero, the calculations take place immediately, instead of only during optimization.
+  If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to zero.
 \end{itemize}
 
 This command makes available the following quantities for optimization. All quantities are limited by 
@@ -4233,6 +4236,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
  Recommended value: ``\%s.twi''.
 \item \verb|matched| --- A flag indicating, if set, that the periodic or matched Twiss parameters should be found.
 \item \verb|output_at_each_step| --- A flag indicating, if set, that output is desired at each step of the simulation.
+  If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to a nonzero value.
 \item \verb|output_before_tune_correction| --- A flag indicating, if set, that output is desired both before and after
 tune correction.
 \item \verb|final_values_only| --- A flag indicating, if set, that only the final values of the Twiss parameters should
