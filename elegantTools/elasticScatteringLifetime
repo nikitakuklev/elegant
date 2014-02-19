@@ -1,0 +1,134 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+# Compute elastic gas scattering lifetime from DA statistics
+
+if [info exists $env(OAG_TOP_DIR)] {
+    set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+} else {
+    set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
+}
+
+APSStandardSetup
+
+set allowedNameList [list Min Max Median]
+for {set p 5} {$p<=100} {incr p 5} {
+    lappend allowedNameList ${p}Percentile
+}
+
+set usage {usage: elasticScatteringLifetime -aperture <daEnvFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(1)}
+set aperture ""
+set twiss ""
+set name 10Percentile
+set output ""
+set sPeriodic 27.61
+set pressure 2
+set args $argv
+if {[APSStrictParseArguments {aperture name twiss output sPeriodic pressure}] || ![string length $aperture] || ![string length $twiss] || ![string length $output]} {
+    return -code error "$usage"
+}
+
+if ![file exists $aperture] {
+   return -code error "not found: $aperture"
+}
+if ![file exists $twiss] {
+   return -code error "not found: $twiss"
+}
+if [file exists $output] {
+   return -code error "in use: $output"
+}
+if [lsearch -exact $allowedNameList $name]==-1 {
+    return -code error "not valid: $name"
+}
+
+
+set tmpRoot [APSTmpString]
+
+# Find beta functions at ID straight, use only first sector's worth of data
+# Sort into increasing s order, remove duplicates
+# 
+exec sddsprocess $twiss -pipe=out -process=beta*,first,%s0 -filter=col,s,0,$sPeriodic \
+    | sddssort -pipe -column=s -unique \
+    | sddsconvert -pipe -retain=col,betax,betay,s -retain=parameter,pCentral,beta?0 \
+    | sddsexpand -pipe=in $tmpRoot.1
+APSAddToTempFileList $tmpRoot.1
+
+# Gas fractional pressures
+set fGas(H2) 0.65
+set fGas(H2O) 0.02
+set fGas(CH4) 0.07
+set fGas(CO) 0.22
+set fGas(CO2) 0.04
+set fGas(N2) 0.0
+
+# Gas constituents (nAtomTypes=# of types of atoms, Z=nuclear charge, atomCount=# atoms of each type)
+set nAtomTypes(H2) 1
+set Z(H2,1) 1
+set atomCount(H2,1) 2
+
+set nAtomTypes(H2O) 2
+set Z(H2O,1) 1
+set atomCount(H2O,1) 2
+set Z(H2O,2) 6
+set atomCount(H2O,2) 1
+
+set nAtomTypes(CH4) 2
+set Z(CH4,1) 8
+set atomCount(CH4,1) 1
+set Z(CH4,2) 1
+set atomCount(CH4,2) 4
+
+set nAtomTypes(CO) 2
+set Z(CO,1) 8
+set atomCount(CO,1) 1
+set Z(CO,2) 6
+set atomCount(CO,2) 1
+
+set nAtomTypes(CO2) 2
+set Z(CO2,1) 8
+set atomCount(CO2,1) 1
+set Z(CO2,2) 6
+set atomCount(CO2,2) 2
+
+set nAtomTypes(N2) 1
+set Z(N2,1) 7
+set atomCount(N2,1) 2
+
+set PSum 0.0
+foreach gas [array names fGas] {
+    set f $fGas($gas)
+    set sum 0.0
+    for {set con 1} { $con <= $nAtomTypes($gas) } {incr con} {
+        set sum [expr $sum+$Z($gas,$con)*$Z($gas,$con)*$atomCount($gas,$con)]
+    }
+    set PSum [expr $PSum+$f*$sum]
+}
+# Convert to Pascals
+set PSum [expr 133.3224*1e-9*$PSum*$pressure]
+
+set count [exec sdds2stream -npage=bare $tmpRoot.1]
+
+eval exec sddscombine [APSReplicateItem -number $count -item $aperture] -pipe=out -retain=col,*$name \
+    | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=param,* \
+    | sddsprocess -pipe \
+    "{-define=col,phi,x$name y$name atan2}" \
+    "{-define=col,theta,x$name sqr betax / betax0 / y$name sqr betay / betay0 / + sqrt}" \
+    "{-define=col,CS,4 theta 2 / tan sqr /}" \
+    | sddssort -pipe -column=phi,incr \
+    | sddsprocess -pipe \
+    -process=CS,gmintegral,%sInteg,functionOf=phi \
+    -define=col,pCentral0,pCentral \
+    | sddscollapse -pipe \
+    | sddsprocess -pipe=in $output \
+    -process=CSInteg,gminteg,%sInteg,functionOf=s \
+    -proces=s,max,%sMax \
+    -process=pCentral,first,%s0 \
+    "{-define=param,ng,$PSum kb_mks / 298 /,units=1/m^3}" \
+    "{-define=param,c1,c_mks ng * 2 *}" \
+    "{-define=param,c2,e_mks sqr 8 / pi / eps_o / me_mks / c_mks sqr / pCentral0 / sqr}" \
+    "{-define=param,decayRate,c1 c2 * CSIntegInteg * sMax /,units=1/s}" \
+    "{-define=param,elasticScatteringLifetime,decayRate rec 3600 /,units=h}" 
+
+
+
