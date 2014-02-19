@@ -17,7 +17,7 @@ for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
 
-set usage {usage: elasticScatteringLifetime -aperture <mmapEnvFile> -name <string>(10Percentile) -output <filename> [-pressure nTorr(1)}
+set usage {usage: elasticScatteringLifetime -aperture <mmapEnvFile> -name <string>(10Percentile) -output <filename> [-pressure nTorr(2)]}
 set aperture ""
 set name 10Percentile
 set output ""

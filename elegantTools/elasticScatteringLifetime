@@ -17,7 +17,7 @@ for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
 
-set usage {usage: elasticScatteringLifetime -aperture <daEnvFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(1)}
+set usage {usage: elasticScatteringLifetime -aperture <daEnvFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(2)]}
 set aperture ""
 set twiss ""
 set name 10Percentile
