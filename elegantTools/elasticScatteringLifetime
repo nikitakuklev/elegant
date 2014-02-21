@@ -12,12 +12,12 @@ if [info exists $env(OAG_TOP_DIR)] {
 
 APSStandardSetup
 
-set allowedNameList [list Min Max Median]
+set allowedNameList [list Min Max Median Clipped]
 for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
 
-set usage {usage: elasticScatteringLifetime -aperture <daEnvFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(2)]}
+set usage {usage: elasticScatteringLifetime -aperture <daFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(2)]}
 set aperture ""
 set twiss ""
 set name 10Percentile
@@ -42,8 +42,8 @@ if [lsearch -exact $allowedNameList $name]==-1 {
     return -code error "not valid: $name"
 }
 
-
 set tmpRoot [APSTmpString]
+APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
 
 # Find beta functions at ID straight, use only first sector's worth of data
 # Sort into increasing s order, remove duplicates
@@ -52,7 +52,16 @@ exec sddsprocess $twiss -pipe=out -process=beta*,first,%s0 -filter=col,s,0,$sPer
     | sddssort -pipe -column=s -unique \
     | sddsconvert -pipe -retain=col,betax,betay,s -retain=parameter,pCentral,beta?0 \
     | sddsexpand -pipe=in $tmpRoot.1
-APSAddToTempFileList $tmpRoot.1
+set nTw [exec sdds2stream -npage=bare $tmpRoot.1]
+
+set nAp   [exec sdds2stream -npage=bare $aperture]
+if $nAp>1 {
+    eval exec sddscombine [APSReplicateItem -item $tmpRoot.1 -number $nAp] $tmpRoot.2
+    set twissFile $tmpRoot.2
+} else {
+    set twissFile $tmpRoot.1
+}
+
 
 # Gas fractional pressures
 set fGas(H2) 0.65
@@ -107,29 +116,33 @@ foreach gas [array names fGas] {
 # Convert to Pascals
 set P [expr 133.3224*1e-9*$pressure]
 
-set count [exec sdds2stream -npage=bare $tmpRoot.1]
-
 # The constant c1 is 2x the value in AOP-TN-2014-009 to account for the fact that we
 # are only integrating phi:[0, pi], not [0, 2*pi]
 
-eval exec sddscombine [APSReplicateItem -number $count -item $aperture] -pipe=out -retain=col,*$name \
-    | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=param,* \
+eval exec sddscombine [APSReplicateItem -number $nTw -item $aperture] -pipe=out -retain=col,*$name \
+    | sddsxref -pipe $twissFile -leave=* -transfer=param,* \
     | sddsprocess -pipe \
     "{-define=col,phi,x$name y$name atan2}" \
     "{-define=col,theta,x$name sqr betax / betax0 / y$name sqr betay / betay0 / + sqrt}" \
     "{-define=col,CS,1 theta 2 / tan sqr /}" \
-    | sddssort -pipe -column=phi,incr \
+    | sddssort -pipe -column=phi,incr -unique \
     | sddsprocess -pipe \
     -process=CS,gmintegral,%sInteg,functionOf=phi \
     -define=col,pCentral0,pCentral \
     | sddscollapse -pipe \
-    | sddsprocess -pipe=in $output \
+    | sddsbreak -pipe -decreaseOf=s \
+    | sddsprocess -pipe \
     -process=CSInteg,gminteg,%sInteg,functionOf=s \
     -proces=s,max,%sMax \
     -process=pCentral,first,%s0 \
     "{-define=param,c1,re_mks sqr c_mks * $P * sMax / pCentral0 sqr / kb_mks / 298 /}" \
     "{-define=param,decayRate,c1 CSIntegInteg * $fSZ2Sum *,units=1/s}" \
-    "{-define=param,elasticScatteringLifetime,decayRate rec 3600 /,units=h}" 
+    "{-define=param,elasticScatteringLifetime,decayRate rec 3600 /,units=h}" \
+    | sddscollapse -pipe \
+    | sddsprocess -pipe=in $output \
+    -process=elasticScatteringLifetime,ave,%sAve \
+    -process=elasticScatteringLifetime,stand,%sStDev
+
 
 
 
