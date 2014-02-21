@@ -103,5 +103,10 @@ exec sddssort -pipe=out $aperture -column=s -unique \
     "-define=col,CS,deltaNegative$name chs sto u -5 8 / u ln - u + 3 u * 8 / - c1 *" \
     "-process=CS,gminteg,decayRate,functionOf=s" \
     "-define=param,bremsstrahlungLifetime,decayRate rec 3600 /,units=h" \
-    | sddscollapse -pipe=in $output
+    | sddscollapse -pipe \
+    | sddsprocess -pipe=in $output \
+    -process=bremsstrahlungLifetime,ave,%sAve \
+    -process=bremsstrahlungLifetime,stand,%sStDev
+
+
 
