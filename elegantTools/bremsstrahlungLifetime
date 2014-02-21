@@ -12,7 +12,7 @@ if [info exists $env(OAG_TOP_DIR)] {
 
 APSStandardSetup
 
-set allowedNameList [list Min Max Median]
+set allowedNameList [list Min Max Median ""]
 for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
@@ -81,7 +81,7 @@ set nAtomTypes(N2) 1
 set Z(N2,1) 7
 set atomCount(N2,1) 2
 
-set PSum 0.0
+set fSZSum 0.0
 foreach gas [array names fGas] {
     # Compute sum over gas molecules
     set f $fGas($gas)
@@ -90,15 +90,17 @@ foreach gas [array names fGas] {
         # Sum of count*Z^2*ln(183/Z^(1/3))
         set sum [expr $sum+$Z($gas,$con)*$Z($gas,$con)*$atomCount($gas,$con)*log(183./pow($Z($gas,$con),1./3))]
     }
-    set PSum [expr $PSum+$f*$sum]
+    set fSZSum [expr $fSZSum+$f*$sum]
 }
 # Convert to Pascals
-set PSum [expr 133.3224*1e-9*$PSum*$pressure]
+set P [expr 133.3224*1e-9*$pressure]
 
 exec sddssort -pipe=out $aperture -column=s -unique \
-    | sddsprocess -pipe=in $output \
-    "-define=param,c1,4 re_mks sqr * 137 / 4 * 3 / $PSum * c_mks * kb_mks / 298 /" \
+    | sddsprocess -pipe \
+    "-define=param,c1,4 re_mks sqr * 137 / 4 * 3 / $P * $fSZSum * c_mks * kb_mks / 298 /" \
     -process=s,max,sMax \
     "-define=col,CS,deltaNegative$name rec chs ln 5 8 / - c1 * sMax /" \
     "-process=CS,integ,decayRate,functionOf=s" \
-    "-define=param,bremsstrahlungLifetime,decayRate rec 3600 /,units=h" 
+    "-define=param,bremsstrahlungLifetime,decayRate rec 3600 /,units=h" \
+    | sddscollapse -pipe=in $output
+
