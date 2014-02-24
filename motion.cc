@@ -51,7 +51,7 @@
 #include "matlib.h"
 
 
-#if defined(SOLARIS)
+#if defined(SOLARIS) || defined(_MINGW)
 #define isinf(x) ((x==x) && !finite(x))
 #endif
 

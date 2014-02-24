@@ -976,6 +976,7 @@ long multiparticleLocalMomentumAcceptance(
   printf("Master processor gather done\n"); fflush(stdout);
   
   if (myid==0) {
+    long slot;
     if (!SDDS_StartPage(&SDDSma, nElem) ||
         !SDDS_SetParameters(&SDDSma, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
                             control->i_step, NULL)) {
@@ -984,7 +985,6 @@ long multiparticleLocalMomentumAcceptance(
     }
     
     /* allocate arrays for storing data for negative and positive momentum limits for each element */
-    long slot;
     deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), 2, nElem);
     sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
     ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
