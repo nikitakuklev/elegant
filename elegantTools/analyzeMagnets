@@ -77,8 +77,8 @@ if [string length $groups] {
     set extraCmd "sddsprocess -pipe -print=col,PartOfElement,%s,ElementName"
 }
 
-foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1/m^3 1/m^4} units {T/m T/m^2 T/m^3} typeName {Quad Sext Oct} {
-    set grad [os editstring %/K/G/ $parameter]
+foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1/m^3 1/m^4} units {T/m T/m^2 T/m^3} units2 {T T/m T/m^2} typeName {Quad Sext Oct} {
+    set grad [os editstring %/K/B/ $parameter]
     if [catch {eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=$wc -match=column,ElementParameter=$parameter \
 	-print=column,ElementTag,%s.%ld,ElementName,ElementOccurence \
 	-define=col,$parameter,ParameterValue,units=$KnUnits \
@@ -89,7 +89,8 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
 	| sddsprocess -pipe=in $rootname-$type.sdds -process=Ide*,sum,%sTotal \
 	-process=Length,max,%sMax -process=Length,min,%sMin \
 	-process=$parameter,largest,${parameter}Largest \
-	"{-define=col,$grad,$parameter $H *,units=$units}"} result] {
+	"{-define=col,$grad,$parameter $H *,units=$units}" \
+	"{-define=col,${grad}L,$parameter $H * Length *,units=$units2}"} result] {
 	puts stderr "No results for $wc"
     } else {
 	if ![string length $caption] {
@@ -129,6 +130,8 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
     "{-define=col,AngleDeg,Angle rtod,units=deg}" \
     "{-define=col,B1,K1 $H *,units=T/m}" \
     "{-define=col,B2,K2 $H *,units=T/m^2}" \
+    "{-define=col,B1L,B1 Length *,units=T}" \
+    "{-define=col,B2L,B2 Length *,units=T/m}" \
     "{-define=col,Ec,0.665 E sqr * B * abs,units=keV}" \
     "{-define=col,TotalPower,E 4 pow 8.846e4 * rho / I0 1e3 / * 2 / pi / Angle *,units=W}" \
     "{-define=col,IntegratedPowerDensity,TotalPower Angle / 1e3 /,units=W/mrad}" \
