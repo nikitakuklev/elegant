@@ -38,15 +38,21 @@ $F(\theta>\theta_o) = \frac{K_2 (\pi^2 - \theta_o^2)}{\pi^2 (K_2 +
 $\theta_o = \sqrt{\frac{(1-F)K_2\pi^2}{K_2 + F \pi^2}}$.  For each scatter,
 $F$ is chosen from a uniform random distribution on $[0,1]$.
 
-{\bf Energy loss.}  Energy loss simulation is very simple.
+{\bf Energy loss.} There are two ways to compute energy loss in materials, using a simple minded approach and using the bremsstrahlung cross section.
+The latter is recommended, but the former is kept for backward compatibility. 
+\begin{itemize}
+\item To enable bremsstrahlung simulation, simply set \verb|NUCLEAR_BREMSSTRAHLUNG=1|. Note that the energy loss is not correlated with the scattering
+  angle, which is not entirely physical but should be reasonable for large numbers of scattering events.
+\item To use the simplified approach:
+      \begin{itemize}
+      \item  Set \verb|ENERGY_DECAY=1|. Energy loss simulation is very simple.
 The energy loss per unit distance traveled, $x$, is 
 $\frac{dE}{dx} = -E/X_o$.  Hence, in traveling through a
 material of thickness $L$, the energy of each particle is
 transformed from $E$ to $E e^{-L/X_o}$.  
-
-{\bf Energy straggling.} This refers to variation in the energy lost
-by particles.  The model used by {\tt elegant} is {\em very}, {\em
-very} crude.  It assumes that the standard deviation of the energy
+       \item Optionally, set \verb|ENERGY_STRAGGLE=1|. {\bf Not recomemnded. Exists only for backward compatibility.}
+This adds variation in the energy lost
+by particles.  The model is {\em very}, {\em very} crude and {\bf not recommended}.  It assumes that the standard deviation of the energy
 loss is equal to half the mean energy loss.  This is an overestimate,
 we think, and is provided to give an upper bound on the effects of
 energy straggling until a real model can be developed.  Note one
@@ -54,3 +60,5 @@ obvious problem with this: if you split a MATTER element of length L
 into two pieces of length L/2, the total energy loss will not not
 change, but the induced energy spread will be about 30\% lower, due to
 addition in quadrature.
+\end{itemize}
+\end{itemize}

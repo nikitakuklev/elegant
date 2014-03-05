@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 25.2.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 25.3.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,41 +32,70 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 25.3.X}
+\section{Highlights of What's New in Version 25.3.1}
 
-Here is a summary of what's changed since release 25.2:
+Here is a summary of what's changed since release 25.2.1:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item In progress.
+\item Increased default accuracy parameter for closed orbit computation and correction to improve run time.
+\item If fixed length orbit calculations are requested, setting \verb|CHANGE_T=1| on \verb|RFCA| or \verb|RFCW| elements
+ is now flagged as an error. This bug was reported by T. Pulampong (DLS).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item In progress.
+\item A name assignment problem was fixed for \verb|correction_matrix_output| when BPMs and correctors have non-unique names.
+\item Fixed bug in handling of steering limits when multiple \verb|steering_element| commands are given.
+\item Changed the default number of x-y cycles and iterations in \verb|correct| command (orbit correction) to give better
+  behavior when the user does not specify anything. This issue was reported by T. Pulampong (DLS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item In progress.
+\item Added \verb|LRWAKE| element, which provides serial and parallel modeling of long range, multi-bunch, multi-pass, non-resonant wakes.
+ (Resonant wakes use the \verb|*RFMODE| elements.)
+\item Added bremsstrahlung energy loss to the \verb|MATTER| and \verb|SCRAPER| elements.
+\item Added parameters to \verb|CSBEND| for specifying the higher multipoles as fractions of the main field at a reference position.
+\item Orbit and trajectory correction now has the ability to remove pegged correctors from the algorithm. This feature was requested by 
+  V. Sajaev (APS).
+\item Gaussian-distributed ISR kicks now use a 5-sigma cutoff instead of 3. This was suggested by Z. Gu (IU) and improves agreement between tracking
+  results and expectations.
+\item The \verb|EDRIFT| element now appears in the magnet output file from \verb|run_setup|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|tune_footprint| command, which allows computing and optimizing the momentum and amplitude tune footprints.
+\item Added the \verb|tune_footprint| command, which allows serial or parallel compution and optimization of the momentum tune footprint, the amplitude tune footprint,
+  and the diffusion rate.
+\item The \verb|rf_setup| command now stores values for bunch length in symbols \verb|Sz0| and \verb|St0|, and also stores the fractional
+  energy spread in \verb|Sdelta0|.
+\item The \verb|load_parameters| command now has the ability to edit the names of elements before assigning values. It also has the ability to skip pages.
+\item Improved \verb|floor_coordinate| command so it can find vertex point for multi-segment dipoles with unequal segments.
+\item Improved \verb|ibsEmittance| to solve for x and y parameters separately, which is necessary for more accurate results when
+  $\tau_x \ne \tau_y$.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item In progress.
+\item The \verb|momentum_aperture| command now supports a massively-parallel mode in which all probe particles are tracked simultaneously.
+\item The \verb|parallel_optimization_setup| command now supports special tolerance and convergence parameters for the hybrid parallel simplex optimizer.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item In progress.
+\item Added {\tt bremsstrahlungLifetime}, which computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
+\item Added {\tt elasticScatteringLifetime}, which computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
+\item Added the script {\tt computeCoherentFraction} to compute the coherent fraction for undulator radiation.
+\item Added the script {\tt plotTwissBeamsize} to plot the beam sizes using data from the \verb|twiss_output| command.
+\item Added the script {\tt analyzeMagnets}, which generates SDDS and \latex files giving magnet parameters.
+\item Minor bug fixes and enhancements for {\tt sddsbs} (bending magnet spectrum).
+\item Added viewpoint generation to {\tt view3dGeometry}.
+\item {\tt sddsrandmult} can now be asked to suppress low-order (i.e., easily correctable) harmonics.
+\item {\tt sddsurgent} can now handle $500 \times 500$ grids for spatial and angular maps.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -2149,6 +2178,7 @@ assigned to the target parameter.
         STRING exclude_item_pattern = NULL;
         STRING include_type_pattern = NULL;
         STRING exclude_type_pattern = NULL;
+        STRING edit_name_command = NULL;
         long change_defined_values = 0;
         long clear_settings = 0;
         long allow_missing_elements = 0;
@@ -2206,6 +2236,9 @@ loading.
 Wildcard patterns to be used in selecting, respectively, which element
 types (e.g., QUAD, DRIFT) to include and which to exclude from
 loading.
+
+\item \verb|edit_name_command| --- A command using the syntax of the {\tt editstring} program, allowing
+  the strings in the \verb|ElementName| column to be modified before values are assigned.
 
 \item \verb|change_defined_values| --- Changes the defined values of
 the parameters.  This means that when the lattice is saved (using
@@ -2554,10 +2587,13 @@ to the search limit.
 
 \item \verb|output_mode| --- Normally, {\tt elegant} puts the values for positive and
 negative momentum aperture in different columns.  Each element thus has a single row of
-data in the output file.  If \verb|output_mode| is nonzero, {\tt elegant} instead puts
+data in the output file.  If \verb|output_mode=1|, {\tt elegant} instead puts
 the values for positive and negative apertures in successive rows, with a reduced number
 of columns.  This is mostly advantageous for the parallel version, since it allows using
 twice as many simultaneous processors.
+If \verb|output_mode=2|, {\tt elegant} tracks many more probe particles simultaneously, which
+is better for massively parallel systems. The number of particles tracked is the number of
+elements selected times the number of probe points between  \verb|delta_negative_limit| and \verb|delta_positive_limit|.
 
 \item \verb|forbid_resonance_crossing| --- Normally, {\tt elegant} allows the momentum
 aperture search to cross integer and half-integer resonances if no unstable particles are
@@ -3269,6 +3305,16 @@ This command must follow a \verb|twiss_output| command that includes radiation i
 energy loss per turn is needed to set up the rf cavities.
 Note that the command includes features to allow selecting a subset of the RFCA elements in the beamline.
 The selected subset is assumed to include all of the cavities that will impart net energy to the beam.
+
+This command stores values for bunch length in symbols \verb|Sz0| and \verb|St0|, and also stores the fractional
+energy spread in \verb|Sdelta0|, where they can be used in rpn expressions in subsequent  commands, e.g.,
+\begin{verbatim}
+&bunched_beam
+ sigma_dp = "(Sdelta0)",
+ sigma_s = "(Sz0)",
+ ...
+&end
+\end{verbatim}
 
 \begin{itemize}
 \item \verb|filename| --- Name of a file to which data related to the rf settings will be written.
@@ -4632,15 +4678,18 @@ arithmetic.
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
 program that reads or writes appropriate SDDS data.  The following is
-a brief description of each program.  Full descriptions for most programs are available
+a brief description of each program.  Full descriptions for many programs are available
 on subsequent pages.  Most programs will return a help message if the program name is
-given with no arguments.
+given with no arguments, which should be sufficient documentation.
 \begin{itemize}
+\item {\tt analyzeMagnets} --- Generates SDDS and \latex files giving magnet parameters.
 \item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA \cite{ASTRA} to a binary
   SDDS file suitable for use with {\tt elegant}.  This program is recommended over
   the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
   files that are quite slow to read and does not perform the correct computations
   for low-energy beams.
+\item {\tt bremsstrahlungLifetime} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
+\item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
   (Program by X. Dong.)
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
@@ -4650,6 +4699,7 @@ given with no arguments.
  successively doubling the number.  Intended to be used to increase the number of particles
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
  See also {\tt smoothDist6}.
+\item {\tt elasticScatteringLifetime} --- Computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
 \item {\tt elegant2astra} --- This program translates {\tt elegant} phase space files into ASTRA \cite{ASTRA} format.
 \item {\tt elegant2track} --- This program translates {\tt elegant} phase space files into TRACK \cite{TRACK} format.
   The ASCII version of TRACK is assumed.
@@ -4674,6 +4724,8 @@ given with no arguments.
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
         data.  (Program by M. Borland.)
+\item {\tt plotTwiss} -- Plots the twiss parameters using data from the \verb|twiss_output| command.
+\item {\tt plotTwissBeamsize} -- Plots the beam sizes using data from the \verb|twiss_output| command.
 \item {\tt radiationEnvelope} --- A tool for use with the output of {\tt sddsbrightness} and {\tt sddsfluxcurve}.
   It analyzes data for many harmonics and produces a single curve that shows the envelope of maximum
   brightness or flux over all harmonics.
@@ -4683,6 +4735,7 @@ given with no arguments.
         command, or the WATCH element.  (Program by M. Borland.)
 \item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator brightness curves.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
+\item {\tt sddsbs} --- Computes bending magnet spectra.
 \item {\tt sddsemitproc} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
@@ -4696,6 +4749,7 @@ given with no arguments.
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element. (Program by M. Borland.)
+\item {\tt sddsws} --- Computes wiggler spectra, using code from WS (bry R. Dejus).
 \item {\tt sddsurgent} --- Uses algorithms from the programs US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
   radiation properties, including power density and intensity distributions.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
@@ -4720,7 +4774,7 @@ given with no arguments.
   This gives a profile of the beamline that can be plotted with other data.
 \item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
   matrices for skew quadrupoles and to perform coupling correction using those matrices.
-\item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice.
+\item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
 \end{itemize}
 
 \begin{latexonly}
@@ -4975,7 +5029,8 @@ ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=129
 \begin{flushleft}{\tt 
 ibsEmittance {\em twissFile} {\em resultsFile}
  {-charge={\em nC}|-particles={\em value} }\{-coupling={\em value}|-emityInput={\em value}\}
- [-emitInput={\em value}] [-deltaInput={\em value}] 
+ [-emitInput={\em value}] [-deltaInput={\em value}]
+ [-emit0={\em value}] [-delta0={\em value}]
  [-superperiods={\em value}] [-isRing=1|0]
  \{-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}\}
  [-energy={\em MeV}] 
@@ -4991,12 +5046,15 @@ ibsEmittance {\em twissFile} {\em resultsFile}
 \begin{itemize}
 \item {\bf -charge}, {\bf -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
-\item {\bf -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
-\item {\tt -emityInput} --- Give the vertical emittance in meters.
+\item {\bf -coupling} --- Give the emittance or ``coupling'' ratio, $\epsilon_y/\epsilon_x$.
+\item {\tt -emityInput} --- Give the initial vertical emittance in meters.
 \item {\bf -emitInput} --- Give the initial total emittance in meters.  If not specified,
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\bf -deltaInput} --- Give the initial rms fractional momentum spread.  If not
 specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
+\item {\bf -emit0}, {\bf -delta0}  --- Redefine the equilibrium emittance and rms energy spread, if
+  different from what is given in the twiss input file. Can be used, e.g., to include additional source
+  of energy spread, such as microwave instability, from an external calculation.
 \item {\bf -superperiods={\em value}} --- If given, the number of superperiods in the 
 lattice.  {\em twissFile} is taken to pertain to a single sector.
 \item {\bf -isRing} --- Specify the calculation is done for stored beam 
@@ -5624,6 +5682,8 @@ The namelist command is {\tt perturbations}.  It has the following fields:
 \item {\tt n\_harm} --- The number of harmonics to simulate.  The default is 0, which results in computing
  all the harmonics for which Halbach indicates his treatment applies.
 \item {\tt random\_number\_seed} --- The initial seed for the random number generator.  Should be a large integer.
+\item {\tt long suppress\_main\_error} --- If non-zero, harmonics for the main multipole and lower orders are
+  suppressed. It is implicitly assumed that these are correctable through alignment and calibration.
 \end{itemize}
 
 \item {\bf author:} M. Borland, ANL/APS.
@@ -5925,7 +5985,7 @@ freewrl aps.x3d
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
-view3dGeometry -rootname {\em string} -showNames {\em listOfElementTypes} -showCoordinates {\em listOfElementTypes}
+view3dGeometry -rootname {\em string} -showNames {\em listOfElementTypes} -showCoordinates {\em listOfElementTypes} [-nviewpoints {\em number(10)}]
 }\end{flushleft}
 
 \item {\bf input files:}
@@ -5944,9 +6004,11 @@ view3dGeometry -rootname {\em string} -showNames {\em listOfElementTypes} -showC
   in the viewer.  Default: ``*SBEN*''.
 \item {\tt -showCoordinates} --- Gives list of element types, with optional wildcards, for which the local coordinate system will be
   shown in the viewer.  Default: ``MARK* WATCH*''.
+\item {\tt nviewpoints} --- Number of viewpoints to generate and embed in file. Moving between viewpoints using keystroke commands
+  is easier than ``flying'' using the keypad.
 \end{itemize}
 
-\item {\bf author:} A. Petrenko, BINP.
+\item {\bf author:} A. Petrenko, BINP. (Modified by M. Borland.)
 
 \end{itemize}
 
