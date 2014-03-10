@@ -124,7 +124,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     else
       zRate[2] = 1.+IBS->dT*IBS->zGrowthRate[islice+1];
 
-    RNSigma[0] = RNSigma[1] = RNSigma[2] = RNSigma[3] = 0;
+    RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
     if (!IBS->smooth) {
       computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
       if (IBS->do_x)
