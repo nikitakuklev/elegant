@@ -2544,6 +2544,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   inhibitFileSync = inhibit_fsync;
   echoNamelists = echo_namelists;
   mpiRandomizationMode = mpi_randomization_mode;
+  srGaussianLimit = SR_gaussian_limit;
   if (log_file)
     freopen(log_file, "w", stdout);
   if (error_log_file)
