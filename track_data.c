@@ -36,6 +36,9 @@ long mpiRandomizationMode = 3;
 
 long particleID = 1;
 
+/* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */
+double srGaussianLimit = 3.0;
+
 char *entity_name[N_TYPES] = {
     "LINE", "QUAD", "SBEN", "RBEN", "DRIF", "SEXT", "OCTU", "MULT", "SOLE", 
     "HKICK", "VKICK", "RFCA", "ELSE", "HMON", "VMON", "MONI", "RCOL", "ECOL", 
@@ -1664,7 +1667,6 @@ PARAMETER lrwake_param[N_LRWAKE_PARAMS] = {
     {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal"},
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal"},
     {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical"},
-    {"N_BUCKETS", "", IS_LONG, 0, (long)((char *)&lrwake_example.nBuckets), NULL, 0.0, 0, "number of buckets in one revolution"},
     {"TURNS_TO_KEEP", "", IS_LONG, 0, (long)((char *)&lrwake_example.turnsToKeep), NULL, 0.0, 128, "number of turns of data to retain"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&lrwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
 };
@@ -1700,6 +1702,8 @@ CHARGE charge_example;
 PARAMETER charge_param[N_CHARGE_PARAMS] = {
     {"TOTAL", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.charge), NULL, 0.0, 0, "total charge in beam"},
     {"PER_PARTICLE", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.chargePerParticle), NULL, 0.0, 0, "charge per macroparticle"},
+    {"N_BUCKETS", "", IS_LONG, 0, (long)((char *)&charge_example.nBuckets), NULL, 0.0, 1, "number of buckets for WAKE, TRWAKE, LRWAKE, ..."},
+    {"STORAGE_RING_BUCKET_MODE", "", IS_LONG, 0, (long)((char *)&charge_example.storageRingBucketMode), NULL, 0.0, 0, "If non-zero, revolution length is used to determine bucket boundaries. Otherwise, uses total beam length."},
 };
 
 PFILTER pfilter_example;

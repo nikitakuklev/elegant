@@ -508,9 +508,9 @@ long trackRfCavityWithWakes
         if (!wakesAtEnd) {
           /* do wakes */
           if (wake) 
-            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+            track_through_wake(part, np, wake, P_central, run, iPass, 0.0, charge);
           if (trwake)
-            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, 0.0, charge);
           if (LSCKick) {
 #if !USE_MPI
             if (dgammaOverGammaNp)
@@ -549,9 +549,9 @@ long trackRfCavityWithWakes
         if (wakesAtEnd) {
           /* do wakes */
           if (wake) 
-            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+            track_through_wake(part, np, wake, P_central, run, iPass, 0.0, charge);
           if (trwake)
-            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, 0.0, charge);
           if (LSCKick) {
             if (dgammaOverGammaNp)
 #if !USE_MPI
@@ -669,9 +669,9 @@ long trackRfCavityWithWakes
         
         /* do wakes */
         if (wake) 
-          track_through_wake(part, np, wake, P_central, run, iPass, charge);
+          track_through_wake(part, np, wake, P_central, run, iPass, 0.0, charge);
         if (trwake)
-          track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          track_through_trwake(part, np, trwake, *P_central, run, iPass, 0.0, charge);
         if (LSCKick) {
           if (dgammaOverGammaNp)
 #if !USE_MPI

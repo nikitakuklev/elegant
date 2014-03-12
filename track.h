@@ -66,7 +66,7 @@ extern long particleIsElectron;
 #define COORDINATES_PER_PARTICLE 7
 
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */
-#define SR_GAUSSIAN_LIMIT 5.0
+extern double srGaussianLimit;
 
 /* various user-controlled global flags (global_settings namelist) */
 extern long inhibitFileSync;
@@ -900,7 +900,7 @@ extern char *entity_text[N_TYPES];
 #define N_WAKE_PARAMS 13
 #define N_TRWAKE_PARAMS 21
 #define N_TUBEND_PARAMS 6
-#define N_CHARGE_PARAMS 2
+#define N_CHARGE_PARAMS 4
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 11
 #define N_CSRCSBEND_PARAMS 70
@@ -942,7 +942,7 @@ extern char *entity_text[N_TYPES];
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
-#define N_LRWAKE_PARAMS 12
+#define N_LRWAKE_PARAMS 11
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2414,9 +2414,10 @@ typedef struct {
   char *WColumn[4]; /* t, Wx, Wy, Wz column names */
   double factor;             /* factor to multiply by (e.g., number of cells) */
   double xFactor, yFactor, zFactor;
-  long nBuckets, turnsToKeep, rampPasses;
+  long turnsToKeep, rampPasses;
   /* for internal use: */
   long initialized;          /* indicates that files are loaded */
+  long nBuckets;
   /* variables for holding data from users input file */
   long wakePoints;
   double *W[4];              /* t, Wx, Wy, Wz */
@@ -2540,6 +2541,7 @@ typedef struct {
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
   double charge, chargePerParticle;
+  long nBuckets, storageRingBucketMode;
   /* for internal use only */
   double macroParticleCharge;
 } CHARGE;
@@ -3556,11 +3558,13 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
                               double *Vtime, long nb, double tmin, double dt, 
                               long interpolate, long exponent);
 void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
-                        RUN *run, long i_pass, CHARGE *charge);
+                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
-                          RUN *run, long i_pass, CHARGE *charge);
+                          RUN *run, long i_pass, double revolution_length, CHARGE *charge);
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
 			  RUN *run, long i_pass, double revolutionLength, CHARGE *charge);
+void determine_bucket_assignments(double **part, double P0, double **time, long **ibParticle, long np, long ***ipBucket, long **npBucket, long nBuckets, double revolutionLength,
+                                  long storageRingBucketMode);
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);

@@ -1470,12 +1470,12 @@ long do_tracking(
 				   charge);
 	      break;
 	    case T_WAKE:
-	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass,
+	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass, beamline->revolution_length,
 				 charge);
 	      break;
 	    case T_TRWAKE:
 	      track_through_trwake(coord, nToTrack, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass, 
-				   charge);
+				   beamline->revolution_length, charge);
 	      break;
 	    case T_SREFFECTS:
               track_SReffects(coord, nToTrack, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals),

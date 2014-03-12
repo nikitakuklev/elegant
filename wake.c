@@ -12,195 +12,288 @@
 #include "table.h"
 #include "fftpackC.h"
 
+#define DEBUG 1
+
 void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);
 
 
-void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
-                        RUN *run, long i_pass, CHARGE *charge
+void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInput,
+                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge
                         )
 {
   static double *Itime = NULL;           /* array for histogram of particle density */
   static double *Vtime = NULL;           /* array for voltage acting on each bin */
   static long max_n_bins = 0;
-  static long *pbin = NULL;              /* array to record which bin each particle is in */
-  static double *time = NULL;            /* array to record arrival time of each particle */
-  static long max_np = 0;
+  long *pbin = NULL;                     /* array to record which bin each particle is in */
+  static double *time0 = NULL;           /* array to record arrival time of each particle */
+  static double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
+  static double **part = NULL;           /* particle buffer for working bucket */
+  static long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
+  long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   static short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0;
+  long iBucket, nBuckets, max_np=0, ip, np;
   double factor, tmin, tmax, tmean=0, dt=0, Po, rampFactor;
 #if USE_MPI
   double *buffer;
+#if MPI_DEBUG
+  printf("myid=%d, np0=%ld\n", myid, np0);
+  fflush(stdout);
+#endif
 #endif
 
-  set_up_wake(wakeData, run, i_pass, np, charge);
-  rampFactor = 0;
-  if (i_pass>=(wakeData->rampPasses-1))
-    rampFactor = 1;
-  else
-    rampFactor = (i_pass+1.0)/wakeData->rampPasses;
-  Po = *PoInput;
+  set_up_wake(wakeData, run, i_pass, np0, charge);
 
-  if (!USE_MPI || !notSinglePart) {
-    if (np>max_np) {
-      pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-      time = trealloc(time, sizeof(*time)*max_np);
-    }
-  }
-#if USE_MPI
-  else if (USE_MPI) {
-      long np_total;
-      if (isSlave) {
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-	if (np_total>max_np) { 
-	  /* if the total number of particles is increased, we do reallocation for every CPU */
-	  pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-	  time = trealloc(time, sizeof(*time)*max_np);
-	  max_np = np_total; /* max_np should be the sum across all the processors */
-	}
-      }
-    }
-#endif 
+  if (!charge || (nBuckets=charge->nBuckets)<=0)
+    nBuckets = 1;
 
-  /* Compute time coordinate of each particle */
-  if (isSlave ||  !notSinglePart)
-    tmean = computeTimeCoordinates(time, Po, part, np);
+  if (isSlave || !notSinglePart) {
+    rampFactor = 0;
+    if (i_pass>=(wakeData->rampPasses-1))
+      rampFactor = 1;
+    else
+      rampFactor = (i_pass+1.0)/wakeData->rampPasses;
+    Po = *PoInput;
 
-  find_min_max(&tmin, &tmax, time, np);
-#if USE_MPI
-  if (isSlave && notSinglePart)
-    find_global_min_max(&tmin, &tmax, np, workers);      
-#endif
-  if (isSlave ||  !notSinglePart) {
-    if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
-      if (!wakeData->allowLongBeam) {
-	fprintf(stderr, "Error: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
-	fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
-		tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-	exit(1);
-      }
-      fprintf(stdout, "Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
-      fprintf(stdout, "The beam length is %le s, while the wake length is %le s\n",
-	      tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-      /*
-      if (abs(tmax-tmean)<abs(tmin-tmean)) 
-	tmin = tmax - (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-      else
-	tmax = tmin + (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-      */
-    }
-
-    dt = wakeData->dt;
-    if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
-      fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
-      fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
-      fprintf(stdout, "         Consider using a wake with finer time spacing in WAKE elements.\n");
-      fflush(stdout);
-      shortBunchWarning = 1;
+    if (nBuckets>1) 
+      determine_bucket_assignments(part0, Po, &time0, &ibParticle, np0, &ipBucket, &npBucket, nBuckets, revolutionLength, charge->storageRingBucketMode);
+    else {
+      time0 = tmalloc(sizeof(*time0)*np0);
+      tmean = computeTimeCoordinates(time0, Po, part0, np0);
     }
     
-    if (wakeData->n_bins) {
-      nb = wakeData->n_bins;
-      tmin = tmean-dt*nb/2.0;
-    }
-    else {
-      /* If user has set nBunches!=0, then we can choose nb differently here. */
-      nb = (tmax-tmin)/dt+3;
-      tmin -= dt;
-      tmax += dt;
-    }
-    if (nb<=0) {
-      fprintf(stdout, "Warning: Number of wake bins is 0 or negative\n");
-      fprintf(stderr, "probably indicating an extremely long bunch\n");
-      fprintf(stderr, "Wake ignored!\n");
-      return;
-    }
-
-    if (nb>max_n_bins) {
-      Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
-      Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-    }
- 
-    n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
-  }
-
-  if (!USE_MPI || !notSinglePart) {
-    if (n_binned!=np) {
-      fprintf(stdout, "warning: only %ld of %ld particles were binned (WAKE)\n", n_binned, np);
-      fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+#ifdef DEBUG
+    if (nBuckets>1) {
+      printf("%ld buckets\n", nBuckets);
       fflush(stdout);
-      return;
-    }
-  }
-#if USE_MPI
-  else if (isSlave) {
-    int all_binned, result = 1;
-
-    result = ((n_binned==np) ? 1 : 0);		             
-    MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
-    if (!all_binned) {
-      if (myid==1) {  
-	/* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-	fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-	fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-	fflush(stdout); 
+      for (iBucket=0; iBucket<nBuckets; iBucket++) {
+        printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
+        fflush(stdout);
       }
     }
-  }
-  
-  if (isSlave && notSinglePart) {
-    buffer = malloc(sizeof(double) * nb);
-    MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
-    memcpy(Itime, buffer, sizeof(double)*nb);
-    free(buffer);
-  }
 #endif
-  if (isSlave || !notSinglePart) {
-    if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
-      if (!SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
-	fprintf(stderr, "Problem with smoothing for WAKE element (file %s)\n",
-		wakeData->inputFile);
-	fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
-		nb, wakeData->SGOrder, wakeData->SGHalfWidth);
-	exit(1);
+
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+      if (nBuckets==1) {
+        time = time0;
+        part = part0;
+        np = np0;
+        pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      } else {
+        if ((np = npBucket[iBucket])==0)
+          continue;
+#ifdef DEBUG
+        printf("WAKE: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
+        fflush(stdout);
+#endif
+        if (np>max_np) {
+          if (part)
+            free_czarray_2d((void**)part, max_np, 7);
+          part = (double**)czarray_2d(sizeof(double), np, 7);
+          time = (double*)tmalloc(sizeof(*time)*np);
+          pbin = trealloc(pbin, sizeof(*pbin)*np);
+          max_np = np;
+        }
+        for (ip=tmean=0; ip<np; ip++) {
+          time[ip] = time0[ipBucket[iBucket][ip]];
+          tmean += time[ip];
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+        }
+        if (np>0)
+          tmean /= np;
       }
+      
+      find_min_max(&tmin, &tmax, time, np);
+#ifdef DEBUG
+      printf("WAKE: tmin=%21.15le, tmax=%21.15le, np=%ld\n", tmin, tmax, np);
+      fflush(stdout);
+#endif
+#if USE_MPI
+      if (isSlave && notSinglePart)
+        find_global_min_max(&tmin, &tmax, np, workers);
+#ifdef DEBUG
+      printf("WAKE: global tmin=%21.15le, tmax=%21.15le, np=%ld\n", tmin, tmax, np);
+      fflush(stdout);
+#endif
+#endif
+      if (isSlave ||  !notSinglePart) {
+        if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
+          if (!wakeData->allowLongBeam) {
+            fprintf(stderr, "Error: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
+            fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
+                    tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+            exit(1);
+          }
+          fprintf(stdout, "Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
+          fprintf(stdout, "The beam length is %le s, while the wake length is %le s\n",
+                  tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+          /*
+            if (abs(tmax-tmean)<abs(tmin-tmean)) 
+            tmin = tmax - (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+            else
+            tmax = tmin + (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+            */
+        }
+
+        dt = wakeData->dt;
+        if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
+          fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
+          fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
+          fprintf(stdout, "         Consider using a wake with finer time spacing in WAKE elements.\n");
+          fflush(stdout);
+          shortBunchWarning = 1;
+        }
+        
+        if (wakeData->n_bins) {
+          nb = wakeData->n_bins;
+          tmin = tmean-dt*nb/2.0;
+        }
+        else {
+          nb = (tmax-tmin)/dt+3;
+          tmin -= dt;
+          tmax += dt;
+        }
+        if (nb<=0) {
+          fprintf(stdout, "Warning: Number of wake bins is 0 or negative\n");
+          fprintf(stdout, "probably indicating an extremely long bunch\n");
+          fprintf(stdout, "Wake ignored!\n");
+          return;
+        }
+#ifdef DEBUG
+        printf("WAKE: dt=%le, nb=%ld\n",dt, nb);
+        fflush(stdout);
+#endif
+
+        if (nb>max_n_bins) {
+          Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
+          Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
+        }
+        
+        n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
+      }
+
+      if (!USE_MPI || !notSinglePart) {
+        if (n_binned!=np) {
+          fprintf(stdout, "warning: only %ld of %ld particles were binned (WAKE)\n", n_binned, np);
+          fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+          fflush(stdout);
+          return;
+        }
+      }
+#if USE_MPI
+else if (isSlave) {
+  int all_binned, result = 1;
+
+  result = ((n_binned==np) ? 1 : 0);		             
+  MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+  if (!all_binned) {
+    if (myid==1) {  
+      /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+      fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
+      fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+      fflush(stdout); 
+    }
+  }
+}
+      
+      if (isSlave && notSinglePart) {
+        buffer = malloc(sizeof(double) * nb);
+        MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(Itime, buffer, sizeof(double)*nb);
+        free(buffer);
+      }
+#endif
+      if (isSlave || !notSinglePart) {
+        if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
+          if (!SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+            fprintf(stderr, "Problem with smoothing for WAKE element (file %s)\n",
+                    wakeData->inputFile);
+            fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+                    nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+            exit(1);
+          }
+        }
+      }
+
+      /* Do the convolution of the particle density and the wake function,
+         V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
+         Note that T<0 is the head of the bunch.
+         For the wake, the argument is the normal convention wherein larger
+         arguments are later times.
+         */
+      if (isSlave || !notSinglePart) {
+        Vtime[nb] = 0;
+        convolveArrays(Vtime, nb,
+                       Itime, nb, 
+                       wakeData->W, wakeData->wakePoints);
+
+        factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor*rampFactor;
+        for (ib=0; ib<nb; ib++)
+          Vtime[ib] *= factor;
+        
+        applyLongitudinalWakeKicks(part, time, pbin, np, Po, 
+                                   Vtime, nb, tmin, dt, wakeData->interpolate);
+      }
+
+      if (nBuckets!=1) {
+#ifdef DEBUG
+        printf("WAKE: copying data back to main array\n");
+        fflush(stdout);
+#endif
+
+        for (ip=0; ip<np; ip++)
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+
+#ifdef DEBUG
+        printf("Done with bucket %ld\n", iBucket);
+        fflush(stdout);
+#endif
+      }
+    }
+    
+    if (nBuckets>1) {
+      free(npBucket);
+      free_czarray_2d((void**)ipBucket, nBuckets, np0);
     }
   }
 
-  /* Do the convolution of the particle density and the wake function,
-     V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
-     Note that T<0 is the head of the bunch.
-     For the wake, the argument is the normal convention wherein larger
-     arguments are later times.
-     */
-  if (isSlave || !notSinglePart) {
-    Vtime[nb] = 0;
-    convolveArrays(Vtime, nb,
-		   Itime, nb, 
-		   wakeData->W, wakeData->wakePoints);
-
-    factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor*rampFactor;
-    for (ib=0; ib<nb; ib++)
-      Vtime[ib] *= factor;
-  
-    applyLongitudinalWakeKicks(part, time, pbin, np, Po, 
-			       Vtime, nb, tmin, dt, wakeData->interpolate);
-  }
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   if (wakeData->change_p0)
-    do_match_energy(part, np, PoInput, 0);
-  
+    do_match_energy(part0, np0, PoInput, 0);
+
+  if (isSlave || !notSinglePart) {
+    if (part && part!=part0) {
+      free_czarray_2d((void**)part, max_np, 7);
+      part = NULL;
+    }
+    if (time && time!=time0) {
+      free(time);
+      time = NULL;
+    }
+    if (time0) {
+      free(time0);
+      time0 = NULL;
+    }
+    if (pbin) {
+      free(pbin);
+      pbin = NULL;
+    }
+    
 #if defined(MINIMIZE_MEMORY)
-  free(Itime);
-  free(Vtime);
-  free(pbin);
-  free(time);
-  Itime = Vtime = time = NULL;
-  pbin = NULL;
-  max_n_bins =  max_np= 0;
+    free(Itime);
+    free(Vtime);
+    free(time0);
+    Itime = Vtime = time = NULL;
+    max_n_bins = 0;
 #endif
+  }
 }
 
 void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,
@@ -508,7 +601,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.W = tmalloc(sizeof(double)*n_bins);
   wakeData.t = tmalloc(sizeof(double)*n_bins);
   wakeData.dt = dt;
-
+  
   for (i=0; i<n_bins; i++) {
     wakeData.t[i] = i*dt;
     wakeData.W[i] = 2*kappa*corgpipe->length*cos(omega*wakeData.t[i]);
@@ -516,7 +609,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.macroParticleCharge = charge->macroParticleCharge;
 
   exactDrift(part, np, corgpipe->length/2);
-  track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, charge);
+  track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, 0.0, charge);
   exactDrift(part, np, corgpipe->length/2);
   
   free(wakeData.t);

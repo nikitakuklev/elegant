@@ -12,211 +12,273 @@
 #include "table.h"
 #include "fftpackC.h"
 
-void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
+/* #define DEBUG 1 */
 
-void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
-                        RUN *run, long i_pass, CHARGE *charge
+void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
+void dumpTransverseTimeDistributions(double **posItime, long nb);
+
+void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
+                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge
                         )
 {
   static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
   static double *Vtime = NULL;           /* array for voltage acting on each bin */
   static long max_n_bins = 0;
   static long *pbin = NULL;              /* array to record which bin each particle is in */
-  static double *time = NULL;            /* array to record arrival time of each particle */
+  static double *time0 = NULL;           /* array to record arrival time of each particle */
+  static double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
   static double *pz = NULL;
+  static double **part = NULL;           /* particle buffer for working bucket */
+  static long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
+  long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   static long max_np = 0;
   static short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0, plane;
+  long iBucket, nBuckets, ip, np;
   double factor, tmin, tmean=0, tmax, dt=0, rampFactor=1;
 #if USE_MPI
   double *buffer;
 #endif
 
-  set_up_trwake(wakeData, run, i_pass, np, charge);
+  set_up_trwake(wakeData, run, i_pass, np0, charge);
+  if (!charge || (nBuckets=charge->nBuckets)<=0)
+    nBuckets = 1;
+
   if (i_pass>=(wakeData->rampPasses-1))
     rampFactor = 1;
   else
     rampFactor = (i_pass+1.0)/wakeData->rampPasses;
 
-#if (!USE_MPI) 
-  if (np>max_np) {
-    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-    time = trealloc(time, sizeof(*time)*max_np);
-    pz = trealloc(pz, sizeof(*pz)*max_np);
-  }
-#else
-  if (notSinglePart) {
-    long np_total;
-    if (isSlave) {
-      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-      if (np_total>max_np) { 
-	/* if the total number of particles is increased, we do reallocation for every CPU */
-	pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-	time = trealloc(time, sizeof(*time)*max_np);
-	pz = trealloc(pz, sizeof(*pz)*max_np);
-	max_np = np_total; /* max_np should be the sum across all the processors */
-      }
-    }
-  } else {
-    if (np>max_np) {
-      pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-      time = trealloc(time, sizeof(*time)*max_np);
-      pz = trealloc(pz, sizeof(*pz)*max_np);
-    }
-  }
-#endif
-
-  /* Compute time coordinate of each particle */
-  if (isSlave || !notSinglePart)
-    tmean = computeTimeCoordinates(time, Po, part, np);
-  find_min_max(&tmin, &tmax, time, np);
-#if USE_MPI
-  if (isSlave && notSinglePart)
-    find_global_min_max(&tmin, &tmax, np, workers);      
-#endif  
   if (isSlave || !notSinglePart) {
-    if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
-      fprintf(stderr, "The beam is longer than the transverse wake function.\nThis would produce unphysical results.\n");
-      fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
-	      tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-      exitElegant(1);
-    }
-
-    dt = wakeData->dt;
-    if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
-      fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
-      fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
-      fprintf(stdout, "         Consider using a wake with finer time spacing in TRWAKE elements.\n");
-      fflush(stdout);
-      shortBunchWarning = 1;
-    }
-
-    if (wakeData->n_bins) {
-      tmin = tmean-dt*wakeData->n_bins/2.0;
-      nb = wakeData->n_bins;
-    }
+    if (nBuckets>1) 
+      determine_bucket_assignments(part0, Po, &time0, &ibParticle, np0, &ipBucket, &npBucket, nBuckets, revolutionLength, charge->storageRingBucketMode);
     else {
-      nb = (tmax-tmin)/dt+3;
-      tmin -= dt;
-      tmax += dt;
+      time0 = tmalloc(sizeof(*time0)*np0);
+      tmean = computeTimeCoordinates(time0, Po, part0, np0);
     }
 
-    if (tmin>tmax || nb<=0) {
-      fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
-      exitElegant(1);
-    }
-  
-    if (nb>max_n_bins) {
-      posItime[0] = trealloc(posItime[0], sizeof(**posItime)*(max_n_bins=nb));
-      posItime[1] = trealloc(posItime[1], sizeof(**posItime)*(max_n_bins=nb));
-      Vtime = trealloc(Vtime, sizeof(*Vtime)*(max_n_bins+1));
-    }
-
-    if (wakeData->tilt)
-      rotateBeamCoordinates(part, np, wakeData->tilt);
-  
-    n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
-					     wakeData->dx, wakeData->dy,
-					     wakeData->xDriveExponent, wakeData->yDriveExponent);
-  }
-#if (!USE_MPI)
-  if (n_binned!=np) {
-    fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-    fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
-    fflush(stdout);
-  }
-#else
-  if (notSinglePart) {
-    if (isSlave) {
-      int all_binned, result = 1;
-      
-      result = ((n_binned==np) ? 1 : 0);	             
-      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
-      if (!all_binned) {
-	if (myid==1) {  
-	  /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-	  fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-	  fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-	  fflush(stdout); 
-	}
-      }
-    }
-  } else {
-    if (n_binned!=np) {
-      fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-      fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
-      fflush(stdout);
-    }
-  }
-#endif  
-    if (isSlave || !notSinglePart) {
-      for (plane=0; plane<2; plane++) {
-	if (!wakeData->W[plane])
-	  continue;
-    
-#if USE_MPI 
-	if (isSlave && notSinglePart) {
-	  buffer = malloc(sizeof(double) * nb);
-	  MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
-	  memcpy(posItime[plane], buffer, sizeof(double)*nb);
-	  free(buffer); buffer = NULL;
-	}
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+      if (nBuckets==1) {
+        time = time0;
+        part = part0;
+        np = np0;
+        pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+        pz = trealloc(pz, sizeof(*pz)*np);
+      } else {
+        if ((np = npBucket[iBucket])==0)
+          continue;
+#ifdef DEBUG
+        printf("WAKE: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
+        fflush(stdout);
 #endif
-	factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor;
-	if (plane==0)
-	  factor *= wakeData->xfactor*rampFactor;
-	else
-	  factor *= wakeData->yfactor*rampFactor;
-	if (!factor)
-	  continue;
-    
-	if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
-	  if (!SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
-				  wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
-	    fprintf(stderr, "Problem with smoothing for TRWAKE element (file %s)\n",
-		    wakeData->inputFile);
-	    fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
-		    nb, wakeData->SGOrder, wakeData->SGHalfWidth);
-	    exitElegant(1);
-	  }
-      
-	}
-
-	/* Do the convolution of the particle density and the wake function,
-	   V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
-	   Note that T<0 is the head of the bunch.
-	   For the wake, the argument is the normal convention wherein larger
-	   arguments are later times.
-	*/
-	Vtime[nb] = 0;
-	convolveArrays(Vtime, nb, 
-		       posItime[plane], nb,
-		       wakeData->W[plane], wakeData->wakePoints);
-
-	for (ib=0; ib<nb; ib++)
-	  Vtime[ib] *= factor;
-
-	/* change particle transverse momenta to reflect voltage in relevant bin */
-	applyTransverseWakeKicks(part, time, pz, pbin, np, 
-				 Po, plane, 
-				 Vtime, nb, tmin, dt, wakeData->interpolate, 
-                                 plane==0?wakeData->xProbeExponent:wakeData->yProbeExponent);
+        if (np>max_np) {
+          if (part)
+            free_czarray_2d((void**)part, max_np, 7);
+          part = (double**)czarray_2d(sizeof(double), np, 7);
+          time = (double*)tmalloc(sizeof(*time)*np);
+          pbin = trealloc(pbin, sizeof(*pbin)*np);
+          pz = trealloc(pz, sizeof(*pz)*np);
+          max_np = np;
+        }
+        for (ip=tmean=0; ip<np; ip++) {
+          time[ip] = time0[ipBucket[iBucket][ip]];
+          tmean += time[ip];
+          pz[ip] = 0;
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+        }
+        if (np>0)
+          tmean /= np;
       }
+            
+      find_min_max(&tmin, &tmax, time, np);
+#ifdef DEBUG
+      printf("WAKE: tmin=%21.15le, tmax=%21.15le, tmax-tmin=%21.15le, np=%ld\n", tmin, tmax, tmax-tmin, np);
+      fflush(stdout);
+#endif
+#if USE_MPI
+      if (isSlave && notSinglePart)
+        find_global_min_max(&tmin, &tmax, np, workers);
+#endif
+      if (isSlave ||  !notSinglePart) {
+        if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
+          fprintf(stderr, "The beam is longer than the transverse wake function.\nThis would produce unphysical results.\n");
+          fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
+                  tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+          exitElegant(1);
+        }
 
-      if (wakeData->tilt)
-	rotateBeamCoordinates(part, np, -wakeData->tilt);
+        dt = wakeData->dt;
+
+        if (wakeData->n_bins) {
+          tmin = tmean-dt*wakeData->n_bins/2.0;
+          nb = wakeData->n_bins;
+        }
+        else {
+          nb = (tmax-tmin)/dt+3;
+          tmin -= dt;
+          tmax += dt;
+        }
+
+        if (tmin>tmax || nb<=0) {
+          fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
+          exitElegant(1);
+        }
+        
+        if (nb>max_n_bins) {
+          posItime[0] = trealloc(posItime[0], sizeof(**posItime)*(max_n_bins=nb));
+          posItime[1] = trealloc(posItime[1], sizeof(**posItime)*(max_n_bins=nb));
+          Vtime = trealloc(Vtime, sizeof(*Vtime)*(max_n_bins+1));
+        }
+
+        if (wakeData->tilt)
+          rotateBeamCoordinates(part, np, wakeData->tilt);
+        
+        n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
+                                                 wakeData->dx, wakeData->dy,
+                                                 wakeData->xDriveExponent, wakeData->yDriveExponent);
+#if (!USE_MPI)
+#ifdef DEBUG
+        dumpTransverseTimeDistributions(posItime, nb);
+#endif
+#endif
+      }
+#if (!USE_MPI)
+      if (n_binned!=np) {
+        fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+        fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
+        fflush(stdout);
+      }
+#else
+      if (notSinglePart) {
+        if (isSlave) {
+          int all_binned, result = 1;
+          
+          result = ((n_binned==np) ? 1 : 0);	             
+          MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+          if (!all_binned) {
+            if (myid==1) {  
+              /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+              fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
+              fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+              fflush(stdout); 
+            }
+          }
+        }
+      } else {
+        if (n_binned!=np) {
+          fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+          fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
+          fflush(stdout);
+        }
+      }
+#endif  
+      if (isSlave || !notSinglePart) {
+        for (plane=0; plane<2; plane++) {
+          if (!wakeData->W[plane])
+            continue;
+          
+#if USE_MPI 
+          if (isSlave && notSinglePart) {
+            buffer = malloc(sizeof(double) * nb);
+            MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+            memcpy(posItime[plane], buffer, sizeof(double)*nb);
+            free(buffer); buffer = NULL;
+          }
+#endif
+          factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor;
+          if (plane==0)
+            factor *= wakeData->xfactor*rampFactor;
+          else
+            factor *= wakeData->yfactor*rampFactor;
+          if (!factor)
+            continue;
+          
+          if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
+            if (!SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
+                                    wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+              fprintf(stderr, "Problem with smoothing for TRWAKE element (file %s)\n",
+                      wakeData->inputFile);
+              fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+                      nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+              exitElegant(1);
+            }
+            
+          }
+
+          /* Do the convolution of the particle density and the wake function,
+             V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
+             Note that T<0 is the head of the bunch.
+             For the wake, the argument is the normal convention wherein larger
+             arguments are later times.
+             */
+          Vtime[nb] = 0;
+          convolveArrays(Vtime, nb, 
+                         posItime[plane], nb,
+                         wakeData->W[plane], wakeData->wakePoints);
+
+          for (ib=0; ib<nb; ib++)
+            Vtime[ib] *= factor;
+
+          /* change particle transverse momenta to reflect voltage in relevant bin */
+          applyTransverseWakeKicks(part, time, pz, pbin, np, 
+                                   Po, plane, 
+                                   Vtime, nb, tmin, dt, wakeData->interpolate, 
+                                   plane==0?wakeData->xProbeExponent:wakeData->yProbeExponent);
+        }
+        
+        if (wakeData->tilt)
+          rotateBeamCoordinates(part, np, -wakeData->tilt);
+
+        if (nBuckets!=1) {
+#ifdef DEBUG
+          printf("WAKE: copying data back to main array\n");
+          fflush(stdout);
+#endif
+          
+          for (ip=0; ip<np; ip++)
+            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+          
+#ifdef DEBUG
+          printf("Done with bucket %ld\n", iBucket);
+          fflush(stdout);
+#endif
+        }
+
+      }
     }
-#if defined(MINIMIZE_MEMORY)
+  }
+  
+
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+  if (isSlave || !notSinglePart) {
+    if (part && part!=part0) {
+      free_czarray_2d((void**)part, max_np, 7);
+      part = NULL;
+    }
+    if (time && time!=time0) {
+      free(time);
+      time = NULL;
+    }
+    if (time0) {
+      free(time0);
+      time0 = NULL;
+    }
+    if (pbin) {
+      free(pbin);
+      pbin = NULL;
+    }
+  }
+  
   free(posItime[0]);
   free(posItime[1]);
   free(Vtime);
-  free(pbin);
-  free(time);
   free(pz);
   Vtime = time = pz = posItime[0] = posItime[1] = NULL;
-  pbin = NULL;
   max_n_bins = max_np = 0;
-#endif
 }
 
 void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,
@@ -542,3 +604,17 @@ long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, do
   return n_binned;
 }
   
+void dumpTransverseTimeDistributions(double **posItime, long nb)
+{
+  static FILE *fp = NULL;
+  long ib;
+  if (!fp) {
+    fp = fopen("posItime.sdds", "w");
+    fprintf(fp, "SDDS1\n&column name=Bin type=long &end\n&column name=xI, type=double &end\n&column name=yI, type=double &end\n");
+    fprintf(fp, "&data mode=ascii &end\n");
+  }
+  fprintf(fp, "%ld\n", nb);
+  for (ib=0; ib<nb; ib++) 
+    fprintf(fp, "%ld %le %le\n", ib, posItime[0][ib], posItime[1][ib]);
+  fflush(fp);
+}
