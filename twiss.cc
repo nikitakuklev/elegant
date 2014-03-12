@@ -4570,6 +4570,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     q = rf_setup_struct.total_voltage/(beamline->radIntegrals.Uo*1e6);
   }
 
+  phase = 0;
   if (voltage) {
     phase = 180-asin(1/q)*180/PI;
     printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n\n", voltage, phase);
