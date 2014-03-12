@@ -1,0 +1,12 @@
+This is the preferred way to assign charge to a beam, which is needed for the use of CSR simulation (CSRCSBEND, CSRDRIFT),
+wake simulation (WAKE, TRWAKE, LRWAKE, ZLONGIT, ZTRANSVERSE), rf mode simulation (RFMODE, TRFMODE, FRFMODE, RTRFMODE),
+space charge simulation (LSCDRIFT, RFCW, SCMULT), and intrabeam scattering simulation (IBSCATTER).
+
+This element is also used to declare the bunch structure of the beam, since this is also involved in calculations of
+collective effects. This is done by specifying \verb|N_BUCKETS|, which declares how many buckets to divide the beam into for
+the purposes of collective effects calculations. The number of buckets $b$ in this sense should not be confused with the number $h$ of rf buckets in a
+storage ring, although typically $b$ divides evenly into $h$.
+In \verb|STORAGE_RING_BUCKET_MODE=1| the revolution length is used to determine the
+duration of each bucket. Otherwise, the bucket durations are determined from the beam; this can be problematical if,
+for example, particles escape from the real rf bucket and incur large time offsets from their bunch. To avoid this, the \verb|CLEAN|
+element or another filter may be needed.
