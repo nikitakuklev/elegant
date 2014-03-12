@@ -12,8 +12,12 @@
     STRING mode = "many-particle";
     double xmin = -0.1;
     double xmax =  0.1;
+    double xpmin = 0.0;
+    double xpmax = 0.0;
     double ymin =  0.0;
     double ymax =  0.1;
+    double ypmin = 0.0;
+    double ypmax = 0.0;
     long nx  = 21;
     long n_splits = 0;
     double split_fraction = 0.5;

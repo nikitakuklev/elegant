@@ -35,12 +35,26 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"yLost", "&column name=yLost, units=m type=double &end"},
     } ;
 
+static SDDS_DEFINITION columnp_definition[N_COLUMNS] = {
+    {"xp", "&column name=xp, type=double &end"},
+    {"yp", "&column name=yp, type=double &end"},
+    {"xpClipped", "&column name=xpClipped, type=double &end"},
+    {"ypClipped", "&column name=ypClipped, type=double &end"},
+    {"sLost", "&column name=sLost, units=m, type=double &end"},
+    {"xLost", "&column name=xLost, units=m, type=double &end"},
+    {"yLost", "&column name=yLost, units=m type=double &end"},
+    } ;
+
 #define IP_STEP 0
 #define IP_AREA 1
 #define N_PARAMETERS 2
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
     {"Area", "&parameter name=Area, type=double, units=\"m$a2$n\" &end"},
+    } ;
+static SDDS_DEFINITION parameterp_definition[N_PARAMETERS] = {
+    {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"Area", "&parameter name=Area, type=double, &end"},
     } ;
 
 static SDDS_DATASET SDDS_aperture;
@@ -65,6 +79,7 @@ static char *search_mode[N_SEARCH_MODES] = {
   "seven-line", "nine-line", "eleven-line", "n-line", "particle-line",
 } ;
 static long mode_code = 0;
+static long slope_mode = 0;
 
 #if USE_MPI
 long do_aperture_search_line_p(RUN *run, VARY *control, double *referenceCoord, ERRORVAL *errcon,
@@ -92,10 +107,21 @@ void setup_aperture_search(
   /* check for data errors */
   if (!output && !optimization_mode)
     bombElegant("no output filename specified (required if optimization_mode=0)", NULL);
-  if (xmin>=xmax)
-    bombElegant("xmin >= xmax", NULL);
-  if (ymin>=ymax)
-    bombElegant("ymin >= ymax", NULL);
+  if (xmin==xmax) {
+    slope_mode = 1;
+    if (xpmin==xpmax || ypmin==ypmax) 
+      bombElegant("if xmin==xmax, must not have xpmin==xpmax or ypmin==ypmax", NULL);
+    if (ymin!=ymax)
+      bombElegant("if xmin==xmax, must also have ymin==ymax", NULL);
+  } else {
+    if (xmin>=xmax)
+      bombElegant("xmin >= xmax", NULL);
+    if (ymin>=ymax)
+      bombElegant("ymin >= ymax", NULL);
+    if (xpmin!=xpmax || ypmin!=ypmax)
+      bombElegant("if xmin!=xmax, must have xpmin==xpmax and ypmin==ypmax", NULL);
+  }
+  
   if (nx<3)
     bombElegant("nx < 3", NULL);
   if (ny<2)
@@ -112,6 +138,8 @@ void setup_aperture_search(
   }
   if ((mode_code=match_string(mode, search_mode, N_SEARCH_MODES, 0))<0)
     bombElegant("unknown search mode", NULL);
+  if (slope_mode && mode_code!=N_LINE_MODE)
+    bombElegant("slope-based aperture search only supported for mode=\"n-line\"", NULL);
 #if USE_MPI
   if (mode_code!=N_LINE_MODE) {
     bombElegant("only mode=\"n-line\" is supported by parallel elegant", NULL);
@@ -130,9 +158,9 @@ void setup_aperture_search(
     output = compose_filename(output, run->rootname);
     sprintf(description, "%s aperture search", search_mode[mode_code]);
     SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
-                            description, run->runfile, run->lattice, parameter_definition, 
+                            description, run->runfile, run->lattice, slope_mode?parameterp_definition:parameter_definition, 
                             N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
-                            column_definition, 
+                            slope_mode?columnp_definition:column_definition, 
 			    N_COLUMNS - (mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:3),
 			    "setup_aperture_search", SDDS_EOS_NEWFILE);
     if (control->n_elements_to_vary) 
@@ -989,13 +1017,18 @@ long do_aperture_search_line(
     xLost = yLost = sLost = DBL_MAX;
     for (split=0; split<=n_splits; split++) {
       if (split==0) {
-	dx = xmax/(nx-1)*dxFactor[line];
-	dy = ymax/(nx-1)*dyFactor[line];
+        if (!slope_mode) {
+          dx = xmax/(nx-1)*dxFactor[line];
+          dy = ymax/(nx-1)*dyFactor[line];
+        } else {
+          dx = xpmax/(nx-1)*dxFactor[line];
+          dy = ypmax/(nx-1)*dyFactor[line];
+        }
 	x0 = y0 = 0;
 	nSteps = nx;
       } else {
-	x0 = xSurvived;
-	y0 = ySurvived;
+        x0 = xSurvived;
+        y0 = ySurvived;
 	dx *= split_fraction;
 	dy *= split_fraction;
 	x0 += dx;
@@ -1022,16 +1055,24 @@ long do_aperture_search_line(
 #endif
 	if (index!=0 || split!=0 || !originStable) {
 	  memcpy(coord[0], orbit, sizeof(*orbit)*6);
-	  coord[0][0] = index*dx + x0 + orbit[0];
-	  coord[0][2] = index*dy + y0 + orbit[2];
-	  
+          if (!slope_mode) {
+            coord[0][0] = index*dx + x0 + orbit[0];
+            coord[0][2] = index*dy + y0 + orbit[2];
+          } else {
+            coord[0][1] = index*dx + x0 + orbit[1];
+            coord[0][3] = index*dy + y0 + orbit[3];
+	  }
+          
 	  p_central = run->p_central;
 	  n_trpoint = 1;
 	  if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
 			  NULL, NULL, NULL, NULL, run, control->i_step, 
 			  SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL, NULL)!=1) {
 	    if (verbosity>=2) {
-	      fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
+              if (!slope_mode)
+                fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
+              else
+                fprintf(stdout, "particle lost for xp=%e, yp=%e\n", index*dx + x0, index*dy + y0);
 	      fflush(stdout);
 	    }
 	    xLost = coord[0][0];
@@ -1046,21 +1087,25 @@ long do_aperture_search_line(
 	if (index==0 && split==0)
 	  originStable = 1;
 	if (verbosity>=2) {
-	  fprintf(stdout, "particle survived for x=%e, y=%e\n", x0+index*dx, y0+index*dy);
+          if (!slope_mode)
+            fprintf(stdout, "particle survived for x=%e, y=%e\n", x0+index*dx, y0+index*dy);
+          else 
+            fprintf(stdout, "particle survived for xp=%e, yp=%e\n", x0+index*dx, y0+index*dy);
 	  fflush(stdout);
 	}
-	if (dxFactor[line]) {
-	  if ((dxFactor[line]>0 && (xSurvived<(x0+index*dx))) ||
-	      (dxFactor[line]<0 && (xSurvived>(x0+index*dx)))) {
-	    xSurvived = x0+index*dx;
-	    ySurvived = y0+index*dy;      
-	  }
-	} else {
-	  if (ySurvived<(y0+index*dy)) {
-	    xSurvived = x0+index*dx;
-	    ySurvived = y0+index*dy;      
-	  }
-	}
+        if (dxFactor[line]) {
+          if ((dxFactor[line]>0 && (xSurvived<(x0+index*dx))) ||
+              (dxFactor[line]<0 && (xSurvived>(x0+index*dx)))) {
+            xSurvived = x0+index*dx;
+            ySurvived = y0+index*dy;      
+          }
+        } else {
+          if (ySurvived<(y0+index*dy)) {
+            xSurvived = x0+index*dx;
+            ySurvived = y0+index*dy;      
+          }
+        }
+        
 #if USE_MPI
 	}
 #endif
@@ -1098,8 +1143,8 @@ long do_aperture_search_line(
 	  yLost = yLost_array[imin];
 	  sLost = sLost_array[imin];
 	  if ((last_index != -1) && (last_index != 0)) {
-	    xSurvived = x0+last_index*dx;
-	    ySurvived = y0+last_index*dy;
+            xSurvived = x0+last_index*dx;
+            ySurvived = y0+last_index*dy;
 	  }
 	}
 	free (index_array);
@@ -1116,7 +1161,7 @@ long do_aperture_search_line(
       }
 #endif
       if (verbosity>=1) {
-	fprintf(stdout, "Sweep done, particle survived up to x=%e, y=%e\n", xSurvived, ySurvived);
+        fprintf(stdout, "Sweep done, particle survived up to x=%e, y=%e\n", xSurvived, ySurvived);
 	fflush(stdout);
       }
     }
@@ -1173,8 +1218,8 @@ long do_aperture_search_line(
   *returnValue = area;
 
   if (output) {
-    if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
-        !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
+    if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_INDEX, xLimit, lines, IC_XC) ||
+        !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_INDEX, yLimit, lines, IC_YC) ||
         !SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Area", area, NULL)) {
       SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
@@ -1356,8 +1401,13 @@ long do_aperture_search_line_p(
     for (index=line=0; line<lines; line++) {
       /* Set start and delta values for the line */
       if (split==0) {
-	dx[line] = xmax/(nx-1)*dxFactor[line];
-	dy[line] = ymax/(nx-1)*dyFactor[line];
+        if (!slope_mode) {
+          dx[line] = xmax/(nx-1)*dxFactor[line];
+          dy[line] = ymax/(nx-1)*dyFactor[line];
+        } else {
+          dx[line] = xpmax/(nx-1)*dxFactor[line];
+          dy[line] = ypmax/(nx-1)*dyFactor[line];
+        }
 	x0[line] = y0[line] = 0;
       } else {
 	x0[line] = xLimit[line];
@@ -1392,8 +1442,13 @@ long do_aperture_search_line_p(
 
 	/* Track a particle */
 	memcpy(coord[0], orbit, sizeof(*orbit)*6);
-	coord[0][0] = step*dx[line] + x0[line] + orbit[0];
-	coord[0][2] = step*dy[line] + y0[line] + orbit[2];
+        if (!slope_mode) {
+          coord[0][0] = step*dx[line] + x0[line] + orbit[0];
+          coord[0][2] = step*dy[line] + y0[line] + orbit[2];
+        } else {
+          coord[0][1] = step*dx[line] + x0[line] + orbit[1];
+          coord[0][3] = step*dy[line] + y0[line] + orbit[3];
+        }
 	p_central = run->p_central;
 	n_trpoint = 1;
 	if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
@@ -1543,8 +1598,8 @@ long do_aperture_search_line_p(
     *returnValue = area;
 
     if (output) {
-      if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
-	  !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
+      if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_INDEX, xLimit, lines, IC_XC) ||
+	  !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_INDEX, yLimit, lines, IC_YC) ||
 	  !SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			      "Area", area, NULL)) {
 	SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
