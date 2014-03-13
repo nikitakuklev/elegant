@@ -12,13 +12,11 @@
 #include "table.h"
 #include "fftpackC.h"
 
-/* #define DEBUG 1 */
-
 void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void dumpTransverseTimeDistributions(double **posItime, long nb);
 
 void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
-                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge
+                        RUN *run, long i_pass, CHARGE *charge
                         )
 {
   static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
@@ -42,8 +40,6 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #endif
 
   set_up_trwake(wakeData, run, i_pass, np0, charge);
-  if (!charge || (nBuckets=charge->nBuckets)<=0)
-    nBuckets = 1;
 
   if (i_pass>=(wakeData->rampPasses-1))
     rampFactor = 1;
@@ -51,12 +47,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
     rampFactor = (i_pass+1.0)/wakeData->rampPasses;
 
   if (isSlave || !notSinglePart) {
-    if (nBuckets>1) 
-      determine_bucket_assignments(part0, Po, &time0, &ibParticle, np0, &ipBucket, &npBucket, nBuckets, revolutionLength, charge->storageRingBucketMode);
-    else {
-      time0 = tmalloc(sizeof(*time0)*np0);
-      tmean = computeTimeCoordinates(time0, Po, part0, np0);
-    }
+    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeam)?charge->nParticlesPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
 
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
       if (nBuckets==1) {

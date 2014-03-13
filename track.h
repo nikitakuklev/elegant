@@ -578,6 +578,7 @@ typedef struct {
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
     long n_lost;            /* number of lost paricles */
+    long n_per_bunch;       /* if non-zero, number of particles per bunch and bunch # is (int)((particleID-1)/n_per_bunch) */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
   long n_original_total;    /* The total number of particles read from data file */
@@ -897,10 +898,10 @@ extern char *entity_text[N_TYPES];
 #define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
-#define N_WAKE_PARAMS 13
-#define N_TRWAKE_PARAMS 21
+#define N_WAKE_PARAMS 14
+#define N_TRWAKE_PARAMS 22
 #define N_TUBEND_PARAMS 6
-#define N_CHARGE_PARAMS 4
+#define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 11
 #define N_CSRCSBEND_PARAMS 70
@@ -2388,6 +2389,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     long change_p0, allowLongBeam;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
+    long bunchedBeam;          /* If nonzero, then do calculations bunch-by-bunch */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2442,6 +2444,7 @@ typedef struct {
     long xDriveExponent, yDriveExponent;
     long xProbeExponent, yProbeExponent;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
+    long bunchedBeam;          /* If nonzero, then do calculations bunch-by-bunch */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2541,9 +2544,9 @@ typedef struct {
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
   double charge, chargePerParticle;
-  long nBuckets, storageRingBucketMode;
   /* for internal use only */
   double macroParticleCharge;
+  long nParticlesPerBunch; /* copied from BEAM structure by do_tracking */
 } CHARGE;
 
 /* names and storage structure for PFILTER element */
@@ -3558,13 +3561,13 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
                               double *Vtime, long nb, double tmin, double dt, 
                               long interpolate, long exponent);
 void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
-                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge);
+                        RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
-                          RUN *run, long i_pass, double revolution_length, CHARGE *charge);
+                          RUN *run, long i_pass, CHARGE *charge);
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
-			  RUN *run, long i_pass, double revolutionLength, CHARGE *charge);
-void determine_bucket_assignments(double **part, double P0, double **time, long **ibParticle, long np, long ***ipBucket, long **npBucket, long nBuckets, double revolutionLength,
-                                  long storageRingBucketMode);
+			  RUN *run, long i_pass, CHARGE *charge);
+void determine_bucket_assignments(double **part, long np, long nParticlesPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets);
+
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
@@ -3643,7 +3646,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
                              double Po, double length, double charge, double z);
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
-                                 double length, double charge, double z);
+                                 double length, double charge, double z, long particlesPerBunch);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
 				  long original_particles,  double Po, double revolutionLength, double z);
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
@@ -3654,7 +3657,7 @@ extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long 
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
 extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
-                             double charge);
+                             double charge, long particlesPerBunch);
 extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central);
 void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[7][7], long plane);

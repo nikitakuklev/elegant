@@ -12,68 +12,84 @@
 #include "table.h"
 #include "fftpackC.h"
 
-void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
+void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge, long nBuckets);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);
 
-#define DEBUG 1
-
-void determine_bucket_assignments(double **part, double P0, double **time, long **ibParticle, long np, long ***ipBucket, long **npBucket, long nBuckets, double revolutionLength,
-                                  long storageRingBucketMode) 
+void determine_bucket_assignments(double **part, long np, long nParticlesPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
+                                  long *nBuckets)
 {
-  double tmin, tmax, beta0;
-  double Trev, dtBucket, tStart;
   long ip, ib;
+  long ibMin, ibMax;
+  static long lastNBuckets = -1;
 
-#if DEBUG
-  fprintf(stdout, "Performing bucket assignment\n");
+  if (nParticlesPerBunch<=0) {
+    ibMin = 0;
+    *nBuckets = 1;
+  } else {
+    ibMin = LONG_MAX;
+    ibMax = LONG_MIN;
+#ifdef DEBUG
+    printf("np=%ld\n",np);
+#endif
+    for (ip=0; ip<np; ip++) {
+      ib = (part[ip][6]-1)/nParticlesPerBunch;
+      if (ib<ibMin)
+        ibMin = ib;
+      if (ib>ibMax)
+        ibMax = ib;
+      }
+    *nBuckets = (ibMax-ibMin)+1;
+#ifdef DEBUG
+    printf("nPPB=%ld, ibMin = %ld, ibMax = %ld\n", nParticlesPerBunch, ibMin, ibMax);
+#endif
+  }
+  /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
+  if (lastNBuckets>0 && *nBuckets>lastNBuckets) 
+    bombElegant("Error: number of bunches has increased.", NULL);
+  lastNBuckets = *nBuckets;
+  
+#ifdef DEBUG
+  fprintf(stdout, "Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
+  fflush(stdout);
 #endif
 #if USE_MPI
   if (isSlave || !notSinglePart) {
-#if DEBUG
+#ifdef DEBUG
     fprintf(stdout, "...performing bucket assignment\n");
+    fflush(stdout);
 #endif
 #endif
     /* Compute time coordinate of each particle */
     *time = tmalloc(sizeof(**time)*np);
     computeTimeCoordinates(*time, P0, part, np);
-
-    find_min_max(&tmin, &tmax, *time, np);
-#if USE_MPI
-    fprintf(stdout, "finding global min/max\n");
-    find_global_min_max(&tmin, &tmax, np, workers);
-    fprintf(stdout, "done finding global min/max\n");
+#ifdef DEBUG
+    printf("Computed time coordinates\n");
+    fflush(stdout);
 #endif
-
-    /* define boundaries of buckets */
-    if (storageRingBucketMode) {
-      beta0 = P0/sqrt(P0*P0+1);
-      Trev = revolutionLength/(beta0*c_mks);
-    } else {
-      if (nBuckets>1)
-        Trev = nBuckets*(tmax-tmin)/(nBuckets-1.);
-      else
-        Trev = 2*(tmax-tmin);
-    }
-    dtBucket = Trev/nBuckets;
-    tStart = tmin-dtBucket/2;
-#if DEBUG
-    printf("Trev=%le, dtBucket=%le, tStart=%le, nBuckets=%ld\n", Trev, dtBucket, tStart, nBuckets);
-#endif
-
     *ibParticle = tmalloc(sizeof(**ibParticle)*np);
     if (ipBucket && npBucket) {
-      *ipBucket = (long**) czarray_2d(sizeof(***ipBucket), nBuckets, np);
-      *npBucket = (long*) tmalloc(sizeof(*npBucket)*nBuckets);
-      for (ib=0; ib<nBuckets; ib++)
+#ifdef DEBUG
+      printf("Allocating cross-reference arrays\n");
+      fflush(stdout);
+#endif
+      *ipBucket = (long**) czarray_2d(sizeof(***ipBucket), *nBuckets, np);
+      *npBucket = (long*) tmalloc(sizeof(*npBucket)*(*nBuckets));
+      for (ib=0; ib<(*nBuckets); ib++)
         (*npBucket)[ib] = 0;
     }
+#ifdef DEBUG
+      printf("Looping over all particles\n");
+      fflush(stdout);
+#endif
     for (ip=0; ip<np; ip++) {
-      ib = ((*time)[ip]-tStart)/dtBucket;
-      if (ib<0 || ib>=nBuckets) {
-        fprintf(stdout, "Error: particle outside LRWAKE region, ib=%ld, nBuckets=%ld\n", ib, nBuckets);
-        fprintf(stdout, "t=%21.15e, tStart=%21.15e, dtBucket=%21.15e\n", (*time)[ip], tStart, dtBucket);
+      if (*nBuckets==1)
+        ib = 0;
+      else
+        ib = (part[ip][6]-1)/nParticlesPerBunch - ibMin;
+      if (ib<0 || ib>=(*nBuckets)) {
+        fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, nBuckets, (long)part[ip][6]);
         exitElegant(1);
       }
       (*ibParticle)[ip] = ib;
@@ -82,6 +98,10 @@ void determine_bucket_assignments(double **part, double P0, double **time, long 
         (*npBucket)[ib] += 1;
       }
     }
+#ifdef DEBUG
+    printf("Leaving determine_bucket_assignment\n");
+    fflush(stdout);
+#endif
 
 #if USE_MPI
   }
@@ -90,7 +110,7 @@ void determine_bucket_assignments(double **part, double P0, double **time, long 
 }
 
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0Input,
-			  RUN *run, long i_pass, double revolutionLength, CHARGE *charge
+			  RUN *run, long i_pass, CHARGE *charge
                         )
 {
   double *tBucket = NULL;     /* array for <t> for buckets */
@@ -135,16 +155,18 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     fprintf(stdout, "Running track_through_lrwake, isSlave=%ld, notSinglePart=%ld\n", isSlave, notSinglePart);
 #endif
 
-  set_up_lrwake(wakeData, run, i_pass, np, charge);
-  nBuckets = charge->nBuckets;
-#ifdef DEBUG
-  fputs("set_up_lrwake returned\n", stdout);
-#endif
-
   P0 = *P0Input;
-  determine_bucket_assignments(part, P0, &time, &ibParticle, np, NULL, NULL, nBuckets, revolutionLength, charge->storageRingBucketMode);
+  determine_bucket_assignments(part, np, charge?charge->nParticlesPerBunch:0, P0, &time, &ibParticle, NULL, NULL, &nBuckets);
+    
 #ifdef DEBUG
   fputs("determine_bucket_assignment returned\n", stdout);
+  printf("nBuckets = %ld\n", nBuckets);
+#endif
+
+  set_up_lrwake(wakeData, run, i_pass, np, charge, nBuckets);
+
+#ifdef DEBUG
+  fputs("set_up_lrwake returned\n", stdout);
 #endif
 
   rampFactor = 0;
@@ -312,7 +334,7 @@ static LRWAKE_DATA *storedWake = NULL;
 static long storedWakes = 0;
 static char *expectedUnits[4] = {"s", "V/C/m", "V/C/m", "V/C"};
 
-void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge)
+void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge, long nBuckets)
 {
   SDDS_DATASET SDDSin;
   double tmin, tmax;
@@ -330,9 +352,6 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 
   wakeData->initialized = 1;
 
-  if (charge->nBuckets<1)
-    bombElegant("n_buckets must be >1 for LRWAKE element", NULL);
-
   if (!wakeData->inputFile || !strlen(wakeData->inputFile))
     bombElegant("supply inputFile for LRWAKE element", NULL);
 
@@ -344,7 +363,6 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (!wakeData->WColumn[1] && !wakeData->WColumn[2] && !wakeData->WColumn[3])
     bombElegant("supply at least one of WxColumn, WyColumn, or WzColumn for LRWAKE element", NULL);
     
-
   for (icol=0; icol<4; icol++)
     wakeData->W[icol] = NULL;
 
@@ -478,7 +496,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 
-  wakeData->nHistory = wakeData->turnsToKeep*charge->nBuckets;
+  wakeData->nHistory = wakeData->turnsToKeep*nBuckets;
 
   wakeData->tHistory = tmalloc(sizeof(*(wakeData->tHistory))*wakeData->nHistory);
   wakeData->xHistory = tmalloc(sizeof(*(wakeData->xHistory))*wakeData->nHistory);

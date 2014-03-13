@@ -57,7 +57,7 @@ static char *elegantColumn[6] = {
 #define IEC_T 4
 #define IEC_P 5
 
-long get_sdds_particles(double ***particle, long one_dump, long n_skip);
+long get_sdds_particles(double ***particle, long *particles_per_bunch, long one_dump, long n_skip);
 
 static char **inputFile = NULL;     /* input filenames */
 static long inputFiles = 0;         /* number of input files */
@@ -100,9 +100,8 @@ void setup_sdds_beam(
     bombElegant("beamline pointer is null in setup_sdds_beam", NULL);
   if (!run->runfile || !run->lattice)
     bombElegant("null runfile or lattice pointer in RUN structure in setup_sdds_beam", NULL);
-
   if (!initial_call)
-    get_sdds_particles(NULL, 0, 0);
+    get_sdds_particles(NULL, NULL, 0, 0);
   else
     initial_call = 0;
 
@@ -113,6 +112,14 @@ void setup_sdds_beam(
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &sdds_beam);
   fflush(stdout);
+
+  if (prebunched!=-1) {
+    track_pages_separately = prebunched;
+    prebunched = -1;
+    printf("***\n");
+    printf("*** WARNING: the prebunched qualifier is deprecated and may be ignored in future versions. Use track_pages_separately instead.\n");
+    printf("***\n");
+  }
 
   /* check for validity of namelist inputs */
   if (input==NULL && input_list==NULL)
@@ -171,6 +178,7 @@ void setup_sdds_beam(
   
   beam->original = beam->particle = beam->accepted = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
+  beam->n_per_bunch = 0;
   save_initial_coordinates = save_original || save_initial_coordinates;
   
   log_exit("setup_sdds_beam");
@@ -224,13 +232,13 @@ long new_sdds_beam(
       generate_new_bunch = 0;
   }
   else {
-    if (!prebunched) {
-      /* The beam in each input file is to be treated as a single bunch,
+    if (!track_pages_separately) {
+      /* The beam in each input file is to be tracked all at once,
        * even though it may be spread over several pages.
        * Read in all the particles from the input file and allocate arrays
        * for storing initial coordinates and coordinates of accepted 
        * particles. */
-      if ((beam->original==NULL) && !has_been_read) {
+     if ((beam->original==NULL) && !has_been_read) {
         /* no beam has been read before, or else it was purged from memory to save RAM */
         /* free any arrays we may have from previous pass */
         if (beam->particle)
@@ -239,7 +247,7 @@ long new_sdds_beam(
           free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
-        if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))<0) {
+        if ((beam->n_original=get_sdds_particles(&beam->original, &beam->n_per_bunch, track_pages_separately, 0))<0) {
           bombElegant("no particles in input file", NULL);
         }
         if (reuse_bunch) {
@@ -286,7 +294,7 @@ long new_sdds_beam(
       beam->particle = beam->accepted = beam->original = NULL;
 
       /* read the new page */
-      if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
+      if ((beam->n_original=get_sdds_particles(&beam->original, &beam->n_per_bunch, track_pages_separately, n_tables_to_skip))>=0) { 
 #if SDDS_MPI_IO
         if (isSlave || !notSinglePart)  
 #endif
@@ -637,7 +645,8 @@ long new_sdds_beam(
  *     for spiffe input:   (*particle)[i] = (r, pr, pz, pphi, t) for ith particle
  *     for elegant input:  (*particle)[i] = (x, xp, y, yp, t, p) for ith particle
  */
-long get_sdds_particles(double ***particle, 
+long get_sdds_particles(double ***particle,
+                        long *particles_per_bunch, 
                         long one_dump,   /* read only one page */
                         long n_skip      /* number of pages to skip */
                         )
@@ -743,6 +752,7 @@ long get_sdds_particles(double ***particle,
     np_max = np = 0;
     data = NULL;
     data_seen = 1;
+    *particles_per_bunch = 0;
     while (data_seen) {
       data_seen = 0;
 #if SDDS_MPI_IO
@@ -782,6 +792,13 @@ long get_sdds_particles(double ***particle,
           fflush(stdout);
           break;
         }
+      }
+      if (*particles_per_bunch==0) {
+        if ((i=SDDS_GetParameterIndex(&SDDS_input, "ParticlesPerBunch"))>=0 && 
+          !SDDS_GetParameterAsLong(&SDDS_input, "ParticlesPerBunch", particles_per_bunch)) {
+          bombElegant("Error: ParticlesPerBunch parameter exists but could not be read. Check data type.\n", NULL);
+        }
+        printf("%ld particles per bunch\n", *particles_per_bunch);
       }
 #if !SDDS_MPI_IO
       if ((rows = SDDS_RowCount(&SDDS_input))<=0) {

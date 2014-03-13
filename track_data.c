@@ -1633,6 +1633,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&wake_example.change_p0), NULL, 0.0, 0, "change central momentum?"},
     {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&wake_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
+    {"BUNCHED_BEAM", "", IS_LONG, 0, (long)((char *)&wake_example.bunchedBeam), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
     };
 
 CORGPIPE corgpipe_example;
@@ -1695,6 +1696,7 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"X_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.xProbeExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of probe particles"},
     {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
+    {"BUNCHED_BEAM", "", IS_LONG, 0, (long)((char *)&trwake_example.bunchedBeam), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
     };
 
 CHARGE charge_example;
@@ -1702,8 +1704,6 @@ CHARGE charge_example;
 PARAMETER charge_param[N_CHARGE_PARAMS] = {
     {"TOTAL", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.charge), NULL, 0.0, 0, "total charge in beam"},
     {"PER_PARTICLE", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.chargePerParticle), NULL, 0.0, 0, "charge per macroparticle"},
-    {"N_BUCKETS", "", IS_LONG, 0, (long)((char *)&charge_example.nBuckets), NULL, 0.0, 1, "number of buckets for WAKE, TRWAKE, LRWAKE, ..."},
-    {"STORAGE_RING_BUCKET_MODE", "", IS_LONG, 0, (long)((char *)&charge_example.storageRingBucketMode), NULL, 0.0, 0, "If non-zero, revolution length is used to determine bucket boundaries. Otherwise, uses total beam length."},
 };
 
 PFILTER pfilter_example;

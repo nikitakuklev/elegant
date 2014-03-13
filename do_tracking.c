@@ -851,6 +851,7 @@ long do_tracking(
 		  exitElegant(1);
 		}
 		charge = (CHARGE*)eptr->p_elem;
+                charge->nParticlesPerBunch = beam->n_per_bunch;
 		charge->macroParticleCharge = 0;
 #if !SDDS_MPI_IO
 		if (nOriginal)
@@ -1035,11 +1036,13 @@ long do_tracking(
 #if !SDDS_MPI_IO
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
-					   charge?charge->macroParticleCharge*nToTrack:0.0, z);
+					   charge?charge->macroParticleCharge*nToTrack:0.0, z, 
+                                           beam?beam->n_per_bunch:0);
 #else
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
-					   charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z);
+					   charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z,
+                                           beam?beam->n_per_bunch:0);
 #endif
 		      break;
 		    case WATCH_PARAMETERS:
@@ -1466,16 +1469,13 @@ long do_tracking(
                                         nLeft, accepted, z, *P_central, 1, 0, 2, 2);
 	      break;
 	    case T_LRWAKE:
-	      track_through_lrwake(coord, nToTrack, (LRWAKE*)eptr->p_elem, P_central, run, i_pass, beamline->revolution_length,
-				   charge);
+	      track_through_lrwake(coord, nToTrack, (LRWAKE*)eptr->p_elem, P_central, run, i_pass, charge);
 	      break;
 	    case T_WAKE:
-	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass, beamline->revolution_length,
-				 charge);
+	      track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass, charge);
 	      break;
 	    case T_TRWAKE:
-	      track_through_trwake(coord, nToTrack, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass, 
-				   beamline->revolution_length, charge);
+	      track_through_trwake(coord, nToTrack, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass, charge);
 	      break;
 	    case T_SREFFECTS:
               track_SReffects(coord, nToTrack, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals),
@@ -3209,7 +3209,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
 			 "unknown", "unknown",
 			 "transformBeamWithScript");
-    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0);
+    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0, beam?beam->n_per_bunch:0);
     
     if (!SDDS_Terminate(&SDDSout))
       SDDS_Bomb("problem terminating script input file");
@@ -4557,18 +4557,18 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
 
   /* convert coordinate frame from local to ftable element frame. Before misalignment.*/
   if (debug) 
-    dump_phase_space(&test_output, particle, np, -2, Po, 0);
+    dump_phase_space(&test_output, particle, np, -2, Po, 0, 0);
   if (ftable->e1 || ftable->l1)
     ftable_frame_converter(particle, np, ftable, 0);
   if (debug) 
-    dump_phase_space(&test_output, particle, np, -1, Po, 0);
+    dump_phase_space(&test_output, particle, np, -1, Po, 0, 0);
   
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, ftable->dx, ftable->dy, ftable->dz);
   if (ftable->tilt)
     rotateBeamCoordinates(particle, np, ftable->tilt);
   if (debug) 
-      dump_phase_space(&test_output, particle, np, 0, Po, 0);
+      dump_phase_space(&test_output, particle, np, 0, Po, 0, 0);
 
   s_location =step/2.;
   eomc = -particleCharge/particleMass/c_mks;
@@ -4664,7 +4664,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
     }
     s_location += step;
   if (debug) 
-    dump_phase_space(&test_output, particle, np, ik+1, Po, 0);
+    dump_phase_space(&test_output, particle, np, ik+1, Po, 0, 0);
   }
 
   free_czarray_2d((void**)A,3,3);
@@ -4674,13 +4674,13 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   if (ftable->dx || ftable->dy || ftable->dz)
     offsetBeamCoordinates(particle, np, -ftable->dx, -ftable->dy, -ftable->dz);
   if (debug) 
-    dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0);
+    dump_phase_space(&test_output, particle, np, nKicks+1, Po, 0, 0);
 
   /* convert coordinate frame from ftable element frame to local frame. After misalignment.*/
   if (ftable->e2 || ftable->l2)
     ftable_frame_converter(particle, np, ftable, 1);
   if (debug) 
-    dump_phase_space(&test_output, particle, np, nKicks+2, Po, 0);
+    dump_phase_space(&test_output, particle, np, nKicks+2, Po, 0, 0);
 
   return;  
 }

@@ -486,7 +486,7 @@ long new_bunched_beam(
             fprintf(stdout, "dumping bunch\n");
             fflush(stdout);
             dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po,
-                             sqrt(-1.0));
+                             sqrt(-1.0), 0);
             if (one_random_bunch && !(firstIsFiducial && beamCounter==1)) {
                 if (!SDDS_Terminate(&SDDS_bunch)) {
                     SDDS_SetError("Problem terminating 'bunch' file (new_bunched_beam)");
@@ -505,15 +505,21 @@ long new_bunched_beam(
     /* copy particles into tracking buffer, adding in the time offset 
      * and converting from deltap/p relative to bunch center (defined
      * by Po) to deltap/p relative to beamline energy (defined by
-     * p_central).  Also add the particle ID.
+     * p_central).  Also offset particle ID for some cases.
      */
     beta = Po/sqrt(sqr(Po)+1);
     s_offset = control->bunch_frequency?
                 (control->i_step-1)*(beta*c_mks)/control->bunch_frequency:0;
     for (i_particle=0; i_particle<beam->n_to_track; i_particle++) {
-        if (beam->particle!=beam->original)
+      if (beam->particle!=beam->original) {
           for (i_coord=0; i_coord<7; i_coord++) 
             beam->particle[i_particle][i_coord] = beam->original[i_particle][i_coord];
+#if USE_MPI
+          beam->original[i_particle][6] += beam->n_to_track_total;
+#else
+          beam->original[i_particle][6] += beam->n_to_track;
+#endif
+        }
         gamma = sqrt(sqr(p=Po*(1+beam->particle[i_particle][5]))+1);
         beta  = p/gamma;
         beam->particle[i_particle][5] = (p-p_central)/p_central;
@@ -521,8 +527,13 @@ long new_bunched_beam(
         }
 
     bunchGenerated = 1;
+#if USE_MPI
+    beam->n_per_bunch = beam->n_to_track_total;
+#else
+    beam->n_per_bunch = beam->n_to_track;
+#endif
 
-    return(beam->n_to_track);
+    return (beam->n_to_track);
     }
 
 long track_beam(
@@ -686,7 +697,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       fprintf(stdout, "Dumping output beam data..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central,
-                     finalCharge);
+                     finalCharge, beam->n_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);
@@ -699,7 +710,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       fprintf(stdout, "Dumping acceptance output..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0,
-                     finalCharge);
+                     finalCharge, beam->n_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);

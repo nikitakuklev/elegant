@@ -14,7 +14,9 @@
     long one_random_bunch = 0;
     long n_particles_per_ring = 0;
     long reuse_bunch = 0;
-    long prebunched = 0;
+    long prebunched = -1;
+    long track_pages_separately = 0;
+    long use_bunched_mode = 0;
     long sample_interval = 1;
     long n_tables_to_skip = 0;
     long center_transversely = 0;

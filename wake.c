@@ -12,8 +12,6 @@
 #include "table.h"
 #include "fftpackC.h"
 
-#define DEBUG 1
-
 void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
@@ -21,7 +19,7 @@ void convolveArrays(double *output, long outputs,
 
 
 void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInput,
-                        RUN *run, long i_pass, double revolutionLength, CHARGE *charge
+                        RUN *run, long i_pass, CHARGE *charge
                         )
 {
   static double *Itime = NULL;           /* array for histogram of particle density */
@@ -48,9 +46,6 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 
   set_up_wake(wakeData, run, i_pass, np0, charge);
 
-  if (!charge || (nBuckets=charge->nBuckets)<=0)
-    nBuckets = 1;
-
   if (isSlave || !notSinglePart) {
     rampFactor = 0;
     if (i_pass>=(wakeData->rampPasses-1))
@@ -59,12 +54,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
       rampFactor = (i_pass+1.0)/wakeData->rampPasses;
     Po = *PoInput;
 
-    if (nBuckets>1) 
-      determine_bucket_assignments(part0, Po, &time0, &ibParticle, np0, &ipBucket, &npBucket, nBuckets, revolutionLength, charge->storageRingBucketMode);
-    else {
-      time0 = tmalloc(sizeof(*time0)*np0);
-      tmean = computeTimeCoordinates(time0, Po, part0, np0);
-    }
+    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeam)?charge->nParticlesPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
     
 #ifdef DEBUG
     if (nBuckets>1) {
@@ -609,7 +599,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.macroParticleCharge = charge->macroParticleCharge;
 
   exactDrift(part, np, corgpipe->length/2);
-  track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, 0.0, charge);
+  track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, charge);
   exactDrift(part, np, corgpipe->length/2);
   
   free(wakeData.t);
