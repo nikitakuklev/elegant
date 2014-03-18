@@ -851,7 +851,7 @@ long do_tracking(
 		  exitElegant(1);
 		}
 		charge = (CHARGE*)eptr->p_elem;
-                charge->nParticlesPerBunch = beam->n_per_bunch;
+                charge->nParticlesPerBunch = beam ? beam->n_per_bunch : 0;
 		charge->macroParticleCharge = 0;
 #if !SDDS_MPI_IO
 		if (nOriginal)
