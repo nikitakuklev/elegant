@@ -73,6 +73,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
         part = part0;
         np = np0;
         pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+        compute_average(&tmean, time, np);
       } else {
         if ((np = npBucket[iBucket])==0)
           continue;
@@ -591,13 +592,15 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.W = tmalloc(sizeof(double)*n_bins);
   wakeData.t = tmalloc(sizeof(double)*n_bins);
   wakeData.dt = dt;
+  wakeData.bunchedBeam = 1;
   
   for (i=0; i<n_bins; i++) {
     wakeData.t[i] = i*dt;
     wakeData.W[i] = 2*kappa*corgpipe->length*cos(omega*wakeData.t[i]);
   }
   wakeData.macroParticleCharge = charge->macroParticleCharge;
-
+  wakeData.charge = charge->macroParticleCharge*np;
+  
   exactDrift(part, np, corgpipe->length/2);
   track_through_wake(part, np, &wakeData, Pcentral, run, i_pass, charge);
   exactDrift(part, np, corgpipe->length/2);
