@@ -528,9 +528,9 @@ long new_bunched_beam(
 
     bunchGenerated = 1;
 #if USE_MPI
-    beam->n_per_bunch = beam->n_to_track_total;
+    beam->id_slots_per_bunch = beam->n_to_track_total;
 #else
-    beam->n_per_bunch = beam->n_to_track;
+    beam->id_slots_per_bunch = beam->n_to_track;
 #endif
 
     return (beam->n_to_track);
@@ -697,7 +697,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       fprintf(stdout, "Dumping output beam data..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central,
-                     finalCharge, beam->n_per_bunch);
+                     finalCharge, beam->id_slots_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);
@@ -710,7 +710,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       fprintf(stdout, "Dumping acceptance output..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0,
-                     finalCharge, beam->n_per_bunch);
+                     finalCharge, beam->id_slots_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);

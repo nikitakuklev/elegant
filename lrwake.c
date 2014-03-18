@@ -17,14 +17,14 @@ void convolveArrays(double *output, long outputs,
                     double *a1, long n1,
                     double *a2, long n2);
 
-void determine_bucket_assignments(double **part, long np, long nParticlesPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
+void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
                                   long *nBuckets)
 {
   long ip, ib;
   long ibMin, ibMax;
   static long lastNBuckets = -1;
 
-  if (nParticlesPerBunch<=0) {
+  if (idSlotsPerBunch<=0) {
     ibMin = 0;
     *nBuckets = 1;
   } else {
@@ -34,7 +34,7 @@ void determine_bucket_assignments(double **part, long np, long nParticlesPerBunc
     printf("np=%ld\n",np);
 #endif
     for (ip=0; ip<np; ip++) {
-      ib = (part[ip][6]-1)/nParticlesPerBunch;
+      ib = (part[ip][6]-1)/idSlotsPerBunch;
       if (ib<ibMin)
         ibMin = ib;
       if (ib>ibMax)
@@ -42,7 +42,7 @@ void determine_bucket_assignments(double **part, long np, long nParticlesPerBunc
       }
     *nBuckets = (ibMax-ibMin)+1;
 #ifdef DEBUG
-    printf("nPPB=%ld, ibMin = %ld, ibMax = %ld\n", nParticlesPerBunch, ibMin, ibMax);
+    printf("nPPB=%ld, ibMin = %ld, ibMax = %ld\n", idSlotsPerBunch, ibMin, ibMax);
 #endif
   }
   /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
@@ -87,7 +87,7 @@ void determine_bucket_assignments(double **part, long np, long nParticlesPerBunc
       if (*nBuckets==1)
         ib = 0;
       else
-        ib = (part[ip][6]-1)/nParticlesPerBunch - ibMin;
+        ib = (part[ip][6]-1)/idSlotsPerBunch - ibMin;
       if (ib<0 || ib>=(*nBuckets)) {
         fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, nBuckets, (long)part[ip][6]);
         exitElegant(1);
@@ -156,7 +156,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 
   P0 = *P0Input;
-  determine_bucket_assignments(part, np, charge?charge->nParticlesPerBunch:0, P0, &time, &ibParticle, NULL, NULL, &nBuckets);
+  determine_bucket_assignments(part, np, charge?charge->idSlotsPerBunch:0, P0, &time, &ibParticle, NULL, NULL, &nBuckets);
     
 #ifdef DEBUG
   fputs("determine_bucket_assignment returned\n", stdout);

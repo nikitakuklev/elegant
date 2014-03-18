@@ -851,7 +851,7 @@ long do_tracking(
 		  exitElegant(1);
 		}
 		charge = (CHARGE*)eptr->p_elem;
-                charge->nParticlesPerBunch = beam ? beam->n_per_bunch : 0;
+                charge->idSlotsPerBunch = beam ? beam->id_slots_per_bunch : 0;
 		charge->macroParticleCharge = 0;
 #if !SDDS_MPI_IO
 		if (nOriginal)
@@ -1037,12 +1037,12 @@ long do_tracking(
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
 					   charge?charge->macroParticleCharge*nToTrack:0.0, z, 
-                                           beam?beam->n_per_bunch:0);
+                                           beam?beam->id_slots_per_bunch:0);
 #else
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
 					   charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z,
-                                           beam?beam->n_per_bunch:0);
+                                           beam?beam->id_slots_per_bunch:0);
 #endif
 		      break;
 		    case WATCH_PARAMETERS:
@@ -3209,7 +3209,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
 			 "unknown", "unknown",
 			 "transformBeamWithScript");
-    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0, beam?beam->n_per_bunch:0);
+    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0, beam?beam->id_slots_per_bunch:0);
     
     if (!SDDS_Terminate(&SDDSout))
       SDDS_Bomb("problem terminating script input file");

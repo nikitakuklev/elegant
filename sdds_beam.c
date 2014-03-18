@@ -57,7 +57,7 @@ static char *elegantColumn[6] = {
 #define IEC_T 4
 #define IEC_P 5
 
-long get_sdds_particles(double ***particle, long *particles_per_bunch, long one_dump, long n_skip);
+long get_sdds_particles(double ***particle, long *id_slots_per_bunch, long one_dump, long n_skip);
 
 static char **inputFile = NULL;     /* input filenames */
 static long inputFiles = 0;         /* number of input files */
@@ -178,7 +178,7 @@ void setup_sdds_beam(
   
   beam->original = beam->particle = beam->accepted = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
-  beam->n_per_bunch = 0;
+  beam->id_slots_per_bunch = 0;
   save_initial_coordinates = save_original || save_initial_coordinates;
   
   log_exit("setup_sdds_beam");
@@ -247,7 +247,7 @@ long new_sdds_beam(
           free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
-        if ((beam->n_original=get_sdds_particles(&beam->original, &beam->n_per_bunch, track_pages_separately, 0))<0) {
+        if ((beam->n_original=get_sdds_particles(&beam->original, &beam->id_slots_per_bunch, track_pages_separately, 0))<0) {
           bombElegant("no particles in input file", NULL);
         }
         if (reuse_bunch) {
@@ -294,7 +294,7 @@ long new_sdds_beam(
       beam->particle = beam->accepted = beam->original = NULL;
 
       /* read the new page */
-      if ((beam->n_original=get_sdds_particles(&beam->original, &beam->n_per_bunch, track_pages_separately, n_tables_to_skip))>=0) { 
+      if ((beam->n_original=get_sdds_particles(&beam->original, &beam->id_slots_per_bunch, track_pages_separately, n_tables_to_skip))>=0) { 
 #if SDDS_MPI_IO
         if (isSlave || !notSinglePart)  
 #endif
@@ -646,7 +646,7 @@ long new_sdds_beam(
  *     for elegant input:  (*particle)[i] = (x, xp, y, yp, t, p) for ith particle
  */
 long get_sdds_particles(double ***particle,
-                        long *particles_per_bunch, 
+                        long *id_slots_per_bunch, 
                         long one_dump,   /* read only one page */
                         long n_skip      /* number of pages to skip */
                         )
@@ -752,7 +752,7 @@ long get_sdds_particles(double ***particle,
     np_max = np = 0;
     data = NULL;
     data_seen = 1;
-    *particles_per_bunch = 0;
+    *id_slots_per_bunch = 0;
     while (data_seen) {
       data_seen = 0;
 #if SDDS_MPI_IO
@@ -793,12 +793,12 @@ long get_sdds_particles(double ***particle,
           break;
         }
       }
-      if (*particles_per_bunch==0) {
-        if ((i=SDDS_GetParameterIndex(&SDDS_input, "ParticlesPerBunch"))>=0 && 
-          !SDDS_GetParameterAsLong(&SDDS_input, "ParticlesPerBunch", particles_per_bunch)) {
-          bombElegant("Error: ParticlesPerBunch parameter exists but could not be read. Check data type.\n", NULL);
+      if (*id_slots_per_bunch==0) {
+        if ((i=SDDS_GetParameterIndex(&SDDS_input, "IDSlotsPerBunch"))>=0 && 
+          !SDDS_GetParameterAsLong(&SDDS_input, "IDSlotsPerBunch", id_slots_per_bunch)) {
+          bombElegant("Error: IDSlotsPerBunch parameter exists but could not be read. Check data type.\n", NULL);
         }
-        printf("%ld particles per bunch\n", *particles_per_bunch);
+        printf("%ld particle ID slots per bunch\n", *id_slots_per_bunch);
       }
 #if !SDDS_MPI_IO
       if ((rows = SDDS_RowCount(&SDDS_input))<=0) {

@@ -144,7 +144,7 @@ static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
   {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Beam charge\" &end"},
   {"Particles", "&parameter name=Particles, type=long, description=\"Number of particles\" &end"},
-  {"ParticlesPerBunch", "&parameter name=ParticlesPerBunch, type=long, description=\"Number of particles in a bunch\" &end"},
+  {"IDSlotsPerBunch", "&parameter name=IDSlotsPerBunch, type=long, description=\"Number of particle ID slots reserved to a bunch\" &end"},
 };
   
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -653,7 +653,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 }
 
 void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
-                          double Po, double length, double charge, double z, long particlesPerBunch)
+                          double Po, double length, double charge, double z, long slotsPerBunch)
 {
   long i, row;
   double p, t0, t;
@@ -741,7 +741,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
                           "Charge", charge,
-                          "ParticlesPerBunch", particlesPerBunch,
+                          "IDSlotsPerBunch", slotsPerBunch,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", delapsed_time(),
 #if USE_MPI
@@ -1366,7 +1366,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 
 
 void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
-        double charge, long particlesPerBunch)
+        double charge, long slotsPerBunch)
 {
     long i;
     double p;
@@ -1412,7 +1412,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
 #endif  
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, "pCentral", Po, "Particles", particles,
-                            "Charge", charge, "ParticlesPerBunch", particlesPerBunch, NULL)) {
+                            "Charge", charge, "IDSlotsPerBunch", slotsPerBunch, NULL)) {
         SDDS_SetError("Problem setting parameter values for SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }

@@ -54,7 +54,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
       rampFactor = (i_pass+1.0)/wakeData->rampPasses;
     Po = *PoInput;
 
-    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeam)?charge->nParticlesPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+    determine_bucket_assignments(part0, np0, (charge && wakeData->bunchedBeam)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
     
 #ifdef DEBUG
     if (nBuckets>1) {
