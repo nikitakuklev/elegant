@@ -91,13 +91,16 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
   
 #ifdef  USE_MPE /* use the MPE library */
-  int event1a, event1b, event2a, event2b;
+  int event1a, event1b, event2a, event2b, event3a, event3b;
   event1a = MPE_Log_get_event_number();
   event1b = MPE_Log_get_event_number();
   event2a = MPE_Log_get_event_number();
   event2b = MPE_Log_get_event_number();
-  MPE_Describe_state(event1a, event1b, "SavitzyGolaySmooth", "red");
-  MPE_Describe_state(event2a, event2b, "fft_inverse", "yellow");
+  event3a = MPE_Log_get_event_number();
+  event3b = MPE_Log_get_event_number();
+  MPE_Describe_state(event1a, event1b, "Histogram", "red");
+  MPE_Describe_state(event2a, event2b, "Compute", "yellow");
+  MPE_Describe_state(event3a, event3b, "Kick", "orange");
 #endif
 
   i_pass0 = i_pass;
@@ -253,23 +256,35 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #if USE_MPI 
       offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
       length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
+      if (offset<0) {
+        length -= offset;
+        offset = 0;
+      }
+      if ((offset+length)>nb)
+        length = nb - offset;
+#ifdef  USE_MPE
+      MPE_Log_event(event1a, 0, "start histogram");
+#endif
       if (isSlave) {
+#if MPI_DEBUG
+        printf("offset = %ld, length = %ld, nb = %ld\n", offset, length, nb);
+#endif
         buffer = malloc(sizeof(double) * length);
         MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
         memcpy(&Itime[offset], buffer, sizeof(double)*length);
         free(buffer);
       }
+#ifdef  USE_MPE
+      MPE_Log_event(event1b, 0, "end histogram"); 
+#endif
+#ifdef  USE_MPE
+      MPE_Log_event(event2a, 0, "start computation"); 
+#endif
 #endif
 
-#ifdef  USE_MPE
-      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
-#endif
       if (zlongit->smoothing)
         SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                            zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
-#ifdef  USE_MPE
-      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
-#endif
 
 #ifdef DEBUG && DEBUG>1
       /* Output the time-binned data */
@@ -307,14 +322,11 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       }
       
       /* Compute inverse FFT of V(f) to get V(t) */
-#ifdef  USE_MPE
-      MPE_Log_event(event2a, 0, "start zlongit"); /* record time spent on I/O operations */
-#endif
       realFFT(Vfreq, nb, INVERSE_FFT);
-#ifdef  USE_MPE
-      MPE_Log_event(event2b, 0, "start zlongit"); /* record time spent on I/O operations */
-#endif
       Vtime = Vfreq;
+#ifdef  USE_MPE
+      MPE_Log_event(event2b, 0, "end computation");
+#endif
       
       if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
@@ -353,6 +365,9 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         }
       }
 
+#ifdef  USE_MPE
+      MPE_Log_event(event3a, 0, "start bunch kicks");
+#endif
       /* put zero voltage in Vtime[nb] for use in interpolation */
       Vtime[nb] = 0;
       /* change particle momentum offsets to reflect voltage in relevant bin */
@@ -386,6 +401,9 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           }
         }
       }
+#ifdef  USE_MPE
+      MPE_Log_event(event3b, 0, "end bunch kicks");
+#endif
       
       if (nBuckets!=1) {
 #ifdef DEBUG

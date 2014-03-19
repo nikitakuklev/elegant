@@ -62,16 +62,16 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   long max_np = 0;
   double *Vfreq = NULL, *iZ = NULL;
   long nBuckets, iBucket, np;
+  long offset, length;
+  double tmin_part, tmax_part;
 #if USE_MPI
+  double *buffer;
   long i;
 #endif
   long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
   long ip, i_pass0;
-#if USE_MPI
-  float *buffer_send, *buffer_recv;
-#endif
 #if defined(DEBUG)
   FILE *fp;
 #endif
@@ -132,6 +132,8 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
       find_global_min_max(&tmin, &tmax, np, workers); 
+      tmin_part = tmin;
+      tmax_part = tmax;     
       tmean = computeAverage_p(time, np, workers);
 #else
       compute_average(&tmean, time, np);
@@ -142,7 +144,11 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       nb = ztransverse->n_bins;
       dt = ztransverse->bin_size;
       tmin -= dt;
-      tmax -= dt;
+      tmax += dt;
+#if USE_MPI && MPI_DEBUG
+      printf("tmin_part = %21.15e  tmax_part = %21.15e\n", tmin_part, tmax_part);
+      printf("tmin      = %21.15e  tmax      = %21.15e  dt = %21.15e\n", tmin, tmax, dt);
+#endif
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
@@ -178,16 +184,23 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       for (plane=0; plane<2; plane++) {
 #if USE_MPI
         if (isSlave) {
-          buffer_send = malloc(sizeof(float) * nb);
-          buffer_recv = malloc(sizeof(float) * nb);
-          for (i=0; i<nb; i++)
-            buffer_send[i] = posItime[plane][i];
-          MPI_Reduce(buffer_send, buffer_recv, nb, MPI_FLOAT, MPI_SUM, 1, workers);
-          MPI_Bcast(buffer_recv, nb, MPI_FLOAT, 1, workers);
-          for (i=0; i<nb; i++)
-            posItime[plane][i] = buffer_recv[i];
-          free(buffer_send);
-          free(buffer_recv);
+          offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
+          length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
+          if (offset<0) {
+            length -= offset;
+            offset = 0;
+          }
+          if ((offset+length)>nb)
+            length = nb - offset;
+#if MPI_DEBUG
+          printf("offset = %ld, length=%ld, nb=%ld\n", offset, length, nb);
+#endif
+          buffer = malloc(sizeof(double) * length);
+          MPI_Allreduce(&posItime[0][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
+          memcpy(&posItime[0][offset], buffer, sizeof(double)*length);
+          MPI_Allreduce(&posItime[1][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
+          memcpy(&posItime[1][offset], buffer, sizeof(double)*length);
+          free(buffer);
         }
 
 #endif
