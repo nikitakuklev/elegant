@@ -2389,7 +2389,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     long change_p0, allowLongBeam;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
-    long bunchedBeam;          /* If nonzero, then do calculations bunch-by-bunch */
+    long bunchedBeamMode;          /* If nonzero, then do calculations bunch-by-bunch */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2444,7 +2444,7 @@ typedef struct {
     long xDriveExponent, yDriveExponent;
     long xProbeExponent, yProbeExponent;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
-    long bunchedBeam;          /* If nonzero, then do calculations bunch-by-bunch */
+    long bunchedBeamMode;          /* If nonzero, then do calculations bunch-by-bunch */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
