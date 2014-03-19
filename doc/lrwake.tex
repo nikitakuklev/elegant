@@ -1,24 +1,20 @@
 This element provides serial and parallel modeling of long range, multi-bunch, multi-pass, non-resonant wakes.
 Resonant wakes can be modeled using the \verb|*RFMODE| elements, while short-range wakes are modeled with
 \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, \verb|ZTRANSVERSE|, and \verb|RFCW|.
-At present there is no way to combine short-range and long-range non-resonant wakes in the parallel version
-except when there is only a single bunch.
 
 For the \verb|LRWAKE| element, the beam is assumed to be bunched and wakes are computed bunch-to-bunch.
 The long-range wake is assumed to be constant within any single bunch.
 
-However, {\tt elegant} doesn't have the concept of a beam with multiple bunches.
-In particular, domain decomposition in the parallel version doesn't recognize a
-bunch property of the particles.
-Rather than try to add this (a major change that would potentially limit the number of processors used), we used a simpler technique
+To use this element, the beam has to be prepared in a special way so that {\tt elegant} can recognize which
+particles belong to which bunches.
+See Section \ref{sect:bunchedBeams} for details.
+Given a properly prepared beam, the algorithm works as follows.
 \begin{itemize}
-\item The user declares how many buckets $B$ to use for grouping particles.
-\item {\tt elegant} determines the inter-bucket spacing from the circumference.
 \item Each processor uses arrays to record
 \begin{itemize}
-  \item How many particles are in each bucket,
-  \item The sum of the arrival times $t$ at the LRWAKE element for the particles in each bucket, and
-  \item The sum of x and y at the LRWAKE element for the particles in each bucket.
+  \item How many particles are in each of $B$ bunches,
+  \item The sum of the arrival times $t$ at the LRWAKE element for the particles in each bunch, and
+  \item The sum of x and y at the LRWAKE element for the particles in each bunch.
   \end{itemize}
 \item These arrays are summed across all the processors and used to compute the moments
   $\langle t \rangle$, $\langle x \rangle$, and $\langle y \rangle$ for each bunch, as
@@ -29,7 +25,7 @@ Rather than try to add this (a major change that would potentially limit the num
     the oldest turn.
   \item The data for latest turn is copied into slot 1.
   \end{itemize}
-\item  For each bunch, sums are performed over all prior buckets/turns to compute the voltage. For the 
+\item  For each bunch, sums are performed over all prior bunches/turns to compute the voltage. For the 
   longitudinal wake, we have
   \begin{equation}
     V_z(b) = \sum\limits_{i=b}^{N*B} q_i W_z(\langle t_b \rangle - \langle t_i \rangle)
@@ -48,3 +44,4 @@ However, they should be zero within the region occupied by a single bunch, to av
 double-counting with the true short-range wake.
 (Note that the above sums include the self-wake.)
 Similarly, the short-range should be zero for times comparable to the bunch spacing.
+
