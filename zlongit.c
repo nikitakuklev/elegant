@@ -50,8 +50,6 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
     {"Deltaf", "&parameter name=Deltaf, symbol=\"$gD$rf\", units=Hz, type=double, description=\"Frequency sampling interval\" &end"},
     } ;
 
-/* #define DEBUG 1 */
-
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,
                     double timeSpan);
 
@@ -82,6 +80,15 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
   long offset, length;
 #endif
+
+#if USE_MPI && defined(DEBUG)  
+  static FILE *fpdeb = NULL;
+  char s[100];
+  sprintf(s, "zlongit.debu%02d", myid);
+  fpdeb = fopen(s, "w");
+  fprintf(fpdeb, "SDDS1\n&column name=time type=double &end\n&column name=dt1 type=double &end\n&column name=ib type=long &end\n");
+  fprintf(fpdeb, "&column name=V0 type=double &end\n&column name=V1 type=double &end\n&column name=dgamma type=double &end\n&data mode=ascii no_row_counts=1 &end\n");
+#endif
   
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b, event2a, event2b;
@@ -105,6 +112,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   
   not_first_call += 1;
 
+#if defined(DEBUG) && USE_MPI
+  printf("myid = %ld\n", myid);
+#endif
+
   if (isSlave || !notSinglePart) {
     determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
 
@@ -125,7 +136,6 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         part = part0;
         np = np0;
         pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-        compute_average(&tmean, time, np);
       } else {
         if ((np = npBucket[iBucket])==0)
           continue;
@@ -141,13 +151,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
         }
-        for (ip=tmean=0; ip<np; ip++) {
+        for (ip=0; ip<np; ip++) {
           time[ip] = time0[ipBucket[iBucket][ip]];
-          tmean += time[ip];
           memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
         }
-        if (np>0)
-          tmean /= np;
       }
       
       find_min_max(&tmin, &tmax, time, np);
@@ -155,12 +162,14 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       find_global_min_max(&tmin, &tmax, np, workers); 
       tmin_part = tmin;
       tmax_part = tmax;     
+      tmean = computeAverage_p(time, np, workers);
+#else
+      compute_average(&tmean, time, np);
 #endif
-      if (iBucket==0) {
-        /* use np0 here since we need to compute the macroparticle charge */
-        set_up_zlongit(zlongit, run, i_pass, np0, charge, tmax-tmin);
-      }
-      
+
+      /* use np0 here since we may need to compute the macroparticle charge */
+      set_up_zlongit(zlongit, run, i_pass, np0, charge, tmax-tmin);
+
       nb = zlongit->n_bins;
       dt = zlongit->bin_size;
       if ((tmax-tmin)*2>nb*dt) {
@@ -173,7 +182,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
         exitElegant(1);
       }
-      
+
       if (zlongit->n_bins>max_n_bins) {
         Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
         Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
@@ -185,6 +194,11 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           time[ip] = 2*tmean-time[ip];
       }
       tmin = tmean - dt*zlongit->n_bins/2.0;
+
+#ifdef DEBUG
+      printf("tmin = %21.15e  tmax = %21.15e  dt = %21.15e  nb = %ld\n",
+             tmin, tmax, dt, nb);
+#endif
       
       for (ib=0; ib<zlongit->n_bins; ib++)
         Itime[2*ib] = Itime[2*ib+1] = 0;
@@ -240,7 +254,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
       length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
       if (isSlave) {
-        buffer = malloc(sizeof(double) * length);;
+        buffer = malloc(sizeof(double) * length);
         MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
         memcpy(&Itime[offset], buffer, sizeof(double)*length);
         free(buffer);
@@ -257,7 +271,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
 #endif
 
-#ifdef DEBUG
+#ifdef DEBUG && DEBUG>1
       /* Output the time-binned data */
       if (1) {
         FILE *fp;
@@ -343,7 +357,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       Vtime[nb] = 0;
       /* change particle momentum offsets to reflect voltage in relevant bin */
       for (ip=0; ip<np; ip++) {
-        if ((ib=pbin[ip])>=0 && ib<=nb-1) {
+        if ((ib=pbin[ip])>=0 && ib<=(nb-1)) {
           if (zlongit->interpolate && ib>0) {
             /* dt/2 offset is so that center of bin is location where
              * particle sees voltage for that bin only
@@ -357,6 +371,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
               dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*particleMassMV*particleRelSign);
             else
               continue;
+#if USE_MPI && defined(DEBUG)
+            fprintf(fpdeb, "%21.15e %21.15e %ld %21.15e %21.15e %21.15e\n",
+                    time[ip], dt1, ib, Vtime[ib-1], Vtime[ib], dgam);
+#endif
           }
           else
             dgam = Vtime[ib]/(1e6*particleMassMV*particleRelSign);
@@ -388,7 +406,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   }    
   
 #if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(workers);
 #endif
 
   if (part && part!=part0)
@@ -648,3 +666,26 @@ long checkPointSpacing(double *x, long n, double tolerance)
   return 1;
 }
 
+#if USE_MPI
+double computeAverage_p(double *data, long np, MPI_Comm mpiComm)
+{
+  double tSum=0, tAve;
+  long ip;
+  double error = 0.0; 
+  long np_total;
+  
+  for (ip=tSum=0; ip<np; ip++) {
+    tSum = KahanPlus(tSum, data[ip], &error); 
+  }
+      
+  if (isMaster) {
+    tSum = 0.0;
+    np = 0;
+  }
+  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, mpiComm);
+  if (np_total>0)
+    return KahanParallel (tSum, error, mpiComm)/np_total;
+  return 0.0;
+}
+#endif
+	 
