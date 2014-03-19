@@ -77,8 +77,6 @@ Here is a summary of what's changed since release 25.2.1:
   energy spread in \verb|Sdelta0|.
 \item The \verb|load_parameters| command now has the ability to edit the names of elements before assigning values. It also has the ability to skip pages.
 \item Improved \verb|floor_coordinate| command so it can find vertex point for multi-segment dipoles with unequal segments.
-\item Improved \verb|ibsEmittance| to solve for x and y parameters separately, which is necessary for more accurate results when
-  $\tau_x \ne \tau_y$.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -91,6 +89,8 @@ Here is a summary of what's changed since release 25.2.1:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
+\item Improved \verb|ibsEmittance| to solve for x and y parameters separately, which is necessary for more accurate results when
+  $\tau_x \ne \tau_y$.
 \item Added {\tt bremsstrahlungLifetime}, which computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
 \item Added {\tt elasticScatteringLifetime}, which computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
 \item Added the script {\tt computeCoherentFraction} to compute the coherent fraction for undulator radiation.
