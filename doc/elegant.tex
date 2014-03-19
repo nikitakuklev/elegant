@@ -56,7 +56,7 @@ Here is a summary of what's changed since release 25.2.1:
 \begin{itemize}
 \item Added \verb|LRWAKE| element, which provides serial and parallel modeling of long range, multi-bunch, multi-pass, non-resonant wakes.
  (Resonant wakes use the \verb|*RFMODE| elements.)
-\item The \verb|WAKE| and \verb|TRWAKE| elements now support bunch-by-bunch calculations.
+\item The \verb|WAKE|, \verb|TRWAKE|, and \verb|ZLONGIT| elements now support bunch-by-bunch calculations.
 \item Added bremsstrahlung energy loss to the \verb|MATTER| and \verb|SCRAPER| elements.
 \item Added parameters to \verb|CSBEND| for specifying the higher multipoles as fractions of the main field at a reference position.
 \item Orbit and trajectory correction now has the ability to remove pegged correctors from the algorithm. This feature was requested by 
@@ -69,7 +69,7 @@ Here is a summary of what's changed since release 25.2.1:
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|sdds_beam| command has two new parameters, \verb|track_pages_separately| and \verb|use_bunched_mode|, which clarify the handling of multi-page
-  input files and allow invoking bunched-mode calculations with \verb|LRWAKE|, \verb|WAKE|, and \verb|TRWAKE|.
+  input files and allow invoking bunched-mode calculations with \verb|LRWAKE|, \verb|WAKE|, \verb|TRWAKE|, and \verb|ZLONGIT|.
 \item Added the \verb|tune_footprint| command, which allows serial or parallel compution and optimization of the momentum tune footprint, the amplitude tune footprint,
   and the diffusion rate.
 \item The \verb|rf_setup| command now stores values for bunch length in symbols \verb|Sz0| and \verb|St0|, and also stores the fractional
@@ -429,7 +429,7 @@ example.)
 \section{Preparing beams for bunched-mode simulations}\label{sect:bunchedBeams}
 
 As of version 25.3, certain elements in {\tt elegant} can operate under the assumption that the beam is organized into bunches.
-This includes the {\tt LRWAKE}, {\tt WAKE}, and {\tt TRWAKE} elements.
+This includes the {\tt LRWAKE}, {\tt WAKE}, {\tt TRWAKE}, and {\tt ZLONGIT} elements.
 At present, this behavior is only available when loading a beam from an external file using the \verb|sdds_beam| command.
 A typical sequence is to run {\tt elegant} once to generate a beam file using \verb|bunched_beam|, then load that beam into a subsequent run.
 
