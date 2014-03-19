@@ -1601,6 +1601,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"Y_DRIVE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yDriveExponent), NULL, 0.0, 1, "Exponent applied to y coordinates of drive particles"},
     {"X_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.xProbeExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of probe particles"},
     {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
+    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
 };
 
 IBSCATTER ibs_example;

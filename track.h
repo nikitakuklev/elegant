@@ -894,7 +894,7 @@ extern char *entity_text[N_TYPES];
 #define N_ZLONGIT_PARAMS 27
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
-#define N_ZTRANSVERSE_PARAMS 35
+#define N_ZTRANSVERSE_PARAMS 36
 #define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
@@ -2369,6 +2369,7 @@ typedef struct {
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
     long xDriveExponent, yDriveExponent;
     long xProbeExponent, yProbeExponent;
+    long bunchedBeamMode;
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
