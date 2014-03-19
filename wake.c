@@ -22,17 +22,17 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
                         RUN *run, long i_pass, CHARGE *charge
                         )
 {
-  static double *Itime = NULL;           /* array for histogram of particle density */
-  static double *Vtime = NULL;           /* array for voltage acting on each bin */
-  static long max_n_bins = 0;
+  double *Itime = NULL;           /* array for histogram of particle density */
+  double *Vtime = NULL;           /* array for voltage acting on each bin */
+  long max_n_bins = 0;
   long *pbin = NULL;                     /* array to record which bin each particle is in */
-  static double *time0 = NULL;           /* array to record arrival time of each particle */
-  static double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
-  static double **part = NULL;           /* particle buffer for working bucket */
-  static long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  double *time0 = NULL;           /* array to record arrival time of each particle */
+  double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
+  double **part = NULL;           /* particle buffer for working bucket */
+  long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-  static short shortBunchWarning = 0;
+  short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0;
   long iBucket, nBuckets, max_np=0, ip, np;
   double factor, tmin, tmax, tmean=0, dt=0, Po, rampFactor;
@@ -249,6 +249,8 @@ else if (isSlave) {
     if (nBuckets>1) {
       free(npBucket);
       free_czarray_2d((void**)ipBucket, nBuckets, np0);
+      npBucket = NULL;
+      ipBucket = NULL;
     }
   }
 
@@ -259,32 +261,24 @@ else if (isSlave) {
   if (wakeData->change_p0)
     do_match_energy(part0, np0, PoInput, 0);
 
-  if (isSlave || !notSinglePart) {
-    if (part && part!=part0) {
-      free_czarray_2d((void**)part, max_np, 7);
-      part = NULL;
-    }
-    if (time && time!=time0) {
-      free(time);
-      time = NULL;
-    }
-    if (time0) {
-      free(time0);
-      time0 = NULL;
-    }
-    if (pbin) {
-      free(pbin);
-      pbin = NULL;
-    }
-    
-#if defined(MINIMIZE_MEMORY)
-    free(Itime);
-    free(Vtime);
+  if (part && part!=part0)
+    free_czarray_2d((void**)part, max_np, 7);
+  if (time && time!=time0) 
+    free(time);
+  if (time0) 
     free(time0);
-    Itime = Vtime = time = NULL;
-    max_n_bins = 0;
-#endif
-  }
+  if (pbin)
+    free(pbin);
+  if (ibParticle) 
+    free(ibParticle);
+  if (ipBucket)
+    free_czarray_2d((void**)ipBucket, nBuckets, np0);
+  if (npBucket)
+    free(npBucket);
+  if (Itime)
+    free(Itime);
+  if (Vtime)
+    free(Vtime);
 }
 
 void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,

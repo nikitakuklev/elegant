@@ -322,6 +322,9 @@ long new_sdds_beam(
     }
   }
 
+  if (use_bunched_mode==0)
+    beam->id_slots_per_bunch = 0;
+
   t_offset = (control->bunch_frequency?(control->i_step-1)/control->bunch_frequency:0);
 
   p_central = beam->p0_original = run->p_central;

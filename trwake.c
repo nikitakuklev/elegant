@@ -19,19 +19,19 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
                         RUN *run, long i_pass, CHARGE *charge
                         )
 {
-  static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
-  static double *Vtime = NULL;           /* array for voltage acting on each bin */
-  static long max_n_bins = 0;
-  static long *pbin = NULL;              /* array to record which bin each particle is in */
-  static double *time0 = NULL;           /* array to record arrival time of each particle */
-  static double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
-  static double *pz = NULL;
-  static double **part = NULL;           /* particle buffer for working bucket */
-  static long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
+  double *Vtime = NULL;           /* array for voltage acting on each bin */
+  long max_n_bins = 0;
+  long *pbin = NULL;              /* array to record which bin each particle is in */
+  double *time0 = NULL;           /* array to record arrival time of each particle */
+  double *time = NULL;            /* array to record arrival time of each particle, for working bucket */
+  double *pz = NULL;
+  double **part = NULL;           /* particle buffer for working bucket */
+  long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-  static long max_np = 0;
-  static short shortBunchWarning = 0;
+  long max_np = 0;
+  short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0, plane;
   long iBucket, nBuckets, ip, np;
   double factor, tmin, tmean=0, tmax, dt=0, rampFactor=1;
@@ -245,31 +245,28 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  if (isSlave || !notSinglePart) {
-    if (part && part!=part0) {
-      free_czarray_2d((void**)part, max_np, 7);
-      part = NULL;
-    }
-    if (time && time!=time0) {
-      free(time);
-      time = NULL;
-    }
-    if (time0) {
-      free(time0);
-      time0 = NULL;
-    }
-    if (pbin) {
-      free(pbin);
-      pbin = NULL;
-    }
-  }
-  
-  free(posItime[0]);
-  free(posItime[1]);
-  free(Vtime);
-  free(pz);
-  Vtime = time = pz = posItime[0] = posItime[1] = NULL;
-  max_n_bins = max_np = 0;
+  if (part && part!=part0)
+    free_czarray_2d((void**)part, max_np, 7);
+  if (time && time!=time0) 
+    free(time);
+  if (time0) 
+    free(time0);
+  if (pbin)
+    free(pbin);
+  if (ibParticle) 
+    free(ibParticle);
+  if (ipBucket)
+    free_czarray_2d((void**)ipBucket, nBuckets, np0);
+  if (npBucket)
+    free(npBucket);
+  if (Vtime)
+    free(Vtime);
+  if (pz)
+    free(pz);
+  if (posItime[0])
+    free(posItime[0]);
+  if (posItime[1])
+    free(posItime[1]);
 }
 
 void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,
