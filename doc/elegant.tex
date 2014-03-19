@@ -55,14 +55,15 @@ Here is a summary of what's changed since release 25.2.1:
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added \verb|LRWAKE| element, which provides serial and parallel modeling of long range, multi-bunch, multi-pass, non-resonant wakes.
- (Resonant wakes use the \verb|*RFMODE| elements.)
+ (Resonant wakes are already supported with the \verb|*RFMODE| elements.)
 \item The \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE| elements now support bunch-by-bunch calculations.
 \item Added bremsstrahlung energy loss to the \verb|MATTER| and \verb|SCRAPER| elements.
 \item Added parameters to \verb|CSBEND| for specifying the higher multipoles as fractions of the main field at a reference position.
 \item Orbit and trajectory correction now has the ability to remove pegged correctors from the algorithm. This feature was requested by 
   V. Sajaev (APS).
-\item Gaussian-distributed ISR kicks now use a 5-sigma cutoff instead of 3. This was suggested by Z. Gu (IU) and improves agreement between tracking
-  results and expectations.
+\item Gaussian-distributed ISR kicks (\verb|CSBEND|, \verb|SREFFECTS|, etc.) presently use a 3-$\sigma$ cutoff. 
+  The cutoff can now be controlled using the \verb|SR_gaussian_limit| parameter in the \verb|global_settings| command.
+  This was suggested by Z. Gu (IU) and improves agreement between tracking results and expectations for storage rings.
 \item The \verb|EDRIFT| element now appears in the magnet output file from \verb|run_setup|.
 \end{itemize}
 
@@ -1916,6 +1917,7 @@ Use of this feature results in a doubling of the number of turns tracked.
 &global_settings
     long inhibit_fsync = 0;
     long echo_namelists = 1;
+    double SR_gaussian_limit = 3.0;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
     long mpi_randomization_mode = 1;
@@ -1926,8 +1928,11 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item \verb|inhibit_fsync| --- By default, \verb|elegant| forces file synchronization across a network file system
   to ensure that users see up-to-date files as soon as possible.  In cases where a great deal of output is generated,
   this can degrade performance.  Setting this parameter to 1 will turn off synchronization until the end of the run.
-\item \verb|echo_namelists| -- By default, \verb|elegant| echoes all namelist input to the terminal.  If this parameter
+\item \verb|echo_namelists| --- By default, \verb|elegant| echoes all namelist input to the terminal.  If this parameter
   is set to 0, this output will be inhibited.
+\item \verb|SR_gaussian_limit| --- By default, \verb|elegant| uses a 3-$\sigma$ cutoff for the gaussian random numbers used
+  in simulation of synchrotron radiation from \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, \verb|KSEXT, and \verb|SREFFECTS|.
+  This parameter allows changing the cutoff.
 \item \verb|log_file| --- By default, \verb|elegant| writes status information to the terminal.  If a filename is supplied
   for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
   the output being discarded.
