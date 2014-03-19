@@ -56,33 +56,33 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                     double timeSpan);
 
 void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po,
-    RUN *run, long i_pass, CHARGE *charge
-    )
+                           RUN *run, long i_pass, CHARGE *charge
+                           )
 {
-    double *Itime = NULL;           /* array for histogram of particle density */
-    double *Ifreq = NULL;           /* array for FFT of histogram of particle density */
-    double *Vtime = NULL;           /* array for voltage acting on each bin */
-    long max_n_bins = 0;
-    long *pbin = NULL;              /* array to record which bin each particle is in */
-    double *time0 = NULL;           /* array to record arrival time of each particle */
-    double *time = NULL;           /* array to record arrival time of each particle */
-    double **part = NULL;           /* particle buffer for working bucket */
-    long *ibParticle = NULL;        /* array to record which bucket each particle is in */
-    long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
-    long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-    long max_np = 0;
-    double *Vfreq, *Z;
-    long np, ip, n_binned, nfreq, iReal, iImag, ib, nb;
-    double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
-    long i_pass0;
-    long iBucket, nBuckets;
-    static long not_first_call = -1;
+  double *Itime = NULL;           /* array for histogram of particle density */
+  double *Ifreq = NULL;           /* array for FFT of histogram of particle density */
+  double *Vtime = NULL;           /* array for voltage acting on each bin */
+  long max_n_bins = 0;
+  long *pbin = NULL;              /* array to record which bin each particle is in */
+  double *time0 = NULL;           /* array to record arrival time of each particle */
+  double *time = NULL;           /* array to record arrival time of each particle */
+  double **part = NULL;           /* particle buffer for working bucket */
+  long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
+  long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
+  long max_np = 0;
+  double *Vfreq, *Z;
+  long np, ip, n_binned, nfreq, iReal, iImag, ib, nb;
+  double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
+  long i_pass0;
+  long iBucket, nBuckets;
+  static long not_first_call = -1;
 #if USE_MPI
-    double *buffer;
-    double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
-    long offset, length;
+  double *buffer;
+  double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
+  long offset, length;
 #endif
-   
+  
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b, event2a, event2b;
   event1a = MPE_Log_get_event_number();
@@ -93,30 +93,30 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   MPE_Describe_state(event2a, event2b, "fft_inverse", "yellow");
 #endif
 
-    i_pass0 = i_pass;
-    if ((i_pass -= zlongit->startOnPass)<0)
-      return;
+  i_pass0 = i_pass;
+  if ((i_pass -= zlongit->startOnPass)<0)
+    return;
 
-    rampFactor = 0;
-    if (i_pass>=(zlongit->rampPasses-1))
-      rampFactor = 1;
-    else
-      rampFactor = (i_pass+1.0)/zlongit->rampPasses;
-    
-    not_first_call += 1;
+  rampFactor = 0;
+  if (i_pass>=(zlongit->rampPasses-1))
+    rampFactor = 1;
+  else
+    rampFactor = (i_pass+1.0)/zlongit->rampPasses;
+  
+  not_first_call += 1;
 
-    if (isSlave || !notSinglePart) {
-      determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+  if (isSlave || !notSinglePart) {
+    determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
 
 #ifdef DEBUG
-      if (nBuckets>1) {
-        printf("%ld buckets\n", nBuckets);
+    if (nBuckets>1) {
+      printf("%ld buckets\n", nBuckets);
+      fflush(stdout);
+      for (iBucket=0; iBucket<nBuckets; iBucket++) {
+        printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
         fflush(stdout);
-        for (iBucket=0; iBucket<nBuckets; iBucket++) {
-          printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
-          fflush(stdout);
-        }
       }
+    }
 #endif
 
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
@@ -160,7 +160,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         /* use np0 here since we need to compute the macroparticle charge */
         set_up_zlongit(zlongit, run, i_pass, np0, charge, tmax-tmin);
       }
-  
+      
       nb = zlongit->n_bins;
       dt = zlongit->bin_size;
       if ((tmax-tmin)*2>nb*dt) {
@@ -385,7 +385,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       }
 
     }
-    }    
+  }    
   
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
@@ -410,7 +410,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   if (Vtime)
     free(Vtime);
 
-  }
+}
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,
                     double timeSpan)
