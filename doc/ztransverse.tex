@@ -25,7 +25,10 @@ Other notes:
 \item The frequency data required from the input file is {\em not} $\omega$, but rather
   $f = \omega/(2 \pi)$.
 \item The default smoothing setting ({\tt SG\_HALFWIDTH=4}), may apply too much smoothing.
-It is recommended that the user vary this parameter if smoothing is employed.
+  It is recommended that the user vary this parameter if smoothing is employed.
+\item Using the broad-brand resonator model can often result in a very large number of bins
+ being used, as {\tt elegant} will try to resolve the resonance peak and achieve the desired
+ bin spacing. This can result in poor performance, particularly for the parallel version.
 \end{enumerate}
 
 Bunched-mode application of the impedance is possible using specially-prepared input
