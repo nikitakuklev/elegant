@@ -891,7 +891,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 25
 #define N_TRFMODE_PARAMS 22
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 26
+#define N_ZLONGIT_PARAMS 27
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
 #define N_ZTRANSVERSE_PARAMS 35
@@ -2332,6 +2332,7 @@ typedef struct {
     long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
+    long bunchedBeamMode;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
