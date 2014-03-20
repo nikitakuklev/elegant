@@ -621,7 +621,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
                    BEAM *beam, long sim_step, unsigned long flags)
 {
-  long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed=0, final_traj;
+  long i, i_cycle, x_failed, y_failed, n_iter_taken=0, bombed=0, final_traj;
   double *closed_orbit, rms_before, rms_after, *Cdp;
   ELEMENT_LIST *newly_pegged;
 #if USE_MPI
