@@ -1284,6 +1284,7 @@ during the computations.
     long keep_largest_SVs[2] = {0, 0};
     double minimum_SV_ratio[2] = {0, 0};
     long auto_limit_SVs[2] = {1, 1};
+    long removed_pegged[2] = {0, 0};
     long threading_divisor[2] = {100, 100};
     double bpm_noise[2] = {0, 0};
     double bpm_noise_cutoff[2] = {1.0, 1.0};
@@ -1340,6 +1341,9 @@ small apertures.  If you get an error message about ``tracking failed for test p
   vectors with the smallest singular values; this is ignored if \verb|auto_limit_SVs| is also requested and would remove more SVs. 
   Set \verb|keep_largest_SVs| to require keeping at most a given number of the largest SVs.
   Set \verb|minimum_SV_ratio| to require removal of any vectors with singular values less than a given factor of the largest singular value.
+\item \verb|remove_pegged[2]| --- If nonzero, then for the plane in question pegged correctors will be removed from the correction matrix.
+  This results in recomputation of the matrix, following which correction continues with the reduced set of correctors.
+  The pegged corrector is left at its last value.
 \item \verb|bpm_noise[2]| --- The BPM noise level. 
 \item \verb|bpm_noise_cutoff[2]| --- Cutoff values for the random distributions of BPM noise.
 \item \verb|bpm_noise_distribution[2]| --- May be either ``gaussian'', ``uniform'', or ``plus\_or\_minus''.
