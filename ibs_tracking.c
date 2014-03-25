@@ -48,11 +48,23 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   static SDDS_TABLE outPage;
   static long isInit=0, doOut=0;
   double eta[4];
+#if USE_MPI
+  long npTotal, countTotal;
+
+  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
+#endif
 
   if (IBS->nslice<1) 
     bombElegant("NSLICE has to be an integer >= 1", NULL);
-  if (charge)
+  if (charge) {
+#if USE_MPI
+    IBS->charge = charge->macroParticleCharge*npTotal;
+    /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
+#else
     IBS->charge = charge->macroParticleCharge*np;
+#endif
+  }
   if (!IBS->charge)
     bombElegant("bunch charge is not given", NULL);
   if (IBS->isRing && IBS->nslice>1)
@@ -62,127 +74,146 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     init_IBS(element);
   if (IBS->dT == 0) return;
 
-  eta[0] = IBS->etax[IBS->elements-1];
-  eta[1] = IBS->etaxp[IBS->elements-1];
-  eta[2] = IBS->etay[IBS->elements-1];
-  eta[3] = IBS->etayp[IBS->elements-1];
-
-  index = (long*)malloc(sizeof(long)*np);
-  count = (long*)malloc(sizeof(long)*IBS->nslice);
-  slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength);
-  bLength = IBS->revolutionLength/IBS->dT*tLength;
-  if ((IBS->nslice == 1) && (!IBS->isRing))
-    bLength /=sqrt(2*PI);
-
-  iend = 0;
-  for (islice=0; islice<IBS->nslice; islice++) {
-    istart = iend;
-    iend += count[islice];
-
-    if (count[islice]<10) {
-      fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taking into account in this slice.\n", count[islice], islice+1);
-      zeroslice (islice, IBS);
-      continue;
-    }
-
-    computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-    IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
-    IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
-    IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
-    IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
-    if (IBS->isRing)
-      bLength = IBS->revolutionLength/IBS->dT*sqrt(S[4][4]);
-    IBS->sigmaz0[islice] = bLength;
+  if (isSlave && notSinglePart) {
+    eta[0] = IBS->etax[IBS->elements-1];
+    eta[1] = IBS->etaxp[IBS->elements-1];
+    eta[2] = IBS->etay[IBS->elements-1];
+    eta[3] = IBS->etayp[IBS->elements-1];
     
-    if (!IBS->forceMatchedTwiss)
-      forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
-    IBS->icharge[islice] = IBS->charge * (double)count[islice] / (double)np;
-    IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
-             IBS->elements, 1, 0, IBS->isRing,
-             IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
-             IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
-             IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
-             IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
-             &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1);    
-    IBS->xGrowthRate[islice] *= IBS->factor;
-    IBS->yGrowthRate[islice] *= IBS->factor;
-    IBS->zGrowthRate[islice] *= IBS->factor;
-  }
-
-  iend = 0;
-  for (islice=0; islice<IBS->nslice; islice++) {
-    istart = iend;
-    iend += count[islice];
-
-    zRate[1] = 1.+IBS->dT*IBS->zGrowthRate[islice];
-    if (islice == 0)
-      zRate[0] = zRate[1];
-    else 
-      zRate[0] = 1.+IBS->dT*IBS->zGrowthRate[islice-1];
-    if (islice == IBS->nslice-1)
-      zRate[2] = zRate[1];
-    else
-      zRate[2] = 1.+IBS->dT*IBS->zGrowthRate[islice+1];
-
-    RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
-    if (!IBS->smooth) {
-      computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-      if (IBS->do_x)
-        RNSigma[0] = sqrt(fabs(sqr(1 + IBS->dT * IBS->xGrowthRate[islice])-1))*sqrt(S[1][1]);
-      if (IBS->do_y)
-        RNSigma[1] = sqrt(fabs(sqr(1 + IBS->dT * IBS->yGrowthRate[islice])-1))*sqrt(S[3][3]);
-      if (IBS->do_z) {
-        RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
+    index = (long*)malloc(sizeof(long)*np);
+    count = (long*)malloc(sizeof(long)*IBS->nslice);
+    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength);
+    bLength = IBS->revolutionLength/IBS->dT*tLength;
+    if ((IBS->nslice == 1) && (!IBS->isRing))
+      bLength /= sqrt(2*PI);
+    
+    iend = 0;
+    for (islice=0; islice<IBS->nslice; islice++) {
+      istart = iend;
+      iend += count[islice];
+      
+#if USE_MPI
+      MPI_Allreduce(&count[islice], &countTotal, 1, MPI_LONG, MPI_SUM, workers);
+      if (countTotal<10) {
+        fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+        zeroslice (islice, IBS);
+        continue;
       }
-      for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
-        if (RNSigma[ihcoord]) {
-          RNSigmaCheck[ihcoord] = 0;
-          if (icoord!=5) {
-            for (ipart=istart; ipart<iend; ipart++) {
-              randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
-              coord[index[ipart]][icoord] += randomNumber;
-              RNSigmaCheck[ihcoord] += sqr(randomNumber);
-            }
-          } else {
-            for (ipart=istart; ipart<iend; ipart++) {
-              randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
-              p = Po*(1+coord[index[ipart]][5]);
-              beta0 = p/sqrt(p*p+1);
-              coord[index[ipart]][5] += randomNumber;
-              p = Po*(1+coord[index[ipart]][5]);
-              beta1 = p/sqrt(p*p+1);
-              coord[index[ipart]][4] *= beta1/beta0;
-              RNSigmaCheck[ihcoord] += sqr(randomNumber);
-            }
-          }
-          RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
+#else 
+      if (count[islice]<10) {
+        fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+        zeroslice (islice, IBS);
+        continue;
+      }
+#endif
+    
+      computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
+      IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
+      IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
+      IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
+      IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
+      if (IBS->isRing)
+        bLength = IBS->revolutionLength/IBS->dT*sqrt(S[4][4]);
+      IBS->sigmaz0[islice] = bLength;
+      
+      if (!IBS->forceMatchedTwiss)
+        forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
+#if USE_MPI
+      IBS->icharge[islice] = (IBS->charge * countTotal)/npTotal;
+#else
+      IBS->icharge[islice] = IBS->charge * (double)count[islice] / (double)np;
+#endif
+      IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
+               IBS->elements, 1, 0, IBS->isRing,
+               IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
+               IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
+               IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
+               IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
+               &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1);    
+      IBS->xGrowthRate[islice] *= IBS->factor;
+      IBS->yGrowthRate[islice] *= IBS->factor;
+      IBS->zGrowthRate[islice] *= IBS->factor;
+      printf("growth rate for slice %ld: %le, %le, %le\n",
+             islice, IBS->xGrowthRate[islice], IBS->yGrowthRate[islice], IBS->zGrowthRate[islice]);
+    }
+
+    iend = 0;
+    for (islice=0; islice<IBS->nslice; islice++) {
+      istart = iend;
+      iend += count[islice];
+      
+      zRate[1] = 1.+IBS->dT*IBS->zGrowthRate[islice];
+      if (islice == 0)
+        zRate[0] = zRate[1];
+      else 
+        zRate[0] = 1.+IBS->dT*IBS->zGrowthRate[islice-1];
+      if (islice == IBS->nslice-1)
+        zRate[2] = zRate[1];
+      else
+        zRate[2] = 1.+IBS->dT*IBS->zGrowthRate[islice+1];
+      
+      RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
+      if (!IBS->smooth) {
+        computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
+        if (IBS->do_x)
+          RNSigma[0] = sqrt(fabs(sqr(1 + IBS->dT * IBS->xGrowthRate[islice])-1))*sqrt(S[1][1]);
+        if (IBS->do_y)
+          RNSigma[1] = sqrt(fabs(sqr(1 + IBS->dT * IBS->yGrowthRate[islice])-1))*sqrt(S[3][3]);
+        if (IBS->do_z) {
+          RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
         }
+        for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
+          if (RNSigma[ihcoord]) {
+            RNSigmaCheck[ihcoord] = 0;
+            if (icoord!=5) {
+              for (ipart=istart; ipart<iend; ipart++) {
+                randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+                coord[index[ipart]][icoord] += randomNumber;
+                RNSigmaCheck[ihcoord] += sqr(randomNumber);
+              }
+            } else {
+              for (ipart=istart; ipart<iend; ipart++) {
+                randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+                p = Po*(1+coord[index[ipart]][5]);
+                beta0 = p/sqrt(p*p+1);
+                coord[index[ipart]][5] += randomNumber;
+                p = Po*(1+coord[index[ipart]][5]);
+                beta1 = p/sqrt(p*p+1);
+                coord[index[ipart]][4] *= beta1/beta0;
+                RNSigmaCheck[ihcoord] += sqr(randomNumber);
+              }
+            }
+            RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
+          }
+        }
+        /*
+          fprintf(stdout,"s=%g,islice=%ld,istart=%ld,iend=%ld,checkz=%g\n", 
+          IBS->s[IBS->elements-1], islice, istart, iend, RNSigmaCheck[2]);
+          */
+      } else {
+        /* inflate each emittance by the prescribed factor */
+        inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
+        inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
+        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate);
       }
-      /*
-      fprintf(stdout,"s=%g,islice=%ld,istart=%ld,iend=%ld,checkz=%g\n", 
-              IBS->s[IBS->elements-1], islice, istart, iend, RNSigmaCheck[2]);
-      */
-    } else {
-      /* inflate each emittance by the prescribed factor */
-      inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
-      inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
-      inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate);
-    }
 
-    /* update beam emittance information after IBS scatter for IBSCATTER */
-    if (!IBS->isRing) {
-      computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-      IBS->emitx[islice] = correctedEmittance(S, eta, 0, 1, 0, 0);
-      IBS->emity[islice] = correctedEmittance(S, eta, 2, 3, 0, 0);
-      IBS->emitl[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
-      IBS->sigmaDelta[islice] = sqrt(S[5][5]);
-      IBS->sigmaz[islice] = sqrt(S[4][4]);
+      /* update beam emittance information after IBS scatter for IBSCATTER */
+      if (!IBS->isRing) {
+        computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
+        IBS->emitx[islice] = correctedEmittance(S, eta, 0, 1, 0, 0);
+        IBS->emity[islice] = correctedEmittance(S, eta, 2, 3, 0, 0);
+        IBS->emitl[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
+        IBS->sigmaDelta[islice] = sqrt(S[5][5]);
+        IBS->sigmaz[islice] = sqrt(S[4][4]);
+      }
     }
-  }
-  free(index);
-  free(count);
+    free(index);
+    free(count);
+  }  
 
-  if(IBS->filename) {
+  MPI_Barrier(MPI_COMM_WORLD);
+  
+  if (IBS->filename && !notSinglePart && !isSlave) {
     if (!isInit) {
       SDDS_IBScatterSetup(&outPage, IBS->filename, SDDS_BINARY, 1, "IBS scatter growth rate output", 
                           run->runfile, run->lattice, "ibs_tracking", IBS->isRing);
@@ -198,8 +229,10 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->output = 0;
     }
   }
+  
   if (i_pass==n_passes-1)
     free_IBS(IBS);
+
   return;
 }
 
@@ -453,6 +486,7 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
   double tMaxAll, tMinAll, tMin, tMax;
   double *time, P, beta;
 
+  /* Count the number of particles in each slice and the keep the slice index for each particle */
   for (i=0; i<np; i++)
     index[i] = -1;
   for (islice=0; islice<nslice; islice++)
@@ -466,34 +500,43 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
   }
 
   /* find limits of bunch longitudinal coordinates */
-  tMin = tMaxAll = -DBL_MAX;
-  tMax = tMinAll =  DBL_MAX;
-
-  for (i=0; i<np; i++) {
-    if (tMinAll>time[i])
-      tMinAll = time[i];
-    if (tMaxAll<time[i])
-      tMaxAll = time[i];
-  }
-  *dt = (tMaxAll-tMinAll)/(double)nslice;
+  find_min_max(&tMinAll, &tMaxAll, time, np);
+#if USE_MPI
+  if (isSlave && notSinglePart)
+    find_global_min_max(&tMinAll, &tMaxAll, np, workers);
+  printf("tMinAll=%le, tMaxAll=%le\n", tMinAll, tMaxAll);
+#endif
   
-  tMin = tMinAll;
-  j = total= 0;
-  for (islice=0; islice<nslice; islice++) {
-    tMax = tMin + (*dt);
-    if (islice == nslice-1)
-      tMax = tMaxAll + 0.1*(*dt);
-    for (i=0; i<np; i++) {
-      if (time[i]>=tMin && time[i]<tMax) {
-        count[islice]++;
-        index[j++] = i;
+  *dt = (tMaxAll-tMinAll)/(double)nslice;
+
+  /* if (nslice>1) { */
+  if (nslice>0) {
+    j = total= 0;
+    tMin = tMinAll;
+    for (islice=0; islice<nslice; islice++) {
+      tMax = tMin + (*dt);
+      if (islice == nslice-1)
+        tMax = tMaxAll + 0.1*(*dt);
+      for (i=0; i<np; i++) {
+        if (time[i]>=tMin && time[i]<tMax) {
+          count[islice]++;
+          index[j++] = i;
+        }
       }
+      total += count[islice];
+      tMin = tMax;
     }
-    total += count[islice];
-    tMin = tMax;
+    if (total !=np) {
+      printf("IBSCATTER: slice-beam (nslice=%ld), total (%ld) is not equal to np (%ld). Report it to code developer.\n", nslice, total, np);
+      for (islice=0; islice<nslice; islice++)
+        printf("count[%ld] = %ld\n", islice, count[islice]);
+      bombElegant(NULL, NULL);
+    }
+  } else {
+    count[0] = np;
+    for (i=0; i<np; i++)
+      index[i] = i;
   }
-  if (total !=np)
-    bombElegant("ibs: slice-beam, total is not equal to np. Report it to code developer", NULL);
   free(time);
   return;
 }
@@ -515,6 +558,10 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
 {
   long i, j, k, i1;
   double *time, dt, dp, beta, P;
+#if USE_MPI
+  long countTotal, count0;
+  double sum;
+#endif
 
   time = tmalloc(sizeof(*time)*(end-start));
 
@@ -537,8 +584,19 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
     C[5] += part[index[i]][5];
   }
 
+#if USE_MPI
+  if (notSinglePart) {
+    printf("Computing centroids\n");
+    count0 = end-start;
+    MPI_Allreduce(&count0, &countTotal, 1, MPI_LONG, MPI_SUM, workers);
+    MPI_Allreduce(MPI_IN_PLACE, &C[0], 6, MPI_DOUBLE, MPI_SUM, workers);
+    for (j=0; j<6; j++) 
+      C[j] /= countTotal;
+  }
+#else
   for (j=0; j<6; j++)
     C[j] /= (double)(end-start);
+#endif
 
   for (i=start; i<end; i++) {
     for (j=0; j<4; j++)
@@ -549,11 +607,22 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
     S[5][5] += sqr(dp = part[index[i]][5] - C[5]);
     S[4][5] += dt*dp;
   }
+#if USE_MPI
+  printf("Computing sigmas\n");
+  for (j=0; j<6; j++)  {
+    MPI_Allreduce(MPI_IN_PLACE, S[j], j+1, MPI_DOUBLE, MPI_SUM, workers);
+    for (k=0; k<=j; k++)
+      S[k][j] = S[j][k] = S[j][k]/countTotal;
+  }
+  printf("Done computing sigmas\n");
+#else
   for (j=0; j<6; j++)
     for (k=0; k<=j; k++) {
       S[j][k] /= (double)(end-start); 
       S[k][j] = S[j][k];
     }
+#endif
+
   free(time);
   return 0;
 }

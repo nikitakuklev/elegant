@@ -1482,6 +1482,9 @@ long do_tracking(
                               flags&TEST_PARTICLES);
 	      break;
 	    case T_IBSCATTER:
+#if USE_MPI && defined(MPI_DEBUG)
+              printf("Running IBSSCATTER\n");
+#endif
 	      if (!(flags&TEST_PARTICLES))
 		track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
 			  *P_central, &(beamline->elem), charge, i_pass, n_passes, run);
