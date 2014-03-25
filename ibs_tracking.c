@@ -133,8 +133,6 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->xGrowthRate[islice] *= IBS->factor;
       IBS->yGrowthRate[islice] *= IBS->factor;
       IBS->zGrowthRate[islice] *= IBS->factor;
-      printf("growth rate for slice %ld: %le, %le, %le\n",
-             islice, IBS->xGrowthRate[islice], IBS->yGrowthRate[islice], IBS->zGrowthRate[islice]);
     }
 
     iend = 0;
@@ -162,7 +160,6 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
         if (IBS->do_z) {
           RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
         }
-        printf("%le (non-smooth): IBS->dT = %le, IBS->xGrowthRate=%le\n", IBS->s[0], IBS->dT, IBS->xGrowthRate[0]);
         for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
           if (RNSigma[ihcoord]) {
             RNSigmaCheck[ihcoord] = 0;
@@ -193,7 +190,6 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
           */
       } else {
         /* inflate each emittance by the prescribed factor */
-        printf("%le (smooth): IBS->dT = %le, IBS->xGrowthRate=%le\n", IBS->s[0], IBS->dT, IBS->xGrowthRate[0]);
         inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
         inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
         inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate);
