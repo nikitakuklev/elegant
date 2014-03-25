@@ -74,7 +74,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     init_IBS(element);
   if (IBS->dT == 0) return;
 
-  if (isSlave && notSinglePart) {
+  if (isSlave || !notSinglePart) {
     eta[0] = IBS->etax[IBS->elements-1];
     eta[1] = IBS->etaxp[IBS->elements-1];
     eta[2] = IBS->etay[IBS->elements-1];
@@ -162,6 +162,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
         if (IBS->do_z) {
           RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
         }
+        printf("%le (non-smooth): IBS->dT = %le, IBS->xGrowthRate=%le\n", IBS->s[0], IBS->dT, IBS->xGrowthRate[0]);
         for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
           if (RNSigma[ihcoord]) {
             RNSigmaCheck[ihcoord] = 0;
@@ -192,6 +193,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
           */
       } else {
         /* inflate each emittance by the prescribed factor */
+        printf("%le (smooth): IBS->dT = %le, IBS->xGrowthRate=%le\n", IBS->s[0], IBS->dT, IBS->xGrowthRate[0]);
         inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
         inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
         inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate);
@@ -211,9 +213,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     free(count);
   }  
 
+#if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD);
-  
-  if (IBS->filename && !notSinglePart && !isSlave) {
+#endif
+
+  if (IBS->filename && !(isSlave || !notSinglePart)) {
     if (!isInit) {
       SDDS_IBScatterSetup(&outPage, IBS->filename, SDDS_BINARY, 1, "IBS scatter growth rate output", 
                           run->runfile, run->lattice, "ibs_tracking", IBS->isRing);
@@ -485,46 +489,48 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
   long i, j, islice, total;
   double tMaxAll, tMinAll, tMin, tMax;
   double *time, P, beta;
-
+  long *timeIndex;
+  
   /* Count the number of particles in each slice and the keep the slice index for each particle */
   for (i=0; i<np; i++)
     index[i] = -1;
   for (islice=0; islice<nslice; islice++)
     count[islice] = 0;
 
-  time = tmalloc(sizeof(*time)*np);
-  for (i=0; i<np; i++) {
-    P = Po*(1+coord[i][5]);
-    beta = P/sqrt(P*P+1);
-    time[i] = coord[i][4]/(beta*c_mks);
-  }
+  if (nslice>1) {
+    time = tmalloc(sizeof(*time)*np);
+    for (i=0; i<np; i++) {
+      P = Po*(1+coord[i][5]);
+      beta = P/sqrt(P*P+1);
+      time[i] = coord[i][4]/(beta*c_mks);
+    }
 
-  /* find limits of bunch longitudinal coordinates */
-  find_min_max(&tMinAll, &tMaxAll, time, np);
+    /* find limits of bunch longitudinal coordinates */
+    find_min_max(&tMinAll, &tMaxAll, time, np);
 #if USE_MPI
-  if (isSlave && notSinglePart)
-    find_global_min_max(&tMinAll, &tMaxAll, np, workers);
-  printf("tMinAll=%le, tMaxAll=%le\n", tMinAll, tMaxAll);
+    if (isSlave || !notSinglePart)
+      find_global_min_max(&tMinAll, &tMaxAll, np, workers);
+    printf("tMinAll=%le, tMaxAll=%le\n", tMinAll, tMaxAll);
 #endif
-  
-  *dt = (tMaxAll-tMinAll)/(double)nslice;
-
-  /* if (nslice>1) { */
-  if (nslice>0) {
+    
+    *dt = (tMaxAll-tMinAll)/(double)nslice;
+    
+    timeIndex = tmalloc(sizeof(*timeIndex)*np);
+    for (i=0; i<np; i++) {
+      if ((timeIndex[i] = (time[i]-tMinAll)/(*dt))<0)
+        timeIndex[i] = 0;
+      else if (timeIndex[i]>=nslice)
+        timeIndex[i] = nslice-1;
+    }    
     j = total= 0;
-    tMin = tMinAll;
     for (islice=0; islice<nslice; islice++) {
-      tMax = tMin + (*dt);
-      if (islice == nslice-1)
-        tMax = tMaxAll + 0.1*(*dt);
       for (i=0; i<np; i++) {
-        if (time[i]>=tMin && time[i]<tMax) {
+        if (timeIndex[i]==islice) {
           count[islice]++;
           index[j++] = i;
         }
       }
       total += count[islice];
-      tMin = tMax;
     }
     if (total !=np) {
       printf("IBSCATTER: slice-beam (nslice=%ld), total (%ld) is not equal to np (%ld). Report it to code developer.\n", nslice, total, np);
@@ -532,12 +538,15 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
         printf("count[%ld] = %ld\n", islice, count[islice]);
       bombElegant(NULL, NULL);
     }
+    free(timeIndex);
+    free(time);
   } else {
+    /* simplified code for single slice */
+    *dt = 1; /* never actually used when only 1 slice present */
     count[0] = np;
     for (i=0; i<np; i++)
       index[i] = i;
   }
-  free(time);
   return;
 }
 
@@ -585,14 +594,12 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
   }
 
 #if USE_MPI
-  if (notSinglePart) {
-    printf("Computing centroids\n");
-    count0 = end-start;
-    MPI_Allreduce(&count0, &countTotal, 1, MPI_LONG, MPI_SUM, workers);
-    MPI_Allreduce(MPI_IN_PLACE, &C[0], 6, MPI_DOUBLE, MPI_SUM, workers);
-    for (j=0; j<6; j++) 
-      C[j] /= countTotal;
-  }
+  printf("Computing centroids\n");
+  count0 = end-start;
+  MPI_Allreduce(&count0, &countTotal, 1, MPI_LONG, MPI_SUM, workers);
+  MPI_Allreduce(MPI_IN_PLACE, &C[0], 6, MPI_DOUBLE, MPI_SUM, workers);
+  for (j=0; j<6; j++) 
+    C[j] /= countTotal;
 #else
   for (j=0; j<6; j++)
     C[j] /= (double)(end-start);
