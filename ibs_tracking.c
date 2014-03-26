@@ -66,9 +66,9 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 #endif
   }
   if (!IBS->charge)
-    bombElegant("bunch charge is not given", NULL);
+    bombElegant("IBSCATTER: bunch charge is not given", NULL);
   if (IBS->isRing && IBS->nslice>1)
-    bombElegant("no slice valid for ring beam. NSLICE has to be 1", NULL);
+    bombElegant("IBSCATTER: NSLICE has to be 1 for ISRING=1", NULL);
 
   if (!IBS->s)
     init_IBS(element);
@@ -239,20 +239,33 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 void inflateEmittance(double **coord, double Po, 
                       long offset, long istart, long iend, long *index, double factor)
 {
-  long ipart, np;
+  long ipart, np, npTotal;
   double factorSqrt, c[2]={0,0};
 
+#if USE_MPI
+  np = iend - istart;
+  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+  if (!npTotal)
+    return;
+#else
   np = iend - istart;
   if (!np)
     return;
+#endif
   factorSqrt = sqrt(factor);
 
   for (ipart=istart; ipart<iend; ipart++) {
     c[0] += coord[index[ipart]][offset+0];
     c[1] += coord[index[ipart]][offset+1];
   }
+#if USE_MPI
+  MPI_Allreduce(MPI_IN_PLACE, &c[0], 2, MPI_DOUBLE, MPI_SUM, workers);
+  c[0] /= npTotal;
+  c[1] /= npTotal;
+#else
   c[0] /= np;
   c[1] /= np;
+#endif
   for (ipart=istart; ipart<iend; ipart++) {
     coord[index[ipart]][offset+0] = (coord[index[ipart]][offset+0]-c[0])*factorSqrt+c[0];
     coord[index[ipart]][offset+1] = (coord[index[ipart]][offset+1]-c[1])*factorSqrt+c[1];
@@ -262,12 +275,19 @@ void inflateEmittance(double **coord, double Po,
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
                        long istart, long iend, long *index, double zRate[3])
 {
-  long i, ipart, np;
+  long i, ipart, np, npTotal;
   double c0, tc, dpc, *time, p, beta0, beta1;
 
+#if USE_MPI
+  np = iend - istart;
+  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+  if (!npTotal)
+    return;
+#else
   np = iend - istart;
   if (!np)
     return;
+#endif
  
   time = tmalloc(sizeof(*time)*np);
   for (i=dpc=tc=0; i<np; i++) {
@@ -278,8 +298,15 @@ void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
     time[i] = coord[index[ipart]][4]/(beta0*c_mks);
     tc += time[i];
   }
+#if USE_MPI
+  MPI_Allreduce(MPI_IN_PLACE, &tc, 1, MPI_DOUBLE, MPI_SUM, workers);
+  MPI_Allreduce(MPI_IN_PLACE, &dpc, 1, MPI_DOUBLE, MPI_SUM, workers);
+  tc /= npTotal;
+  dpc /= npTotal;
+#else
   tc /= np;
   dpc /= np;
+#endif
 
   for (i=0; i<np; i++) {
     ipart = i + istart;
@@ -313,7 +340,7 @@ void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
 void init_IBS(ELEMENT_LIST *element)
 {
   long count, nElements, i, j, isRing = 0, init=1;
-  double startRingPos, finalPos;
+  double startRingPos, finalPos = 0;
   double s0, s1, dt, delta_s, p0, gamma;
   ELEMENT_LIST *element0, *elementStartRing, *eptr=NULL;
   IBSCATTER *IBS=NULL;
@@ -453,9 +480,8 @@ void init_IBS(ELEMENT_LIST *element)
     element = element->succ;
   }
   
-  if (isRing)
-    if (finalPos != IBS->s[IBS->elements-1])
-      bombElegant("You must have IBSCATTER at the end of the RING", NULL);
+  if (finalPos != IBS->s[IBS->elements-1])
+    bombElegant("You must have IBSCATTER at the end of the RING", NULL);
   element = element0;
   return;
 }
