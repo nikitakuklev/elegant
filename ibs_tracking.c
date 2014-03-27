@@ -113,8 +113,9 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
       IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
       if (IBS->isRing)
-        bLength = IBS->revolutionLength/IBS->dT*sqrt(S[4][4]);
+        bLength = sqrt(S[4][4])*c_mks;
       IBS->sigmaz0[islice] = bLength;
+      printf("slice %ld, bLength=%le\n", islice, bLength);
       
       if (!IBS->forceMatchedTwiss)
         forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
@@ -616,15 +617,16 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
   }
 
 #if USE_MPI
-  printf("Computing centroids\n");
   count0 = end-start;
   MPI_Allreduce(&count0, &countTotal, 1, MPI_LONG, MPI_SUM, workers);
   MPI_Allreduce(MPI_IN_PLACE, &C[0], 6, MPI_DOUBLE, MPI_SUM, workers);
   for (j=0; j<6; j++) 
     C[j] /= countTotal;
 #else
-  for (j=0; j<6; j++)
+  for (j=0; j<6; j++) {
     C[j] /= (double)(end-start);
+    printf("C[%ld] = %le\n", j, C[j]);
+  }
 #endif
 
   for (i=start; i<end; i++) {
@@ -634,7 +636,7 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
     i1 = i-start;
     S[4][4] += sqr(dt = time[i1]          - C[4]);
     S[5][5] += sqr(dp = part[index[i]][5] - C[5]);
-    S[4][5] += dt*dp;
+    S[5][4] += dt*dp;
   }
 #if USE_MPI
   printf("Computing sigmas\n");
@@ -649,6 +651,8 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
     for (k=0; k<=j; k++) {
       S[j][k] /= (double)(end-start); 
       S[k][j] = S[j][k];
+      if (j==k)
+        printf("S[%ld][%ld] = %le\n", j, k, S[j][k]);
     }
 #endif
 
