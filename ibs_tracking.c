@@ -108,6 +108,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 #endif
     
       computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
+      /*** Should update eta[i] here to use values from the sigma matrix ****/
       IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
       IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
       IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
@@ -504,6 +505,31 @@ void free_IBS(IBSCATTER *IBS)
   free_czarray_2d((void**)IBS->yRateVsS, IBS->nslice, IBS->elements);
   free_czarray_2d((void**)IBS->zRateVsS, IBS->nslice, IBS->elements);
   free_elements1(IBS->elem);
+
+  IBS->name = NULL;
+  IBS->s = NULL;
+  IBS->pCentral = NULL;
+  IBS->icharge = NULL;
+  IBS->etax = NULL;
+  IBS->etaxp = NULL;
+  IBS->etay = NULL;
+  IBS->etayp = NULL;
+  IBS->emitx0 = NULL;
+  IBS->emity0 = NULL;
+  IBS->emitl0 = NULL;
+  IBS->emitx = NULL;
+  IBS->emity = NULL;
+  IBS->emitl = NULL;
+  IBS->sigmaz0 = NULL;
+  IBS->sigmaDelta0 = NULL;
+  IBS->sigmaz = NULL;
+  IBS->sigmaDelta = NULL;
+  IBS->xGrowthRate = NULL;
+  IBS->yGrowthRate = NULL;
+  IBS->zGrowthRate = NULL;
+  IBS->betax = IBS->betay = IBS->alphax = IBS->alphay = NULL;
+  IBS->xRateVsS = IBS->yRateVsS = IBS->zRateVsS = NULL;
+  IBS->elem = NULL;
   return;
 }
 
