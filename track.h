@@ -80,6 +80,7 @@ extern long isMaster;
 /* flag used to identify if it is a slave processor */
 extern long isSlave;
 /* flag used to indicate if the same particle will be tracked on all the processors, or all the processor will track independently (e.g., in dynamic aperture optimization) */
+/* 0 value, for example, during tracking for the closed orbit, when all processors track the same particle */
 extern long notSinglePart;     
 extern long runInSinglePartMode;
 /* A hash table for loading parameters effectively */
