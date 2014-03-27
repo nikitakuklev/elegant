@@ -115,7 +115,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       if (IBS->isRing)
         bLength = sqrt(S[4][4])*c_mks;
       IBS->sigmaz0[islice] = bLength;
-      printf("slice %ld, bLength=%le\n", islice, bLength);
+      /* printf("slice %ld, bLength=%le\n", islice, bLength); */
       
       if (!IBS->forceMatchedTwiss)
         forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
@@ -533,7 +533,7 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
 #if USE_MPI
     if (isSlave || !notSinglePart)
       find_global_min_max(&tMinAll, &tMaxAll, np, workers);
-    printf("tMinAll=%le, tMaxAll=%le\n", tMinAll, tMaxAll);
+    /* printf("tMinAll=%le, tMaxAll=%le\n", tMinAll, tMaxAll); */
 #endif
     
     *dt = (tMaxAll-tMinAll)/(double)nslice;
@@ -625,7 +625,7 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
 #else
   for (j=0; j<6; j++) {
     C[j] /= (double)(end-start);
-    printf("C[%ld] = %le\n", j, C[j]);
+    /* printf("C[%ld] = %le\n", j, C[j]); */
   }
 #endif
 
@@ -639,20 +639,16 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
     S[5][4] += dt*dp;
   }
 #if USE_MPI
-  printf("Computing sigmas\n");
   for (j=0; j<6; j++)  {
     MPI_Allreduce(MPI_IN_PLACE, S[j], j+1, MPI_DOUBLE, MPI_SUM, workers);
     for (k=0; k<=j; k++)
       S[k][j] = S[j][k] = S[j][k]/countTotal;
   }
-  printf("Done computing sigmas\n");
 #else
   for (j=0; j<6; j++)
     for (k=0; k<=j; k++) {
       S[j][k] /= (double)(end-start); 
       S[k][j] = S[j][k];
-      if (j==k)
-        printf("S[%ld][%ld] = %le\n", j, k, S[j][k]);
     }
 #endif
 
