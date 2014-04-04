@@ -730,6 +730,7 @@ Command name & Type & Description \\\hline
 \begin{itemize}
 \item type: action command.
 \item function: modify the value of a parameter for one or more elements
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -797,6 +798,7 @@ Command name & Type & Description \\\hline
 \begin{itemize}
 \item type: action command.
 \item function: compute corrected and uncorrected orbit amplification factors and functions.
+\item sequence: must be the last command in a sequence.
 \end{itemize}
 
 \begin{verbatim}
@@ -841,6 +843,7 @@ Recommended value: ``\%s.kaf''.
 \begin{itemize}
 \item type: major action command.
 \item function: find the approximate first-order matrix and related quantities for an accelerator by tracking.
+\item sequence: must follow \verb|run_control|.
 \end{itemize}
 
 \begin{verbatim}
@@ -916,6 +919,7 @@ Recommended value: ``\%s.kaf''.
 
 \begin{itemize}
 \item type: setup command.
+\item sequence: must follow \verb|run_control|.
 \item function: set up for tracking of particle coordinates with various distributions.
 \end{itemize}
 
@@ -1119,6 +1123,7 @@ particles.
 \begin{itemize}
 \item type: action command.
 \item function: change the particle type from the default value of ``electron.''
+\item sequence: must precede \verb|run_setup|.
 \item N.B.: this feature has had limited testing, mostly to verify that electron tracking is not
  impacted by the implementation.  Please use with caution and be alert for suspicious results.
 \end{itemize}
@@ -1148,6 +1153,7 @@ particles.
 \begin{itemize}
 \item type: setup command.
 \item function: set up for chromaticity correction.
+\item sequence: should follow \verb|twiss_output|.
 \end{itemize}
 
 \begin{verbatim}
@@ -1265,6 +1271,7 @@ during the computations.
 
 \begin{itemize}
 \item type: setup command.
+\item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item function: set up for correction of the trajectory or closed orbit.
 \end{itemize}
 
@@ -1385,6 +1392,7 @@ use at each iteration.
 \begin{itemize}
 \item type: setup/action command.
 \item function: provide output of the orbit/trajectory correction matrix.
+\item sequence: must follow \verb|run_setup| and definition of steering elements (if wanted, with \verb|steering_element|).
 \end{itemize}
 
 \begin{verbatim}
@@ -1434,6 +1442,7 @@ matrix.
 \begin{itemize}
 \item type: setup command.
 \item function: set up for correction of the tunes.
+\item sequence: should follow \verb|twiss_output|.
 \end{itemize}
 
 \begin{verbatim}
@@ -1486,6 +1495,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 \begin{itemize}
 \item type: setup/action command.
 \item function: set up or execute computation of coupled twiss parameters and beam sizes
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -1538,6 +1548,7 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 \begin{itemize}
 \item type: setup command.
 \item function: define how to subdivide certain beamline elements.
+\item sequence: must precede \verb|run_setup|.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.  
@@ -1600,6 +1611,7 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 
 \begin{itemize}
 \item type: setup command.
+\item sequence: must follow \verb|run_control|.
 \item function: assert a random error defintion for the accelerator.
 \end{itemize}
 
@@ -1668,6 +1680,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 
 \begin{itemize}
 \item type: setup command
+\item sequence: must follow \verb|run_control|.
 \item function: overall control of random errors.
 \end{itemize}
 
@@ -1826,6 +1839,7 @@ aperture for use in the penalty function.  This is available only for the line s
 \begin{itemize}
 \item type: action command.
 \item function: compute floor coordinates for an accelerator.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -1914,6 +1928,7 @@ Use of this feature results in a doubling of the number of turns tracked.
 
 \begin{itemize}
 \item type: action command.  
+\item sequence: should precede \verb|run_setup|.
 \item function: change global settings.
 \end{itemize}
 
@@ -1963,6 +1978,7 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item type: action command.
 \item function: Insert elements into a beamline at specified locations. This is a convenient way to
  add elements to a beamline without modifying the lattice file.
+\item sequence: must follow \verb|run_setup|.
 \item notes: 
 	The modified beamline can be saved through \verb|save_lattice|
    command. Be sure to use ``output\_seq = 1'' option in that command.  
@@ -2016,6 +2032,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 \begin{itemize}
 \item type: setup command.
 \item function: set up for transverse space charge calculation.  
+\item sequence: must precede \verb|run_setup|.
 \item {\bf This feature can not work with concatenation matrix tracking.}
 \item {\bf
 N.B.: This feature is not designed for space charge calculations in
@@ -2073,6 +2090,7 @@ beamline. In this case, user has to re-calculate twiss using
 \item type: setup command.
 \item function: define chromatic variation of beta functions, tunes, etc. for using in
  fast linear-chromatic tracking
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -2128,6 +2146,7 @@ flexible, since one can include tune shifts with amplitude.
 \begin{itemize}
 \item type: setup command.
 \item function: overall control of element parameter links.
+\item sequence: must follow \verb|run_control|.
 \end{itemize}
 
 \begin{verbatim}
@@ -2155,6 +2174,7 @@ during computations.
 \begin{itemize}
 \item type: setup command.
 \item function: assert a link between parameters of accelerator elements.
+\item sequence: must follow \verb|run_control| and \verb|link_control|.
 \end{itemize}
 
 \begin{verbatim}
@@ -2203,6 +2223,7 @@ assigned to the target parameter.
 \begin{itemize}
 \item type: setup command.
 \item function: load parameters for elements from an SDDS file.
+\item sequence: must follow \verb|run_setup| and precede \verb|run_control| and \verb|error_control| (if present).
 \end{itemize}
 
 \begin{verbatim}
@@ -2374,7 +2395,7 @@ number of the occurrence of the named element from which to start.
 \begin{itemize}
 \item type: setup command.
 \item function: define parameters for time-dependent modulation of elements
-\item N.B.: this feature is somewhat experimental.  Please use with caution and report any problems on the forum.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -2456,7 +2477,8 @@ is modulated.
 
 \begin{itemize}
 \item type: action/setup command.
-\item function: compute periodic or non-periodic beam moments, optionally including radiation
+\item function: compute periodic or propagate non-periodic beam moments without tracking, optionally including radiation.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -2689,6 +2711,7 @@ correctly.  It is also a good idea to track for several synchrotron oscillation 
 \begin{itemize}
 \item type: major action command.
 \item function: perform optimization.
+\item sequence: must follow \verb|optimization_setup| and beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item note: on UNIX systems, the user may press Control-C to force
 \verb|elegant| to terminate optimization and proceed as if
 optimization had converged.  (To genuinely terminate the run during
@@ -2720,6 +2743,7 @@ summary of the optimization parameters should be printed.
 \begin{itemize}
 \item type: setup command.
 \item function: define a constraint for optimization.
+\item sequence: must follow \verb|optimization_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item N.B.: This command is {\em disparaged}. It is {\em far} better to put constraints
 	into the optimization equation (via the \verb|equation| parameter of
 	\verb|optimization_setup| or via \verb|optimization_term|).  The reason
@@ -2762,6 +2786,7 @@ allowed for the expression.
 \begin{itemize}
 \item type: setup command.
 \item function: define an element parameter to be varied as a function of optimization parameters.
+\item sequence: must follow \verb|optimization_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item N.B.: It is not possible to optimize an element if the element name starts with one of the following
 characters: 
 \verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
@@ -2798,6 +2823,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
 \begin{itemize}
 \item type: setup command.
 \item function: define overall optimization parameters and methods.
+\item sequence: must precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|)
 \end{itemize}
 
 \begin{verbatim}
@@ -3110,9 +3136,8 @@ to a very large number to use this rule as the stop condition alone.
 
 \begin{itemize}
 \item type: setup command.
-
 \item function: define optimization equation via individual terms
-
+\item sequence: must follow \verb|optimization_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \end{itemize}
 
 \begin{verbatim}
@@ -3176,6 +3201,7 @@ details on designing optimization terms.
 \begin{itemize}
 \item type: setup command.
 \item function: defines a parameter of an element to be used in optimization.
+\item sequence: must follow \verb|optimization_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item N.B.: It is not possible to optimize an element if the element name starts with one of the following
 characters: 
 \verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
@@ -3239,7 +3265,7 @@ equal, the range of the parameter is unlimited.
 \begin{itemize}
 \item type: setup command.
 \item function: define parameters for time-dependent ramping of elements
-\item N.B.: this feature is somewhat experimental.  Please use with caution and report any problems on the forum.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -3319,6 +3345,7 @@ Note that $i=0$ on the first pass.
 \begin{itemize}
 \item type: setup/action command.
 \item function: set up rf cavity frequency, phase, and voltage for a storage ring
+\item sequence: must follow \verb|run_setup|. In action mode, must follow action-mode instance of \verb|twiss_output|.
 \end{itemize}
 
 \begin{verbatim}
@@ -3394,6 +3421,8 @@ energy loss per turn.
 \item type: action command.
 \item function: Replace old element with a newly defined element, or just 
    remove it from beamline. This is a convenient way to modify lattice in an elegant run.
+   See also \verb|transmute_elements|.
+\item sequence: must follow \verb|run_setup|.
 \item notes: 
 	The modified lattice can be saved through \verb|save_lattice|
    command. Be sure to use ``output\_seq = 1'' option in that command.  
@@ -3544,6 +3573,7 @@ a different run.
 \begin{itemize}
 \item type: setup command.
 \item function: set up the number of simulation steps and passes.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -3712,6 +3742,7 @@ tracking.
 \begin{itemize}
 \item type: setup/action command.
 \item function: set parameters for computation of SASE FEL gain and other properties.
+\item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \end{itemize}
 
 \begin{verbatim}
@@ -3782,6 +3813,7 @@ together with \verb|insert_elements| and \verb|replace_elements|.
 \begin{itemize}
 \item type: setup command.
 \item function: set up for tracking and histogram analyzing of particle coordinates stored in an SDDS file.
+\item sequence: must follow \verb|run_control|.
 \end{itemize}
 
 \begin{verbatim}
@@ -3873,6 +3905,7 @@ and is useful for tracking very large numbers of particles.
 \item type: setup command.
 \item function: set up names for semaphore files, which are used to mark the
         start and end of program execution.
+\item sequence: must precede \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -3907,6 +3940,7 @@ and is useful for tracking very large numbers of particles.
         (at the end of the beamline) in symbols for use in optimization
         equations.  The names of the symbols are the same as the names
         of the columns in the output file.
+\item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \end{itemize}
 
 \begin{verbatim}
@@ -3961,6 +3995,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
 \begin{itemize}
 \item type: setup command.
 \item function: setup for use of a given parameter of a given element as a steering corrector.
+\item sequence: must precede \verb|correct|.
 \item N.B.: any use of this command disables the built-in definition of HKICK, VKICK, and HVKICK elements
 as steering elements.  For trajectory correction, this facility works without any additional effort by the user.
 However, it will not work for orbit correction unless the user also sets \verb|use_response_from_computed_orbits=1| in
@@ -4001,6 +4036,7 @@ However, it will not work for orbit correction unless the user also sets \verb|u
    calculated by using Piwinski's formula and from the Monte Carlo
    simulation. Scattered particles can be tracked through the entire
    beamline (one pass only), and beam loss information is recorded.
+\item sequence: must follow \verb|run_setup|.
 \item notes: 
 	\begin{itemize} 
       \item A momentum aperture file is required previous using this command. It
@@ -4121,10 +4157,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
 \item function: Changes the type of selected elements, which may be used to
 	turn off unneeded diagnostics and speed up tracking when concatenation
 	is being used.
+\item Must preceded \verb|run_setup|.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.
-	\item Not effective unless given prior to \verb|run_setup|.
 	\item The only property of the original element that is preserved is
 	the length.  For example, transmuting a SBEN into a CSBEN will not
 	have the expected result.
@@ -4165,7 +4201,8 @@ However, it will not work for orbit correction unless the user also sets \verb|u
 \item type: action/setup command.  
 \item function: compute frequency map from tracking and use it to determine the 
   chromatic and amplitude tune footprints.
-  Note that the number of turns tracked is set by the \verb|run_control| command.
+\item sequence: must follow \verb|run_control|.
+\item N.B.: the number of turns tracked is set by the \verb|run_control| command.
 \end{itemize}
 
 \begin{verbatim}
@@ -4245,6 +4282,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item type: setup command.
 \item function: analyze Twiss parameters within a user-defined region for purposes of
         optimization.
+\item sequence: must precede \verb|twiss_output|.
 \end{itemize}
 
 \begin{verbatim}
@@ -4287,6 +4325,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \begin{itemize}
 \item type: action/setup command.
 \item function: compute and output uncoupled Twiss parameters, or set up to do so.
+\item sequence: must follow \verb|run_setup|.
 \end{itemize}
 
 \begin{verbatim}
@@ -4517,6 +4556,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
 \begin{itemize}
 \item type: major action command.
 \item function: track particles.
+\item sequence: must follow \verb|run_setup|, \verb|run_control|, and beam definition with \verb|bunched_beam| or \verb|sdds_beam|.
 \end{itemize}
 
 \begin{verbatim}
@@ -4571,7 +4611,7 @@ given value.  It will be as if all the particles were lost.
 \begin{itemize}
 \item type: setup command.
 \item function: prepare for computation of tune shifts with amplitude.
-\item note: must be given prior to the \verb|twiss_output| command.
+\item sequence: must follow \verb|twiss_output|.
 \item methods: 
 \begin{itemize}
  \item[Method 1]: tune shifts with amplitude are computed via tracking a series of
@@ -4675,6 +4715,7 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
 \begin{itemize}
 \item type: setup command.
 \item function: define an index and/or tie a parameter of an element to it.
+\item sequence: must follow \verb|run_control|
 \item N.B.: It is not possible to vary an element if the element name starts with one of the following
 characters: 
 \verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
