@@ -474,8 +474,8 @@ int main( int argc, char **argv)
   }
   if (verbosity)
     fprintf( stdout, "Opening \"%s\" for writing...\n", outputfile);
-  if (!SDDS_InitializeOutput(&resultsPage, SDDS_BINARY, 1, "Intra-beam scattering rates",
-                             "Intra-beam scattering rates", outputfile))
+  if (!SDDS_InitializeOutput(&resultsPage, SDDS_BINARY, 1, "Intra-beam scattering results from ibsEmittance",
+                             "Intra-beam scattering results from ibsEmittance", outputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "I1", NULL) ||
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "I2", NULL) ||
