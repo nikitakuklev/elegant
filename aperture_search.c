@@ -145,6 +145,12 @@ void setup_aperture_search(
     bombElegant("only mode=\"n-line\" is supported by parallel elegant", NULL);
   }
 #endif
+  if (mode_code<ONE_LINE_MODE) {
+    printf("*** Warning: using one of the line-based search methods is strongly recommended.\n");
+    printf("*** Other methods, which search from large amplitude to small amplitude,\n");
+    printf("*** may overstate the aperture because of stable islands\n");
+  }
+  
   if (optimization_mode && (mode_code<=TWO_LINE_MODE || (mode_code==LINE_MODE && n_lines<3)))
     bombElegant("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
   if (offset_by_orbit && mode_code==SP_MODE)
