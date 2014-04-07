@@ -21,3 +21,6 @@ void IBSRate (double particles,
               double *alphay, double *etax, double *etaxp, double *etay, double *etayp,
               double *xRateVsS, double *yRateVsS, double *zRateVsS, 
               double *xGrowthRate, double *yGrowthRate, double *zGrowthRate, long isElegant);
+
+double computeCouplingAngle(double taux, double tauy, double emitx, double emity);
+

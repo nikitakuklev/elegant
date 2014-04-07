@@ -289,3 +289,27 @@ double coulombLog (double gamma, double emitx, double emity,
   }
   return value;
 }
+
+static double xRate, yRate;
+
+double couplingAngleFn(double theta)
+{
+  double st22;
+  st22 = sqr(sin(theta)/2);
+  return (yRate+xRate)*st22/(yRate + st22*(xRate-3*yRate)) ;
+}
+
+double computeCouplingAngle(double taux, double tauy, double emitx, double emity) 
+{
+  /* Returns solution of 
+     emity/emitx = sin^2(theta)/4 * (2/tauy + 2/taux) / (2/tauy + sin^2(theta)/4*(2/taux-3*2/tauy)) 
+     */
+  double theta;
+  
+  xRate = 2/taux;
+  yRate = 2/tauy;
+  /* Use the interval-halving method since the derivatives go to zero for theta=0 and theta=pi/2 */
+  theta = zeroInterp(couplingAngleFn, emity/emitx, 0.0, PI/2, 0.01, 1e-10);
+  /* printf("coupling angle merit function = %le (theta = %le)\n", couplingAngleFn(theta)-emity/emitx, theta); */
+  return theta;
+}

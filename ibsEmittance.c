@@ -214,6 +214,7 @@ char *option[N_OPTIONS] = {
   };
 
 #include "zibs.h"
+
 void exitElegant(long status);
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
@@ -235,6 +236,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
 /* global variables */
 double *s, *pCentral, *betax, *alphax, *betay, *alphay, *etax, *etaxp, *etay, *etayp;
 long isRing;
+double thetaCoupling;
 
 int main( int argc, char **argv)
 {
@@ -279,7 +281,7 @@ int main( int argc, char **argv)
   particles = 0;
   charge = 0;
   coupling = emityInput = 0;
-  force = 1;
+  force = 0;
   length = 0;
   superperiods=1;
   method = 0;
@@ -494,7 +496,8 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "RfVoltage", NULL, "MV", "Rf Voltage", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "xGrowthRateInitial", "g$bIBS,x$n", "1/s", "Initial IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "yGrowthRateInitial", "g$bIBS,y$n", "1/s", "Initial IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "zGrowthRateInitial", "g$bIBS,z$n", "1/s", "Initial IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "zGrowthRateInitial", "g$bIBS,z$n", "1/s", "Initial IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "couplingAngle", "$gt$r$bc$r", "", "Coupling angle", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations", NULL, SDDS_STRING, NULL) ||
@@ -638,6 +641,11 @@ int main( int argc, char **argv)
     emity = emityInput;
     emitx = emitxInput;
 
+    thetaCoupling = computeCouplingAngle(taux, tauy, emitx, emity);
+    if (verbosity>=1) {
+      printf("thetaCoupling = %le\n", thetaCoupling);
+    }
+    
     if (integrationPoints) {
       IBSIntegrate(exInteg, eyInteg, elInteg, passInteg,
                    SdeltaInteg, SzInteg,
@@ -657,9 +665,9 @@ int main( int argc, char **argv)
     /* This call is to get the initial growth rates for writing to results file.
        This applies for any running option selected in the commandline */
     IBSRate(particles, elements, superperiods, verbosity, isRing,
-             emitx, emity, sigmaDelta, sigmaz, 
-             s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
-             NULL, NULL, NULL, 
+            emitx, emity, sigmaDelta, sigmaz, 
+            s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
+            NULL, NULL, NULL, 
             &xGrowthRateInitial, &yGrowthRateInitial, &zGrowthRateInitial, 0);
 
     /* iterating for equilibrium emittances and final growth rates */
@@ -777,7 +785,8 @@ int main( int argc, char **argv)
                             "zGrowthRateInitial", zGrowthRateInitial,
                             "sigmaDeltaInput", sigmaDeltaInput,
                             "sigmaDelta0", sigmaDelta0,
-                            "sigmaz0", sigmaz0, NULL) ||
+                            "sigmaz0", sigmaz0, 
+                            "couplingAngle", thetaCoupling, NULL) ||
         (!growthRatesOnly && 
          !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                              "xGrowthRate", xGrowthRate,
@@ -819,6 +828,7 @@ double IBSequations(double *x, long *invalid) {
   long elements, superperiods, verbosity, forceCoupling;
   double xGrowthRate, yGrowthRate, zGrowthRate;
   double ax, bx, cx, ay, by, cy, d, e, f, func1x, func1y, func2;
+  double sint22, gx, gy, c1;
   
   emitx = x[0];
   sigmaDelta = x[1];
@@ -849,51 +859,10 @@ double IBSequations(double *x, long *invalid) {
        sigmaz0/sigmaDelta0 and emityInput/emitxInput respectively.       
        */
 
-    /* equations to solve (using ZAP manual notation) and throwing in coupling
-       terms.
-       damping term     quantum excitation      IBS terms
-                       (a constant)                                              
-        SR             SR   0    1              IBS       1         IBS       k  
-       g   e        = g    e   -----       +   g    e   -----  +   g    e   -----
-        x   x          x    x  1 + k            x    x  1 + k       y    y  1 + k
-     
-       The quantum excitation term is a constant and is reduced in the x plane 
-       because of coupling. Also the IBS growth rate in x is reduced because of
-       coupling. 
-     
-       In the y-plane:
-       damping term     quantum excitation      IBS terms
-                       (a constant)                                              
-        SR             SR   0    k              IBS       1         IBS       k  
-       g   e        = g    e   -----       +   g    e   -----  +   g    e   -----
-        y   y          x    x  1 + k            y    y  1 + k       x    x  1 + k
-     
-       In the longitudinal plane,
-       damping term     quantum excitation      IBS term
-                       (a constant)                                              
-        SR      2      SR        2              IBS      2
-       g   delta    = g    delta0          +   g    delta
-        z              z                        z    
-     
-       Assume that g^IBS will have the approximate dependence which will help finding
-       solutions:
-                    Input Input          2  
-                   e    e     deltaInput          
-        IBS         x    y                          1
-       g    = G' ----------------------- = G ----------------
-                               2                           2               
-                   e  e   delta                e  e   delta 
-                    x  y                        x  y        
-       where G doesn't change much during the iterations and where
-       G' = g^IBS on the very first calculation.
+    /* 
+     * Based on equations from R. Lindberg, to be published
+     */
 
-       Correspondence with our variables:
-       g^SR_x    -> 2/taux
-       g^IBS_x   -> xGrowthRate
-       e^0_x     -> emitx0
-       k         -> coupling
-
-       */
   sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
   IBSRate(particles, elements, superperiods, verbosity, isRing, 
           emitx, emity, sigmaDelta, sigmaz, 
@@ -901,29 +870,28 @@ double IBSequations(double *x, long *invalid) {
           NULL, NULL, NULL, 
           &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
 
-  if (forceCoupling) 
-    emity = coupling*emitx;
+  sint22 = sqr(sin(thetaCoupling)/2);
+  
+  gx = (2/taux - xGrowthRate);
+  gy = (2/tauy - yGrowthRate);
+  bx = 2*emitx0/taux;
+  by = 2*emitx0*sint22/taux;
+  c1 = gx*gy + sint22*sqr(gx-gy);
 
-  ax = -2./taux*emitx;
-  bx = 2./taux * emitx0/(1+coupling);
-  cx = xGrowthRate * emitx/(1+coupling) + yGrowthRate * emity*coupling/(1+coupling);
-
-  ay = -2./tauy*emity;
-  by = 2./taux * emitx0*coupling/(1+coupling);
-  cy = xGrowthRate * emitx*coupling/(1+coupling) + yGrowthRate * emity/(1+coupling);
+  func1x = c1*emitx - emitx0*2/taux*(gy + sint22*(gx - 3*gy));
+  func1y = c1*emity - emitx0*sint22*2/taux*(gx + gy);
 
   d = -2./taudelta * sqr(sigmaDelta);
   e = 2./taudelta * sqr(sigmaDelta0);
   f = zGrowthRate * sqr(sigmaDelta);
-  func1x = ax + bx + cx;
-  func1y = ay + by + cy;
   func2 = d + e + f;
+
   *invalid = 0;
   /* returns an equation evaluation that, at the end of convergence, should be zero. */
-  if (!forceCoupling)
-    return (sqr(func1x/bx) + sqr(func1y/by) + sqr(func2/e));
-  else 
-    return (sqr((func1x+func1y)/(bx+by)) + sqr(func2/e));
+  /* printf("emitx = %le, emity = %le, func1x/bx = %le, func1y/by = %le, func2/e = %le\n",
+         emitx, emity, func1x/bx, func1y/by, func2/e);
+         */
+  return (sqr(func1x/bx) + sqr(func1y/by) + sqr(func2/e));
 }
 
 
@@ -999,5 +967,6 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
   yRateInteg[slot] = yGrowthRate;
   zRateInteg[slot] = zGrowthRate;
 }
+
 
 
