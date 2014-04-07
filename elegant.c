@@ -882,6 +882,8 @@ char **argv;
     case ANALYZE_MAP:
       switch (commandCode) {
       case TRACK:
+        if (!run_setuped || !run_controled || beam_type==-1) 
+          bombElegant("run_setup, run_control, and beam definition must precede track namelist", NULL);
         set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
         set_print_namelist_flags(0);
         if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
@@ -903,6 +905,8 @@ char **argv;
           bombElegant("beam must be defined prior to tracking", NULL);
         break;
       case ANALYZE_MAP:
+        if (!run_setuped || !run_controled)
+          bombElegant("run_setup, run_control, and beam definition must precede track namelist", NULL);
         setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
         break;
       }
@@ -1308,6 +1312,8 @@ char **argv;
       fflush(stdout);
       break;
     case TUNE_FOOTPRINT:
+      if (!run_setuped || !run_controled)
+        bombElegant("run_setup and run_control must precede tune_footprint namelist", NULL);
       if (setupTuneFootprint(&namelist_text, &run_conditions, &run_control)) {
         doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
         outputTuneFootprint();
@@ -1534,6 +1540,8 @@ char **argv;
       do_print_dictionary(filename, latex_form, SDDS_form);
       break;
     case FLOOR_COORDINATES:
+      if (!run_setuped)
+        bombElegant("run_setup must precede floor_coordinates namelist", NULL);
       if (isMaster)
         output_floor_coordinates(&namelist_text, &run_conditions, beamline);
       break;
