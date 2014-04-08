@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 25.3.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 25.4.Beta\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -34,72 +34,39 @@ at a high-level.
 
 \section{Highlights of What's New in Version 25.3.1}
 
-Here is a summary of what's changed since release 25.2.1:
+Here is a summary of what's changed since release 25.3.2:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Increased default accuracy parameter for closed orbit computation and correction to improve run time.
-\item If fixed length orbit calculations are requested, setting \verb|CHANGE_T=1| on \verb|RFCA| or \verb|RFCW| elements
- is now flagged as an error. This bug was reported by T. Pulampong (DLS).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A name assignment problem was fixed for \verb|correction_matrix_output| when BPMs and correctors have non-unique names.
-\item Fixed bug in handling of steering limits when multiple \verb|steering_element| commands are given.
-\item Changed the default number of x-y cycles and iterations in \verb|correct| command (orbit correction) to give better
-  behavior when the user does not specify anything. This issue was reported by T. Pulampong (DLS).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added \verb|LRWAKE| element, which provides serial and parallel modeling of long range, multi-bunch, multi-pass, non-resonant wakes.
- (Resonant wakes are already supported with the \verb|*RFMODE| elements.)
-\item The \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE| elements now support bunch-by-bunch calculations.
-\item Added bremsstrahlung energy loss to the \verb|MATTER| and \verb|SCRAPER| elements.
-\item Added parameters to \verb|CSBEND| for specifying the higher multipoles as fractions of the main field at a reference position.
-\item Orbit and trajectory correction now has the ability to remove pegged correctors from the algorithm. This feature was requested by 
-  V. Sajaev (APS).
-\item Gaussian-distributed ISR kicks (\verb|CSBEND|, \verb|SREFFECTS|, etc.) presently use a 3-$\sigma$ cutoff. 
-  The cutoff can now be controlled using the \verb|SR_gaussian_limit| parameter in the \verb|global_settings| command.
-  This was suggested by Z. Gu (IU) and improves agreement between tracking results and expectations for storage rings.
-\item The \verb|EDRIFT| element now appears in the magnet output file from \verb|run_setup|.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|sdds_beam| command has two new parameters, \verb|track_pages_separately| and \verb|use_bunched_mode|, which clarify the handling of multi-page
-  input files and allow invoking bunched-mode calculations with \verb|LRWAKE|, \verb|WAKE|, \verb|TRWAKE|, \verb|ZLONGIT|, and \verb|ZTRANSVERSE|.
-\item Added the \verb|tune_footprint| command, which allows serial or parallel compution and optimization of the momentum tune footprint, the amplitude tune footprint,
-  and the diffusion rate.
-\item The \verb|rf_setup| command now stores values for bunch length in symbols \verb|Sz0| and \verb|St0|, and also stores the fractional
-  energy spread in \verb|Sdelta0|.
-\item The \verb|load_parameters| command now has the ability to edit the names of elements before assigning values. It also has the ability to skip pages.
-\item Improved \verb|floor_coordinate| command so it can find vertex point for multi-segment dipoles with unequal segments.
+\item The \verb|load_parameters| command will now accept lists of patterns for matching names, types, and parameters in the input file.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item The \verb|momentum_aperture| command now supports a massively-parallel mode in which all probe particles are tracked simultaneously.
-\item The \verb|parallel_optimization_setup| command now supports special tolerance and convergence parameters for the hybrid parallel simplex optimizer.
+\item None.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item Improved \verb|ibsEmittance| to solve for x and y parameters separately, which is necessary for more accurate results when
-  $\tau_x \ne \tau_y$.
-\item Added {\tt bremsstrahlungLifetime}, which computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
-\item Added {\tt elasticScatteringLifetime}, which computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
-\item Added the script {\tt computeCoherentFraction} to compute the coherent fraction for undulator radiation.
-\item Added the script {\tt plotTwissBeamsize} to plot the beam sizes using data from the \verb|twiss_output| command.
-\item Added the script {\tt analyzeMagnets}, which generates SDDS and \latex files giving magnet parameters.
-\item Minor bug fixes and enhancements for {\tt sddsbs} (bending magnet spectrum).
-\item Added viewpoint generation to {\tt view3dGeometry}.
-\item {\tt sddsrandmult} can now be asked to suppress low-order (i.e., easily correctable) harmonics.
-\item {\tt sddsurgent} can now handle $500 \times 500$ grids for spatial and angular maps.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -2282,18 +2249,22 @@ chromaticity correction commands and the \verb|run_setup| command
         with an individual \verb|load_parameters| command.
 
 \item \verb|include_name_pattern|, \verb|exclude_name_pattern| ---
-Wildcard patterns to be used in selecting, respectively, which
-elements to include and which to exclude from loading.
+A comma- or space-separated list of wildcard patterns to be used in selecting, respectively, which
+elements to include and which to exclude from loading. 
+To be used, data must match at least one inclusion pattern and no exclusion patterns.
 
 \item \verb|include_item_pattern|, \verb|exclude_item_pattern| ---
-Wildcard patterns to be used in selecting, respectively, which items
+A comma- or space-separated list of wildcard patterns to be used in selecting, respectively, which items
 (i.e., which element parameters) to include and which to exclude from
 loading.
+To be used, data must match at least one inclusion pattern and no exclusion patterns.
+
 
 \item \verb|include_type_pattern|, \verb|exclude_type_pattern| ---
 Wildcard patterns to be used in selecting, respectively, which element
 types (e.g., QUAD, DRIFT) to include and which to exclude from
 loading.
+To be used, data must match at least one inclusion pattern and no exclusion patterns.
 
 \item \verb|edit_name_command| --- A command using the syntax of the {\tt editstring} program, allowing
   the strings in the \verb|ElementName| column to be modified before values are assigned.
