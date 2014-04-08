@@ -29,8 +29,10 @@ typedef struct {
 #define COMMAND_FLAG_IGNORE             0x0002UL
 #define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
 #define COMMAND_FLAG_USE_FIRST          0x0008UL
-    char *includeNamePattern, *includeItemPattern, *includeTypePattern;
-    char *excludeNamePattern, *excludeItemPattern, *excludeTypePattern;
+    char **includeNamePattern, **includeItemPattern, **includeTypePattern;
+    long includeNamePatterns, includeItemPatterns, includeTypePatterns;
+    char **excludeNamePattern, **excludeItemPattern, **excludeTypePattern;
+    long excludeNamePatterns, excludeItemPatterns, excludeTypePatterns;
     char *editNameCommand;
     long skip_pages;         /* if >0, pages are skipped, used as counter */
     long last_code;          /* return code from SDDS_ReadTable */
@@ -64,8 +66,11 @@ static char *load_mode[LOAD_MODES] = {
     } ;
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
+char **addPatterns(long *patterns, char *input0);
+int matchesPatternList(char **pattern, long patterns, char *input);
 
 static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100, printingEnabled = 1;
+
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -128,12 +133,13 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
   if (use_first)
     load_request[load_requests].flags |= COMMAND_FLAG_USE_FIRST;
-  load_request[load_requests].includeNamePattern = include_name_pattern;
-  load_request[load_requests].includeItemPattern = include_item_pattern;
-  load_request[load_requests].includeTypePattern = include_type_pattern;
-  load_request[load_requests].excludeNamePattern = exclude_name_pattern;
-  load_request[load_requests].excludeItemPattern = exclude_item_pattern;
-  load_request[load_requests].excludeTypePattern = exclude_type_pattern;
+  load_request[load_requests].includeNamePattern = addPatterns(&(load_request[load_requests].includeNamePatterns), include_name_pattern);
+  load_request[load_requests].includeNamePattern = addPatterns(&(load_request[load_requests].includeNamePatterns), include_name_pattern);
+  load_request[load_requests].includeItemPattern = addPatterns(&(load_request[load_requests].includeItemPatterns), include_item_pattern);
+  load_request[load_requests].includeTypePattern = addPatterns(&(load_request[load_requests].includeTypePatterns), include_type_pattern);
+  load_request[load_requests].excludeNamePattern = addPatterns(&(load_request[load_requests].excludeNamePatterns), exclude_name_pattern);
+  load_request[load_requests].excludeItemPattern = addPatterns(&(load_request[load_requests].excludeItemPatterns), exclude_item_pattern);
+  load_request[load_requests].excludeTypePattern = addPatterns(&(load_request[load_requests].excludeTypePatterns), exclude_type_pattern);
   load_request[load_requests].skip_pages = skip_pages;
 #ifdef USE_MPE /* use the MPE library */    
   int event1a, event1b;
@@ -434,24 +440,20 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         if (strcmp(lastMissingElement, element[j])==0)
           continue;
       }
-      if (load_request[i].includeNamePattern &&
-          !wild_match(element[j], load_request[i].includeNamePattern))
+      if (load_request[i].includeNamePattern && !matchesPatternList(load_request[i].includeNamePattern, load_request[i].includeNamePatterns, element[j]))
         continue;
-      if (load_request[i].includeItemPattern &&
-          !wild_match(parameter[j], load_request[i].includeItemPattern))
+      if (load_request[i].includeItemPattern && !matchesPatternList(load_request[i].includeItemPattern, load_request[i].includeItemPatterns, parameter[j]))
         continue;
-      if (load_request[i].includeTypePattern &&
-          !wild_match(type[j], load_request[i].includeTypePattern))
+      if (load_request[i].includeTypePattern && !matchesPatternList(load_request[i].includeTypePattern, load_request[i].includeTypePatterns, type[j]))
         continue;
-      if (load_request[i].excludeNamePattern &&
-          wild_match(element[j], load_request[i].excludeNamePattern))
+
+      if (load_request[i].excludeNamePattern && matchesPatternList(load_request[i].excludeNamePattern, load_request[i].excludeNamePatterns, element[j]))
         continue;
-      if (load_request[i].excludeItemPattern &&
-          wild_match(parameter[j], load_request[i].excludeItemPattern))
+      if (load_request[i].excludeItemPattern && matchesPatternList(load_request[i].excludeItemPattern, load_request[i].excludeItemPatterns, parameter[j]))
         continue;
-      if (load_request[i].excludeTypePattern &&
-          wild_match(type[j], load_request[i].excludeTypePattern))
+      if (load_request[i].excludeTypePattern && matchesPatternList(load_request[i].excludeTypePattern, load_request[i].excludeTypePatterns, type[j]))
         continue;
+
       element_missing = 0;
 
       /* If edit command given, change the name now (after matching) */
@@ -903,3 +905,30 @@ void finishLatticeParametersFile()
   dumpingLatticeParameters = 0;
 }
 
+char **addPatterns(long *patterns, char *input0) 
+{
+  char *input, *ptr, **pattern;
+  *patterns = 0;
+  if (input0==NULL)
+    return NULL;
+  cp_str(&input, input0);
+  pattern = NULL;
+  while ((ptr=get_token(input))) {
+    pattern = SDDS_Realloc(pattern, sizeof(*pattern)*(*patterns+1));
+    cp_str(&(pattern[*patterns]), ptr);
+    *patterns += 1;
+  }
+  free(input);
+  return pattern;
+}
+
+int matchesPatternList(char **pattern, long patterns, char *input) 
+{
+  long i;
+  for (i=0; i<patterns; i++) {
+    if (wild_match(input, pattern[i])) {
+      return 1;
+    }
+  }
+  return 0;
+}
