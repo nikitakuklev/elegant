@@ -126,7 +126,7 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
     "{-define=param,I0,$beamCurrent,units=mA}" \
     "{-define=param,E,$H c_mks * 1e9 /,units=GeV}" \
     "{-define=col,Angle,ParameterValue PartCount *}" \
-    "{-define=column,rho,Length Angle /}" "{-define=col,B,$H rho /,units=T}" \
+    "{-define=column,rho,Angle 0 == ? 1e300 : Length Angle / $ }" "{-define=col,B,$H rho /,units=T}" \
     "{-define=col,AngleDeg,Angle rtod,units=deg}" \
     "{-define=col,B1,K1 $H *,units=T/m}" \
     "{-define=col,B2,K2 $H *,units=T/m^2}" \
@@ -134,8 +134,8 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
     "{-define=col,B2L,B2 Length *,units=T/m}" \
     "{-define=col,Ec,0.665 E sqr * B * abs,units=keV}" \
     "{-define=col,TotalPower,E 4 pow 8.846e4 * rho / I0 1e3 / * 2 / pi / Angle *,units=W}" \
-    "{-define=col,IntegratedPowerDensity,TotalPower Angle / 1e3 /,units=W/mrad}" \
-    "{-define=col,PowerDensity,TotalPower Angle / 21 * 32 / $pCentral * 1e6 /,units=W/mrad\$a2\$n}" \
+    "{-define=col,IntegratedPowerDensity,TotalPower Angle abs 1e-16 + / 1e3 /,units=W/mrad}" \
+    "{-define=col,PowerDensity,TotalPower Angle abs 1e-16 + / 21 * 32 / $pCentral * 1e6 /,units=W/mrad\$a2\$n}" \
   | sddssort -pipe -column=ElementName -unique=count  \
   | sddssort -pipe -column=s \
   | $extraCmd \
