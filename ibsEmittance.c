@@ -165,7 +165,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
- [-noWarning]\nVersion 4, April 2014.\n";
+ [-noWarning]\n\
+Version 5, April 2014.\n";
 
 #define SET_ENERGY 0
 #define VERBOSE 1
@@ -214,7 +215,6 @@ char *option[N_OPTIONS] = {
   };
 
 #include "zibs.h"
-
 void exitElegant(long status);
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
@@ -236,7 +236,6 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
 /* global variables */
 double *s, *pCentral, *betax, *alphax, *betay, *alphay, *etax, *etaxp, *etay, *etayp;
 long isRing;
-double thetaCoupling;
 
 int main( int argc, char **argv)
 {
@@ -255,7 +254,7 @@ int main( int argc, char **argv)
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
-  long dimensions = 17, maxEvaluations = 500, maxPasses = 5;
+  long dimensions = 15, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
@@ -281,7 +280,7 @@ int main( int argc, char **argv)
   particles = 0;
   charge = 0;
   coupling = emityInput = 0;
-  force = 0;
+  force = 1;
   length = 0;
   superperiods=1;
   method = 0;
@@ -474,8 +473,8 @@ int main( int argc, char **argv)
   }
   if (verbosity)
     fprintf( stdout, "Opening \"%s\" for writing...\n", outputfile);
-  if (!SDDS_InitializeOutput(&resultsPage, SDDS_BINARY, 1, "Intra-beam scattering results from ibsEmittance",
-                             "Intra-beam scattering results from ibsEmittance", outputfile))
+  if (!SDDS_InitializeOutput(&resultsPage, SDDS_BINARY, 1, "Intra-beam scattering rates",
+                             "Intra-beam scattering rates", outputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "I1", NULL) ||
       !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "I2", NULL) ||
@@ -496,8 +495,7 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "RfVoltage", NULL, "MV", "Rf Voltage", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "xGrowthRateInitial", "g$bIBS,x$n", "1/s", "Initial IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "yGrowthRateInitial", "g$bIBS,y$n", "1/s", "Initial IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "zGrowthRateInitial", "g$bIBS,z$n", "1/s", "Initial IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "couplingAngle", "$gt$r$bc$r", "", "Coupling angle", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "zGrowthRateInitial", "g$bIBS,z$n", "1/s", "Initial IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations", NULL, SDDS_STRING, NULL) ||
@@ -524,11 +522,8 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  if (verbosity) {
+  if (verbosity)
     fprintf( stdout, "Opening for reading \"%s\"\n", inputfile);
-    fflush(stdout);
-  }
-
   if (!SDDS_InitializeInput(&twissPage, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
@@ -644,17 +639,6 @@ int main( int argc, char **argv)
     emity = emityInput;
     emitx = emitxInput;
 
-    thetaCoupling = computeCouplingAngle(taux, tauy, emitx, emity);
-    if (thetaCoupling<0)
-      thetaCoupling = 0;
-    if (thetaCoupling>PI/2)
-      thetaCoupling = PI/2;
-
-    if (verbosity>=1) {
-      printf("thetaCoupling = %le\n", thetaCoupling);
-      fflush(stdout);
-    }
-    
     if (integrationPoints) {
       IBSIntegrate(exInteg, eyInteg, elInteg, passInteg,
                    SdeltaInteg, SzInteg,
@@ -674,9 +658,9 @@ int main( int argc, char **argv)
     /* This call is to get the initial growth rates for writing to results file.
        This applies for any running option selected in the commandline */
     IBSRate(particles, elements, superperiods, verbosity, isRing,
-            emitx, emity, sigmaDelta, sigmaz, 
-            s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
-            NULL, NULL, NULL, 
+             emitx, emity, sigmaDelta, sigmaz, 
+             s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
+             NULL, NULL, NULL, 
             &xGrowthRateInitial, &yGrowthRateInitial, &zGrowthRateInitial, 0);
 
     /* iterating for equilibrium emittances and final growth rates */
@@ -691,66 +675,73 @@ int main( int argc, char **argv)
       xLowerLimit = (double*) malloc(sizeof(double)*dimensions);
       xUpperLimit = (double*) malloc(sizeof(double)*dimensions);
       disable = (short*) malloc(sizeof(short)*dimensions);
-
+      xGuess[0] = MAX(emitx, emitx0/ (1 + coupling));
       xGuess[1] = MAX(sigmaDelta, sigmaDelta0);
-
-      /* These values are expected from Lindberg's results for charge=0 */
-      xGuess[0] = MAX((1 + 0.25/taux*(tauy-3*taux)*sqr(sin(thetaCoupling)))/(1 + 0.25/taux/tauy*sqr(taux-tauy)*sqr(sin(thetaCoupling)))*emitx0, emitx);
-      xGuess[2] = MAX(0.25/taux*(taux+tauy)*sqr(sin(thetaCoupling))/(1 + 0.25/taux/tauy*sqr(taux-tauy)*sqr(sin(thetaCoupling)))*emitx0, xGuess[0]*coupling);
-      if (verbosity) 
-        fprintf(stdout, "starting values: ex=%le, ey=%le, sdelta=%le\n",
-                xGuess[0], xGuess[2], xGuess[1]);
-
       dxGuess[0] = emitx * 0.1;
       dxGuess[1] = sigmaDelta * 0.1;
-      dxGuess[2] = emitx*coupling*0.1;
-      xLowerLimit[0] = 0.5*emitx0/ (1 + coupling);
+      xLowerLimit[0] = emitx0/ (1 + coupling);
       xLowerLimit[1] = sigmaDelta0;
-      xLowerLimit[2] = xLowerLimit[0]*coupling;
       xUpperLimit[0] = emitx0/ (1 + coupling) * 200;
       xUpperLimit[1] = MIN(sigmaDelta0 * 100, 1.0);
-      xUpperLimit[2] = coupling*xUpperLimit[0];
       /* assign other variables to array which are not supoosed
          to be varied by simplex minimization
          */
-      xGuess[3] = pCentral0;
-      xGuess[4] = emity;
-      xGuess[5] = sigmaz0;
-      xGuess[6] = particles;
-      xGuess[7] = emitx0;
-      xGuess[8] = sigmaDelta0;
-      xGuess[9] = taux;
-      xGuess[10] = tauy;
-      xGuess[11] = taudelta;
-      xGuess[12] = coupling;
-      xGuess[13] = elements;
-      xGuess[14] = superperiods;
-      xGuess[15] = verbosity;
-      xGuess[16] = force;
+      xGuess[2] = pCentral0;
+      xGuess[3] = emity;
+      xGuess[4] = sigmaz0;
+      xGuess[5] = particles;
+      xGuess[6] = emitx0;
+      xGuess[7] = sigmaDelta0;
+      xGuess[8] = taux;
+      xGuess[9] = tauy;
+      xGuess[10] = taudelta;
+      xGuess[11] = coupling;
+      xGuess[12] = elements;
+      xGuess[13] = superperiods;
+      xGuess[14] = verbosity;
+      xLowerLimit[2] = pCentral0;
+      xLowerLimit[3] = emity;
+      xLowerLimit[4] = sigmaz0;
+      xLowerLimit[5] = particles;
+      xLowerLimit[6] = emitx0;
+      xLowerLimit[7] = sigmaDelta0;
+      xLowerLimit[8] = taux;
+      xLowerLimit[9] = tauy;
+      xLowerLimit[10] = taudelta;
+      xLowerLimit[11] = coupling;
+      xLowerLimit[12] = elements;
+      xLowerLimit[13] = superperiods;
+      xLowerLimit[14] = verbosity;
+      xUpperLimit[2] = pCentral0;
+      xUpperLimit[3] = emity;
+      xUpperLimit[4] = sigmaz0;
+      xUpperLimit[5] = particles;
+      xUpperLimit[6] = emitx0;
+      xUpperLimit[7] = sigmaDelta0;
+      xUpperLimit[8] = taux;
+      xUpperLimit[9] = tauy;
+      xUpperLimit[10] = taudelta;
+      xUpperLimit[11] = coupling;
+      xUpperLimit[12] = elements;
+      xUpperLimit[13] = superperiods;
+      xUpperLimit[14] = verbosity;
       disable[0] = 0;
       disable[1] = 0;
-      disable[2] = force;
-      for (i=3 ; i<dimensions ; i++) {
+      for (i=2 ; i<dimensions ; i++) {
         dxGuess[i] = 0.0;
         disable[i] = 1;
-        xUpperLimit[i] = xLowerLimit[i] = xGuess[i];
       }
       if (verbosity) {
         fprintf( stdout, "Doing simplex minimization...\n");
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
-                  target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                  maxEvaluations, maxPasses, 13, 3.0, 1.0, 0);
+                 target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
+                 maxEvaluations, maxPasses, 12, 3.0, 1.0, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
-      if (force)
-        emity = coupling*emitx;
-      else
-        emity = xGuess[2];
+      emity = emitx * coupling;
       sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
-      if (verbosity)
-        fprintf(stdout, "Final: emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n", emitx, emity, sigmaDelta, sigmaz);
     }
 
     /* calculate growth rates contributions at equilibrium or
@@ -801,8 +792,7 @@ int main( int argc, char **argv)
                             "zGrowthRateInitial", zGrowthRateInitial,
                             "sigmaDeltaInput", sigmaDeltaInput,
                             "sigmaDelta0", sigmaDelta0,
-                            "sigmaz0", sigmaz0, 
-                            "couplingAngle", thetaCoupling, NULL) ||
+                            "sigmaz0", sigmaz0, NULL) ||
         (!growthRatesOnly && 
          !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                              "xGrowthRate", xGrowthRate,
@@ -841,28 +831,25 @@ double IBSequations(double *x, long *invalid) {
   double emitx, sigmaDelta;
   double pCentral0, emity, sigmaz, sigmaz0, particles, emitx0, 
   sigmaDelta0, taux, tauy, taudelta, coupling;
-  long elements, superperiods, verbosity, forceCoupling;
+  long elements, superperiods, verbosity;
   double xGrowthRate, yGrowthRate, zGrowthRate;
-  double ax, bx, cx, ay, by, cy, d, e, f, func1x, func1y, func2;
-  double sint22, gx, gy, c1;
+  double a, b, c, d, e, f, func1, func2;
   
   emitx = x[0];
   sigmaDelta = x[1];
-  emity = x[2];
-  pCentral0 = x[3];
-  sigmaz0 = x[5];
-  particles = x[6];
-  emitx0 = x[7];
-  sigmaDelta0 = x[8];
-  taux = x[9];
-  tauy = x[10];
-  taudelta = x[11];
-  coupling = x[12];
-  elements = x[13];
-  superperiods = x[14];
-  verbosity = x[15];
-  forceCoupling = x[16];
-  
+  pCentral0 = x[2];
+  sigmaz0 = x[4];
+  particles = x[5];
+  emitx0 = x[6];
+  sigmaDelta0 = x[7];
+  taux = x[8];
+  tauy = x[9];
+  taudelta = x[10];
+  coupling = x[11];
+  elements = x[12];
+  superperiods = x[13];
+  verbosity = x[14];
+
     /* zap code requires damping rate for horizontal and longitudinal emittances
        which is twice the damping rate for one coordinate.
        The quantities emitx0 and 2/taux are used to determined
@@ -875,46 +862,82 @@ double IBSequations(double *x, long *invalid) {
        sigmaz0/sigmaDelta0 and emityInput/emitxInput respectively.       
        */
 
-    /* 
-     * Based on equations from R. Lindberg, to be published
-     */
+    /* equations to solve (using ZAP manual notation) and throwing in coupling
+       terms.
+       damping term     quantum excitation      IBS terms
+                       (a constant)                                              
+        SR             SR   0    1              IBS       1         IBS       k  
+       g   e        = g    e   -----       +   g    e   -----  +   g    e   -----
+        x   x          x    x  1 + k            x    x  1 + k       y    y  1 + k
+     
+       The quantum excitation term is a constant and is reduced in the x plane 
+       because of coupling. Also the IBS growth rate in x is reduced because of
+       coupling. 
+     
+       In the y-plane:
+       damping term     quantum excitation      IBS terms
+                       (a constant)                                              
+        SR             SR   0    k              IBS       1         IBS       k  
+       g   e        = g    e   -----       +   g    e   -----  +   g    e   -----
+        y   y          y    y  1 + k            y    y  1 + k       x    x  1 + k
+     
+       In the longitudinal plane,
+       damping term     quantum excitation      IBS term
+                       (a constant)                                              
+        SR      2      SR        2              IBS      2
+       g   delta    = g    delta0          +   g    delta
+        z              z                        z    
+     
+       Assume that g^IBS will have the approximate dependence which will help finding
+       solutions:
+                    Input Input          2  
+                   e    e     deltaInput          
+        IBS         x    y                          1
+       g    = G' ----------------------- = G ----------------
+                               2                           2               
+                   e  e   delta                e  e   delta 
+                    x  y                        x  y        
+       where G doesn't change much during the iterations and where
+       G' = g^IBS on the very first calculation.
 
+       Correspondence with our variables:
+       g^SR_x    -> 2/taux
+       g^IBS_x   -> xGrowthRate
+       e^0_x     -> emitx0
+       k         -> coupling
+
+       N.B.: These equations are misleading for x and y planes. The correct thing to 
+       do is to sum the equations and solve with the requirement that emity=coupling*emitx.
+       See technical note by R. Lindberg.
+
+       One can ignore the y equation and simply put emity = coupling * emitx 
+       during and after the calculation of emitx.
+       */
+    
+  emity = emitx * coupling;
   sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
   IBSRate(particles, elements, superperiods, verbosity, isRing, 
           emitx, emity, sigmaDelta, sigmaz, 
           s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
           NULL, NULL, NULL, 
           &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
-
-  sint22 = sqr(sin(thetaCoupling)/2);
-  
-  gx = (2/taux - xGrowthRate);
-  gy = (2/tauy - yGrowthRate);
-  bx = 2*emitx0/taux;
-  by = 2*emitx0*sint22/taux;
-  c1 = gx*gy + sint22*sqr(gx-gy);
-
-  func1x = c1*emitx - emitx0*2/taux*(gy + sint22*(gx - 3*gy));
-  func1y = c1*emity - emitx0*sint22*2/taux*(gx + gy);
-
+  a = -2./taux*emitx - 2./tauy*emity;
+  b = 2./taux * emitx0;
+  c = xGrowthRate * emitx + yGrowthRate * emity;
   d = -2./taudelta * sqr(sigmaDelta);
   e = 2./taudelta * sqr(sigmaDelta0);
   f = zGrowthRate * sqr(sigmaDelta);
+  func1 = a + b + c;
   func2 = d + e + f;
-
   *invalid = 0;
   /* returns an equation evaluation that, at the end of convergence, should be zero. */
-  /* printf("emitx = %le, emity = %le, func1x/bx = %le, func1y/by = %le, func2/e = %le\n",
-         emitx, emity, func1x/bx, func1y/by, func2/e);
-         */
-  return (sqr(func1x/bx) + sqr(func1y/by) + sqr(func2/e));
+  return (sqr(func1/b) + sqr(func2/e));
 }
-
 
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims) {
   fprintf( stdout, "IBS Simplex Report:\nMinimum value obtained: %e.\n", ymin);
   fprintf( stdout, "    %ld passes, %ld evaluations.\n", pass, evals);
-  fprintf( stdout, "    emitx = %e   emity = %e  sigmaDelta = %e.\n", xmin[0], xmin[2], xmin[1]);
+  fprintf( stdout, "    emitx = %e   sigmaDelta = %e.\n", xmin[0], xmin[1]);
   return;
 }
 
@@ -983,6 +1006,5 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
   yRateInteg[slot] = yGrowthRate;
   zRateInteg[slot] = zGrowthRate;
 }
-
 
 
