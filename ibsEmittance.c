@@ -165,7 +165,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
- [-noWarning]\n\Version 4, April 2014.\n";
+ [-noWarning]\nVersion 4, April 2014.\n";
 
 #define SET_ENERGY 0
 #define VERBOSE 1
@@ -255,7 +255,7 @@ int main( int argc, char **argv)
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
-  long dimensions = 17, maxEvaluations = 500, maxPasses = 2;
+  long dimensions = 17, maxEvaluations = 500, maxPasses = 5;
   double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
@@ -524,8 +524,11 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  if (verbosity)
+  if (verbosity) {
     fprintf( stdout, "Opening for reading \"%s\"\n", inputfile);
+    fflush(stdout);
+  }
+
   if (!SDDS_InitializeInput(&twissPage, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
@@ -642,8 +645,14 @@ int main( int argc, char **argv)
     emitx = emitxInput;
 
     thetaCoupling = computeCouplingAngle(taux, tauy, emitx, emity);
+    if (thetaCoupling<0)
+      thetaCoupling = 0;
+    if (thetaCoupling>PI/2)
+      thetaCoupling = PI/2;
+
     if (verbosity>=1) {
       printf("thetaCoupling = %le\n", thetaCoupling);
+      fflush(stdout);
     }
     
     if (integrationPoints) {
@@ -682,9 +691,16 @@ int main( int argc, char **argv)
       xLowerLimit = (double*) malloc(sizeof(double)*dimensions);
       xUpperLimit = (double*) malloc(sizeof(double)*dimensions);
       disable = (short*) malloc(sizeof(short)*dimensions);
-      xGuess[0] = MAX(emitx, emitx0/ (1 + coupling));
+
       xGuess[1] = MAX(sigmaDelta, sigmaDelta0);
-      xGuess[2] = coupling*xGuess[0];
+
+      /* These values are expected from Lindberg's results for charge=0 */
+      xGuess[0] = MAX((1 + 0.25/taux*(tauy-3*taux)*sqr(sin(thetaCoupling)))/(1 + 0.25/taux/tauy*sqr(taux-tauy)*sqr(sin(thetaCoupling)))*emitx0, emitx);
+      xGuess[2] = MAX(0.25/taux*(taux+tauy)*sqr(sin(thetaCoupling))/(1 + 0.25/taux/tauy*sqr(taux-tauy)*sqr(sin(thetaCoupling)))*emitx0, xGuess[0]*coupling);
+      if (verbosity) 
+        fprintf(stdout, "starting values: ex=%le, ey=%le, sdelta=%le\n",
+                xGuess[0], xGuess[2], xGuess[1]);
+
       dxGuess[0] = emitx * 0.1;
       dxGuess[1] = sigmaDelta * 0.1;
       dxGuess[2] = emitx*coupling*0.1;
@@ -723,8 +739,8 @@ int main( int argc, char **argv)
         fprintf( stdout, "Doing simplex minimization...\n");
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
-                 target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses, 13, 3.0, 1.0, 0);
+                  target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
+                  maxEvaluations, maxPasses, 13, 3.0, 1.0, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
