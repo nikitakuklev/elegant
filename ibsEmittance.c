@@ -165,7 +165,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
- [-noWarning]";
+ [-noWarning]\n\Version 4, April 2014.\n";
 
 #define SET_ENERGY 0
 #define VERBOSE 1
