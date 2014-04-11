@@ -202,7 +202,7 @@ void track_through_kicker(
           double l1, l2;
           l1 = kicker->length/kicker->n_kicks;
           l2 = kicker->length/kicker->n_kicks/2.;
-	  angle  = kicker->angle/kicker->n_kicks;
+	  angle  /= kicker->n_kicks;
 	  /* deflection map mode */
           for (i=0; i<kicker->n_kicks; i++) {
 	    if (i==0) {
