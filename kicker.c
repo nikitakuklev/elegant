@@ -87,7 +87,7 @@ void track_through_kicker(
             break;
         }
 
-    if (kicker->length<=0) {
+    if (kicker->length<0) {
         log_exit("track_through_kicker");
         return;
         }
@@ -150,44 +150,53 @@ void track_through_kicker(
         dp = coord[5];
 
         if (kicker->n_kicks<=0) {
-          curv = sin(-angle)/kicker->length/(1+dp);
-          theta_i = atan(xp);
-          alpha_i = -theta_i;
-          alpha_f = asin(kicker->length*curv + sin(alpha_i));
-          if (fabs(curv*kicker->length)<1e-12) {
-            x += (dx=kicker->length*xp);
-            s += (ds=fabs(kicker->length/cos(alpha_i)));
-          }
-          else {
-            x += (dx=(cos(alpha_f)  - cos(alpha_i))/curv);
-            s += (ds=fabs((alpha_f-alpha_i)/curv));
-          }
-          xp = tan(theta_i - (alpha_f - alpha_i));
-          y += kicker->length*yp;
-        }
-        else if (!kicker->deflectionMap) {
-          double l1, x0, y0;
-          l1 = kicker->length/kicker->n_kicks;
-          for (i=0; i<kicker->n_kicks; i++) {
-            curv = sin(-angle)/kicker->length/(1+dp)*(1+kicker->b2*(x*x-y*y));
+          if (kicker->length!=0) {
+            curv = sin(-angle)/kicker->length/(1+dp);
             theta_i = atan(xp);
             alpha_i = -theta_i;
-            alpha_f = asin(l1*curv + sin(alpha_i));
-            x0 = x;
-            if (fabs(curv*l1)<1e-12) {
-              x += (dx=l1*xp);
-              s += (ds=fabs(l1/cos(alpha_i)));
+            alpha_f = asin(kicker->length*curv + sin(alpha_i));
+            if (fabs(curv*kicker->length)<1e-12) {
+              x += (dx=kicker->length*xp);
+              s += (ds=fabs(kicker->length/cos(alpha_i)));
             }
             else {
               x += (dx=(cos(alpha_f)  - cos(alpha_i))/curv);
               s += (ds=fabs((alpha_f-alpha_i)/curv));
             }
             xp = tan(theta_i - (alpha_f - alpha_i));
-            x0 = (x+x0)/2;
-            y0 = y;
-            y += l1*yp ;
-            y0 = (y+y0)/2;
-            yp += -2*sin(angle)/kicker->length/(1+dp)*ds*x0*y0*kicker->b2;
+            y += kicker->length*yp;
+          } else {
+            xp += angle/(1+dp);
+          }
+        }
+        else if (!kicker->deflectionMap) {
+          double l1, x0, y0;
+          l1 = kicker->length/kicker->n_kicks;
+          if (l1!=0) {
+            for (i=0; i<kicker->n_kicks; i++) {
+              curv = sin(-angle)/kicker->length/(1+dp)*(1+kicker->b2*(x*x-y*y));
+              theta_i = atan(xp);
+              alpha_i = -theta_i;
+              alpha_f = asin(l1*curv + sin(alpha_i));
+              x0 = x;
+              if (fabs(curv*l1)<1e-12) {
+                x += (dx=l1*xp);
+                s += (ds=fabs(l1/cos(alpha_i)));
+              }
+              else {
+                x += (dx=(cos(alpha_f)  - cos(alpha_i))/curv);
+                s += (ds=fabs((alpha_f-alpha_i)/curv));
+              }
+            xp = tan(theta_i - (alpha_f - alpha_i));
+              x0 = (x+x0)/2;
+              y0 = y;
+              y += l1*yp ;
+              y0 = (y+y0)/2;
+              yp += -2*sin(angle)/kicker->length/(1+dp)*ds*x0*y0*kicker->b2;
+            }
+          }
+          else {
+            xp += angle/(1+dp);
           }
         } else {
           double l1, l2;
@@ -209,7 +218,7 @@ void track_through_kicker(
 	    }
 	    /* kick */
 	    interpolateDeflectionMap(&xpFactor, &ypFactor, kicker, x, y);
-	    xp += angle*xpFactor/(1+dp);
+      	    xp += angle*xpFactor/(1+dp);
 	    yp += angle*ypFactor/(1+dp);
 
 	  }
