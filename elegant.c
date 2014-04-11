@@ -81,10 +81,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 25.3.2, "__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 25.4Beta1 "__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 25.3.2, "__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 25.4Beta1, "__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   time_t timeNow;
   char *timeNowString;
