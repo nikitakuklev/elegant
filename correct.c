@@ -1438,9 +1438,9 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 #endif
       if (iteration==0)
         CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
-      *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)*fraction;
+      *((double*)(corr->p_elem+kick_offset)) += Mij(dK, i_corr, 0)*fraction/CM->kick_coef[i_corr];
       if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
-        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen\n",
+        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen (1)\n",
                corr->name, corr->occurence, fabs(*((double*)(corr->p_elem+kick_offset))), SL->corr_limit[sl_index]);
         printf("fraction=%e -> kick = %e\n", fraction, *((double*)(corr->p_elem+kick_offset)));
       }
@@ -1575,7 +1575,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
         }
         break;
       default:
-        printf("Error: Unknown method in one_to_one_trajcor_plane: %ld---This shouldn't happen!\n", method);
+        printf("Error: Unknown method in one_to_one_trajcor_plane: %ld---This shouldn't happen (2)!\n", method);
         exitElegant(1);
         break;
       }
@@ -1649,7 +1649,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       fflush(stdout);
 #endif
       if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
-        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen\n",
+        printf("**** Corrector %s#%ld went past limit (%e > %e) --- This shouldn't happen (3)\n",
                corr->name, corr->occurence, fabs(*((double*)(corr->p_elem+kick_offset))), SL->corr_limit[sl_index]);
         printf("param = %e, fraction=%e -> kick = %e\n", param, fraction, *((double*)(corr->p_elem+kick_offset)));
       }
@@ -3084,7 +3084,7 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
   for (ic0=0; ic0<CM->ncor; ic0++) {
     if (CM->ucorr[ic0]==newly_pegged) {
       if (CM->pegged[ic0]==2)
-	bombElegant("Previously pegged corrector has pegged again---shouldn't happen.", NULL);
+	bombElegant("Previously pegged corrector has pegged again---shouldn't happen. (4)", NULL);
       fprintf(stdout, "Corrector %ld is pegged\n", ic0);
       CM->pegged[ic0] = 2;
       break;
