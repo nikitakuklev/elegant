@@ -54,7 +54,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method);
 void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
-            LINE_LIST *beamline, double *starting_coord, BEAM *beam);
+            LINE_LIST *beamline, double *starting_coord, BEAM *beam, long verbose);
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
                   long n_iterations, double accuracy,
                   long clorb_iter, double clorb_iter_frac,
@@ -728,7 +728,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           break;
         case THREAD_CORRECTION:
           thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
           break;
         default:
           bombElegant("Invalid x trajectory correction mode---this should never happen!", NULL);
@@ -792,7 +792,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           break;
         case THREAD_CORRECTION:
           thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+                               run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL), correct->verbose);
           break;
         default:
           bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
@@ -1374,6 +1374,10 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
         return 0;
       }
       fputc('\n', stdout);
+    } else if (n_part==0) {
+      /* This actually should never happend given the tracking flags */
+      printf("Beam lost before end of beamline during trajectory correction\n");
+      fflush(stdout);
     }
 
     /* find readings at monitors and add in reading errors */
@@ -1677,7 +1681,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
 }
 
 void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
-                          LINE_LIST *beamline, double *starting_coord, BEAM *beam)
+                          LINE_LIST *beamline, double *starting_coord, BEAM *beam, long verbose)
 {
   ELEMENT_LIST *corr;
   TRAJECTORY *traj;
@@ -1770,7 +1774,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                *    NewValue = OldValue + CorrectorTweek 
                */
               param = origValue 
-                + SL->corr_tweek[sl_index]/CM->kick_coef[i_corr]*iScan*scanStep*direction;
+                + SL->corr_limit[sl_index]/CM->kick_coef[i_corr]*iScan*scanStep*direction;
               /* Check that we haven't exceeded allowed strength */
               fraction = 1;
               if (param && SL->corr_limit[sl_index])
@@ -1841,7 +1845,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
             if (beamline->links)
               assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
           }
-          if (bestValue!=origValue) {
+          if (verbose && bestValue!=origValue) {
             printf("Beam now advanced to element %ld\n", iBest);
             fflush(stdout);
           }
