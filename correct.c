@@ -1371,7 +1371,6 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                   traj[i].elem->end_pos, traj[i].elem->name);
         fflush(stdout);
         fputc('\n', stdout);
-        return 0;
       }
       fputc('\n', stdout);
     } else if (n_part==0) {
