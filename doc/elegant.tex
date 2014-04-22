@@ -44,7 +44,11 @@ Here is a summary of what's changed since release 25.3.2:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item Fixed two bugs in trajectory correction (\verb|correct| command): The range for threading mode was incorrectly set to the corrector tweak
+  value instead of the corrector strength limit.  In the ``use actual beam''  mode of trajectory correction, trajectory correction is no longer aborted 
+  if beam is lost during tracking.
+\item Steering strength limit functions were not working correctly for unusual correction elements such as integrated steering coils on quadrupoles.
+  This was reported by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -1318,6 +1322,10 @@ small apertures.  If you get an error message about ``tracking failed for test p
 \item \verb|remove_pegged[2]| --- If nonzero, then for the plane in question pegged correctors will be removed from the correction matrix.
   This results in recomputation of the matrix, following which correction continues with the reduced set of correctors.
   The pegged corrector is left at its last value.
+\item \verb|threading_divisor| --- In threading mode trajectory correction, each corrector is varied between 0 and $\pm\theta_\textrm{max}$, 
+  where $\theta_\textrm{max}$ is the strength limit.
+  This parameter sets the number of steps to divide the corrector range into on the positive and negative sides.
+  A smaller value results in faster execution but is less reliable.
 \item \verb|bpm_noise[2]| --- The BPM noise level. 
 \item \verb|bpm_noise_cutoff[2]| --- Cutoff values for the random distributions of BPM noise.
 \item \verb|bpm_noise_distribution[2]| --- May be either ``gaussian'', ``uniform'', or ``plus\_or\_minus''.
