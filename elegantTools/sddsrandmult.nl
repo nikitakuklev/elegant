@@ -13,6 +13,7 @@
     STRING kmult_output = NULL;
     double effective_length = 0.23;
     double bore_radius = 0.066;
+    double reference_radius = 0;
     double dx_pole = 0;
     double dy_pole = 0;
     double dradius  = 0;

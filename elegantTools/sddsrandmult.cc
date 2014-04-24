@@ -103,6 +103,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   SDDS_output = elegant_output = kmult_output = name = NULL;
   type = "quadrupole";
   bore_radius = 0.066;
+  reference_radius = 0;
   effective_length = 0.23;
   n_cases = 1000;
   random_number_seed -= 2;
@@ -117,6 +118,8 @@ void do_perturbations(NAMELIST_TEXT *nltext)
     bomb("n_cases <= 0", NULL);
   if (bore_radius<=0)
     bomb("bore_radius <= 0", NULL);
+  if (reference_radius<=0)
+    reference_radius = bore_radius;
   if (!SDDS_output)
     bomb("no output filename given", NULL);
   if ((iN=match_string(type, type_name, N_FUNDAMENTAL_TYPES, 0))<0)
@@ -142,6 +145,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   fprintf(fpSDDS, "&column name=G, description=\"skew total fractional error\", type=double &end\n");
   fprintf(fpSDDS, "&parameter name=MagnetType, type=string, fixed_value=%s &end\n", type);
   fprintf(fpSDDS, "&parameter name=BoreRadius, type=double, fixed_value=%e, units=m &end\n", bore_radius);
+  fprintf(fpSDDS, "&parameter name=ReferenceRadius, type=double, fixed_value=%e, units=m &end\n", reference_radius);
   fprintf(fpSDDS, "&parameter name=EffectiveLength, type=double, fixed_value=%e, units=m &end\n", effective_length);
   fprintf(fpSDDS, "&parameter name=SxPole, type=double, units=m, fixed_value=%e &end\n", dx_pole);
   fprintf(fpSDDS, "&parameter name=SyPole, type=double, units=m, fixed_value=%e &end\n", dy_pole);
@@ -164,7 +168,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
     fprintf(fpKMULT, "&parameter name=SySplit, type=double, units=m, fixed_value=%e &end\n", dy_split);
     fprintf(fpKMULT, "&parameter name=SphiHalves, type=double, fixed_value=%e &end\n", dphi_halves);
     fprintf(fpKMULT, "&parameter name=SrPole, type=double, units=m, fixed_value=%e &end\n", dradius);
-    fprintf(fpKMULT, "&parameter name=referenceRadius, type=double, fixed_value=%e, units=m &end\n", bore_radius);
+    fprintf(fpKMULT, "&parameter name=referenceRadius, type=double, fixed_value=%e, units=m &end\n", reference_radius);
     fprintf(fpKMULT, "&column name=order, type=long &end\n");
     fprintf(fpKMULT, "&column name=an, type=double &end\n");
     fprintf(fpKMULT, "&column name=bn, type=double &end\n");
@@ -260,8 +264,12 @@ void do_perturbations(NAMELIST_TEXT *nltext)
       frms[i] += sqr(f[i]);
       grms[i] += sqr(g[i]);
     }
-    for (i=1; i<=2*n_harm+2; i++)
-      fprintf(fpSDDS, "%13.6le ", f[i-1]);
+    for (i=0; i<n_harm; i++)
+      fprintf(fpSDDS, "%13.6le ", f[i]*ipow(reference_radius/bore_radius, i));
+    fprintf(fpSDDS, "%13.6le ", f[i]);
+    for (i=0; i<n_harm; i++)
+      fprintf(fpSDDS, "%13.6le ", g[i]*ipow(reference_radius/bore_radius, i));
+    fprintf(fpSDDS, "%13.6le ", g[i]);
     fputc('\n', fpSDDS);
   }
 
@@ -271,11 +279,13 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   }
   
   if (kmult_output) {
+    double factor;
     for (i=1; i<n_harm; i++) {
+      factor = ipow(reference_radius/bore_radius, i);
       if (suppress_main_error && ((iN==INDEX_QUAD && i<=1) || (iN==INDEX_SEXT && i<=2))) {
         fprintf(fpKMULT, "%ld 0 0\n", i);
       } else
-        fprintf(fpKMULT, "%ld %e %e\n", i, frms[i], grms[i]);
+        fprintf(fpKMULT, "%ld %e %e\n", i, frms[i]*factor, grms[i]*factor);
     }
   }
   
