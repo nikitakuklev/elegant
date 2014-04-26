@@ -224,6 +224,8 @@ void correction_setup(
     _correct->CMFy->default_tweek = corrector_tweek[1];
     _correct->CMFx->default_threading_divisor = threading_divisor[0];
     _correct->CMFy->default_threading_divisor = threading_divisor[1];
+    _correct->CMFx->threading_correctors = threading_correctors[0];
+    _correct->CMFy->threading_correctors = threading_correctors[1];
     _correct->CMFx->corr_limit = corrector_limit[0];
     _correct->CMFy->corr_limit = corrector_limit[1];
     _correct->CMFx->corr_fraction = correction_fraction[0];
@@ -1689,7 +1691,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   long n_part, n_left, i, tracking_flags, done, direction, improved, worsened;
   double **particle, param, fraction, bestValue, origValue, lastValue;
   double p, scanStep;
-  long iScan, nScan;
+  long iScan, nScan, nToTry, corrLeft;
 
   if (!CM->mon_index)
     bombElegant("monitor index array is NULL (thread__trajcor_plane)", NULL);
@@ -1714,6 +1716,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
   nScan = CM->default_threading_divisor+1.5;
   scanStep = 1.0/(nScan-1);
+  nToTry = CM->threading_correctors;
   
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
@@ -1740,6 +1743,10 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     n_left = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
                          traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+    if (verbose>1) {
+      printf("%ld particles left after tracking through beamline\n",  n_left);
+      fflush(stdout);
+    }
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       double x, y;
       x = traj[CM->mon_index[i_moni]].centroid[0];
@@ -1754,8 +1761,23 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
         if (traj[iElem].n_part==0)
           break;
       iBest = iElem;
-      
+      if (verbose>1) {
+        printf("Beam reaches element %ld at s=%le m\n", iElem, traj[iElem].elem->end_pos);
+        fflush(stdout);
+      }
+      /* Find the first corrector upstream of the loss point */
       for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+        corr = CM->ucorr[i_corr];
+        if (corr->end_pos>traj[iBest].elem->end_pos)
+          break;
+      }
+      if (--i_corr<0)
+        i_corr = 0;
+      if (nToTry>0) 
+        corrLeft = nToTry;
+      else
+        corrLeft = -1;
+      for (; i_corr>=0 && corrLeft!=0; i_corr--, corrLeft--) {
         corr = CM->ucorr[i_corr];
         sl_index = CM->sl_index[i_corr];           /* steering list index of this corrector */
         kick_offset = SL->param_offset[sl_index];  /* offset of steering parameter in element structure */
@@ -1768,6 +1790,10 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
           improved = 0;
           for (direction=-1; !improved && !done && direction<2 ; direction+=2) {
             worsened = 0;
+            if (verbose>1) {
+              printf("Trying corrector %ld of %ld at s=%e m in direction %ld\n", i_corr, CM->ncor, corr->end_pos, direction);
+              fflush(stdout);
+            }
             for (iScan=0; !worsened && !done && iScan<nScan; iScan++) {
               /* -- Compute new value of the parameter
                *    NewValue = OldValue + CorrectorTweek 
@@ -1845,7 +1871,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
               assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
           }
           if (verbose && bestValue!=origValue) {
-            printf("Beam now advanced to element %ld\n", iBest);
+            printf("Beam now reaches element %ld at s=%le m\n", iBest, traj[iBest].elem->end_pos);
             fflush(stdout);
           }
           
