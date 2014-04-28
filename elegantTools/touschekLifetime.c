@@ -619,57 +619,63 @@ void TouschekLifeCalc(long verbosity)
 
     tmP[i] = beta2*pp*pp;
     tmN[i] = beta2*pm*pm;
+    
+    if (tmP[i]==0 || tmN[i]==0) {
+      B1[i] = B2[i] = 0;
+      FP[i] = FN[i] = 0;
+    } else {
+      sxb2 = betax[i]*emitx;
+      syb2 = betay[i]*emity;
+      dx2 = ipow(etax[i], 2);
+      sx2  = sxb2 + dx2*sp2;
+    
+      dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
+      c1 = sqr(betax[i])/(2*betagamma2*sxb2);
+      c2 = sqr(betay[i])/(2*betagamma2*syb2);
+    
+      if (plane_orbit) {
+        sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2);
+        B1[i] = c1*(1-sh2*dx_2/sxb2)+c2;
+        c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
+        c3 = sx2*syb2;
+        B2[i] = sqr(B1[i])-sqr(c0)*c3;   
+        if (B2[i]<0) {
+          if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+            fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+          } else {
+            B2[i] = 0;
+          }
+        }
+        B2[i]=sqrt(B2[i]);
+      }
 
-    sxb2 = betax[i]*emitx;
-    syb2 = betay[i]*emity;
-    dx2 = ipow(etax[i], 2);
-    sx2  = sxb2 + dx2*sp2;
-    
-    dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
-    c1 = sqr(betax[i])/(2*betagamma2*sxb2);
-    c2 = sqr(betay[i])/(2*betagamma2*syb2);
-    
-    if (plane_orbit) {
-      sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2);
-      B1[i] = c1*(1-sh2*dx_2/sxb2)+c2;
-      c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
-      c3 = sx2*syb2;
-      B2[i] = sqr(B1[i])-sqr(c0)*c3;   
-      if (B2[i]<0) {
-        if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
-          fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
-        } else {
-          B2[i] = 0;
+      if (!plane_orbit) {
+        dy2 = ipow(etay[i], 2);
+        sy2  = syb2 + dy2*sp2;
+        dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
+        sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);
+        c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
+        c3 = sx2*sy2-sp4*dx2*dy2;
+        B1[i] = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
+        B2[i] = sqr(B1[i])-sqr(c0)*c3;   	  
+        if (B2[i]<0) {
+          if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+            fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+          } else {
+            B2[i] = 0;
+          }
         }
+        B2[i]=sqrt(B2[i]);   	  
       }
-      B2[i]=sqrt(B2[i]);
+      
+      coeff[i] = a0*c0;
+      if (verbosity>1) 
+        fprintf(stderr, "Computing F integral\n");
+      FIntegral(tmP, B1, B2, FP, i, verbosity);
+      FIntegral(tmN, B1, B2, FN, i, verbosity);
     }
-    
-    if (!plane_orbit) {
-      dy2 = ipow(etay[i], 2);
-      sy2  = syb2 + dy2*sp2;
-      dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
-      sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);
-      c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
-      c3 = sx2*sy2-sp4*dx2*dy2;
-      B1[i] = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
-      B2[i] = sqr(B1[i])-sqr(c0)*c3;   	  
-      if (B2[i]<0) {
-        if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
-          fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
-        } else {
-          B2[i] = 0;
-        }
-      }
-      B2[i]=sqrt(B2[i]);   	  
-    }
-    
-    coeff[i] = a0*c0;
-    if (verbosity>1) 
-      fprintf(stderr, "Computing F integral\n");
-    FIntegral(tmP, B1, B2, FP, i, verbosity);
-    FIntegral(tmN, B1, B2, FN, i, verbosity);
   }
+
   if (verbosity>1) 
     fprintf(stderr, "Exited loop\n");
   
