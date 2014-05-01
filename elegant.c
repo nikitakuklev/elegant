@@ -1723,8 +1723,8 @@ void printFarewell(FILE *fp)
   fprintf(stdout, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
   fprintf(stdout, "  Advanced Photon Source LS-287, September 2000.\n");
   fprintf(stdout, "  Y. Wang and M. Borland, \"Pelegant: A Parallel Accelerator Simulation Code for  \n");
-  fprintf(stdout, "  Electron Generation and Tracking, Proceedings of the 12th Advanced Accelerator  \n"); 
-  fprintf(stdout, "  Concepts Workshop, 2006.\n");
+  fprintf(stdout, "  Electron Generation and Tracking\", Proceedings of the 12th Advanced Accelerator  \n"); 
+  fprintf(stdout, "  Concepts Workshop, AIP Conf. Proc. 877, 241 (2006).\n");
   fprintf(stdout, "If you use a modified version, please indicate this in all publications.\n");
   fprintf(stdout, "=====================================================================================\n");
 #endif

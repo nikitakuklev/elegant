@@ -617,6 +617,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   double length;
   long i, j, k, slice;
   double *accumD1, *accumD2, *dtmp;
+  double post_xkick, post_ykick;
   VMATRIX *M1, *M2, *Ml1, *Mtmp;
   ELEMENT_LIST elem;
   MATRIX *Ms;
@@ -642,6 +643,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 
   elem.end_pos = eptr->end_pos;
   for (slice=0; slice<nSlices; slice++) {
+    post_xkick = post_ykick = 0; /* use this to handle pre- and post-KQUAD kicks */
     switch (eptr->type) {
     case T_CSBEND:
       memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
@@ -739,6 +741,15 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_KQUAD:
       memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
       kquad.isr = 0;
+      if (slice==0) {
+        M1->C[1] += kquad.xkick/2;
+        M1->C[3] += kquad.ykick/2;
+      }
+      if (slice==nSlices-1) {
+        post_xkick = kquad.xkick/2;
+        post_ykick = kquad.ykick/2;
+      }
+      kquad.xkick = kquad.ykick = 0;
       length = (kquad.length /= nSlices);
       kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
       if (slice!=0)
@@ -860,6 +871,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
     determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation); 
+    Ml1->C[1] += post_xkick;
+    Ml1->C[3] += post_ykick;
     /*    print_matrices(stdout, "matrix1:", Ml1); */
 
     /* Step 2: Propagate the diffusion matrix */

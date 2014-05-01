@@ -24,7 +24,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     char *p_elem0;
     char **changedDefinedParameter = NULL;
     long nChangedDefinedParameter = 0;
-
+    long warningCountDown = 25;
+    
 #if !USE_MPI
     printingEnabled = 1;
 #else
@@ -134,10 +135,12 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         iParam = confirm_parameter(item, thisType);
       }
       if (iParam<0) {
-	if (printingEnabled) {
+	if (printingEnabled && warningCountDown>0) {
 	  fprintf(stderr, "%s: element %s does not have parameter %s\n", 
 		  allow_missing_parameters?"Warning":"Error",
 		  eptr->name, item);
+          if (--warningCountDown==0 && allow_missing_parameters)
+            fprintf(stderr, "*** Further messages suppressed!\n");
 	}
 	if (!allow_missing_parameters)
 	  exitElegant(1);
