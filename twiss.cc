@@ -3720,11 +3720,10 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
       sprintf(s, (char*)"%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
       fpt->twiss_mem[i] = rpn_create_mem(s, 0);
     }
-    if (radIntegrals) 
-      for (j=0; j<6; j++, i++) {
-	sprintf(s, (char*)"%s#%ld.I%ld", name, occurence, j+1);
-	fpt->twiss_mem[i] = rpn_create_mem(s, 0);
-      }
+    for (j=0; j<6; j++, i++) {
+      sprintf(s, (char*)"%s#%ld.I%ld", name, occurence, j+1);
+      fpt->twiss_mem[i] = rpn_create_mem(s, 0);
+    }
   }
   if (!twiss) {
     fprintf(stdout, (char*)"twiss parameter pointer unexpectedly NULL\n");
