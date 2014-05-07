@@ -1369,9 +1369,9 @@ set sideTabs 0
 if {[APSStrictParseArguments {configuration templateDirectory sideTabs}]} {
     return -code error "usage: $argv0 \[-configuration <filename>\] \[-templateDirectory <path>\] [-sideTabs 1\]"
 }
-set tabPosition n
+set tabPosition nw
 if $sideTabs {
-    set tabPosition w
+    set tabPosition wn
 }
 if {[string length $configuration]} {
     if ![file exists $configuration] {

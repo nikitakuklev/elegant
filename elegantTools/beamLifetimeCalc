@@ -275,8 +275,7 @@ set widgetList [APSTabFrame .parameters -parent .userFrame -label "" \
                                         "Beam Inputs" \
                                         "Variation" \
                                         "Loss Rates and Lifetimes" } \
-                          -width 900 -height 400 \
-                          -tabPosition n]
+                          -width 900 -height 400]
 
 set widget [lindex $widgetList 0]
 
