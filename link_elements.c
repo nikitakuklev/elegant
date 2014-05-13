@@ -196,7 +196,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       links->flags[n_links] = link_mode_flag[mode_code];
       links->minimum[n_links] = minimum;
       links->maximum[n_links] = maximum;
-      
+      links->flags[n_links] |= (exclude_self?EXCLUDE_SELF_LINK:0);
+
       /* make the list of pointers to targets */
       eptr = tmalloc(sizeof(*eptr));
       eptr[0] = t_context;
@@ -364,19 +365,35 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           }
           eptr[n_sources++] = s_context;
         }
+      } else if (src_position_code==SRC_POSITION_FIRST) {
+        n_sources = 0;
+        while (n_sources<n_targets) {
+          eptr1 = NULL;
+          s_context = NULL;
+          if (find_element(source, &s_context, &(beamline->elem))) {
+              eptr1 = s_context;
+          }
+          if (!eptr1) {
+            fprintf(stdout, "error: no %s element--can't link %s as requested\n",
+                    source, target);
+            fflush(stdout);
+            exitElegant(1);
+          }
+          eptr[n_sources++] = eptr1;
+        }
       }
-
       links->source_elem[n_links] = eptr;
 
-#if DEBUG
-      fprintf(stdout, "list of targets and sources:\n");
-      fflush(stdout);
-      for (i=0; i<n_targets; i++)
-        fprintf(stdout, "%s at z=%em linked to %s at z=%em\n", 
-                links->target_elem[n_links][i]->name, links->target_elem[n_links][i]->end_pos,
-                links->source_elem[n_links][i]->name, links->source_elem[n_links][i]->end_pos);
-      fflush(stdout);
-#endif
+      if (verbosity>1) {
+        long i;
+        fprintf(stdout, "list of targets and sources:\n");
+        fflush(stdout);
+        for (i=0; i<n_targets; i++)
+          fprintf(stdout, "%s at z=%em linked to %s at z=%em\n", 
+                  links->target_elem[n_links][i]->name, links->target_elem[n_links][i]->end_pos,
+                  links->source_elem[n_links][i]->name, links->source_elem[n_links][i]->end_pos);
+        fflush(stdout);
+      }
 
       links->n_links += 1;
     }
@@ -428,6 +445,8 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
             fflush(stdout);
 #endif
             p_elem = sour[i_elem]->p_elem;
+            if (links->flags[i_link]&EXCLUDE_SELF_LINK && p_elem==targ[i_elem]->p_elem)
+              continue;
             for (i_item=0; i_item<entity_description[sour[0]->type].n_params; i_item++) {
   	        char s[1024];
 		double value0;

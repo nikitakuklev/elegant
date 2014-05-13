@@ -21,6 +21,7 @@
     STRING equation = NULL;
     double minimum = -DBL_MAX;
     double maximum = DBL_MAX;
+    long exclude_self = 1;
 #end
 
 #define SRC_POSITION_BEFORE 0
@@ -28,9 +29,10 @@
 #define SRC_POSITION_ADJACENT 2
 #define SRC_POSITION_NEAREST 3
 #define SRC_POSITION_SAME_OCCURENCE 4
-#define N_SRC_POSITIONS 5
+#define SRC_POSITION_FIRST 5
+#define N_SRC_POSITIONS 6
 static char *src_position_name[N_SRC_POSITIONS] = {
-    "before", "after", "adjacent", "nearest", "same-occurence"
+    "before", "after", "adjacent", "nearest", "same-occurence", "first",
     } ;
 
 #define N_LINK_MODES 4

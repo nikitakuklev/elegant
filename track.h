@@ -263,6 +263,7 @@ typedef struct {
 #define POST_CORRECTION_LINK 4
 #define TURN_BY_TURN_LINK 8
 #define LINK_ELEMENT_DEFINITION 16
+#define EXCLUDE_SELF_LINK 32
     ELEMENT_LIST ***source_elem;   /* arrays of pointers to source element pointers, parallel to target_elem */
     long *n_parameters;            /* numbers of parameters for each source */
     char **equation;               /* rpn equations for items in terms of parameters of source */
