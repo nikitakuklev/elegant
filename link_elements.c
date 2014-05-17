@@ -229,8 +229,21 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         bombElegant("invalid type of item for target of link", NULL);
         break;
       }
-      for (j=0; j<n_targets; j++)
-        links->baseline_value[n_links][j] = links->initial_value[n_links];
+      for (j=0; j<n_targets; j++) {
+        switch (entity_description[eptr[0]->type].parameter[links->target_param[n_links]].type) {
+        case IS_DOUBLE:
+          links->baseline_value[n_links][j] = 
+            *((double*)(eptr[j]->p_elem+entity_description[eptr[j]->type].parameter[links->target_param[n_links]].offset));
+          break;
+        case IS_LONG:
+          links->baseline_value[n_links][j] = 
+            *((long*)(eptr[j]->p_elem+entity_description[eptr[j]->type].parameter[links->target_param[n_links]].offset));
+          break;
+        default:
+          bombElegant("invalid type of item for target of link", NULL);
+          break;
+        }
+      }
 
       /* make the list of pointers to sources */
       if (iTarget) {
@@ -431,49 +444,53 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
         elem_type = targ[0]->type;
         param     = links->target_param[i_link];
         data_type = entity_description[elem_type].parameter[param].type;
-#if DEBUG
-        fprintf(stdout, "asserting %ld links of %s.%s to %s\n", links->n_targets[i_link],
-            links->target_name[i_link], links->item[i_link], links->source_name[i_link]);
-        fflush(stdout);
-        fprintf(stdout, "source type is %ld, with %ld parameters\n", sour[0]->type, 
-                    entity_description[sour[0]->type].n_params);
-        fflush(stdout);
-#endif
+        if (verbosity>3) {
+          fprintf(stdout, "asserting %ld links of %s.%s to %s\n", links->n_targets[i_link],
+                  links->target_name[i_link], links->item[i_link], links->source_name[i_link]);
+          fflush(stdout);
+          fprintf(stdout, "source type is %ld, with %ld parameters\n", sour[0]->type, 
+                  entity_description[sour[0]->type].n_params);
+          fflush(stdout);
+        }
         for (i_elem=0; i_elem<links->n_targets[i_link]; i_elem++) {
-#if DEBUG
-            fprintf(stdout, "  working on element %ld\n", i_elem);
-            fflush(stdout);
-#endif
+            if (verbosity>4) {
+              fprintf(stdout, "  working on target element %ld\n", i_elem);
+              fflush(stdout);
+            }
             p_elem = sour[i_elem]->p_elem;
             if (links->flags[i_link]&EXCLUDE_SELF_LINK && p_elem==targ[i_elem]->p_elem)
               continue;
-            for (i_item=0; i_item<entity_description[sour[0]->type].n_params; i_item++) {
+            if (verbosity>5) {
+              fprintf(stdout, "  setting variable values for use in expression\n");
+              fflush(stdout);
+            }
+            for (i_item=0; i_item<entity_description[sour[i_elem]->type].n_params; i_item++) {
   	        char s[1024];
-		double value0;
-                switch (entity_description[sour[0]->type].parameter[i_item].type) {
+		double value0 = 0;
+                switch (entity_description[sour[i_elem]->type].parameter[i_item].type) {
                     case IS_DOUBLE:
-                        value = *((double*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
-                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
-                        value0 = *((double*)(sour[i_elem]->p_elem0+entity_description[sour[0]->type].parameter[i_item].offset));
-			sprintf(s, "%s0", entity_description[sour[0]->type].parameter[i_item].name);
+                        value = *((double*)(p_elem+entity_description[sour[i_elem]->type].parameter[i_item].offset));
+                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[i_elem]->type].parameter[i_item].name, 0));
+                        value0 = *((double*)(sour[i_elem]->p_elem0+entity_description[sour[i_elem]->type].parameter[i_item].offset));
+			sprintf(s, "%s0", entity_description[sour[i_elem]->type].parameter[i_item].name);
                         rpn_store(value0, NULL, rpn_create_mem(s, 0));
                         break;
                     case IS_LONG:
-                        value = *((long*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
-                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
-                        value0 = *((long*)(sour[i_elem]->p_elem0+entity_description[sour[0]->type].parameter[i_item].offset));
-			sprintf(s, "%s0", entity_description[sour[0]->type].parameter[i_item].name);
+                        value = *((long*)(p_elem+entity_description[sour[i_elem]->type].parameter[i_item].offset));
+                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[i_elem]->type].parameter[i_item].name, 0));
+                        value0 = *((long*)(sour[i_elem]->p_elem0+entity_description[sour[i_elem]->type].parameter[i_item].offset));
+			sprintf(s, "%s0", entity_description[sour[i_elem]->type].parameter[i_item].name);
                         rpn_store(value0, NULL, rpn_create_mem(s, 0));
                         break;
                     default:
                         break;
                     }
-#if DEBUG 
-                fprintf(stdout, "    asserting value %e for %s\n", value, entity_description[sour[0]->type].parameter[i_item].name);
-                fprintf(stdout, "    asserting value %e for %s0\n", value0, entity_description[sour[0]->type].parameter[i_item].name);
-                fflush(stdout);
-#endif
+                if (verbosity>5) {
+                  fprintf(stdout, "    using value %e for %s\n", value, entity_description[sour[i_elem]->type].parameter[i_item].name);
+                  fprintf(stdout, "    using value %e for %s0\n", value0, entity_description[sour[i_elem]->type].parameter[i_item].name);
+                  fflush(stdout);
                 }
+              }
             p_elem = targ[i_elem]->p_elem;
 
             rpn_clear();
@@ -560,11 +577,11 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
             switch (data_type) {
                 case IS_DOUBLE:
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      links->baseline_value[i_link][i_elem] = links->initial_value[i_link];
+                      links->baseline_value[i_link][i_elem];
                     break;
                 case IS_LONG:
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      links->baseline_value[i_link][i_elem] = nearestInteger(links->initial_value[i_link]);
+                      nearestInteger(links->baseline_value[i_link][i_elem]); 
                     break;
                 case IS_STRING:
                 default:
