@@ -101,7 +101,7 @@ exec sddssort -pipe=out $aperture -column=s -unique \
     -process=s,max,sMax \
     "-define=param,c1,16 3 / 137 / re_mks sqr * $P * c_mks * kb_mks / 298 / $fSZSum * sMax /" \
     "-define=col,CS,deltaNegative$name chs sto u -5 8 / u ln - u + 3 u * 8 / - c1 *" \
-    "-process=CS,gminteg,decayRate,functionOf=s" \
+    "-process=CS,integ,decayRate,functionOf=s" \
     "-define=param,bremsstrahlungLifetime,decayRate rec 3600 /,units=h" \
     | sddscollapse -pipe \
     | sddsprocess -pipe=in $output \
