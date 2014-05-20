@@ -127,12 +127,12 @@ eval exec sddscombine [APSReplicateItem -number $nTw -item $aperture] -pipe=out 
     "{-define=col,CS,1 theta 2 / tan sqr /}" \
     | sddssort -pipe -column=phi,incr -unique \
     | sddsprocess -pipe \
-    -process=CS,gmintegral,%sInteg,functionOf=phi \
+    -process=CS,integral,%sInteg,functionOf=phi \
     -define=col,pCentral0,pCentral \
     | sddscollapse -pipe \
     | sddsbreak -pipe -decreaseOf=s \
     | sddsprocess -pipe \
-    -process=CSInteg,gminteg,%sInteg,functionOf=s \
+    -process=CSInteg,integ,%sInteg,functionOf=s \
     -proces=s,max,%sMax \
     -process=pCentral,first,%s0 \
     "{-define=param,c1,re_mks sqr c_mks * $P * sMax / pCentral0 sqr / kb_mks / 298 /}" \
