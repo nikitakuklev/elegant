@@ -213,6 +213,53 @@ proc setStatus {text} {
     APSSetVarAndUpdate status "[clock format [clock seconds] -format %H:%M:%S:] $text"
 }
 
+proc Tsai_f {Z} {
+    set a [expr $Z/137.0]
+    set a2 [expr pow($a,2)]
+    return [expr $a2*(1./(1+$a2) + 0.20206 + $a2*(-0.0369+$a2*(0.0083-$a2*0.002)))]
+}
+
+proc Tsai_Lrad {Z} {
+    switch $Z {
+        1 {
+            return 5.31
+        }
+        2 {
+            return 4.79
+        }
+        3 {
+            return 4.74
+        }
+        4 {
+            return 4.71
+        }
+        default {
+            return [expr log(184.15/pow($Z, 1./3.))]
+        }
+    }
+}
+
+proc Tsai_Lradp {Z} {
+    switch $Z {
+        1 {
+            return 6.144
+        }
+        2 {
+            return 5.621
+        }
+        3 {
+            return 5.805
+        }
+        4 {
+            return 5.924
+        }
+        default {
+            return [expr log(1194./pow($Z, 2./3.))]
+        }
+    }
+}
+
+
 proc SetGasDefaults {} {
     global component pressureFrac pressure temperature
     set component(1) H2O
@@ -238,8 +285,6 @@ set energyAperture 0.022
 set effectiveEnergyAperture 0
 set energy 7
 set referenceEnergy 7
-set screening 0
-set electrons 1
 set emittance 8.5e-9
 set dampingTime 4.73
 set alpha 2.28e-4
@@ -321,10 +366,6 @@ foreach widget {.pt.pres .pt.temperature} {
 set widget [lindex $widgetList 1]
 APSFrame .calc -parent $widget -label ""
 set w $widget.calc.frame
-APSRadioButtonFrame .electrons -parent $w -label "Electron scattering?:" -variable electrons \
-  -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
-  -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
-  "Select whether or not to include the effects of scattering on electrons of the gas atoms."
 
 APSRadioButtonFrame .touschek -parent $w -label "Touschek?:" -variable touschek \
   -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
@@ -335,11 +376,6 @@ APSRadioButtonFrame .touschekZAP -parent $w -label "ZAP-convention Touschek?:" -
     -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
   -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
   "Select whether to multiply the Touschek rate by log(2) when combining with other rates.  ZAP does this."
-
-#APSRadioButtonFrame .screening -parent $w -label "Include screening:" -variable screening \
-#  -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
-#  -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
-#  "Select whether or not to include the effects of screening of the nucleus by atomic electrons."
 
 set widget [lindex $widgetList 2] 
 APSFrame .lattice -parent $widget -label ""
@@ -596,8 +632,6 @@ proc StartOutputFile {} {
     putsColumnHeader $outputFID EnergyAperture "" double
     putsColumnHeader $outputFID EffectiveEnergyAperture "" double
     putsColumnHeader $outputFID Energy GeV double
-    putsColumnHeader $outputFID Screening "" long
-    putsColumnHeader $outputFID ElectronScattering "" double
     putsColumnHeader $outputFID Temperature K double
     putsColumnHeader $outputFID Emittance m-rad double
     putsColumnHeader $outputFID Coupling "" double
@@ -706,7 +740,7 @@ proc NormalizePressureFractions {} {
 
 proc LoadLatticeParameters {} {
     global referenceValue aperturePlane
-    global betaAve acceptance energyAperture energy screening temperature electrons
+    global betaAve acceptance energyAperture energy temperature 
     global pressure pressureFrac component
     global tauEN tauEE tauIN tauIE tauUser tauTouschek tau tauQuantum
     global rateEN rateEE rateIN rateIE rateUser rateTouschek rate rateQuantum
@@ -763,7 +797,7 @@ proc LoadLatticeParameters {} {
 
 proc RecomputeOutputs {args} {
     global referenceValue
-    global betaAve acceptance energyAperture energy screening temperature electrons
+    global betaAve acceptance energyAperture energy temperature
     global pressure pressureFrac component
     global tauEN tauEE tauIN tauIE tauUser tauTouschek tau tauQuantum
     global rateEN rateEE rateIN rateIE rateUser rateTouschek rate rateQuantum
@@ -949,21 +983,23 @@ proc RecomputeOutputs {args} {
             set n0 [lindex $nList $pindex]
             incr pindex 
 
-            set Zr3 [expr pow($Z0, 1./3.)]
-            if $screening {
-                set csi [expr log(1440/($Zr3*$Zr3))/log(183/$Zr3)]
-            } else {
-                set csi 0
-            }
+            set fZ [Tsai_f $Z0]
+            set Lrad [Tsai_Lrad $Z0]
+            set Lradp [Tsai_Lradp $Z0]
+            set K0Z [expr 4.*$rce*$rce/137.*$Z0]
 
-            set c0 [expr 16.0*$rce*$rce/411.0]
-            set gamma [expr $energy/0.511e-3]
+            set dap $effectiveEnergyAperture
+            set I1 [expr (-5 + 8*$dap - 3*pow($dap,2) - 8*log($dap))/6.]
+            set I2 [expr (-1 + $dap - log($dap))/9.]
+
             set sigmaIN \
-              [expr $c0*$Z0*($Z0+$csi)*(log(1./$effectiveEnergyAperture)-5./8.)*log(183/$Zr3)]
+                [expr $K0Z*$Z0*($I1*($Lrad-$fZ) + $I2)]
             set sigmaIE \
-              [expr $c0*$Z0*(log(2.5*$gamma/$effectiveEnergyAperture)-1.4)*(log(1./$effectiveEnergyAperture)-5./8.)]
+                [expr $K0Z*($I1*$Lradp + $I2)]
+
+            set gamma [expr $energy/0.511e-3]
             set sigmaEN \
-              [expr 2*3.1415926*pow($rce/$gamma, 2)*$betaAve/$acceptance*$Z0*($Z0+$screening)]
+              [expr 2*3.1415926*pow($rce/$gamma, 2)*$betaAve/$acceptance*$Z0*($Z0+1)]
             set sigmaEE \
               [expr 2*3.1415926*pow($rce, 2)/$gamma*$Z0/$effectiveEnergyAperture]
 
@@ -975,12 +1011,6 @@ proc RecomputeOutputs {args} {
     }
     foreach type {IN IE EN EE} {
         set tau$type [expr 1./[subst \$rate$type]]
-    }
-    if !$electrons {
-        set tauIE 1e10
-        set rateIE 1e-10
-        set tauEE 1e10
-        set rateEE 1e-10
     }
     if $touschek {
         set tauTouschek [APSTouschekLifetime -latticeFile $latticeFile \
@@ -1039,7 +1069,7 @@ proc RecomputeOutputs {args} {
         }
         puts -nonewline $outputFID "$betaAve $acceptance $alpha $dampingTime $Uo $harmonic "
         puts -nonewline $outputFID "$rfVoltage $energyAperture $effectiveEnergyAperture "
-        puts -nonewline $outputFID "$energy $screening $electrons $temperature "
+        puts -nonewline $outputFID "$energy $temperature "
         puts -nonewline $outputFID "$emittance $coupling $energySpread $bunchLength $bunchLengthFactor $bunchCurrent $revolutionFrequency $touschek $ZAPTouschek "
         puts -nonewline $outputFID "$rateEN $rateEE $rateIN $rateIE $rateTouschek $rateQuantum $rateUser $rate "
         puts $outputFID "$tauEN $tauEE $tauIN $tauIE $tauTouschek $tauQuantum $tauUser $tau"
@@ -1126,7 +1156,7 @@ proc RunVariationFromFile {} {
 
 
 proc RunVariation {} {
-    global pressure Z nAtoms fracPres betaAve acceptance energyAperture energy screening temperature
+    global pressure Z nAtoms fracPres betaAve acceptance energyAperture energy temperature
     global varyChoice status varyPoints varyStart varyEnd outputFID
     if [string compare $varyChoice None]==0 {
         setStatus "No quantity chosen for variation."
