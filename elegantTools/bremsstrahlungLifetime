@@ -56,41 +56,94 @@ set atomCount(H2,1) 2
 set nAtomTypes(H2O) 2
 set Z(H2O,1) 1
 set atomCount(H2O,1) 2
-set Z(H2O,2) 6
+set Z(H2O,2) 8
 set atomCount(H2O,2) 1
 
 set nAtomTypes(CH4) 2
-set Z(CH4,1) 8
+set Z(CH4,1) 6
 set atomCount(CH4,1) 1
 set Z(CH4,2) 1
 set atomCount(CH4,2) 4
 
 set nAtomTypes(CO) 2
-set Z(CO,1) 8
+set Z(CO,1) 6
 set atomCount(CO,1) 1
-set Z(CO,2) 6
+set Z(CO,2) 8
 set atomCount(CO,2) 1
 
 set nAtomTypes(CO2) 2
-set Z(CO2,1) 8
+set Z(CO2,1) 6
 set atomCount(CO2,1) 1
-set Z(CO2,2) 6
+set Z(CO2,2) 8
 set atomCount(CO2,2) 2
 
 set nAtomTypes(N2) 1
 set Z(N2,1) 7
 set atomCount(N2,1) 2
 
-set fSZSum 0.0
+proc Tsai_f {Z} {
+    set a [expr $Z/137.0]
+    set a2 [expr pow($a,2)]
+    return [expr $a2*(1./(1+$a2) + 0.20206 + $a2*(-0.0369+$a2*(0.0083-$a2*0.002)))]
+}
+
+proc Tsai_Lrad {Z} {
+    switch $Z {
+        1 {
+            return 5.31
+        }
+        2 {
+            return 4.79
+        }
+        3 {
+            return 4.74
+        }
+        4 {
+            return 4.71
+        }
+        default {
+            return [expr log(184.15/pow($Z, 1./3.))]
+        }
+    }
+}
+
+proc Tsai_Lradp {Z} {
+    switch $Z {
+        1 {
+            return 6.144
+        }
+        2 {
+            return 5.621
+        }
+        3 {
+            return 5.805
+        }
+        4 {
+            return 5.924
+        }
+        default {
+            return [expr log(1194./pow($Z, 2./3.))]
+        }
+    }
+}
+
+set fSZSum1 0.0
+set fSZSum2 0.0
 foreach gas [array names fGas] {
     # Compute sum over gas molecules
-    set f $fGas($gas)
-    set sum 0.0
+    set sumF1 0.0
+    set sumF2 0.0
     for {set con 1} { $con <= $nAtomTypes($gas) } {incr con} {
-        # Sum of count*Z*(Z+1)*ln(184.15/Z^(1/3))
-        set sum [expr $sum+$Z($gas,$con)*($Z($gas,$con)+1)*$atomCount($gas,$con)*log(184.15/pow($Z($gas,$con),1./3))]
+        set Z0 $Z($gas,$con)
+        set fZ [Tsai_f $Z0]
+        set Lrad [Tsai_Lrad $Z0]
+        set Lradp [Tsai_Lradp $Z0]
+        set sumF1 [expr $sumF1+$atomCount($gas,$con)*($Z0*$Z0*($Lrad-$fZ)+$Z0*$Lradp)]
+        set sumF2 [expr $sumF2+$atomCount($gas,$con)*$Z0*($Z0+1)]
     }
-    set fSZSum [expr $fSZSum+$f*$sum]
+    set f $fGas($gas)
+    set fSZSum1 [expr $fSZSum1+$f*$sumF1]
+    set fSZSum2 [expr $fSZSum2+$f*$sumF2]
 }
 # Convert to Pascals
 set P [expr 133.3224*1e-9*$pressure]
@@ -99,10 +152,14 @@ exec sddssort -pipe=out $aperture -column=s -unique \
     | sddsconvert -pipe -retain=col,s,deltaNegative$name \
     | sddsprocess -pipe \
     -process=s,max,sMax \
-    "-define=param,c1,16 3 / 137 / re_mks sqr * $P * c_mks * kb_mks / 298 / $fSZSum * sMax /" \
-    "-define=col,CS,deltaNegative$name chs sto u -5 8 / u ln - u + 3 u * 8 / - c1 *" \
-    "-process=CS,integ,decayRate,functionOf=s" \
-    "-define=param,bremsstrahlungLifetime,decayRate rec 3600 /,units=h" \
+    "-redefine=col,dap,deltaNegative$name chs" \
+    "-define=col,I1,-5 8 dap * + dap sqr 3 * - dap ln 8 * - 6 /" \
+    "-define=col,I2,-1 dap + dap ln - 9 /" \
+    "-define=param,K0,4 re_mks sqr * 137 /,units=1/m^2" \
+    "-define=col,CS,I1 $fSZSum1 * I2 $fSZSum2 * + K0 *,units=1/m^2" \
+    "-process=CS,integ,CSInteg,functionOf=s" \
+    "-define=param,CSMean,CSInteg sMax /" \
+    "-define=param,bremsstrahlungLifetime,CSMean c_mks * $P 298 / kb_mks / * rec 3600 /,units=h" \
     | sddscollapse -pipe \
     | sddsprocess -pipe=in $output \
     -process=bremsstrahlungLifetime,ave,%sAve \
