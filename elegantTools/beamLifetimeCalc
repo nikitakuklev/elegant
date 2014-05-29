@@ -265,15 +265,15 @@ proc SetGasDefaults {} {
     set component(1) H2O
     set pressureFrac(1) 0.02
     set component(2) CO
-    set pressureFrac(2) 0.21
+    set pressureFrac(2) 0.22
     set component(3) H2
-    set pressureFrac(3) 0.66
+    set pressureFrac(3) 0.65
     set component(4) CO2
     set pressureFrac(4) 0.04
     set component(5) CH4
     set pressureFrac(5) 0.07
     set pressure 0.5
-    set temperature 300
+    set temperature 298
 }
 
 SetGasDefaults
