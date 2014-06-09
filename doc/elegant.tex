@@ -32,14 +32,17 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 25.3.1}
+\section{Highlights of What's New in Version 26.0.0}
 
 Here is a summary of what's changed since release 25.3.2:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item Corrected the second- and third-order matrices for the \verb|KQUSE| element. These matrices were used for analysis (e.g., chromaticity) and 
+  tracking when \verb|MATRIX_TRACKING=1| was set as part of the element definition. This bug was reported by C. Tennant (TJNAF).
+\item Corrected the third-order matrix for \verb|QUAD| and \verb|KQUAD| elements, and certain (off-diagonal) elements of the third-order matrix
+  for the \verb|OCT| and \verb|KOCT| elements. All of these corrections were traced to a bug in a mathematica script that computes the matrices.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -4589,6 +4592,10 @@ given value.  It will be as if all the particles were lost.
 \subsection{tune\_shift\_with\_amplitude \label{subsec:tuneshiftwithamplitude}}
 
 \begin{itemize}
+\item N.B.: this command is deprecated, because it is too difficult to tune it to get
+  reliable answers. The use of driving term computation in \verb|twiss_output| is recommended instead, even though it 
+  doesn't include all possibly relevant effects. For tune-spread calculations, the \verb|tune_footprint| command provides
+  more versatility.
 \item type: setup command.
 \item function: prepare for computation of tune shifts with amplitude.
 \item sequence: must follow \verb|twiss_output|.

@@ -3639,7 +3639,7 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
   }
 
   free_matrices(&M2);
-
+  
 /*
   fprintf(stderr, (char*)"Tune check: \n%le %le\n%le %le\n",
           cos(PIx2*turns*tune[0]), (M1.R[0][0]+M1.R[1][1])/2,
