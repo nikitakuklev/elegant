@@ -43,6 +43,11 @@ Here is a summary of what's changed since release 25.3.2:
   tracking when \verb|MATRIX_TRACKING=1| was set as part of the element definition. This bug was reported by C. Tennant (TJNAF).
 \item Corrected the third-order matrix for \verb|QUAD| and \verb|KQUAD| elements, and certain (off-diagonal) elements of the third-order matrix
   for the \verb|OCT| and \verb|KOCT| elements. All of these corrections were traced to a bug in a mathematica script that computes the matrices.
+\item The \verb|BUMPER| element now uses the kicker waveform when a kickmap is supplied. Previously, the kicker waveform got ignored when a 
+  kickmap was provided.
+\item The \verb|BUMPER| element now behaves as expected when the length is zero.
+\item The steering feature of the \verb|KQUAD| element did not work properly with the \verb|moments_output| command. This has been fixed.
+  This bug was reported by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -52,6 +57,9 @@ Here is a summary of what's changed since release 25.3.2:
   if beam is lost during tracking.
 \item Steering strength limit functions were not working correctly for unusual correction elements such as integrated steering coils on quadrupoles.
   This was reported by V. Sajaev (APS).
+\item The \verb|link_elements| command now behaves as closer to what would be expected when links are used together with errors. 
+  This addresses some issues identified by V. Sajaev (APS).
+\item Included additional checks for valid ordering of commands, in order to prevent errors.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -62,6 +70,11 @@ Here is a summary of what's changed since release 25.3.2:
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|load_parameters| command will now accept lists of patterns for matching names, types, and parameters in the input file.
+\item The \verb|link_elements| command includes a new source-position specifier, namely, ``first.'' Also, a new feature to block self links was
+  added, and is on by default. 
+\item When performing threading-based trajectory correction, the algorithm now works backwards from the loss point and tries a specified number of correctors, which 
+  improves performance. 
+\item Quadratic spacing in the transverse coordinates is now the default for the \verb|tune_footprint| command.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -73,7 +86,16 @@ Here is a summary of what's changed since release 25.3.2:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item {\tt analyzeMagnets}: fixed divide-by-zero issue.
+\item {\tt elasticScatteringLifetime}: Use different integration method to avoid issues with Gill-Miller when s values have an irregular distribution.
+\item {\tt beamLifetimeCalc}: Use bremsstrahlung cross section from \cite{Tsai-RMP46}  and separation into nuclear and electron terms 
+  following \cite{Wrulich-CAS94}. Previously, used erroneous expressions from \cite{LeDuff-NIM239}.
+\item {\tt bremsstrahlungLifetime}: Use different integration method to avoid issues with Gill-Miller when s values have an irregular distribution.
+  Use bremsstrahlung cross section from \cite{Tsai-RMP46}  and separation into nuclear and electron terms 
+  following \cite{Wrulich-CAS94}. Previously, used erroneous expressions from \cite{LeDuff-NIM239}.
+\item {\tt longitCalcs}: added option for a harmonic bunch-lenghtening cavity.
+\item {\tt sddsrandmult}: now possible to have reference radius different from the magnet bore radius.
+\item {\tt touschekLifetime}: if momentum aperture is zero, returns zero lifetime instead of running forever.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -1267,6 +1289,7 @@ during the computations.
     long auto_limit_SVs[2] = {1, 1};
     long removed_pegged[2] = {0, 0};
     long threading_divisor[2] = {100, 100};
+    long threading_correctors[2] = {-1, -1};
     double bpm_noise[2] = {0, 0};
     double bpm_noise_cutoff[2] = {1.0, 1.0};
     STRING bpm_noise_distribution[2] = {"uniform", "uniform"};
@@ -1329,6 +1352,8 @@ small apertures.  If you get an error message about ``tracking failed for test p
   where $\theta_\textrm{max}$ is the strength limit.
   This parameter sets the number of steps to divide the corrector range into on the positive and negative sides.
   A smaller value results in faster execution but is less reliable.
+\item \verb|threading_correctors| --- In threading mode trajectory correction, gives the number of correctors upstream of the loss point to
+  use for threading the beam further through the system.
 \item \verb|bpm_noise[2]| --- The BPM noise level. 
 \item \verb|bpm_noise_cutoff[2]| --- Cutoff values for the random distributions of BPM noise.
 \item \verb|bpm_noise_distribution[2]| --- May be either ``gaussian'', ``uniform'', or ``plus\_or\_minus''.
@@ -2166,6 +2191,7 @@ during computations.
     STRING equation = NULL;
     double minimium = -DBL_MAX;
     double maximum = DBL_MAX;
+    long exclude_self = 1;
 &end
 \end{verbatim}
 
@@ -2176,7 +2202,7 @@ during computations.
  the element is excluded from the link.
 \item \verb|item| --- The parameter that will be modified.
 \item \verb|source| --- The name of the elements to be linked to.
-\item \verb|source_position| --- May be one of ``before'', ``after'', 
+\item \verb|source_position| --- May be one of ``first'', ``before'', ``after'', 
 ``adjacent'', ``nearest'', or ``same-occurrence''.
 \item \verb|mode| --- May be either ``dynamic'' or ``static''.  A dynamic link
 is asserted whenever the source is changed (during correction, for example).  
@@ -2190,6 +2216,7 @@ parameter values, append ``0'' to the parameter name.  These names must appear
 in capital letters.  
 \item \verb|minimum|, \verb|maximum| --- Minimum and maximum values that will be
 assigned to the target parameter.
+\item \verb|exclude_self| --- If nonzero, self-links are blocked. It is not recommended to change this.
 \end{itemize}
 
 \begin{latexonly}
@@ -6400,6 +6427,13 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 
 \bibitem{Bane-SLAC14925}
  K. Bane, ``Corrugated Pipe as a Beam Dechirper,'' SLAC-PUB-14925, April 2012.
+
+\bibitem{Tsai-RMP46}
+ Y.S. Tsai, Rev. Mod. Phys. 46, 815 (1974)
+\bibitem{Wrulich-CAS94}
+ A. Wrulich, CERN Accelerator School 94-01, Vol. 1, 409 (1994).
+\bibitem{LeDuff-NIM239}
+ J. LeDuff, NIM A 239 (1985) 83-101.
 
 \end{thebibliography}
 
