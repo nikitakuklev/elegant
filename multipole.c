@@ -133,15 +133,15 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
         multData->order[j-1] = multData->order[j];
       }
       multData->orders -= 1;
-      for (i=0; i<multData->orders; i++)
-        multData->bn[i] = multData->an[i]*ipow(-1.0, multData->order[i]/2);
-#ifdef DEBUG
-      fprintf(stdout, "Steering multipole data: \n");
-      for (i=0; i<multData->orders; i++)
-        fprintf(stdout, "%ld: %e %e\n", multData->order[i],
-                multData->an[i], multData->bn[i]);
-#endif
     }
+    for (i=0; i<multData->orders; i++)
+      multData->bn[i] = multData->an[i]*ipow(-1.0, multData->order[i]/2);
+#ifdef DEBUG
+    fprintf(stdout, "Steering multipole data: \n");
+    for (i=0; i<multData->orders; i++)
+      fprintf(stdout, "%ld: %e %e\n", multData->order[i],
+              multData->an[i], multData->bn[i]);
+#endif
   }
   multData->initialized = 1;
 }
