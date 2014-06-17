@@ -614,7 +614,6 @@ int main(int argc, char **argv) {
     inputSupplied = 1;
     if (twiss.pCentral)
       electron_param.energy = twiss.pCentral[0]*me_mev*0.001;
-    
   } else {
     if (undulator_param.energy) {
       /* calculate the Kx value for the undulator */
@@ -655,10 +654,11 @@ int main(int argc, char **argv) {
   nYP0 = pinhole_param.nYP;
   
   if (nE>=(pinhole_param.nXP+1)*(pinhole_param.nYP+1))
-    points=nE+100;
+    points=nE+200;
   else
-    points=(pinhole_param.nXP+1)*(pinhole_param.nYP+1)+100;
-  
+    points=(pinhole_param.nXP+1)*(pinhole_param.nYP+1)+200;
+
+ 
   EE=(double*)malloc(sizeof(*EE)*points);
   if (!us) 
     lamda=(double*)malloc(sizeof(*lamda)*points);
@@ -754,7 +754,7 @@ int main(int argc, char **argv) {
           xPMM, yPMM, irradiance, spec1, EE);
      }
     
-    
+    /* fprintf(stderr, "points=%d, nE=%d, nEE=%d\n", points, nE, nEE); */
     output = outputfile;
     if (!us) {
       if (!page) {
@@ -1692,7 +1692,7 @@ void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARA
       error++;
     }
     if (iharm<-1000 || iharm>1000) {
-      fprintf(stderr, "The harmonics number %ld is out of URGENT harmonics range (-1000, 1000).\n", iharm);
+      fprintf(stderr, "The harmonics number %d is out of URGENT harmonics range (-1000, 1000).\n", iharm);
       error++;
     }
     if (nE<1 || nE>5001) {
