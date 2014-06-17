@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 25.4.Beta\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 26.0.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -46,8 +46,10 @@ Here is a summary of what's changed since release 25.3.2:
 \item The \verb|BUMPER| element now uses the kicker waveform when a kickmap is supplied. Previously, the kicker waveform got ignored when a 
   kickmap was provided.
 \item The \verb|BUMPER| element now behaves as expected when the length is zero.
-\item The steering feature of the \verb|KQUAD| element did not work properly with the \verb|moments_output| command. This has been fixed.
+\item The steering feature of the \verb|KQUAD| element did not work properly with the \verb|moments_output| command.
   This bug was reported by V. Sajaev (APS).
+\item The steering multipoles feature of \verb|KQUAD| did not include the skew components (driven by vertical steering) when the steering multipoles 
+  were specified without the dipole term. 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
