@@ -329,7 +329,7 @@ int main(int argc, char **argv) {
   ELECTRON_BEAM_PARAM electron_param;
   PINHOLE_PARAM pinhole_param;
   double emax,  emin, dAlpha, dOmega, coupling, emittanceRatio, period, current;
-  long nE, mode, icalc,  nAlpha, nOmega, idebug, us, nPhi, points, nowarnings;
+  long nE, mode, icalc,  nAlpha, nOmega, idebug, us, nPhi, points, nowarnings, urgent_points, get_nee;
   int32_t iharm;
   /* input parameters from input file */
   TWISS_PARAMETER twiss;
@@ -657,8 +657,7 @@ int main(int argc, char **argv) {
     points=nE+200;
   else
     points=(pinhole_param.nXP+1)*(pinhole_param.nYP+1)+200;
-
- 
+  
   EE=(double*)malloc(sizeof(*EE)*points);
   if (!us) 
     lamda=(double*)malloc(sizeof(*lamda)*points);
@@ -718,8 +717,9 @@ int main(int argc, char **argv) {
       check_input_parameters(&undulator_param, &electron_param, &pinhole_param, nE, nPhi, nAlpha, nOmega, dOmega,
                              mode, icalc, iharm, inputSupplied, us);
     }
-    
     if (!us) {
+      /*get nEE (points) */
+      get_nee = 1;
       urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
               &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
               &emin,&emax,&nE,
@@ -729,7 +729,63 @@ int main(int argc, char **argv) {
               &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
               &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
               &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
-              &dAlpha,&nOmega, &dOmega, /*end of input parameters */
+              &dAlpha,&nOmega, &dOmega, &get_nee, /*end of input parameters */
+              &E1,&lamda1,&ptot,&pd,&isub,&iang,
+              EE,lamda,&min_harmonic,&max_harmonic,&nEE,
+              xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
+              I1,I2,&i_max,EI,spec1,spec2,
+              spec3,&pdtot,&ptot1,&ftot,harmonics,
+              &iharm5,x5,y5,E5,power5,flux5);
+      urgent_points = nEE + 1;
+    } else {
+      urgent_points = 0;
+    }
+    if (urgent_points>points) {
+      points = urgent_points;
+      
+      EE=SDDS_Realloc(EE, sizeof(*EE)*points);
+      if (!us) 
+        lamda=SDDS_Realloc(lamda, sizeof(*lamda)*points);
+      xPMM=SDDS_Realloc(xPMM,sizeof(*xPMM)*points); 
+      yPMM=SDDS_Realloc(yPMM, sizeof(*yPMM)*points); 
+      irradiance=SDDS_Realloc(irradiance, sizeof(*irradiance)*points);
+      L1=SDDS_Realloc(L1, sizeof(*L1)*points);
+      L2=SDDS_Realloc(L2, sizeof(*L2)*points);
+      L3=SDDS_Realloc(L3, sizeof(*L3)*points);
+      L4=SDDS_Realloc(L4,sizeof(*L4)*points);
+      if (!us) { 
+        power=SDDS_Realloc(power, sizeof(*power)*points);
+        EI=SDDS_Realloc(EI, sizeof(*EI)*points);
+      }
+      spec1=SDDS_Realloc(spec1, sizeof(*spec1)*points);
+      if (!us) {
+        spec2=SDDS_Realloc(spec2, sizeof(*spec2)*points);
+        spec3=SDDS_Realloc(spec3, sizeof(*spec3)*points);
+        I1=SDDS_Realloc(I1, sizeof(*I1)*points);
+        I2=SDDS_Realloc(I2, sizeof(*I2)*points);
+        harmonics=SDDS_Realloc(harmonics, sizeof(*harmonics)*points);
+      }
+      if (mode==-6) {
+        special=1;
+        E5=SDDS_Realloc(E5, sizeof(*E5)*MAXIMUM_H);
+        x5=SDDS_Realloc(x5, sizeof(*x5)*MAXIMUM_H);
+        y5=SDDS_Realloc(y5, sizeof(*y5)*MAXIMUM_H);
+        power5=SDDS_Realloc(power5, sizeof(*power5)*MAXIMUM_H);
+        flux5=SDDS_Realloc(flux5, sizeof(*flux5)*MAXIMUM_H);
+      }
+    }
+    if (!us) {
+      get_nee = 0;
+      urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
+              &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
+              &emin,&emax,&nE,
+              &electron_param.energy,&electron_param.current,
+              &electron_param.sigmax,&electron_param.sigmay,
+              &electron_param.sigmaxp,&electron_param.sigmayp,
+              &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
+              &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
+              &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
+              &dAlpha,&nOmega, &dOmega, &get_nee, /*end of input parameters */
               &E1,&lamda1,&ptot,&pd,&isub,&iang,
               EE,lamda,&min_harmonic,&max_harmonic,&nEE,
               xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
@@ -1695,8 +1751,8 @@ void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARA
       fprintf(stderr, "The harmonics number %d is out of URGENT harmonics range (-1000, 1000).\n", iharm);
       error++;
     }
-    if (nE<1 || nE>5001) {
-      fprintf(stderr, "The number of photon energy points (%ld) is out of URGENT range (1, 5001).\n", nE);
+    if (nE<1 || nE>50001) {
+      fprintf(stderr, "The number of photon energy points (%ld) is out of URGENT range (1, 50001).\n", nE);
       error++;
     }
     
