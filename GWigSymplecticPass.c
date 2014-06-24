@@ -74,9 +74,8 @@ void GWigInit(struct gwig *Wig,
   if ((Wig->sr = synchRad))
     Wig->srCoef = sqr(particleCharge)*ipow(pCentral, 3)/(6*PI*epsilon_o*particleMass*sqr(c_mks));
 
-  Wig->isrCoef = 0;
-  if ((Wig->isr = isr))
-    Wig->isrCoef = particleRadius*sqrt(55/(24.0*sqrt(3))*ipow(pCentral, 5)*137.0359895);
+  Wig->isr = isr;
+  Wig->isrCoef = particleRadius*sqrt(55/(24.0*sqrt(3))*ipow(pCentral, 5)*137.0359895);
 
   kw = 2.0e0*PI/(Wig->Lw);
   Wig->Zw = 0.0;
@@ -149,37 +148,38 @@ void GWigInit(struct gwig *Wig,
 #define fourth 4
 
 void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
-			CWIGGLER *cwiggler)
+			CWIGGLER *cwiggler, double *sigmaDelta2, 
+                        long singleStep,
+                        double *ZwStart)
 {	
 
   int c;
   double r6[6], denom;
-  struct gwig Wig;
+  static struct gwig Wig;
   MALIGN malign;
   TRACKING_CONTEXT tContext;
   
   getTrackingContext(&tContext);
   
-  InitializeCWiggler(cwiggler, tContext.elementName);
-
-/*
-  if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
-    printf("Error: Can't presently include synchrotron radiation effects for fourth-order integration of CWIGGLER\n");
-    exitElegant(1);
+  if (!singleStep || (singleStep && ZwStart && ZwStart==0)) {
+    InitializeCWiggler(cwiggler, tContext.elementName);
   }
-*/
-
+  
   GWigInit(&Wig, cwiggler->length, cwiggler->length/cwiggler->periods, 
-	   cwiggler->BMax, cwiggler->ByMax, cwiggler->BxMax, 
+           cwiggler->BMax, cwiggler->ByMax, cwiggler->BxMax, 
            cwiggler->stepsPerPeriod, 
-	   cwiggler->integrationOrder,
-	   cwiggler->ByHarmonics, cwiggler->BxHarmonics,
+           cwiggler->integrationOrder,
+           cwiggler->ByHarmonics, cwiggler->BxHarmonics,
            cwiggler->BySplitPole, cwiggler->BxSplitPole,
-	   cwiggler->ByData, cwiggler->BxData,
+           cwiggler->ByData, cwiggler->BxData,
            cwiggler->zEndPointH, cwiggler->zEndPointV, 
            pCentral,
            cwiggler->sr, cwiggler->isr && (num_particles>1 || cwiggler->isr1Particle));
+
   Wig.cwiggler = cwiggler;
+
+  if (ZwStart && (*ZwStart-cwiggler->length)>1e-6*cwiggler->length)
+    bombElegant("ZwStart>cwiggler->length  This is a bug!", NULL);
   
   if (cwiggler->tilt)
     rotateBeamCoordinates(coord, num_particles, cwiggler->tilt);
@@ -214,15 +214,26 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     /* For some reason, they swap the order here */
     r6[4] = coord[c][5]; 
     r6[5] = coord[c][4];
-    Wig.Zw = 0;
+    if (ZwStart) {
+      Wig.Zw = *ZwStart;
+      if (singleStep && Wig.Zw!=0) {
+        double ax, ay, axpy, aypx;
+        GWigAx(&Wig, r6, &ax, &axpy);
+        GWigAy(&Wig, r6, &ay, &aypx);
+        r6[1] += ax;
+        r6[3] += ay;
+      }
+    }      
+    else 
+      Wig.Zw = 0;
     
     /* Track through the wiggler */
     switch (cwiggler->integrationOrder) {
       case second :
-	GWigPass_2nd(&Wig, r6);
+	GWigPass_2nd(&Wig, r6, sigmaDelta2, singleStep);
 	break;
       case fourth:
-	GWigPass_4th(&Wig, r6);
+	GWigPass_4th(&Wig, r6, sigmaDelta2, singleStep);
 	break;
       default:
 	printf("Error: Invalid method integration order for CWIGGLER (use 2 or 4)\n");
@@ -230,20 +241,41 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 	break;
     }
 
-    /* convert back to elegant coordinates */
-    coord[c][0] = r6[0];
-    coord[c][2] = r6[2];
-    coord[c][5] = r6[4]; 
-    coord[c][4] = r6[5];
-    /* d = sqrt(sqr(1+delta)-sqr(qx)-sqr(qy))
-     * xp = qx/d, yp=qy/d
-     */
-    denom = sqrt(sqr(1+coord[c][5])-sqr(r6[1])-sqr(r6[3]));
-    coord[c][1] = r6[1]/denom;
-    coord[c][3] = r6[3]/denom;
+    if (singleStep) {
+      /* convert back to elegant coordinates (special code for interior of device to account for vector potential) */
+      double ax, ay, axpy, aypx;
+      GWigAx(&Wig, r6, &ax, &axpy);
+      GWigAy(&Wig, r6, &ay, &aypx);
+      coord[c][0] = r6[0];
+      coord[c][2] = r6[2];
+      coord[c][5] = r6[4]; 
+      coord[c][4] = r6[5];
+      /* d = sqrt(sqr(1+delta)-sqr(qx)-sqr(qy))
+       * xp = qx/d, yp=qy/d
+       */
+      r6[1] -= ax;
+      r6[3] -= ay;
+      denom = sqrt(sqr(1+coord[c][5])-sqr(r6[1])-sqr(r6[3]));
+      coord[c][1] = r6[1]/denom;
+      coord[c][3] = r6[3]/denom;
+    }
+    else {
+      /* convert back to elegant coordinates */
+      coord[c][0] = r6[0];
+      coord[c][2] = r6[2];
+      coord[c][5] = r6[4]; 
+      coord[c][4] = r6[5];
+      /* d = sqrt(sqr(1+delta)-sqr(qx)-sqr(qy))
+       * xp = qx/d, yp=qy/d
+       */
+      denom = sqrt(sqr(1+coord[c][5])-sqr(r6[1])-sqr(r6[3]));
+      coord[c][1] = r6[1]/denom;
+      coord[c][3] = r6[3]/denom;
+  }
+    
   }
 
-  if (cwiggler->fieldOutputInitialized) {
+  if (!singleStep && cwiggler->fieldOutputInitialized) {
     if (!SDDS_WritePage(&cwiggler->SDDSFieldOutput)) {
       printf("*** Error: unable to write SDDS page for CWIGGLER field output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -259,6 +291,10 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   }
   if (cwiggler->tilt)
     rotateBeamCoordinates(coord, num_particles, -cwiggler->tilt);
+  if (sigmaDelta2)
+    *sigmaDelta2 /= num_particles;
+  if (ZwStart) 
+    *ZwStart += singleStep ? cwiggler->length/(cwiggler->periods*cwiggler->stepsPerPeriod) : cwiggler->length;
 }
 
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name)

@@ -512,7 +512,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
     ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
     ((CWIGGLER*)eptr->p_elem)->isr = ((CWIGGLER*)eptr->p_elem)->sr = 0;
-    GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem);
+    GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
     ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
@@ -608,13 +608,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   return M;
 }
 
+/* FILE *fpdeb = NULL; */
+
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long order)
 {
   CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend;
-  KQUAD kquad;  QUAD *quad;
+  KQUAD kquad;  QUAD *quad; CWIGGLER cwig;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
-  double length;
+  double length, z;
   long i, j, k, slice;
   double *accumD1, *accumD2, *dtmp;
   double post_xkick, post_ykick;
@@ -622,6 +624,14 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   ELEMENT_LIST elem;
   MATRIX *Ms;
   long ignoreRadiation = 0;
+/*
+  fpdeb = fopen("analyze.sdds", "w");
+  fprintf(fpdeb, "SDDS1\n&column name=z type=double &end\n");
+  fprintf(fpdeb, "&column name=x type=double &end\n&column name=xp type=double &end\n");
+  fprintf(fpdeb, "&column name=y type=double &end\n&column name=yp type=double &end\n");
+  fprintf(fpdeb, "&column name=s type=double &end\n&column name=p type=double &end\n");
+  fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+*/
 
   /* Accumulated diffusion matrix */
   accumD1 = tmalloc(21*sizeof(*(accumD1)));
@@ -641,6 +651,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   /* Matrix for sigma matrix (D matrix) propagation */
   m_alloc(&Ms, 21, 21);
 
+  if (eptr->type==T_CWIGGLER)
+    nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
+  z = 0;
+  
   elem.end_pos = eptr->end_pos;
   for (slice=0; slice<nSlices; slice++) {
     post_xkick = post_ykick = 0; /* use this to handle pre- and post-KQUAD kicks */
@@ -657,6 +671,13 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
+      break;
+    case T_CWIGGLER:
+      memcpy(&cwig, (CWIGGLER*)eptr->p_elem, sizeof(CWIGGLER));
+      cwig.isr = 0;
+      elem.type = T_CWIGGLER;
+      elem.p_elem = (void*)&cwig;
+      length = cwig.length/nSlices;
       break;
     case T_SBEN:
       if (slice!=0)
@@ -862,6 +883,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       hvcor.ykick /= nSlices;
       hvcor.isr = 0;
       break;
+    case T_WIGGLER:
+      printf("*** Error: determineRadiationMatrix not supported for WIGGLER elements.\n");
+      exit(1);
+      break;
+      break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
       printf("***        Seek professional help!\n");
@@ -870,10 +896,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     }
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
-    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation); 
+    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation, &z); 
     Ml1->C[1] += post_xkick;
     Ml1->C[3] += post_ykick;
-    /*    print_matrices(stdout, "matrix1:", Ml1); */
+    /* printf("z = %le ", z);
+     print_matrices(stdout, "matrix1:", Ml1);*/
 
     /* Step 2: Propagate the diffusion matrix */
     fillSigmaPropagationMatrix(Ms->a, Ml1->R);
@@ -922,7 +949,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 }
 
 
-void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation)
+void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation, double *z)
 {
   CSBEND *csbend;
   KQUAD *kquad;
@@ -993,6 +1020,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     pCentral = run->p_central;
     motion(coord, n_track, elem->p_elem, elem->type, &pCentral, &dgamma, dP, NULL, 0.0);
     break;
+  case T_CWIGGLER:
+    GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)elem->p_elem, &sigmaDelta2, 1, z);
+    break;
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
     printf("***        Seek professional help!\n");
@@ -1001,6 +1031,16 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   }
   if (ignoreRadiation)
     sigmaDelta2 = 0;
+
+  /*  fprintf(fpdeb, "%le %le %le %le %le %le %le\n",
+          *z,
+          (coord[0][0]+coord[1][0])/2,
+          (coord[0][1]+coord[1][1])/2,
+          (coord[0][2]+coord[1][2])/2,
+          (coord[0][3]+coord[1][3])/2,
+          (coord[0][4]+coord[1][4])/2,
+          (coord[0][5]+coord[1][5])/2);
+          */
 
   R = Mr->R;
   C = Mr->C;

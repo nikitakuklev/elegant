@@ -31,7 +31,7 @@
 #include <math.h>
 #include <stdio.h>
 
-void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl);
+void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl, double *sigmaDelta2);
 void GWigB(struct gwig *pWig, double *Xvec, double *B);
 void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B);
 
@@ -59,7 +59,7 @@ void GWigGauge(struct gwig *pWig, double *X, int flag)
 }
 
 
-void GWigPass_2nd(struct gwig *pWig, double *X) 
+void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep)
 {
   int    i, Nstep;
   double dl;
@@ -85,7 +85,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
   Nstep = pWig->PN*(pWig->Nw);
   dl    = pWig->Lw/(pWig->PN);
 
-  if (pWig->sr || pWig->isr || FIELD_OUTPUT)  {
+  if ((pWig->sr || pWig->isr || FIELD_OUTPUT) && pWig->Zw==0)  {
     double B[2];
     double ax, ay, axpy, aypx;
     GWigAx(pWig, X, &ax, &axpy);
@@ -94,7 +94,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
     X[1] -= ax;
     X[3] -= ay;
     if (pWig->sr || pWig->isr)
-      GWigRadiationKicks(pWig, X, B, dl);
+      GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
 #if FIELD_OUTPUT
     fprintf(fpd, "%ld %e %e %e %e %e %e %e %e\n",
             index, pWig->Zw, X[0], X[2], X[1], X[3], X[4], B[0], B[1]);
@@ -104,7 +104,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
     X[3] += ay;
   }
   
-  for (i = 1; i <= Nstep; i++) {
+  for (i = 1; i <= Nstep; i++ ) {
     GWigMap_2nd(pWig, X, dl);
     if (pWig->sr || pWig->isr || pWig->cwiggler->fieldOutputInitialized) {
       double B[2];
@@ -115,7 +115,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
       X[1] -= ax;
       X[3] -= ay;
       if (pWig->sr || pWig->isr)
-        GWigRadiationKicks(pWig, X, B, dl);
+        GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
       if (pWig->cwiggler->fieldOutputInitialized)
         GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
 #if FIELD_OUTPUT
@@ -126,11 +126,13 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
       X[1] += ax;
       X[3] += ay;
     }
+    if (singleStep)
+      break;
   }
 }
 
 
-void GWigPass_4th(struct gwig *pWig, double *X)
+void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep)
 {
 
   const double x1 = 1.3512071919596576340476878089715e0;
@@ -145,7 +147,7 @@ void GWigPass_4th(struct gwig *pWig, double *X)
   dl1 = x1*dl;
   dl0 = x0*dl;
 
-  if (pWig->sr || pWig->isr)  {
+  if ((pWig->sr || pWig->isr || FIELD_OUTPUT) && pWig->Zw==0)  {
     double B[2];
     double ax, ay, axpy, aypx;
     GWigAx(pWig, X, &ax, &axpy);
@@ -153,7 +155,7 @@ void GWigPass_4th(struct gwig *pWig, double *X)
     GWigB(pWig, X, B);
     X[1] -= ax;
     X[3] -= ay;
-    GWigRadiationKicks(pWig, X, B, dl);
+    GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
     X[1] += ax;
     X[3] += ay;
   }
@@ -171,12 +173,14 @@ void GWigPass_4th(struct gwig *pWig, double *X)
       X[1] -= ax;
       X[3] -= ay;
       if (pWig->sr || pWig->isr)
-        GWigRadiationKicks(pWig, X, B, dl);
+        GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
       if (pWig->cwiggler->fieldOutputInitialized)
         GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
       X[1] += ax;
       X[3] += ay;
     }
+    if (singleStep)
+      break;
   }
 }
 
@@ -578,7 +582,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
 }
 
 
-void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl)
+void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl, double *sigmaDelta2)
 /* Apply kicks for synchrotron radiation.
  * Added by M. Borland, August 2007.
  */
@@ -610,10 +614,19 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl)
 
   if (pWig->isr) {
     /* Incoherent synchrotron radiation or quantum excitation */
-    dDelta = pWig->isrCoef*dFactor*pow(irho2,0.75)*sqrt(dl)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    dDelta = pWig->isrCoef*dFactor*pow(irho2,0.75)*sqrt(dl)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
     X[4] += dDelta;
     X[1] *= (1+dDelta);
     X[3] *= (1+dDelta);
+  }
+
+  if (sigmaDelta2) {
+    if (dl<0)
+      bombElegant("dl<0 in GWigRadiationKicks", NULL);
+    *sigmaDelta2 += sqr(pWig->isrCoef*dFactor)*pow(irho2, 1.5)*dl;
+    /* printf("ZWig = %le, B = %le, sigmaDelta2 = %le\n", 
+       pWig->Zw, sqrt(B2), *sigmaDelta2);
+       */
   }
   
 }

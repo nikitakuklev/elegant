@@ -68,8 +68,8 @@ struct gwig {
 };
 
 void GWigGauge(struct gwig *pWig, double *X, int flag);
-void GWigPass_2nd(struct gwig *pWig, double *X);
-void GWigPass_4th(struct gwig *pWig, double *X);
+void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep);
+void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep);
 void GWigMap_2nd(struct gwig *pWig, double *X, double dl);
 void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy);
 void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx);

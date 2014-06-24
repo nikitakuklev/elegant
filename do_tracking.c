@@ -1564,7 +1564,7 @@ long do_tracking(
                 saveISR = ((CWIGGLER*)eptr->p_elem)->isr;
                 ((CWIGGLER*)eptr->p_elem)->isr = 0;
               }
-	      GWigSymplecticPass(coord, nToTrack, *P_central, (CWIGGLER*)eptr->p_elem);
+	      GWigSymplecticPass(coord, nToTrack, *P_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
               if (flags&TEST_PARTICLES)
                 ((CWIGGLER*)eptr->p_elem)->isr = saveISR;
 	      break;

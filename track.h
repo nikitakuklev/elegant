@@ -2959,7 +2959,7 @@ extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double dx, double dy, double dz,
 			       double tilt, long order, long focusing);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
-			CWIGGLER *cwiggler);
+			CWIGGLER *cwiggler, double *sigmaDelta2, long singleStep, double *ZwStart);
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
@@ -2968,7 +2968,7 @@ extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
-extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation);
+extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
 extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
