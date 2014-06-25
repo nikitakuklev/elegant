@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 26.0.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 26.0.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,7 +32,7 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 26.0.0}
+\section{Highlights of What's New in Version 26.0.2}
 
 Here is a summary of what's changed since release 25.3.2:
 
@@ -44,12 +44,11 @@ Here is a summary of what's changed since release 25.3.2:
 \item Corrected the third-order matrix for \verb|QUAD| and \verb|KQUAD| elements, and certain (off-diagonal) elements of the third-order matrix
   for the \verb|OCT| and \verb|KOCT| elements. All of these corrections were traced to a bug in a mathematica script that computes the matrices.
 \item The \verb|BUMPER| element now uses the kicker waveform when a kickmap is supplied. Previously, the kicker waveform got ignored when a 
-  kickmap was provided.
-\item The \verb|BUMPER| element now behaves as expected when the length is zero.
+  kickmap was provided. Also, the \verb|BUMPER| element now behaves as expected when the length is zero.
 \item The steering feature of the \verb|KQUAD| element did not work properly with the \verb|moments_output| command.
   This bug was reported by V. Sajaev (APS).
-\item The steering multipoles feature of \verb|KQUAD| did not include the skew components (driven by vertical steering) when the steering multipoles 
-  were specified without the dipole term. 
+\item The steering multipoles feature of \verb|KQUAD| did not correctly include the skew components (driven by vertical steering) when the steering multipoles 
+  were specified without the dipole term. In that case, the skew component levels were essentially random values.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -66,7 +65,7 @@ Here is a summary of what's changed since release 25.3.2:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item The \verb|WIGGLER| and \verb|CWIGGLER| elements are now included in beam moments calculations with the \verb|moments_output| command.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -110,8 +109,7 @@ Here is a summary of what's changed since release 25.3.2:
 \item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
   the documentation for {\tt SREFFECTS} for details.
-\item Computation of beam moments does not include synchrotron radiation effects from \verb|CWIGGLER|,
-  \verb|WIGGLER|, or \verb|UKICKMAP| elements.
+\item Computation of beam moments does not include synchrotron radiation effects from \verb|UKICKMAP| elements.
 \item The file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
 \item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
@@ -2544,7 +2542,7 @@ propagates beam moments, i.e., the 6x6 sigma matrix, from the
 beginning to the end of a transport line, including coupling from
 rotated elements or offset sextupoles. This can be performed with or
 without synchrotron radiation effects in dipoles, quadrupoles, and sextupoles.
-({\em NB: radiation effects are not yet included for wigglers!})  These computations
+These computations
 include the evolution of the trajectory due to errors and (if included)
 synchrotron radiation.
 
