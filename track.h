@@ -60,6 +60,11 @@
 extern "C" {
 #endif
 
+/* Convert p=beta*gamma to T*m with this factor */
+#define RIGIDITY_FACTOR ((me_mks*c_mks)/e_mks)
+/* Convert B*lambda to K with this factor */
+#define UNDULATOR_K_FACTOR (1/(RIGIDITY_FACTOR*PIx2))
+
 extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
 extern long particleIsElectron;
 

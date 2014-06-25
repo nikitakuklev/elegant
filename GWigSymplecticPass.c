@@ -161,7 +161,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   
   getTrackingContext(&tContext);
   
-  if (!singleStep || (singleStep && ZwStart && ZwStart==0)) {
+  if (!singleStep || (singleStep && ZwStart && *ZwStart==0)) {
     InitializeCWiggler(cwiggler, tContext.elementName);
   }
   

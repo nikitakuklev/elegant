@@ -612,12 +612,12 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long order)
 {
-  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend;
+  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig;
   KQUAD kquad;  QUAD *quad; CWIGGLER cwig;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
   double length, z;
-  long i, j, k, slice;
+  long i, j, k, slice, nSlices0;
   double *accumD1, *accumD2, *dtmp;
   double post_xkick, post_ykick;
   VMATRIX *M1, *M2, *Ml1, *Mtmp;
@@ -651,8 +651,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   /* Matrix for sigma matrix (D matrix) propagation */
   m_alloc(&Ms, 21, 21);
 
+  nSlices0 = nSlices;
   if (eptr->type==T_CWIGGLER)
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
+  if (eptr->type==T_WIGGLER)
+    nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
   z = 0;
   
   elem.end_pos = eptr->end_pos;
@@ -671,13 +674,6 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
-      break;
-    case T_CWIGGLER:
-      memcpy(&cwig, (CWIGGLER*)eptr->p_elem, sizeof(CWIGGLER));
-      cwig.isr = 0;
-      elem.type = T_CWIGGLER;
-      elem.p_elem = (void*)&cwig;
-      length = cwig.length/nSlices;
       break;
     case T_SBEN:
       if (slice!=0)
@@ -883,10 +879,43 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       hvcor.ykick /= nSlices;
       hvcor.isr = 0;
       break;
-    case T_WIGGLER:
-      printf("*** Error: determineRadiationMatrix not supported for WIGGLER elements.\n");
-      exit(1);
+    case T_CWIGGLER:
+      if (slice==0) {
+        memcpy(&cwig, (CWIGGLER*)eptr->p_elem, sizeof(CWIGGLER));
+        cwig.isr = 0;
+        elem.type = T_CWIGGLER;
+        elem.p_elem = (void*)&cwig;
+        length = cwig.length/nSlices;
+      }
       break;
+    case T_WIGGLER:
+      if (slice==0) {
+        wig = (WIGGLER*)eptr->p_elem;
+        memset(&cwig, 0, sizeof(cwig));
+        cwig.sinusoidal = 1;
+        cwig.length = wig->length;
+        cwig.tilt = wig->tilt;
+        cwig.dx = wig->dx;
+        cwig.dy = wig->dy;
+        cwig.dz = wig->dz;
+        cwig.periods = wig->poles/2;
+        cwig.stepsPerPeriod = nSlices0;
+        cwig.sr = 1;
+        cwig.integrationOrder = 4;
+        if (wig->K) {
+          double lambda;
+          lambda = cwig.length/cwig.periods;
+          cwig.ByMax = wig->K/(UNDULATOR_K_FACTOR*lambda);
+        } else if (wig->radius) {
+          double H;
+          H = run->p_central*RIGIDITY_FACTOR;
+          cwig.ByMax = H/wig->radius;
+        } else
+        cwig.ByMax = wig->B;
+        elem.type = T_CWIGGLER;
+        elem.p_elem = (void*)&cwig;
+        length = cwig.length/nSlices;
+      }
       break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
