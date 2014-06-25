@@ -63,7 +63,7 @@ endif
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
 PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux
 else
-PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon
 endif
 
 SCRIPTS = brightnessEnvelope
