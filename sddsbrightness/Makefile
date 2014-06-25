@@ -41,7 +41,7 @@ ifdef AIX
 F77 = g77
 endif
 ifeq ($(OS_CLASS),Darwin)
-F77 = gfortran
+F77 = gfortran -m64 -ffixed-line-length-132
 #F77 = /usr/local/bin/gfortran -arch i386 -arch x86_64
 static_flags = -static-libgcc -L/opt/local/lib
 endif
