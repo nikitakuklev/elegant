@@ -223,6 +223,12 @@ proc ReadConfiguration {} {
                       -checkValidity 1]
     if ![string length $configFile] return
     if ![file exists $configFile] return
+    SourceConfiguration $configFile
+}
+
+proc SourceConfiguration {configFile} {
+    global mainDirectory elegantSaveVarList env
+    eval global $elegantSaveVarList
     source $configFile
     setStatus "Configuration $configFile read."
     if [info exists dynamicApertureErrors(mode)] {
@@ -256,6 +262,7 @@ proc ReadConfiguration {} {
 	}
     }
     switch $gridEngine {
+        no - 
 	0 {
 	    set gridEngine no
 	}
@@ -275,6 +282,7 @@ proc ReadConfiguration {} {
 		set gridEngine yes
 	    }
 	}
+        yes - 
 	default {
 	    set gridEngine yes
 	}
@@ -1407,7 +1415,7 @@ if {[string length $configuration]} {
     if ![file exists $configuration] {
         setStatus "not found: $configuration"
     } else {
-        source $configuration
+        SourceConfiguration $configuration
         setStatus "Configuration $configuration read."
     }    
 }
