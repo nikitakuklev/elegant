@@ -217,7 +217,7 @@ proc SaveConfiguration {} {
 
 
 proc ReadConfiguration {} {
-    global mainDirectory elegantSaveVarList
+    global mainDirectory elegantSaveVarList env
     eval global $elegantSaveVarList
     set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
                       -checkValidity 1]
@@ -253,6 +253,30 @@ proc ReadConfiguration {} {
 		    set dynamicApertureErrors(lines) 11
 		}
 	    }
+	}
+    }
+    switch $gridEngine {
+	0 {
+	    set gridEngine no
+	}
+	1 {
+	    if [string match oak??? $env(HOSTNAME)] {
+		set gridEngine beamphysics
+	    } else {
+		set gridEngine yes
+	    }
+	}
+	2 {
+	    if [string match oak??? $env(HOSTNAME)] {
+		set gridEngine beamphysics-test
+	    } elseif {[info exists env(SGE_CLUSTER_NAME)] && [string compare $env(SGE_CLUSTER_NAME) "weed"]==0} {
+		set gridEngine hive
+	    } else {
+		set gridEngine yes
+	    }
+	}
+	default {
+	    set gridEngine yes
 	}
     }
 }
@@ -438,12 +462,18 @@ proc FillMainFrame {widget args} {
       -contextHelp "Enter an optional prefix to use in creating output filenames."
 
     if {[info exists env(SGE_CLUSTER_NAME)] && [string compare $env(SGE_CLUSTER_NAME) "weed"]==0} {
+	# APS weed cluster with main (all.q) and hive (hive.q) queues
 	APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-	    -variable gridEngine -buttonList "Yes(main) Yes(hive) No" -valueList "1 2 0" \
+	    -variable gridEngine -buttonList "Yes(main) Yes(hive) No" -valueList "yes hive no" \
+	    -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
+    } elseif {[string match oak??? $env(HOSTNAME)]} {
+	# SLAC oak cluster with main (beamphysics) and test (beamphysics-test) queues
+	APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
+	    -variable gridEngine -buttonList "Yes(main) Yes(test) No" -valueList "beamphysics beamphysics-test no" \
 	    -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
     } else {
 	APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-	    -variable gridEngine -buttonList "Yes No" -valueList "1 0" \
+	    -variable gridEngine -buttonList "Yes No" -valueList "yes no" \
 	    -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
     }
 
