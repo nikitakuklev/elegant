@@ -209,11 +209,11 @@ ifdef WIN32
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		namelist rpnlib mdbmth mdblib lzma \
-		meschach z fdlibm pgapack
+		meschach z pgapack
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib lzma \
-		meschach z fdlibm 
+		meschach z  
 endif
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 
@@ -449,7 +449,7 @@ mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
-fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
+#fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 pgapack_DIR = $(EPICS_EXTENSIONS_LIB)
 lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 

@@ -45,7 +45,7 @@
 #include <float.h>
 #include <math.h>
 #include <io.h>
-#define isnan(x) _isnan(x)
+/*#define isnan(x) _isnan(x)*/
 #define dup2(x,y) _dup2(x,y)
 #endif
 

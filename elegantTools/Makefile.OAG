@@ -192,7 +192,7 @@ sddsrandmult_SYS_LIBS += $(SYS_GSLLIB)
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib $(GSLLIB) mdbmth mdblib lzma \
-		meschach z fdlibm
+		meschach z
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
@@ -213,7 +213,7 @@ lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
-fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
+#fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 
 astra2elegant_SRCS = astra2elegant.c
 
