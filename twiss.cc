@@ -4500,6 +4500,8 @@ void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long d
     fprintf(fpRf, "&parameter name=nuSynch, type=double &end\n");
     fprintf(fpRf, "&parameter name=Sz0, type=double, units=m &end\n");
     fprintf(fpRf, "&parameter name=St0, type=double, units=s &end\n");
+    fprintf(fpRf, "&parameter name=Frequency, type=double, units=Hz &end\n");
+    fprintf(fpRf, "&parameter name=Harmonic, type=long &end\n");
     fprintf(fpRf, "&data mode=ascii &end\n");
   }
   
@@ -4604,8 +4606,8 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   rpn_store(beamline->radIntegrals.sigmadelta, NULL, rpn_create_mem("Sdelta0", 0));
   
   if (writeToFile && fpRf) {
-    fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n",
-            phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0);
+    fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n%le\n%ld\n",
+            phase, voltage*nRfca, rfAcceptance, nus, Sz0, St0, frf, h);
   }
 }
 
