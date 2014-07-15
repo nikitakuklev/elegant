@@ -323,7 +323,8 @@ void track_through_rfmode(
 			      (char*)"tPostBeam", rfmode->last_t,
 			      (char*)"V", n_summed?V_sum/n_summed:0.0,
 			      (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-			      (char*)"Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
+			      (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                              (char*)"Charge", rfmode->mp_charge*np, NULL) ||
 	   !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
@@ -409,6 +410,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VPostBeam", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Charge", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&rfmode->SDDSrec) ||
         !SDDS_StartPage(&rfmode->SDDSrec, n+1)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
