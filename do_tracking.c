@@ -846,7 +846,7 @@ long do_tracking(
 		  fflush(stdout);
 		}
 		if (charge!=NULL) {
-		  fprintf(stdout, "Fatal error: multipole CHARGE elements in one beamline.\n");
+		  fprintf(stdout, "Fatal error: multiple CHARGE elements in one beamline.\n");
 		  fflush(stdout);
 		  exitElegant(1);
 		}
