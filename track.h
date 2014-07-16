@@ -908,7 +908,7 @@ extern char *entity_text[N_TYPES];
 #define N_WAKE_PARAMS 14
 #define N_TRWAKE_PARAMS 22
 #define N_TUBEND_PARAMS 6
-#define N_CHARGE_PARAMS 2
+#define N_CHARGE_PARAMS 3
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 11
 #define N_CSRCSBEND_PARAMS 70
@@ -2553,6 +2553,7 @@ typedef struct {
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
   double charge, chargePerParticle;
+  long allowChangeWhileRunning;
   /* for internal use only */
   double macroParticleCharge;
   long idSlotsPerBunch; /* copied from BEAM structure by do_tracking */

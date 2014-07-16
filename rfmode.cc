@@ -124,6 +124,10 @@ void track_through_rfmode(
 
     if (!rfmode->initialized)
         bombElegant((char*)"track_through_rfmode called with uninitialized element", NULL);
+    if (rfmode->Ra)
+      rfmode->RaInternal = rfmode->Ra;
+    else
+      rfmode->RaInternal = 2*rfmode->Rs;
 
     if (rfmode->n_bins>max_n_bins) {
       Ihist = (long*)trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));

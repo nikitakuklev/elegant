@@ -1706,6 +1706,7 @@ CHARGE charge_example;
 PARAMETER charge_param[N_CHARGE_PARAMS] = {
     {"TOTAL", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.charge), NULL, 0.0, 0, "total charge in beam"},
     {"PER_PARTICLE", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.chargePerParticle), NULL, 0.0, 0, "charge per macroparticle"},
+    {"ALLOW_TOTAL_CHANGE", NULL, IS_LONG, 0, (long)((char *)&charge_example.allowChangeWhileRunning), NULL, 0.0, 0, "If nonzero, allow total charge to change while tracking even if number of particles does not change.  Useful for ramping of charge."},
 };
 
 PFILTER pfilter_example;

@@ -839,13 +839,13 @@ long do_tracking(
 	    case -1:
 	      break;
 	    case T_CHARGE:
-	      if (i_pass==0 && !startElem) {
+	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
 		  warnedAboutChargePosition = 1;
 		  fprintf(stdout, "Warning: the CHARGE element is not at the start of the beamline.\n");
 		  fflush(stdout);
 		}
-		if (charge!=NULL) {
+		if (charge!=NULL && !( ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning && charge==((CHARGE*)(eptr->p_elem)))) {
 		  fprintf(stdout, "Fatal error: multiple CHARGE elements in one beamline.\n");
 		  fflush(stdout);
 		  exitElegant(1);
@@ -865,11 +865,11 @@ long do_tracking(
 		    charge->macroParticleCharge = charge->charge/(nOriginal);
 		}
 #endif
-		if (charge->chargePerParticle)
-		  charge->macroParticleCharge = charge->chargePerParticle;
-                if (charge->macroParticleCharge<0) 
-                  bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
 	      }
+              if (charge->chargePerParticle)
+                charge->macroParticleCharge = charge->chargePerParticle;
+              if (charge->macroParticleCharge<0) 
+                bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
 	      break;
 	    case T_MARK:
 	      if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
