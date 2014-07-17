@@ -409,9 +409,9 @@ void track_through_ftrfmode(
     for (ip=0; ip<np; ip++) {
       if (pbin[ip]>=0) {
 	P = Po*(1+part[ip][5]);
-	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + trfmode->n_cavities*Vzbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	Px = part[ip][1]*Pz + trfmode->n_cavities*Vxbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	Py = part[ip][3]*Pz + trfmode->n_cavities*Vybin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
 	part[ip][1] = Px/Pz;
 	part[ip][3] = Py/Pz;

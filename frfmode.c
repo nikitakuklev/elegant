@@ -200,7 +200,7 @@ void track_through_frfmode(
       for (ip=0; ip<np; ip++) {
 	if (pbin[ip]>=0) {
 	  /* compute new momentum and momentum offset for this particle */
-	  dgamma = Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	  dgamma = rfmode->n_cavities*Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	  add_to_particle_energy(part[ip], time[ip], Po, dgamma);
 	}
       }
