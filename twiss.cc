@@ -40,7 +40,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0, double eta0, double etap0, 
                            double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
-                           double *coord);
+                           double *coord, double pCentral);
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -320,6 +320,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   MATRIX *dispM, *dispOld, *dispNew;
   VMATRIX *dispM1, *dispM2;  
   ELEMENT_LIST *elemOrig;
+  MULT *mult;
+  double KnL;
   static long asinWarning = 50;
   std::complex <double> kappa;
   if (!twiss0)
@@ -542,7 +544,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                             elem, 
                             beta[0], alpha[0], gamma[0], eta[0], etap[0], 
                             beta[1], alpha[1], gamma[1], eta[1], etap[1], 
-                            path0);
+                            path0, run->p_central);
       if (elem->type==T_MRADINTEGRALS) {
         for (i=0; i<6; i++) {
           radIntegrals->RI[i] = (radIntegrals->RI[i]-lastRI[i])*(((MRADINTEGRALS*)elem->p_elem)->factor)+lastRI[i];
@@ -736,7 +738,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     if (n_periods==1) {
         while (elem) {
             if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
-                 elem->type==T_KSEXT || elem->type==T_SOLE) && (length = *((double*)elem->p_elem))) {
+                 elem->type==T_KSEXT || elem->type==T_SOLE || elem->type==T_MULT) && (length = *((double*)elem->p_elem))) {
                 if (elem->pred) {
                     beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
                     beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
@@ -757,21 +759,41 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                 }
                 ks = K1r = K1 = 0;
                 switch (elem->type) {
-                    case T_QUAD:
-                    K1r = (K1=((QUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((QUAD*)(elem->p_elem))->tilt));
+                case T_QUAD:
+                  K1r = (K1=((QUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((QUAD*)(elem->p_elem))->tilt));
+                  break;
+                case T_KQUAD:
+                  K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
+                  break;
+                case T_SEXT:
+                  K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                  break;
+                case T_KSEXT:
+                  K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                  break;
+                case T_SOLE:
+                  ks = -((SOLE*)(elem->p_elem))->ks;
+                  break;
+                case T_MULT:
+                  mult = (MULT*)elem->p_elem;
+                  if (mult->bore!=0) {
+                    double H;
+                    H = run->p_central*me_mks*c_mks/e_mks;
+                    KnL = dfactorial(mult->order)*mult->BTipL/(H*ipow(mult->bore, mult->order));
+                  } else {
+                    KnL = mult->KnL;
+                  }
+                  switch (mult->order) {
+                  case 1:
+                    K1r = (K1=KnL/length)*sin(2*(tilt=mult->tilt));
                     break;
-                    case T_KQUAD:
-                    K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
+                  case 2:
+                    K1r = KnL/length*(y-mult->dy);
                     break;
-                    case T_SEXT:
-                    K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                  default:
                     break;
-                    case T_KSEXT:
-                    K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
-                    break;
-                    case T_SOLE:
-                    ks = -((SOLE*)(elem->p_elem))->ks;
-                    break;
+                  }
+                  break;
                 }
                 if (K1r!=0 || ks!=0) {
                     integrand = (K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2 - std::complex<double>(0,1)*(1/beta[0]+1/beta[1])*ks/2.0)*sqrt(beta[0]*beta[1])/PIx2*length;
@@ -2509,7 +2531,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0, double eta0, double etap0, 
                            double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
-                           double *coord)
+                           double *coord, double pCentral)
 {
   /* compute contribution to radiation integrals */
   long isBend;
@@ -2610,107 +2632,118 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       radIntegrals->RI[4] += I5*n_periods;
     }
   } else {
+    MULT *mult = NULL;
+    double KnMult = 0;
     isBend = 1;
-    switch (elem->type) {
-    case T_QUAD:
-    case T_KQUAD:
+    if (elem->type==T_MULT) {
+      double H = 0;
+      H = pCentral*me_mks*c_mks/e_mks;
+      mult = (MULT*)elem->p_elem; /* only used if type==T_MULT */
+      if ((length = mult->length)<1e-6)
+        length = 1e-6;
+      if (mult->bore)
+        KnMult = dfactorial(mult->order)*mult->BTipL/(H*ipow(mult->bore, mult->order)*length);
+      else 
+        KnMult = mult->KnL/length;
+    }
+    if (elem->type==T_QUAD || elem->type==T_KQUAD || (elem->type==T_MULT && mult->order==1)) {
       if (!coord && !coord[0]) {
 	isBend = 0;
-	break;
+      } else {
+        switch (elem->type) {
+        case T_QUAD:
+          qptr = (QUAD*)(elem->p_elem);
+          length = qptr->length;
+          kick = qptr->xkick*qptr->xKickCalibration;
+          K1 = qptr->k1;
+          dx = qptr->dx;
+          break;
+        case T_KQUAD:
+          qptrk = (KQUAD*)(elem->p_elem);
+          length = qptrk->length;
+          kick = qptrk->xkick*qptrk->xKickCalibration;
+          K1 = qptrk->k1;
+          dx = qptrk->dx;
+          break;
+        case T_MULT:
+          K1 = KnMult;
+          dx = mult->dx;
+          break;
+        }
+        if (!(h = K1*(coord[0]-dx))) {
+          isBend = 0;
+        } else {
+          /* The kick is subtracted because a positive angle bends toward the
+           * right (negative x) 
+           */
+          angle = length*h - kick;
+          E1 = E2 = 0;
+          isBend = 1;
+        }
       }
-      switch (elem->type) {
-      case T_QUAD:
-	qptr = (QUAD*)(elem->p_elem);
-	length = qptr->length;
-	kick = qptr->xkick*qptr->xKickCalibration;
-	K1 = qptr->k1;
-	dx = qptr->dx;
-	break;
-      case T_KQUAD:
-	qptrk = (KQUAD*)(elem->p_elem);
-	length = qptrk->length;
-	kick = qptrk->xkick*qptrk->xKickCalibration;
-	K1 = qptrk->k1;
-	dx = qptrk->dx;
-	break;
-      }
-      if (!(h = K1*(coord[0]-dx))) {
-	isBend = 0;
-	break;
-      }
-      /* The kick is subtracted because a positive angle bends toward the
-       * right (negative x) 
-       */
-      angle = length*h - kick;
-      E1 = E2 = 0;
-      isBend = 1;
-      break;
-    case T_SEXT:
-    case T_KSEXT:
+    } else if (elem->type==T_SEXT || elem->type==T_KSEXT || (elem->type==T_MULT && mult->order==2)) {
       if (!coord && !coord[0]) {
 	isBend = 0;
-	break;
+      } else {
+        switch (elem->type) {
+        case T_SEXT:
+          sptr = (SEXT*)(elem->p_elem);
+          length = sptr->length;
+          K2 = sptr->k2;
+          dx = sptr->dx;
+          break;
+        case T_KSEXT:
+          sptrk = (KSEXT*)(elem->p_elem);
+          length = sptrk->length;
+          K2 = sptrk->k2;
+          dx = sptrk->dx;
+          break;
+        case T_MULT:
+          K2 = KnMult;
+          dx = mult->dx;
+          break;
+        }
+        if (!(h = K2*sqr(coord[0]-dx)/2)) {
+          isBend = 0;
+        } else {
+          K1 = K2*(coord[0]-dx);
+          angle = length*h;
+          E1 = E2 = 0;
+          isBend = 1;
+        }
       }
-      switch (elem->type) {
-      case T_SEXT:
-	sptr = (SEXT*)(elem->p_elem);
-	length = sptr->length;
-	K2 = sptr->k2;
-	dx = sptr->dx;
-	break;
-      case T_KSEXT:
-	sptrk = (KSEXT*)(elem->p_elem);
-	length = sptrk->length;
-	K2 = sptrk->k2;
-	dx = sptrk->dx;
-	break;
-      }
-      if (!(h = K2*sqr(coord[0]-dx)/2)) {
-	isBend = 0;
-	break;
-      }
-      K1 = K2*(coord[0]-dx);
-      angle = length*h;
-      E1 = E2 = 0;
-      isBend = 1;
-      break;
-    case T_SBEN:
-    case T_RBEN:
+    } else if (elem->type==T_SBEN || elem->type==T_RBEN) {
       bptr = (BEND*)(elem->p_elem);
       length = bptr->length;
       angle = bptr->angle;
       E1 = bptr->e1*(bptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
       E2 = bptr->e2*(bptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = bptr->k1;
-      break;
-    case T_KSBEND:
+    } else if (elem->type==T_KSBEND) {
       kbptr = (KSBEND*)(elem->p_elem);
       length = kbptr->length;
       angle = kbptr->angle;
       E1 = kbptr->e1*(kbptr->flags&BEND_EDGE1_EFFECTS?1:0);
       E2 = kbptr->e2*(kbptr->flags&BEND_EDGE2_EFFECTS?1:0);
       K1 = kbptr->k1;
-      break;
-    case T_CSBEND:
+    } else if (elem->type==T_CSBEND) {
       cbptr = (CSBEND*)(elem->p_elem);
       length = cbptr->length;
       angle = cbptr->angle;
       E1 = cbptr->e1*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
       E2 = cbptr->e2*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = cbptr->k1;
-      break;
-    case T_CSRCSBEND:
+    } else if (elem->type==T_CSRCSBEND) {
       csrbptr = (CSRCSBEND*)(elem->p_elem);
       length = csrbptr->length;
       angle = csrbptr->angle;
       E1 = csrbptr->e1*(csrbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
       E2 = csrbptr->e2*(csrbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = csrbptr->k1;
-      break;
-    default:
+    } else {
       isBend = 0;
-      break;
     }
+    
     if (isBend && angle!=0) {
       /* This code seems like it should be here, but including it makes the
 	 deviations from tracking results larger.

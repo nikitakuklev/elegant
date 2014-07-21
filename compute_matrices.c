@@ -22,6 +22,7 @@ VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
 VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
+VMATRIX *mult_matrix(MULT *mult, double P, long maxOrder);
 
 void checkMatrices(char *label, ELEMENT_LIST *elem)
 {
@@ -719,6 +720,7 @@ VMATRIX *compute_matrix(
     SOLE *sole; ROTATE *rot; QFRING *qfring;
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
+    MULT *mult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
@@ -1294,9 +1296,14 @@ VMATRIX *compute_matrix(
 	else
 	  elem->matrix = rfdf_matrix((RFDF*)elem->p_elem, Pref_output);
         break;
+      case T_MULT: 
+        elem->matrix = mult_matrix(mult=(MULT*)elem->p_elem, Pref_output, run->default_order);
+        if (mult->dx || mult->dy || mult->dz)
+          misalign_matrix(elem->matrix, mult->dx, mult->dy, mult->dz, 0.0);
+        break;
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
-      case T_ECOL: case T_TRCOUNT: case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
+      case T_ECOL: case T_TRCOUNT: case T_RECIRC: case T_SCRAPER: case T_CENTER: 
       case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
       case T_KICKER: case T_RFMODE: case T_REMCOR: 
       case T_DSCATTER: case T_MKICKER:
@@ -2368,4 +2375,37 @@ VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long sid
 
   return M;
 }
+
+VMATRIX *mult_matrix(MULT *mult, double P, long order)
+{
+  VMATRIX *M;
+  double length, H, KnL;
+  if ((length = mult->length)<=1e-12)
+    length = 1e-12;
+  H = P*me_mks*c_mks/e_mks;
+  if (mult->bore) {
+    KnL = dfactorial(mult->order)*mult->BTipL/(H*ipow(mult->bore, mult->order));
+  } else {
+    KnL = mult->KnL;
+  }
+  switch (mult->order) {
+  case 0: /* dipole */
+    M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, mult->tilt, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
+    break;
+  case 1: /* quadrupole */
+    M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, NULL, NULL, 0);
+    break;
+  case 2: /* sextupole */
+    M = sextupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0);
+    break;
+  case 3: /* octupole */
+    M = octupole_matrix(KnL/length, length, order, mult->tilt, 0.0);
+    break;
+  default: /* something else, use drift matrix */
+    M = drift_matrix(length, order);
+    break;
+  }
+  return M;
+}
+
 

@@ -104,4 +104,5 @@
 	double total_voltage = 0;
 	long disable = 0;
         long output_only = 0;
+        long track_for_frequency = 1;
 #end
