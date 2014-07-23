@@ -275,7 +275,7 @@ proc SourceConfiguration {configFile} {
 	}
 	2 {
 	    if [string match oak??? $env(HOSTNAME)] {
-		set gridEngine beamphysics-test
+		set gridEngine beamphysics
 	    } elseif {[info exists env(SGE_CLUSTER_NAME)] && [string compare $env(SGE_CLUSTER_NAME) "weed"]==0} {
 		set gridEngine hive
 	    } else {
