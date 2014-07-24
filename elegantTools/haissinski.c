@@ -27,8 +27,8 @@ static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
   -BBResonator=Rs=<Ohm>,frequency=<Hz>,Q=<value>[,wall=<Ohms>]} \n\
  {-charge=<C>|-particles=<value>|-bunchCurrent=<A>}\n\
  {-steps=<numberOfChargeSteps>} {-outputLastStepOnly}\n\
- {-RF=Voltage=<V>,harmonic=<value>|-length=<s>}\n\
- {-harmonicCavity=Voltage=<V>,factor=<harmonicFactor>}\n\
+ {-RF=Voltage=<V>,harmonic=<value>,phase=<value>|-length=<s>}\n\
+ {-harmonicCavity=Voltage=<V>,harmonicFactor=<harmonicFactor>,phase=<value>}\n\
  {-superPeriods=<number>} {-energy=<GeV>} \n\
  -integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,\n\
 iterations=<number>,fraction=<value>,tolerance=<value> \n\
@@ -50,11 +50,14 @@ BBResonator    Instead of a wake function or circuit model, one can specify the\
                parameters of a broad-band resonator, optionally with a resistive\n\
                wall term (implemented as a simple resistor as in -model).\n\
 RF             RF parameters that control the length of the zero-current beam.\n\
+               If one want to solve from a potential with the main rf at a particular phase,\n\
+               then the phase (in radians) must be given.\n\
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
                in seconds directly.\n\
 harmonicCavity If -RF is given, one may also specify a higher-harmonic cavity\n\
-               for possible bunch shortening.  If you want to lengthen the bunch,\n\
-               give a negative voltage.\n\
+               for possible bunch shortening or lengthening.\n\
+               In general the bunch length should be solved from a non-harmonic potential,\n\
+               thus the phase (in radians) of this harmonic cavity must be given.\n\
 superPeriods   The number of superiods of lattice file in the actual machine.\n\
                Default is 1.\n\
 energy         The beam energy at which to perform computations, if it is desired\n\
@@ -116,22 +119,35 @@ typedef struct {
    These factors allows conversion to SI units. */
   double xFactor, yFactor;
 } FUNCTION;
+typedef struct {
+  long superPeriods;
+  double desiredEnergyMeV;
+  double energyMeV;
+  double momentumCompaction;
+  double U0;
+  double sigmaDelta;
+  double sigmaE;
+  double circumference;
+  double revFrequency;
+} RINGPARAMETERS;
 
 #define ITERATION_LIMITS 1000
 
 void printFunction( char *label, FUNCTION *data);
 void initializeFunction( FUNCTION *data);
-void readRingParameters( char *twissFile, long superPeriods, double desiredEnergyMeV,
-                        double *energyMeV, double *momentumCompaction,
-                        double *U0, double *sigmaDelta,
-                        double *circumference);
+void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETERS *parameters);
+
 /* returned results is the first parameter. */
 void getWakeFunction( FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
                      double delta, long points);
 void integrateWakeFunction( FUNCTION *stepResponse, FUNCTION *wake);
 void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points);
 void getInitialDensity( FUNCTION *density, long points, double deltaTime, double charge, double length);
-void copyDensity( FUNCTION *target, FUNCTION *source);
+void copyFunction( FUNCTION *target, FUNCTION *source);
+void getRfVoltage( FUNCTION *rfVoltageFn, double rfVoltage, double rfPhase, double rfHarmonic,
+                   double rfHigherHarmonicVoltage, double rfHigherHarmonicPhase, double rfHigherHarmonic,
+                    RINGPARAMETERS *parameters);
+void getRfPotential( FUNCTION *rfPotential, FUNCTION *rfVoltageFn, RINGPARAMETERS *parameters);
 void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *Vinduced,
                   FUNCTION *density, FUNCTION *wake);
@@ -139,16 +155,19 @@ void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
                            FUNCTION *Vinduced,
                            FUNCTION *density, double L, double R);
 void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
-                          FUNCTION *potentialDistortion, double length, double VrfDot);
+                            FUNCTION *rfPotentialFn, FUNCTION *potentialDistortion, 
+                            double length, double VrfDot, long singleRF,
+                            RINGPARAMETERS *ringParameters );
 void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double charge);
 void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
-                  FUNCTION *potential, FUNCTION *potentialDistortion, 
+                  FUNCTION *potential, FUNCTION *rfPotential, FUNCTION *rfVoltageFn, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
                   long converged);
 void makeBBRWakeFunction(FUNCTION *wake, double dt, long points, 
                          double Q, double R, double omega, double rw, double T0);
 
 long verbosity;
+
 
 int main( int argc, char **argv)
 {
@@ -157,24 +176,25 @@ int main( int argc, char **argv)
   char *twissFile, *resultsFile;
   SDDS_DATASET resultsPage;
   double particles, charge, finalCharge, length;
-  long steps, converged, superPeriods;
+  long steps, converged;
   int32_t points, iterationLimits;
   long useWakeFunction=0, intermediateSolutions;
-  double rfVoltage, rfHarmonic;
-  double energyMeV, momentumCompaction, U0, sigmaE, circumference;
+  double rfVoltage, rfHarmonic, rfPhase;
+  RINGPARAMETERS ringParameters;
   double startTime, deltaTime;
   unsigned long dummyFlags;
   FUNCTION density, densityOld, diff, wake, stepResponse;
-  FUNCTION potential, potentialDistortion, distribution, Vinduced;
+  FUNCTION potential, rfVoltageFn, rfPotential, potentialDistortion, distribution, Vinduced;
   char *wakeFile, *tCol, *wCol;
-  double revFrequency, syncPhase, syncTune, syncAngFrequency;
+  double syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN, inductance, resistance;
-  double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0;
+  double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0, rfHigherHarmonicPhase=0;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction, lastMaxDifference;
   double maxDensity;
   double averageCurrent=0.0, bunchCurrent=0.0, desiredEnergy;
   long useBBR = 0;
   double BBR_R, BBR_Q, BBR_frequency, BBR_rw;
+  long singleRF=1;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -190,6 +210,7 @@ int main( int argc, char **argv)
   initializeFunction( &wake );
   initializeFunction( &stepResponse );
   initializeFunction( &potential );
+  initializeFunction( &rfPotential );
   initializeFunction( &potentialDistortion );
   initializeFunction( &distribution );
   initializeFunction( &Vinduced );
@@ -209,10 +230,10 @@ int main( int argc, char **argv)
   intermediateSolutions=0;
   fraction = 0.01;
   wakeFile = tCol = wCol = NULL;
-  superPeriods = 1;
   desiredEnergy = 0.0;
   outputLastStepOnly = 0;
-  
+  ringParameters.superPeriods = 1;
+
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
       delete_chars(scanned[i].list[0], "_");
@@ -247,7 +268,7 @@ int main( int argc, char **argv)
       case SUPERPERIODS:
         if (scanned[i].n_items<2)
           bomb("invalid -superPeriods syntax", NULL);
-        get_long(&superPeriods, scanned[i].list[1]);
+        get_long(&(ringParameters.superPeriods), scanned[i].list[1]);
         break;
       case ENERGY:
         if (scanned[i].n_items<2)
@@ -273,23 +294,28 @@ int main( int argc, char **argv)
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "voltage", SDDS_DOUBLE, &rfVoltage, 1, 0,
                           "harmonic", SDDS_DOUBLE, &rfHarmonic, 1, 0,
+                          "phase", SDDS_DOUBLE, &rfPhase, 1, 0,
                           NULL) ||
             rfVoltage<=0 || rfHarmonic<=0)
-          bomb("invalid -rf syntax/values", "-rf=voltage=<V>,harmonic=<value>");
+          bomb("invalid -rf syntax/values", "-rf=voltage=<V>,harmonic=<value>,phase=<value>");
         break;
       case HARMONIC_CAVITY:
         if (scanned[i].n_items<2)
           bomb("invalid -harmonicCavity syntax", NULL);
         scanned[i].n_items--;
         rfHigherHarmonic = rfHigherHarmonicVoltage = 0;
+        singleRF = 0;
+	/* harmonic and factor are the same thing, a low integer */
+	/* maybe later we'll change the type  to integer */
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "voltage", SDDS_DOUBLE, &rfHigherHarmonicVoltage, 1, 0,
                           "harmonic", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
                           "factor", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
+                          "phase", SDDS_DOUBLE, &rfHigherHarmonicPhase, 1, 0,
                           NULL) ||
             rfHigherHarmonic<=0)
           bomb("invalid -harmonicCavity syntax/values", 
-               "-harmonicCavity=voltage=<V>,harmonicFactor=<value>");
+               "-harmonicCavity=voltage=<V>,harmonicFactor=<value>,phase=<value>");
         break;
       case INTEGRATION:
         scanned[i].n_items--;
@@ -371,43 +397,51 @@ int main( int argc, char **argv)
     if (!rfVoltage)
       bomb("You must give -rf if you give -harmonicCavity", NULL);
   }
-  readRingParameters( twissFile, superPeriods, desiredEnergy*1e3,
-                     &energyMeV, &momentumCompaction,
-                     &U0, &sigmaE, &circumference);
-  revFrequency = c_mks/ circumference;
+  readRingParameters( twissFile, desiredEnergy*1e3, &ringParameters);
+  ringParameters.revFrequency = c_mks/ ringParameters.circumference;
 
   if (bunchCurrent)
-    finalCharge = bunchCurrent/revFrequency;
+    finalCharge = bunchCurrent/ringParameters.revFrequency;
   if (!finalCharge) 
     finalCharge = particles * e_mks;
   if (!particles)
     particles = finalCharge/ e_mks;
 
   if (!length) {
-    syncPhase = asin( U0/ rfVoltage);
-    syncTune = sqrt( momentumCompaction * rfHarmonic * cos(syncPhase) /
-                    2 / PI * rfVoltage / (energyMeV * 1e6));
-    if (rfHigherHarmonic)
+    /* These calculations are correct only in the case of harmonic
+       potential, for which it is the user's responsibility to understand,
+       that, depending on the harmonic cavity's settings, the potential can be very
+       non-harmonic */
+    syncPhase = asin( ringParameters.U0/ rfVoltage);
+    syncTune = sqrt( ringParameters.momentumCompaction * rfHarmonic * cos(syncPhase) /
+                    2 / PI * rfVoltage / (ringParameters.energyMeV * 1e6));
+    /*    if (rfHigherHarmonic)
       syncTune 
         *= sqrt(1 + (rfHigherHarmonicVoltage/rfVoltage)*rfHigherHarmonic/cos(syncPhase));
-    syncAngFrequency = syncTune * 2 * PI * revFrequency;
-    length = momentumCompaction * sigmaE/ syncAngFrequency; /* length is seconds */
-    /* derivative w.r.t time */
-    VrfDot = rfVoltage * 2 * PI * rfHarmonic * revFrequency * 
+        syncAngFrequency = syncTune * 2 * PI * ringParameters.revFrequency; */
+    /* Even with HHC, start with a length from main rf system running only. */
+    length = ringParameters.momentumCompaction * ringParameters.sigmaE/ syncAngFrequency; 
+
+    /* length is seconds */
+    /* derivative w.r.t time. Again this is valid only when the total rf potential is harmonic */
+    VrfDot = rfVoltage * 2 * PI * rfHarmonic * ringParameters.revFrequency * 
       (cos(syncPhase) + rfHigherHarmonicVoltage/rfVoltage*rfHigherHarmonic);
   }
   else {
-    syncAngFrequency = momentumCompaction * sigmaE/ length; /* length is seconds */
-    syncTune = syncAngFrequency / 2 / PI / revFrequency;
-    VrfDot = sqr(2 * PI) * revFrequency * sqr(syncTune) * (energyMeV * 1e6)/
-      momentumCompaction;
+    /* only useful when the total rf potential is harmonic */
+    /* When length is specified we don't know the RF voltage or the harmonic. However Vrfdot 
+       and f_s can be calculated. The rf potential can be constructed. */
+    syncAngFrequency = ringParameters.momentumCompaction * ringParameters.sigmaE/ length; /* length is seconds */
+    syncTune = syncAngFrequency / 2 / PI / ringParameters.revFrequency;
+    VrfDot = sqr(2 * PI) * ringParameters.revFrequency * sqr(syncTune) * (ringParameters.energyMeV * 1e6)/
+      ringParameters.momentumCompaction;
   }
   if (deltaTime==0)
     deltaTime = length/100;
   
   if (!useWakeFunction && !useBBR) {
     if ( inductance==0 && ZoverN != 0) {
-      inductance = ZoverN * circumference / 2 / PI/ c_mks;
+      inductance = ZoverN * ringParameters.circumference / 2 / PI/ c_mks;
     }
   }
   
@@ -424,7 +458,7 @@ int main( int argc, char **argv)
       fprintf(stderr, "Making BBR wake\n");
 #endif
 
-      makeBBRWakeFunction(&wake, deltaTime, points, BBR_Q, BBR_R, BBR_frequency*PIx2, BBR_rw, 1/revFrequency);
+      makeBBRWakeFunction(&wake, deltaTime, points, BBR_Q, BBR_R, BBR_frequency*PIx2, BBR_rw, 1/ringParameters.revFrequency);
 
 #ifdef DEBUG
       fp = fopen("BBRWake.sdds", "w");
@@ -444,21 +478,38 @@ int main( int argc, char **argv)
       getWakeFunction( &wake, wakeFile, tCol, wCol, deltaTime, points);
     }
       
-    /* integrate Wake function for step response
+    /* integrate Wake function for step response of the special solver
      */
     integrateWakeFunction( &stepResponse, &wake);
   } 
 
   setupResultsFile( &resultsPage, resultsFile, points);
-  
-  /* Loop over charge steps
+
+  /* Loop over charge steps. The iterations in strength are required for convergence.
    */
   for (i=1; i<=steps ; i++) {
     charge = 1.0 * i/ steps * finalCharge;
+    fflush(stdout);
     if (i==1) {
+      /* with HHC on, the value of length is from main rf system alone. */
       getInitialDensity( &density, points, deltaTime, charge, length);
-    }
+
+      if (verbosity > 1)
+        printFunction("Initial density",&density);
+      copyFunction( &rfVoltageFn, &density );
+      rfPhase = syncPhase;
+      getRfVoltage( &rfVoltageFn,  rfVoltage,  rfPhase,  rfHarmonic,
+                    rfHigherHarmonicVoltage,  rfHigherHarmonicPhase,  rfHigherHarmonic,
+                    &ringParameters);
+      if (verbosity > 1)
+        printFunction("rf voltage",&rfVoltageFn);
+      getRfPotential( &rfPotential, &rfVoltageFn,  &ringParameters);
+      if (verbosity > 1)
+        printFunction("rf potential",&rfPotential);
+     }
     else {
+      /* use the previous solution (of lower charge) to make a new starting
+	 distribution */
       for (j=0;j<points;j++) {
         density.y[j] *= 1.0 * i/ (i-1);
       }
@@ -472,7 +523,9 @@ int main( int argc, char **argv)
     }
     lastMaxDifference = DBL_MAX;
     for (j=0; j<iterationLimits; j++) {
-      copyDensity( &densityOld, &density );
+      copyFunction( &densityOld, &density );
+      if (verbosity > 2) 
+        printFunction("density", &density);
       /* Calculate potential well distortion term. 
          Induced voltage is returned as well.
        */
@@ -483,16 +536,28 @@ int main( int argc, char **argv)
         getPotentialDistortionFromModel( &potentialDistortion, &Vinduced, 
                               &density, inductance, resistance);
       }
-      /* Calculate distribution exponential (Use K. Bane's expression in
-         SLAC-PUB-5177 p. 30)
-       */
-      calculateDistribution( &distribution, &potential, &potentialDistortion,
-                           length, VrfDot);
+      if (verbosity > 2) {
+        printFunction("V induced", &Vinduced);
+        printFunction("Potential distortion", &potentialDistortion);
+      }
+       /* Calculate distribution exponential (Use K. Bane's expression in
+         SLAC-PUB-5177 p. 30) Even if we have harmonic cavities, this call
+         will produce an initial estimate of length and distribution to
+         enter into the iterations */
+      calculateDistribution( &distribution, &potential, &rfPotential, &potentialDistortion,
+                             length, VrfDot, singleRF, &ringParameters);
+      if (verbosity > 2) { 
+        printFunction("Total potential", &potential);
+        printFunction("New distribution", &distribution);
+      }
       /* Normalize for new density function
        */
       normalizeDensityFunction( &density, &distribution, charge);
+      if (verbosity > 2) 
+        printFunction("New density", &density);
       /* mix old density with new density to see if numerical instability
-       is reduced */
+       is reduced. This may or may not work. It may be removed later, or
+      a different convergence scheme could be dreamed up. */
       for (k=0;k<points;k++) {
         density.y[k] = fraction * density.y[k] + (1 - fraction) * densityOld.y[k];
       }
@@ -534,7 +599,7 @@ int main( int argc, char **argv)
       }
       free(diff.y);
       if (intermediateSolutions) {
-        writeResults( &resultsPage, &density, &potential, &potentialDistortion, 
+        writeResults( &resultsPage, &density, &potential, &rfPotential, &rfVoltageFn, &potentialDistortion, 
                      &Vinduced, charge, averageCurrent, converged );
       }
       if (maxDifference>lastMaxDifference)
@@ -542,9 +607,9 @@ int main( int argc, char **argv)
       lastMaxDifference = maxDifference;
     }
     /* write results whether converged or not */
-    averageCurrent = charge * revFrequency;
+    averageCurrent = charge * ringParameters.revFrequency;
     if (!outputLastStepOnly || i==steps) 
-      writeResults( &resultsPage, &density, &potential, &potentialDistortion, 
+      writeResults( &resultsPage, &density, &potential, &rfPotential, &rfVoltageFn, &potentialDistortion, 
                    &Vinduced, charge, averageCurrent, converged );
   }
   if (!SDDS_Terminate(&resultsPage))
@@ -560,11 +625,7 @@ void initializeFunction( FUNCTION *data) {
   data->xFactor = data->yFactor = 0.0;
 }
 
-void readRingParameters( char *twissFile, long superPeriods, 
-                        double desiredEnergyMeV, double *energyMeV, 
-                        double *momentumCompaction,
-                        double *U0, double *sigmaE,
-                        double *circumference) {
+void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETERS *parameters) {
   SDDS_TABLE twissPage;
   double pCentral, *s;
   long elements;
@@ -581,26 +642,26 @@ void readRingParameters( char *twissFile, long superPeriods,
   SDDS_ReadPage(&twissPage);
   if (!SDDS_GetParameters(&twissPage,
                           "pCentral", &pCentral,
-                          "alphac", momentumCompaction,
-                          "U0", U0,
-                          "Sdelta0", sigmaE,
+                          "alphac", &(parameters->momentumCompaction),
+                          "U0", &(parameters->U0),
+                          "Sdelta0", &(parameters->sigmaE),
                           NULL) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  *energyMeV = sqrt(sqr(pCentral) + 1) * me_mev;
+  parameters->energyMeV = sqrt(sqr(pCentral) + 1) * me_mev;
   elements = SDDS_CountRowsOfInterest(&twissPage);
   s = SDDS_GetColumnInDoubles(&twissPage, "s");
-  *circumference = s[elements-1]*superPeriods;
-  *U0 *= 1e6*superPeriods; /* units in eV */
+  parameters->circumference = s[elements-1] * parameters->superPeriods;
+  parameters->U0 *= 1e6*parameters->superPeriods; /* units in eV */
 
   if (desiredEnergyMeV>0) {
     if (verbosity) {
       fprintf(stdout, "Scaling from %f MeV to %f MeV\n",
-              *energyMeV, desiredEnergyMeV);
+              parameters->energyMeV, desiredEnergyMeV);
       fflush(stdout);
     }
-    *U0 *= ipow(desiredEnergyMeV/(*energyMeV), 4);
-    *sigmaE *= desiredEnergyMeV/(*energyMeV);
-    *energyMeV = desiredEnergyMeV;
+    parameters->U0 *= ipow(desiredEnergyMeV/(parameters->energyMeV), 4);
+    parameters->sigmaE *= desiredEnergyMeV/(parameters->energyMeV);
+    parameters->energyMeV = desiredEnergyMeV;
   }
 
   if (!SDDS_Terminate(&twissPage))
@@ -711,6 +772,12 @@ void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) 
       0>SDDS_DefineColumn(resultsPage, "PotentialWellDistortion", NULL, NULL,
                           "Wake potential distortion term in distribution",
                           NULL, SDDS_DOUBLE, 0) ||
+      0>SDDS_DefineColumn(resultsPage, "RfPotentialWell", NULL, NULL,
+                          "Potential well from RF voltage",
+                          NULL, SDDS_DOUBLE, 0) ||
+      0>SDDS_DefineColumn(resultsPage, "RfVoltage", NULL, "V",
+                          "RF voltage",
+                          NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(resultsPage, "PotentialWell", NULL, NULL,
                           "Total Wake potential term in distribution",
                           NULL, SDDS_DOUBLE, 0))
@@ -739,13 +806,15 @@ void getInitialDensity( FUNCTION *density, long points, double deltaTime,
   }
 }
 
-void copyDensity( FUNCTION *target, FUNCTION *source) {
+void copyFunction( FUNCTION *target, FUNCTION *source) {
   long i;
   double *ptr;
   
   ptr = target->y;
   /* This assignment transfers all values, including
-     the pointer to the double array, which we had to preserve. 
+     the pointer to the double array, which we don't want. We want to keep the original
+     pointer from creation in order not to cause memory leaks. Espcially if this
+     function is called repeatedly for the same FUNCTION structure.
      */
   *target = *source;
   target->y = ptr;
@@ -757,16 +826,59 @@ void copyDensity( FUNCTION *target, FUNCTION *source) {
   }
 }
 
+void getRfVoltage( FUNCTION *rfVoltageFn, double rfVoltage, double rfPhase, double rfHarmonic,
+                   double rfHigherHarmonicVoltage, double rfHigherHarmonicPhase, double rfHigherHarmonic,
+                   RINGPARAMETERS *parameters) {
+
+  long i;
+  double time;
+  /* array y was allocated from the previous call to copyFunction */
+
+  /* calculate rf voltage */
+  for (i=0; i<rfVoltageFn->points;i++) {
+    time = (i + rfVoltageFn->offset) * rfVoltageFn->xDelta; 
+    rfVoltageFn->y[i] = rfVoltage * sin( 2 * PI * rfHarmonic * parameters->revFrequency * time + rfPhase);
+    if (rfHigherHarmonicVoltage)
+      rfVoltageFn->y[i] += rfHigherHarmonicVoltage * sin( 2 * PI * rfHigherHarmonic * rfHarmonic * parameters->revFrequency * time + rfHigherHarmonicPhase) ;
+  }
+}
+
+void getRfPotential( FUNCTION *pot, FUNCTION *rfVoltage, RINGPARAMETERS *parameters) {
+
+  long i;
+  double *ptr, P0;
+
+  ptr = pot->y; 
+  *pot = *rfVoltage;
+  pot->y = ptr; /* to prevent memory leak */
+  pot->y = SDDS_Malloc( sizeof(*pot->y) * pot->points);
+  pot->yFactor = 1;
+  
+  /* integrate (rfVoltage - U0) */
+  pot->y[0] = 0.0;
+  for (i=1; i < pot->points; i++) 
+    pot->y[i] = pot->y[i-1] + pot->xDelta * 
+      ( ( rfVoltage->y[i] + rfVoltage->y[i-1] ) / 2.0 - parameters->U0 );
+ 
+  /* potential is zero at the index of offset, which is the modpoint of the array */
+  P0 = pot->y[ - pot->offset ]; /* a variable needs to be created for modifying the array */
+  for (i=0; i < pot->points; i++) 
+    pot->y[i] -= P0;
+
+}
+
 void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *Vind,
                   FUNCTION *density, FUNCTION *wake) {
   long i, j, index;
   double *ptr;
-  double P0;
   
+  /* There are two results from this call, the induced voltage Vind and its
+     integral, the potential potentialDistortion. */
+
   ptr = potentialDistortion->y;
   /* This assignment transfers all values, including
-     the pointer to the double array, which we preserved.
+     the pointer to the double array, which we want to keep.
      */
   *potentialDistortion = *density;
   potentialDistortion->y = ptr;
@@ -777,7 +889,7 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
   }
   ptr = Vind->y;
   /* This assignment transfers all values, including
-     the pointer to the double array, which we preserved.
+     the pointer to the double array, which we want to keep.
      */
   *Vind = *density;
   Vind->y = ptr;
@@ -787,7 +899,7 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
     Vind->y = SDDS_Malloc( sizeof(*Vind->y) * Vind->points);
   }
 
-/* calculate induced voltage. */
+/* calculate induced voltage as a convolution. i.e. a n^2 calculation. */
  for (i=0; i<density->points;i++) {
     Vind->y[i] = 0.0;
     for (j=0; j<density->points;j++) {
@@ -796,6 +908,9 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
          may be zero, btw. */
       index = i - wake->offset - j;
       if ( index<0 ) break;
+      /* integral as a sum of integrands. We can optimzie this later,
+	 e.g. move the xDelta outside the inner loop, and use the 
+      extended trapezoid integral, which requires more index calculations.*/
       Vind->y[i] += wake->y[index] * density->y[j] * density->xDelta;
     }
   }
@@ -806,12 +921,13 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
   }
   potentialDistortion->y[0] = 0.0;
   for (i=1; i<potentialDistortion->points; i++) {
+      /* integral with trapeze rule. Can improve this with modified trapezoid integral. p. 885, Abramowitz and Stegun*/
     potentialDistortion->y[i] = potentialDistortion->y[i-1] + potentialDistortion->xDelta * 
       (Vind->y[i-1] + Vind->y[i]) / 2.0;
   }
   
 /* potential at synchronous phase and middle of original
-   density distribution is defined to be zero */
+   density distribution is defined to be zero. Why the statements below are commented? */
 /*
   P0 = potentialDistortion->y[-potentialDistortion->offset];
   for (i=0; i<potentialDistortion->points; i++) {
@@ -853,10 +969,10 @@ void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
   charge = SDDS_Malloc( sizeof(*charge) * density->points);
   charge[0] = 0.0;
   for (i=1; i<potentialDistortion->points; i++) {
-    charge[i] = charge[i-1] + density->xDelta *
-      (density->y[i-1] + density->y[i]) / 2.0;
+    charge[i] = charge[i-1] + density->xDelta * (density->y[i-1] + density->y[i]) / 2.0;
   }
-  
+  /* For a model that includes inductance, the potential is calculated first, then
+     the Vind is the derivatve. */
   for (i=0; i<potentialDistortion->points; i++) {
     potentialDistortion->y[i] = L * density->y[i] + R * charge[i];
   }
@@ -875,14 +991,15 @@ void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
 }
 
 void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
-                          FUNCTION *potentialDistortion,
-                          double length, double VrfDot) {
+                            FUNCTION *rfPotentialFn, FUNCTION *potentialDistortion,
+                            double length, double VrfDot, long singleRF, 
+                            RINGPARAMETERS *parameters) {
   long i;
-  double *ptr, time;
+  double rfPotential, *ptr, time;
 
   ptr = potential->y;
-  /* This assignment transfers all values, including
-     the pointer to the double array, which we preserved.
+  /* This assignment transfers all values of the data structure, including
+     the pointer to the double array, which we want to keep.
      */
   *potential = *potentialDistortion;
   potential->y = ptr;
@@ -905,8 +1022,15 @@ void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
   }
   for (i=0; i<potential->points; i++) {
     time = distribution->xStart + i * distribution->xDelta;
-    potential->y[i] = sqr(time)/ 2.0/ sqr(length) + 
-      1.0/ VrfDot/ sqr(length) * potentialDistortion->y[i];
+    /* this works only with single RF and a harmonic potential. With a harmonic cavity
+     where the total potential is non-harmonic this is not right. */
+    if (singleRF) {
+      rfPotential = sqr(time)/ 2.0/ sqr(length);
+      potential->y[i] = rfPotential + 1.0/ VrfDot/ sqr(length) * potentialDistortion->y[i];
+    }
+    else {
+      potential->y[i] = parameters->revFrequency / (parameters->energyMeV * 1e6 * parameters->momentumCompaction * sqr(parameters->sigmaE) ) * (rfPotentialFn->y[i] + potentialDistortion->y[i]);
+    }
     distribution->y[i] = exp( - potential->y[i]);
   }
 }
@@ -918,6 +1042,7 @@ void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double
   /* integrate exp(-H) to find normalization constant */
   integral = 0.0;
   for (i=0; i<distribution->points; i++) {
+    /* could use more sophistication */
     integral += distribution->y[i];
   }
   integral *= distribution->xDelta;
@@ -927,7 +1052,7 @@ void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double
 }
 
 void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
-                  FUNCTION *potential, FUNCTION *potentialDistortion, 
+                  FUNCTION *potential, FUNCTION *rfPotential, FUNCTION *rfVoltageFn, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
                   long converged) {
   long i;
@@ -950,7 +1075,9 @@ void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density,
       !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, current, density->points, "Current")  ||
       !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, actualDensity, density->points, "Density") ||
       !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, Vind->y, density->points, "WakeField") ||
+      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfVoltageFn->y, density->points, "RfVoltage") ||
       !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potential->y, density->points, "PotentialWell") ||
+      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfPotential->y, density->points, "RfPotentialWell") ||
       !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potentialDistortion->y, density->points, "PotentialWellDistortion"))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if ( !SDDS_WritePage(resultsPage))
