@@ -295,7 +295,7 @@ long doFrequencyMap(
 	      if (myid==1) {
 		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
 		if ((newPercentage-oldPercentage)>=1) {
-		  fprintf(stdout, "About %.1f%% done\n", newPercentage);
+		  fprintf(stdout, "About %.1f%% done after %lg s wall time\n", newPercentage, delapsed_time());
 		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}
