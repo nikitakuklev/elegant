@@ -189,8 +189,10 @@ long loadModulationTable(double **t, double **value, char *file, char *timeColum
       !(count=SDDS_CountRowsOfInterest(&SDDS_table)) ||
       !(*value = SDDS_GetColumnInDoubles(&SDDS_table, amplitudeColumn)) ||
       !(*t = SDDS_GetColumnInDoubles(&SDDS_table, timeColumn)) ||
-      !SDDS_Terminate(&SDDS_table))
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      !SDDS_Terminate(&SDDS_table)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    bombElegant("Unable to read required data from modulation file.", NULL);
+  }
   for (i=1; i<count; i++)
     if ((*t)[i-1]>=(*t)[i])
       bombElegant("time values not monotonically increasing for modulation data", NULL);
