@@ -50,13 +50,13 @@ if [expr $H==0] {
 # combine repeated elements 
 exec sddsshift $rootname.twi -pipe=out -column=s -shift=1 \
     | sddsprocess -pipe \
-    -match=col,ElementType=*QUAD,ElementType=*BEN*,|,ElementType=*DRIF,|,ElementType=*SEXT*,|,ElementName=*OCT,| \
+    -match=col,ElementType=*QUAD,ElementType=*BEN*,|,ElementType=*DRIF,|,ElementType=*SEXT*,|,ElementType=*OCT,| \
     | sddsbreak -pipe -change=ElementName \
     | sddsprocess -pipe \
     -process=Element*,first,%s -process=Shifteds,first,s \
     | sddscollapse -pipe=in $rootname.twi.1 
 
-eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*QUAD,ElementType=*BEN*,|,ElementType=*DRIF,|,ElementType=*SEXT*,|,ElementName=*OCT,| \
+eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*QUAD,ElementType=*BEN*,|,ElementType=*DRIF,|,ElementType=*SEXT*,|,ElementType=*OCT,| \
   -match=column,ElementParameter=L \
   -filter=col,ParameterValue,0,0,! \
   | sddsbreak -pipe -change=ElementName \
