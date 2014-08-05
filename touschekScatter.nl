@@ -28,6 +28,7 @@
         STRING initial = NULL;
         STRING output = NULL;
         long nbins = 100;
+        double sbin_step = 1;
         long n_simulated = 5E6;
         double ignored_portion = 0.01;
         long i_start = -1;
