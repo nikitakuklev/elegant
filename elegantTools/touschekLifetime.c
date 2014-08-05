@@ -72,12 +72,12 @@
 #include "constants.h"
 
 static char *USAGE = "touschekLifetime <resultsFile>\n\
- -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
+ -twiss=<twissFile> -aperture=<momentumApertureFile> [-beam=<beamProfile>] \n\
  {-charge=<nC>|-particles=<number>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
- [-ignoreMismatch]\n\
+ [-method=[0/1] 0-simpson's rule; 1-direct integral] [-ignoreMismatch]\n\
 Program by A. Xiao.  (This is version 6, January 2013, A. Xiao)";
 
 #define VERBOSE 0
@@ -94,7 +94,9 @@ Program by A. Xiao.  (This is version 6, January 2013, A. Xiao)";
 #define IGNORE_MISMATCH 11
 #define EMITXINPUT 12
 #define EMITYINPUT 13
-#define N_OPTIONS 14
+#define METHOD 14
+#define BEAMPROF 15
+#define N_OPTIONS 16
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -110,12 +112,16 @@ char *option[N_OPTIONS] = {
   "deltalimit",
   "ignoreMismatch",
   "emitxinput",
-  "emityinput"
+  "emityinput",
+  "method",
+  "beam"
 };
 
 void TouschekLifeCalc();  
-void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long verbosity); 
-double Fvalue (double t, double tm, double b1, double b2);
+double FIntegral_0(double *tm, double *B1, double *B2, long index, long verbosity); 
+double Fvalue_0 (double t, double tm, double b1, double b2);
+double FIntegral_1(double *tm, double *B1, double *B2, long index, long verbosity); 
+double Fvalue_1 (double t, double tm, double b1, double b2);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 void limitMomentumAperture(double *dpp, double *dpm, double limit, long n);
  
@@ -124,31 +130,34 @@ long plane_orbit = 0;
 double *s, *s2, *dpp, *dpm;
 double *betax, *alphax, *etax, *etaxp;
 double *betay, *alphay, *etay, *etayp;
-double *tmP, *tmN, *B1, *B2, *FP, *FN, *coeff;
+double *tmP, *tmN, *B1, *B2, *FP, *FN;
 double tLife;
 long elements, elem2;
 long *eOccur1;
-double pCentral, sz, sigmap; 
-double NP, emitx, emity; 
+long nSlice;
+double pCentral, gamma0, NP, *npSlice, *szSlice, *sigmapSlice, *exSlice, *eySlice, *gammaSlice; 
 char **eName1, **eName2, **eType1;
-long ignoreMismatch = 0;
+long ignoreMismatch = 0, method=0;
+
 #define NDIV 10000;
+#define MAXREGION 30;
+#define STEPS 100;
 
 #define RF_LIMIT_APERTURE 0x01UL
 
 int main( int argc, char **argv)
 {
   SCANNED_ARG *scanned;
-  char *inputfile1, *inputfile2, *outputfile;
-  SDDS_DATASET twissPage, aperPage, resultsPage;
+  char *twissInput, *MAInput, *outputfile, *beamInput;
+  SDDS_DATASET twissPage, aperPage, resultsPage, beamProfPage;
   long verbosity;
   double etaymin, etaymax;
   long i;
   unsigned long rfFlags;
   double emitInput, sigmaDeltaInput, rfVoltage, rfHarmonic, eyInput;
   double alphac, U0, circumference, EMeV;
-  double coupling, emitx0, charge;
-  short has_ex0 = 0, has_Sdelta0 = 0;
+  double coupling, emitx0, charge, sz, sigmap, emitx, emity; 
+  short has_ex0 = 0, has_Sdelta0 = 0, has_beam = 0;
   double deltaLimit = 0;
   
   /****************************************************\
@@ -160,19 +169,19 @@ int main( int argc, char **argv)
   if (argc == 1)
     bomb(NULL, USAGE);
 
-  inputfile1  =  NULL;
-  inputfile2  =  NULL;  
+  twissInput  =  NULL;
+  MAInput  =  NULL;  
   outputfile  =  NULL;
+  beamInput = NULL;
   verbosity = 0;
   NP = 0;
   charge = 0;
   coupling = 0;
   sz = 0;
-  emitInput = 0;
+  emitInput = eyInput = emitx = emity = 0;
   sigmaDeltaInput = 0;
   rfVoltage = rfHarmonic = 0;
   rfFlags = 0;
-  eyInput = 0;
   
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
@@ -237,13 +246,19 @@ int main( int argc, char **argv)
       case TWISSFILE:
         if (scanned[i].n_items<2)
           bomb("invalid -twiss syntax", NULL);
-        inputfile1  =  scanned[i].list[1];
+        twissInput  =  scanned[i].list[1];
         break;
       case APERFILE:
         if (scanned[i].n_items<2)
           bomb("invalid -twiss syntax", NULL);
-        inputfile2  =  scanned[i].list[1];
+        MAInput  =  scanned[i].list[1];
         break;
+      case BEAMPROF:
+        if (scanned[i].n_items<2)
+          bomb("invalid -beam syntax", NULL);
+        beamInput  =  scanned[i].list[1];
+	has_beam = 1;
+        break;	
       case DELTALIMIT:
         if (scanned[i].n_items != 2 || !get_double(&deltaLimit, scanned[i].list[1]) || deltaLimit<=0)
           bomb("invalid -deltaLimit syntax/values", "-deltaLimit=<percent>");        
@@ -252,6 +267,11 @@ int main( int argc, char **argv)
       case IGNORE_MISMATCH:
 	ignoreMismatch = 1;
 	break;
+      case METHOD:
+        if (scanned[i].n_items > 1 ) {
+          get_long(&method, scanned[i].list[1]);
+        } 
+        break;
       default:
         fprintf(stderr, "unknown option \"%s\" given\n", scanned[i].list[0]);
         exit(1);
@@ -265,8 +285,8 @@ int main( int argc, char **argv)
         bomb("too many filenames given", NULL);
     }
   }
-  if (charge && NP) {
-    bomb("Options charge and particles cannot be both specified.",NULL);
+  if ((charge && NP) || (!charge && !NP && !has_beam)) {
+    bomb("Give one and only one of bunch charge input.",NULL);
   }
   if (!charge) 
     charge = NP * e_mks;
@@ -275,17 +295,17 @@ int main( int argc, char **argv)
     charge /= 1e9; 
     NP = charge/ e_mks;
   }
-  if ((!coupling && !eyInput) || (coupling && eyInput))
+  if ((!coupling && !eyInput && !has_beam) || (coupling && eyInput))
     bomb("Give one and only one of coupling or eyInput",NULL);
-  if (!sz && !rfVoltage) 
-    bomb("Specify either the bunch length or the rf voltage.", NULL);
+  if (!sz && !rfVoltage && !has_beam) 
+    bomb("Specify either the bunch length or the rf voltage or provide the bunch profile sdds file.", NULL);
   
   /****************************************************\
    * Check input twissfile                            *
    \****************************************************/
   if (verbosity)
-    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", inputfile1);
-  if (!SDDS_InitializeInput(&twissPage, inputfile1))
+    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", twissInput);
+  if (!SDDS_InitializeInput(&twissPage, twissInput))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   SDDS_ReadPage(&twissPage);
 
@@ -311,8 +331,8 @@ int main( int argc, char **argv)
    * Check input aperturefile                         *
    \****************************************************/
   if (verbosity)
-    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", inputfile2);
-  if (!SDDS_InitializeInput(&aperPage, inputfile2))
+    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", MAInput);
+  if (!SDDS_InitializeInput(&aperPage, MAInput))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   /* Check presence of momentum aperture */
   SDDS_ReadPage(&aperPage);
@@ -388,8 +408,6 @@ int main( int argc, char **argv)
                           "Piwinski's parameter B1", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "B2", NULL, NULL, 
                           "Piwinski's parameter B2", NULL, SDDS_DOUBLE, 0) || 
-      0>SDDS_DefineColumn(&resultsPage, "c0", NULL, NULL, 
-                          "1/T=c0*F", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "FP", NULL, NULL, 
                           "Piwinski's parameter F for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(&resultsPage, "FN", NULL, NULL, 
@@ -418,42 +436,44 @@ int main( int argc, char **argv)
   s2 = SDDS_GetColumnInDoubles(&aperPage, "s");
   if(elements<elem2)
     fprintf(stdout, "warning: Twiss file is shorter than Aperture file\n");
-  if (emitInput) {
-    emitx = emitInput/(1+coupling);
-  } else {
-    if (!SDDS_GetParameters(&twissPage, "ex0", &emitx0, NULL))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    emitx = emitx0/ ( 1 + coupling);
-    has_ex0 = 1;
-  }
-  if (eyInput)
-    emity = eyInput;
-  else
-    emity = emitx * coupling;
-  if (sigmaDeltaInput) {
-    sigmap = sigmaDeltaInput;
-  } else {
-    if (!SDDS_GetParameters(&twissPage, "Sdelta0", &sigmap, NULL))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    has_Sdelta0 = 1;
-  }
-  circumference = s[elements-1];
-  EMeV = sqrt(sqr(pCentral) + 1) * me_mev;
-  if (!sz) {
-    /* compute length in m from rf voltage, energy spread, etc */
-    if (!SDDS_GetParameters(&twissPage, "alphac", &alphac,
-                            "U0", &U0, NULL))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    sz = 
-      circumference*sigmap*
+  if (!has_beam) {
+    if (emitInput) {
+      emitx = emitInput/(1+coupling);
+    } else {
+      if (!SDDS_GetParameters(&twissPage, "ex0", &emitx0, NULL))
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      emitx = emitx0/ ( 1 + coupling);
+      has_ex0 = 1;
+    }
+    if (eyInput)
+      emity = eyInput;
+    else
+      emity = emitx * coupling;
+    if (sigmaDeltaInput) {
+      sigmap = sigmaDeltaInput;
+    } else {
+      if (!SDDS_GetParameters(&twissPage, "Sdelta0", &sigmap, NULL))
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      has_Sdelta0 = 1;
+    }
+    circumference = s[elements-1];
+    EMeV = sqrt(sqr(pCentral) + 1) * me_mev;
+    if (!sz) {
+      /* compute length in m from rf voltage, energy spread, etc */
+      if (!SDDS_GetParameters(&twissPage, "alphac", &alphac,
+			      "U0", &U0, NULL))
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      sz = 
+	circumference*sigmap*
         sqrt(alphac*EMeV/(PIx2*rfHarmonic*sqrt(sqr(rfVoltage)-sqr(U0))));
-    if (rfFlags&RF_LIMIT_APERTURE) {
-      double q, rfLimit = 0;
-      q = rfVoltage/U0;
-      if (q<1 || (rfLimit = sqrt(2*U0/(PI*alphac*rfHarmonic*EMeV)*(sqrt(q*q-1)-acos(1/q))))==0)
-        SDDS_Bomb("rf voltage too low compared to energy loss per turn");
-      if (deltaLimit==0 || rfLimit<deltaLimit)
-        deltaLimit = rfLimit;
+      if (rfFlags&RF_LIMIT_APERTURE) {
+	double q, rfLimit = 0;
+	q = rfVoltage/U0;
+	if (q<1 || (rfLimit = sqrt(2*U0/(PI*alphac*rfHarmonic*EMeV)*(sqrt(q*q-1)-acos(1/q))))==0)
+	  SDDS_Bomb("rf voltage too low compared to energy loss per turn");
+	if (deltaLimit==0 || rfLimit<deltaLimit)
+	  deltaLimit = rfLimit;
+      }
     }
   }
 
@@ -481,6 +501,62 @@ int main( int argc, char **argv)
     limitMomentumAperture(dpp, dpm, deltaLimit, elem2);
   
   /****************************************************\
+   * Check and read beam profile input                *
+  \****************************************************/
+  if (has_beam) {
+    if (verbosity)
+      fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
+    if (!SDDS_InitializeInput(&beamProfPage, beamInput))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_ReadPage(&beamProfPage);
+    if (!SDDS_CheckColumn(&beamProfPage, "NP", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "ds", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "deltaP", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "emitx", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "emity", NULL, SDDS_DOUBLE, verbosity?stdout:NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    nSlice = SDDS_CountRowsOfInterest(&beamProfPage);
+    npSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Ne");
+    szSlice = SDDS_GetColumnInDoubles(&beamProfPage, "s");
+    sigmapSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Sdelta");
+    exSlice = SDDS_GetColumnInDoubles(&beamProfPage, "xemit");
+    eySlice = SDDS_GetColumnInDoubles(&beamProfPage, "yemit");
+    gammaSlice = SDDS_GetColumnInDoubles(&beamProfPage, "gamma");
+    NP = sz = sigmap = emitx = emity = 0;
+    for (i=0; i<nSlice; i++) {
+      NP += npSlice[i];
+      if (i+1==nSlice) {
+	szSlice[i]=szSlice[i-1];
+      } else {
+	szSlice[i]=(szSlice[i+1]-szSlice[i])/2./sqrt(PI);
+      }
+      sz += szSlice[i];
+      sigmap += sigmapSlice[i];
+      exSlice[i] /= gammaSlice[i];
+      eySlice[i] /= gammaSlice[i];
+      emitx += exSlice[i];
+      emity += eySlice[i];
+    }
+    sigmap /= nSlice;
+    emitx /= nSlice;
+    emity /= nSlice;
+    coupling = emity/emitx;
+    charge = NP * e_mks;
+  } else {
+    nSlice = 1;
+    npSlice = calloc(sizeof(double), 1);
+    szSlice = calloc(sizeof(double), 1); 
+    sigmapSlice = calloc(sizeof(double), 1); 
+    exSlice = calloc(sizeof(double), 1); 
+    eySlice = calloc(sizeof(double), 1); 
+    npSlice[0] = NP;
+    szSlice[0] = sz;
+    sigmapSlice[0] = sigmap;
+    exSlice[0] = emitx;
+    eySlice[0] = emity;
+  }
+
+  /****************************************************\
    * calculate Touschek Lifetime                      *
    \****************************************************/
   find_min_max(&etaymin, &etaymax, etay, elements);
@@ -492,8 +568,7 @@ int main( int argc, char **argv)
       !(B1 = SDDS_Malloc(sizeof(*B1)*elements)) ||
       !(B2 = SDDS_Malloc(sizeof(*B2)*elements)) ||
       !(FP = SDDS_Malloc(sizeof(*FP)*elements)) ||
-      !(FN = SDDS_Malloc(sizeof(*FN)*elements)) ||
-      !(coeff = SDDS_Malloc(sizeof(*coeff)*elements)))
+      !(FN = SDDS_Malloc(sizeof(*FN)*elements)))
     bomb("memory allocation failure (integration arrays)", NULL);
   
   TouschekLifeCalc(verbosity);
@@ -528,7 +603,6 @@ int main( int argc, char **argv)
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, tmN, elements, "tmN") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B1, elements, "B1") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B2, elements, "B2") ||
-      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, coeff, elements, "c0") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, FP, elements, "FP") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, FN, elements, "FN"))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -546,9 +620,12 @@ int main( int argc, char **argv)
     fprintf( stdout, "The code doesn't support multi twiss pages.\n");
   if (SDDS_ReadPage(&aperPage)>0)
     fprintf( stdout, "The code doesn't support multi aperture pages.\n");
-  
+   if (SDDS_ReadPage(&beamProfPage)>0)
+    fprintf( stdout, "The code doesn't support multi beam pages.\n");
+ 
   if (!SDDS_Terminate(&twissPage) || 
       !SDDS_Terminate(&aperPage) ||
+      !SDDS_Terminate(&beamProfPage) ||
       !SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
@@ -558,20 +635,18 @@ int main( int argc, char **argv)
 
 void TouschekLifeCalc(long verbosity) 
 {
-  long i, j;
+  long i, j, k;
   double sp2, sp4, beta2, betagamma2, sh2;
   double sx2, sxb2, dx2, dx_2;
   double sy2, syb2, dy2, dy_2;
-  double a0, c0, c1, c2, c3;
+  double a0, a1, c0, c1, c2, c3;
   double pm, pp;
-  
-  sp2 = sqr(sigmap);
-  sp4 = sqr(sp2);
+  double fnSlice, fpSlice, coeff;
+
   beta2 = sqr(pCentral)/(sqr(pCentral)+1);
   betagamma2 = sqr(pCentral);
-  a0 = sqr(re_mks)*c_mks*NP/(4*sqrt(PI)*(sqr(pCentral)+1)*sz);
-  
-  i=j=0;
+  a1 = sqr(re_mks)*c_mks/(4*sqrt(PI)*(sqr(pCentral)+1));
+  i=j=k=0;
   for (i = 0; i<elements; i++) {
     if (verbosity>1) 
       fprintf(stderr, "Working on i=%ld, j=%ld\n", i, j);
@@ -585,7 +660,6 @@ void TouschekLifeCalc(long verbosity)
         B2[i]=B2[i-1];
         FP[i]=FP[i-1];
         FN[i]=FN[i-1];
-        coeff[i]=coeff[i-1];
         if(++i==elements) break;
       }
     }
@@ -601,7 +675,7 @@ void TouschekLifeCalc(long verbosity)
         }        
       }
     }
-    /* compare two files if it's for same beam line. */       
+    /* compare two files if it's for same beamline. */       
     if(s[i]>s2[j]) j++;
     if(j==elem2) j--;
     /* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
@@ -619,60 +693,74 @@ void TouschekLifeCalc(long verbosity)
 
     tmP[i] = beta2*pp*pp;
     tmN[i] = beta2*pm*pm;
-    
+
     if (tmP[i]==0 || tmN[i]==0) {
       B1[i] = B2[i] = 0;
       FP[i] = FN[i] = 0;
+      bomb("zero momentum aperture??? This should never happen",NULL);      
     } else {
-      sxb2 = betax[i]*emitx;
-      syb2 = betay[i]*emity;
-      dx2 = ipow(etax[i], 2);
-      sx2  = sxb2 + dx2*sp2;
+      for (k=0; k<nSlice; k++) {
+	sp2 = sqr(sigmapSlice[k]);
+	sp4 = sqr(sp2);
+	a0 = a1*npSlice[k]/szSlice[k];
+	sxb2 = betax[i]*exSlice[k];
+	syb2 = betay[i]*eySlice[k];
+	dx2 = ipow(etax[i], 2);
+	sx2  = sxb2 + dx2*sp2;
     
-      dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
-      c1 = sqr(betax[i])/(2*betagamma2*sxb2);
-      c2 = sqr(betay[i])/(2*betagamma2*syb2);
+	dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
+	c1 = sqr(betax[i])/(2*betagamma2*sxb2);
+	c2 = sqr(betay[i])/(2*betagamma2*syb2);
     
-      if (plane_orbit) {
-        sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2);
-        B1[i] = c1*(1-sh2*dx_2/sxb2)+c2;
-        c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
-        c3 = sx2*syb2;
-        B2[i] = sqr(B1[i])-sqr(c0)*c3;   
-        if (B2[i]<0) {
-          if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
-            fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
-          } else {
-            B2[i] = 0;
-          }
-        }
-        B2[i]=sqrt(B2[i]);
-      }
+	if (plane_orbit) {
+	  sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2);
+	  B1[i] = c1*(1-sh2*dx_2/sxb2)+c2;
+	  c0 = sqrt(sh2)/(sigmapSlice[k]*betagamma2*exSlice[k]*eySlice[k]);
+	  c3 = sx2*syb2;
+	  B2[i] = sqr(B1[i])-sqr(c0)*c3;   
+	  if (B2[i]<0) {
+	    if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+	      fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+	    } else {
+	      B2[i] = 0;
+	    }
+	  }
+	  B2[i]=sqrt(B2[i]);
+	}
 
-      if (!plane_orbit) {
-        dy2 = ipow(etay[i], 2);
-        sy2  = syb2 + dy2*sp2;
-        dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
-        sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);
-        c0 = sqrt(sh2)/(sigmap*betagamma2*emitx*emity);
-        c3 = sx2*sy2-sp4*dx2*dy2;
-        B1[i] = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
-        B2[i] = sqr(B1[i])-sqr(c0)*c3;   	  
-        if (B2[i]<0) {
-          if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
-            fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
-          } else {
-            B2[i] = 0;
-          }
-        }
-        B2[i]=sqrt(B2[i]);   	  
+	if (!plane_orbit) {
+	  dy2 = ipow(etay[i], 2);
+	  sy2  = syb2 + dy2*sp2;
+	  dy_2 = ipow(alphay[i]*etay[i]+betay[i]*etayp[i], 2);      
+	  sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2+(dy2+dy_2)/syb2);
+	  c0 = sqrt(sh2)/(sigmapSlice[k]*betagamma2*exSlice[k]*eySlice[k]);
+	  c3 = sx2*sy2-sp4*dx2*dy2;
+	  B1[i] = c1*(1-sh2*dx_2/sxb2)+c2*(1-sh2*dy_2/syb2);
+	  B2[i] = sqr(B1[i])-sqr(c0)*c3;   	  
+	  if (B2[i]<0) {
+	    if (fabs(B2[i]/sqr(B1[i]))<1e-7) {
+	      fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eName1[i], eOccur1[i]);
+	    } else {
+	      B2[i] = 0;
+	    }
+	  }
+	  B2[i]=sqrt(B2[i]);   	  
+	}
+	
+	if (verbosity>1) 
+	  fprintf(stderr, "Computing F integral\n");
+	if (method) {
+	  fpSlice = FIntegral_1(tmP, B1, B2, i, verbosity);
+	  fnSlice = FIntegral_1(tmN, B1, B2, i, verbosity);
+	  coeff = a0*c0;
+	} else {
+	  fpSlice = FIntegral_0(tmP, B1, B2, i, verbosity);
+	  fnSlice = FIntegral_0(tmN, B1, B2, i, verbosity);
+	  coeff = a0*c0/2;
+	}
+	FP[i] += coeff*fpSlice*npSlice[k]/NP;
+	FN[i] += coeff*fnSlice*npSlice[k]/NP;
       }
-      
-      coeff[i] = a0*c0;
-      if (verbosity>1) 
-        fprintf(stderr, "Computing F integral\n");
-      FIntegral(tmP, B1, B2, FP, i, verbosity);
-      FIntegral(tmN, B1, B2, FN, i, verbosity);
     }
   }
 
@@ -682,7 +770,7 @@ void TouschekLifeCalc(long verbosity)
   tLife = 0;  
   for (i = 1; i<elements; i++) {
     if (s[i]>s[i-1]) {
-      tLife += (s[i]-s[i-1])*(coeff[i]*(FP[i]+FN[i])+coeff[i-1]*(FP[i-1]+FN[i-1]))/4.;
+      tLife += (s[i]-s[i-1])*(FP[i]+FN[i]+FP[i-1]+FN[i-1])/4.;
     }
   }
   if (verbosity>1) 
@@ -693,7 +781,7 @@ void TouschekLifeCalc(long verbosity)
   return;
 } 
 
-void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long verbosity) 
+double FIntegral_1(double *tm, double *B1, double *B2, long index, long verbosity) 
 {
   double f0, f1, sum;
   double HPI, step;
@@ -707,7 +795,7 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long v
   b1 = B1[index];
   b2 = B2[index];
   k0 = km = atan(sqrt(tstart));
-  f0 = Fvalue(tstart, tstart, b1, b2);
+  f0 = Fvalue_1(tstart, tstart, b1, b2);
   sum = 0;
   f1 = 0;
   pass = 0;
@@ -726,7 +814,7 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long v
       break;
     }
     
-    f1 = Fvalue(t1, tstart, b1, b2);
+    f1 = Fvalue_1(t1, tstart, b1, b2);
     if (f1>0)
       f1NonzeroSeen = 1;
     
@@ -737,15 +825,75 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long v
     k0 = k1;
     f0 = f1;    
   }
-  F[index] = sum;
-  return;
+  return sum;
 }
 
-double Fvalue (double t, double tm, double b1, double b2)
+double Fvalue_1 (double t, double tm, double b1, double b2)
 {
   double c0, c1, c2, result;
 
   c0 = (sqr(2*t+1)*(t/tm/(1+t)-1)/t+t-sqrt(t*tm*(1+t))-(2+1/(2*t))*log(t/tm/(1+t)))*sqrt(1+t);
+  c1 = exp(-b1*t);
+  c2 = dbesi0(b2*t);
+  result = c0 * c1 * c2;
+  /* If overflow/underflow use approximate equation for modified bessel function. */
+  if (isnan(result) || fabs(result)>FLT_MAX) {
+    result=c0*exp(b2*t-b1*t)/sqrt(PIx2*b2*t);
+  } 
+  return result;
+}
+
+double FIntegral_0(double *tm, double *B1, double *B2, long index, long verbosity) 
+{
+  long maxRegion = MAXREGION;
+  long steps = STEPS; /* number of integration steps per decade */
+  long i, j;
+  double test = 1e-5, simpsonCoeff[2] = {2.,4.};
+  double h, tau0, tau, tstart, intF;
+  double cof, sum, fun;
+  double b1,b2;
+  /* Using simpson's rule to do the integral. 
+     split integral into region with "steps" steps per region.
+     integration intervals be [1,3], [3,9], [9,27], and so on. 
+     i is the index over these intervals. j is the index over each step.
+  */
+  b1 = B1[index];
+  b2 = B2[index];
+  tstart = tm[index];
+  tau0 = tstart;
+  intF = 0.0;
+  for (i=0; i<maxRegion; i++) {
+    if (i==0) {
+      h = tau0 * 2. / steps;
+    } else {
+      h = tau0 * 3. / steps;
+    }
+    sum = 0.0;
+    for (j=0; j<=steps; j++) {
+      tau = tau0 + h*j;
+      cof = simpsonCoeff[j%2]; 
+      if (j==0 || j==steps) 
+        cof = 1.;
+      fun = Fvalue_0(tau, tstart, b1, b2);
+      sum += cof*fun;
+    }
+    tau0 = tau;
+    sum = (sum/3.0)*h;
+    intF += sum;
+    if (FABS(sum/intF)<test) 
+      break;
+    if ( i== maxRegion) 
+      fprintf( stdout, "**Warning** Integral did not converge till tau= %g.\n",tau);
+  }
+
+  return intF;
+}
+
+double Fvalue_0 (double t, double tm, double b1, double b2)
+{
+  double c0, c1, c2, result;
+
+  c0 = (sqr(2.+1./t)*(t/tm/(1.+t)-1.)+1.-sqrt(tm*(1.+t)/t)-(4.+1./t)/(2.*t)*log(t/tm/(1.+t)))*sqrt(t/(1.+t));
   c1 = exp(-b1*t);
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
