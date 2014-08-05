@@ -21,13 +21,13 @@ void free_IBS(IBSCATTER *IBS);
 void inflateEmittance(double **coord, double Po, 
                       long offset, long istart, long iend, long *index, double factor);
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
-                       long istart, long iend, long *index, double zRate[3]);
+		       long istart, long iend, long *index, double zRate[3], double tc0, double Duration);
 void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                          char *command_file, char *lattice_file, char *caller, long isRing);
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass);
 void reset_IBS_output(ELEMENT_LIST *element);
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt);
+void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt, double *tCent);
 void zeroslice (long islice, IBSCATTER *IBS);
 long computeSliceParameters(double C[6], double S[6][6], double **part, long *index, long start, long end, double Po);
 void forth_propagate_twiss(IBSCATTER *IBS, long islice, double betax0, double alphax0, 
@@ -44,7 +44,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   double randomNumber;
   double beta0, beta1, p;
   double RNSigma[3], RNSigmaCheck[3]={0,0,0};
-  double bLength, tLength, zRate[3];
+  double bLength, tLength, tCent, zRate[3];
   static SDDS_TABLE outPage;
   static long isInit=0, doOut=0;
   double eta[4];
@@ -67,8 +67,6 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   }
   if (!IBS->charge)
     bombElegant("IBSCATTER: bunch charge is not given", NULL);
-  if (IBS->isRing && IBS->nslice>1)
-    bombElegant("IBSCATTER: NSLICE has to be 1 for ISRING=1", NULL);
 
   if (!IBS->s)
     init_IBS(element);
@@ -82,10 +80,12 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     
     index = (long*)malloc(sizeof(long)*np);
     count = (long*)malloc(sizeof(long)*IBS->nslice);
-    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength);
+    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength, &tCent);
     bLength = IBS->revolutionLength/IBS->dT*tLength;
     if ((IBS->nslice == 1) && (!IBS->isRing))
       bLength /= sqrt(2*PI);
+    if ((IBS->nslice > 1) && (IBS->isRing))
+      bLength /= sqrt(4*PI);
     
     iend = 0;
     for (islice=0; islice<IBS->nslice; islice++) {
@@ -113,7 +113,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
       IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
       IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
-      if (IBS->isRing)
+      if (IBS->isRing && IBS->nslice == 1)
         bLength = sqrt(S[4][4])*c_mks;
       IBS->sigmaz0[islice] = bLength;
       /* printf("slice %ld, bLength=%le\n", islice, bLength); */
@@ -136,7 +136,17 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->yGrowthRate[islice] *= IBS->factor;
       IBS->zGrowthRate[islice] *= IBS->factor;
     }
-
+      /* Calculate longitudinal base for each slice */
+      /*
+    if (IBS->nslice >1) {
+      tSlice[iCent+1] = (tSlice[iCent+1]-tCent)*sqrt(IBS->zGrowthRate[iCent])+tCent;
+      tSlice[iCent] = (tSlice[iCent]-tCent)*sqrt(IBS->zGrowthRate[iCent])+tCent;      
+      for (islice=iCent; i>0; i--)
+	tSlice[i-1] = (tSlice[i-1]-tSlice[i])*sqrt(IBS->zGrowthRate[i-1])+tSlice[i];
+      for (i=iCent; i<IBS->nslice)
+	tSlice[i+2] = (tSlice[i+2]-tSlice[i+1])*sqrt(IBS->zGrowthRate[i+1])+tSlice[i+1]; 
+    }
+      */
     iend = 0;
     for (islice=0; islice<IBS->nslice; islice++) {
       istart = iend;
@@ -165,24 +175,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
         for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
           if (RNSigma[ihcoord]) {
             RNSigmaCheck[ihcoord] = 0;
-            if (icoord!=5) {
-              for (ipart=istart; ipart<iend; ipart++) {
-                randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
-                coord[index[ipart]][icoord] += randomNumber;
-                RNSigmaCheck[ihcoord] += sqr(randomNumber);
-              }
-            } else {
-              for (ipart=istart; ipart<iend; ipart++) {
-                randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
-                p = Po*(1+coord[index[ipart]][5]);
-                beta0 = p/sqrt(p*p+1);
-                coord[index[ipart]][5] += randomNumber;
-                p = Po*(1+coord[index[ipart]][5]);
-                beta1 = p/sqrt(p*p+1);
-                coord[index[ipart]][4] *= beta1/beta0;
-                RNSigmaCheck[ihcoord] += sqr(randomNumber);
-              }
-            }
+	    for (ipart=istart; ipart<iend; ipart++) {
+	      randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+	      coord[index[ipart]][icoord] += randomNumber;
+	      RNSigmaCheck[ihcoord] += sqr(randomNumber);
+	    }
             RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
           }
         }
@@ -194,7 +191,18 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
         /* inflate each emittance by the prescribed factor */
         inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
         inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
-        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate);
+        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate, tCent, IBS->dT);
+	/*
+	if (islice == iCent)
+	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
+			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tCent, 0);
+	if (islice > iCent)
+	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
+			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tSlice[islice], 1);
+	if (islice < iCent)
+	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
+			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tSlice[islice+1], -1);
+	*/
       }
 
       /* update beam emittance information after IBS scatter for IBSCATTER */
@@ -275,7 +283,7 @@ void inflateEmittance(double **coord, double Po,
 }
 
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
-                       long istart, long iend, long *index, double zRate[3])
+		       long istart, long iend, long *index, double zRate[3], double tc0, double Duration)
 {
   long i, ipart, np, npTotal;
   double c0, tc, dpc, *time, p, beta0, beta1;
@@ -313,25 +321,21 @@ void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
   for (i=0; i<np; i++) {
     ipart = i + istart;
 
+    if (time[i]>tc)
+      c0 = (time[i]-tc)/dt*(zRate[2]-zRate[1])+zRate[1];
+    else
+      c0 = (time[i]-tc)/dt*(zRate[1]-zRate[0])+zRate[1];
+    c0 = sqrt(c0);
+    coord[index[ipart]][5] = (coord[index[ipart]][5]-dpc)*c0+dpc;
+    p = Po*(1+coord[index[ipart]][5]);
+    beta0 = p/sqrt(p*p+1);
     if (isRing) {
-      c0 = sqrt(zRate[1]);
-      time[i] = (time[i]-tc)*c0+tc;
-      coord[index[ipart]][5] = (coord[index[ipart]][5]-dpc)*c0+dpc;
-      p = Po*(1+coord[index[ipart]][5]);
-      beta0 = p/sqrt(p*p+1);
+      time[i] = (time[i]-tc0)*c0+tc0;
       coord[ipart][4] = time[i]*beta0*c_mks;
     } else {
-      if (time[i]>tc)
-        c0 = (time[i]-tc)/dt*(zRate[2]-zRate[1])+zRate[1];
-      else
-        c0 = (time[i]-tc)/dt*(zRate[1]-zRate[0])+zRate[1];
-      c0 = sqrt(c0);
-      p = Po*(1+coord[index[ipart]][5]);
-      beta0 = p/sqrt(p*p+1);
-      coord[index[ipart]][5] = (coord[index[ipart]][5]-dpc)*c0+dpc;
       p = Po*(1+coord[index[ipart]][5]);
       beta1 = p/sqrt(p*p+1);
-      coord[index[ipart]][4] = coord[index[ipart]][4]*beta1/beta0;
+      coord[index[ipart]][4] += (beta1-beta0)*Duration*c_mks/2;
     }
   }
   free(time);
@@ -533,12 +537,12 @@ void free_IBS(IBSCATTER *IBS)
   return;
 }
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt)
+void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt, double *tCent)
 {
   long i, j, islice, total;
   double tMaxAll, tMinAll, tMin, tMax;
   double *time, P, beta;
-  long *timeIndex;
+  long *timeIndex, temp=0;
   
   /* Count the number of particles in each slice and the keep the slice index for each particle */
   for (i=0; i<np; i++)
@@ -552,6 +556,7 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
       P = Po*(1+coord[i][5]);
       beta = P/sqrt(P*P+1);
       time[i] = coord[i][4]/(beta*c_mks);
+      temp += time[i];
     }
 
     /* find limits of bunch longitudinal coordinates */
@@ -563,7 +568,7 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
 #endif
     
     *dt = (tMaxAll-tMinAll)/(double)nslice;
-    
+    *tCent = temp/np;
     timeIndex = tmalloc(sizeof(*timeIndex)*np);
     for (i=0; i<np; i++) {
       if ((timeIndex[i] = (time[i]-tMinAll)/(*dt))<0)
