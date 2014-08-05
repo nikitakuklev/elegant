@@ -57,19 +57,18 @@ void TouschekEffect(RUN *run,
                     NAMELIST_TEXT *nltext) 
 {
   ELEMENT_LIST *eptr;
-  long flag, nElement;
+  long nElement;
 
   /* Check if there is TScatter element along beamline. */
   eptr = &(beamline->elem);
-  flag = (nElement = 0);
+  nElement = 0;
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      flag = 1;
       nElement++;
     }
     eptr = eptr->succ; 
   }
-  if(!flag) 
+  if(!nElement) 
     bombElegant("No TSCATTER element along beamline", NULL);                
 
   /* process the namelist text */
@@ -95,7 +94,9 @@ void TouschekEffect(RUN *run,
     bombElegant("energy spread has to be given", NULL);
   if (!sigma_s)
     bombElegant("bunch length has to be given", NULL);
-
+  if (sbin_step <=0)
+    bombElegant("sbin can not be less than 0", NULL);
+  
   if (!Momentum_Aperture)
     bombElegant("Momentum_Aperture file needed before performing simulation", NULL);
   if (get_MAInput(Momentum_Aperture, beamline, nElement)<0)
@@ -306,7 +307,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
-  sTotal = (long)beamline->revolution_length+1;
+  sTotal =(long)(beamline->revolution_length/sbin_step)+1;
 
   determineOccurenceInFilenames(&occurenceSeen, &noOccurenceSeen,
 				initial, distribution, output, loss, bunch);
@@ -397,7 +398,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         disBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
       }
       if (output) {
-        lossDis = chbook1("s", "m", 0, sTotal, sTotal);
+        lossDis = chbook1("s", "m", 0, beamline->revolution_length, sTotal);
       }
 #if USE_MPI
       if (isMaster)
