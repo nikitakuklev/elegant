@@ -77,8 +77,23 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
- [-method=[0/1] 0-simpson's rule; 1-direct integral] [-ignoreMismatch]\n\
-Program by A. Xiao.  (This is version 6, January 2013, A. Xiao)";
+ [-method=[0/1] 0-simpson's rule; 1-direct integral] [-ignoreMismatch]\n\n\
+twiss          Give &twiss_output output file from elegant, with radiation_integrals=1.\n\
+aperture       Give &momentum_aperture output file from elegant.\n\
+charge         Charge of bunch in nanocoulombs.\n\
+particles      Number of electrons in the bunch.\n\
+coupling       Ratio between vertical and horizontal emittances.\n\
+emityInput     Vertical emittance in meters.\n\
+emitInput      Natural emittance in meters. By default, taken from twiss file.\n\
+deltaInput     Rms fractional energy spread. By default, taken from twiss file.\n\
+deltaLimit     Maximum value of stable momentum deviation, imposed as a cap\n\
+               over the momentum aperture in the aperture file.\n\
+RF             Give rf voltage (in MV) and harmonic number. If limit qualifier\n\
+               is given, then deltaLimit is computed from the bucket half-height.\n\
+verbosity      Higher values result in more output during computations.\n\
+ignoreMismatch Ignore mismatch between names of elements in the Twiss and aperture files.\n\
+method         Choose integration method, simplex or direct.\n\n\
+Program by A. Xiao, M. Borland.  (This is version 7, August 2014, A. Xiao)";
 
 #define VERBOSE 0
 #define CHARGE 1
