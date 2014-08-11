@@ -91,6 +91,8 @@ deltaLimit     Maximum value of stable momentum deviation, imposed as a cap\n\
                over the momentum aperture in the aperture file.\n\
 RF             Give rf voltage (in MV) and harmonic number. If limit qualifier\n\
                is given, then deltaLimit is computed from the bucket half-height.\n\
+               Otherwise, used only to compute the bunch length.\n\
+length         Give rms bunch length in mm.\n\
 verbosity      Higher values result in more output during computations.\n\
 ignoreMismatch Ignore mismatch between names of elements in the Twiss and aperture files.\n\
 method         Choose integration method, simplex or direct.\n\n\
