@@ -639,14 +639,17 @@ int main( int argc, char **argv)
     fprintf( stdout, "The code doesn't support multi twiss pages.\n");
   if (SDDS_ReadPage(&aperPage)>0)
     fprintf( stdout, "The code doesn't support multi aperture pages.\n");
-   if (SDDS_ReadPage(&beamProfPage)>0)
-    fprintf( stdout, "The code doesn't support multi beam pages.\n");
  
   if (!SDDS_Terminate(&twissPage) || 
       !SDDS_Terminate(&aperPage) ||
-      !SDDS_Terminate(&beamProfPage) ||
       !SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (has_beam) {
+    if (SDDS_ReadPage(&beamProfPage)>0)
+      fprintf( stdout, "The code doesn't support multi beam pages.\n");
+    if (!SDDS_Terminate(&beamProfPage))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
   
   return(0);
   
