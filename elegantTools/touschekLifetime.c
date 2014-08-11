@@ -525,11 +525,12 @@ int main( int argc, char **argv)
     if (!SDDS_InitializeInput(&beamProfPage, beamInput))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     SDDS_ReadPage(&beamProfPage);
-    if (!SDDS_CheckColumn(&beamProfPage, "NP", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "ds", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "deltaP", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "emitx", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "emity", NULL, SDDS_DOUBLE, verbosity?stdout:NULL))
+    if (!SDDS_CheckColumn(&beamProfPage, "Ne", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "s", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "Sdelta", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "xemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "yemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+	!SDDS_CheckColumn(&beamProfPage, "gamma", NULL, SDDS_DOUBLE, verbosity?stdout:NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     nSlice = SDDS_CountRowsOfInterest(&beamProfPage);
     npSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Ne");
