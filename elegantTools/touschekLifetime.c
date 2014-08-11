@@ -80,6 +80,7 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  [-method=[0/1] 0-simpson's rule; 1-direct integral] [-ignoreMismatch]\n\n\
 twiss          Give &twiss_output output file from elegant, with radiation_integrals=1.\n\
 aperture       Give &momentum_aperture output file from elegant.\n\
+beam           Give beam profile file from elegant2genesis.\n\
 charge         Charge of bunch in nanocoulombs.\n\
 particles      Number of electrons in the bunch.\n\
 coupling       Ratio between vertical and horizontal emittances.\n\
