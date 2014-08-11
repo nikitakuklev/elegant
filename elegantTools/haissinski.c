@@ -187,7 +187,7 @@ int main( int argc, char **argv)
   FUNCTION potential, rfVoltageFn, rfPotential, potentialDistortion, distribution, Vinduced;
   char *wakeFile, *tCol, *wCol;
   double syncPhase, syncTune, syncAngFrequency;
-  double VrfDot, ZoverN, inductance, resistance;
+  double VrfDot, ZoverN=0, inductance=0, resistance;
   double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0, rfHigherHarmonicPhase=0;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction, lastMaxDifference;
   double maxDensity;
@@ -214,6 +214,7 @@ int main( int argc, char **argv)
   initializeFunction( &potentialDistortion );
   initializeFunction( &distribution );
   initializeFunction( &Vinduced );
+  initializeFunction( &rfVoltageFn );
   
   twissFile  =  NULL;
   resultsFile  =  NULL;
@@ -1070,21 +1071,33 @@ void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density,
   if (!SDDS_SetParameters(resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                           "Convergence", converged?"Solution converged":"Solution did not converge",
                           "Charge", charge, 
-                          "AverageCurrent", averageCurrent, NULL)||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, time, density->points, "Time") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, current, density->points, "Current")  ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, actualDensity, density->points, "Density") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, Vind->y, density->points, "WakeField") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfVoltageFn->y, density->points, "RfVoltage") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potential->y, density->points, "PotentialWell") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfPotential->y, density->points, "RfPotentialWell") ||
-      !SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potentialDistortion->y, density->points, "PotentialWellDistortion"))
+                          "AverageCurrent", averageCurrent, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (density->points > 0) {
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, current, density->points, "Current"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, time, density->points, "Time"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, actualDensity, density->points, "Density"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, Vind->y, density->points, "WakeField"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfVoltageFn->y, density->points, "RfVoltage"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potential->y, density->points, "PotentialWell"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, rfPotential->y, density->points, "RfPotentialWell"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, potentialDistortion->y, density->points, "PotentialWellDistortion"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
   if ( !SDDS_WritePage(resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  free(time);
-  free(current);
-  free(actualDensity);
+  if (density->points > 0) {
+    free(time);
+    free(current);
+    free(actualDensity);
+  }
 }
 
 void printFunction( char *label, FUNCTION *data) {
