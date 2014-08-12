@@ -574,7 +574,9 @@ int main( int argc, char **argv)
     exSlice[0] = emitx;
     eySlice[0] = emity;
   }
-
+  if (verbosity>0)
+    fprintf( stdout, "Beam parameters set up.\n");
+    
   /****************************************************\
    * calculate Touschek Lifetime                      *
    \****************************************************/
@@ -669,6 +671,8 @@ void TouschekLifeCalc(long verbosity)
   betagamma2 = sqr(pCentral);
   a1 = sqr(re_mks)*c_mks/(4*sqrt(PI)*(sqr(pCentral)+1));
   i=j=k=0;
+  if (verbosity>1)
+    fprintf(stderr, "In TouschekLifeCalc\n");
   for (i = 0; i<elements; i++) {
     if (verbosity>1) 
       fprintf(stderr, "Working on i=%ld, j=%ld\n", i, j);
@@ -715,11 +719,14 @@ void TouschekLifeCalc(long verbosity)
 
     tmP[i] = beta2*pp*pp;
     tmN[i] = beta2*pm*pm;
+    if (verbosity>2)
+      fprintf(stderr, "pp = %le, pm = %le, tmP[%ld] = %le, tmN[%ld] = %le\n", pp, pm, i, tmP[i], i, tmN[i]);
 
     if (tmP[i]==0 || tmN[i]==0) {
       B1[i] = B2[i] = 0;
       FP[i] = FN[i] = 0;
-      bomb("zero momentum aperture??? This should never happen",NULL);      
+      /* Bombing is not good behavior. Just return 0 lifetime so scripts can behave appropriately. */
+      /* bomb("zero momentum aperture??? This should never happen",NULL); */
     } else {
       for (k=0; k<nSlice; k++) {
 	sp2 = sqr(sigmapSlice[k]);
@@ -729,11 +736,20 @@ void TouschekLifeCalc(long verbosity)
 	syb2 = betay[i]*eySlice[k];
 	dx2 = ipow(etax[i], 2);
 	sx2  = sxb2 + dx2*sp2;
-    
+        
 	dx_2 = ipow(alphax[i]*etax[i]+betax[i]*etaxp[i], 2);
 	c1 = sqr(betax[i])/(2*betagamma2*sxb2);
 	c2 = sqr(betay[i])/(2*betagamma2*syb2);
-    
+
+        if (verbosity>3) 
+          fprintf(stderr, "slice %ld: sp2=%le, a0=%le, sxb2=%le, syb2=%le, dx2=%le, sx2=%le, dx_2=%le, c1=%le, c2=%le\n",
+                  k, sp2, a0, sxb2, syb2, dx2, sx2, dx_2, c1, c2);
+        if (isnan(c1) || isnan(c2)) {
+          if (verbosity>3)
+            fprintf(stderr, "Slice invalid (probably low population)---ignored\n");
+          continue;
+        }
+
 	if (plane_orbit) {
 	  sh2 = 1/(1/sp2+(dx2+dx_2)/sxb2);
 	  B1[i] = c1*(1-sh2*dx_2/sxb2)+c2;
@@ -769,14 +785,22 @@ void TouschekLifeCalc(long verbosity)
 	  B2[i]=sqrt(B2[i]);   	  
 	}
 	
-	if (verbosity>1) 
-	  fprintf(stderr, "Computing F integral\n");
+        if (verbosity>1)
+          fprintf(stderr, "Computing F integrals for i=%ld, k=%ld\n", i, k);
 	if (method) {
+          if (verbosity>2) 
+            fprintf(stderr, "Computing F integral P (%le, %le, %le)\n", tmP[i], B1[i], B2[i]);
 	  fpSlice = FIntegral_1(tmP, B1, B2, i, verbosity);
+          if (verbosity>2) 
+            fprintf(stderr, "Computing F integral N (%le, %le, %le)\n", tmN[i], B1[i], B2[i]);
 	  fnSlice = FIntegral_1(tmN, B1, B2, i, verbosity);
 	  coeff = a0*c0;
 	} else {
+          if (verbosity>2) 
+            fprintf(stderr, "Computing F integral P (%le, %le, %le)\n", tmP[i], B1[i], B2[i]);
 	  fpSlice = FIntegral_0(tmP, B1, B2, i, verbosity);
+          if (verbosity>2) 
+            fprintf(stderr, "Computing F integral N (%le, %le, %le)\n", tmN[i], B1[i], B2[i]);
 	  fnSlice = FIntegral_0(tmN, B1, B2, i, verbosity);
 	  coeff = a0*c0/2;
 	}
