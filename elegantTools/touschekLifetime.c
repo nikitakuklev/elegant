@@ -522,6 +522,7 @@ int main( int argc, char **argv)
    * Check and read beam profile input                *
   \****************************************************/
   if (has_beam) {
+    double sSum, s2Sum;
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
     if (!SDDS_InitializeInput(&beamProfPage, beamInput))
@@ -542,23 +543,28 @@ int main( int argc, char **argv)
     eySlice = SDDS_GetColumnInDoubles(&beamProfPage, "yemit");
     gammaSlice = SDDS_GetColumnInDoubles(&beamProfPage, "gamma");
     NP = sz = sigmap = emitx = emity = 0;
+    sSum = s2Sum = 0;
     for (i=0; i<nSlice; i++) {
       NP += npSlice[i];
+      sSum += npSlice[i]*szSlice[i];
+      s2Sum += npSlice[i]*sqr(szSlice[i]);
       if (i+1==nSlice) {
 	szSlice[i]=szSlice[i-1];
       } else {
 	szSlice[i]=(szSlice[i+1]-szSlice[i])/2./sqrt(PI);
       }
-      sz += szSlice[i];
-      sigmap += sigmapSlice[i];
-      exSlice[i] /= gammaSlice[i];
-      eySlice[i] /= gammaSlice[i];
-      emitx += exSlice[i];
-      emity += eySlice[i];
+      sigmap += npSlice[i]*sigmapSlice[i];
+      if (gammaSlice[i]>0) {
+          exSlice[i] /= gammaSlice[i];
+          eySlice[i] /= gammaSlice[i];
+          emitx += npSlice[i]*exSlice[i];
+          emity += npSlice[i]*eySlice[i];
+      }
     }
-    sigmap /= nSlice;
-    emitx /= nSlice;
-    emity /= nSlice;
+    sigmap /= NP;
+    emitx /= NP;
+    emity /= NP;
+    sz = sqrt(s2Sum/NP - sqr(sSum/NP));
     coupling = emity/emitx;
     charge = NP * e_mks;
   } else {
@@ -744,7 +750,7 @@ void TouschekLifeCalc(long verbosity)
         if (verbosity>3) 
           fprintf(stderr, "slice %ld: sp2=%le, a0=%le, sxb2=%le, syb2=%le, dx2=%le, sx2=%le, dx_2=%le, c1=%le, c2=%le\n",
                   k, sp2, a0, sxb2, syb2, dx2, sx2, dx_2, c1, c2);
-        if (isnan(c1) || isnan(c2)) {
+        if (isnan(c1) || isnan(c2) || isinf(c1) || isinf(c2)) {
           if (verbosity>3)
             fprintf(stderr, "Slice invalid (probably low population)---ignored\n");
           continue;
