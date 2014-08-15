@@ -6005,8 +6005,11 @@ the beam will vary step-wise from slice to slice.  This discontinuous variation 
 
 \begin{itemize}
 
-\item {\bf description:} \verb|touschekLifetime| computes Touschek lifetime using 
-A. Piwinski's formula \cite{Piwinski, Xiao2007a}.
+\item {\bf description:} \verb|touschekLifetime| computes Touschek
+  lifetime using A. Piwinski's formula \cite{Piwinski, Xiao2007a}. A
+  longitudinally non-Gaussian distributed bunch lifetime (such as ring
+  with harmonic cavity) can be computed if the bunch profile is
+  inputed through beam option.
 
 \item {\bf examples:}
 \begin{flushleft}{\tt
@@ -6016,11 +6019,11 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 touschekLifetime {\em outputFile}
- -twiss={\em twissFile} -aperture={\em momentumApertureFile}
+ -twiss={\em twissFile} -aperture={\em momentumApertureFile} [-beam={\em beamProfile}] 
  {-charge={\em nC}|-particles={\em value}} \{-coupling={\em value}|-emityInput={\em value}\}
  {-RF=Voltage={\em MV},harmonic={\em value}[,limit] | -length={\em mm}} 
  [-emitInput={\em valueInMeters}] [-deltaInput={\em value}] [-verbosity={\em value}]
- [-ignoreMismatch] [-deltaLimit={\em valueInPercent}]
+ [-ignoreMismatch] [-deltaLimit={\em valueInPercent}] [-method={\em 0|1}]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -6036,6 +6039,10 @@ only Quadrupole elements).  However, the Twiss and momentum aperture
 files {\em must} cover the same beamline. Having one file for a part
 of beamline (e.g., a few sectors) and one for the entire ring will
 yield incorrect results.
+\item {\tt -beam} --- Give beam profile file from elegant2genesis. If
+  this option is given, other input beam parameters are ignored. You
+  can use this option to compute touschek lifetime for a non-Gaussian
+  longitudinally distributed bunch.
 \item {\tt -charge}, {\tt -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
 \item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.  This is
@@ -6057,6 +6064,11 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
   the values in the momentum aperture input file are used, possibly altered by the use of the
   {\tt -RF} option with the {\tt limit} qualifier.  If both {\tt -deltaLimit} and {\tt -RF=limit...} are
   given, the smaller is enforced.
+\item {\tt -method} --- The integral of Piwinski's formula can be done
+  in two ways. ``0'' - direct integral of parameter {\em $\tau$}, this
+  method is also used in {\tt elegant}. 1 - substitute variable {\em
+    $\tau$} with variable {\em k}, with $\tau=\tan^2(k)$. These two
+  methods give you same results.
 \end{itemize}
 
 \item {\bf author:} A. Xiao, ANL/APS.
