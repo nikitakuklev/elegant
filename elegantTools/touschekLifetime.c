@@ -77,7 +77,7 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
  [-emitInput=<valueInMeters>] [-deltaInput=<value>] [-verbosity=<value>]\n\
- [-method=[0/1] 0-simpson's rule; 1-direct integral] [-ignoreMismatch]\n\n\
+ [-method=[0/1] 0-direct; 1-variable substitution] [-ignoreMismatch]\n\n\
 twiss          Give &twiss_output output file from elegant, with radiation_integrals=1.\n\
 aperture       Give &momentum_aperture output file from elegant.\n\
 beam           Give beam profile file from elegant2genesis.\n\
@@ -95,7 +95,7 @@ RF             Give rf voltage (in MV) and harmonic number. If limit qualifier\n
 length         Give rms bunch length in mm.\n\
 verbosity      Higher values result in more output during computations.\n\
 ignoreMismatch Ignore mismatch between names of elements in the Twiss and aperture files.\n\
-method         Choose integration method, simpson rule or direct.\n\n\
+method         Choose integration method, direct or variable substitution.\n\n\
 Program by A. Xiao, M. Borland.  (This is version 7, August 2014, A. Xiao)";
 
 #define VERBOSE 0
