@@ -95,7 +95,7 @@ RF             Give rf voltage (in MV) and harmonic number. If limit qualifier\n
 length         Give rms bunch length in mm.\n\
 verbosity      Higher values result in more output during computations.\n\
 ignoreMismatch Ignore mismatch between names of elements in the Twiss and aperture files.\n\
-method         Choose integration method, simplex or direct.\n\n\
+method         Choose integration method, simpson rule or direct.\n\n\
 Program by A. Xiao, M. Borland.  (This is version 7, August 2014, A. Xiao)";
 
 #define VERBOSE 0
@@ -427,9 +427,9 @@ int main( int argc, char **argv)
       0>SDDS_DefineColumn(&resultsPage, "B2", NULL, NULL, 
                           "Piwinski's parameter B2", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "FP", NULL, NULL, 
-                          "Piwinski's parameter F for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
+                          "Local particle loss rate (1/s) for positive momentum particle", NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(&resultsPage, "FN", NULL, NULL, 
-                          "Piwinski's parameter F for negative momentum particle", NULL, SDDS_DOUBLE, 0))
+                          "Local particle loss rate (1/s) for negative momentum particle", NULL, SDDS_DOUBLE, 0))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (!SDDS_WriteLayout(&resultsPage) )
