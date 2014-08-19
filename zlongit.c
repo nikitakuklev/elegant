@@ -445,7 +445,8 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     free(Itime);
   if (Vtime)
     free(Vtime);
-
+  if (Ifreq)
+    free(Ifreq);
 }
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,

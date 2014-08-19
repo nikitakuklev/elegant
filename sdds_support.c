@@ -320,13 +320,14 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     }
 
 
-#define WATCH_PARAMETER_MODE_COLUMNS 27
-#define WATCH_CENTROID_MODE_COLUMNS 17
+#define WATCH_PARAMETER_MODE_COLUMNS 28
+#define WATCH_CENTROID_MODE_COLUMNS 18
 static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS] = {
     {"Step", "&column name=Step, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
     {"ElapsedTime", "&column name=ElapsedTime, type=double units=s &end"},
     {"ElapsedCoreTime", "&column name=ElapsedCoreTime, type=double units=s &end"},
+    {"MemoryUsage", "&column name=MemoryUsage, type=long, units=kB &end"},
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
     {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double, description=\"y centroid\" &end"},
@@ -448,6 +449,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "ElapsedTime", "s", SDDS_DOUBLE) ||	
 	!SDDS_DefineSimpleParameter(SDDS_table, "ElapsedCoreTime", "s", SDDS_DOUBLE) ||	
+	!SDDS_DefineSimpleParameter(SDDS_table, "MemoryUsage", "kB", SDDS_LONG) ||	
 	!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
@@ -744,6 +746,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           "IDSlotsPerBunch", slotsPerBunch,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", delapsed_time(),
+                          "MemoryUsage", memory_count(),
 #if USE_MPI
 		          "ElapsedCoreTime", delapsed_time()*n_processors,
 #else
@@ -1024,6 +1027,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 			     "ElapsedCoreTime", delapsed_time(),
 #endif
 	                     "ElapsedTime", delapsed_time(),
+                             "MemoryUsage", memory_count(),
 			     "Pass", pass, 
 			     "Step", step, NULL)) {
 	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
