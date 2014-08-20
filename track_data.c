@@ -1417,6 +1417,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&rfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
     {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&rfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
     {"N_CAVITIES", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_cavities), NULL, 0.0, 1, "effect is multiplied by this number, simulating N identical cavities"},
+    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&rfmode_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
     };
 
 FRFMODE frfmode_example;

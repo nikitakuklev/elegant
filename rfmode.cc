@@ -40,18 +40,25 @@ void runBinlessRfMode(double **part, long np, RFMODE *rfmode, double Po,
 		      CHARGE *charge);
 
 void track_through_rfmode(
-                          double **part, long np, RFMODE *rfmode, double Po,
+                          double **part0, long np0, RFMODE *rfmode, double Po,
                           char *element_name, double element_z, long pass, long n_passes,
                           CHARGE *charge
     )
 {
-    static long *Ihist = NULL;               /* array for histogram of particle density */
-    static double *Vbin = NULL;              /* array for voltage acting on each bin */
-    static long max_n_bins = 0;
-    static long *pbin = NULL;                /* array to record which bin each particle is in */
-    static double *time = NULL;              /* array to record arrival time of each particle */
-    static long max_np = 0;
-    long ip, ib, lastBin=0, n_binned=0;
+    long *Ihist = NULL;               /* array for histogram of particle density */
+    double *Vbin = NULL;              /* array for voltage acting on each bin */
+    long max_n_bins = 0;
+    long max_np = 0;
+    long *pbin = NULL;                /* array to record which bin each particle is in */
+    double *time0 = NULL;             /* array to record arrival time of each particle */
+    double *time = NULL;              /* array to record arrival time of each particle */
+    double **part = NULL;             /* particle buffer for working bucket */
+    long *ibParticle = NULL;          /* array to record which bucket each particle is in */
+    long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
+    long *npBucket = NULL;            /* array to record how many particles are in each bucket */
+    long iBucket, nBuckets, np;
+    
+    long ip, ib, lastBin=0, firstBin=0, n_binned=0;
     double tmin=0, tmax, tmean, dt=0, P;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
@@ -64,7 +71,6 @@ void track_through_rfmode(
 #if USE_MPI
     long nonEmptyBins = 0;
     long np_total;
-    long firstBin = rfmode->n_bins;
 #endif
 
     if (rfmode->binless) { /* This can't be done in parallel mode */
@@ -78,6 +84,7 @@ void track_through_rfmode(
       runBinlessRfMode(part, np, rfmode, Po, element_name, element_z, pass, n_passes, charge);
       return;
     }
+    
     if (charge) {
       rfmode->mp_charge = charge->macroParticleCharge;
     } else if (pass==0) {
@@ -85,37 +92,43 @@ void track_through_rfmode(
       if (rfmode->charge<0)
         bombElegant((char*)"RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI) 
-      if (np)
-        rfmode->mp_charge = rfmode->charge/np;
+      if (np0)
+        rfmode->mp_charge = rfmode->charge/np0;
 #else
       if (notSinglePart) {
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&np0, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	if (np_total)
 	  rfmode->mp_charge = rfmode->charge/np_total; 
       } else {
-        if (np)
-          rfmode->mp_charge = rfmode->charge/np;
+        if (np0)
+          rfmode->mp_charge = rfmode->charge/np0;
       }
 #endif
     }
+#ifdef DEBUG
+    printf("RFMODE: np0=%ld, charge=%le, mp_charge=%le\n", np0, rfmode->charge, rfmode->mp_charge);
+#endif
 
     if (pass%rfmode->pass_interval)
       return;
     
     if (isMaster && (!been_warned)) {        
-        if (rfmode->freq<1e3 && rfmode->freq)  {
-            fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
-            fflush(stdout);
-            been_warned = 1;
-            }
-        if (been_warned) {
-            fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
-            fflush(stdout);
-            print_dictionary_entry(stdout, T_RFMODE, 0, 0);
-            }
-        }
-
+      if (rfmode->freq<1e3 && rfmode->freq)  {
+        fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+        fflush(stdout);
+        been_warned = 1;
+      }
+      if (been_warned) {
+        fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
+        fflush(stdout);
+        print_dictionary_entry(stdout, T_RFMODE, 0, 0);
+      }
+    }
+    
     if (rfmode->mp_charge==0) {
+#ifdef DEBUG
+      printf("RFMODE: mp_charge=0, returning\n");
+#endif
       return ;
     }
     if (rfmode->detuned_until_pass>pass) {
@@ -134,221 +147,327 @@ void track_through_rfmode(
       Vbin = (double*)trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
     }
 
-    if (np>max_np) {
-      pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
-      time = (double*)trealloc(time, sizeof(*time)*max_np);
-    }
-
-    tmean = 0;
-    if (isSlave) {
-      for (ip=0; ip<np; ip++) {
-        P = Po*(part[ip][5]+1);
-        time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-        tmean += time[ip];
-      }
-    }
-#if USE_MPI
-    if (notSinglePart) {
-      if (isSlave) {
-	double t_total;
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-	MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
-	tmean = t_total;
-      }
-      tmean /= np_total;
-    } else
-      tmean /= np;
-#else
-    tmean /= np;
+    if (isSlave || !notSinglePart) {
+#ifdef DEBUG
+      printf("RFMODE: Determining bucket assignments\n");
 #endif
-    
-   if (isSlave) {
-      tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
-      tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
-
-      for (ib=0; ib<rfmode->n_bins; ib++)
-        Ihist[ib] = 0;
-      
-      dt = (tmax - tmin)/rfmode->n_bins;
-      n_binned = lastBin = 0;
-      for (ip=0; ip<np; ip++) {
-        pbin[ip] = -1;
-        ib = (long)((time[ip]-tmin)/dt);
-        if (ib<0)
-            continue;
-        if (ib>rfmode->n_bins - 1)
-            continue;
-        Ihist[ib] += 1;
-#if USE_MPI
-	if (Ihist[ib]==1)
-	  nonEmptyBins++;
-#endif
-        pbin[ip] = ib;
-        if (ib>lastBin)
-          lastBin = ib;
-#if USE_MPI
-      if (ib<firstBin)    
-	firstBin = ib;
-#endif
-        n_binned++;
-      }
-      V_sum = Vr_sum = phase_sum = Q_sum = 0;
-      n_summed = max_hist = n_occupied = 0;
-    
-      /* find frequency and Q at this time */
-      omega = PIx2*rfmode->freq;
-      if (rfmode->nFreq) {
-	double omegaFactor;
-	ib = find_nearby_array_entry(rfmode->tFreq, rfmode->nFreq, tmean);
-	omega *= (omegaFactor=linear_interpolation(rfmode->fFreq, rfmode->tFreq, rfmode->nFreq, tmean, ib));
-	/* keeps stored energy constant for constant R/Q */
-	rfmode->V *= sqrt(omegaFactor);
-      }
-      Q = rfmode->Q/(1+rfmode->beta);
-      if (rfmode->nQ) {
-	ib = find_nearby_array_entry(rfmode->tQ, rfmode->nQ, tmean);
-	Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
-      }
-    }
-#if (!USE_MPI)
-    if (Q<0.5) {
-      fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      determine_bucket_assignments(part0, np0, (charge && rfmode->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+#ifdef DEBUG
+      printf("RFMODE: Done determining bucket assignments\n");
       fflush(stdout);
-      exitElegant(1);
-    }
-#else
-    if (myid == 1) { /* Let the first slave processor write the output */
-      if (Q<0.5) {
-	dup2(fd,fileno(stdout)); 
-	fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
-	fflush(stdout);
-	close(fd);
-	MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
-      }
-    }
+#endif 
+    } else 
+      nBuckets = 1;
+
+#if USE_MPI
+    /* Master needs to know the number of buckets */
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Allreduce(&nBuckets, &iBucket, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+    if (myid==0)
+      nBuckets = iBucket;
 #endif
-      tau = 2*Q/omega;
-      k = omega/4*(rfmode->RaInternal)/rfmode->Q;
-      if ((deltaPass = (pass-rfmode->detuned_until_pass)) <= (rfmode->rampPasses-1)) 
-	k *= (deltaPass+1.0)/rfmode->rampPasses;
+#ifdef DEBUG
+    printf("RFMODE: nBuckets = %ld\n", nBuckets);
+#endif
+    
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+      if (isSlave || !notSinglePart) {
+        if (nBuckets==1) {
+          time = time0;
+          part = part0;
+          np = np0;
+          pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
+        } else {
+          if ((np = npBucket[iBucket])==0)
+            continue;
+          if (part)
+            free_czarray_2d((void**)part, max_np, 7);
+          part = (double**)czarray_2d(sizeof(double), np, 7);
+          time = (double*)tmalloc(sizeof(*time)*np);
+          pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
+          max_np = np;
+          for (ip=0; ip<np; ip++) {
+            time[ip] = time0[ipBucket[iBucket][ip]];
+            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+          }
+        }
+#ifdef DEBUG
+        printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
+        fflush(stdout);
+#endif
+        tmean = 0;
+        if (isSlave) {
+          for (ip=0; ip<np; ip++) {
+            P = Po*(part[ip][5]+1);
+            time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+            tmean += time[ip];
+          }
+        }
+#if USE_MPI
+        if (notSinglePart) {
+          if (isSlave) {
+            double t_total;
+            MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+            MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+            tmean = t_total;
+          }
+          tmean /= np_total;
+        } else
+          tmean /= np;
+#else
+        tmean /= np;
+#endif
 
-      /* These adjustments per Zotter and Kheifets, 3.2.4 */
-      Qrp = sqrt(Q*Q - 0.25);
-      VbImagFactor = 1/(2*Qrp);
-      omega *= Qrp/Q;
+        if (isSlave) {
+          tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
+          tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
+#ifdef DEBUG
+          printf("tmin = %le, tmax = %le, tmean = %le\n", tmin, tmax, tmean);
+          fflush(stdout);
+#endif
+          
+          for (ib=0; ib<rfmode->n_bins; ib++)
+            Ihist[ib] = 0;
+        
+          dt = (tmax - tmin)/rfmode->n_bins;
+          n_binned = lastBin = 0;
+          firstBin = rfmode->n_bins;
+          for (ip=0; ip<np; ip++) {
+            pbin[ip] = -1;
+            ib = (long)((time[ip]-tmin)/dt);
+            if (ib<0)
+              continue;
+            if (ib>rfmode->n_bins - 1)
+              continue;
+            Ihist[ib] += 1;
+#if USE_MPI
+            if (Ihist[ib]==1)
+              nonEmptyBins++;
+#endif
+            pbin[ip] = ib;
+            if (ib>lastBin)
+              lastBin = ib;
+            if (ib<firstBin)    
+              firstBin = ib;
+            n_binned++;
+          }
+          V_sum = Vr_sum = phase_sum = Q_sum = 0;
+          n_summed = max_hist = n_occupied = 0;
+    
+        /* find frequency and Q at this time */
+          omega = PIx2*rfmode->freq;
+          if (rfmode->nFreq) {
+            double omegaFactor;
+            ib = find_nearby_array_entry(rfmode->tFreq, rfmode->nFreq, tmean);
+            omega *= (omegaFactor=linear_interpolation(rfmode->fFreq, rfmode->tFreq, rfmode->nFreq, tmean, ib));
+            /* keeps stored energy constant for constant R/Q */
+            rfmode->V *= sqrt(omegaFactor);
+          }
+          Q = rfmode->Q/(1+rfmode->beta);
+          if (rfmode->nQ) {
+            ib = find_nearby_array_entry(rfmode->tQ, rfmode->nQ, tmean);
+            Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
+          }
+        }
+#if (!USE_MPI)
+        if (Q<0.5) {
+          fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+          fflush(stdout);
+          exitElegant(1);
+        }
+#else
+        if (myid == 1) { /* Let the first slave processor write the output */
+          if (Q<0.5) {
+            dup2(fd,fileno(stdout)); 
+            fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+            fflush(stdout);
+            close(fd);
+            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+          }
+        }
+#endif
+        tau = 2*Q/omega;
+        k = omega/4*(rfmode->RaInternal)/rfmode->Q;
+        if ((deltaPass = (pass-rfmode->detuned_until_pass)) <= (rfmode->rampPasses-1)) 
+          k *= (deltaPass+1.0)/rfmode->rampPasses;
+      
+        /* These adjustments per Zotter and Kheifets, 3.2.4 */
+        Qrp = sqrt(Q*Q - 0.25);
+        VbImagFactor = 1/(2*Qrp);
+        omega *= Qrp/Q;
+      
+        if (rfmode->single_pass) {
+          rfmode->V = rfmode->last_phase = 0;
+          rfmode->last_t = tmin + 0.5*dt;
+        }
+      }
+      
+#if USE_MPI
+        if (nBuckets==1) {
+          histogram_sums(nonEmptyBins, firstBin, &lastBin, Ihist);
+        } else {
+          long firstBin_global, lastBin_global;
+          if (myid==0) {
+            firstBin = rfmode->n_bins;
+            lastBin = 0;
+          }
+          MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+          MPI_Allreduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
+          firstBin = firstBin_global;
+          lastBin = lastBin_global;
+          if (isSlave || !notSinglePart) { 
+            double *buffer;
+            buffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
+            MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
+            memcpy(Ihist+firstBin, buffer, sizeof(double)*(lastBin-firstBin+1));
+            free(buffer);
+          }
+#ifdef DEBUG
+          printf("firstBin = %ld, lastBin = %ld\n", firstBin_global, lastBin_global);
+          printf("%ld particles binned\n", n_binned);
+          for (ib=firstBin; ib<=lastBin; ib++) 
+            printf("%ld %ld\n", ib, Ihist[ib]);
+          fflush(stdout);
+#endif
+        }
+#else 
+#ifdef DEBUG
+        printf("%ld particles binned\n", n_binned);
+        for (ib=firstBin; ib<=lastBin; ib++) 
+          printf("%ld %ld\n", ib, Ihist[ib]);
+        fflush(stdout);
+#endif
+#endif
 
-      if (rfmode->single_pass) {
-	rfmode->V = rfmode->last_phase = 0;
-	rfmode->last_t = tmin + 0.5*dt;
+      if (isSlave || !notSinglePart) {
+        /* These values are fixed and can be used to compute the effect on the beam of
+         * the "long-range" fields (previous turns) only
+         */
+        VPrevious = rfmode->V;
+        tPrevious = rfmode->last_t;
+        phasePrevious = rfmode->last_phase;
+        for (ib=firstBin; ib<=lastBin; ib++) {
+          if (!Ihist[ib])
+            continue;
+          if (Ihist[ib]>max_hist)
+            max_hist = Ihist[ib];
+          n_occupied++;
+          
+          t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+          
+          /* advance cavity to this time */
+          phase = rfmode->last_phase + omega*(t - rfmode->last_t);
+          damping_factor = exp(-(t-rfmode->last_t)/tau);
+          rfmode->last_t = t;
+          rfmode->last_phase = phase;
+          V = rfmode->V*damping_factor;
+          rfmode->Vr = V*cos(phase);
+          rfmode->Vi = V*sin(phase);
+
+          /* compute beam-induced voltage for this bin */
+          Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval*Ihist[ib];
+          if (rfmode->long_range_only)
+            Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
+          else 
+            Vbin[ib] = rfmode->Vr - Vb/2;
+        
+          /* add beam-induced voltage to cavity voltage */
+          rfmode->Vr -= Vb;
+          rfmode->Vi -= Vb*VbImagFactor;
+          rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
+          rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
+        
+          V_sum  += Ihist[ib]*rfmode->V;
+          Vr_sum += Ihist[ib]*rfmode->Vr;
+          phase_sum += Ihist[ib]*rfmode->last_phase;
+          Q_sum += Ihist[ib]*rfmode->mp_charge*particleRelSign;
+          n_summed  += Ihist[ib];
+        }
+
+#ifdef DEBUG
+        printf("Computed voltage values in bins\n");
+        fflush(stdout);
+#endif
+
+        if (rfmode->rigid_until_pass<=pass) {
+          /* change particle momentum offsets to reflect voltage in relevant bin */
+          /* also recompute slopes for new momentum to conserve transverse momentum */
+          for (ip=0; ip<np; ip++) {
+            if (pbin[ip]>=0) {
+              /* compute new momentum and momentum offset for this particle */
+              dgamma = rfmode->n_cavities*Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+              add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+            }
+          }
+        }
+    
+#ifdef DEBUG
+        printf("Applied voltages to particles\n");
+        fflush(stdout);
+#endif
+
+        if (rfmode->record) {
+#if (USE_MPI)
+          if (myid == 1) /* We let the first slave to dump the parameter */
+#endif
+            if ((pass%rfmode->sample_interval)==0 && 
+                (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                    (pass/rfmode->sample_interval),
+                                    (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+                                    (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
+                                    (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
+                                    (char*)"tPostBeam", rfmode->last_t,
+                                    (char*)"V", n_summed?V_sum/n_summed:0.0,
+                                    (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+                                    (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                                    (char*)"Charge", rfmode->mp_charge*np, NULL) ||
+                 !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
+            }
+          if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+          }
+        }
+    
+        if (nBuckets!=1) {
+          for (ip=0; ip<np; ip++)
+            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+        }
       }
 #if USE_MPI
-      histogram_sums(nonEmptyBins, firstBin, &lastBin, Ihist);
-
-      /*      if (isSlave) {
-        long lastBin_global;         
-        MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
-        lastBin = lastBin_global;
-      }
-      if(isSlave) {
-        buffer = (double*)tmalloc(sizeof(double) * (lastBin+1)); 
-	MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-        memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
-	free(buffer);
-      }
-      */
-     
-#endif 
-      /* These values are fixed and can be used to compute the effect on the beam of
-       * the "long-range" fields (previous turns) only
-       */
-      VPrevious = rfmode->V;
-      tPrevious = rfmode->last_t;
-      phasePrevious = rfmode->last_phase;
-      for (ib=0; ib<=lastBin; ib++) {
-	if (!Ihist[ib])
-          continue;
-        if (Ihist[ib]>max_hist)
-          max_hist = Ihist[ib];
-        n_occupied++;
-
-        t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-
-        /* advance cavity to this time */
-        phase = rfmode->last_phase + omega*(t - rfmode->last_t);
-        damping_factor = exp(-(t-rfmode->last_t)/tau);
-        rfmode->last_t = t;
-        rfmode->last_phase = phase;
-        V = rfmode->V*damping_factor;
-        rfmode->Vr = V*cos(phase);
-        rfmode->Vi = V*sin(phase);
-
-        /* compute beam-induced voltage for this bin */
-        Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval*Ihist[ib];
-	if (rfmode->long_range_only)
-	  Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
-	else 
-	  Vbin[ib] = rfmode->Vr - Vb/2;
-        
-        /* add beam-induced voltage to cavity voltage */
-        rfmode->Vr -= Vb;
-        rfmode->Vi -= Vb*VbImagFactor;
-        rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
-        rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
-        
-        V_sum  += Ihist[ib]*rfmode->V;
-        Vr_sum += Ihist[ib]*rfmode->Vr;
-        phase_sum += Ihist[ib]*rfmode->last_phase;
-        Q_sum += Ihist[ib]*rfmode->mp_charge*particleRelSign;
-        n_summed  += Ihist[ib];
-      }
-
-      if (rfmode->rigid_until_pass<=pass) {
-	/* change particle momentum offsets to reflect voltage in relevant bin */
-	/* also recompute slopes for new momentum to conserve transverse momentum */
-	for (ip=0; ip<np; ip++) {
-	  if (pbin[ip]>=0) {
-	    /* compute new momentum and momentum offset for this particle */
-	    dgamma = rfmode->n_cavities*Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-	    add_to_particle_energy(part[ip], time[ip], Po, dgamma);
-	  }
-	}
-      }
-    
-    if (rfmode->record) {
-#if (USE_MPI)
-      if (myid == 1) /* We let the first slave to dump the parameter */
+      MPI_Barrier(MPI_COMM_WORLD);
 #endif
-      if ((pass%rfmode->sample_interval)==0 && 
-          (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				(pass/rfmode->sample_interval),
-			      (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
-			      (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
-			      (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
-			      (char*)"tPostBeam", rfmode->last_t,
-			      (char*)"V", n_summed?V_sum/n_summed:0.0,
-			      (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-			      (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
-                              (char*)"Charge", rfmode->mp_charge*np, NULL) ||
-	   !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
-      }
-      if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb((char*)"problem writing data for RFMODE record file");
-      }
     }
- 
-#if defined(MINIMIZE_MEMORY)
-    free(Ihist);
-    free(Vbin);
-    free(pbin);
-    free(time);
-    Ihist = pbin = NULL;
-    Vbin = time = NULL;
-    max_n_bins = max_np = 0;
+
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
+#ifdef DEBUG
+    printf("RFMODE: Exited bunch loop\n");
+    fflush(stdout);
+#endif
+
+#if defined(MINIMIZE_MEMORY)
+    if (Ihist) free(Ihist);
+    if (Vbin) free(Vbin);
+    if (part && part!=part0)
+      free_czarray_2d((void**)part, max_np, 7);
+    if (time && time!=time0) 
+      free(time);
+    if (time0) 
+      free(time0);
+    if (pbin)
+      free(pbin);
+    if (ibParticle) 
+      free(ibParticle);
+    if (ipBucket)
+      free_czarray_2d((void**)ipBucket, nBuckets, np0);
+    if (npBucket)
+      free(npBucket);
+#endif
   }
 
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 
