@@ -182,6 +182,8 @@ void track_through_rfmode(
             continue;
           if (part)
             free_czarray_2d((void**)part, max_np, 7);
+          if (time)
+            free(time);
           part = (double**)czarray_2d(sizeof(double), np, 7);
           time = (double*)tmalloc(sizeof(*time)*np);
           pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
