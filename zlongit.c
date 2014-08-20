@@ -150,7 +150,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           if (part)
             free_czarray_2d((void**)part, max_np, 7);
           part = (double**)czarray_2d(sizeof(double), np, 7);
-          time = (double*)tmalloc(sizeof(*time)*np);
+          time = (double*)trealloc(time, sizeof(*time)*np);
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
         }
@@ -286,7 +286,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                            zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
 
-#ifdef DEBUG && DEBUG>1
+#ifdef DEBUG
       /* Output the time-binned data */
       if (1) {
         FILE *fp;
