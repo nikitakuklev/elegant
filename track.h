@@ -896,7 +896,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 57
 #define N_MATTER_PARAMS 11
 #define N_RFMODE_PARAMS 27
-#define N_TRFMODE_PARAMS 23
+#define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
 #define N_MODRF_PARAMS 15
@@ -2265,6 +2265,7 @@ typedef struct {
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     long n_cavities;           /* multiply effect by this number */
+    long bunchedBeamMode;
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     long doX, doY;
