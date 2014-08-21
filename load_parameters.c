@@ -161,14 +161,15 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
                                           load_request[load_requests].filename)) {
     if (printingEnabled) {
       fprintf(stdout, "%s: couldn't initialize SDDS input for load_parameters file %s\n", 
-	      load_request[load_requests].filename,
-	      allow_missing_files?"warning":"error");
+	      allow_missing_files?"warning":"error", 
+	      load_request[load_requests].filename);
       fflush(stdout);
     }
     if (!allow_missing_files) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
+    SDDS_ClearErrors();
     return 1;
   }
   if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Element_ColumnName))<0 ||
