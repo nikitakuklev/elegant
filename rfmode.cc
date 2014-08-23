@@ -408,7 +408,8 @@ void track_through_rfmode(
 
         if (rfmode->record) {
 #if (USE_MPI)
-          if (myid == 1) /* We let the first slave to dump the parameter */
+          if (myid == 1) {
+	    /* We let the first slave to dump the parameter */
 #endif
             if ((pass%rfmode->sample_interval)==0 && 
                 (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -423,14 +424,20 @@ void track_through_rfmode(
                                     (char*)"Charge", rfmode->mp_charge*np, NULL) ||
                  !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-              SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
+	      printf("Warning: problem setting up data for RFMODE record file, row %ld\n", (long)(pass/rfmode->sample_interval));
             }
-          if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            SDDS_Bomb((char*)"problem writing data for RFMODE record file");
-          }
-        }
-    
+            if (pass==n_passes-1) {
+	      printf("Terminating RFMODe record file (pass = %ld)\n", pass);
+	      if (!SDDS_Terminate(&rfmode->SDDSrec)) {
+		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+		SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+	      }
+	    }
+#if USE_MPI
+	  }
+#endif
+	}
+
         if (nBuckets!=1) {
           for (ip=0; ip<np; ip++)
             memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
