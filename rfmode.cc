@@ -406,7 +406,8 @@ void track_through_rfmode(
         fflush(stdout);
 #endif
 
-        if (rfmode->record) {
+        if (rfmode->record && iBucket==(nBuckets-1)) {
+            
 #if (USE_MPI)
           if (myid == 1) {
 	    /* We let the first slave to dump the parameter */
@@ -427,7 +428,6 @@ void track_through_rfmode(
 	      printf("Warning: problem setting up data for RFMODE record file, row %ld\n", (long)(pass/rfmode->sample_interval));
             }
             if (pass==n_passes-1) {
-	      printf("Terminating RFMODe record file (pass = %ld)\n", pass);
 	      if (!SDDS_Terminate(&rfmode->SDDSrec)) {
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 		SDDS_Bomb((char*)"problem writing data for RFMODE record file");

@@ -415,7 +415,7 @@ void track_through_trfmode(
 #endif
   }
   
-  if (trfmode->record) {
+  if (trfmode->record && iBucket==(nBuckets-1)) {
 #if USE_MPI
     if (myid == 1) {/* first slave will do output */
 #endif
