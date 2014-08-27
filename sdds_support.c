@@ -320,7 +320,7 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     }
 
 
-#define WATCH_PARAMETER_MODE_COLUMNS 28
+#define WATCH_PARAMETER_MODE_COLUMNS 30
 #define WATCH_CENTROID_MODE_COLUMNS 18
 static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS] = {
     {"Step", "&column name=Step, type=long &end"},
@@ -351,6 +351,8 @@ static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS]
     {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=m, type=double, description=\"geometric horizontal emittance\" &end"},
     {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=m, type=double, description=\"geometric vertical emittance\" &end"},
     {"el", "&column name=el, symbol=\"$ge$r$bl$n\", units=s, type=double, description=\"longitudinal emittance\" &end"},
+    {"ecx", "&column name=ecx, symbol=\"$ge$r$bx,c$n\", units=m, type=double, description=\"geometric horizontal emittance less dispersive contributions\" &end"},
+    {"ecy", "&column name=ecy, symbol=\"$ge$r$by,c$n\", units=m, type=double, description=\"geometric vertical emittance less dispersive contributions\" &end"},
     } ;
 
 #define WATCH_POINT_FFT_COLUMNS 4
@@ -791,7 +793,9 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 {
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
-    
+    double emit[3], emitc[3];
+    long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0;
+    static BEAM_SUMS sums;
 #if USE_MPI  
     long particles_total;
     double emittance_l;
@@ -843,108 +847,57 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     watch->t0Last = tc0;
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
-    for (i=0; i<6; i+=2 ) {
-      double x, xp, cx, cxp, sum_x = 0, sum_xp = 0, sum_x2, sum_xxp, sum_xp2;
-      for (j=0; j<particles; j++) {
-        sum_x   += particle[j][i];
-        sum_xp  += particle[j][i+1];
-      }
-#if SDDS_MPI_IO
-      if (USE_MPI) {
-	double sum_x_total, sum_xp_total;
- 
-        if (particles_total) {
-	  MPI_Allreduce(&sum_x, &sum_x_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	  MPI_Allreduce(&sum_xp, &sum_xp_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	  sum_x = sum_x_total;
-	  sum_xp = sum_xp_total;
-	  cx = sum_x/particles_total;
-	  cxp = sum_xp/particles_total;
-	}
-	else
-	  cx = cxp = 0;
-      }
-#else
-      if (particles) {
-        cx  = sum_x/particles;
-        cxp = sum_xp/particles;
-      }
-      else 
-        cx = cxp = 0;
-#endif
-      if (isMaster) 
-	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-			       i==0?"Cx" :(i==2?"Cy" :"Cs" ), cx,
-			       i==0?"Cxp":(i==2?"Cyp":"Cdelta"), cxp, NULL)) {
-	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-      if (watch->mode_code==WATCH_PARAMETERS) {
-        for (j=sum_x2=sum_xp2=sum_xxp=0; j<particles; j++) {
-          x  = particle[j][i]   - cx;
-          xp = particle[j][i+1] - cxp;
-          sum_x2  += sqr(x);
-          sum_xxp += x*xp;
-          sum_xp2 += sqr(xp);
-        }
-#if SDDS_MPI_IO
-	if (USE_MPI) {
-          double sum[3], sum_total[3];
-          sum[0] = sum_x2; sum[1] = sum_xxp; sum[2] = sum_xp2;
-	  MPI_Allreduce(sum, sum_total, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-          sum_x2 = sum_total[0];
-          sum_xxp = sum_total[1];
-          sum_xp2 = sum_total[2];
-	}
-        if (isMaster) {
-	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-				 i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles_total?sqrt(sum_x2/particles_total):0.0,
-				 i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles_total?sqrt(sum_xp2/particles_total):0.0, NULL)) {
-	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-	  if (i!=4)
-	    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-				   i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles_total, NULL)) {
-	      SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	    }
-	}
-#else 
-	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-			       i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles?sqrt(sum_x2/particles):0.0,
-			       i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles?sqrt(sum_xp2/particles):0.0, NULL)) {
-	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-	if (i!=4)
-	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-				 i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles, NULL)) {
-	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-#endif
-      }
-    }
-
-#if SDDS_MPI_IO 
-    emittance_l = rms_longitudinal_emittance_p(particle, particles, Po);  
+    zero_beam_sums(&sums, 1);
+    accumulate_beam_sums(&sums, particle, particles, Po);
     if (isMaster) {
-      if (watch->mode_code==WATCH_PARAMETERS)
-	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-			       "el", emittance_l, NULL)) {
+      if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
+	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      for (i=0; i<6; i++) {
+        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+                               Cx_index+i, sums.centroid[i],
+                               -1)) {
 	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-    }
-#else
-    if (watch->mode_code==WATCH_PARAMETERS)
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-			     "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
-	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
       }
-#endif
+    }
+     
+    if (watch->mode_code==WATCH_PARAMETERS) {
+      for (i=0; i<2; i++) {
+        emitc[i] = emit[i] = 0;
+        computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
+      }
+      emit[2] = SAFE_SQRT(sums.sigma[5][5]*sums.sigma[6][6] - sqr(sums.sigma[5][6]));
+
+      if (isMaster) {
+        if ((Sx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Sx"))<0 ||
+            (ex_index=SDDS_GetColumnIndex(&watch->SDDS_table, "ex"))<0 ||
+            (ecx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "ecx"))<0) {
+	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        for (i=0; i<7; i++) {
+          if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+                                 Sx_index+i, sqrt(sums.sigma[i][i]),
+                                 -1)) {
+            SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+        }
+        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+                               ex_index, emit[0], 
+                               ex_index+1, emit[1],
+                               ex_index+2, emit[2], 
+                               ecx_index, emitc[0],
+                               ecx_index+1, emitc[1],
+                               -1)) {
+          SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
     /* time centroid and sigma */
     for (i=p_sum=gamma_sum=sum=0; i<particles; i++) {
       p = Po*(1+particle[i][5]);
@@ -986,33 +939,6 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 #endif
-    if (watch->mode_code==WATCH_PARAMETERS) {
-      for (i=sum=0; i<particles; i++) {
-        p = Po*(1+particle[i][5]);
-        sum += sqr(particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
-      }
-#if SDDS_MPI_IO
-      if (USE_MPI) {
-	double sum_total;
-	MPI_Allreduce(&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-        if (isMaster)
-	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-				 "St", particles_total?sqrt(sum_total/particles_total):0.0, NULL)) {
-	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-	if (isMaster)
-          particles = particles_total; /* make sure the partiles will not be used in a loop */
-      }
-#else
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                             "St", particles?sqrt(sum/particles):0.0, NULL)) {
-        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-#endif
-    }
 
     if (isMaster) {
       /* number of particles */
