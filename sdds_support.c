@@ -676,7 +676,11 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   if (!particle)
     bombElegant("NULL coordinate pointer passed to dump_watch_particles", NULL);
   if (watch->fraction>1)
-    bombElegant("logic error--fraction>1 in dump_watch_particles", NULL);
+    bombElegant("Error: fraction>1 in dump_watch_particles", NULL);
+  if (watch->startPID>=0 && watch->startPID>watch->endPID)
+    bombElegant("Error: startPID>endPID in dump_watch_particles", NULL);
+  if ((watch->endPID>=0 && watch->startPID<0) || (watch->startPID>=0 && watch->endPID<0))
+    bombElegant("Error: Invalid startPID, endPID in dump_watch_particles", NULL);
   for (i=0; i<particles; i++)
     if (!particle[i]) {
       fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
@@ -696,7 +700,8 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
 #endif
   for (i=0; i<particles; i++) {
-    if (watch->fraction==1 || random_2(0)<watch->fraction) {
+    if (((watch->startPID<0 && watch->endPID<0) || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID))
+	&& (watch->fraction==1 || random_2(0)<watch->fraction)) {
       if (watch->xData && 
           !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
                              watch->xIndex[0], particle[i][0], 

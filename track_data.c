@@ -713,6 +713,8 @@ WATCH watch_example;
 /* names for watch point */
 PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&watch_example.fraction), NULL, 1.0, 0, "fraction of particles to dump (coordinate mode)"},
+    {"START_PID", "", IS_LONG, 0, (long)((char *)&watch_example.startPID), NULL, 0.0, -1, "starting particleID for particles to dump (coordinate mode)"},
+    {"END_PID", "", IS_LONG, 0, (long)((char *)&watch_example.endPID), NULL, 0.0, -1, "ending particleID for particles to dump (coordinate mode)"},
     {"INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.interval), NULL, 0.0, 1, "interval for data output (in turns)"},
     {"START_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.start_pass), NULL, 0.0, 0, "pass on which to start"},
     {"END_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.end_pass), NULL, 0.0, -1, "pass on which to end (inclusive).  Ignored if negative."},

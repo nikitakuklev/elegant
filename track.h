@@ -867,7 +867,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 15
+#define N_WATCH_PARAMS 17
 #define N_MALIGN_PARAMS 10
 #define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
@@ -1515,7 +1515,7 @@ extern char *fft_window_name[N_FFT_WINDOWS];
 
 typedef struct {
     double fraction;
-    long interval, start_pass, end_pass;
+    long startPID, endPID, interval, start_pass, end_pass;
     char *filename, *label, *mode;
     long xData, yData, longitData, excludeSlopes, flushInterval, disable;
     long useDisconnect, indexOffset;
