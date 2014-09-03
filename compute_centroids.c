@@ -154,7 +154,7 @@ void compute_sigmas(
   double sum2_total[6];
 
   if (notSinglePart) {
-    if (isMaster)
+    if (isMaster && parallelStatus==trueParallel)
       n_part = 0;
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
       active = 1;
@@ -242,7 +242,7 @@ void zero_beam_sums(
     for (j=0; j<7; j++)
       sums[i].centroid[j] = 0;
     for (j=0; j<7; j++)
-      for (k=j; k<7; k++)
+      for (k=0; k<7; k++)
         sums[i].sigma[j][k] = 0;
     sums[i].n_part = sums[i].z = sums[i].p0 = 0;
   }
@@ -434,7 +434,7 @@ void accumulate_beam_sums(
 	    Sij = KahanPlus(Sij, ((i<6?coord[i_part][i]:timeCoord[i_part])-centroid[i])*((j<6?coord[i_part][j]:timeCoord[i_part])-centroid[j]), &errorSig[j]); 
 #endif
 	  }
-	  sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	  sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part));
 #else 
 	  if (notSinglePart) {
 	    if (parallelStatus==trueParallel) {
@@ -459,8 +459,8 @@ void accumulate_beam_sums(
 		Sij = KahanPlus(Sij, ((i<6?coord[i_part][i]:timeCoord[i_part])-centroid[i])*((j<6?coord[i_part][j]:timeCoord[i_part])-centroid[j]), &errorSig[j]); 
 #endif
 	      }
-	      if (n_part)
-		sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	      if (n_part) 
+		sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part));
 	    }
 	  }
 	  else { /* Single particle case */
@@ -472,7 +472,7 @@ void accumulate_beam_sums(
 #endif
 	    }
 	    if (n_part)
-	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	      sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part));
 	  }
 #endif
 	}
@@ -520,7 +520,7 @@ void accumulate_beam_sums(
 	      offset += i-1;
 	    for (j=i; j<7; j++) {
 	      index = 6*i+j-offset;
-	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+n_total);
+	      sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+n_total));
 	    }
 	  }
 	}
@@ -575,10 +575,12 @@ void copy_beam_sums(
 
   for (i=0; i<7; i++) {
     target->maxabs[i] = source->maxabs[i];
+    target->max[i] = source->max[i];
+    target->min[i] = source->min[i];
   }
   for (i=0; i<7; i++) {
     target->centroid[i] = source->centroid[i];
-    for (j=i; j<7; j++)
+    for (j=0; j<7; j++)
       target->sigma[i][j] = source->sigma[i][j];
   }
   target->n_part = source->n_part;
