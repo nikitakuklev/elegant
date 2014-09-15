@@ -63,7 +63,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 fprintf(fpm, "\"%s\" %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(value));
                 end = start+kqptr->length;
                 fprintf(fpm, "\"%s\" %s %e  %d\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n\"%s\" %s %e 0\n", 
-                        eptr->name, entity_name[eptr->type], end, SIGN(kqptr->k1), 
+                        eptr->name, entity_name[eptr->type], end, SIGN(value),
                         eptr->name, entity_name[eptr->type], end, 
                         eptr->name, entity_name[eptr->type], start,
                         eptr->name, entity_name[eptr->type], end);
