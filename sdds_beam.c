@@ -196,7 +196,7 @@ long new_sdds_beam(
 #ifdef VAX_VMS
   char s[100];
 #endif
-  long i_store, i, j;
+  long i_store, i, j, k;
   static long new_particle_data, generate_new_bunch;
   double r, theta, pr, pz, pphi, delta;
   double sin_theta, cos_theta, path, *pti;
@@ -352,6 +352,7 @@ long new_sdds_beam(
     /* Create the initial distribution from the beam->original particle data 
      * or generate a new distribution from those data 
      */
+
 #if SDDS_MPI_IO
     if (isSlave || (!notSinglePart)) {
 #endif
@@ -483,6 +484,47 @@ long new_sdds_beam(
         adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central, 
                                  center_arrival_time, reverse_t_sign);
     }
+    if (duplicates>1) {
+      /* Duplicate particles with some offsets */
+      long n0 = beam->n_to_track, n0Total = beam->n_to_track;
+      long idup;
+#ifdef SDDS_MPI_IO
+      MPI_Allreduce(&n0, &n0Total, 1, MPI_LONG, MPI_SUM, workers);
+#endif
+#ifdef MPI_DEBUG
+      printf("Duplicating %ld-particle bunch %ld times (myid=%d)\n", n0, duplicates,  myid);
+#endif
+      if (beam->particle!=beam->original) {
+        beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), duplicates*n0, 7);
+      } else {
+        beam->particle = (double**)czarray_2d(sizeof(double), duplicates*n0, 7);
+        memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*7);
+      }
+#ifdef MPI_DEBUG
+      printf("Array resized\n");
+#endif
+      j = n0;
+      duplicate_stagger[4] *= c_mks*p_central/sqrt(sqr(p_central)+1); /* convert dt to ds=beta*c*dt */
+      for (idup=1; idup<duplicates; idup++) {
+#ifdef MPI_DEBUG
+        printf("Working on duplicate %ld\n", idup);
+#endif
+        for (i=0; i<n0; i++) {
+          for (k=0; k<6; k++) {
+            beam->particle[j][k] = beam->original[i][k] + idup*duplicate_stagger[k];
+          }
+          beam->particle[j][6] = beam->original[i][6] + idup*n0Total;
+          j++;
+        }
+#ifdef MPI_DEBUG
+        printf("Done with duplicate %ld\n", idup);
+#endif
+      }
+#ifdef MPI_DEBUG
+      printf("Done with all duplicates\n");
+#endif
+      beam->n_to_track = n0*duplicates;
+    }
 #if SDDS_MPI_IO
     }
 #endif
@@ -536,8 +578,14 @@ long new_sdds_beam(
   if (notSinglePart) {
     if (isMaster)
       beam->n_to_track = 0;
+#ifdef MPI_DEBUG
+    printf("Counting particles on all processors.\n");
+#endif
     MPI_Allreduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     beam->n_original_total = beam->n_to_track_total;
+#ifdef MPI_DEBUG
+    printf("%ld particles total\n", beam->n_to_track_total);
+#endif
   }
 
   /* We need change to the singlePart mode for certain special situations */
@@ -554,6 +602,9 @@ long new_sdds_beam(
        but only if the stuff already in original[] is not going to be needed again
        to generate new beams.
        */
+#ifdef MPI_DEBUG
+    printf("Making copy of particles\n");
+#endif
     if (beam->original==beam->particle) 
       bombElegant("logic error in new_sdds_beam: array for original coordinates is missing", NULL);
 #if SDDS_MPI_IO
@@ -564,6 +615,9 @@ long new_sdds_beam(
     long *n_vector_long = (long*)tmalloc(n_processors*sizeof(*n_vector_long));
     int *n_vector = (int*)tmalloc(n_processors*sizeof(*n_vector));
     
+#ifdef MPI_DEBUG
+    printf("Preparing to share all particles across all processors\n");
+#endif    
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 
     data_all = (double**)resize_czarray_2d((void**)data_all, sizeof(double), (long)(np_total), 7);
@@ -596,6 +650,9 @@ long new_sdds_beam(
     beam->original = (double**)resize_czarray_2d((void**)beam->original, sizeof(double), (long)(np_total), 7);
   }
 #endif
+#ifdef MPI_DEBUG
+    printf("Checking arrays\n");
+#endif
     if (!beam->original)
       bombElegant("beam->original is NULL (new_sdds_beam.4)", NULL);
     if (!beam->particle)
@@ -621,6 +678,9 @@ long new_sdds_beam(
   }
 #endif
   if (!save_initial_coordinates) {
+#ifdef MPI_DEBUG
+    printf("In !save_initial_coordinates branch\n");
+#endif
     if (reuse_bunch) {
       /* close the SDDS file to free memory and read again from scratch next time */
       if (!SDDS_Terminate(&SDDS_input)) {
@@ -631,13 +691,26 @@ long new_sdds_beam(
     }
     /* free the 'original' particle data array */
     if (beam->original && beam->original!=beam->particle) {
-      free_czarray_2d((void**)beam->original, beam->n_original, 7);
+#ifdef MPI_DEBUG
+    printf("Freeing original data (beam->n_original = %ld)\n", beam->n_original);
+#endif
+      free_czarray_2d((void**)beam->original, beam->n_original, 7); 
       beam->original = NULL;
       beam->n_original = 0;
     }
+#ifdef MPI_DEBUG
+    printf("Done freeing original data\n");
+#endif
   if (beam->original==beam->particle)
       beam->original = NULL;
   }
+
+#ifdef MPI_DEBUG
+  printf("Exiting new_sdds_beam\n");
+#endif
+#ifdef SDDS_MPI_IO
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
   log_exit("new_sdds_beam");
   return(beam->n_to_track);

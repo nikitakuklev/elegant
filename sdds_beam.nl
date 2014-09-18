@@ -26,5 +26,7 @@
     double p_lower = 0.0;
     double p_upper = 0.0;
     long save_initial_coordinates = 1;
+    long duplicates = 1;
+    double duplicate_stagger[6] = {0, 0, 0, 0, 0, 0};
 #end
 
