@@ -484,7 +484,7 @@ long new_sdds_beam(
         adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central, 
                                  center_arrival_time, reverse_t_sign);
     }
-    if (duplicates>1) {
+    if (n_duplicates>1) {
       /* Duplicate particles with some offsets */
       long n0 = beam->n_to_track, n0Total = beam->n_to_track;
       long idup;
@@ -492,12 +492,12 @@ long new_sdds_beam(
       MPI_Allreduce(&n0, &n0Total, 1, MPI_LONG, MPI_SUM, workers);
 #endif
 #ifdef MPI_DEBUG
-      printf("Duplicating %ld-particle bunch %ld times (myid=%d)\n", n0, duplicates,  myid);
+      printf("Duplicating %ld-particle bunch %ld times (myid=%d)\n", n0, n_duplicates,  myid);
 #endif
       if (beam->particle!=beam->original) {
-        beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), duplicates*n0, 7);
+        beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), n_duplicates*n0, 7);
       } else {
-        beam->particle = (double**)czarray_2d(sizeof(double), duplicates*n0, 7);
+        beam->particle = (double**)czarray_2d(sizeof(double), n_duplicates*n0, 7);
         memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*7);
       }
 #ifdef MPI_DEBUG
@@ -505,7 +505,7 @@ long new_sdds_beam(
 #endif
       j = n0;
       duplicate_stagger[4] *= c_mks*p_central/sqrt(sqr(p_central)+1); /* convert dt to ds=beta*c*dt */
-      for (idup=1; idup<duplicates; idup++) {
+      for (idup=1; idup<n_duplicates; idup++) {
 #ifdef MPI_DEBUG
         printf("Working on duplicate %ld\n", idup);
 #endif
@@ -523,7 +523,7 @@ long new_sdds_beam(
 #ifdef MPI_DEBUG
       printf("Done with all duplicates\n");
 #endif
-      beam->n_to_track = n0*duplicates;
+      beam->n_to_track = n0*n_duplicates;
     }
 #if SDDS_MPI_IO
     }
