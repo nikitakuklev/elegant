@@ -2600,7 +2600,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_EDRIFT_PARAMS, MAT_LEN|DIVIDE_OK, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
-    {   N_TSCATTER_PARAMS,  NO_DICT_OUTPUT,       sizeof(TSCATTER),  tscatter_param     },   
+    {   N_TSCATTER_PARAMS,  0,       sizeof(TSCATTER),  tscatter_param     },   
     {   N_KQUSE_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KQUSE),    kquse_param    },
     {   N_UKICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM, sizeof(UKICKMAP),    ukickmap_param    },
