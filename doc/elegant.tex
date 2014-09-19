@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 26.0.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 27.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,50 +32,29 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 26.0.2}
+\section{Highlights of What's New in Version 27.0}
 
-Here is a summary of what's changed since release 25.3.2:
+Here is a summary of what's changed since release 26.0.2:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Corrected the second- and third-order matrices for the \verb|KQUSE| element. These matrices were used for analysis (e.g., chromaticity) and 
-  tracking when \verb|MATRIX_TRACKING=1| was set as part of the element definition. This bug was reported by C. Tennant (TJNAF).
-\item Corrected the third-order matrix for \verb|QUAD| and \verb|KQUAD| elements, and certain (off-diagonal) elements of the third-order matrix
-  for the \verb|OCT| and \verb|KOCT| elements. All of these corrections were traced to a bug in a mathematica script that computes the matrices.
-\item The \verb|BUMPER| element now uses the kicker waveform when a kickmap is supplied. Previously, the kicker waveform got ignored when a 
-  kickmap was provided. Also, the \verb|BUMPER| element now behaves as expected when the length is zero.
-\item The steering feature of the \verb|KQUAD| element did not work properly with the \verb|moments_output| command.
-  This bug was reported by V. Sajaev (APS).
-\item The steering multipoles feature of \verb|KQUAD| did not correctly include the skew components (driven by vertical steering) when the steering multipoles 
-  were specified without the dipole term. In that case, the skew component levels were essentially random values.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed two bugs in trajectory correction (\verb|correct| command): The range for threading mode was incorrectly set to the corrector tweak
-  value instead of the corrector strength limit.  In the ``use actual beam''  mode of trajectory correction, trajectory correction is no longer aborted 
-  if beam is lost during tracking.
-\item Steering strength limit functions were not working correctly for unusual correction elements such as integrated steering coils on quadrupoles.
-  This was reported by V. Sajaev (APS).
-\item The \verb|link_elements| command now behaves as closer to what would be expected when links are used together with errors. 
-  This addresses some issues identified by V. Sajaev (APS).
-\item Included additional checks for valid ordering of commands, in order to prevent errors.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|WIGGLER| and \verb|CWIGGLER| elements are now included in beam moments calculations with the \verb|moments_output| command.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|load_parameters| command will now accept lists of patterns for matching names, types, and parameters in the input file.
-\item The \verb|link_elements| command includes a new source-position specifier, namely, ``first.'' Also, a new feature to block self links was
-  added, and is on by default. 
-\item When performing threading-based trajectory correction, the algorithm now works backwards from the loss point and tries a specified number of correctors, which 
-  improves performance. 
-\item Quadratic spacing in the transverse coordinates is now the default for the \verb|tune_footprint| command.
+\item The \verb|sdds_beam| command has new features to allow duplicating an input beam to make multiple bunches.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -87,16 +66,7 @@ Here is a summary of what's changed since release 25.3.2:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item {\tt analyzeMagnets}: fixed divide-by-zero issue.
-\item {\tt elasticScatteringLifetime}: Use different integration method to avoid issues with Gill-Miller when s values have an irregular distribution.
-\item {\tt beamLifetimeCalc}: Use bremsstrahlung cross section from \cite{Tsai-RMP46}  and separation into nuclear and electron terms 
-  following \cite{Wrulich-CAS94}. Previously, used erroneous expressions from \cite{LeDuff-NIM239}.
-\item {\tt bremsstrahlungLifetime}: Use different integration method to avoid issues with Gill-Miller when s values have an irregular distribution.
-  Use bremsstrahlung cross section from \cite{Tsai-RMP46}  and separation into nuclear and electron terms 
-  following \cite{Wrulich-CAS94}. Previously, used erroneous expressions from \cite{LeDuff-NIM239}.
-\item {\tt longitCalcs}: added option for a harmonic bunch-lenghtening cavity.
-\item {\tt sddsrandmult}: now possible to have reference radius different from the magnet bore radius.
-\item {\tt touschekLifetime}: if momentum aperture is zero, returns zero lifetime instead of running forever.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -426,7 +396,7 @@ example.)
 \section{Preparing beams for bunched-mode simulations}\label{sect:bunchedBeams}
 
 As of version 25.3, certain elements in {\tt elegant} can operate under the assumption that the beam is organized into bunches.
-This includes the {\tt LRWAKE}, {\tt WAKE}, {\tt TRWAKE}, {\tt ZLONGIT}, and {\tt ZTRANSVERSE} elements.
+This includes the {\tt LRWAKE}, {\tt RFMODE}, {\tt WAKE}, {\tt TRFMODE}, {\tt TRWAKE}, {\tt ZLONGIT}, and {\tt ZTRANSVERSE} elements.
 At present, this behavior is only available when loading a beam from an external file using the \verb|sdds_beam| command.
 A typical sequence is to run {\tt elegant} once to generate a beam file using \verb|bunched_beam|, then load that beam into a subsequent run.
 
@@ -446,7 +416,6 @@ This mechanism allows specifying the bunch structure without adding columns to t
 
 Note that although in the case of beams generated with \verb|bunched_beam| the individual bunches appear in separate pages of the beam file, this is not
 necessary.
-
 
 \section{Namelist Command Dictionary}
 
@@ -3847,6 +3816,8 @@ together with \verb|insert_elements| and \verb|replace_elements|.
     double p_upper = 0.0;
     long save_initial_coordinates = 1;
     long reverse_t_sign = 0;
+    long n_duplicates = 0;
+    double duplicate_stagger[6] = {0, 0, 0, 0, 0, 0};
 &end
 \end{verbatim}
 
@@ -3902,6 +3873,16 @@ accelerator is set to zero.
 of tracked particles in memory.  This is the default behavior.  If unset, the initial coordinates
 are not saved, but are reread from disk each time they are needed.  This is more memory efficient
 and is useful for tracking very large numbers of particles.
+\item \verb|n_duplicates| --- This specifies duplicating the particles from the input file to allow tracking more
+  particles.   \verb|n_duplicates| specifies the number of duplications, where the default value of 0 indicates no duplication.
+  If $n$-fold duplication is invoked, the particle ID of a new particle is equal to the particle ID of its parent particle plus
+  $i N_p$, where $i=1,...,n+1$ is the duplication index and $N_p$ is the number of particles in the parent bunch.
+  This should be kept in mind when using the particle ID to segregate the beam into bunches.
+\item \verb|duplicate_stagger| --- Specifies offsetting of the coordinates $x$, $x^\prime$, $y$, $y^\prime$, $t$, and $\delta$
+  for each duplication by the specified amounts.
+  In the absence of such values, one assumes that some stochastic process such as synchrotron radiation will cause differentiation of
+  duplicate particles.
+  One can also use \verb|SCATTER| or \verb|DSCATTER| elements in the beamline for this purpose.
 \end{itemize}
 
 \begin{latexonly}
