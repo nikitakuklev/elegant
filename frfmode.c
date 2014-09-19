@@ -15,10 +15,6 @@
 #include "mdb.h"
 #include "track.h"
 
-#if USE_MPI
-void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
-#endif
-
 void track_through_frfmode(
                            double **part0, long np0, FRFMODE *rfmode, double Po,
                            char *element_name, double element_z, long pass, long n_passes,

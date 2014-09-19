@@ -3871,6 +3871,11 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
 void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass);
 
+#if USE_MPI
+void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif

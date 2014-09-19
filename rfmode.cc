@@ -31,10 +31,6 @@ double linear_interpolation(double *y, double *t, long n, double t0, long i);
 }
 #endif
 
-#if USE_MPI
-void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
-#endif
-
 void runBinlessRfMode(double **part, long np, RFMODE *rfmode, double Po,
 		      char *element_name, double element_z, long pass, long n_passes,
 		      CHARGE *charge);
@@ -825,7 +821,7 @@ typedef struct {
   long sum;
 } SUB_HISTOGRAM;
 
- void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
+void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 {
   static long *nonEmptyArray = NULL;
   long lastBin_global, firstBin_global;
