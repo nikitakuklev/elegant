@@ -96,7 +96,10 @@ void TouschekEffect(RUN *run,
     bombElegant("bunch length has to be given", NULL);
   if (sbin_step <=0)
     bombElegant("sbin can not be less than 0", NULL);
-  
+  if (do_track) 
+    if(control->ready != 1)
+        bombElegant("run_control must precede touschek_scatter namelists for doing tracking", NULL);
+      
   if (!Momentum_Aperture)
     bombElegant("Momentum_Aperture file needed before performing simulation", NULL);
   if (get_MAInput(Momentum_Aperture, beamline, nElement)<0)
