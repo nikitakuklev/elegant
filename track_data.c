@@ -1094,6 +1094,8 @@ PARAMETER scatter_param[N_SCATTER_PARAMS] = {
     {"YP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.yp), NULL, 0.0, 0, "rms scattering level for y'"},
     {"DP", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.dp), NULL, 0.0, 0, "rms scattering level for (p-pCentral)/pCentral"},
     {"PROBABILITY", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.probability), NULL, 1.0, 0, "Probability that any particle will be selected for scattering."},
+    {"STARTONPASS", "", IS_LONG, 0, (long)((char*)&scatter_example.startOnPass), NULL, 0.0, 0, "Pass number to start on."},
+    {"ENDONPASS", "", IS_LONG, 0, (long)((char*)&scatter_example.endOnPass), NULL, 0.0, -1, "Pass number to end on (inclusive).  Ignored if negative."},
     } ;
 
 DSCATTER dscatter_example;

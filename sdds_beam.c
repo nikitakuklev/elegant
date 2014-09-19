@@ -484,7 +484,7 @@ long new_sdds_beam(
         adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central, 
                                  center_arrival_time, reverse_t_sign);
     }
-    if (n_duplicates>1) {
+    if (n_duplicates>0) {
       /* Duplicate particles with some offsets */
       long n0 = beam->n_to_track, n0Total = beam->n_to_track;
       long idup;
@@ -494,6 +494,7 @@ long new_sdds_beam(
 #ifdef MPI_DEBUG
       printf("Duplicating %ld-particle bunch %ld times (myid=%d)\n", n0, n_duplicates,  myid);
 #endif
+      n_duplicates += 1;
       if (beam->particle!=beam->original) {
         beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), n_duplicates*n0, 7);
       } else {

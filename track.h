@@ -886,7 +886,7 @@ extern char *entity_text[N_TYPES];
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
-#define N_SCATTER_PARAMS 6
+#define N_SCATTER_PARAMS 8
 #define N_NIBEND_PARAMS 24
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
@@ -1898,6 +1898,7 @@ typedef struct {
 /* names and storage structure for scattering element physical parameters */
 typedef struct {
     double x, xp, y, yp, dp, probability;
+    long startOnPass, endOnPass;
     } SCATTER;
 
 /* names and storage structure for distribution-based scattering element physical parameters */
@@ -3037,7 +3038,7 @@ void remove_correlations(double **part, REMCOR *remcor, long np);
 void drift_beam(double **part, long np, double length, long order);
 void exactDrift(double **part, long np, double length);
 void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle, double etilt, double tilt);
-void scatter(double **part, long np, double Po, SCATTER *scatter);
+void scatter(double **part, long np, double Po, SCATTER *scatter, long iPass);
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);
 void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
