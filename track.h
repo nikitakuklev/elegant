@@ -3665,7 +3665,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
                                  double length, double charge, double z, long idSlotsPerBunch);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
-				  long original_particles,  double Po, double revolutionLength, double z);
+				  long original_particles,  double Po, double revolutionLength, double z, double eta[4]);
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
