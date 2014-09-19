@@ -18,16 +18,16 @@ static TWISS *twiss0;
 
 void init_IBS(ELEMENT_LIST *element);
 void free_IBS(IBSCATTER *IBS);
-void inflateEmittance(double **coord, double Po, 
+void inflateEmittance(double **coord, double Po, double eta[4], 
                       long offset, long istart, long iend, long *index, double factor);
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
-		       long istart, long iend, long *index, double zRate[3], double tc0, double Duration);
+		       long istart, long iend, long *index, double zRate[3], double Duration);
 void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                          char *command_file, char *lattice_file, char *caller, long isRing);
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass);
 void reset_IBS_output(ELEMENT_LIST *element);
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt, double *tCent);
+void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt);
 void zeroslice (long islice, IBSCATTER *IBS);
 long computeSliceParameters(double C[6], double S[6][6], double **part, long *index, long start, long end, double Po);
 void forth_propagate_twiss(IBSCATTER *IBS, long islice, double betax0, double alphax0, 
@@ -44,7 +44,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   double randomNumber;
   double beta0, beta1, p;
   double RNSigma[3], RNSigmaCheck[3]={0,0,0};
-  double bLength, tLength, tCent, zRate[3];
+  double bLength, tLength, zRate[3];
   static SDDS_TABLE outPage;
   static long isInit=0, doOut=0;
   double eta[4];
@@ -77,10 +77,10 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     eta[1] = IBS->etaxp[IBS->elements-1];
     eta[2] = IBS->etay[IBS->elements-1];
     eta[3] = IBS->etayp[IBS->elements-1];
-    
+
     index = (long*)malloc(sizeof(long)*np);
     count = (long*)malloc(sizeof(long)*IBS->nslice);
-    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength, &tCent);
+    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength);
     bLength = IBS->revolutionLength/IBS->dT*tLength;
     if ((IBS->nslice == 1) && (!IBS->isRing))
       bLength /= sqrt(2*PI);
@@ -136,17 +136,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
       IBS->yGrowthRate[islice] *= IBS->factor;
       IBS->zGrowthRate[islice] *= IBS->factor;
     }
-      /* Calculate longitudinal base for each slice */
-      /*
-    if (IBS->nslice >1) {
-      tSlice[iCent+1] = (tSlice[iCent+1]-tCent)*sqrt(IBS->zGrowthRate[iCent])+tCent;
-      tSlice[iCent] = (tSlice[iCent]-tCent)*sqrt(IBS->zGrowthRate[iCent])+tCent;      
-      for (islice=iCent; i>0; i--)
-	tSlice[i-1] = (tSlice[i-1]-tSlice[i])*sqrt(IBS->zGrowthRate[i-1])+tSlice[i];
-      for (i=iCent; i<IBS->nslice)
-	tSlice[i+2] = (tSlice[i+2]-tSlice[i+1])*sqrt(IBS->zGrowthRate[i+1])+tSlice[i+1]; 
-    }
-      */
+
     iend = 0;
     for (islice=0; islice<IBS->nslice; islice++) {
       istart = iend;
@@ -189,22 +179,10 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
           */
       } else {
         /* inflate each emittance by the prescribed factor */
-        inflateEmittance(coord, Po, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
-        inflateEmittance(coord, Po, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
-        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate, tCent, IBS->dT);
-	/*
-	if (islice == iCent)
-	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
-			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tCent, 0);
-	if (islice > iCent)
-	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
-			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tSlice[islice], 1);
-	if (islice < iCent)
-	  inflateEmittanceZ(coord, Po, IBS->isRing, istart, iend, index,
-			    (1.+IBS->dT*IBS->zGrowthRate[islice]), tSlice[islice+1], -1);
-	*/
+        inflateEmittance(coord, Po, eta, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
+        inflateEmittance(coord, Po, eta, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
+        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate, IBS->dT);
       }
-
       /* update beam emittance information after IBS scatter for IBSCATTER */
       if (!IBS->isRing) {
         computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
@@ -217,13 +195,63 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     }
     free(index);
     free(count);
-  }  
-
+  }
+  
 #if USE_MPI
+  if (IBS->filename) {
+    if (myid==1) {
+      /* processor 1 sends data back to master for output */
+      if (MPI_Send(&IBS->icharge[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->emitx0[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->emity0[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->emitl0[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->sigmaDelta0[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->sigmaz0[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->xGrowthRate[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->xGrowthRate[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+          MPI_Send(&IBS->zGrowthRate[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS) {
+        printf("Error: MPI_Send returns error sending IBS data from processor 1\n");
+        bombElegant("Communication error", NULL);
+      }
+      if (!IBS->isRing && 
+          (MPI_Send(&IBS->emitx[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+           MPI_Send(&IBS->emity[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+           MPI_Send(&IBS->emitl[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+           MPI_Send(&IBS->sigmaDelta[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS ||
+           MPI_Send(&IBS->sigmaz[0], IBS->nslice, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD)!=MPI_SUCCESS)) {
+        printf("Error: MPI_Send returns error sending IBS data from processor 1\n");
+        bombElegant("Communication error", NULL);
+      }
+    } else if (myid==0) {
+      /* processor 0 (master) receives data from processor 1 */
+      MPI_Status mpiStatus;
+      if (MPI_Recv(&IBS->icharge[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->emitx0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->emity0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->emitl0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->sigmaDelta0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->sigmaz0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->xGrowthRate[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->xGrowthRate[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+          MPI_Recv(&IBS->zGrowthRate[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
+        printf("Error: MPI_Recv returns error retrieving IBS data from processor 1\n");
+        bombElegant("Communication error", NULL);
+      }
+      if (!IBS->isRing && 
+          (MPI_Recv(&IBS->emitx[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+           MPI_Recv(&IBS->emity[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+           MPI_Recv(&IBS->emitl[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+           MPI_Recv(&IBS->sigmaDelta[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
+           MPI_Recv(&IBS->sigmaz[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS)) {
+        printf("Error: MPI_Recv returns error retrieving IBS data from processor 1\n");
+        bombElegant("Communication error", NULL);
+      }
+    }
+  }
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  if (IBS->filename && !(isSlave || !notSinglePart)) {
+  if (IBS->filename && isMaster) {
     if (!isInit) {
       SDDS_IBScatterSetup(&outPage, IBS->filename, SDDS_BINARY, 1, "IBS scatter growth rate output", 
                           run->runfile, run->lattice, "ibs_tracking", IBS->isRing);
@@ -246,11 +274,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   return;
 }
 
-void inflateEmittance(double **coord, double Po, 
+void inflateEmittance(double **coord, double Po, double eta[4], 
                       long offset, long istart, long iend, long *index, double factor)
 {
   long ipart, np, npTotal;
-  double factorSqrt, c[2]={0,0};
+  double factorSqrt, dpc=0, c[2]={0,0}, cp[2]={0,0};
 
 #if USE_MPI
   np = iend - istart;
@@ -267,23 +295,29 @@ void inflateEmittance(double **coord, double Po,
   for (ipart=istart; ipart<iend; ipart++) {
     c[0] += coord[index[ipart]][offset+0];
     c[1] += coord[index[ipart]][offset+1];
+    dpc += coord[index[ipart]][5];
   }
 #if USE_MPI
   MPI_Allreduce(MPI_IN_PLACE, &c[0], 2, MPI_DOUBLE, MPI_SUM, workers);
+  MPI_Allreduce(MPI_IN_PLACE, &dpc, 1, MPI_DOUBLE, MPI_SUM, workers);
   c[0] /= npTotal;
   c[1] /= npTotal;
+  dpc /= npTotal;
 #else
   c[0] /= np;
   c[1] /= np;
+  dpc /= np;
 #endif
   for (ipart=istart; ipart<iend; ipart++) {
-    coord[index[ipart]][offset+0] = (coord[index[ipart]][offset+0]-c[0])*factorSqrt+c[0];
-    coord[index[ipart]][offset+1] = (coord[index[ipart]][offset+1]-c[1])*factorSqrt+c[1];
+    cp[0] = eta[offset+0]*dpc;
+    cp[1] = eta[offset+1]*dpc;
+    coord[index[ipart]][offset+0] = (coord[index[ipart]][offset+0]-c[0]-cp[0])*factorSqrt+c[0]+cp[0]; 
+    coord[index[ipart]][offset+1] = (coord[index[ipart]][offset+1]-c[1]-cp[1])*factorSqrt+c[1]+cp[1];
   }
 }
 
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
-		       long istart, long iend, long *index, double zRate[3], double tc0, double Duration)
+		       long istart, long iend, long *index, double zRate[3], double Duration)
 {
   long i, ipart, np, npTotal;
   double c0, tc, dpc, *time, p, beta0, beta1;
@@ -325,18 +359,13 @@ void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
       c0 = (time[i]-tc)/dt*(zRate[2]-zRate[1])+zRate[1];
     else
       c0 = (time[i]-tc)/dt*(zRate[1]-zRate[0])+zRate[1];
-    c0 = sqrt(c0);
-    coord[index[ipart]][5] = (coord[index[ipart]][5]-dpc)*c0+dpc;
+
     p = Po*(1+coord[index[ipart]][5]);
     beta0 = p/sqrt(p*p+1);
-    if (isRing) {
-      time[i] = (time[i]-tc0)*c0+tc0;
-      coord[ipart][4] = time[i]*beta0*c_mks;
-    } else {
-      p = Po*(1+coord[index[ipart]][5]);
-      beta1 = p/sqrt(p*p+1);
-      coord[index[ipart]][4] += (beta1-beta0)*Duration*c_mks/2;
-    }
+    coord[index[ipart]][5] = (coord[index[ipart]][5]-dpc)*c0+dpc;
+    p = Po*(1+coord[index[ipart]][5]);
+    beta1 = p/sqrt(p*p+1);
+    coord[index[ipart]][4] += (beta1-beta0)*Duration*c_mks/2;
   }
   free(time);
   return;
@@ -537,7 +566,7 @@ void free_IBS(IBSCATTER *IBS)
   return;
 }
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt, double *tCent)
+void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt)
 {
   long i, j, islice, total;
   double tMaxAll, tMinAll, tMin, tMax;
@@ -568,7 +597,6 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
 #endif
     
     *dt = (tMaxAll-tMinAll)/(double)nslice;
-    *tCent = temp/np;
     timeIndex = tmalloc(sizeof(*timeIndex)*np);
     for (i=0; i<np; i++) {
       if ((timeIndex[i] = (time[i]-tMinAll)/(*dt))<0)
@@ -661,12 +689,13 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
 #endif
 
   for (i=start; i<end; i++) {
-    for (j=0; j<4; j++)
+    for (j=0; j<6; j++)
       for (k=0; k<=j; k++)
-        S[j][k] += (part[index[i]][j]-C[j])*(part[index[i]][k]-C[k]);
+        if (!(j>=4 && k>=4)) 
+          S[j][k] += (part[index[i]][j]-C[j])*(part[index[i]][k]-C[k]);
     i1 = i-start;
     S[4][4] += sqr(dt = time[i1]          - C[4]);
-    S[5][5] += sqr(dp = part[index[i]][5] - C[5]);
+    S[5][5] += sqr(dp = (part[index[i]][5] - C[5]));
     S[5][4] += dt*dp;
   }
 #if USE_MPI
@@ -735,8 +764,8 @@ void reset_IBS_output(ELEMENT_LIST *element)
   element = element0;
 }
 
-#define IBSCATTER_RING_PARAMETERS 19
-#define IBSCATTER_LINAC_PARAMETERS 25
+#define IBSCATTER_RING_PARAMETERS 20
+#define IBSCATTER_LINAC_PARAMETERS 27
 static SDDS_DEFINITION ibscatter_print_parameter[IBSCATTER_LINAC_PARAMETERS] = {
   {"TotalSlice", "&parameter name=TotalSlice, type=long, description=\"Total number of Slices\" &end"},
   {"NSlice", "&parameter name=NSlice, type=long, description=\"The ith slice of the beam\" &end"},
@@ -755,12 +784,14 @@ static SDDS_DEFINITION ibscatter_print_parameter[IBSCATTER_LINAC_PARAMETERS] = {
   {"eny0", "&parameter name=eny0, symbol=\"$gge$r$by$n\", units=\"m$be$nc $gp$rm\", type=double, description=\"Normalized initial vertical emittance\" &end"},
   {"emitx0", "&parameter name=emitx0, symbol=\"$ge$r$bx,Input$n\", units=\"$gp$rm\", type=double, description=\"Initial horizontal emittance\" &end"},
   {"emity0", "&parameter name=emity0, symbol=\"$ge$r$by,Input$n\", units=\"$gp$rm\", type=double, description=\"Initial vertical emittance\" &end"},
+  {"emitl0", "&parameter name=emitl0, symbol=\"$ge$r$bl,Input$n\", units=\"s\", type=double, description=\"Initial longitudinal emittance\" &end"},
   {"sigmaDelta0", "&parameter name=sigmaDelta0, symbol=\"$gs$r$bd,Input$n\", type=double, description=\"Initial momentum spread\" &end"},
   {"sigmaz0", "&parameter name=sigmaz0, symbol=\"$gs$r$bz,Input$n\", units=m, type=double, description=\"Initial bunch length\" &end"},
   {"enx", "&parameter name=enx, symbol=\"$gge$r$bx$n\", units=\"m$be$nc $gp$rm\", type=double, description=\"Normalized horizontal emittance with IBS\" &end"},
   {"eny", "&parameter name=eny, symbol=\"$gge$r$by$n\", units=\"m$be$nc $gp$rm\", type=double, description=\"Normalized vertical emittance with IBS\" &end"},
   {"emitx", "&parameter name=emitx, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double, description=\"Horizontal emittance with IBS\" &end"},
   {"emity", "&parameter name=emity, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double, description=\"Vertical emittance with IBS\" &end"},
+  {"emitl", "&parameter name=emitl, symbol=\"$ge$r$bl$n\", units=\"s\", type=double, description=\"Longitudinal emittance with IBS\" &end"},
   {"sigmaDelta", "&parameter name=sigmaDelta, symbol=\"$gs$r$bd$n\", type=double, description=\"Momentum spread with IBS\" &end"},
   {"sigmaz", "&parameter name=sigmaz, symbol=\"$gs$r$bz$n\", units=m, type=double, description=\"Bunch length with IBS\" &end"},
 };
@@ -786,6 +817,7 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
 {
     log_entry("SDDS_IBScatterSetup");
 
+/*
     if (isRing)
       SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, ibscatter_print_column, IBSCATTER_COLUMNS,
@@ -794,7 +826,15 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
       SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, ibscatter_print_column, IBSCATTER_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
-
+*/
+    if (isRing)
+      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
+                            ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, NULL, NULL,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    else
+      SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
+                            ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, NULL, NULL,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_IBScatterSetup");
 }
 
@@ -815,7 +855,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
-    for (i=0; i<IBS->elements; i++) {
+/*    for (i=0; i<IBS->elements; i++) {
       if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                              0, IBS->name[i], 1, IBS->s[i], 
                              2, IBS->xRateVsS[islice][i], 3, IBS->yRateVsS[islice][i], 4, IBS->zRateVsS[islice][i], 
@@ -824,7 +864,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
         SDDS_SetError("Problem setting SDDS row values (dump_IBScatter)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-    }
+    } */
     if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", fabs(IBS->icharge[islice]/particleCharge), NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Charge", IBS->icharge[islice]*1e9, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalSlice", IBS->nslice, NULL))||
@@ -842,6 +882,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "eny0", IBS->emity0[islice]*gamma, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emitx0", IBS->emitx0[islice], NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emity0", IBS->emity0[islice], NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emitl0", IBS->emitl0[islice], NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaDelta0", IBS->sigmaDelta0[islice], NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaz0", IBS->sigmaz0[islice], NULL))){
       SDDS_SetError("Problem setting SDDS parameters (dump_IBScatter)");
@@ -851,6 +892,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
     if (!IBS->isRing) {
       if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emitx", IBS->emitx[islice], NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emity", IBS->emity[islice], NULL))||
+          (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "emitl", IBS->emitl[islice], NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "enx", IBS->emitx[islice]*gamma, NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "eny", IBS->emity[islice]*gamma, NULL))||
           (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "sigmaDelta", IBS->sigmaDelta[islice], NULL))||
