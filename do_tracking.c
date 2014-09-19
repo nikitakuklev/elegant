@@ -158,7 +158,6 @@ long do_tracking(
   double sum, x_max, y_max;
   long elliptical;
   double et1, et2=0;
-  double eta[4];
   long is_batch = 0, last_type;
   static long is_ansi_term = -1;
   char s[100], *name;
@@ -1048,16 +1047,12 @@ long do_tracking(
 		      break;
 		    case WATCH_PARAMETERS:
 		    case WATCH_CENTROIDS:
-                      eta[0] = eptr->twiss->etax;
-                      eta[1] = eptr->twiss->etapx;
-                      eta[2] = eptr->twiss->etay;
-                      eta[3] = eptr->twiss->etapy;                      
 #if SDDS_MPI_IO
 		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					    beamline->revolution_length, z, eta);
+					    beamline->revolution_length, z);
 #else
 		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					    beamline->revolution_length, z, eta);
+					    beamline->revolution_length, z);
 #endif
 		      break;
 		    case WATCH_FFT:
@@ -1916,16 +1911,12 @@ long do_tracking(
 		  break;
 		case WATCH_PARAMETERS:
 		case WATCH_CENTROIDS:
-                  eta[0] = eptr->twiss->etax;
-                  eta[1] = eptr->twiss->etapx;
-                  eta[2] = eptr->twiss->etay;
-                  eta[3] = eptr->twiss->etapy;                      
 #if SDDS_MPI_IO
 		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					beamline->revolution_length, z, eta);
+					beamline->revolution_length, z);
 #else
 		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					beamline->revolution_length, z, eta);
+					beamline->revolution_length, z);
 #endif
 		  break;
 		case WATCH_FFT:

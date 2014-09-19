@@ -794,7 +794,7 @@ double tmp_safe_sqrt;
 
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, 
                            long particles, long original_particles,  double Po, 
-                           double revolutionLength, double z, double eta[4])
+                           double revolutionLength, double z)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
@@ -870,16 +870,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     }
      
     if (watch->mode_code==WATCH_PARAMETERS) {
-      double S[6][6];
-      for (i=0; i<6; i++) {
-        for (j=0; j<6; j++) {
-          S[i][j] = sums.sigma[i][j];
-        }
+      for (i=0; i<2; i++) {
+        emitc[i] = emit[i] = 0;
+        computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
       }
-      emitc[0] = correctedEmittance(S, eta, 0, 1, NULL, NULL);
-      emitc[1] = correctedEmittance(S, eta, 2, 3, NULL, NULL);
-      emit[0] = SAFE_SQRT(sums.sigma[0][0]*sums.sigma[1][1] - sqr(sums.sigma[0][1]));
-      emit[1] = SAFE_SQRT(sums.sigma[2][2]*sums.sigma[3][3] - sqr(sums.sigma[2][3]));
       if (isMaster) {
         if ((Sx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Sx"))<0 ||
             (ex_index=SDDS_GetColumnIndex(&watch->SDDS_table, "ex"))<0 ||
