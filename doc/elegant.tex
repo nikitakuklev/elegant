@@ -49,7 +49,8 @@ Here is a summary of what's changed since release 26.0.2:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item The \verb|SCATTER| element now has controls to allow determining the starting and ending pass.
+\item The \verb|RFMODE| and \verb|TRFMODE| now work in multi-bunch mode (see section \ref{sect:bunchedBeams}).
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -393,14 +394,16 @@ example.)
 
 \end{itemize}
 
-\section{Preparing beams for bunched-mode simulations}\label{sect:bunchedBeams}
+\section{Preparing beams for bunch-mode simulations}\label{sect:bunchedBeams}
 
-As of version 25.3, certain elements in {\tt elegant} can operate under the assumption that the beam is organized into bunches.
+Certain collective-effects elements in {\tt elegant} can operate under the assumption that the beam is organized into bunches.
 This includes the {\tt LRWAKE}, {\tt RFMODE}, {\tt WAKE}, {\tt TRFMODE}, {\tt TRWAKE}, {\tt ZLONGIT}, and {\tt ZTRANSVERSE} elements.
 At present, this behavior is only available when loading a beam from an external file using the \verb|sdds_beam| command.
 A typical sequence is to run {\tt elegant} once to generate a beam file using \verb|bunched_beam|, then load that beam into a subsequent run.
 
-In the beam-generation run, 
+This beam file may either contain the entire beam (all the bunches) or it may contain a single bunch.
+In the latter case, the single bunch must be duplicated using the \verb|n_duplicates| and \verb|duplicate_stagger| parameters of \verb|sdds_beam|.
+Otherwise, in the beam-generation run, 
 the \verb|run_control| command must be used to specify both the number of bunches (using \verb|n_steps|) and the bunch frequency (using
 \verb|bunch_frequency|).
 The beamline for this run would typically consist simply of a zero-length drift space, so that the \verb|output| file from the \verb|run_setup| command
