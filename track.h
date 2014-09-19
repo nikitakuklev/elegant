@@ -925,7 +925,7 @@ extern char *entity_text[N_TYPES];
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
-#define N_FRFMODE_PARAMS  13
+#define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 16
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
@@ -2228,6 +2228,7 @@ typedef struct {
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     long n_cavities;           /* multiply effect by this number */
+    long bunchedBeamMode;
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -2303,6 +2304,7 @@ typedef struct {
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     long n_cavities;           /* multiply effect by this number */
+    long bunchedBeamMode;
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */

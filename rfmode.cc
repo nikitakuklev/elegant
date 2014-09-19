@@ -301,6 +301,7 @@ void track_through_rfmode(
           rfmode->last_t = tmin + 0.5*dt;
         }
       }
+    
       
 #if USE_MPI
         if (nBuckets==1) {
@@ -457,7 +458,6 @@ void track_through_rfmode(
     fflush(stdout);
 #endif
 
-#if defined(MINIMIZE_MEMORY)
     if (Ihist) free(Ihist);
     if (Vbin) free(Vbin);
     if (part && part!=part0)
@@ -474,7 +474,6 @@ void track_through_rfmode(
       free_czarray_2d((void**)ipBucket, nBuckets, np0);
     if (npBucket)
       free(npBucket);
-#endif
   }
 
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 

@@ -440,7 +440,6 @@ void track_through_trfmode(
 #endif
   }
 
-#if defined(MINIMIZE_MEMORY)
   free(xsum);
   free(ysum);
   free(count);
@@ -461,8 +460,6 @@ void track_through_trfmode(
     free_czarray_2d((void**)ipBucket, nBuckets, np0);
   if (npBucket)
     free(npBucket);
-#endif
-
 }
 
 

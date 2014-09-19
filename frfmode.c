@@ -15,20 +15,31 @@
 #include "mdb.h"
 #include "track.h"
 
+#if USE_MPI
+void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
+#endif
+
 void track_through_frfmode(
-                           double **part, long np, FRFMODE *rfmode, double Po,
+                           double **part0, long np0, FRFMODE *rfmode, double Po,
                            char *element_name, double element_z, long pass, long n_passes,
                            CHARGE *charge
                            )
 {
-  static long *Ihist = NULL;               /* array for histogram of particle density */
-  static double *Vbin = NULL;              /* array for voltage acting on each bin */
-  static long max_n_bins = 0;
-  static long *pbin = NULL;                /* array to record which bin each particle is in */
-  static double *time = NULL;              /* array to record arrival time of each particle */
-  static long max_np = 0;
+  long *Ihist = NULL;               /* array for histogram of particle density */
+  double *Vbin = NULL;              /* array for voltage acting on each bin */
+  long max_n_bins = 0;
+  long max_np = 0;
+  long *pbin = NULL;                /* array to record which bin each particle is in */
+  double *time0 = NULL;             /* array to record arrival time of each particle */
+  double *time = NULL;              /* array to record arrival time of each particle */
+  double **part = NULL;             /* particle buffer for working bucket */
+  long *ibParticle = NULL;          /* array to record which bucket each particle is in */
+  long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
+  long *npBucket = NULL;            /* array to record how many particles are in each bucket */
+  long iBucket, nBuckets, np;
+
   double *VPrevious = NULL, *phasePrevious = NULL, tPrevious;
-  long ip, ib, nb2, lastBin, n_binned;
+  long ip, ib, nb2, firstBin, lastBin, n_binned;
   double tmin, tmax, tmean, dt, P;
   double Vb, V, omega, phase, t, k, damping_factor, tau;
   double V_sum, Vr_sum, phase_sum;
@@ -39,6 +50,7 @@ void track_through_frfmode(
 #if USE_MPI
   double *buffer; 
   long np_total;
+  long nonEmptyBins = 0;
 #endif
   
   if (charge)
@@ -65,173 +77,283 @@ void track_through_frfmode(
     time = trealloc(time, sizeof(*time)*max_np);
   }
 
-  tmean = 0;
-  if (isSlave) {
-    for (ip=0; ip<np; ip++) {
-      P = Po*(part[ip][5]+1);
-      time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-      tmean += time[ip];
-    }
-  }
+  if (isSlave || !notSinglePart) {
+#ifdef DEBUG
+    printf("TRFMODE: Determining bucket assignments\n");
+#endif
+    determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+#ifdef DEBUG
+    printf("TRFMODE: Done determining bucket assignments\n");
+    fflush(stdout);
+#endif 
+  } else 
+    nBuckets = 1;
+
 #if USE_MPI
-  if (isSlave) {
-    double t_total;
-    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
-    tmean = t_total;
-  }
-  tmean /= np_total;      
-#else
-  tmean /= np;
+  /* Master needs to know the number of buckets */
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Allreduce(&nBuckets, &iBucket, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+  if (myid==0)
+    nBuckets = iBucket;
+#endif
+#ifdef DEBUG
+  printf("RFMODE: nBuckets = %ld\n", nBuckets);
 #endif
 
-  if (isSlave) {
-    if (rfmode->long_range_only) {
-      VPrevious = tmalloc(sizeof(*VPrevious)*rfmode->modes);
-      phasePrevious = tmalloc(sizeof(*phasePrevious)*rfmode->modes);
-      for (imode=0; imode<rfmode->modes; imode++) {
-	VPrevious[imode] = rfmode->V[imode];
-	phasePrevious[imode] = rfmode->last_phase[imode];
+  for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    if (isSlave || !notSinglePart) {
+      if (nBuckets==1) {
+        time = time0;
+        part = part0;
+        np = np0;
+        pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      } else {
+        if ((np = npBucket[iBucket])==0)
+          continue;
+        if (part)
+          free_czarray_2d((void**)part, max_np, 7);
+        part = (double**)czarray_2d(sizeof(double), np, 7);
+        time = (double*)trealloc(time, sizeof(*time)*np);
+        pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
+        max_np = np;
+        for (ip=0; ip<np; ip++) {
+          time[ip] = time0[ipBucket[iBucket][ip]];
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+        }
+      }
+#ifdef DEBUG
+      printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
+      fflush(stdout);
+#endif
+      tmean = 0;
+      if (isSlave) {
+        for (ip=0; ip<np; ip++) {
+          P = Po*(part[ip][5]+1);
+          time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+            tmean += time[ip];
+        }
+      }
+#if USE_MPI
+      if (notSinglePart) {
+        if (isSlave) {
+          double t_total;
+          MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+          MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+          tmean = t_total;
+        }
+        tmean /= np_total;
+      } else
+        tmean /= np;
+#else
+      tmean /= np;
+#endif
+
+      if (isSlave) {
+        tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
+        tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
+#ifdef DEBUG
+        printf("tmin = %le, tmax = %le, tmean = %le\n", tmin, tmax, tmean);
+        fflush(stdout);
+#endif
+        
+        if (rfmode->long_range_only) {
+          VPrevious = tmalloc(sizeof(*VPrevious)*rfmode->modes);
+          phasePrevious = tmalloc(sizeof(*phasePrevious)*rfmode->modes);
+          for (imode=0; imode<rfmode->modes; imode++) {
+            VPrevious[imode] = rfmode->V[imode];
+            phasePrevious[imode] = rfmode->last_phase[imode];
+          }
+        }
+        
+        for (ib=0; ib<rfmode->n_bins; ib++) {
+          Ihist[ib] = 0;
+          Vbin[ib] = 0;
+        }
+        
+
+        dt = (tmax - tmin)/rfmode->n_bins;
+        n_binned = lastBin = 0;
+        firstBin = rfmode->n_bins;
+        for (ip=0; ip<np; ip++) {
+          pbin[ip] = -1;
+          ib = (time[ip]-tmin)/dt;
+          if (ib<0)
+            continue;
+          if (ib>rfmode->n_bins - 1)
+            continue;
+          Ihist[ib] += 1;
+          pbin[ip] = ib;
+          if (ib>lastBin)
+            lastBin = ib;
+          if (ib<firstBin)    
+            firstBin = ib;
+          n_binned++;
+        }
       }
     }
-    tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
-    tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
 
-    for (ib=0; ib<rfmode->n_bins; ib++) {
-      Ihist[ib] = 0;
-      Vbin[ib] = 0;
-    }
-    
-    dt = (tmax - tmin)/rfmode->n_bins;
-    n_binned = lastBin = 0;
-    for (ip=0; ip<np; ip++) {
-      pbin[ip] = -1;
-      ib = (time[ip]-tmin)/dt;
-      if (ib<0)
-	continue;
-      if (ib>rfmode->n_bins - 1)
-	continue;
-      Ihist[ib] += 1;
-      pbin[ip] = ib;
-      if (ib>lastBin)
-	lastBin = ib;
-      n_binned++;
-    }
 #if USE_MPI
-    if (isSlave) {
-      long lastBin_global;         
-      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
+    if (nBuckets==1) {
+      histogram_sums(nonEmptyBins, firstBin, &lastBin, Ihist);
+    } else {
+      long firstBin_global, lastBin_global;
+      if (myid==0) {
+        firstBin = rfmode->n_bins;
+        lastBin = 0;
+      }
+      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+      MPI_Allreduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
+      firstBin = firstBin_global;
       lastBin = lastBin_global;
+      if (isSlave || !notSinglePart) { 
+        double *buffer;
+        buffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
+        MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(Ihist+firstBin, buffer, sizeof(double)*(lastBin-firstBin+1));
+        free(buffer);
+      }
+#ifdef DEBUG
+      printf("firstBin = %ld, lastBin = %ld\n", firstBin_global, lastBin_global);
+      printf("%ld particles binned\n", n_binned);
+      for (ib=firstBin; ib<=lastBin; ib++) 
+        printf("%ld %ld\n", ib, Ihist[ib]);
+      fflush(stdout);
+#endif
     }
-    if(isSlave) {
-      buffer = malloc(sizeof(double) * (lastBin+1)); 
-      MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-      memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
-      free(buffer);
-    }
-#endif 
+#else 
+#ifdef DEBUG
+    printf("%ld particles binned\n", n_binned);
+    for (ib=firstBin; ib<=lastBin; ib++) 
+      printf("%ld %ld\n", ib, Ihist[ib]);
+    fflush(stdout);
+#endif
+#endif
+    
     rampFactor = 0;
     if (pass > (rfmode->rampPasses-1)) 
       rampFactor = 1;
     else
       rampFactor = (pass+1.0)/rfmode->rampPasses;
-    tPrevious = rfmode->last_t;
-    for (ib=0; ib<=lastBin; ib++) {
-      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-      if (!Ihist[ib])
-	continue;
-    
-      for (imode=0; imode<rfmode->modes; imode++) {
-	if (rfmode->cutoffFrequency>0 && (rfmode->omega[imode] > PIx2*rfmode->cutoffFrequency))
-	  continue;
+
+    if (isSlave || !notSinglePart) {
+      tPrevious = rfmode->last_t;
       
-	V_sum = Vr_sum = phase_sum = Vc = Vcr = 0;
-	max_hist = n_occupied = 0;
-	nb2 = rfmode->n_bins/2;
-	
-	omega = rfmode->omega[imode];
-	Q = rfmode->Q[imode]/(1+rfmode->beta[imode]);
-	tau = 2*Q/omega;
-	k = omega/2*rfmode->Rs[imode]*rfmode->factor/rfmode->Q[imode];
+      for (ib=firstBin; ib<=lastBin; ib++) {
+        t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+        if (!Ihist[ib])
+          continue;
+        
+        for (imode=0; imode<rfmode->modes; imode++) {
+          if (rfmode->cutoffFrequency>0 && (rfmode->omega[imode] > PIx2*rfmode->cutoffFrequency))
+            continue;
+          
+          V_sum = Vr_sum = phase_sum = Vc = Vcr = 0;
+          max_hist = n_occupied = 0;
+          nb2 = rfmode->n_bins/2;
+          
+          omega = rfmode->omega[imode];
+          Q = rfmode->Q[imode]/(1+rfmode->beta[imode]);
+          tau = 2*Q/omega;
+          k = omega/2*rfmode->Rs[imode]*rfmode->factor/rfmode->Q[imode];
+          
+          /* These adjustments per Zotter and Kheifets, 3.2.4 */
+          Qrp = sqrt(Q*Q - 0.25);
+          VbImagFactor = 1/(2*Qrp);
+          omega *= Qrp/Q;
+          
+          /* advance cavity to this time */
+          phase = rfmode->last_phase[imode] + omega*(t - rfmode->last_t);
+          damping_factor = exp(-(t-rfmode->last_t)/tau);
+          rfmode->last_phase[imode] = phase;
+          V = rfmode->V[imode]*damping_factor;
+          rfmode->Vr[imode] = V*cos(phase);
+          rfmode->Vi[imode] = V*sin(phase);
+          
+          /* compute beam-induced voltage for this bin */
+          Vb = 2*k*particleRelSign*rfmode->mp_charge*Ihist[ib]*rampFactor; 
+          if (rfmode->long_range_only) {
+            Vbin[ib] += VPrevious[imode]*exp(-(t-tPrevious)/tau)*cos(phasePrevious[imode]+omega*(t-tPrevious));
+          } else {
+            Vbin[ib] += rfmode->Vr[imode] - Vb/2;
+          }
+          
+          /* add beam-induced voltage to cavity voltage */
+          rfmode->Vr[imode] -= Vb;
+          rfmode->Vi[imode] -= Vb*VbImagFactor;
+          rfmode->last_phase[imode] = atan2(rfmode->Vi[imode], rfmode->Vr[imode]);
+          rfmode->V[imode] = sqrt(sqr(rfmode->Vr[imode])+sqr(rfmode->Vi[imode]));
+          
+          V_sum  += Ihist[ib]*rfmode->V[imode];
+          Vr_sum += Ihist[ib]*rfmode->Vr[imode];
+          phase_sum += Ihist[ib]*rfmode->last_phase[imode];
 
-	/* These adjustments per Zotter and Kheifets, 3.2.4 */
-	Qrp = sqrt(Q*Q - 0.25);
-	VbImagFactor = 1/(2*Qrp);
-	omega *= Qrp/Q;
-
-	/* advance cavity to this time */
-	phase = rfmode->last_phase[imode] + omega*(t - rfmode->last_t);
-	damping_factor = exp(-(t-rfmode->last_t)/tau);
-	rfmode->last_phase[imode] = phase;
-	V = rfmode->V[imode]*damping_factor;
-	rfmode->Vr[imode] = V*cos(phase);
-	rfmode->Vi[imode] = V*sin(phase);
-	
-	/* compute beam-induced voltage for this bin */
-	Vb = 2*k*particleRelSign*rfmode->mp_charge*Ihist[ib]*rampFactor; 
-	if (rfmode->long_range_only) {
-	  Vbin[ib] += VPrevious[imode]*exp(-(t-tPrevious)/tau)*cos(phasePrevious[imode]+omega*(t-tPrevious));
-	} else {
-	  Vbin[ib] += rfmode->Vr[imode] - Vb/2;
-	}
-
-	/* add beam-induced voltage to cavity voltage */
-	rfmode->Vr[imode] -= Vb;
-	rfmode->Vi[imode] -= Vb*VbImagFactor;
-	rfmode->last_phase[imode] = atan2(rfmode->Vi[imode], rfmode->Vr[imode]);
-	rfmode->V[imode] = sqrt(sqr(rfmode->Vr[imode])+sqr(rfmode->Vi[imode]));
+          if (rfmode->outputFile && 
+              !SDDS_SetRowValues(&rfmode->SDDSout, 
+                                 SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+                                 rfmode->modeIndex[imode], rfmode->V[imode], -1))
+            SDDS_Bomb("Problem writing data to FRFMODE output file");
+        }
+        rfmode->last_t = t;
+      }
       
-	V_sum  += Ihist[ib]*rfmode->V[imode];
-	Vr_sum += Ihist[ib]*rfmode->Vr[imode];
-	phase_sum += Ihist[ib]*rfmode->last_phase[imode];
+      if (rfmode->rigid_until_pass<=pass) {
+        /* change particle momentum offsets to reflect voltage in relevant bin */
+        /* also recompute slopes for new momentum to conserve transverse momentum */
+        for (ip=0; ip<np; ip++) {
+          if (pbin[ip]>=0) {
+            /* compute new momentum and momentum offset for this particle */
+            dgamma = rfmode->n_cavities*Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+            add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+          }
+        }
+      }
 
-	if (rfmode->outputFile && 
-	    !SDDS_SetRowValues(&rfmode->SDDSout, 
-			       SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
-			       rfmode->modeIndex[imode], rfmode->V[imode], -1))
-	  SDDS_Bomb("Problem writing data to FRFMODE output file");
-      }
-      rfmode->last_t = t;
-    }
-  
-    if (rfmode->rigid_until_pass<=pass) {
-      /* change particle momentum offsets to reflect voltage in relevant bin */
-      /* also recompute slopes for new momentum to conserve transverse momentum */
-      for (ip=0; ip<np; ip++) {
-	if (pbin[ip]>=0) {
-	  /* compute new momentum and momentum offset for this particle */
-	  dgamma = rfmode->n_cavities*Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-	  add_to_particle_energy(part[ip], time[ip], Po, dgamma);
-	}
-      }
-    }
-  }
-  if (rfmode->outputFile) {
+      if (rfmode->outputFile && iBucket==(nBuckets-1)) {
 #if (USE_MPI)
-      if (myid == 1) /* We let the first slave to dump the parameter */
+        if (myid == 1) { /* We let the first slave to dump the parameter */
 #endif
-    if (!SDDS_SetRowValues(&rfmode->SDDSout, 
-                           SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
-                           "Pass", pass, NULL))
-      SDDS_Bomb("Problem writing data to FRFMODE output file");
-    if ((rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
-        !SDDS_UpdatePage(&rfmode->SDDSout, 0))
-      SDDS_Bomb("Problem writing data to FRFMODE output file");
+          if (!SDDS_SetRowValues(&rfmode->SDDSout, 
+                                 SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
+                                 "Pass", pass, NULL))
+            SDDS_Bomb("Problem writing data to FRFMODE output file");
+          if ((rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
+              !SDDS_UpdatePage(&rfmode->SDDSout, 0))
+            SDDS_Bomb("Problem writing data to FRFMODE output file");
+#if USE_MPI
+        }
+#endif
+      }
+      
+      if (nBuckets!=1) {
+        for (ip=0; ip<np; ip++)
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+      }
+    }
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
   }
   
-
-#if defined(MINIMIZE_MEMORY)
-  free(Ihist);
-  free(Vbin);
-  free(pbin);
-  free(time);
-  if (VPrevious) free(VPrevious);
-  if (phasePrevious) free(phasePrevious);
-  Ihist = pbin = NULL;
-  Vbin = time = NULL;
-  max_n_bins = max_np = 0;
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
-
+    
+  if (Ihist) free(Ihist);
+  if (Vbin) free(Vbin);
+  if (part && part!=part0)
+    free_czarray_2d((void**)part, max_np, 7);
+  if (time && time!=time0)
+    free(time);
+  if (time0)
+    free(time0);
+  if (pbin)
+    free(pbin);
+  if (ibParticle)
+    free(ibParticle);
+  if (ipBucket)
+    free_czarray_2d((void**)ipBucket, nBuckets, np0);
+  if (npBucket)
+    free(npBucket);
 }
 
 
