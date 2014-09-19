@@ -984,6 +984,11 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
     emitx += (xGrowthRate-xSRdampRate)*emitx*dT+xSRdampRate*emitx0*dT/(1+coupling);
     emity += (yGrowthRate-ySRdampRate)*emity*dT+ySRdampRate*emitx0*coupling*dT/(1+coupling);
     emitz += (zGrowthRate-longitSRdampRate)*emitz*dT+longitSRdampRate*emitz0*dT;
+    /* removing SR effects, for code testing
+    emitx += xGrowthRate*emitx*dT;
+    emity += yGrowthRate*emity*dT;
+    emitz += zGrowthRate*emitz*dT;
+    */
     if (force) {
       emitx = (emitx+emity)/(1+coupling);
       emity = emitx*coupling;
