@@ -228,6 +228,9 @@ void track_through_rfmode(
           dt = (tmax - tmin)/rfmode->n_bins;
           n_binned = lastBin = 0;
           firstBin = rfmode->n_bins;
+#if USE_MPI
+          nonEmptyBins = 0;
+#endif
           for (ip=0; ip<np; ip++) {
             pbin[ip] = -1;
             ib = (long)((time[ip]-tmin)/dt);
@@ -831,15 +834,26 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
   static long max_nonEmptyBins_total = 0;
   MPI_Status status;
 
+#ifdef DEBUG
+  printf("histogram_sums 1\n"); fflush(stdout);
+#endif
+
   MPI_Reduce(lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
   if (isMaster) {
     *lastBin = lastBin_global;
     firstBin = firstBin_global; 
   }
+#ifdef DEBUG
+  printf("histogram_sums 2\n"); fflush(stdout);
+#endif
 
   if (!nonEmptyArray)
     nonEmptyArray =(long*) tmalloc(sizeof(*nonEmptyArray)*n_processors);
+
+#ifdef DEBUG
+  printf("histogram_sums 3\n"); fflush(stdout);
+#endif
 
   MPI_Gather(&nonEmptyBins,1,MPI_LONG,nonEmptyArray,1,MPI_LONG,0,MPI_COMM_WORLD);
   if (isMaster){
@@ -847,13 +861,22 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
       nonEmptyBins_total += nonEmptyArray[i];
   }
   MPI_Bcast(&nonEmptyBins_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+#ifdef DEBUG
+  printf("histogram_sums 4: nonEmptyBins_total = %ld\n", nonEmptyBins_total); fflush(stdout);
+#endif
  
   if (nonEmptyBins_total>max_nonEmptyBins_total) {
     if (!(subHis = (SUB_HISTOGRAM*) trealloc(subHis, sizeof(*subHis)*(max_nonEmptyBins_total=nonEmptyBins_total))))
       bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
   }
 
+#ifdef DEBUG
+  printf("histogram_sums 5\n"); fflush(stdout);
+#endif
   if (isSlave) {
+#ifdef DEBUG
+    printf("histogram_sums 6, firstBin=%ld, lastBin=%ld\n", firstBin, *lastBin); fflush(stdout);
+#endif
     for (i=0,ib=firstBin; ib<=*lastBin; ib++) {
       if (his[ib]){        
 	subHis[i].index = ib;
@@ -861,9 +884,18 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 	i++;
       }
     }
+#ifdef DEBUG
+    printf("histogram_sums 6.1\n"); fflush(stdout);
+#endif
     MPI_Send(subHis, nonEmptyBins*sizeof(*subHis), MPI_BYTE, 0, 108, MPI_COMM_WORLD);
+#ifdef DEBUG
+    printf("histogram_sums 6.2\n"); fflush(stdout);
+#endif
   }
   else {
+#ifdef DEBUG
+    printf("histogram_sums 7\n"); fflush(stdout);
+#endif
     for (i=1; i<n_processors; i++) {
       if (i>1)
 	offset += nonEmptyArray[i-1];
@@ -874,6 +906,9 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 	his[map_j] += current.sum; 
       }
     }
+#ifdef DEBUG
+    printf("histogram_sums 7.1\n"); fflush(stdout);
+#endif
       
     for (i=0, ib=firstBin; ib<=*lastBin; ib++) { 
       if (his[ib]) {
@@ -882,10 +917,16 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 	i++;  
       }
     } 
+#ifdef DEBUG
+    printf("histogram_sums 7.2\n"); fflush(stdout);
+#endif
     /* If there are overlapped bins between different processors, the number should be less than the original
        nonEmptyBins_total */
     nonEmptyBins_total = i;  
   }
+#ifdef DEBUG
+  printf("histogram_sums 8\n"); fflush(stdout);
+#endif
   MPI_Bcast (&nonEmptyBins_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
   MPI_Bcast (subHis, nonEmptyBins_total*sizeof(*subHis), MPI_BYTE, 0, MPI_COMM_WORLD);
   MPI_Bcast (lastBin, 1, MPI_LONG, 0, MPI_COMM_WORLD);
@@ -895,5 +936,8 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
       his[subHis[i].index] = subHis[i].sum; 
     }
   } 
+#ifdef DEBUG
+  printf("histogram_sums 9\n"); fflush(stdout);
+#endif
 }
 #endif
