@@ -49,6 +49,15 @@ void track_through_frfmode(
   long nonEmptyBins = 0;
 #endif
   
+#if DEBUG==1 && USE_MPI==1
+  printf("FRFMODE(1): myid=%d, isSlave=%ld, notSinglePart=%ld, np0=%ld\n",
+         myid, isSlave, notSinglePart, np0);
+  fflush(stdout);
+#endif
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
   if (charge)
     rfmode->mp_charge = charge->macroParticleCharge;
   else
@@ -60,26 +69,33 @@ void track_through_frfmode(
   if (!rfmode->initialized)
     bombElegant("track_through_rfmode called with uninitialized element", NULL);
 
-  if (rfmode->outputFile && pass==0 && !SDDS_StartPage(&rfmode->SDDSout, n_passes))
-    SDDS_Bomb("Problem starting page for FRFMODE output file");
+#if (USE_MPI)
+  if (myid == 1) { /* We let the first slave to dump the parameter */
+#endif
+    if (rfmode->outputFile && pass==0 && !SDDS_StartPage(&rfmode->SDDSout, n_passes))
+      SDDS_Bomb("Problem starting page for FRFMODE output file");
+#if (USE_MPI)
+  }
+#endif
   
   if (rfmode->n_bins>max_n_bins) {
     Ihist = trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
     Vbin = trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
   }
 
-  if (np>max_np) {
-    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-    time = trealloc(time, sizeof(*time)*max_np);
-  }
+#if DEBUG==1 && USE_MPI==1
+  printf("FRFMODE(2): myid=%d, isSlave=%ld, notSinglePart=%ld\n",
+         myid, isSlave, notSinglePart);
+  fflush(stdout);
+#endif
 
   if (isSlave || !notSinglePart) {
 #ifdef DEBUG
-    printf("TRFMODE: Determining bucket assignments\n");
+    printf("FRFMODE: Determining bucket assignments\n");
 #endif
     determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
 #ifdef DEBUG
-    printf("TRFMODE: Done determining bucket assignments\n");
+    printf("FRFMODE: Done determining bucket assignments\n");
     fflush(stdout);
 #endif 
   } else 
@@ -93,7 +109,7 @@ void track_through_frfmode(
     nBuckets = iBucket;
 #endif
 #ifdef DEBUG
-  printf("RFMODE: nBuckets = %ld\n", nBuckets);
+  printf("FRFMODE: nBuckets = %ld\n", nBuckets);
 #endif
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
@@ -160,16 +176,26 @@ void track_through_frfmode(
             phasePrevious[imode] = rfmode->last_phase[imode];
           }
         }
+#ifdef DEBUG
+        printf("Allocated arrays for previous values\n");
+        fflush(stdout);
+#endif
         
         for (ib=0; ib<rfmode->n_bins; ib++) {
           Ihist[ib] = 0;
           Vbin[ib] = 0;
         }
-        
 
+#ifdef DEBUG
+        printf("Zeroed-out histogram and voltage arrays.\n");
+        fflush(stdout);
+#endif
         dt = (tmax - tmin)/rfmode->n_bins;
         n_binned = lastBin = 0;
         firstBin = rfmode->n_bins;
+#if USE_MPI
+        nonEmptyBins = 0;
+#endif
         for (ip=0; ip<np; ip++) {
           pbin[ip] = -1;
           ib = (time[ip]-tmin)/dt;
@@ -178,6 +204,10 @@ void track_through_frfmode(
           if (ib>rfmode->n_bins - 1)
             continue;
           Ihist[ib] += 1;
+#if USE_MPI
+          if (Ihist[ib]==1)
+            nonEmptyBins++;
+#endif
           pbin[ip] = ib;
           if (ib>lastBin)
             lastBin = ib;
@@ -185,6 +215,10 @@ void track_through_frfmode(
             firstBin = ib;
           n_binned++;
         }
+#ifdef DEBUG
+        printf("Binned %ld particles\n", n_binned);
+        fflush(stdout);
+#endif
       }
     }
 
@@ -283,11 +317,18 @@ void track_through_frfmode(
           Vr_sum += Ihist[ib]*rfmode->Vr[imode];
           phase_sum += Ihist[ib]*rfmode->last_phase[imode];
 
-          if (rfmode->outputFile && 
-              !SDDS_SetRowValues(&rfmode->SDDSout, 
-                                 SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
-                                 rfmode->modeIndex[imode], rfmode->V[imode], -1))
-            SDDS_Bomb("Problem writing data to FRFMODE output file");
+
+#if (USE_MPI)
+          if (myid == 1) { /* We let the first slave to dump the parameter */
+#endif
+            if (rfmode->outputFile && 
+                !SDDS_SetRowValues(&rfmode->SDDSout, 
+                                   SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+                                   rfmode->modeIndex[imode], rfmode->V[imode], -1))
+              SDDS_Bomb("Problem writing data to FRFMODE output file");
+#if USE_MPI
+          }
+#endif
         }
         rfmode->last_t = t;
       }
@@ -474,7 +515,9 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 
 #if (USE_MPI)
   if (myid == 1) { /* We let the first slave to dump the parameter */
+#ifndef MPI_DEBUG
     dup2(fd,fileno(stdout));
+#endif
 #endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
@@ -512,10 +555,12 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       free(filename);
   }
 #if (USE_MPI)
+#ifndef MPI_DEBUG
 #if defined(_WIN32)
     freopen("NUL","w",stdout); 
 #else
     freopen("/dev/null","w",stdout);  
+#endif
 #endif
   } /* We let the first slave to dump the parameter */
 #endif
