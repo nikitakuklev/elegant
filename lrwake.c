@@ -24,9 +24,18 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   long ibMin, ibMax;
   static long lastNBuckets = -1;
 
+#ifdef DEBUG
+  printf("determine_bucket_assignments called\n");
+  fflush(stdout);
+#endif
+
   if (idSlotsPerBunch<=0) {
     ibMin = 0;
     *nBuckets = 1;
+#ifdef DEBUG
+    printf("determine_bucket_assignments: only one bunch\n");
+    fflush(stdout);
+#endif
   } else {
     ibMin = LONG_MAX;
     ibMax = LONG_MIN;
@@ -89,7 +98,7 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
       else
         ib = (part[ip][6]-1)/idSlotsPerBunch - ibMin;
       if (ib<0 || ib>=(*nBuckets)) {
-        fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, nBuckets, (long)part[ip][6]);
+        fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
         exitElegant(1);
       }
       (*ibParticle)[ip] = ib;
