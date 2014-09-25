@@ -139,6 +139,7 @@ void track_through_ftrfmode(
       }
 #if USE_MPI
       if (notSinglePart) {
+        long np_total = np;
         if (isSlave) {
           double t_total;
           MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
@@ -174,7 +175,7 @@ void track_through_ftrfmode(
         lastBin = -1;
         firstBin = trfmode->n_bins;
 #if USE_MPI
-	nonEmptyBins = 0
+	nonEmptyBins = 0;
 #endif
         if (isSlave) {  
           for (ip=0; ip<np; ip++) {
@@ -203,7 +204,7 @@ void track_through_ftrfmode(
   
 #if USE_MPI
     if (isMaster) {
-      firstBin = rfmode->n_bins;
+      firstBin = trfmode->n_bins;
       lastBin = 0;
     }
     MPI_Reduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
