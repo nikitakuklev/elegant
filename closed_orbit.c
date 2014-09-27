@@ -287,7 +287,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   static MATRIX *R, *ImR, *INV_ImR, *INV_R, *C, *co, *diff, *change;
   static double **one_part;
   static long initialized = 0;
-  long i, j, n_iter = 0, bad_orbit = 0;
+  long i, j, n_iter = 0, bad_orbit = 0, second_try;
   long n_part, method;
   double p, error, last_error;
 
@@ -301,6 +301,11 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   if (fixed_length)
     return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
                                       start_from_recirc, starting_point, change_fraction, deviation);
+
+#ifdef DEBUG
+  printf("running find_closed_orbit: clorb_acc=%le, clorb_iter=%ld, dp=%le, start_from_recirc=%ld, fixed_length=%ld, change_fraction=%le\n",
+         clorb_acc, clorb_iter, dp, start_from_recirc, fixed_length, change_fraction);
+#endif
   
   /* method for finding closed orbit: 
    * 1. solve co[i] = C[i] + R[i][j]*co[j] for co[i]:
@@ -381,13 +386,33 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
       n_iter = 0;
       error = DBL_MAX/4;
       bad_orbit = 0;
+      second_try = 0;
       do {
         n_part = 1;
+#ifdef DEBUG
+  printf("n_iter=%ld,  trial point: %le, %le, %le, %le, %le, %le, p=%le\n",
+         n_iter, one_part[0][0], one_part[0][1], one_part[0][2], 
+         one_part[0][3], one_part[0][4], one_part[0][5], p);
+#endif
         if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                          clorb+1, run, 0, 
                          CLOSED_ORBIT_TRACKING+TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 
                          1, 0,
                          NULL, NULL, NULL, NULL, NULL)) {
+#ifdef DEBUG
+          printf("particle lost while tracking for closed orbit!\n");
+#endif
+          if (n_iter==0 && !second_try) {
+            /* Try again with zero coordinate to start */
+            one_part[0][0] = one_part[0][1] = one_part[0][2] = one_part[0][3] = one_part[0][4] = 0;
+            one_part[0][5] = dp;
+            for (i=0; i<4; i++)
+              co->a[i][0] = one_part[0][i];
+            n_iter = -1;
+            second_try = 1;
+            p = run->p_central;
+            continue;
+          }
           n_iter = clorb_iter;
           break;
         }
@@ -511,43 +536,105 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 {
   long nElems, iterationsLeft, i, iterationsDone;
   double error=0, ds, last_dp, last_ds;
-  
+  double lastError = 0;
+  double orbit0[6], orbit1[6];
+  double iterationFactor = 1.0;
+#if DEBUG
+  static FILE *fpdeb = NULL;
+  if (fpdeb==NULL) {
+    fpdeb = fopen("flco.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=Iteration type=long &end\n");
+    fprintf(fpdeb, "&column name=x type=double &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=ds type=double &end\n");
+    fprintf(fpdeb, "&column name=delta type=double &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  } else {
+    fprintf(fpdeb, "\n");
+  }
+#endif
+
   nElems = beamline->n_elems;
   iterationsLeft = clorb_iter/10+10;
   last_ds = last_dp = sqrt(DBL_MAX/10);
   iterationsDone = 0;
   while (iterationsDone<iterationsLeft) {
+#ifdef DEBUG
+    printf("running find_closed_orbit for dp=%le, starting_point=%le, %le, %le, %le, %le, %le\n", dp, 
+           starting_point?starting_point[0]:-1,
+           starting_point?starting_point[1]:-1,
+           starting_point?starting_point[2]:-1,
+           starting_point?starting_point[3]:-1,
+           starting_point?starting_point[4]:-1,
+           starting_point?starting_point[5]:-1);
+#endif
     if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
-                           0, starting_point, change_fraction, deviation))
-      return 0;
+                           0, starting_point, change_fraction, deviation)) {
+      iterationFactor /= 3;
+#ifdef DEBUG
+      printf("find_closed_orbit() failed for iteration=%ld, reducing dp iteration factor to %le\n", iterationsDone, iterationFactor);
+#endif
+      dp = last_dp;
+      if (iterationFactor<1e-3) {
+#ifdef DEBUG
+        printf("find_closed_orbit() failed, iteration factor too small now (%le).\n", iterationFactor);
+#endif
+        return 0;
+      }
+      continue;
+    }
     ds = clorb[nElems].centroid[4] - beamline->revolution_length;
-    if (deviation)
-      deviation[4] = ds;
 #ifdef DEBUG
     printf("ds = %le\n", ds);
+    fprintf(fpdeb, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n",
+	    iterationsDone,
+	    clorb[nElems].centroid[0],
+	    clorb[nElems].centroid[1],
+	    clorb[nElems].centroid[2],
+	    clorb[nElems].centroid[3],
+	    ds, dp);
+    fflush(fpdeb);
 #endif
-    for (i=error=0; i<4; i++)
-      error += sqr(clorb[nElems].centroid[i]-clorb[0].centroid[i]);
-    /* The error for delta is scaled by 1/change_fraction so that it
-     * gets a chance to converge even with a small change_fraction.
-     * Otherwise, the delta iteration may not converge even though the
-     * individual orbits are converging.
-     */
-    error = sqrt(error + sqr((last_ds-ds)/(beamline->revolution_length*change_fraction)));
+    lastError = error;
+    error = fabs(last_dp-dp);
 #if DEBUG
-      fprintf(stdout, "orbit error for dp=%le is %le, ds=%le:\n", dp, error, ds);
+      fprintf(stdout, "orbit error for iterationsDone=%ld, dp=%le is %le, ds=%le:\n", iterationsDone, dp, error, ds);
       for (i=0; i<6; i++)
-      fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
+	fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
       fprintf(stdout, "\n");
       for (i=0; i<6; i++)
-      fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+	fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
       fprintf(stdout, "\n");
 #endif
-    if (error<clorb_acc)
+    if (error<clorb_acc && iterationsDone>1) {
+#if DEBUG
+      printf("exiting dp iteration loop with error=%le (< %le)\n", error, clorb_acc);
+#endif
       break;
+    }
     last_ds = ds;
     last_dp = dp;
-    dp -= change_fraction*ds/M->R[4][5];
+    if (iterationsDone==0) {
+      for (i=0; i<6; i++) 
+	orbit0[i] = clorb[nElems].centroid[i];
+      orbit0[4] = ds;
+      if (deviation)
+	deviation[4] = ds;
+      dp -= change_fraction*ds/M->R[4][5]/10;
+    } else {
+      if (iterationsDone>1) {
+	for (i=0; i<6; i++)
+	  orbit0[i] = orbit1[i];
+      }
+      for (i=0; i<6; i++) 
+	orbit1[i] = clorb[nElems].centroid[i];
+      orbit1[4] = ds;
+      if (orbit1[4]!=orbit0[4])
+        dp += -(orbit1[5] - orbit0[5])/(orbit1[4]-orbit0[4])*orbit1[4]*iterationFactor;
+    }
     iterationsDone++;
   }
 #if DEBUG
