@@ -194,8 +194,6 @@ void track_through_rfmode(
         tmean = 0;
         if (isSlave) {
           for (ip=0; ip<np; ip++) {
-            P = Po*(part[ip][5]+1);
-            time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
             tmean += time[ip];
           }
         }
@@ -213,7 +211,10 @@ void track_through_rfmode(
 #else
         tmean /= np;
 #endif
-
+#ifdef DEBUG
+        printf("computed tmean = %le\n", tmean);
+        fflush(stdout);
+#endif
         if (isSlave) {
           tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
           tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
