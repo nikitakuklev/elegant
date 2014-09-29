@@ -223,7 +223,9 @@ void track_through_frfmode(
     }
 
 #if USE_MPI
-    if (nBuckets==1) {
+    if (nBuckets==0) {
+      /* Since nBuckets can never be 0, this code is not called. */
+      /* There are unresolved issues with histogram_sums() introducing noise into the results. */
       histogram_sums(nonEmptyBins, firstBin, &lastBin, Ihist);
     } else {
       long firstBin_global, lastBin_global;

@@ -212,14 +212,14 @@ void track_through_rfmode(
         tmean /= np;
 #endif
 #ifdef DEBUG
-        printf("computed tmean = %le\n", tmean);
+        printf("computed tmean = %21.15le\n", tmean);
         fflush(stdout);
 #endif
         if (isSlave) {
           tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
           tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
 #ifdef DEBUG
-          printf("tmin = %le, tmax = %le, tmean = %le\n", tmin, tmax, tmean);
+          printf("tmin = %21.15le, tmax = %21.15le, tmean = %21.15le\n", tmin, tmax, tmean);
           fflush(stdout);
 #endif
           
@@ -304,7 +304,9 @@ void track_through_rfmode(
     
       
 #if USE_MPI
-        if (nBuckets==1) {
+        if (nBuckets==0) {
+          /* Since nBuckets can never be 0, this code is not called. */
+          /* There are unresolved issues with histogram_sums() introducing noise into the results. */
           histogram_sums(nonEmptyBins, firstBin, &lastBin, Ihist);
         } else {
           long firstBin_global, lastBin_global;
