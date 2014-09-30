@@ -39,14 +39,31 @@ void track_through_ftrfmode(
   long max_np = 0;
   double *VxPrevious = NULL, *VyPrevious = NULL, *xPhasePrevious = NULL, *yPhasePrevious = NULL, tPrevious;
   long ip, ib;
-  double tmin, tmax, tmean, dt, P;
+  double tmin, tmax, last_tmax, tmean, dt, P;
   double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
   long firstBin, lastBin, imode;
   double rampFactor;
 #if USE_MPI
-  long nonEmptyBins, firstBin_global, lastBin_global;
+  long firstBin_global, lastBin_global;
+#endif
+#ifdef DEBUG
+  static FILE *fpdeb = NULL;
+/*  if (!fpdeb) {
+    fpdeb = fopen("ftrfmode.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=ib, type=long, &end\n");
+    fprintf(fpdeb, "&column name=N, type=long, &end\n");
+    fprintf(fpdeb, "&column name=xSum, type=double, &end\n");
+    fprintf(fpdeb, "&column name=ySum, type=double, &end\n");
+    fprintf(fpdeb, "&column name=t, type=double, units=s &end\n");
+    fprintf(fpdeb, "&column name=Vx, type=double, units=V &end\n");
+    fprintf(fpdeb, "&column name=Vy, type=double, units=V &end\n");
+    fprintf(fpdeb, "&column name=Vz, type=double, units=V &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+*/
 #endif
 
 #ifdef DEBUG
@@ -60,6 +77,11 @@ void track_through_ftrfmode(
     bombElegant("CHARGE element required to use FTRFMODE", NULL);
   if (trfmode->mp_charge==0 || (trfmode->xfactor==0 && trfmode->yfactor==0))
     return;
+
+#ifdef DEBUG
+  printf("mp charge = %le\n", trfmode->mp_charge);
+  fflush(stdout);
+#endif
   
   if (!trfmode->initialized)
     bombElegant("track_through_ftrfmode called with uninitialized element", NULL);
@@ -123,6 +145,13 @@ void track_through_ftrfmode(
   fflush(stdout);
 #endif
 
+  if (trfmode->long_range_only) {
+    VxPrevious = tmalloc(sizeof(*VxPrevious)*trfmode->modes);
+    VyPrevious = tmalloc(sizeof(*VyPrevious)*trfmode->modes);
+    xPhasePrevious = tmalloc(sizeof(*xPhasePrevious)*trfmode->modes);
+    yPhasePrevious = tmalloc(sizeof(*yPhasePrevious)*trfmode->modes);
+  }
+  
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
     if (isSlave || !notSinglePart) {
       if (nBuckets==1) {
@@ -174,19 +203,23 @@ void track_through_ftrfmode(
       fflush(stdout);
 #endif
 
+      tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
+      tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
+    if (iBucket>0 && tmin<last_tmax) {
+#if USE_MPI
+      if (myid==0)
+#endif
+        printf("Warning: time range overlap between buckets\n");
+    }
+    last_tmax = tmax;
+
       if (isSlave) {
-        tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
-        tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 #ifdef DEBUG
         printf("tmin = %21.15e, tmax = %21.15e\n", tmin, tmax);
         fflush(stdout);
 #endif
 
         if (trfmode->long_range_only) {
-          VxPrevious = tmalloc(sizeof(*VxPrevious)*trfmode->modes);
-          VyPrevious = tmalloc(sizeof(*VyPrevious)*trfmode->modes);
-          xPhasePrevious = tmalloc(sizeof(*xPhasePrevious)*trfmode->modes);
-          yPhasePrevious = tmalloc(sizeof(*yPhasePrevious)*trfmode->modes);
           tPrevious = trfmode->last_t;
           for (imode=0; imode<trfmode->modes; imode++) {
             VxPrevious[imode] = trfmode->Vx[imode];
@@ -197,17 +230,17 @@ void track_through_ftrfmode(
         }
 
         dt = (tmax - tmin)/trfmode->n_bins;
+#ifdef DEBUG
+        printf("dt = %21.15e\n", dt);
+        fflush(stdout);
+#endif
         lastBin = -1;
         firstBin = trfmode->n_bins;
-#if USE_MPI
-	nonEmptyBins = 0;
-#endif
+        for (ib=0; ib<trfmode->n_bins; ib++)
+          xsum[ib] = ysum[ib] = count[ib] = 0;
+        
         if (isSlave) {  
           for (ip=0; ip<np; ip++) {
-#ifdef DEBUG
-            printf("ip = %ld, firstBin = %ld, lastBin = %ld\n", ip, firstBin, lastBin);
-            fflush(stdout);
-#endif
             pbin[ip] = -1;
             ib = (time[ip]-tmin)/dt;
             if (ib<0)
@@ -217,10 +250,6 @@ void track_through_ftrfmode(
             xsum[ib] += part[ip][0]-trfmode->dx;
             ysum[ib] += part[ip][2]-trfmode->dy;
             count[ib] += 1;
-#if USE_MPI
-            if (count[ib]==1) /* Count nonEmptyBins for the first time only */
-              nonEmptyBins++;
-#endif
             pbin[ip] = ib;
             if (ib>lastBin)
               lastBin = ib;
@@ -273,9 +302,10 @@ void track_through_ftrfmode(
       printf("sharing counts\n");
       fflush(stdout);
 #endif
-      lbuffer = (unsigned long*)calloc(lastBin-firstBin+1, sizeof(long));
-      MPI_Allreduce(&count[firstBin], dbuffer, lastBin-firstBin+1, MPI_LONG, MPI_SUM, workers);
+      lbuffer = (unsigned long*)calloc(lastBin-firstBin+1, sizeof(unsigned long));
+      MPI_Allreduce(&count[firstBin], lbuffer, lastBin-firstBin+1, MPI_LONG, MPI_SUM, workers);
       memcpy(count+firstBin, lbuffer, sizeof(unsigned long)*(lastBin-firstBin+1));
+      free(lbuffer);
 #ifdef DEBUG
       printf("done sharing data\n");
       fflush(stdout);
@@ -292,6 +322,8 @@ void track_through_ftrfmode(
     if (isSlave){
       double last_t = trfmode->last_t; /* Save it and use it later for different modes */
       
+      for (ib=firstBin; ib<=lastBin; ib++)
+        Vxbin[ib] = Vybin[ib] = Vzbin[ib] = 0;
       for (imode=0; imode<trfmode->modes; imode++) {
 	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
 	  continue;
@@ -299,6 +331,10 @@ void track_through_ftrfmode(
           continue;
         
 	trfmode->last_t = last_t;
+#ifdef DEBUG
+        printf("working on mode %ld, last_t = %21.15le\n", imode, last_t);
+        fflush(stdout);
+#endif
         for (ib=firstBin; ib<=lastBin; ib++) {
           if (!count[ib] || (!xsum[ib] && !ysum[ib]))
             continue;
@@ -386,13 +422,24 @@ void track_through_ftrfmode(
           trfmode->last_t = t;
         } /* loop over bins */
       } /* loop over modes */
-    }
+    
      
-    /* change particle slopes to reflect voltage in relevant bin */
-    if (isSlave) {
+#ifdef DEBUG
+      if (fpdeb) {
+        for (ib=firstBin; ib<=lastBin; ib++) {
+          if (count[ib])
+            fprintf(fpdeb, "%ld %ld %e %e %21.15e %e %e %e \n", ib, (long)count[ib], xsum[ib], ysum[ib], tmin + dt*ib, Vxbin[ib], Vybin[ib], Vzbin[ib]);
+        }
+        fflush(fpdeb);
+      }
+#endif
+
+      /* change particle slopes to reflect voltage in relevant bin */
       for (ip=0; ip<np; ip++) {
         if (pbin[ip]>=0) {
           ib = pbin[ip];
+          if (ib<firstBin || ib>lastBin)
+            bombElegant("particle bin index outside of expected range---please report this bug", NULL);
           P = Po*(1+part[ip][5]);
           Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[ib]/(1e6*particleMassMV*particleRelSign);
           Px = part[ip][1]*Pz + Vxbin[ib]/(1e6*particleMassMV*particleRelSign);
@@ -403,9 +450,24 @@ void track_through_ftrfmode(
           part[ip][5] = (P-Po)/Po;
           part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
         }
+      }        
+      
+      if (nBuckets!=1) {
+        for (ip=0; ip<np; ip++)
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
       }
     }
   }
+  
+#ifdef DEBUG
+  printf("Done with FTRFMODE: last_t = %21.15le\n", trfmode->last_t);
+  for (imode=0; imode<trfmode->modes; imode++) {
+    printf("imode=%ld, Vxr=%le, Vxi=%le, phasex=%le, Vx=%le\n", imode, trfmode->Vxr[imode], trfmode->Vxi[imode], trfmode->lastPhasex[imode],
+           sqrt(sqr(trfmode->Vxr[imode])+sqr(trfmode->Vxi[imode])));
+    printf("imode=%ld, Vyr=%le, Vyi=%le, phasey=%le, Vy=%le\n", imode, trfmode->Vyr[imode], trfmode->Vyi[imode], trfmode->lastPhasey[imode],
+           sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode])));
+  }
+#endif
   
 #if USE_MPI
   if (myid == 1) { /* We let the first slave dump the parameter */

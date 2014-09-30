@@ -36,7 +36,7 @@ void track_through_frfmode(
 
   double *VPrevious = NULL, *phasePrevious = NULL, tPrevious;
   long ip, ib, nb2, firstBin, lastBin, n_binned;
-  double tmin, tmax, tmean, dt, P;
+  double tmin, tmax, last_tmax, tmean, dt, P;
   double Vb, V, omega, phase, t, k, damping_factor, tau;
   double V_sum, Vr_sum, phase_sum;
   double Vc, Vcr, dgamma;
@@ -158,9 +158,17 @@ void track_through_frfmode(
       tmean /= np;
 #endif
 
+      tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
+      tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
+      if (iBucket>0 && tmin<last_tmax) {
+#if USE_MPI
+        if (myid==0)
+#endif
+          bombElegant("Error: time range overlap between buckets\n", NULL);
+      }
+      last_tmax = tmax;
+
       if (isSlave) {
-        tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
-        tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
 #ifdef DEBUG
         printf("tmin = %le, tmax = %le, tmean = %le\n", tmin, tmax, tmean);
         fflush(stdout);

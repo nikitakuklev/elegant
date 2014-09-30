@@ -43,7 +43,7 @@ void track_through_trfmode(
   long max_np = 0;
   double tPrevious, VxPrevious, xPhasePrevious, VyPrevious, yPhasePrevious;
   long ip, ib;
-  double tmin, tmax, tmean, dt, P;
+  double tmin, tmax, tmean, dt, P, last_tmax;
   double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
@@ -216,10 +216,17 @@ void track_through_trfmode(
     tmean /= np;
 #endif
   
+    tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
+    tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
+    if (iBucket>0 && tmin<last_tmax) {
+#if USE_MPI
+      if (myid==0)
+#endif
+        bombElegant("Error: time range overlap between buckets\n", NULL);
+    }
+    last_tmax = tmax;
+    
     if (isSlave) {   
-      tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
-      tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
-
       for (ib=0; ib<trfmode->n_bins; ib++)
         xsum[ib] = ysum[ib] = count[ib] = 0;
       dt = (tmax - tmin)/trfmode->n_bins;
@@ -245,7 +252,7 @@ void track_through_trfmode(
         n_binned++;
       }
     }
-
+    
 #if USE_MPI
     if (!isSlave)
       n_binned=0;
@@ -327,7 +334,7 @@ void track_through_trfmode(
         }
             
         trfmode->last_t = t;
-        Vzbin[ib] = 0;
+        Vxbin[ib] = Vybin[ib] = Vzbin[ib] = 0;
             
         /* compute beam-induced voltage for this bin */
         if (trfmode->doX) {
