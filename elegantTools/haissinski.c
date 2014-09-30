@@ -58,7 +58,7 @@ harmonicCavity If -RF is given, one may also specify a higher-harmonic cavity\n\
                for possible bunch shortening or lengthening.\n\
                In general the bunch length should be solved from a non-harmonic potential,\n\
                thus the phase (in radians) of this harmonic cavity must be given.\n\
-superPeriods   The number of superiods of lattice file in the actual machine.\n\
+superPeriods   The number of superperiods of lattice file in the actual machine.\n\
                Default is 1.\n\
 energy         The beam energy at which to perform computations, if it is desired\n\
                that this be different than the energy in the Twiss file.\n\
@@ -126,10 +126,17 @@ typedef struct {
   double momentumCompaction;
   double U0;
   double sigmaDelta;
-  double sigmaE;
   double circumference;
   double revFrequency;
 } RINGPARAMETERS;
+typedef struct {
+  double mainRfVoltage;
+  double mainRfHarmonic;
+  double mainRfPhase;
+  double HHCvoltage;
+  double HHCharmonicFactor;
+  double HHCphase;
+} RFPARAMETERS;
 
 #define ITERATION_LIMITS 1000
 
@@ -144,9 +151,7 @@ void integrateWakeFunction( FUNCTION *stepResponse, FUNCTION *wake);
 void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points);
 void getInitialDensity( FUNCTION *density, long points, double deltaTime, double charge, double length);
 void copyFunction( FUNCTION *target, FUNCTION *source);
-void getRfVoltage( FUNCTION *rfVoltageFn, double rfVoltage, double rfPhase, double rfHarmonic,
-                   double rfHigherHarmonicVoltage, double rfHigherHarmonicPhase, double rfHigherHarmonic,
-                    RINGPARAMETERS *parameters);
+void getRfVoltage( FUNCTION *rfVoltageFn, RFPARAMETERS *rfParameters, RINGPARAMETERS *parameters);
 void getRfPotential( FUNCTION *rfPotential, FUNCTION *rfVoltageFn, RINGPARAMETERS *parameters);
 void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *Vinduced,
@@ -162,7 +167,7 @@ void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double
 void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
                   FUNCTION *potential, FUNCTION *rfPotential, FUNCTION *rfVoltageFn, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
-                  long converged);
+                  long converged, RFPARAMETERS *rfParameters, RINGPARAMETERS *parameters);
 void makeBBRWakeFunction(FUNCTION *wake, double dt, long points, 
                          double Q, double R, double omega, double rw, double T0);
 
@@ -179,7 +184,7 @@ int main( int argc, char **argv)
   long steps, converged;
   int32_t points, iterationLimits;
   long useWakeFunction=0, intermediateSolutions;
-  double rfVoltage, rfHarmonic, rfPhase;
+  RFPARAMETERS rfParameters;
   RINGPARAMETERS ringParameters;
   double startTime, deltaTime;
   unsigned long dummyFlags;
@@ -188,7 +193,6 @@ int main( int argc, char **argv)
   char *wakeFile, *tCol, *wCol;
   double syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN=0, inductance=0, resistance;
-  double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0, rfHigherHarmonicPhase=0;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction, lastMaxDifference;
   double maxDensity;
   double averageCurrent=0.0, bunchCurrent=0.0, desiredEnergy;
@@ -221,7 +225,7 @@ int main( int argc, char **argv)
   verbosity = 0;
   particles = finalCharge = bunchCurrent = 0;
   length = 0;
-  rfVoltage = rfHarmonic = 0;
+  rfParameters.mainRfVoltage = rfParameters.mainRfHarmonic = rfParameters.mainRfPhase = rfParameters.HHCvoltage = rfParameters.HHCharmonicFactor = rfParameters.HHCphase = 0;
   steps = 1;
   points=1000;
   iterationLimits = ITERATION_LIMITS;
@@ -291,30 +295,28 @@ int main( int argc, char **argv)
         if (scanned[i].n_items<2)
           bomb("invalid -rf syntax", NULL);
         scanned[i].n_items--;
-        rfVoltage = rfHarmonic = 0;
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
-                          "voltage", SDDS_DOUBLE, &rfVoltage, 1, 0,
-                          "harmonic", SDDS_DOUBLE, &rfHarmonic, 1, 0,
-                          "phase", SDDS_DOUBLE, &rfPhase, 1, 0,
+                          "voltage", SDDS_DOUBLE, &rfParameters.mainRfVoltage, 1, 0,
+                          "harmonic", SDDS_DOUBLE, &rfParameters.mainRfHarmonic, 1, 0,
+                          "phase", SDDS_DOUBLE, &rfParameters.mainRfPhase, 1, 0,
                           NULL) ||
-            rfVoltage<=0 || rfHarmonic<=0)
+            rfParameters.mainRfVoltage<=0 || rfParameters.mainRfHarmonic<=0)
           bomb("invalid -rf syntax/values", "-rf=voltage=<V>,harmonic=<value>,phase=<value>");
         break;
       case HARMONIC_CAVITY:
         if (scanned[i].n_items<2)
           bomb("invalid -harmonicCavity syntax", NULL);
         scanned[i].n_items--;
-        rfHigherHarmonic = rfHigherHarmonicVoltage = 0;
         singleRF = 0;
 	/* harmonic and factor are the same thing, a low integer */
 	/* maybe later we'll change the type  to integer */
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
-                          "voltage", SDDS_DOUBLE, &rfHigherHarmonicVoltage, 1, 0,
-                          "harmonic", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
-                          "factor", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
-                          "phase", SDDS_DOUBLE, &rfHigherHarmonicPhase, 1, 0,
+                          "voltage", SDDS_DOUBLE, &rfParameters.HHCvoltage, 1, 0,
+                          "harmonic", SDDS_DOUBLE, &rfParameters.HHCharmonicFactor, 1, 0,
+                          "factor", SDDS_DOUBLE, &rfParameters.HHCharmonicFactor, 1, 0,
+                          "phase", SDDS_DOUBLE, &rfParameters.HHCphase, 1, 0,
                           NULL) ||
-            rfHigherHarmonic<=0)
+            rfParameters.HHCharmonicFactor<=0)
           bomb("invalid -harmonicCavity syntax/values", 
                "-harmonicCavity=voltage=<V>,harmonicFactor=<value>,phase=<value>");
         break;
@@ -392,10 +394,10 @@ int main( int argc, char **argv)
   if (((finalCharge!=0)+(particles!=0)+(bunchCurrent!=0))>1)
     bomb("Specify only one of -charge, -particles, or -bunchCurrent.",NULL);
 
-  if (length && rfVoltage)
+  if (length && rfParameters.mainRfVoltage)
     bomb("Options length and RF cannot be both specified.",NULL);
-  if (rfHigherHarmonic) {
-    if (!rfVoltage)
+  if (rfParameters.HHCharmonicFactor) {
+    if (!rfParameters.mainRfVoltage)
       bomb("You must give -rf if you give -harmonicCavity", NULL);
   }
   readRingParameters( twissFile, desiredEnergy*1e3, &ringParameters);
@@ -408,31 +410,36 @@ int main( int argc, char **argv)
   if (!particles)
     particles = finalCharge/ e_mks;
 
+  if (!finalCharge)
+    bomb("Specify at least one of -charge, -particles, or -bunchCurrent.",NULL);
+
   if (!length) {
     /* These calculations are correct only in the case of harmonic
        potential, for which it is the user's responsibility to understand,
        that, depending on the harmonic cavity's settings, the potential can be very
        non-harmonic */
-    syncPhase = asin( ringParameters.U0/ rfVoltage);
-    syncTune = sqrt( ringParameters.momentumCompaction * rfHarmonic * cos(syncPhase) /
-                    2 / PI * rfVoltage / (ringParameters.energyMeV * 1e6));
-    /*    if (rfHigherHarmonic)
+    /* this phase is the ring definition of phase, i.e. V sin(omega.t), not the same as elegant's usual
+       (linac) definition of phase */
+    syncPhase = asin( ringParameters.U0/ rfParameters.mainRfVoltage);
+    syncTune = sqrt( ringParameters.momentumCompaction * rfParameters.mainRfHarmonic * cos(syncPhase) /
+                    2 / PI * rfParameters.mainRfVoltage / (ringParameters.energyMeV * 1e6));
+    /*    if (rfParameters.HHCharmonicFactor)
       syncTune 
-        *= sqrt(1 + (rfHigherHarmonicVoltage/rfVoltage)*rfHigherHarmonic/cos(syncPhase));
-        syncAngFrequency = syncTune * 2 * PI * ringParameters.revFrequency; */
+      *= sqrt(1 + (rfParameters.HHCvoltage/rfParameters.mainRfVoltage)*rfParameters.HHCharmonicFactor/cos(syncPhase)); */
+    syncAngFrequency = syncTune * 2 * PI * ringParameters.revFrequency;
     /* Even with HHC, start with a length from main rf system running only. */
-    length = ringParameters.momentumCompaction * ringParameters.sigmaE/ syncAngFrequency; 
+    length = ringParameters.momentumCompaction * ringParameters.sigmaDelta/ syncAngFrequency; 
 
     /* length is seconds */
     /* derivative w.r.t time. Again this is valid only when the total rf potential is harmonic */
-    VrfDot = rfVoltage * 2 * PI * rfHarmonic * ringParameters.revFrequency * 
-      (cos(syncPhase) + rfHigherHarmonicVoltage/rfVoltage*rfHigherHarmonic);
+    VrfDot = rfParameters.mainRfVoltage * 2 * PI * rfParameters.mainRfHarmonic * ringParameters.revFrequency * 
+      (cos(syncPhase) + rfParameters.HHCvoltage/rfParameters.mainRfVoltage*rfParameters.HHCharmonicFactor);
   }
   else {
     /* only useful when the total rf potential is harmonic */
     /* When length is specified we don't know the RF voltage or the harmonic. However Vrfdot 
        and f_s can be calculated. The rf potential can be constructed. */
-    syncAngFrequency = ringParameters.momentumCompaction * ringParameters.sigmaE/ length; /* length is seconds */
+    syncAngFrequency = ringParameters.momentumCompaction * ringParameters.sigmaDelta/ length; /* length is seconds */
     syncTune = syncAngFrequency / 2 / PI / ringParameters.revFrequency;
     VrfDot = sqr(2 * PI) * ringParameters.revFrequency * sqr(syncTune) * (ringParameters.energyMeV * 1e6)/
       ringParameters.momentumCompaction;
@@ -498,10 +505,11 @@ int main( int argc, char **argv)
       if (verbosity > 1)
         printFunction("Initial density",&density);
       copyFunction( &rfVoltageFn, &density );
-      rfPhase = syncPhase;
-      getRfVoltage( &rfVoltageFn,  rfVoltage,  rfPhase,  rfHarmonic,
-                    rfHigherHarmonicVoltage,  rfHigherHarmonicPhase,  rfHigherHarmonic,
-                    &ringParameters);
+      /* this phase has been calculated above to be between 0 and pi/2,
+         which is not standard. It should be between pi/2 and pi for
+         positive alpha rings. */
+      rfParameters.mainRfPhase = syncPhase;
+      getRfVoltage( &rfVoltageFn,  &rfParameters, &ringParameters);
       if (verbosity > 1)
         printFunction("rf voltage",&rfVoltageFn);
       getRfPotential( &rfPotential, &rfVoltageFn,  &ringParameters);
@@ -601,7 +609,7 @@ int main( int argc, char **argv)
       free(diff.y);
       if (intermediateSolutions) {
         writeResults( &resultsPage, &density, &potential, &rfPotential, &rfVoltageFn, &potentialDistortion, 
-                     &Vinduced, charge, averageCurrent, converged );
+                      &Vinduced, charge, averageCurrent, converged, &rfParameters, &ringParameters );
       }
       if (maxDifference>lastMaxDifference)
         fraction /= 2;
@@ -611,7 +619,7 @@ int main( int argc, char **argv)
     averageCurrent = charge * ringParameters.revFrequency;
     if (!outputLastStepOnly || i==steps) 
       writeResults( &resultsPage, &density, &potential, &rfPotential, &rfVoltageFn, &potentialDistortion, 
-                   &Vinduced, charge, averageCurrent, converged );
+                   &Vinduced, charge, averageCurrent, converged, &rfParameters, &ringParameters );
   }
   if (!SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -645,7 +653,7 @@ void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETER
                           "pCentral", &pCentral,
                           "alphac", &(parameters->momentumCompaction),
                           "U0", &(parameters->U0),
-                          "Sdelta0", &(parameters->sigmaE),
+                          "Sdelta0", &(parameters->sigmaDelta),
                           NULL) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   parameters->energyMeV = sqrt(sqr(pCentral) + 1) * me_mev;
@@ -661,7 +669,7 @@ void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETER
       fflush(stdout);
     }
     parameters->U0 *= ipow(desiredEnergyMeV/(parameters->energyMeV), 4);
-    parameters->sigmaE *= desiredEnergyMeV/(parameters->energyMeV);
+    parameters->sigmaDelta *= desiredEnergyMeV/(parameters->energyMeV);
     parameters->energyMeV = desiredEnergyMeV;
   }
 
@@ -758,6 +766,45 @@ void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) 
       0>SDDS_DefineParameter(resultsPage, "Convergence", NULL, NULL,
                              "Convergence of iterations of integral equation", NULL,
                              SDDS_STRING, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "SuperPeriods", NULL, NULL,
+                             "Superperiods of the lattice selected", NULL,
+                             SDDS_LONG, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "DesiredEnergy", NULL, "Mev",
+                             "Desired Energy from the command line", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "Energy", NULL, "Mev",
+                             "Energy", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "AverageTau", "C$gt$r", "s",
+                             "Bunch position in time", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "AverageZ", "Cs", "s",
+                             "Bunch position in distance", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "SigmaTau", "$gs$bt$n$r", "s",
+                             "Bunch length in time", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "SigmaZ", "$gs$r$bz$n", "s",
+                             "Bunch length", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "MainRfVoltage", "V$brf$n", "V",
+                             "Voltage of main RF system", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "MainRfHarmonic", "h", NULL,
+                             "Harmonic number of main rf system", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "MainRfPhase", "$gf$e$bs$r", NULL,
+                             "Phase of main rf system", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "HarmonicRfVoltage", "V$bh$n", "V",
+                             "Voltage of higher-harmonic RF system", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "HarmonicFactor", "N", NULL,
+                             "Harmonic factor of higher-harmonic rf system", NULL,
+                             SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(resultsPage, "HarmonicRfPhase", "$gf$r$bs$n", NULL,
+                             "Phase of higher-harmonic rf system", NULL,
+                             SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineColumn(resultsPage, "Time", "t", "s",
                           "Time relative to synchronous phase at zero current",
                           NULL, SDDS_DOUBLE, 0) ||
@@ -827,9 +874,7 @@ void copyFunction( FUNCTION *target, FUNCTION *source) {
   }
 }
 
-void getRfVoltage( FUNCTION *rfVoltageFn, double rfVoltage, double rfPhase, double rfHarmonic,
-                   double rfHigherHarmonicVoltage, double rfHigherHarmonicPhase, double rfHigherHarmonic,
-                   RINGPARAMETERS *parameters) {
+void getRfVoltage( FUNCTION *rfVoltageFn, RFPARAMETERS *rfParameters, RINGPARAMETERS *parameters) {
 
   long i;
   double time;
@@ -838,9 +883,12 @@ void getRfVoltage( FUNCTION *rfVoltageFn, double rfVoltage, double rfPhase, doub
   /* calculate rf voltage */
   for (i=0; i<rfVoltageFn->points;i++) {
     time = (i + rfVoltageFn->offset) * rfVoltageFn->xDelta; 
-    rfVoltageFn->y[i] = rfVoltage * sin( 2 * PI * rfHarmonic * parameters->revFrequency * time + rfPhase);
-    if (rfHigherHarmonicVoltage)
-      rfVoltageFn->y[i] += rfHigherHarmonicVoltage * sin( 2 * PI * rfHigherHarmonic * rfHarmonic * parameters->revFrequency * time + rfHigherHarmonicPhase) ;
+    /* using sine, a main phase between 0 and pi/2 makes the time quantity
+       have the same sign as the phase space time coordinate. The voltage
+       is rising for increasing "tau" */
+    rfVoltageFn->y[i] = rfParameters->mainRfVoltage * sin( 2 * PI * rfParameters->mainRfHarmonic * parameters->revFrequency * time + rfParameters->mainRfPhase);
+    if (rfParameters->HHCvoltage)
+      rfVoltageFn->y[i] += rfParameters->HHCvoltage * sin( 2 * PI * rfParameters->mainRfHarmonic * rfParameters->HHCharmonicFactor * parameters->revFrequency * time + rfParameters->HHCphase) ;
   }
 }
 
@@ -1030,7 +1078,7 @@ void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
       potential->y[i] = rfPotential + 1.0/ VrfDot/ sqr(length) * potentialDistortion->y[i];
     }
     else {
-      potential->y[i] = parameters->revFrequency / (parameters->energyMeV * 1e6 * parameters->momentumCompaction * sqr(parameters->sigmaE) ) * (rfPotentialFn->y[i] + potentialDistortion->y[i]);
+      potential->y[i] = parameters->revFrequency / (parameters->energyMeV * 1e6 * parameters->momentumCompaction * sqr(parameters->sigmaDelta) ) * (rfPotentialFn->y[i] + potentialDistortion->y[i]);
     }
     distribution->y[i] = exp( - potential->y[i]);
   }
@@ -1053,25 +1101,47 @@ void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double
 }
 
 void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
-                  FUNCTION *potential, FUNCTION *rfPotential, FUNCTION *rfVoltageFn, FUNCTION *potentialDistortion, 
-                  FUNCTION *Vind, double charge, double averageCurrent,
-                  long converged) {
+                   FUNCTION *potential, FUNCTION *rfPotential, FUNCTION *rfVoltageFn, FUNCTION *potentialDistortion, 
+                   FUNCTION *Vind, double charge, double averageCurrent,
+                   long converged, RFPARAMETERS *rfParameters, RINGPARAMETERS *parameters) {
   long i;
-  double *current, *actualDensity, *time;
+  double *current, *actualDensity, *time, averageTau, sigmaTau;
+  double timeSum, timeSqrSum, currentSum;
 
   time = SDDS_Malloc( sizeof(*time) * density->points);
   current = SDDS_Malloc( sizeof(*current) * density->points);
   actualDensity = SDDS_Malloc( sizeof(*actualDensity) * density->points);
+  timeSum = 0.0;
+  timeSqrSum = 0.0;
+  currentSum = 0.0;
   for (i=0;i<density->points;i++) {
     time[i] = density->xStart + i * density->xDelta;
     current[i] = density->y[i] * density->yFactor; /* convert to A units */
     actualDensity[i] = density->y[i] * density->yFactor / c_mks; /* convert to C/m units */
+    timeSum += time[i] * current[i];
+    timeSqrSum += sqr(time[i]) * current[i];
+    currentSum += current[i];
   }
-  
+  averageTau = timeSum / currentSum;
+  sigmaTau = sqrt(timeSqrSum / currentSum - sqr(averageTau ));
+
   if (!SDDS_SetParameters(resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                           "Convergence", converged?"Solution converged":"Solution did not converge",
                           "Charge", charge, 
-                          "AverageCurrent", averageCurrent, NULL))
+                          "AverageCurrent", averageCurrent, 
+                          "SuperPeriods", parameters->superPeriods,
+                          "Energy", parameters->energyMeV,
+                          "SigmaTau", sigmaTau,
+                          "SigmaZ", sigmaTau * c_mks,
+                          "AverageTau", averageTau,
+                          "AverageZ", averageTau * c_mks,
+                          "MainRfVoltage", rfParameters->mainRfVoltage,
+                          "MainRfHarmonic", rfParameters->mainRfHarmonic,
+                          "MainRfPhase", rfParameters->mainRfPhase,
+                          "HarmonicRfVoltage", rfParameters->HHCvoltage,
+                          "HarmonicFactor", rfParameters->HHCharmonicFactor,
+                          "HarmonicRfPhase", rfParameters->HHCphase,
+                          NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (density->points > 0) {
     if (!SDDS_SetColumn(resultsPage, SDDS_SET_BY_NAME, current, density->points, "Current"))
