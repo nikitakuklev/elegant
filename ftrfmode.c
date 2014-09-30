@@ -49,6 +49,11 @@ void track_through_ftrfmode(
   long nonEmptyBins, firstBin_global, lastBin_global;
 #endif
 
+#ifdef DEBUG
+  printf("In track_through_ftrfmode\n");
+  fflush(stdout);
+#endif
+
   if (charge)
     trfmode->mp_charge = charge->macroParticleCharge;
   else
@@ -59,9 +64,21 @@ void track_through_ftrfmode(
   if (!trfmode->initialized)
     bombElegant("track_through_ftrfmode called with uninitialized element", NULL);
 
-  if (trfmode->outputFile && pass==0 && !SDDS_StartPage(&trfmode->SDDSout, n_passes))
-    SDDS_Bomb("Problem starting page for FTRFMODE output file");
+/*
+#if USE_MPI
+  if (myid==1) {
+#endif
+    if (trfmode->outputFile && pass==0 && !SDDS_StartPage(&trfmode->SDDSout, n_passes))
+      SDDS_Bomb("Problem starting page for FTRFMODE output file");
+#if USE_MPI
+  }
+#endif
+*/
 
+#ifdef DEBUG
+  printf("About to allocate memory\n");
+  fflush(stdout);
+#endif
   
   xsum = calloc(trfmode->n_bins, sizeof(*xsum));
   ysum = calloc(trfmode->n_bins, sizeof(*ysum));
@@ -73,21 +90,22 @@ void track_through_ftrfmode(
   if (!(xsum && ysum && count && Vxbin && Vybin && Vzbin))
     bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
 
+#ifdef DEBUG
+  printf("Finished allocating memory\n");
+  fflush(stdout);
+#endif
+
   if (!(xsum && ysum && count))
     bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
 
-  if (np>max_np) {
-    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-    time = trealloc(time, sizeof(*time)*max_np);
-  }
-
   if (isSlave || !notSinglePart) {
 #ifdef DEBUG
-    printf("TRFMODE: Determining bucket assignments\n");
+    printf("FTRFMODE: Determining bucket assignments\n");
+    fflush(stdout);
 #endif
     determine_bucket_assignments(part0, np0, trfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
 #ifdef DEBUG
-    printf("TRFMODE: Done determining bucket assignments\n");
+    printf("FTRFMODE: Done determining bucket assignments\n");
     fflush(stdout);
 #endif 
   } else 
@@ -102,6 +120,7 @@ void track_through_ftrfmode(
 #endif
 #ifdef DEBUG
   printf("RFMODE: nBuckets = %ld\n", nBuckets);
+  fflush(stdout);
 #endif
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
@@ -132,9 +151,7 @@ void track_through_ftrfmode(
       tmean = 0;
       if (isSlave) {
         for (ip=0; ip<np; ip++) {
-          P = Po*(part[ip][5]+1);
-          time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-            tmean += time[ip];
+          tmean += time[ip];
         }
       }
 #if USE_MPI
@@ -152,10 +169,18 @@ void track_through_ftrfmode(
 #else
       tmean /= np;
 #endif
+#ifdef DEBUG
+      printf("tmean = %21.15e\n", tmean);
+      fflush(stdout);
+#endif
 
       if (isSlave) {
         tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
         tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
+#ifdef DEBUG
+        printf("tmin = %21.15e, tmax = %21.15e\n", tmin, tmax);
+        fflush(stdout);
+#endif
 
         if (trfmode->long_range_only) {
           VxPrevious = tmalloc(sizeof(*VxPrevious)*trfmode->modes);
@@ -179,6 +204,10 @@ void track_through_ftrfmode(
 #endif
         if (isSlave) {  
           for (ip=0; ip<np; ip++) {
+#ifdef DEBUG
+            printf("ip = %ld, firstBin = %ld, lastBin = %ld\n", ip, firstBin, lastBin);
+            fflush(stdout);
+#endif
             pbin[ip] = -1;
             ib = (time[ip]-tmin)/dt;
             if (ib<0)
@@ -200,30 +229,57 @@ void track_through_ftrfmode(
           }
         }
       }
+#ifdef DEBUG
+      printf("firstBin = %ld, lastBin = %ld\n", firstBin, lastBin);
+      fflush(stdout);
+#endif
     }
+    
   
 #if USE_MPI
     if (isMaster) {
       firstBin = trfmode->n_bins;
       lastBin = 0;
     }
-    MPI_Reduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+    MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     lastBin = lastBin_global;
     firstBin = firstBin_global; 
+#ifdef DEBUG
+    printf("global: firstBin = %ld, lastBin = %ld\n", firstBin, lastBin);
+    fflush(stdout);
+#endif
     if (isSlave || !notSinglePart) { 
       double *dbuffer;
-      long lbuffer;
+      unsigned long *lbuffer;
+      
       dbuffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
+#ifdef DEBUG
+      printf("sharing x sums\n");
+      fflush(stdout);
+#endif
       MPI_Allreduce(&xsum[firstBin], dbuffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(xsum+firstBin, dbuffer, sizeof(double)*(lastBin-firstBin+1));
+
+#ifdef DEBUG
+      printf("sharing y sums\n");
+      fflush(stdout);
+#endif
       MPI_Allreduce(&ysum[firstBin], dbuffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(ysum+firstBin, dbuffer, sizeof(double)*(lastBin-firstBin+1));
       free(dbuffer);
 
-      lbuffer = (double*)calloc(lastBin-firstBin+1, sizeof(long));
-      MPI_Allreduce(&count[firstBin], dbuffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(count+firstBin, lbuffer, sizeof(double)*(lastBin-firstBin+1));
+#ifdef DEBUG
+      printf("sharing counts\n");
+      fflush(stdout);
+#endif
+      lbuffer = (unsigned long*)calloc(lastBin-firstBin+1, sizeof(long));
+      MPI_Allreduce(&count[firstBin], dbuffer, lastBin-firstBin+1, MPI_LONG, MPI_SUM, workers);
+      memcpy(count+firstBin, lbuffer, sizeof(unsigned long)*(lastBin-firstBin+1));
+#ifdef DEBUG
+      printf("done sharing data\n");
+      fflush(stdout);
+#endif
     }
 #endif
     
@@ -555,7 +611,9 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
 
 #if (USE_MPI)
   if (myid == 1) {/* We let the first slave to dump the parameter */
+#ifndef DEBUG
     dup2(fd,fileno(stdout));
+#endif
 #endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
@@ -596,10 +654,12 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       free(filename);
   }
 #if (USE_MPI)
+#ifndef DEBUG
 #if defined(_WIN32)
     freopen("NUL","w",stdout); 
 #else
-    freopen("/dev/null","w",stdout);  
+    freopen("/dev/null","w",stdout);   
+#endif
 #endif
   } /* We let the first slave to dump the parameter */
 #endif
