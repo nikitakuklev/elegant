@@ -926,7 +926,7 @@ extern char *entity_text[N_TYPES];
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  14
-#define N_FTRFMODE_PARAMS 16
+#define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  13
