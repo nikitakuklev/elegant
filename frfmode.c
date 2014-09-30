@@ -140,9 +140,7 @@ void track_through_frfmode(
       tmean = 0;
       if (isSlave) {
         for (ip=0; ip<np; ip++) {
-          P = Po*(part[ip][5]+1);
-          time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-            tmean += time[ip];
+          tmean += time[ip];
         }
       }
 #if USE_MPI
