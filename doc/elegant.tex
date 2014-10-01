@@ -4797,6 +4797,10 @@ given with no arguments, which should be sufficient documentation.
 \item {\tt haissinski} --- Computes the steady-state longitudinal distribution in
         an electron storage ring.  Requires as input a file containing the Twiss
         parameters around the ring, such as that provided by the \verb|twiss_output| command.
+        Wakes can be specified with either a L, R model, a BBR resonator model or a wake function.
+        Other inputs are external rf system parameters, with possibility of a harmonic
+        cavity. Output is a charge or current profile with longitudinal time coordinate (front
+        of bunch is at positive times). 
         (Program by L. Emery and M. Borland.)
 \item {\tt ibsEmittance} --- Computes local intra-beam scattering rates for both storage ring
         and linac. Also computes the equlibrium transverse and longitudinal emittances of a 
