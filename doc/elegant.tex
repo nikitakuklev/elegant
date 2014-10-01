@@ -50,12 +50,14 @@ Here is a summary of what's changed since release 26.0.2:
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|SCATTER| element now has controls to allow determining the starting and ending pass.
-\item The \verb|RFMODE| and \verb|TRFMODE| now work in multi-bunch mode (see section \ref{sect:bunchedBeams}).
+\item The \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE| elements now work in multi-bunch mode (see section \ref{sect:bunchedBeams}).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|sdds_beam| command has new features to allow duplicating an input beam to make multiple bunches.
+\item The algorithm for finding fixed-length closed orbits has been significantly improved, resulting in faster convergence
+  and less chance of failure to find an orbit. These changes were motivated by problems reported by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -397,7 +399,7 @@ example.)
 \section{Preparing beams for bunch-mode simulations}\label{sect:bunchedBeams}
 
 Certain collective-effects elements in {\tt elegant} can operate under the assumption that the beam is organized into bunches.
-This includes the {\tt LRWAKE}, {\tt RFMODE}, {\tt WAKE}, {\tt TRFMODE}, {\tt TRWAKE}, {\tt ZLONGIT}, and {\tt ZTRANSVERSE} elements.
+This includes the {\tt FRFMODE}, {\tt FTRFMODE}, {\tt LRWAKE}, {\tt RFMODE}, {\tt WAKE}, {\tt TRFMODE}, {\tt TRWAKE}, {\tt ZLONGIT}, and {\tt ZTRANSVERSE} elements.
 At present, this behavior is only available when loading a beam from an external file using the \verb|sdds_beam| command.
 A typical sequence is to run {\tt elegant} once to generate a beam file using \verb|bunched_beam|, then load that beam into a subsequent run.
 
@@ -3883,8 +3885,7 @@ and is useful for tracking very large numbers of particles.
   This should be kept in mind when using the particle ID to segregate the beam into bunches.
 \item \verb|duplicate_stagger| --- Specifies offsetting of the coordinates $x$, $x^\prime$, $y$, $y^\prime$, $t$, and $\delta$
   for each duplication by the specified amounts.
-  In the absence of such values, one assumes that some stochastic process such as synchrotron radiation will cause differentiation of
-  duplicate particles.
+  One assumes that some stochastic process such as synchrotron radiation will cause further differentiation of duplicate particles.
   One can also use \verb|SCATTER| or \verb|DSCATTER| elements in the beamline for this purpose.
 \end{itemize}
 
