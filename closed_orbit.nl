@@ -15,6 +15,8 @@
     long start_from_recirc = 0;
     long verbosity = 0;
     double iteration_fraction = 0.9;
+    double fraction_multiplier = 1.05;
+    double multiplier_interval = 5;
     long output_monitors_only = 0;
 #end
 

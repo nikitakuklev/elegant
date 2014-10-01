@@ -346,12 +346,12 @@ void do_transport_analysis(
     if (delta_dp && center_on_orbit) {
         if (!beamline->matrix)
             beamline->matrix = full_matrix(&(beamline->elem), run, 1);
-        find_closed_orbit(clorb, 1e-12, 20, beamline, beamline->matrix, run, delta_dp, 1, 0, NULL, 1.0,
-                          NULL);
+        find_closed_orbit(clorb, 1e-12, 20, beamline, beamline->matrix, run, delta_dp, 1, 0, NULL, 0.5,
+                          1.05, 5, NULL);
         for (i=0; i<6; i++)
             orbit_p[i] = clorb[0].centroid[i];
-        find_closed_orbit(clorb, 1e-12, 20, beamline, beamline->matrix, run, -delta_dp, 1, 0, NULL, 1.0,
-                          NULL);
+        find_closed_orbit(clorb, 1e-12, 20, beamline, beamline->matrix, run, -delta_dp, 1, 0, NULL, 0.5,
+                          1.05, 5, NULL);
         for (i=0; i<6; i++)
             orbit_m[i] = clorb[0].centroid[i];
         for (i=0; i<4; i++)

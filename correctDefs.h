@@ -59,9 +59,8 @@ typedef struct {
     long xplane, yplane;
     long use_response_from_computed_orbits;
     long use_altered_matrices[2];
-    double clorb_accuracy;
-    double clorb_iterations;
-    double clorb_iter_fraction;
+    double clorb_accuracy, clorb_iterations, clorb_iter_fraction, clorb_fraction_multiplier;
+    long clorb_multiplier_interval;
     STEERING_LIST SLx, SLy;
     TRAJECTORY **traj;
     /* These structures store Full data for all correctors */
