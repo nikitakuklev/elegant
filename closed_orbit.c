@@ -15,6 +15,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "matlib.h"
+#define DEBUG 1
 
 long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
                                 VMATRIX *M, RUN *run, double dp, long start_from_recirc, double *starting_point, 
@@ -538,6 +539,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
   double error=0, ds, last_dp, last_ds;
   double lastError = 0;
   double orbit0[6], orbit1[6];
+  double startingPoint[6];
   double iterationFactor = 1.0;
 #if DEBUG
   static FILE *fpdeb = NULL;
@@ -572,7 +574,9 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
            starting_point?starting_point[5]:-1);
 #endif
     if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
-                           0, starting_point, change_fraction, deviation)) {
+                           0, 
+                           iterationsDone==0?starting_point:startingPoint,
+                           change_fraction, deviation)) {
       iterationFactor /= 3;
 #ifdef DEBUG
       printf("find_closed_orbit() failed for iteration=%ld, reducing dp iteration factor to %le\n", iterationsDone, iterationFactor);
@@ -635,6 +639,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
       if (orbit1[4]!=orbit0[4])
         dp += -(orbit1[5] - orbit0[5])/(orbit1[4]-orbit0[4])*orbit1[4]*iterationFactor;
     }
+    memcpy(startingPoint, orbit1, 6*sizeof(startingPoint[0]));
     iterationsDone++;
   }
 #if DEBUG
