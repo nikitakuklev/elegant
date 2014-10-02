@@ -44,7 +44,8 @@ Here is a summary of what's changed since release 26.0.2:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The \verb|floor_coordinates| command would crash if vertex-point computation was requested and a dipole was the
+  first element in the beamline. Thanks to C. Behrens (DESY) for help finding this. 
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -91,8 +92,8 @@ Here is a summary of what's changed since release 26.0.2:
  V. Sajaev (ANL).
 \item Computation of radiation integrals does not include the effect of steering magnets.
 \item There is a bug related to using {\tt ILMATRIX} that will result in a crash
-if one does not request computation of the twiss parameters. If you encounter this
-problem, just add the following statement after the \verb|run_setup| command:
+  if one does not request computation of the twiss parameters. If you encounter this
+  problem, just add the following statement after the \verb|run_setup| command:
 \begin{verbatim}
 &twiss_output
         matched = 1
@@ -1836,13 +1837,21 @@ aperture for use in the penalty function.  This is available only for the line s
  Recommended value: ``\%s.flr''.
 \item \verb|X0|, \verb|Z0|, \verb|theta0| --- Initial X, Z, and angle coordinate of the beamline.
 \item \verb|include_vertices| --- Flag that, if set, specifies including  in the output
-the coordinates of the vertices of bending magnets.
+the coordinates of the vertices of bending magnets. 
 \item \verb|vertices_only| --- Flag that, if set, specifies that output will contain only
-the coordinates of the vertices of bending magnets.
+the coordinates of the vertices of bending magnets. 
 \item \verb|magnet_centers| --- Flag that, if set, specifies that output will contain 
 the coordinates of the centers of all magnets.  By default, the coordinates of the downstream
 end are given.
 \end{itemize}
+
+The ``vertex  point'' for a dipole or string of dipoles is defined as the intersection of the
+straight lines from the ideal entrance and exit trajectories. 
+The \verb|s| quantity for the vertex is defined as the sum of the actual distance traveled to the
+start of the dipole or string of dipoles plus the straight-line distance from the entrace to the
+vertex. 
+Hence, one cannot subtract the \verb|s| values for two successive vertices and expect to get the
+distance between the vertices.
 
 \begin{latexonly}
 \newpage
