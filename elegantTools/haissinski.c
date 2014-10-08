@@ -30,7 +30,7 @@ static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
  {-RF=Voltage=<V>,harmonic=<value>,phase=<value>|-length=<s>}\n\
  {-harmonicCavity=Voltage=<V>,harmonicFactor=<harmonicFactor>,phase=<value>}\n\
  {-superPeriods=<number>} {-energy=<GeV>} \n\
- -integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,\n\
+ -integrationParameters=deltaTime=<s>,points=<number>,\n\
 iterations=<number>,fraction=<value>,tolerance=<value> \n\
 Calculation of steady-state longitudinal bunch density distribution \n\
 in an electron storage ring. \n\
@@ -39,7 +39,8 @@ in an electron storage ring. \n\
                alphac (momentum compaction), U0 (energy loss per turn),\n\
                Sdelta0 (rms of momentum distribution), etc.\n\
 <resultsFile>  Output file with bunch distribution, wake potential for the\n\
-               solved bunch distribution.\n\
+               solved bunch distribution. The time coordinate is the\n\
+               time advance from a reference point.\n\
 wakeFunction   Input the wake function for an impulse response of a 1 C charge.\n\
                Time and wake column names should be specified with \n\
                units s and V/C respectively.\n";
@@ -53,7 +54,8 @@ RF             RF parameters that control the length of the zero-current beam.\n
                If one want to solve from a potential with the main rf at a particular phase,\n\
                then the phase (in radians) must be given.\n\
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
-               in seconds directly.\n\
+               in seconds directly. This case is considered a single rf system\n\
+               and no harmonic cavities can be entered.\n\
 harmonicCavity If -RF is given, one may also specify a higher-harmonic cavity\n\
                for possible bunch shortening or lengthening.\n\
                In general the bunch length should be solved from a non-harmonic potential,\n\
@@ -68,11 +70,9 @@ integrationParameters   Specifies integration parameters for solving the \n\
                Haissinski integral equation. deltaTime specifies the time \n\
                interval in seconds for evaluating wake potential and charge density.\n\
                points is the number of points requested for the charge density.\n\
-               startTime is the time in ps for the first point relative to the \n\
-               zero-current synchronous phase. iterationLimits is the number of \n\
-               iterations for solving the integral equation. fraction is\n\
-               the relaxation fraction between 0 and 1 to reduce numerical\n\
-               instabilities.";
+               iterationLimits is the number of iterations for solving the \n\
+               integral equation. fraction is the relaxation fraction between \n\
+               0 and 1 to reduce numerical instabilities.";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -112,7 +112,7 @@ char *option[N_OPTIONS] = {
 typedef struct {
   double *y, xStart, xDelta;
   long points;
-  long offset;
+  long offset; /* time offset for all arrays, position where x is zero. */
 /* Different units from SI may be used.
    However to be compliant with elegant, the units of 
    output files should be SI units.
@@ -186,7 +186,7 @@ int main( int argc, char **argv)
   long useWakeFunction=0, intermediateSolutions;
   RFPARAMETERS rfParameters;
   RINGPARAMETERS ringParameters;
-  double startTime, deltaTime;
+  double deltaTime;
   unsigned long dummyFlags;
   FUNCTION density, densityOld, diff, wake, stepResponse;
   FUNCTION potential, rfVoltageFn, rfPotential, potentialDistortion, distribution, Vinduced;
@@ -198,7 +198,7 @@ int main( int argc, char **argv)
   double averageCurrent=0.0, bunchCurrent=0.0, desiredEnergy;
   long useBBR = 0;
   double BBR_R, BBR_Q, BBR_frequency, BBR_rw;
-  long singleRF=1;
+  long singleRF=0;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -229,7 +229,6 @@ int main( int argc, char **argv)
   steps = 1;
   points=1000;
   iterationLimits = ITERATION_LIMITS;
-  startTime=0.0;
   deltaTime=0;
   maxTolerance = 0.0001; /* fraction of maximum */
   intermediateSolutions=0;
@@ -290,6 +289,7 @@ int main( int argc, char **argv)
         if (scanned[i].n_items<2)
           bomb("invalid -length syntax", NULL);
         get_double(&length, scanned[i].list[1]);
+        singleRF = 1;
         break;
       case RF:
         if (scanned[i].n_items<2)
@@ -324,14 +324,13 @@ int main( int argc, char **argv)
         scanned[i].n_items--;
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "points", SDDS_LONG, &points, 1, 0,
-                          "startTime", SDDS_DOUBLE, &startTime, 1, 0,
                           "deltaTime", SDDS_DOUBLE, &deltaTime, 1, 0,
                           "fraction", SDDS_DOUBLE, &fraction, 1, 0,
                           "tolerance", SDDS_DOUBLE, &maxTolerance, 1, 0,
                           "iterations", SDDS_LONG, &iterationLimits, 1, 0,
                           NULL) ||
             points<=0 || iterationLimits<=0 || maxTolerance<=0 || deltaTime<0) {
-          bomb("invalid -integrationParameters syntax/values", "-integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,iterations=<number>");
+          bomb("invalid -integrationParameters syntax/values", "-integrationParameters=deltaTime=<s>,points=<number>,iterations=<number>");
         }
         
         break;
@@ -413,7 +412,7 @@ int main( int argc, char **argv)
   if (!finalCharge)
     bomb("Specify at least one of -charge, -particles, or -bunchCurrent.",NULL);
 
-  if (!length) {
+  if (!length) { /* that is, main RF is specified on the command line */
     /* These calculations are correct only in the case of harmonic
        potential, for which it is the user's responsibility to understand,
        that, depending on the harmonic cavity's settings, the potential can be very
@@ -498,7 +497,7 @@ int main( int argc, char **argv)
   for (i=1; i<=steps ; i++) {
     charge = 1.0 * i/ steps * finalCharge;
     fflush(stdout);
-    if (i==1) {
+    if (i==1) { /* these rf-related calls are done just once. */
       /* with HHC on, the value of length is from main rf system alone. */
       getInitialDensity( &density, points, deltaTime, charge, length);
 
@@ -508,7 +507,8 @@ int main( int argc, char **argv)
       /* this phase has been calculated above to be between 0 and pi/2,
          which is not standard. It should be between pi/2 and pi for
          positive alpha rings. */
-      rfParameters.mainRfPhase = syncPhase;
+      /* adding syncPhase and commandline main rf phase together */
+      rfParameters.mainRfPhase += syncPhase;
       getRfVoltage( &rfVoltageFn,  &rfParameters, &ringParameters);
       if (verbosity > 1)
         printFunction("rf voltage",&rfVoltageFn);
@@ -679,10 +679,10 @@ void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETER
 }
 
 void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
-                     double deltaTime, long points) {
+                     double deltaTime, long pointsCalledFor) {
   SDDS_TABLE wakePage;
-  double time, *t, *V;
-  long i, rows, returnCode;
+  double time, endTime, *t, *V;
+  long i, rows, pointsThatCoversRangeOfData, returnCode;
   
   if (verbosity) {
     fprintf( stdout, "Opening for reading \"%s\"\n", wakeFile);
@@ -720,21 +720,33 @@ void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
   wake->xDelta = deltaTime;
   if (t[0]<0) {
     wake->offset = ((long) (-t[0] / deltaTime)) - 1;
-    wake->xStart =  wake->offset * deltaTime;
+    wake->xStart =  - wake->offset * deltaTime; /* xStart should be negative */
   }
-  else {
+  else { /* is t[0] > 0, then we have some serious problems in that we
+          don't know the wake at zero. Leave the offset at zero in order
+          not to break things.*/
     wake->offset = 0;
     wake->xStart = 0.0;
   }
-  wake->points = points - wake->offset; /* add more points if there is non-causal points */
+  endTime = t[rows-1];
+  pointsThatCoversRangeOfData = (long)((t[rows-1] - t[0])/deltaTime) + 1;
+  /* points generated for wake function cannot give a greater range that
+     what is provided by SDDS file */
+  wake->points = MIN( pointsCalledFor, pointsThatCoversRangeOfData);
+  /* I don't think we should remove points that are non-causal */
+  /* wake->points = points - wake->offset; */
   wake->y = SDDS_Malloc( sizeof(*wake->y) * wake->points);
   wake->xFactor = 1; 
   wake->yFactor = 1; 
   /* interpolate to produce points spaced by deltaTime. */
-  for (i=0; i<points; i++) {
+  for (i=0; i<wake->points; i++) {
     time = wake->xStart + i * deltaTime;
     wake->y[i] = interp( V, t, rows, time, 1, 1, &returnCode );
+    if (verbosity > 1)
+      fprintf(stderr, "%ld %14.3le %14.3le\n", i, time, wake->y[i]);
   }
+  if (verbosity > 1)
+    printFunction("interpolated wake function",wake);
 }
 
 void integrateWakeFunction(FUNCTION *stepResponse, FUNCTION *wake) {
@@ -748,6 +760,8 @@ void integrateWakeFunction(FUNCTION *stepResponse, FUNCTION *wake) {
     stepResponse->y[i] = stepResponse->y[i-1] + wake->xDelta * 
       (wake->y[i] + wake->y[i-1]) / 2.0;
   }
+  if (verbosity > 1)
+    printFunction("wake step function",stepResponse);
 }
 
 void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) {
@@ -805,7 +819,7 @@ void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) 
       0>SDDS_DefineParameter(resultsPage, "HarmonicRfPhase", "$gf$r$bs$n", NULL,
                              "Phase of higher-harmonic rf system", NULL,
                              SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineColumn(resultsPage, "Time", "t", "s",
+      0>SDDS_DefineColumn(resultsPage, "Time", "$gt$r", "s",
                           "Time relative to synchronous phase at zero current",
                           NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(resultsPage, "Density", "$gr$r", "C/m",
@@ -883,9 +897,11 @@ void getRfVoltage( FUNCTION *rfVoltageFn, RFPARAMETERS *rfParameters, RINGPARAME
   /* calculate rf voltage */
   for (i=0; i<rfVoltageFn->points;i++) {
     time = (i + rfVoltageFn->offset) * rfVoltageFn->xDelta; 
-    /* using sine, a main phase between 0 and pi/2 makes the time quantity
-       have the same sign as the phase space time coordinate. The voltage
-       is rising for increasing "tau" */
+    /* using the sine function, the main rf phase would be between 0 and
+       pi/2, a reflection of a value in the range pi/2 and pi relative to
+       pi/2. This effectively makes the time quantity have the same sign as
+       the phase space time coordinate. The voltage is rising for
+       increasing "tau" */
     rfVoltageFn->y[i] = rfParameters->mainRfVoltage * sin( 2 * PI * rfParameters->mainRfHarmonic * parameters->revFrequency * time + rfParameters->mainRfPhase);
     if (rfParameters->HHCvoltage)
       rfVoltageFn->y[i] += rfParameters->HHCvoltage * sin( 2 * PI * rfParameters->mainRfHarmonic * rfParameters->HHCharmonicFactor * parameters->revFrequency * time + rfParameters->HHCphase) ;
@@ -909,7 +925,7 @@ void getRfPotential( FUNCTION *pot, FUNCTION *rfVoltage, RINGPARAMETERS *paramet
     pot->y[i] = pot->y[i-1] + pot->xDelta * 
       ( ( rfVoltage->y[i] + rfVoltage->y[i-1] ) / 2.0 - parameters->U0 );
  
-  /* potential is zero at the index of offset, which is the modpoint of the array */
+  /* potential is zero at the index of offset, which is the midpoint of the array */
   P0 = pot->y[ - pot->offset ]; /* a variable needs to be created for modifying the array */
   for (i=0; i < pot->points; i++) 
     pot->y[i] -= P0;
@@ -947,20 +963,26 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
   if (!Vind->y) {
     Vind->y = SDDS_Malloc( sizeof(*Vind->y) * Vind->points);
   }
-
-/* calculate induced voltage as a convolution. i.e. a n^2 calculation. */
- for (i=0; i<density->points;i++) {
-    Vind->y[i] = 0.0;
-    for (j=0; j<density->points;j++) {
+  
+  /* calculate induced voltage as a convolution. i.e. a n^2 calculation. */
+  for (i=0; i<density->points;i++) {
+    Vind->y[i] = 0.0;  /* i is the index for tau in internal note (where the
+                          induced voltage is to be calculated*/
+    for (index=0; index < wake->points; index ++) { /* wake function array element */
+      j = index + i - wake->offset;
+      if (j<0 || j >= density->points) continue;
+      /* j is the tau' index in internal note */
       /* start integrating with the first element of wake->y even though
          it may correspond to negative time, i.e. non-causal data which
          may be zero, btw. */
-      index = i - wake->offset - j;
-      if ( index<0 ) break;
-      /* integral as a sum of integrands. We can optimzie this later,
-	 e.g. move the xDelta outside the inner loop, and use the 
-      extended trapezoid integral, which requires more index calculations.*/
-      Vind->y[i] += wake->y[index] * density->y[j] * density->xDelta;
+      /* Integral as a sum of integrands. We can optimize this later,
+         e.g. move the xDelta outside the inner loop, and use the extended
+         trapezoid integral, which requires more index calculations.*/
+      /* While delta-function wake is defined as positive, the induced
+         voltage is expected to be negative. Use a minus sign here. */
+      /* Also the "j" index appears positive in both density and wake. That
+         is because wake and density are defined with opposite signs */
+      Vind->y[i] -= wake->y[index] * density->y[j] * density->xDelta;
     }
   }
 
@@ -990,6 +1012,7 @@ void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
                            FUNCTION *density, double L, double R) {
   long i;
   double *ptr, *charge;
+  /* potential distortion would normally oppose that of the external rf potential */
 
   ptr = potentialDistortion->y;
   /* This assignment transfers all values, including
@@ -1016,26 +1039,27 @@ void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
   }
   
   charge = SDDS_Malloc( sizeof(*charge) * density->points);
-  charge[0] = 0.0;
+  charge[0] = 0.0; /* cumulative charge along the bunch profile */
   for (i=1; i<potentialDistortion->points; i++) {
     charge[i] = charge[i-1] + density->xDelta * (density->y[i-1] + density->y[i]) / 2.0;
   }
   /* For a model that includes inductance, the potential is calculated first, then
-     the Vind is the derivatve. */
+     the Vind is the derivative. */
+  /* terms in R should be negative, right? */
   for (i=0; i<potentialDistortion->points; i++) {
-    potentialDistortion->y[i] = L * density->y[i] + R * charge[i];
+    potentialDistortion->y[i] = L * density->y[i] - R * charge[i];
   }
   for (i=1; i<potentialDistortion->points - 1; i++) {
     Vind->y[i] = L * (density->y[i+1] - density->y[i-1])/ 2.0 
-      /density->xDelta + R * density->y[i];
+      /density->xDelta - R * density->y[i];
   }
   /* end points */
   Vind->y[0] = L * (density->y[1] - density->y[0])/
-    density->xDelta + R * density->y[0];
+    density->xDelta - R * density->y[0];
   Vind->y[potentialDistortion->points - 1] = 
     L * (density->y[potentialDistortion->points - 1] - 
          density->y[potentialDistortion->points - 2])/
-      density->xDelta + R * density->y[potentialDistortion->points - 1];
+      density->xDelta - R * density->y[potentialDistortion->points - 1];
   free(charge);
 }
 
@@ -1189,6 +1213,7 @@ void printFunction( char *label, FUNCTION *data) {
   for (i=data->points-3;i<data->points;i++) {
     fprintf( stderr, "\t%s.y[%ld]: %g\n", label, i, data->y[i]);
   }
+  fflush( stderr);
 }
 
 void makeBBRWakeFunction(FUNCTION *wake, double dt, long points, 
