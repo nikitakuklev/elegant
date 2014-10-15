@@ -124,7 +124,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime astra2elegant rfgun2elegant
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry generateBunch radiationEnvelope computeCoherentFraction plotTwissBeamsize analyzeMagnets bremsstrahlungLifetime elasticScatteringLifetime makeWigglerFromBends
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry generateBunch radiationEnvelope computeCoherentFraction plotTwissBeamsize analyzeMagnets bremsstrahlungLifetime elasticScatteringLifetime makeWigglerFromBends elasticScatteringLifetimeDetailed bremsstrahlungLifetimeDetailed
 
 PROD_HOST = $(PRODOAG)
 
