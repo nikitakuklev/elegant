@@ -217,6 +217,11 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
                                         elem, last_elem, &SDDS_floor, row_index);
     m_copy(W0, W1);
     m_copy(V0, V1);
+    if (elem->succ==NULL && IS_BEND(elem->type) && include_vertices) {
+      /* Get final vertex, if needed */
+      row_index = advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, 
+                                          NULL, last_elem, &SDDS_floor, row_index);
+    }
     elem = elem->succ;
   }
   if (!SDDS_WriteTable(&SDDS_floor)) {
@@ -269,94 +274,97 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     x3 = vec_get(3);
     x4 = vec_get(3);
   }
-  
+
   is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = is_mirror = 0;
   length = dX = dY = dZ = tilt = angle = 0;
-  switch (elem->type) {
-  case T_RBEN: case T_SBEN:
-    is_bend = 1;
-    bend = (BEND*)elem->p_elem;
-    angle = bend->angle;
-    rho = (length=bend->length)/angle;
-    tilt = bend->tilt;
-    break;
-  case T_KSBEND:
-    is_bend = 1;
-    ksbend = (KSBEND*)elem->p_elem;
-    angle = ksbend->angle;
-    rho = (length=ksbend->length)/angle;
-    tilt = ksbend->tilt;
-    break;
-  case T_CSBEND:
-    is_bend = 1;
-    csbend = (CSBEND*)elem->p_elem;
-    angle = csbend->angle;
-    rho = (length=csbend->length)/angle;
-    tilt = csbend->tilt;
-    break;
-  case T_CSRCSBEND:
-    is_bend = 1;
-    csrbend = (CSRCSBEND*)elem->p_elem;
-    angle = csrbend->angle;
-    rho = (length=csrbend->length)/angle;
-    tilt = csrbend->tilt;
-    break;
-  case T_FTABLE:
-    ftable = (FTABLE*)elem->p_elem;
-    if (ftable->angle) {
+  if (elem) {
+    switch (elem->type) {
+    case T_RBEN: case T_SBEN:
       is_bend = 1;
-      angle = ftable->angle;
-      rho = ftable->l0/2./sin(angle/2.);      
-      length = rho * angle;
-      tilt = ftable->tilt;
-    }
-    break;
-  case T_MALIGN:
-    malign = (MALIGN*)elem->p_elem;
-    dX = malign->dx;
-    dY = malign->dy;
-    dZ = malign->dz;
-    angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
-    tilt = atan2(malign->dyp, -malign->dxp);
-    is_misalignment = 1;
-    break;
-  case T_ALPH:
-    is_alpha = 1;
-    alpha = (ALPH*)elem->p_elem;
-    tilt = alpha->tilt;
-    switch (alpha->part) {
-    case 1:
-      dX = alpha->xmax*sin(ALPHA_ANGLE);
-      dZ = alpha->xmax*cos(ALPHA_ANGLE);
-      angle = -(ALPHA_ANGLE + PI/2);
+      bend = (BEND*)elem->p_elem;
+      angle = bend->angle;
+      rho = (length=bend->length)/angle;
+      tilt = bend->tilt;
       break;
-    case 2:
-      dX = alpha->xmax;
-      angle = -(ALPHA_ANGLE + PI/2);
+    case T_KSBEND:
+      is_bend = 1;
+      ksbend = (KSBEND*)elem->p_elem;
+      angle = ksbend->angle;
+      rho = (length=ksbend->length)/angle;
+      tilt = ksbend->tilt;
+      break;
+    case T_CSBEND:
+      is_bend = 1;
+      csbend = (CSBEND*)elem->p_elem;
+      angle = csbend->angle;
+      rho = (length=csbend->length)/angle;
+      tilt = csbend->tilt;
+      break;
+    case T_CSRCSBEND:
+      is_bend = 1;
+      csrbend = (CSRCSBEND*)elem->p_elem;
+      angle = csrbend->angle;
+      rho = (length=csrbend->length)/angle;
+      tilt = csrbend->tilt;
+      break;
+    case T_FTABLE:
+      ftable = (FTABLE*)elem->p_elem;
+      if (ftable->angle) {
+        is_bend = 1;
+        angle = ftable->angle;
+        rho = ftable->l0/2./sin(angle/2.);      
+        length = rho * angle;
+        tilt = ftable->tilt;
+      }
+      break;
+    case T_MALIGN:
+      malign = (MALIGN*)elem->p_elem;
+      dX = malign->dx;
+      dY = malign->dy;
+      dZ = malign->dz;
+      angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
+      tilt = atan2(malign->dyp, -malign->dxp);
+      is_misalignment = 1;
+      break;
+    case T_ALPH:
+      is_alpha = 1;
+      alpha = (ALPH*)elem->p_elem;
+      tilt = alpha->tilt;
+      switch (alpha->part) {
+      case 1:
+        dX = alpha->xmax*sin(ALPHA_ANGLE);
+        dZ = alpha->xmax*cos(ALPHA_ANGLE);
+        angle = -(ALPHA_ANGLE + PI/2);
+        break;
+      case 2:
+        dX = alpha->xmax;
+        angle = -(ALPHA_ANGLE + PI/2);
+        break;
+      default:
+        angle = -(2*ALPHA_ANGLE + PI);
+        break;
+      }
+      break;
+    case T_ROTATE:
+      rotate = (ROTATE*)elem->p_elem;
+      tilt = rotate->tilt;
+      is_rotation = 1;
+      break;
+    case T_LMIRROR:
+      angle = PI-2*(((LMIRROR*)elem->p_elem)->theta);
+      tilt = (((LMIRROR*)elem->p_elem)->tilt);
+      length = 0;
+      is_mirror = 1;
       break;
     default:
-      angle = -(2*ALPHA_ANGLE + PI);
+      if (entity_description[elem->type].flags&HAS_LENGTH)
+        length = dZ = *((double*)(elem->p_elem));
+      if (entity_description[elem->type].flags&IS_MAGNET)
+        is_magnet = 1;
       break;
     }
-    break;
-  case T_ROTATE:
-    rotate = (ROTATE*)elem->p_elem;
-    tilt = rotate->tilt;
-    is_rotation = 1;
-    break;
-  case T_LMIRROR:
-    angle = PI-2*(((LMIRROR*)elem->p_elem)->theta);
-    tilt = (((LMIRROR*)elem->p_elem)->tilt);
-    length = 0;
-    is_mirror = 1;
-    break;
-  default:
-    if (entity_description[elem->type].flags&HAS_LENGTH)
-      length = dZ = *((double*)(elem->p_elem));
-    if (entity_description[elem->type].flags&IS_MAGNET)
-      is_magnet = 1;
-    break;
   }
+  
   if (include_vertices || vertices_only) {
     ELEMENT_LIST *preceeds, *follow;
     
@@ -375,18 +383,25 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         x2->ve[0] = V0->a[0][0] - W0->a[0][2];
         x2->ve[1] = V0->a[1][0] - W0->a[1][2];
         x2->ve[2] = V0->a[2][0] - W0->a[2][2];
-        sVertex = elem->pred->end_pos;
+        if (elem->pred)
+          sVertex = elem->pred->end_pos;
+        else
+          sVertex = 0;
         anglesVertex[0] = *theta;
         anglesVertex[1] = *phi;
         anglesVertex[2] = *psi;
         x1x2Ready = 1;
       }
-    } else if (elem->type!=T_MARK && elem->type!=T_WATCH) {
+    } 
+    if ((!elem && IS_BEND(last_elem->type)) || (elem && !is_bend && elem->type!=T_MARK && elem->type!=T_WATCH)) {
 #ifdef DEBUG
-      printf("%s is not a bend\n", elem->name);
+      printf("preparing vertex output after %s\n", elem?elem->name:"END");
 #endif
       /* If this element is not a bend but previous was a bend and next element is not a bend, have all the required information for vertex computation */
-      if (elem->pred!=NULL && (preceeds=bendPreceeds(elem))!=NULL && bendFollows(elem)==NULL) {
+      preceeds = NULL;
+      if (!elem || (elem->pred!=NULL && (preceeds=bendPreceeds(elem))!=NULL)) {
+        if (!preceeds)
+          preceeds = last_elem;
         /* See http://mathworld.wolfram.com/Line-LineIntersection.html for an explanation of the method.
            Also Hill, F. S. Jr. "The Pleasures of 'Perp Dot' Products." Ch. II.5 in Graphics Gems IV (Ed. P. S. Heckbert). San Diego: Academic Press, pp. 138-148, 1994. 
            */
@@ -437,7 +452,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                                  IC_S, sVertex+ds, IC_DS, ds,
                                  IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
                                  IC_THETA, anglesVertex[0], IC_PHI, anglesVertex[1], IC_PSI, anglesVertex[2],
-                                 IC_ELEMENT, label, IC_OCCURENCE, elem->pred->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
+                                 IC_ELEMENT, label, IC_OCCURENCE, preceeds->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
             SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -455,6 +470,8 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       }
     }
   }
+  if (!elem)
+    return row_index;
   if (elem->type!=T_FLOORELEMENT) {
     theta0 = *theta;
     phi0 = *phi;
