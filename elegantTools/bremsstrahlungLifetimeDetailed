@@ -158,10 +158,11 @@ foreach g $speciesList {
     append rateSumOpt "rate-$g + "
 }
 
-set tmpRoot tmp
+set tmpRoot /tmp/[APSTmpString]
+APSAddToTempFileList $tmpRoot.pres
 
-set sLMA [exec sddsprocess $aperture -pipe=out -process=s,max,sMax | sdds2stream -pipe -parameter=sMax]
-set sPres [exec sddsprocess $pressure -pipe=out -process=s,max,sMax | sdds2stream -pipe -parameter=sMax]
+set sLMA [exec sddsprocess $aperture "-test=param,i_page 1 ==" -pipe=out -process=s,max,sMax | sdds2stream -pipe -parameter=sMax]
+set sPres [exec sddsprocess $pressure "-test=param,i_page 1 ==" -pipe=out -process=s,max,sMax | sdds2stream -pipe -parameter=sMax]
 if [expr $sPres<$sLMA] {
     set np [expr int($sPres/$sPeriodic+0.5)]
     set na [expr int($sLMA/$sPeriodic+0.5)]
@@ -181,7 +182,6 @@ eval exec sddsinterp $aperture -pipe=out -column=s,deltaNegative$name -fileValue
     -aboveRange=extrapolate -belowRange=extrapolate \
     | sddsconvert -pipe -retain=col,s,deltaNegative$name \
     | sddsxref -pipe $pressure -take=* -reuse=page \
-    | tee ds2 \
     | sddsprocess -pipe \
     -process=s,max,sMax \
     "{-redefine=col,k,deltaNegative$name chs}" \
