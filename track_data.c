@@ -1554,14 +1554,14 @@ PARAMETER modrf_param[N_MODRF_PARAMS] = {
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&modrf_example.freq), NULL, 500.0e6, 0, "nominal frequency"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&modrf_example.Q), NULL, 0.0, 0, "cavity Q"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&modrf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
-    {"AMMAG", "", IS_DOUBLE, 0, (long)((char *)&modrf_example.amMag), NULL, 0.0, 0, "magnitude of amplitude modulation"},
+    {"AMMAG", "", IS_DOUBLE, 0, (long)((char *)&modrf_example.amMag), NULL, 0.0, 0, "magnitude of amplitude modulation (fraction value)"},
     {"AMPHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.amPhase), NULL, 0.0, 0, "phase of amplitude modulation"},
     {"AMFREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&modrf_example.amFreq), NULL, 0.0, 0, "frequency of amplitude modulation"},
-    {"AMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.amDecay), NULL, 0.0, 0, "exponetial decay rate of amplitude modulation"},
+    {"AMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.amDecay), NULL, 0.0, 0, "exponential decay rate of amplitude modulation"},
     {"PMMAG", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmMag), NULL, 0.0, 0, "magnitude of phase modulation"},
     {"PMPHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmPhase), NULL, 0.0, 0, "phase of phase modulation"},
     {"PMFREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmFreq), NULL, 0.0, 0, "frequency of phase modulation"},
-    {"PMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmDecay), NULL, 0.0, 0, "exponetial decay rate of phase modulation"},
+    {"PMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmDecay), NULL, 0.0, 0, "exponential decay rate of phase modulation"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&modrf_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
     };    
 
