@@ -166,5 +166,9 @@ eval exec sddscombine [APSReplicateItem -number $nTw -item $aperture] -pipe=out 
     | sddscollapse -pipe \
     | sddsprocess -pipe=in $output \
     "{$rateSumOpt}" \
-    "{-define=param,elasticScatteringLifetime,rate rec 3600 /,units=h}" \
+    "{-define=column,elasticScatteringLifetime,rate rec 3600 /,units=h}" \
+    -process=elasticScatteringLifetime,ave,%sAve \
+    -process=elasticScatteringLifetime,stand,%sStDev 
+
+
 
