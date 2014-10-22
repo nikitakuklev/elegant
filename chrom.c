@@ -58,6 +58,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     if (chrom->name)
         tfree(chrom->name);
     chrom->name = tmalloc(sizeof(*chrom->name)*(chrom->n_families=1));
+    if (has_wildcards(sextupoles))
+      sextupoles = expand_ranges(sextupoles);
     while ((chrom->name[chrom->n_families-1]=get_token(sextupoles)))
         chrom->name = trealloc(chrom->name, sizeof(*chrom->name)*(chrom->n_families+=1));
     if ((--chrom->n_families)<1)
@@ -151,9 +153,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     VMATRIX *M;
     double chromx, chromy;
     double chromx0, chromy0;
-    double K2=0.0, *K2ptr;
+    double *K2=NULL, *K2ptr;
     ELEMENT_LIST *context;
-    long i, count, K2_param=0;
+    long i, count, K2_param=0, max_count=0;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
     
     m_alloc(&C, 2, chrom->n_families);
@@ -183,7 +185,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
         context = NULL;
-        while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
+        while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -192,9 +194,10 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                 bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
-            if (count==0)
-                K2 = *K2ptr;
-            *K2ptr = K2 + chrom->sextupole_tweek;
+	    if (count>=max_count)
+	      K2 = SDDS_Realloc(K2, sizeof(*K2)*(max_count+=10));
+	    K2[count] = *K2ptr;
+            *K2ptr += chrom->sextupole_tweek;
             if (context->matrix) {
                 free_matrices(context->matrix);
                 free(context->matrix);
@@ -230,7 +233,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             }
         count = 0;
         context = NULL;
-        while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
+        while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -241,7 +244,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
             if (!K2ptr)
                 bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
-            *K2ptr = K2;
+            *K2ptr = K2[count];
             if (context->matrix) {
                 free_matrices(context->matrix);
                 free(context->matrix);
@@ -290,6 +293,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     m_free(&Ct);
     m_free(&CtC);
     m_free(&inv_CtC);
+    free(K2);
   }
 
 
@@ -408,7 +412,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             count = 0;
-            while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
+            while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
                 if (count==0 && (K2_param = confirm_parameter("K2", context->type))<0) {
                     fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
                             context->name);
