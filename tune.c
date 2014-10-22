@@ -155,7 +155,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         count = 0;
         context = NULL;
         betax_L_sum = betay_L_sum = 0;
-        while ((context=find_element(tune->name[i], &context, &(beamline->elem)))) {
+        while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
             if (count==0) {
                 if (context->type!=T_QUAD && context->type!=T_KQUAD) {
                     fprintf(stdout, "%s is not a QUAD or KQUAD element!\n", context->name);
@@ -312,7 +312,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while ((context=find_element(tune->name[i], &context, &(beamline->elem)))) {
+      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
         K1 = (((QUAD*)context->p_elem)->k1 += tune->dK1->a[i][0]);
         if (context->matrix) {
           free_matrices(context->matrix);
@@ -371,7 +371,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while ((context=find_element(tune->name[i], &context, &(beamline->elem))))
+      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem))))
         fprintf(fp_sl, "%ld %21.15e %s\n", step, ((QUAD*)context->p_elem)->k1, tune->name[i]);
     }    
     fflush(fp_sl);
