@@ -132,7 +132,7 @@ int main(int argc, char **argv)
   SDDS_DATASET SDDSin, SDDSout, SDDSgen;
   char *inputfile, *outputfile, *generateFile;
   long iPart, particles, i_arg, readCode, noWarnings, row, nToGenerate;
-  long i, j;
+  long i, j, transverseData;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   double *x, *xp, *y, *yp, *p=NULL, *t;
@@ -200,9 +200,12 @@ int main(int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   /* check the input file for valid data */
+  transverseData = 1;
   if (!check_sdds_beam_column(&SDDSin, "x", "m") || !check_sdds_beam_column(&SDDSin, "y", "m") ||
-      !check_sdds_beam_column(&SDDSin, "xp", NULL) || !check_sdds_beam_column(&SDDSin, "yp", NULL) ||
-      !check_sdds_beam_column(&SDDSin, "t", "s") ||
+      !check_sdds_beam_column(&SDDSin, "xp", NULL) || !check_sdds_beam_column(&SDDSin, "yp", NULL)) {
+    transverseData = 0;
+  }
+  if (!check_sdds_beam_column(&SDDSin, "t", "s") ||
       (!check_sdds_beam_column(&SDDSin, "p", "m$be$nc") && !check_sdds_beam_column(&SDDSin, "p", NULL))) {
     fprintf(stderr, 
             "sddsanalyzebeam: one or more of (x, xp, y, yp, t, p) have the wrong units or are not present in %s", 
@@ -240,12 +243,14 @@ int main(int argc, char **argv)
     }
     x = xp = y = yp = t = p = NULL;
     if ((particles=SDDS_RowCount(&SDDSin))>2) {
-      if (!(data[0] = x = SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
-          !(data[1] = xp = SDDS_GetColumnInDoubles(&SDDSin, "xp")) ||
-          !(data[2] = y = SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
-          !(data[3] = yp = SDDS_GetColumnInDoubles(&SDDSin, "yp")) ||
+      data[0] = data[1] = data[2] = data[3] = NULL;
+      if ((transverseData &&
+	   (!(data[0] = x = SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
+	    !(data[1] = xp = SDDS_GetColumnInDoubles(&SDDSin, "xp")) ||
+	    !(data[2] = y = SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
+	    !(data[3] = yp = SDDS_GetColumnInDoubles(&SDDSin, "yp")))) ||
           !(data[4] = t =  SDDS_GetColumnInDoubles(&SDDSin, "t")) ||
-          !(data[5] = p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
+	  !(data[5] = p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
       /* convert momentum to (p-po)/po */
@@ -258,20 +263,26 @@ int main(int argc, char **argv)
 
       /* compute and subtract off average values */
       for (i=0; i<6; i++) {
-        C[i] = arithmeticAverage(data[i], particles);
-        for (j=0; j<particles; j++)
-          data[i][j] -= C[i];
+	C[i] = 0;
+	if (data[i]) {
+	  C[i] = arithmeticAverage(data[i], particles);
+	  for (j=0; j<particles; j++)
+	    data[i][j] -= C[i];
+	}
       }
 
       /* compute correlations */
       for (i=0; i<6; i++) {
         for (j=0; j<=i; j++) {
-          for (iPart=sum=0; iPart<particles; iPart++)
-            sum += data[i][iPart]*data[j][iPart];
-          S[j][i] = S[i][j] = sum/particles;
+	  S[j][i] = S[i][j] = 0;
+	  if (data[i] && data[j]) {
+	    for (iPart=sum=0; iPart<particles; iPart++)
+	      sum += data[i][iPart]*data[j][iPart];
+	    S[j][i] = S[i][j] = sum/particles;
+	  }
         }
       }
-      if (generateFile)
+      if (transverseData && generateFile)
 	GenerateAndDumpParticles(&SDDSgen, C, S, pAve, cutoff, nToGenerate);
 
       for (i=0; i<6; i++)
@@ -285,14 +296,19 @@ int main(int argc, char **argv)
         for (i=0; i<4; i++) 
           eta[i] = 0;
       for (i=0; i<4; i++) {
-        for (iPart=0; iPart<particles; iPart++)
-          data[i][iPart] -= eta[i]*data[5][iPart];
+	if (data[i]) {
+	  for (iPart=0; iPart<particles; iPart++)
+	    data[i][iPart] -= eta[i]*data[5][iPart];
+	}
       }
       for (i=0; i<6; i++) {
         for (j=0; j<6; j++) {
-          for (iPart=sum=0; iPart<particles; iPart++)
-            sum += data[i][iPart]*data[j][iPart];
-          Sbeta[j][i] = Sbeta[i][j] = sum/particles;
+          Sbeta[j][i] = Sbeta[i][j] = 0;
+	  if (data[i] && data[j]) {
+	    for (iPart=sum=0; iPart<particles; iPart++)
+	      sum += data[i][iPart]*data[j][iPart];
+	    Sbeta[j][i] = Sbeta[i][j] = sum/particles;
+	  }
         }
       }
       /* compute beta functions etc */
@@ -642,15 +658,17 @@ void TransformToCanonicalMomenta(double **data, long np, double pAve)
   double qz, xp, yp, delta;
   long ip;
 
-  /* Compute canonical momenta, save slopes */
-  for (ip=0; ip<np; ip++) {
-    xp    = data[1][ip];
-    yp    = data[3][ip];
-    delta = data[5][ip];
-    qz = (1+delta)/sqrt(1+sqr(xp)+sqr(yp));
-    data[1][ip] *= qz;  /* qx = px/p0 = xp*(1+delta)/sqrt(1+xp^2+yp^2) = xp*qz*/
-    data[3][ip] *= qz;  /* qy = yp*qz */
-    data[5][ip]  = qz;
+  if (data[0] && data[1] && data[2] && data[3]) {
+    /* Compute canonical momenta, save slopes */
+    for (ip=0; ip<np; ip++) {
+      xp    = data[1][ip];
+      yp    = data[3][ip];
+      delta = data[5][ip];
+      qz = (1+delta)/sqrt(1+sqr(xp)+sqr(yp));
+      data[1][ip] *= qz;  /* qx = px/p0 = xp*(1+delta)/sqrt(1+xp^2+yp^2) = xp*qz*/
+      data[3][ip] *= qz;  /* qy = yp*qz */
+      data[5][ip]  = qz;
+    }
   }
 }
 
