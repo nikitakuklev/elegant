@@ -43,6 +43,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (processNamelist(&correct_tunes, nltext)==NAMELIST_ERROR)
       bombElegant(NULL, NULL);
     str_toupper(quadrupoles);
+    if (has_wildcards(quadrupoles) && strchr(quadrupoles, '-'))
+      quadrupoles = expand_ranges(quadrupoles);
     if (echoNamelists) print_namelist(stdout, &correct_tunes);
 
     if (tune->name)
