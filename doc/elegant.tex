@@ -2525,6 +2525,8 @@ be output, and not the parameters as a function of s.
 \item \verb|equilibrium| --- A flag indicating, if set, that the equilibrium moments should be found.  If \verb|matched=1| and \verb|equilibrium=0|,
   then the initial twiss parameters are computed from the periodic solution for the beamline.
 \item \verb|radiation| --- A flag indicating, if set, that synchrotron radiation effects should be included.
+  N.B.: this flag is all that needs to be set if the lattice contains no kick elements. However, if the lattice contains \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, 
+  or \verb|KQUAD| elements (or other elements with \verb|SYNCH_RAD| and \verb|ISR| parameters), then the \verb|SYNCH_RAD| and\verb|ISR| must be set to 1 as well.
 \item \verb|n_slices| --- The number of slices into which to cut individual dipoles, quadrupoles, and sextuoples for computations.
   10 has been found to work for all rings tested, but users are advised to ensure it is sufficient for their cases.
 \item \verb|emit_x|, \verb|beta_x|, \verb|alpha_x|, \verb|eta_x|, \verb|etap_x|, and related quantities for \verb|y| and \verb|z| ---
