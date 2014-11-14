@@ -910,7 +910,7 @@ extern char *entity_text[N_TYPES];
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 3
 #define N_PFILTER_PARAMS 6
-#define N_HISTOGRAM_PARAMS 11
+#define N_HISTOGRAM_PARAMS 12
 #define N_CSRCSBEND_PARAMS 70
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
@@ -1536,7 +1536,7 @@ typedef struct {
     long interval, startPass, bins, fixedBinSize;
     long xData, yData, longitData;
     double binSizeFactor;
-    long normalize, disable;
+    long normalize, disable, sparse;
     /* internal variables for SDDS output */
     long initialized, count;
     long columnIndex[7][2];  /* x, xp, y, yp, t, p, dt */
