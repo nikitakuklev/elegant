@@ -2940,15 +2940,19 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
 {
   double calibration, tilt, reading;
   char *equation;
-
+  double setpoint;
+  
   switch (elem->type) {
   case T_MONI:  
     x -= ((MONI*)(elem->p_elem))->dx;
     y -= ((MONI*)(elem->p_elem))->dy;
-    if (coord==0)
+    if (coord==0) {
       calibration = ((MONI*)(elem->p_elem))->xcalibration;
-    else 
+      setpoint = ((MONI*)(elem->p_elem))->xsetpoint;
+    } else {
       calibration = ((MONI*)(elem->p_elem))->ycalibration;
+      setpoint = ((MONI*)(elem->p_elem))->ysetpoint;
+    }
     tilt = ((MONI*)(elem->p_elem))->tilt;
     if (flags&COMPUTEMONITORREADING_TILT_0)
       tilt = 0;
@@ -2963,6 +2967,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
     x -= ((HMON*)(elem->p_elem))->dx;
     y -= ((HMON*)(elem->p_elem))->dy;
     calibration = ((HMON*)(elem->p_elem))->calibration;
+    setpoint = ((HMON*)(elem->p_elem))->setpoint;
     tilt = ((HMON*)(elem->p_elem))->tilt;
     if (flags&COMPUTEMONITORREADING_TILT_0)
       tilt = 0;
@@ -2970,12 +2975,13 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
       rotate_xy(&x, &y, tilt);   
     equation = ((HMON*)(elem->p_elem))->readout; 
     if (coord!=0)
-      bombElegant("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
+      bombElegant("element in horizontal monitor list is not a Horizontal monitor--internal logic error", NULL);
     break;
   case T_VMON:
     x -= ((VMON*)(elem->p_elem))->dx;
     y -= ((VMON*)(elem->p_elem))->dy;
     calibration = ((VMON*)(elem->p_elem))->calibration;
+    setpoint = ((VMON*)(elem->p_elem))->setpoint;
     tilt = ((VMON*)(elem->p_elem))->tilt;
     if (flags&COMPUTEMONITORREADING_TILT_0)
       tilt = 0;
@@ -3014,7 +3020,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
     }
   }
 
-  return reading;
+  return reading-setpoint;
 }
 
 double getMonitorWeight(ELEMENT_LIST *elem)

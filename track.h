@@ -853,9 +853,9 @@ extern char *entity_text[N_TYPES];
 #define N_VCOR_PARAMS 11
 #define N_RFCA_PARAMS 18
 #define N_ELSE_PARAMS 0
-#define N_HMON_PARAMS 9
-#define N_VMON_PARAMS 9
-#define N_MONI_PARAMS 11
+#define N_HMON_PARAMS 10
+#define N_VMON_PARAMS 10
+#define N_MONI_PARAMS 13
 #define N_RCOL_PARAMS 7
 #define N_ECOL_PARAMS 8
 #define N_MARK_PARAMS 3
@@ -1190,7 +1190,7 @@ typedef struct {
 extern PARAMETER hmon_param[N_HMON_PARAMS] ;
    
 typedef struct {
-    double length, dx, dy, weight, tilt, calibration;
+    double length, dx, dy, weight, tilt, calibration, setpoint;
     long order;
     char *readout;   /* rpn equation for x readout as function of x and y */
     long coFitpoint;
@@ -1202,7 +1202,7 @@ typedef struct {
 extern PARAMETER vmon_param[N_VMON_PARAMS] ;
    
 typedef struct {
-    double length, dx, dy, weight, tilt, calibration;
+    double length, dx, dy, weight, tilt, calibration, setpoint;
     long order;
     char *readout;   /* rpn equation for y readout as function of x and y */
     long coFitpoint;
@@ -1214,7 +1214,7 @@ typedef struct {
 extern PARAMETER moni_param[N_MONI_PARAMS] ;
    
 typedef struct {
-    double length, dx, dy, weight, tilt, xcalibration, ycalibration;
+    double length, dx, dy, weight, tilt, xcalibration, ycalibration, xsetpoint, ysetpoint;
     long order;
     char *x_readout, *y_readout; /* rpn equations for x and y readouts as function of actual x and y */
     long coFitpoint;
@@ -2945,7 +2945,7 @@ extern long check_duplic_line(LINE_LIST *line, char *new_line, long n_lines, lon
 extern void compute_centroids(double *centroid, double **coordinates, long n_part);
 extern void compute_sigmas(double *emit, double *sigma, double *centroid, double **coordinates, long n_part);
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
-extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central);
+extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, long startPID, long endPID);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 extern long computeSliceMoments(double C[6], double S[6][6], 
 			 double **part, long np, 
@@ -3101,14 +3101,14 @@ extern double approximateBeamWidth(double fraction, double **part, long nPart, l
 extern double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord);
 extern double rms_emittance_p(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
-extern double rms_longitudinal_emittance_p(double **coord, long n, double Po);
+extern double rms_longitudinal_emittance_p(double **coord, long n, double Po, long startPID, long endPID);
 double computeAverage_p(double *data, long np, MPI_Comm mpiComm);
 #endif
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
 void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
-extern double rms_longitudinal_emittance(double **coord, long n, double Po);
+extern double rms_longitudinal_emittance(double **coord, long n, double Po, long startPID, long endPID);
 extern double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po);
 extern void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po);
 extern void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, long plane);

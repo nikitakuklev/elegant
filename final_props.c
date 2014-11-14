@@ -648,12 +648,12 @@ long compute_final_properties
 #endif
 
 #if !SDDS_MPI_IO
-  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central, 0, 0);
 #else
   if (notSinglePart)
-    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance_p(coord, sums->n_part, p_central);
+    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance_p(coord, sums->n_part, p_central, 0, 0);
   else
-    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central, 0, 0);
 #endif
  
   /* compute normalized emittances */
@@ -816,16 +816,24 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
 }
 #endif
 
-double rms_longitudinal_emittance(double **coord, long n, double Po)
+double rms_longitudinal_emittance(double **coord, long n, double Po, long startPID, long endPID)
 {
     double s11, s12, s22, dt, ddp;
     double tc, dpc, beta, P;
-    long i;
+    long i, npCount;
     static double *time = NULL;
     static long max_n = 0;
 
     if (!n)
         return(0.0);
+
+    for (i=npCount=0; i<n; i++) {
+      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+        npCount++;
+      }
+    }
+    if (!npCount)
+      return 0.0;
 
     if (n>max_n)
         time = trealloc(time, sizeof(*time)*(max_n=n));
@@ -834,14 +842,16 @@ double rms_longitudinal_emittance(double **coord, long n, double Po)
 
     /* compute centroids */
     for (i=tc=dpc=0; i<n; i++) {
+      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         P = Po*(1+coord[i][5]);
         beta = P/sqrt(P*P+1);
         time[i] = coord[i][4]/(beta*c_mks);
         tc  += time[i];
         dpc += coord[i][5];
-        }
-    tc  /= n;
-    dpc /= n;
+      }
+    }
+    tc  /= npCount;
+    dpc /= npCount;
 
     for (i=s11=s12=s22=0; i<n; i++) {
         s11 += sqr(dt  =  time[i]    - tc);
@@ -850,15 +860,15 @@ double rms_longitudinal_emittance(double **coord, long n, double Po)
         }
 
     log_exit("rms_longitudinal_emittance");
-    return(SAFE_SQRT(s11*s22-sqr(s12))/n);
+    return(SAFE_SQRT(s11*s22-sqr(s12))/npCount);
     }
 
 #if USE_MPI
-double rms_longitudinal_emittance_p(double **coord, long n, double Po)
+double rms_longitudinal_emittance_p(double **coord, long n, double Po, long startPID, long endPID)
 {
     double s11, s12, s22, dt, ddp, s[3], s_total[3];
     double tc, dpc, beta, P, tmp[2], tmp_total[2];
-    long i;
+    long i, npCount, npCount_total;
     static double *time = NULL;
     static long max_n = 0;
     long n_total;
@@ -872,11 +882,22 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po)
 	return(0.0);    
     }
     
-   
     if (!n_total)
         return(0.0);
 
-    if (n>max_n)
+    for (i=npCount=0; i<n; i++) {
+      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+        npCount++;
+      }
+    }
+
+    if (isMaster)
+      npCount = 0;
+    MPI_Allreduce (&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+    if (!npCount_total)
+      return 0.0;
+
+    if (npCount>max_n)
         time = trealloc(time, sizeof(*time)*(max_n=n));
  
     if(isMaster)
@@ -884,25 +905,28 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po)
 
     /* compute centroids */
     for (i=tc=dpc=0; i<n; i++) {
+      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         P = Po*(1+coord[i][5]);
         beta = P/sqrt(P*P+1);
         time[i] = coord[i][4]/(beta*c_mks);
         tc  += time[i];
         dpc += coord[i][5];
-        }
-
+      }
+    }
+    
     tmp[0] = tc; tmp[1] = dpc;
     MPI_Allreduce (&tmp, &tmp_total, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    /*  MPI_Allreduce (&dpc, &dpc_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); */
    
-    tc = tmp_total[0]/n_total;
-    dpc = tmp_total[1]/n_total;
+    tc = tmp_total[0]/npCount_total;
+    dpc = tmp_total[1]/npCount_total;
 
     for (i=s11=s12=s22=0; i<n; i++) {
+      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         s11 += sqr(dt  =  time[i]    - tc);
         s22 += sqr(ddp = coord[i][5] - dpc);
         s12 += dt*ddp;
         }
+    }
     s[0] = s11; s[1] = s12; s[2] = s22;
     MPI_Reduce (s, s_total, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
    
@@ -910,7 +934,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po)
       log_exit("rms_longitudinal_emittance");
      
     /* Only the master will return meaningful result */
-    return(SAFE_SQRT(s_total[0]*s_total[2]-sqr(s_total[1]))/n_total);
+    return(SAFE_SQRT(s_total[0]*s_total[2]-sqr(s_total[1]))/npCount_total);
     }
 
 

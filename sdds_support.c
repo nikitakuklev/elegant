@@ -799,11 +799,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
     double emit[2], emitc[2];
-    long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0;
+    long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount, npCount_total=0;
     static BEAM_SUMS sums;
+    double emittance_l;
 #if USE_MPI  
     long particles_total;
-    double emittance_l;
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -853,7 +853,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po);
+    accumulate_beam_sums(&sums, particle, particles, Po, watch->startPID, watch->endPID);
     if (isMaster) {
       if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
@@ -902,7 +902,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     }
 
 #if SDDS_MPI_IO 
-    emittance_l = rms_longitudinal_emittance_p(particle, particles, Po);  
+    emittance_l = rms_longitudinal_emittance_p(particle, particles, Po, watch->startPID, watch->endPID);  
     if (isMaster) {
       if (watch->mode_code==WATCH_PARAMETERS)
 	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
@@ -912,19 +912,23 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	}
     }
 #else
+    emittance_l=rms_longitudinal_emittance(particle, particles, Po, watch->startPID, watch->endPID);
     if (watch->mode_code==WATCH_PARAMETERS)
       if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-			     "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
+			     "el", emittance_l, NULL)) {
 	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
 #endif
     /* time centroid and sigma */
-    for (i=p_sum=gamma_sum=sum=0; i<particles; i++) {
-      p = Po*(1+particle[i][5]);
-      p_sum     += p;
-      gamma_sum += sqrt(sqr(p)+1);
-      sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
+    for (i=npCount=p_sum=gamma_sum=sum=0; i<particles; i++) {
+      if (watch->startPID==watch->endPID || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID)) {
+        p = Po*(1+particle[i][5]);
+        p_sum     += p;
+        gamma_sum += sqrt(sqr(p)+1);
+        sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
+        npCount++;
+        }
     }
 #if SDDS_MPI_IO
     if (USE_MPI) {
@@ -932,8 +936,9 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       MPI_Allreduce (&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce (&p_sum, &p_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce (&gamma_sum, &gamma_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);     
-      if (particles_total)
-	tc = sum_total/particles_total;
+      MPI_Allreduce (&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      if (npCount_total)
+	tc = sum_total/npCount_total;
       else
 	tc = 0;
       if (isMaster) {
@@ -948,14 +953,14 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     }
 #else
     if (particles)
-      tc = sum/particles;
+      tc = sum/npCount;
     else
       tc = 0;
  
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Ct", tc, "dCt", tc-tc0,
-                           "pAverage", p_sum/particles, "pCentral", Po, 
-                           "KAverage", (gamma_sum/particles-1)*particleMassMV, NULL)) {
+                           "pAverage", p_sum/npCount, "pCentral", Po, 
+                           "KAverage", (gamma_sum/npCount-1)*particleMassMV, NULL)) {
       SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -965,11 +970,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       /* number of particles */
       if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,			     
 #if USE_MPI
-			     "Particles", particles_total,
+			     "Particles", npCount_total,
 			     "Transmission", (original_particles?((double)particles_total)/original_particles:(double)0.0),
 			     "ElapsedCoreTime", delapsed_time()*n_processors,
 #else 
-			     "Particles", particles,
+			     "Particles", npCount,
 			     "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
 			     "ElapsedCoreTime", delapsed_time(),
 #endif
