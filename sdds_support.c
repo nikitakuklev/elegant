@@ -1187,15 +1187,17 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
                           double Po, double length, double charge, double z)
 {
-  long icoord, ipart, ibin;
+  long icoord, ipart, ibin, jpart;
   double p, t0;
   static long maxBins = 0, maxParticles = 0;
   static double *frequency=NULL, *coordinate=NULL, *histData=NULL;
   double center, range, lower, upper;
+  static short *chosen = NULL;
+  long nChosen = 0;
   
 #if USE_MPI  
   static double *buffer=NULL;
-  long particles_total;
+  long particles_total, nChosen_total;
 #endif
 
   log_entry("dump_particle_histogram");
@@ -1234,9 +1236,17 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   if (isSlave) {
     if (particles>maxParticles) {
       maxParticles = particles;
-      if (!(histData = SDDS_Realloc(histData, sizeof(*histData)*maxParticles)))
+      if (!(histData = SDDS_Realloc(histData, sizeof(*histData)*maxParticles)) ||
+          !(chosen=SDDS_Realloc(chosen, sizeof(*chosen)*maxParticles)))
 	SDDS_Bomb("Memory allocation failure (dump_particle_histogram)");
     }
+  }
+  for (ipart=0; ipart<particles; ipart++) {
+    if (histogram->startPID>=histogram->endPID || (particle[ipart][6]>=histogram->startPID && particle[ipart][6]<=histogram->endPID)) {
+      chosen[ipart] = 1;
+      nChosen ++;
+    } else
+      chosen[ipart] = 0;
   }
   
   t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));  
@@ -1249,21 +1259,28 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     if (isSlave) {
       if (icoord==4) {
 	/* t */
-	for (ipart=0; ipart<particles; ipart++) {
-	  p = Po*(1+particle[ipart][5]);
-	  histData[ipart] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1));
+	for (ipart=jpart=0; ipart<particles; ipart++) {
+          if (chosen[ipart]) {
+            p = Po*(1+particle[ipart][5]);
+            histData[jpart++] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1));
+          }
 	}
       } else if (icoord==6) {
 	/* dt (could reuse computations for t, but would need to store another array) */
-	for (ipart=0; ipart<particles; ipart++) {
-	  p = Po*(1+particle[ipart][5]);
-	  histData[ipart] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1)) - t0;
+	for (ipart=jpart=0; ipart<particles; ipart++) {
+          if (chosen[ipart]) {
+            p = Po*(1+particle[ipart][5]);
+            histData[jpart++] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1)) - t0;
+          }
 	}
       } else {
-	for (ipart=0; ipart<particles; ipart++)
-	  histData[ipart] = particle[ipart][icoord];
+	for (ipart=jpart=0; ipart<particles; ipart++)
+          if (chosen[ipart])
+            histData[jpart++] = particle[ipart][icoord];
       }
-      find_min_max(&lower, &upper, histData, particles);
+      if (jpart!=nChosen) 
+        bombElegant("fatal error: particle counting problem making histogram", NULL);
+      find_min_max(&lower, &upper, histData, nChosen);
       if (lower==upper) {
 	lower -= 1e-16;
 	upper += 1e-16;
@@ -1271,8 +1288,8 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     }
 #if USE_MPI
     if (isMaster)    /* The particles are on slave */
-      particles = 0;    
-    find_global_min_max(&lower, &upper, particles, MPI_COMM_WORLD); 
+      nChosen = 0;    
+    find_global_min_max(&lower, &upper, nChosen, MPI_COMM_WORLD); 
 #endif
     if (histogram->count==0 || !histogram->fixedBinSize) {
       range = histogram->binSizeFactor*(upper-lower);
@@ -1285,20 +1302,20 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     upper = center+range/2;
     for (ibin=0; ibin<histogram->bins; ibin++) 
       coordinate[ibin] = (ibin+0.5)*histogram->binSize[icoord] + lower;
-    make_histogram(frequency, histogram->bins, lower, upper, histData, particles, 1);
+    make_histogram(frequency, histogram->bins, lower, upper, histData, nChosen, 1);
 #if USE_MPI
     if (USE_MPI) /* This will update the number of particles locally on master if there are lost on slaves */
-      MPI_Reduce (&particles, &particles_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce (&nChosen,  &nChosen_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if (isMaster)
-      particles = particles_total;
+      nChosen = nChosen_total;
     MPI_Allreduce(frequency, buffer, histogram->bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     memcpy(frequency, buffer, sizeof(*buffer)*histogram->bins);    
-    if (isMaster && particles_total) 
+    if (isMaster && nChosen_total) 
 #endif
     {
       if (histogram->normalize)
 	for (ibin=0; ibin<histogram->bins; ibin++)
-	  frequency[ibin] /= particles*(upper-lower)/histogram->bins;
+	  frequency[ibin] /= nChosen*(upper-lower)/histogram->bins;
       if (histogram->sparse) {
         long row;
 	for (ibin=row=0; ibin<histogram->bins; ibin++) {
@@ -1321,7 +1338,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   }
   
 #if SDDS_MPI_IO
-  if (isMaster && particles_total)
+  if (isMaster && nChosen_total)
 #endif
   {
     if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
