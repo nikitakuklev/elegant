@@ -835,6 +835,11 @@ long multipole_tracking2(
       }
     }
   }
+  if (fabs(tilt)>0.1) {
+    /* If rotation is greater than 100 mrad, disable aperture inside the element */
+    /* Prevents unexpected results with skew elements */
+    apertureData.present = 0;
+  }
   
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
