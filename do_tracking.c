@@ -3826,7 +3826,7 @@ void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long 
 	 nLost0, *nLost, nLeft, nToTrack);
  */ 
   for (ip=nLeft; ip<nToTrack; ip++) {  /* copy the lost particle coordinates and pass information */
-    if (!lossBuffer) {
+/*    if (!lossBuffer) {
       fprintf(stderr, "NULL loss buffer main pointer for ip=%ld\n");
       bombElegant("Fatal error", NULL);
     }
@@ -3838,6 +3838,7 @@ void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long 
       fprintf(stderr, "NULL coordinnate buffer for ip=%ld\n");
       bombElegant("Fatal error", NULL);
     }
+*/
     for (j=0; j<7; j++) {
       lossBuffer[ip][j] = coord[ip][j];
     }
