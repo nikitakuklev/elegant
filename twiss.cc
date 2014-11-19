@@ -138,6 +138,11 @@ VMATRIX *compute_periodic_twiss(
  
   if (clorb) {
     /* use the closed orbit to compute the on-orbit R matrix */
+#ifdef DEBUG
+    printf("Using closed orbit to compute on-orbit R matrix in compute_periodic_twiss\n");
+    printf("clorb=%le, %le, %le, %le, %le, %le\n",
+           clorb[0], clorb[1], clorb[2], clorb[3], clorb[4], clorb[5]);
+#endif
     M1 = (VMATRIX*)tmalloc(sizeof(*M1));
     initialize_matrices(M1, 1);
     for (i=0; i<6; i++) {
@@ -354,6 +359,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   initialize_matrices(M1, 1);
   initialize_matrices(M2, twissConcatOrder);
   if (traj) {
+#ifdef DEBUG
+    printf("using trajectory in propagate_twiss_parameters()\n");
+    printf("traj=%le, %le, %le, %le, %le, %le\n",
+           traj[0], traj[1], traj[2], traj[3], traj[4], traj[5]);
+#endif
     for (i=0; i<6; i++) {
       path[i] = traj[i];
       M1->R[i][i] = 1;
@@ -1785,7 +1795,20 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   log_entry((char*)"compute_twiss_parameters");
 
   *unstable = 0;
-  
+
+#ifdef DEBUG
+  if (starting_coord) 
+    {
+      printf("compute_twiss_parameters: starting_coord = %le, %le, %le, %le, %le, %le\n",
+             starting_coord[0], 
+             starting_coord[1], 
+             starting_coord[2], 
+             starting_coord[3], 
+             starting_coord[4], 
+             starting_coord[5]);
+    }
+#endif
+
   if (!beamline->twiss0)
     beamline->twiss0 = (TWISS*)tmalloc(sizeof(*beamline->twiss0));
 
