@@ -65,9 +65,6 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
   /* Find dividing point between positive and negative delta */
   id0 = -1;
   for (id=0; id<nDelta; id++) {
-    if (deltaTfData[id].nu[0]<=0 || deltaTfData[id].nu[0]>=1 ||
-        deltaTfData[id].nu[1]<=0 || deltaTfData[id].nu[1]>=1 || deltaTfData[id].diffusionRate>diffusion_rate_limit)
-      continue;
     if (deltaTfData[id].delta>=0) {
       id0 = id;
       nu0[0] = deltaTfData[id].nu[0];
@@ -76,33 +73,60 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       break;
     }
   }
-  if (id0==-1) {
+  if (id0==-1 || 
+      (deltaTfData[id].nu[0]<=0 || deltaTfData[id].nu[0]>=1 ||
+       deltaTfData[id].nu[1]<=0 || deltaTfData[id].nu[1]>=1 || deltaTfData[id].diffusionRate>diffusion_rate_limit)) {
     tuneRange[0] = tuneRange[1] = deltaRange[0] = deltaRange[1]= 0;
     return;
   }
+#ifdef DEBUG
+  printf("id0 = %ld, nux = %le, nuy = %le\n", id0, deltaTfData[id0].nu[0], deltaTfData[id0].nu[1]);
+#endif
 
-  id1 = id2 = -1;
-  delta1 = delta2 = 0;
   for (coord=0; coord<2; coord++) {
+    id1 = id2 = -1;
+    delta1 = delta2 = 0; 
     for (id=id0; id>=0; id--) {
       /* scan to negative delta side from center until we find a place where the 
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
-          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord])) || deltaTfData[id].diffusionRate>diffusion_rate_limit)
+          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord])) || deltaTfData[id].diffusionRate>diffusion_rate_limit) {
+#ifdef DEBUG
+        printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
+             coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
+#endif
         break;
+      }
+#ifdef DEBUG
+      printf("coord = %ld, ok: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
+             coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
+#endif
       delta1 = deltaTfData[id].delta;
       id1 = id;
-    }  
+    }
     for (id=id0; id<nDelta; id++) {
       /* scan to positive delta side from center until we find a place where the 
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
-          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord])))
+          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) {
+#ifdef DEBUG
+        printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
+             coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
+#endif
         break;
+      }
+#ifdef DEBUG
+      printf("coord = %ld, ok: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
+             coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
+#endif
       delta2 = deltaTfData[id].delta;
       id2 = id;
     }
     deltaRange[coord] = MIN(fabs(delta1), fabs(delta2));
+#ifdef DEBUG
+    printf("coord = %ld, delta1 = %le, id1 = %ld, delta2 = %le, id2 = %ld, deltaRange = %le\n",
+           coord, delta1, id1, delta2, id2, deltaRange[coord]);
+#endif
 
     for (id=0; id<id1; id++)
       deltaTfData[id].used = 0;
@@ -454,6 +478,7 @@ long doTuneFootprint(
   else
     ddelta = 0;
   for (idelta=my_idelta=0; idelta<ndelta; idelta++) {
+    deltaTfData[my_idelta].used = 0;
     if (!quadratic_spacing)
       delta = delta_min + idelta*ddelta;
     else {
@@ -622,6 +647,7 @@ long doTuneFootprint(
       } else {
         y = ymin + iy*dy;
       }
+      xyTfData[my_ixy].used = 0;
       memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
       if (myid == (ix*ny+iy)%n_processors) /* Partition the job according to particle ID */

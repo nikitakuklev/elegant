@@ -1285,6 +1285,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       if (interrupt_file && fexists(interrupt_file) && 
 	  (interrupt_file_mtime==0 || interrupt_file_mtime<get_mtime(interrupt_file))) {
 	fprintf(stdout, "Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
+        simplexMinAbort(1);
 	startsLeft = 0;
 	break;
       }
@@ -2014,6 +2015,10 @@ double optimization_function(double *value, long *invalid)
     rpn_store(tuneFP.chromaticDiffusionMaximum, NULL, tuneFootprintMem[7]);
     rpn_store(tuneFP.amplitudeDiffusionMaximum, NULL, tuneFootprintMem[8]);
     rpn_store(tuneFP.xyArea, NULL, tuneFootprintMem[9]);
+    if (optimization_data->verbose>1) {
+      for (i=0; i<10; i++)
+        printf("%s = %le\n", tuneFootprintName[i], rpn_recall(tuneFootprintMem[i]));
+    }
   }
   
   if (floorCoord_mem[0]==-1) 
