@@ -154,7 +154,7 @@ int main(int argc, char **argv)
   SDDS_DATASET inData, outData;
   long i_arg, tmpFileUsed, rows, i, k, sign, signs, multx, multy, start, end, offset;
   long count, datapoints=0, outputpoints=0, **sortIndex, plane, index, index1, *pole=NULL, i_pole, poles;
-  long maximumOrder;
+  long maximumOrder = 4;
   char *columnName[4] = {NULL, NULL, "nux", "nuy"};  
   char *multipole0[4]={"dipole", "quadrupole", "sextupole", "octupole"};
   char **multipole = NULL;
