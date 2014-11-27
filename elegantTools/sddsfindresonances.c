@@ -64,7 +64,7 @@ char *USAGE="sddsfindresonances [-pipe=[input][,output]] [<inputFile>] [<outputf
 -type          for user to choose to use normal and/or skew for each \n\
                multipoles. default is normal and skew. \n\
 -variables     Give names for the variable columns.  The defaults are x and y.\n\n\
-Program by H. Shang, November 2005 (This is Version 2, November 2005.) \n";
+Program by H. Shang, November 2005 (This is Version 3, November 2014.) \n";
 
 static double *sortData[2];
 int SDDS_CompareDoubleRows(const void *vrow1, const void *vrow2);
@@ -165,7 +165,8 @@ int main(int argc, char **argv)
 
   tmpFileUsed=rows=0;
   inputFile=outputFile=NULL;
-  multipoleFlags = typeFlags = pipeFlags = 0;
+  multipoleFlags = USE_ALL_MULTIPOLES;
+  typeFlags = pipeFlags = 0;
   outputData = (double**)malloc(sizeof(*outputData)*4);
   indepData = (double**)malloc(sizeof(*indepData)*4);
   /* indepData[i] i=0,1,2,3 is the input data of x, y, nux, and nuy respectively */
@@ -192,6 +193,7 @@ int main(int argc, char **argv)
        case SET_MULTIPOLES:
          s_arg[i_arg].n_items--;
          maximumOrder = 4;
+	 multipoleFlags = 0;
          if (!scanItemList(&multipoleFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                            "dipole", -1, NULL, 0, USE_DIPOLE,
                            "quadrupole", -1, NULL, 0, USE_QUADRUPOLE,
