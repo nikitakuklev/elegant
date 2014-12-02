@@ -23,5 +23,9 @@ sddsrandmult$(OBJ): sddsrandmult.h
 sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h
 
+ifdef BASE_3_15
+clean:
+else
 clean::
+endif
 	$(RM) sddsrandmult.h 
