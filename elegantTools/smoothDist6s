@@ -1,61 +1,16 @@
 #!/bin/sh  
 # \
-exec tclsh "$0" "$@"
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
 
 #
 # replaces the transverse distribution with an idealized distribution 
 # reflecting the median slice properties.  
 #
-
-proc APSSetVarsFromList {args} {
-    set valueList ""
-    set variableList ""
-    if {[APSStrictParseArguments {valueList variableList}] || \
-          ![llength $valueList] || [llength $valueList]!=[llength $variableList]} {
-        return -code error "APSSetVarsFromList: invalid arguments/values"
-    }
-    foreach value $valueList variable $variableList {
-        uplevel 1 "set $variable \"$value\""
-    }
-}
-
-proc APSStrictParseArguments {optlist} {
-    upvar args arguments
-    set length [llength $arguments]
-    set index 0
-    set leftovers {}
-    while {$index<$length} {
-        set arg [lindex $arguments $index]
-        if {[string index $arg 0]=="-"} {
-            set keywordName [string range $arg 1 end]
-            if {[lsearch -exact $optlist $keywordName]!=-1} {
-                incr index
-                if {$index==$length} {
-                    lappend leftovers $arg
-                } else {
-                    set valueString [lindex $arguments $index]
-                    uplevel "set $keywordName {$valueString}"
-                    incr index
-                }
-            } else {
-                incr index
-                lappend leftovers $arg
-            }
-        } else {
-            lappend leftovers $arg
-            incr index
-        }
-    }
-    set arguments [concat $leftovers]
-    if {$arguments != ""} {
-        set procName [lindex [info level [expr {[info level] - 1}]] 0]
-        puts "Unknown option(s) given to $procName \"$arguments\""
-        return -1
-    } else {
-        return 0
-    }
-}
-
 
 set usage {usage: smoothDist6 -input <name> -output <name> -factor <number> -rippleAmplitude <%> -rippleWavelength <um> -smoothPasses <num(500)> -energyMod <%> -betaSlices <n> -seed <integer> -haltonOffset <integer> -semaphore <filename>}
 set debug 0
@@ -121,7 +76,7 @@ if [string length $semaphore] {
 
 set factor [expr int($factor)]
 
-set tmpRoot /tmp/tmp[pid]-$env(USER)
+set tmpRoot [APSTmpDir]/tmp[pid]-$env(USER)
 
 # fit a polynomial to the (t,p) data to make a table for computing p(t)
 if {[catch {exec sddspfit $input $tmpRoot.fit -terms=12 -evaluate=$tmpRoot.eval,number=10000 -column=t,p} results]} {
