@@ -14,8 +14,8 @@ exec oagwish "$0" "$@"
 # First Version in CVS.
 #
 
-set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
-set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
 package require sdds
 
@@ -103,7 +103,7 @@ set US_EXE "/home/oxygen/JIAOX/OAG/urgent/us_urgent_example/us"
 set URGENT_EXE "/home/oxygen/JIAOX/OAG/urgent/us_urgent_example/urgent"
 set sddsurgent_EXE "sddsurgent"
 
-set tmp_dir "/tmp/$env(USER)"
+set tmp_dir "[APSTmpDir]/$env(USER)"
 if { ![ file exist $tmp_dir ] } {
    eval exec mkdir $tmp_dir
 }   
@@ -465,7 +465,7 @@ proc run_US {} {
      cd $tmp_dir 
      catch { exec $US_EXE < $tmp_us_in > $tmp_us_out  }
      cd $foo
-     exec cp "/tmp/$env(USER)/$tmp_us_out" ${outputFile}.US
+     exec cp "[APSTmpDir]/$env(USER)/$tmp_us_out" ${outputFile}.US
      setStatus "Run $US_EXE successfully"
      setStatus "Saved US output file to ${outputFile}.US"
      
