@@ -185,9 +185,8 @@ exec oagwish "$0" "$@"
 #
 #
 
-set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
-set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
-APSDebugPath
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
 set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: shang $"
 
@@ -870,7 +869,7 @@ proc RecomputeOutputs {args} {
             global haissinskiDone superperiods haissinskiIterations haissinskiTolerance
             global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor
             set Q [expr $bunchCurrent/1000.0/$revolutionFrequency]
-            set tmpRoot /tmp/[APSTmpString]
+            set tmpRoot [APSTmpDir]/[APSTmpString]
             APSAddToTempFileList $tmpRoot.0 $tmpRoot.1
             set haissinskiDone 0
             set extraOption -outputLastStepOnly
@@ -1202,7 +1201,7 @@ proc APSTouschekLifetime {args} {
         return 1e10
     }
     set gamma [expr $energy/0.511e-3]
-    set tmpFile /tmp/[APSTmpString]
+    set tmpFile [APSTmpDir]/[APSTmpString]
     set rce 2.81794092e-15
     exec sddsprocess $latticeFile $tmpFile.1 \
       -defi=param,emit,$emittance,units=m \

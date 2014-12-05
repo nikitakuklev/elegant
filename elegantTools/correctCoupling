@@ -22,8 +22,9 @@ exec oagtclsh "$0" "$@"
 # Various refinements and improvements after testing.
 #
 
-set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
-set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
 APSStandardSetup
 
 set usage {usage: correctCoupling -rootname <string> -input <parameterFile> -eyTarget <pm>  -inverse <filename> -diagnostic <markerName> -skewLimit <K1Value> -fraction <value> -iterations <num> -order {1|2} -energy <MeV>}
@@ -122,7 +123,7 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     puts $fdo "Multiply with inverse matrix: $result"
     flush $fdo
 
-    set tmpInput /tmp/[APSTmpString]
+    set tmpInput [APSTmpDir]/[APSTmpString]
     APSAddToTempFileList $tmpInput
     # Combine the previous parameter input file with the correction parameter file to make
     # starting point for the next iteration

@@ -2,11 +2,10 @@
 # \
 exec oagtclsh "$0" "$@"
 
-if {![info exists env(OAG_TOP_DIR)] || [string length $env(OAG_TOP_DIR)]==0} {
-    set env(OAG_TOP_DIR) /usr/local
-}
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
-catch {APSStandardSetup}
+
+APSStandardSetup
 
 set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-beamCurrent <mA>] [-angleOffset <radians>] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
 set H 0

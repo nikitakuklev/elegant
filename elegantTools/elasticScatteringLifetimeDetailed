@@ -8,11 +8,8 @@ exec oagtclsh "$0" "$@"
 # pressure input file, they are used in the computations. Units must be nT or nTorr.
 # M. Borland, 2014.
 
-if [info exists $env(OAG_TOP_DIR)] {
-    set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
-} else {
-    set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
-}
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
 APSStandardSetup
 
