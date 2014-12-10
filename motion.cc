@@ -40,7 +40,7 @@
 #endif
 #endif
 #include <complex>
-#if defined(darwin)
+#if defined(darwin) || (_MINGW)
 #include <cmath>
 #define isinf(x) std::isinf(x)
 #define isnan(x) std::isnan(x)

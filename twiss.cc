@@ -19,7 +19,7 @@
 #endif
 #endif
 #include <complex>
-#if defined(darwin)
+#if defined(darwin) || (_MINGW)
 #include <cmath>
 #define isnan(x) std::isnan(x)
 #endif
