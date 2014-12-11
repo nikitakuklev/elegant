@@ -87,6 +87,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   char occurence_s[8], eptr_name[1024];
   ntuple *nBx, *nBy, *nBz;
   double ftable_length;
+  htab *occurence_htab;
+  long totalElements, uniqueElements, *occurenceCounter, *occurencePtr;
   
   log_entry("get_beamline");
 
@@ -97,10 +99,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   if (madfile) {
     char *filename;
 
-#ifdef DEBUG
-    fprintf(stdout, "reading from file %s\n", madfile);
-    fflush(stdout);
-#endif
+    if (echo) {
+      fprintf(stdout, "reading from file %s\n", madfile);
+      fflush(stdout);
+    }
+    
     if (!(filename=findFileInSearchPath(madfile))) {
       fprintf(stderr, "Unable to find file %s\n", madfile);
       exitElegant(1);
@@ -263,7 +266,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       fflush(stdout);
       exitElegant(1);
     }
-
+    if (echo) {
+      fprintf(stdout, "finished reading from files\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+      report_stats(stdout, "statistics: ");
+#endif
+      fflush(stdout);
+    }
+    
     if (getSCMULTSpecCount()) {
       fill_elem(eptr, getSCMULTName(), T_SCMULT, NULL);
       eptr_sc = eptr;
@@ -445,51 +455,111 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     }
   } 
 
-  /* go through and give occurence numbers to each element */
+  if (echo) {
+    fprintf(stdout, "Beginning organization of lattice input data.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
+
+  /* go through and do some basic initialization for each element */
   eptr = &(lptr->elem);
+  totalElements = 0;
   while (eptr) {
     eptr->occurence = 0;
     lptr->elast = eptr;
+    eptr->Pref_input = eptr->Pref_output = p_central;
+    if (eptr->type==T_SREFFECTS)
+      lptr->flags |= BEAMLINE_TWISS_WANTED;
+    totalElements ++;
     eptr = eptr->succ;
   }
 
+  if (echo) {
+    fprintf(stdout, "Step 1 done.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
+
+  /* Set up hash table to all computing occurrence numbers quickly */
+  occurence_htab = hcreate(12);
+  occurenceCounter = tmalloc(sizeof(*occurenceCounter)*totalElements);
+  uniqueElements = 0;
+  eptr = &(lptr->elem);
+  while (eptr) {
+    if (hcount(occurence_htab)==0 || hfind(occurence_htab, eptr->name, strlen(eptr->name))==FALSE) {
+      occurenceCounter[uniqueElements] = 0;
+      hadd(occurence_htab, eptr->name, strlen(eptr->name), (void*)&occurenceCounter[uniqueElements++]);
+      if (echo) {
+        fprintf(stdout, "Added %s to hash table\n", eptr->name);
+        fflush(stdout);
+      }
+    }
+    eptr = eptr->succ;
+  }
+  if (echo) {
+    fprintf(stdout, "Created occurence hash table for %ld unique elements of %ld total elements\n",
+            uniqueElements, totalElements);
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
+    
   eptr = &(lptr->elem);
   lptr->flags = 0;
   while (eptr) {
-    eptr->Pref_input = eptr->Pref_output = p_central;
-    if (eptr->occurence==0) {
-      /* this is the first occurence of this element--go through and find any others */
-      if (eptr->type==T_FTABLE)  {
+    if (hfind(occurence_htab, eptr->name, strlen(eptr->name))==TRUE) {
+      occurencePtr = hstuff(occurence_htab);
+      eptr->occurence = (*occurencePtr += 1);
+    } else 
+      bombElegant("hash table problem in get_beamline---seek professional help!", NULL);
+    eptr = eptr->succ;
+  }
+  hdestroy(occurence_htab);
+  free(occurenceCounter);
+
+/*
+      if (eptr->occurence==1 && eptr->type==T_FTABLE)  {
         initializeFTable((FTABLE*)eptr->p_elem);
         nBx = ((FTABLE*)eptr->p_elem)->Bx;
         nBy = ((FTABLE*)eptr->p_elem)->By;
         nBz = ((FTABLE*)eptr->p_elem)->Bz;
         ftable_length = ((FTABLE*)eptr->p_elem)->length;
-      }        
-
-      eptr->occurence = occurence = 1;
-      eptr1 = eptr->succ;
-      while (eptr1) {
-        if (strcmp(eptr->name, eptr1->name)==0) {
-          if (eptr1->type==T_FTABLE)  {
-            ((FTABLE*)eptr1->p_elem)->initialized=1;
-            ((FTABLE*)eptr1->p_elem)->length=ftable_length;
-            ((FTABLE*)eptr1->p_elem)->Bx = nBx;
-            ((FTABLE*)eptr1->p_elem)->By = nBy;
-            ((FTABLE*)eptr1->p_elem)->Bz = nBz;
-          }
-          eptr1->occurence = ++occurence;
-        }
-        eptr1 = eptr1->succ;
       }
-    }
-    if (eptr->type==T_SREFFECTS)
-      lptr->flags |= BEAMLINE_TWISS_WANTED;
-    eptr = eptr->succ;
+      
+          eptr1 = eptr->succ;
+          while (eptr1) {
+            if (strcmp(eptr->name, eptr1->name)==0) {
+              if (eptr1->type==T_FTABLE)  {
+                ((FTABLE*)eptr1->p_elem)->initialized=1;
+                ((FTABLE*)eptr1->p_elem)->length=ftable_length;
+                ((FTABLE*)eptr1->p_elem)->Bx = nBx;
+                ((FTABLE*)eptr1->p_elem)->By = nBy;
+                ((FTABLE*)eptr1->p_elem)->Bz = nBz;
+              }
+              eptr1->occurence = ++occurence;
+            }
+            eptr1 = eptr1->succ;
+          }
+        }
+*/
+
+  if (echo) {
+    fprintf(stdout, "Step 2 done.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
   }
+
   /* create a hash table with the size of 2^12, it can grow automatically if necessary */
   if (!load_hash)
      load_hash = hcreate(12);  
+
   eptr = &(lptr->elem);
   while (eptr) {
     /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
@@ -499,10 +569,26 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       hadd (load_hash, eptr_name, strlen(eptr_name), (void*)eptr);
       eptr = eptr->succ;
   }
+  if (echo) {
+    fprintf(stdout, "Step 3 done.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
+
   compute_end_positions(lptr);
   free(s);
   free(t);
   
+  if (echo) {
+    fprintf(stdout, "Step 4 done.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
+
   return(lptr);
 }
 
