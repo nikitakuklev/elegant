@@ -77,8 +77,8 @@ void track_through_rfmode(
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Abort(MPI_COMM_WORLD, 9);
 #endif
-      runBinlessRfMode(part, np, rfmode, Po, element_name, element_z, pass, n_passes, charge);
-      return;
+    runBinlessRfMode(part0, np0, rfmode, Po, element_name, element_z, pass, n_passes, charge);
+    return;
     }
     
     if (charge) {
@@ -418,7 +418,6 @@ void track_through_rfmode(
 #endif
 
         if (rfmode->record && iBucket==(nBuckets-1)) {
-            
 #if (USE_MPI)
           if (myid == 1) {
 	    /* We let the first slave to dump the parameter */
