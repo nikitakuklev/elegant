@@ -261,7 +261,7 @@ void accumulate_beam_sums(
   double value;
   long active = 1;
   double Sij;
-  long npCount, npCount_total = 0;
+  long npCount=0, npCount_total = 0;
   short *chosen = NULL;
 #ifdef USE_KAHAN
   double errorCen[7], errorSig[28];
