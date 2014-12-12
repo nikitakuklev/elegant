@@ -218,14 +218,14 @@ endif
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 
 ifeq ($(MPI),1)
-USR_CFLAGS_WIN32 = -Ic:/MicrosoftMPI/inc
-USR_CPPFLAGS_WIN32 = -Ic:/MicrosoftMPI/inc
+USR_CFLAGS_WIN32 = -Ic:/Program\ Files\ \(x86\)/Microsoft\ SDKs/MPI/Include
+USR_CPPFLAGS_WIN32 = -Ic:/Program\ Files\ \(x86\)/Microsoft\ SDKs/MPI/Include
 USR_LIBS += msmpi
 ifeq ($(EPICS_HOST_ARCH),win32-x86)
-    msmpi_DIR = c:/MicrosoftMPI/Lib/i386
+    msmpi_DIR = c:/MicrosoftMPI/Lib/x86
 endif
 ifeq ($(EPICS_HOST_ARCH),windows-x64)
-    msmpi_DIR = c:/MicrosoftMPI/Lib/amd64
+    msmpi_DIR = c:/MicrosoftMPI/Lib/x64
 endif
 else
 USR_CFLAGS_WIN32 = -nil-
