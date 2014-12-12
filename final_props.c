@@ -828,7 +828,7 @@ double rms_longitudinal_emittance(double **coord, long n, double Po, long startP
         return(0.0);
 
     for (i=npCount=0; i<n; i++) {
-      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         npCount++;
       }
     }
@@ -842,7 +842,7 @@ double rms_longitudinal_emittance(double **coord, long n, double Po, long startP
 
     /* compute centroids */
     for (i=tc=dpc=0; i<n; i++) {
-      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         P = Po*(1+coord[i][5]);
         beta = P/sqrt(P*P+1);
         time[i] = coord[i][4]/(beta*c_mks);
@@ -886,7 +886,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
         return(0.0);
 
     for (i=npCount=0; i<n; i++) {
-      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         npCount++;
       }
     }
@@ -905,7 +905,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
 
     /* compute centroids */
     for (i=tc=dpc=0; i<n; i++) {
-      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         P = Po*(1+coord[i][5]);
         beta = P/sqrt(P*P+1);
         time[i] = coord[i][4]/(beta*c_mks);
@@ -921,7 +921,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
     dpc = tmp_total[1]/npCount_total;
 
     for (i=s11=s12=s22=0; i<n; i++) {
-      if (startPID<endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         s11 += sqr(dt  =  time[i]    - tc);
         s22 += sqr(ddp = coord[i][5] - dpc);
         s12 += dt*ddp;
