@@ -100,7 +100,7 @@ If -elegantInput is given, then it is assumed that the input file is\n\
 a \"final\" output file from elegant, with the data stored in the\n\
 following parameters: Charge, Dt80 (for bunch length), pAverage,\n\
 ex, and Sdelta.\n\
-Program by Michael Borland.  (This is version 2, January 2000.)\n";
+Program by Michael Borland.  (This is version 3, December 2014.)\n";
 
 double FELScalingFunction
 (double *etaDiffraction, double *etaEmittance, double *etaEnergySpread,
@@ -532,7 +532,7 @@ double SASEFELOptimFn(double *x, long *invalid)
 
 void setOptimizationParameters(double *x0, double *dx, short *disable, long index, VALUE_NAME data, long row)
 {
-  if (data.inFile || data.onCommandline) {
+  if ((data.inFile && data.value[row]!=0) || data.onCommandline) {
     x0[index] = data.value[row];
     dx[index] = 0.0;
     disable[index] = 1;
@@ -550,7 +550,7 @@ void setOptimizationParameters(double *x0, double *dx, short *disable, long inde
 
 void transferOptimizationParameters(double *x0, long index, VALUE_NAME data, long row)
 {
-  if (!data.inFile && !data.onCommandline)
+  if (!(data.inFile && data.value[row]!=0) && !data.onCommandline)
     data.value[row] = x0[index];
 }
                                
