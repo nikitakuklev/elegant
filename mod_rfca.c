@@ -54,17 +54,23 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
             }
         }
 
-    if (!part)
-        bombElegant("NULL particle data pointer (modulated_rf_cavity)", NULL);
-    for (ip=0; ip<np; ip++)
-        if (!part[ip]) {
-            fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
-            fflush(stdout);
 #if USE_MPI
-	    MPI_Abort(MPI_COMM_WORLD, 1);
+    if  (!isMaster) {
 #endif
-            abort();
-            }
+      if (!part)
+        bombElegant("NULL particle data pointer (modulated_rf_cavity)", NULL);
+      for (ip=0; ip<np; ip++)
+        if (!part[ip]) {
+          fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
+          fflush(stdout);
+#if USE_MPI
+          MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+          abort();
+        }
+#if USE_MPI
+    }
+#endif
     if (!modrf)
         bombElegant("NULL modrf pointer (modulated_rf_cavity)", NULL);
 
