@@ -402,7 +402,7 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", 
                              "Bunch length", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "tLifetime", NULL, "hour", 
-                             "Touschek half lifetime", NULL, SDDS_DOUBLE, NULL))
+                             "Touschek half lifetime, which is equivalent to Initial exponential decay lifetime", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   if (!SDDS_TransferColumnDefinition(&resultsPage, &twissPage, "s", NULL) ||
