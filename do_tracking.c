@@ -619,7 +619,7 @@ long do_tracking(
       if (sums_vs_z && *sums_vs_z && (!run->final_pass || i_pass==n_passes-1) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bombElegant("attempt to accumulate beam sums with negative index!", NULL);
-        accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0);
+        accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
         fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
@@ -1879,7 +1879,7 @@ long do_tracking(
         if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
           if (i_sums<0)
             bombElegant("attempt to accumulate beam sums with negative index!", NULL);
-          accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0);
+          accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
           (*sums_vs_z)[i_sums].z = z;
           i_sums++;
         }
@@ -1952,7 +1952,7 @@ long do_tracking(
         (run->wrap_around || i_pass==n_passes-1)) {
       if (i_sums<0)
         bombElegant("attempt to accumulate beam sums with negative index!", NULL);
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
@@ -2078,7 +2078,7 @@ long do_tracking(
     if (flags&FINAL_SUMS_ONLY) {
       log_entry("do_tracking.3.1");
       i_sums = 0;
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
@@ -2092,7 +2092,7 @@ long do_tracking(
       if (i_sums<0)
         bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       /* accumulate sums for final output */
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
@@ -2716,7 +2716,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   static char s[1000];
 
   zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, Po, 0, 0);
+  accumulate_beam_sums(&sums, coord, np, Po, 0, 0, 0);
   if (isMaster || !notSinglePart) {
     for (i=0; i<6; i++) {
       centroid[i] = sums.centroid[i];
@@ -4290,7 +4290,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 #endif
 
   zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, pCentral, 0, 0);
+  accumulate_beam_sums(&sums, coord, np, pCentral, 0, 0, 0);
   pAverage = pCentral*(1+sums.centroid[5]);
   
   for (i=0; i<2; i++) {

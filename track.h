@@ -2946,7 +2946,9 @@ extern long check_duplic_line(LINE_LIST *line, char *new_line, long n_lines, lon
 extern void compute_centroids(double *centroid, double **coordinates, long n_part);
 extern void compute_sigmas(double *emit, double *sigma, double *centroid, double **coordinates, long n_part);
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
-extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, long startPID, long endPID);
+#define BEAM_SUMS_SPARSE   0x0001UL
+#define BEAM_SUMS_NOMINMAX 0x0002UL
+extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, long startPID, long endPID, unsigned long flags);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 extern long computeSliceMoments(double C[6], double S[6][6], 
 			 double **part, long np, 
