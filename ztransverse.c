@@ -593,7 +593,12 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
                  (long)(log(2*timeSpan*1.05/bin_size)/log(2)+1));
     if (maxBins2<n_bins) {
       fprintf(stderr, "  Maximum number of bins does not allow sufficient time span!\n");
+#if USE_MPI
+      mpiAbort = 1;
+      return ;
+#else
       exitElegant(1);
+#endif
     }
     fprintf(stdout, "  Number of bins adjusted to %ld\n",
             n_bins);
@@ -619,7 +624,12 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
         fprintf(stdout, " It isn't possible to model this situation accurately with %ld bins.  Consider the RFMODE or TRFMODE element.\n",
                 maxBins2);
         fprintf(stdout, " Alternatively, consider increasing your bin size or maximum number of bins\n");
+#if USE_MPI
+        mpiAbort = 1;
+        return;
+#else
         exitElegant(1);
+#endif
       }
       n_bins = maxBins2;
       fprintf(stdout, "  Number of bins adjusted to %ld\n", n_bins);

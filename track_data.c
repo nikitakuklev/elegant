@@ -34,6 +34,10 @@ long inhibitFileSync = 0;
 long echoNamelists = 1;
 long mpiRandomizationMode = 3;
 
+#if USE_MPI
+short mpiAbort = 0;
+#endif
+
 long particleID = 1;
 
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */

@@ -110,6 +110,8 @@ extern long last_optimize_function_call; /* A flag used to indicate if it is the
 extern int min_value_location; /* The location (which processor) of the optimization value */
 /* A flag used to specify if the output will be enabled for some special cases. E.g., simplex method in Pelegant */
 extern long enableOutput;
+/* used to abort MPI run in cases where master is not running the same code */
+extern short mpiAbort;
 #endif
 
 #ifndef __cplusplus

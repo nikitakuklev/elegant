@@ -2602,6 +2602,12 @@ void bombElegant(char *error, char *usage)
   exit(1);
 }
 
+#if USE_MPI
+void mpiSetAbort() {
+  mpiAbort = 1;
+}
+#endif
+
 void exitElegant(long status)
 {
   if (status && semaphoreFile[2]) 

@@ -62,6 +62,7 @@ void track_through_multipole_deflector(
                                 );
 
 #if USE_MPI
+static short mpiAbortGlobal;
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       long n_processors, int myid, balance balanceStatus, 
@@ -1705,11 +1706,12 @@ long do_tracking(
 	      exitElegant(1);
 	      break;
 	    }
-	  }
+          }
 #ifdef USE_MPE
 	      MPE_Log_event( event2b, 0, bytebuf );
 #endif
-	}
+         }
+          
 #if USE_MPI
 	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
 	  active = 0;
@@ -1832,11 +1834,21 @@ long do_tracking(
       	if (((DRIFT*)eptr->p_elem)->length > 0.0) 
         	accumulateSCMULT(coord, nToTrack, eptr);
       }
+
+      /* Certain elements with MPALGORITHM=0 may need to abort, but master has no way to know because it doesn't run the procedure.
+         Here we check for setting of the mpiAbort variable on any processor */
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
+      if (mpiAbortGlobal) {
+        exitElegant(1);
+      }
+
       last_type = eptr->type;
       eptrPred = eptr;
       eptr = eptr->succ;
       i_elem++;
       nToTrack = nLeft;
+        
     } /* end of the while loop */
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
