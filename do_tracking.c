@@ -1835,6 +1835,7 @@ long do_tracking(
         	accumulateSCMULT(coord, nToTrack, eptr);
       }
 
+#if USE_MPI
       /* Certain elements with MPALGORITHM=0 may need to abort, but master has no way to know because it doesn't run the procedure.
          Here we check for setting of the mpiAbort variable on any processor */
       MPI_Barrier(MPI_COMM_WORLD);
@@ -1842,6 +1843,7 @@ long do_tracking(
       if (mpiAbortGlobal) {
         exitElegant(1);
       }
+#endif
 
       last_type = eptr->type;
       eptrPred = eptr;
