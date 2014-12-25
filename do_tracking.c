@@ -1836,12 +1836,14 @@ long do_tracking(
       }
 
 #if USE_MPI
-      /* Certain elements with MPALGORITHM=0 may need to abort, but master has no way to know because it doesn't run the procedure.
-         Here we check for setting of the mpiAbort variable on any processor */
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
-      if (mpiAbortGlobal) {
-        exitElegant(1);
+      if (flags&ALLOW_MPI_ABORT_TRACKING) {
+	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
+	   to know because it doesn't run the procedure. Here we check for setting of the mpiAbort variable on any processor */
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
+	if (mpiAbortGlobal) {
+	  exitElegant(1);
+	}
       }
 #endif
 

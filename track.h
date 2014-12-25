@@ -2828,6 +2828,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define RESTRICT_FIDUCIALIZATION 0x1000UL
 #define IBS_ONLY_TRACKING        0x2000UL
 #define CLOSED_ORBIT_TRACKING    0x4000UL
+#define ALLOW_MPI_ABORT_TRACKING 0x8000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2

@@ -611,7 +611,8 @@ long track_beam(
                        (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)|
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
-                         +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
+                         +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING))|
+		       ALLOW_MPI_ABORT_TRACKING,
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lost, NULL); 
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
