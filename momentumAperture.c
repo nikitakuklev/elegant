@@ -27,6 +27,7 @@ static long turnsStored = 0;
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
 long multiparticleLocalMomentumAcceptance(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
+void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid);
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -838,18 +839,19 @@ long multiparticleLocalMomentumAcceptance(
                               )
 {    
 #if USE_MPI
-  double **coord, **accepted;
+  double **coord;
   double round = 0.5;
   long nTotal, ip, ie, idelta, id, nLeft, nLost, nElem, nEachProcessor, code;
   double pCentral, delta;
   ELEMENT_LIST *elem, *elem0;
   char s[1000];
-  double *sStart, **deltaSurvived;
+  double *sStart, **deltaSurvived, **deltaLost;
   char **ElementName, **ElementType;
   int32_t *ElementOccurence;
-  short **survivorFound;
+  short **loserFound;
   char logFile[100];
   long n_working_processors = n_processors - 1;
+  double **lostParticles;
 
 #ifdef DEBUG
   FILE *fpd;
@@ -887,10 +889,10 @@ long multiparticleLocalMomentumAcceptance(
   /* allocate and initialize array for tracking */
   if (myid==0) {
     coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, 7);
-    accepted = (double**)czarray_2d(sizeof(**accepted), nEachProcessor*n_working_processors, 7);
+    lostParticles = NULL;
   } else {
     coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, 7);
-    accepted = (double**)czarray_2d(sizeof(**accepted), nEachProcessor, 7);
+    lostParticles = (double**)czarray_2d(sizeof(double), nEachProcessor, 8);	 
   }
   
 #ifdef DEBUG
@@ -956,9 +958,9 @@ long multiparticleLocalMomentumAcceptance(
     printf("Tracking\n");
     fflush(stdout);
     nLeft = do_tracking(NULL, coord, nEachProcessor, NULL, beamline, &pCentral, 
-                        accepted, NULL, NULL, NULL, run, control->i_step, 
+                        NULL, NULL, NULL, NULL, run, control->i_step, 
                         (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
-                        control->n_passes, 0, NULL, NULL, NULL, NULL, NULL);
+                        control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
     nLost = nEachProcessor - nLeft;
 #ifdef DEBUG
     fprintf(fpd, "Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
@@ -971,10 +973,10 @@ long multiparticleLocalMomentumAcceptance(
   
   MPI_Barrier(MPI_COMM_WORLD);
 
-  /* gather particle data to master */
-  gatherParticles(&coord, NULL, &nLeft, &nLost, &accepted, n_processors, myid, &round);
-  printf("Master processor gather done\n"); fflush(stdout);
-  
+  /* gather lost particle data to master */
+  gatherLostParticles(&lostParticles, &nLost, n_processors, myid);
+  printf("Lost-particle gather done\n"); fflush(stdout);
+
   if (myid==0) {
     long slot;
     if (!SDDS_StartPage(&SDDSma, nElem) ||
@@ -985,58 +987,50 @@ long multiparticleLocalMomentumAcceptance(
     }
     
     /* allocate arrays for storing data for negative and positive momentum limits for each element */
+    deltaLost = (double**)czarray_2d(sizeof(**deltaLost), 2, nElem);
+    for (ie=0; ie<nElem; ie++) {
+      deltaLost[0][ie] = -DBL_MAX;
+      deltaLost[1][ie] = DBL_MAX;
+    }
     deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), 2, nElem);
     sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
     ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
     ElementType = (char**)tmalloc(sizeof(*ElementType)*nElem);
     ElementOccurence = (int32_t*)tmalloc(sizeof(*ElementOccurence)*nElem);
-    survivorFound = (short**)czarray_2d(sizeof(**survivorFound), 2, nElem);
+    loserFound = (short**)czarray_2d(sizeof(**loserFound), 2, nElem);
 
     /* Figure out the delta limits for each element */
     printf("%ld particles remain after LMA tracking.\n", nLeft); fflush(stdout);
-#ifdef DEBUG
-    if (1) {
-      FILE *fpd2;
-      fpd2 = fopen("accepted.sdds", "w");
-      fprintf(fpd2, "SDDS1\n&column name=particleID, type=long &end\n");
-      fprintf(fpd2, "&column name=s units=m type=double &end\n");
-      fprintf(fpd2, "&column name=delta type=double &end\n");
-      fprintf(fpd2, "&data mode=ascii no_row_counts=1 &end\n");
-      for (ip=0; ip<nLeft; ip++) {
-        idelta = ((long)accepted[ip][6])%nDelta;
-        ie = (accepted[ip][6]-idelta)/nDelta;
-        delta = delta_negative_limit + idelta * deltaStep;
-        fprintf(fpd2, "%ld %le %le\n", (long)accepted[ip][6], elementArray[ie]->end_pos, delta);
-      }
-      fclose(fpd2);
-    }
-#endif
     
-    for (ip=0; ip<nLeft; ip++) {
-      if (accepted[ip][6]<0) {
+    for (ip=0; ip<nLost; ip++) {
+      if (lostParticles[ip][6]<0) {
         /* buffer particle, ignore */
         continue;
       }
-      idelta = ((long)accepted[ip][6])%nDelta;
-      ie = (accepted[ip][6]-idelta)/nDelta;
+      idelta = ((long)lostParticles[ip][6])%nDelta;
+      ie = (lostParticles[ip][6]-idelta)/nDelta;
       delta = delta_negative_limit + idelta * deltaStep;
       if (delta>=0) {
         slot = 1;
-        if (!survivorFound[slot][ie] || delta>deltaSurvived[slot][ie]) {
-          survivorFound[slot][ie] = 1;
-          deltaSurvived[slot][ie] = delta;
+        if (!loserFound[slot][ie] || delta<deltaLost[slot][ie]) {
+          loserFound[slot][ie] = 1;
+          deltaLost[slot][ie] = delta;
         }
       } else {
         slot = 0;
-        if (!survivorFound[slot][ie] || delta<deltaSurvived[slot][ie]) {
-          survivorFound[slot][ie] = 1;
-          deltaSurvived[slot][ie] = delta;
+        if (!loserFound[slot][ie] || delta>deltaLost[slot][ie]) {
+          loserFound[slot][ie] = 1;
+          deltaLost[slot][ie] = delta;
         }
       }
       sStart[ie] = elementArray[ie]->end_pos;
       ElementName[ie] = elementArray[ie]->name;
       ElementType[ie] = entity_name[elementArray[ie]->type];
       ElementOccurence[ie] = elementArray[ie]->occurence;
+    }
+    for (ie=0; ie<nElem; ie++) {
+      deltaSurvived[0][ie] = deltaLost[0][ie] + deltaStep;
+      deltaSurvived[1][ie] = deltaLost[1][ie] - deltaStep;
     }
     if (!SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, nElem, "ElementName") ||
         !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, nElem, "s") ||
@@ -1059,12 +1053,11 @@ long multiparticleLocalMomentumAcceptance(
     free(ElementOccurence);
     free(elementArray);
     free(sStart);
+    free_czarray_2d((void**)deltaLost, 2, nElem);
     free_czarray_2d((void**)deltaSurvived, 2, nElem);
-    free_czarray_2d((void**)coord, nEachProcessor*n_working_processors, 7);
-    free_czarray_2d((void**)accepted, nEachProcessor*n_working_processors, 7);
+    /* free_czarray_2d((void**)coord, nEachProcessor*n_working_processors, 7); */
   } else {
     free_czarray_2d((void**)coord, nEachProcessor, 7);
-    free_czarray_2d((void**)accepted, nEachProcessor, 7);
   }
   
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1142,3 +1135,42 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 }
 
 
+void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid) 
+{
+  long work_processors = n_processors-1;
+  int root = 0, i, nItems, displs ;
+  int my_nToTrack, my_nLost, *nLostCounts, current_nLost=0, nToTrack_total, nLost_total; 
+ 
+  MPI_Status status;
+  nLostCounts = malloc(sizeof(int) * n_processors);
+
+  if (myid==0) {
+    my_nLost = 0;
+  }
+  else {
+    my_nLost = *nLost;
+  }
+  
+  MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Reduce(&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (myid==0) {
+    /* set up the displacement array and the number of elements that are received from each processor */ 
+    nLostCounts[0] = 0;
+    displs = 0;
+    *lostParticles = (double**)resize_czarray_2d((void**)(*lostParticles), sizeof(double), nLost_total, COORDINATES_PER_PARTICLE+1);
+    for (i=1; i<=work_processors; i++) {
+      /* gather information for lost particles */
+      displs = displs+nLostCounts[i-1];
+      nItems = nLostCounts[i]*(COORDINATES_PER_PARTICLE+1);
+      MPI_Recv (&(*lostParticles)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
+    } 
+  } else {
+    /* send information for lost particles */
+    MPI_Send (&(*lostParticles)[0][0], my_nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
+  }
+
+  if (myid==0) {
+    *nLost = nLost_total;
+  }
+}
