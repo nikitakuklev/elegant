@@ -27,7 +27,9 @@ static long turnsStored = 0;
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
 long multiparticleLocalMomentumAcceptance(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
+#if USE_MPI
 void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid);
+#endif
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -1134,7 +1136,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
   return 1;
 }
 
-
+#if USE_MPI
 void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid) 
 {
   long work_processors = n_processors-1;
@@ -1174,3 +1176,4 @@ void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors
     *nLost = nLost_total;
   }
 }
+#endif
