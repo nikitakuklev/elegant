@@ -28,7 +28,7 @@ static long turnsStored = 0;
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
 long multiparticleLocalMomentumAcceptance(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 #if USE_MPI
-void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid);
+void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
 #endif
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
@@ -939,6 +939,8 @@ long multiparticleLocalMomentumAcceptance(
   fflush(stdout);
 
   if (myid!=0) {
+    for (ip=0; ip<nEachProcessor; ip++) 
+      lostParticles[ip][6] = -2;
     for (ip=0; ip<nEachProcessor; ip++) {
       if (startingCoord)
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
@@ -951,7 +953,6 @@ long multiparticleLocalMomentumAcceptance(
         nEachProcessor = ip+1;
       }
     }
-    
     setTrackingOmniWedgeFunction(momentumOffsetFunctionOmni); 
 #ifdef DEBUG
     fprintf(fpd, "Tracking\n");
@@ -976,7 +977,7 @@ long multiparticleLocalMomentumAcceptance(
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* gather lost particle data to master */
-  gatherLostParticles(&lostParticles, &nLost, n_processors, myid);
+  gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
   printf("Lost-particle gather done\n"); fflush(stdout);
 
   if (myid==0) {
@@ -1000,12 +1001,12 @@ long multiparticleLocalMomentumAcceptance(
     ElementType = (char**)tmalloc(sizeof(*ElementType)*nElem);
     ElementOccurence = (int32_t*)tmalloc(sizeof(*ElementOccurence)*nElem);
     loserFound = (short**)czarray_2d(sizeof(**loserFound), 2, nElem);
-
-    /* Figure out the delta limits for each element */
-    printf("%ld particles remain after LMA tracking.\n", nLeft); fflush(stdout);
     
     for (ip=0; ip<nLost; ip++) {
       if (lostParticles[ip][6]<0) {
+        if (lostParticles[ip][6]==-2) {
+          bombElegant("problem with lost particle accounting!", NULL);
+        }
         /* buffer particle, ignore */
         continue;
       }
@@ -1137,11 +1138,11 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 }
 
 #if USE_MPI
-void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors, int myid) 
+void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid) 
 {
   long work_processors = n_processors-1;
-  int root = 0, i, nItems, displs ;
-  int my_nToTrack, my_nLost, *nLostCounts, current_nLost=0, nToTrack_total, nLost_total; 
+  int root = 0, i, nItems, displs;
+  int my_nLost, *nLostCounts, nLost_total; 
  
   MPI_Status status;
   nLostCounts = malloc(sizeof(int) * n_processors);
@@ -1169,7 +1170,7 @@ void gatherLostParticles(double ***lostParticles, long *nLost, long n_processors
     } 
   } else {
     /* send information for lost particles */
-    MPI_Send (&(*lostParticles)[0][0], my_nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
+    MPI_Send (&(*lostParticles)[nSurvived][0], my_nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
   }
 
   if (myid==0) {
