@@ -335,7 +335,7 @@ static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS]
     {"Cs", "&column name=Cs, symbol=\"<s>\", units=m, type=double, description=\"mean distance traveled\" &end"},
     {"Cdelta", "&column name=Cdelta, symbol=\"<$gd$r>\", type=double, description=\"delta centroid\" &end"},
     {"Ct", "&column name=Ct, symbol=\"<t>\", units=s, type=double, description=\"mean time of flight\" &end"},
-    {"dCt", "&column name=dCt, symbol=\"$gD$r<t>\", units=s, type=double, description=\"change in mean time of flight from last pass\" &end"},
+    {"dCt", "&column name=dCt, symbol=\"$gD$r<t>\", units=s, type=double, description=\"mean time of flight relative to ideal\" &end"},
     {"Particles", "&column name=Particles, description=\"Number of particles\", type=long, &end"},
     {"Transmission", "&column name=Transmission, description=Transmission, type=double &end"},
     {"pCentral", "&column name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
