@@ -332,7 +332,15 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
     while(eptr) {
       if (eptr->type==T_CHARGE) {
         charge = (CHARGE*)eptr->p_elem;
-        break;
+	if (!charge->charge) {
+	  if (!charge->chargePerParticle) {
+	    fprintf(stdout, "Warning: charge is zero. Space charge effect will not be calculated!\n");
+	    fflush(stdout);
+	  } else {
+	    charge->charge = (double)np * charge->chargePerParticle;
+	  }
+	}
+       break;
       }
       eptr =eptr->succ;
     }
@@ -354,7 +362,8 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
 #endif
   sc->c0 = sqrt(2.0/PI) * particleRadius * charge->charge / particleCharge;
   sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
-  /*       printf("c0=%.6g, c1=%.6g, sz=%.6g\n\n", sc->c0, sc->c1, sc->sigmaz); */
+  /* printf("r=%g, charge=%g, particleCharge=%g\n",  particleRadius, charge->charge, particleCharge); 
+     printf("c0=%g, c1=%g, sz=%.6g\n", sc->c0, sc->c1, sc->sigmaz); */
 
   sc->dmux=sc->dmuy=0.0;
   sc->length=0.0;
