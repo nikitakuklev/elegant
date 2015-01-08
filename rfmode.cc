@@ -164,9 +164,29 @@ void track_through_rfmode(
 #endif
 #ifdef DEBUG
     printf("RFMODE: nBuckets = %ld\n", nBuckets);
+    fflush(stdout);
 #endif
     
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
+#ifdef DEBUG
+      printf("iBucket = %ld\n", iBucket);
+      fflush(stdout);
+#endif
+#if USE_MPI
+      /* Master needs to know if this bucket has particles */
+      if (isSlave || !notSinglePart) {
+        if (nBuckets==1)
+          np = np0;
+        else
+          np = npBucket[iBucket];
+      } else {
+        np = 0;
+      }
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      if (np_total==0)
+        continue;
+#endif
+      
       if (isSlave || !notSinglePart) {
         if (nBuckets==1) {
           time = time0;
@@ -334,11 +354,13 @@ void track_through_rfmode(
             free(buffer);
           }
 #ifdef DEBUG
-          printf("firstBin = %ld, lastBin = %ld\n", firstBin_global, lastBin_global);
-          printf("%ld particles binned\n", n_binned);
-          for (ib=firstBin; ib<=lastBin; ib++) 
-            printf("%ld %ld\n", ib, Ihist[ib]);
-          fflush(stdout);
+          printf("bucket = %ld, firstBin = %ld, lastBin = %ld\n",  iBucket, firstBin_global, lastBin_global);
+          if (myid!=0) {
+            printf("%ld particles binned\n", n_binned);
+            for (ib=firstBin; ib<=lastBin; ib++) 
+              printf("%ld %ld\n", ib, Ihist[ib]);
+            fflush(stdout);
+          }
 #endif
         }
 #else 
@@ -422,6 +444,10 @@ void track_through_rfmode(
           if (myid == 1) {
 	    /* We let the first slave to dump the parameter */
 #endif
+#ifdef DEBUG
+            printf("Writing record file\n");
+            fflush(stdout);
+#endif
             if ((pass%rfmode->sample_interval)==0 && 
                 (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                     (pass/rfmode->sample_interval),
@@ -443,6 +469,10 @@ void track_through_rfmode(
 		SDDS_Bomb((char*)"problem writing data for RFMODE record file");
 	      }
 	    }
+#ifdef DEBUG
+          printf("Done writing record file\n");
+          fflush(stdout);
+#endif
 #if USE_MPI
 	  }
 #endif
@@ -454,12 +484,28 @@ void track_through_rfmode(
         }
       }
 #if USE_MPI
+#ifdef DEBUG
+      printf("Preparing to wait on barrier (1)\n");
+      fflush(stdout);
+#endif
       MPI_Barrier(MPI_COMM_WORLD);
+#ifdef DEBUG
+      printf("Finished waiting on barrier (1)\n");
+      fflush(stdout);
+#endif
 #endif
     }
 
 #if USE_MPI
+#ifdef DEBUG
+      printf("Preparing to wait on barrier (2)\n");
+      fflush(stdout);
+#endif
       MPI_Barrier(MPI_COMM_WORLD);
+#endif
+#ifdef DEBUG
+      printf("Finished waiting on barrier (2)\n");
+      fflush(stdout);
 #endif
 
 #ifdef DEBUG
