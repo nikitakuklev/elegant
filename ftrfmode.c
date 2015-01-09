@@ -34,7 +34,7 @@ void track_through_ftrfmode(
   long *ibParticle = NULL;          /* array to record which bucket each particle is in */
   long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-  long iBucket, nBuckets, np;
+  long iBucket, nBuckets, np, np_total;
 
   long max_np = 0;
   double *VxPrevious = NULL, *VyPrevious = NULL, *xPhasePrevious = NULL, *yPhasePrevious = NULL, tPrevious;
