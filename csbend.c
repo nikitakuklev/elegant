@@ -279,7 +279,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     f[5] = csbend->f6;
     f[6] = csbend->f7;
     f[7] = csbend->f8;
-    for (i=0; i<=8; i++) {
+    for (i=0; i<8; i++) {
       csbend->b[i] += f[i]*term;
       term *= (i+2)/csbend->xReference;
     }    
