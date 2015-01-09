@@ -113,6 +113,21 @@ void track_through_frfmode(
 #endif
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+#if USE_MPI
+      /* Master needs to know if this bucket has particles */
+      if (isSlave || !notSinglePart) {
+        if (nBuckets==1)
+          np = np0;
+        else
+          np = npBucket[iBucket];
+      } else {
+        np = 0;
+      }
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      if (np_total==0)
+        continue;
+#endif
+
     if (isSlave || !notSinglePart) {
       if (nBuckets==1) {
         time = time0;
