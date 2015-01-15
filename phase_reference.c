@@ -122,12 +122,12 @@ void delete_phase_references(void)
 
     log_entry("delete_phase_references");
 
-#ifdef DEBUG
-    fprintf(stdout, "phase references deleted\n");
-    fflush(stdout);
-#endif
     for (i=0; i<n_references; i++)
         reference[i].flags = 0;
+    /*
+    fprintf(stdout, "Phase references deleted\n");
+    fflush(stdout);
+    */
     log_exit("delete_phase_references");
     }
 

@@ -358,6 +358,7 @@ typedef struct line_list {
 #define BEAMLINE_RADINT_WANTED    0x00000020
 #define BEAMLINE_RADINT_CURRENT   0x00000040
 #define BEAMLINE_RADINT_DONE      0x00000080
+    unsigned long fiducial_flag;  /* same bits as used by VARY, but only used to keep track of status */
     } LINE_LIST;
 
 typedef struct {
@@ -440,7 +441,7 @@ typedef struct {
     double bunch_frequency;      /* bunch interval, if timing is varied */
     long reset_rf_each_step;     /* whether to reset rf element phases/timing */
     long reset_scattering_seed;  /* whether to reset random numbers for scattering for each step */
-    unsigned long fiducial_flag; /* for track_beam/do_tracking */
+    unsigned long fiducial_flag; /* flags for fiducial control */
     long n_passes;               /* number of times to go through beamline */
     long new_data_read;          /* new data has been read for variation of elements */
     LINE_LIST *cell;             /* cell to be varied along with main beamline */
@@ -2813,22 +2814,23 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define TRACK_PREVIOUS_BUNCH 1
 
 /* flags for do_tracking/track_beam flag word */
-#define FINAL_SUMS_ONLY          0x0001UL
-#define TEST_PARTICLES           0x0002UL
-#define BEGIN_AT_RECIRC          0x0004UL
-#define TEST_PARTICLE_LOSSES     0x0008UL
-#define SILENT_RUNNING           0x0010UL
-#define TIME_DEPENDENCE_OFF      0x0020UL
-#define INHIBIT_FILE_OUTPUT      0x0040UL
-#define LINEAR_CHROMATIC_MATRIX  0x0080UL
-#define LONGITUDINAL_RING_ONLY   0x0100UL
-#define FIRST_BEAM_IS_FIDUCIAL   0x0200UL
-#define FIDUCIAL_BEAM_SEEN       0x0400UL
-#define PRECORRECTION_BEAM       0x0800UL
-#define RESTRICT_FIDUCIALIZATION 0x1000UL
-#define IBS_ONLY_TRACKING        0x2000UL
-#define CLOSED_ORBIT_TRACKING    0x4000UL
-#define ALLOW_MPI_ABORT_TRACKING 0x8000UL
+#define FINAL_SUMS_ONLY          0x00001UL
+#define TEST_PARTICLES           0x00002UL
+#define BEGIN_AT_RECIRC          0x00004UL
+#define TEST_PARTICLE_LOSSES     0x00008UL
+#define SILENT_RUNNING           0x00010UL
+#define TIME_DEPENDENCE_OFF      0x00020UL
+#define INHIBIT_FILE_OUTPUT      0x00040UL
+#define LINEAR_CHROMATIC_MATRIX  0x00080UL
+#define LONGITUDINAL_RING_ONLY   0x00100UL
+#define FIRST_BEAM_IS_FIDUCIAL   0x00200UL
+#define FIDUCIAL_BEAM_SEEN       0x00400UL
+#define PRECORRECTION_BEAM       0x00800UL
+#define RESTRICT_FIDUCIALIZATION 0x01000UL
+#define IBS_ONLY_TRACKING        0x02000UL
+#define CLOSED_ORBIT_TRACKING    0x04000UL
+#define ALLOW_MPI_ABORT_TRACKING 0x08000UL
+#define RESET_RF_FOR_EACH_STEP   0x10000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2
@@ -2992,7 +2994,11 @@ extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, 
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
 extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
-extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
+extern void reset_special_elements(LINE_LIST *beamline, unsigned long flags);
+#define RESET_INCLUDE_RF     0x0001UL
+#define RESET_INCLUDE_RANDOM 0x0002UL
+#define RESET_INCLUDE_NIELEM 0x0004UL
+#define RESET_INCLUDE_ALL 0xFFFFFFFFUL
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
                                    void *Wi);
 extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel, long change_p0, double Preference);

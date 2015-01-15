@@ -799,7 +799,7 @@ char **argv;
         output_magnets(magnets, lattice, beamline);
 
       delete_phase_references();    /* necessary for multi-step runs */
-      reset_special_elements(beamline, 1);
+      reset_special_elements(beamline, RESET_INCLUDE_ALL);
       reset_driftCSR();
       last_default_order = default_order;
       run_setuped = 1;
@@ -813,6 +813,7 @@ char **argv;
       vary_setup(&run_control, &namelist_text, &run_conditions, beamline);
       run_control.ready = 1;
       run_controled = 1;
+      beamline->fiducial_flag = run_control.fiducial_flag;
       break;
     case VARY_ELEMENT:
       if (!run_controled)
@@ -844,7 +845,7 @@ char **argv;
       correction_setuped = 1;
       correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
       delete_phase_references();
-      reset_special_elements(beamline, 1);
+      reset_special_elements(beamline, RESET_INCLUDE_ALL);
       reset_driftCSR();
       break;
     case SET_AWE_BEAM: 

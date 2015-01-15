@@ -1405,13 +1405,20 @@ VMATRIX *magnification_matrix(MAGNIFY *magnif)
     }
 
 
-void reset_special_elements(LINE_LIST *beamline, long includeRF)
+void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
 {
     ELEMENT_LIST *eptr;
     NIBEND *nibend; NISEPT *nisept;
+    short includeRF=0, includeRandom=0, includeNiElements=0;
     
     log_entry("reset_special_elements");
 
+    if (flags&RESET_INCLUDE_RF)
+      includeRF = 1;
+    if (flags&RESET_INCLUDE_RANDOM)
+      includeRandom = 1;
+    if (flags&RESET_INCLUDE_NIELEM)
+      includeNiElements = 1;
     eptr = &(beamline->elem);
     while (eptr) {
         switch (eptr->type) {
@@ -1419,12 +1426,16 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             ((KICKER*)eptr->p_elem)->fiducial_seen = 0;
             break;
           case T_NIBEND:
-            nibend = (NIBEND*)eptr->p_elem;
-            nibend->initialized = 0;
+            if (includeNiElements) {
+                nibend = (NIBEND*)eptr->p_elem;
+                nibend->initialized = 0;
+            }
             break;
           case T_NISEPT:
-            nisept = (NISEPT*)eptr->p_elem;
-            nisept->fse_opt = 0;
+            if (includeNiElements) {
+                nisept = (NISEPT*)eptr->p_elem;
+                nisept->fse_opt = 0;
+            }
             break;
           case T_TMCF:
             if (includeRF) {
@@ -1495,10 +1506,12 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             }
             break;
           case T_KQUAD:
-            ((KQUAD*)eptr->p_elem)->randomMultipoleData.randomized = 0;
+            if (includeRandom) 
+              ((KQUAD*)eptr->p_elem)->randomMultipoleData.randomized = 0;
             break;
           case T_KSEXT:
-            ((KSEXT*)eptr->p_elem)->randomMultipoleData.randomized = 0;
+            if (includeRandom)
+              ((KSEXT*)eptr->p_elem)->randomMultipoleData.randomized = 0;
             break;
           case T_MATR:
             if (includeRF)
@@ -1513,6 +1526,9 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             }
         eptr = eptr->succ;
         }
+    /* printf("Special elements have been reset.\n");
+       fflush(stdout);
+    */
     log_exit("reset_special_elements");
     }
 

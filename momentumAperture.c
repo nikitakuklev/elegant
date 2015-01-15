@@ -625,7 +625,7 @@ long doMomentumApertureSearch(
             lostParticles[0][7] = -1;
             if (!fiducialize) {
               delete_phase_references();
-              reset_special_elements(beamline, 1);
+              reset_special_elements(beamline, RESET_INCLUDE_ALL);
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 

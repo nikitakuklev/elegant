@@ -642,7 +642,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       if (do_track) {
 	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*COORDINATES_PER_PARTICLE);
 	delete_phase_references();
-	reset_special_elements(beamline, 1);
+	reset_special_elements(beamline, RESET_INCLUDE_ALL);
 	pCentral = run->p_central;
 	if (!do_tracking(NULL, fiducialParticle, 1, NULL, beamline, 
 			 &pCentral, NULL, NULL, NULL, NULL, run, control->i_step,

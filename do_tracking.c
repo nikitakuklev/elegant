@@ -282,28 +282,32 @@ long do_tracking(
   
   check_nan = 1;
   eptr = &(beamline->elem);
-
-  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
+  flags |= beamline->fiducial_flag;
+  if ((flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) || !(flags&FIRST_BEAM_IS_FIDUCIAL)) {
     /* this is required just in case rf elements etc. have previously
      * been activated by computation of correction matrices or trajectory
      * correction.
      */
-    delete_phase_references();
-    reset_special_elements(beamline, 1);
+    if (flags&RESET_RF_FOR_EACH_STEP)
+      delete_phase_references();
+    reset_special_elements(beamline, RESET_INCLUDE_RF);
   }
   reset_driftCSR();
 
-  while (eptr) {
-    if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN))
+  if (((flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) || !(flags&FIRST_BEAM_IS_FIDUCIAL))) {
+    flags &= ~FIDUCIAL_BEAM_SEEN;
+    while (eptr) {
       eptr->Pref_output_fiducial = 0;
-    eptr = eptr->succ;
+      eptr = eptr->succ;
+    }
+    if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
+      fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
+      fflush(stdout);
+    }
   }
+  
   if (!(flags&FIDUCIAL_BEAM_SEEN) && flags&PRECORRECTION_BEAM)
     flags &= ~FIRST_BEAM_IS_FIDUCIAL; 
-  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN) && !(flags&SILENT_RUNNING)) {
-    fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
-    fflush(stdout);
-  }
   
   log_exit("do_tracking.1");
   log_entry("do_tracking.2");
@@ -1758,11 +1762,12 @@ long do_tracking(
       } else if (flags&FIDUCIAL_BEAM_SEEN) {
         if (*P_central!=eptr->Pref_output_fiducial)
           set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
-      }
-      else if (run->always_change_p0)
+      } else if (run->always_change_p0) {
 	if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
 	  /* If it is a Diagnostic element, nothing needs to be done */
 	  do_match_energy(coord, nLeft, P_central, 0);
+      } else if (!(flags&FIDUCIAL_BEAM_SEEN))
+        eptr->Pref_output_fiducial = *P_central;
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {

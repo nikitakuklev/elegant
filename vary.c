@@ -72,6 +72,8 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     if (first_is_fiducial)
       _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL |
         (restrict_fiducialization?RESTRICT_FIDUCIALIZATION:0); 
+    if (reset_rf_for_each_step)
+      _control->fiducial_flag |= RESET_RF_FOR_EACH_STEP;
     
     /* reset flags for elements that may have been varied previously */
     if (_control->n_elements_to_vary) {
@@ -257,9 +259,12 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
 #endif
 
   if ((_control->bunch_frequency==0 && _control->reset_rf_each_step) || 
-      _control->i_step==0)
+      _control->i_step==0) {
+    /* printf("Deleting phase references in preparation for new step.\n"); */
     delete_phase_references();
-  reset_special_elements(beamline, _control->reset_rf_each_step);
+  }
+  /* printf("Reseting special elements in preparation for new step.\n"); */
+  reset_special_elements(beamline, _control->reset_rf_each_step?RESET_INCLUDE_ALL:0);
 
   if (_control->reset_scattering_seed)
     seedElegantRandomNumbers(0, RESTART_RN_SCATTER);
