@@ -28,9 +28,9 @@ static SC_SPEC *scSpec = NULL;
 static long No_scSpec = 0;
 static SPACE_CHARGE *sc = NULL;
 
-void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center);
+void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, double charge);
 int  nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
-                     double sigmax, double sigmay, double *kick);
+                     double sigmax, double sigmay, double *kick, double charge);
 
 long getSCMULTSpecCount() 
 {
@@ -177,12 +177,13 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   double *coord;
   double kx, ky, sx;
   double center[3], kick[2];
-  double sigmax, sigmay;
+  double sigmax, sigmay, totalCharge;
   int flag;
 
   if ( !USE_MPI || !notSinglePart) {
     if (!np)  
       return;
+    totalCharge = sc->chargePerParticle*(double)np;
   }
 #if USE_MPI
   else {
@@ -191,6 +192,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
    if (!np_total)
      return;
+    totalCharge = sc->chargePerParticle*(double)np_total;
   }
 #endif
   /* compute bunch center */
@@ -218,7 +220,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   if (!sc->nonlinear) {
     for(i=0; i<np; i++) {
       coord = part[i];
-      linearSCKick(coord, eptr, center);
+      linearSCKick(coord, eptr, center,totalCharge);
     }
   }
   else {
@@ -228,24 +230,24 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
       coord = part[i];
       /* remove linear kick approximation.
       if ((fabs(coord[0]-center[0])<sigmax) && (fabs(coord[2]-center[1]) < sigmay)) {
-        linearSCKick(coord, eptr, center);
+        linearSCKick(coord, eptr, center,totalCharge);
         continue;
       }
       */
 
       if (sigmax/sigmay>0.99 && sigmax/sigmay < 1.01) {
         sx = 0.99 * sigmay;
-        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick,totalCharge); 
         if(!flag) {
-          linearSCKick(coord, eptr, center);
+          linearSCKick(coord, eptr, center,totalCharge);
           continue;
         }
         kx = kick[0];
         ky = kick[1];
         sx = 1.01 * sigmay;
-        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick,totalCharge); 
         if(!flag) {
-          linearSCKick(coord, eptr, center);
+          linearSCKick(coord, eptr, center,totalCharge);
           continue;
         }
         kx += kick[0];
@@ -254,9 +256,9 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
         coord[3] += ky / 2.0;
       }
       else {
-        flag = nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick,totalCharge); 
         if(!flag) {
-          linearSCKick(coord, eptr, center);
+          linearSCKick(coord, eptr, center,totalCharge);
           continue;
         }
         coord[1] += kick[0];
@@ -268,13 +270,13 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   sc->dmux=sc->dmuy=0.0;       /* reset space charge strength */
 }
 
-void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center)
+void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, double charge)
 {
   double k0, kx, ky;
   if (sc->uniform) {
-    k0 = sc->c1 * sqrt(PI/6.0);
+    k0 = sc->c1 * charge * sqrt(PI/6.0);
   } else {
-    k0 = sc->c1 * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0);
+    k0 = sc->c1 * charge * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0);
   }
   if (sc->horizontal) {
     kx = k0 * sc->dmux / eptr->twiss->betax;	/* From dmux to KL */
@@ -287,7 +289,7 @@ void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center)
 }
 
 int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
-                     double sigmax, double sigmay, double *kick)
+		    double sigmax, double sigmay, double *kick, double charge)
 {
   double k0, kx, ky, sqs;
   std::complex <double> wa, wb, w1, w2, w;
@@ -295,9 +297,9 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
   long flag;
 
   if (sc->uniform) {
-    k0 = sc->c1 * PI/12.0;
+    k0 = sc->c1 * charge * PI/12.0;
   } else {
-    k0 = sc->c1 * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0) * sqrt(PI/2.0);
+    k0 = sc->c1 * charge * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0) * sqrt(PI/2.0);
   }
 
   sqs = sqrt(fabs(sqr(sigmax)-sqr(sigmay))*2.0);
@@ -323,22 +325,30 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
 
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass )
 {
-  static CHARGE *charge;
+  CHARGE *charge;
 	
   if (!eptr->twiss)
     bombElegant((char*)"Twiss parameters must be calculated before SC tracking.", NULL);
 		
+  /* initialize charge per particle parameters */
   if (i_pass==0) {
     while(eptr) {
       if (eptr->type==T_CHARGE) {
         charge = (CHARGE*)eptr->p_elem;
-	if (!charge->charge) {
-	  if (!charge->chargePerParticle) {
-	    fprintf(stdout, "Warning: charge is zero. Space charge effect will not be calculated!\n");
-	    fflush(stdout);
+	if (!charge->chargePerParticle) {
+	  if (!charge->charge) {
+	    bombElegant((char*)"Charge is zero. Please set non-zero charge to charge element", NULL);
 	  } else {
-	    charge->charge = (double)np * charge->chargePerParticle;
+#if USE_MPI
+	    long np_total;
+	    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	    sc->chargePerParticle = charge->charge/(double)np_total;	    
+#else
+	    sc->chargePerParticle = charge->charge/(double)np;
+#endif	    
 	  }
+	} else {
+	  sc->chargePerParticle = charge->chargePerParticle;
 	}
        break;
       }
@@ -360,9 +370,9 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   /* set it back to parallel execution */
   notSinglePart = 1;
 #endif
-  sc->c0 = sqrt(2.0/PI) * particleRadius * charge->charge / particleCharge;
+  sc->c0 = sqrt(2.0/PI) * particleRadius / particleCharge;
   sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
-  /* printf("r=%g, charge=%g, particleCharge=%g\n",  particleRadius, charge->charge, particleCharge); 
+  /* printf("r=%g, chargeperparticle=%g, particleCharge=%g\n",  particleRadius,  sc->chargePerParticle, particleCharge); 
      printf("c0=%g, c1=%g, sz=%.6g\n", sc->c0, sc->c1, sc->sigmaz); */
 
   sc->dmux=sc->dmuy=0.0;

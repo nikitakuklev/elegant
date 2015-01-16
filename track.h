@@ -635,6 +635,7 @@ typedef struct {
   double sigmax, sigmay, sigmaz, sigmap; 
   double c0;   			/* c0=re*np/(2*Pi)^(3/2) -> calculate once.  */
   double c1;	 			/* c1=c0/p0^3/sigmaz -> calculate every turn */
+  double chargePerParticle;
   double dmux, dmuy;
   double length;
 } SPACE_CHARGE;
