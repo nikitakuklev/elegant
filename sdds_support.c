@@ -1835,8 +1835,8 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
 static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total simulated scatted particles\" &end"},
   {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
-  {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate\" &end"},
-  {"NScatter", "&parameter name=NScatter, type=double, description=\"Total Scattered particles\" &end"},
+  {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate between 2 TSCATTER elements of a single bunch\" &end"},
+  {"NScatter", "&parameter name=NScatter, type=double, units=\"1/s\", description=\"Total scattered particles per s between 2 TSCATTER elements of a beam\" &end"},
   {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
   {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
@@ -1851,7 +1851,7 @@ static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
     {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
-    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate\" &end"},
+    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate between 2 TSCATTER elements of a beam\" &end"},
 };
 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1940,7 +1940,7 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"Pass", "&column name=Pass, type=long &end"},
     {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
-    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate\" &end"},
+    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate between 2 TSCATTER elements of a beam\" &end"},
 } ;
 #define BEAM_SCATTER_LOSS_PARAMETERS 9
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
@@ -1950,8 +1950,8 @@ static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS]
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
   {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
   {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate\" &end"},
-  {"NScatter", "&parameter name=NScatter, type=double, description=\"Total Scattered particles\" &end"},
-  {"TotalLoss", "&parameter name=TotalLoss, type=double, description=\"Total loss scattered particles\" &end"},
+  {"NScatter", "&parameter name=NScatter, type=double, units=\"1/s\", description=\"Total Scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
+  {"TotalLoss", "&parameter name=TotalLoss, type=double, units=\"1/s\", description=\"Total lossed scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
   {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 };
 
