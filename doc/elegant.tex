@@ -3,7 +3,7 @@
 %   dvi2ps elegant | lpr [-P<postscript-printer-name>]
 %
 \documentclass[11pt]{article}
-\usepackage{html}
+\usepackage{hyperref}
 \usepackage{longtable}
 \usepackage{subfigure} 
 \usepackage[dvips]{graphicx}
@@ -622,9 +622,9 @@ When in setup mode, the indicated computations will be performed repeatedly, e.g
 for each set of errors, for each step in the parameter scan, or for use in each
 evaluation of the optimization penalty function.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
-\end{latexonly}
+%\end{latexonly}
 \subsection{Table of {\tt elegant} commands and their functions}
 
 \begin{longtable}{|p{2.75in}|p{0.75in}|p{2.75in}|}
@@ -694,10 +694,10 @@ Command name & Type & Description \\\hline
 
 \clearpage
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|alter_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{alter\_elements\label{subsec:alterelements}}
 
 \begin{itemize}
@@ -762,10 +762,10 @@ Command name & Type & Description \\\hline
  that precede the named element in the beamline. 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|amplification_factors|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{amplification\_factors \label{subsec:amplificationfactors}}
 
 \begin{itemize}
@@ -807,10 +807,10 @@ Recommended value: ``\%s.kaf''.
 \item \verb|maximum_z| --- The maximum z coordinate of the elements to perturb.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|analyze_map|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{analyze\_map \label{subsec:analyzemap}}
 
 \begin{itemize}
@@ -846,10 +846,10 @@ Recommended value: ``\%s.kaf''.
 \item \verb|verbosity| --- The larger this value, the more output is printed during computations.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|aperture_data|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{aperture\_data \label{subsec:aperturedata}}
 
 \begin{itemize}
@@ -884,10 +884,10 @@ Recommended value: ``\%s.kaf''.
 \item \verb|disable| --- If non-zero, the command is ignored.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|bunched_beam|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{bunched\_beam \label{subsec:bunchedbeam}}
 
 \begin{itemize}
@@ -1087,10 +1087,10 @@ memory efficient and is useful for tracking very large numbers of
 particles.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|change_particle|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{change\_particle\label{subsec:changeparticle}}
 
 \begin{itemize}
@@ -1117,10 +1117,10 @@ particles.
   a mass ratio of 1836.18 and a charge ratio of 1.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|chromaticity|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{chromaticity \label{subsec:chromaticity}}
 
 \begin{itemize}
@@ -1176,10 +1176,10 @@ to obtain correction.  In general, it is not necessary and only slows the simula
   execution.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|closed_orbit|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{closed\_orbit \label{subsec:closedorbit}}
 
 \begin{itemize}
@@ -1239,10 +1239,10 @@ element, one should give this flag.
 during the computations.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|correct|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{correct \label{subsec:correct}}
 
 \begin{itemize}
@@ -1328,8 +1328,8 @@ small apertures.  If you get an error message about ``tracking failed for test p
 \item \verb|remove_pegged[2]| --- If nonzero, then for the plane in question pegged correctors will be removed from the correction matrix.
   This results in recomputation of the matrix, following which correction continues with the reduced set of correctors.
   The pegged corrector is left at its last value.
-\item \verb|threading_divisor| --- In threading mode trajectory correction, each corrector is varied between 0 and $\pm\theta_\textrm{max}$, 
-  where $\theta_\textrm{max}$ is the strength limit.
+\item \verb|threading_divisor| --- In threading mode trajectory correction, each corrector is varied between 0 and $\pm{\theta_{\textrm{max}}}$, 
+  where $\theta_{\textrm{max}}$ is the strength limit.
   This parameter sets the number of steps to divide the corrector range into on the positive and negative sides.
   A smaller value results in faster execution but is less reliable.
 \item \verb|threading_correctors| --- In threading mode trajectory correction, gives the number of correctors upstream of the loss point to
@@ -1366,10 +1366,10 @@ use at each iteration.
   using differences of closed orbits, which is slower but may be more accurate. For cross-plane matrices, this is always the case.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|correction_matrix_output|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{correction\_matrix\_output \label{subsec:correctionmatrixoutput}}
 
 \begin{itemize}
@@ -1416,10 +1416,10 @@ matrix.
   using differences of closed orbits, which is slower but may be more accurate. For cross-plane matrices, this is always the case.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|correct_tunes|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{correct\_tunes \label{subsec:correcttunes}}
 
 \begin{itemize}
@@ -1472,10 +1472,10 @@ performing correction.  For difficult lattices with large errors, this may be ne
 to obtain correction.  In general, it is not necessary and only slows the simulation.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|coupled_twiss_output|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{coupled\_twiss\_output \label{subsec:coupledtwissoutput}}
 
 \begin{itemize}
@@ -1525,10 +1525,10 @@ This feature was added to {\tt elegant} using code supplied by V. Sajaev, based 
 The code computes the coupled lattice functions, then uses the supplied emittance, emittance ratio,
 and momentum spread to compute the beam sizes, bunch length (if rf is included), and beam tilt.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|divide_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{divide\_elements \label{subsec:divideelements}}
 
 \begin{itemize}
@@ -1589,10 +1589,10 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 	deleted.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|error_element|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{error\_element \label{subsec:errorelement}}
 
 \begin{itemize}
@@ -1658,10 +1658,10 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
  that precede the named element in the beamline.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|error_control|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{error\_control \label{subsec:errorcontrol}}
 
 \begin{itemize}
@@ -1709,10 +1709,10 @@ The proper use of this command can be confusing.  A typical sequence will be as 
 &end
 \end{verbatim}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|find_aperture|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{find\_aperture \label{subsec:findaperture}}
 
 \begin{itemize}
@@ -1816,10 +1816,10 @@ aperture for use in the penalty function.  This is available only for the line s
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|floor_coordinates|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{floor\_coordinates \label{subsec:floorcoordinates}}
 
 \begin{itemize}
@@ -1861,10 +1861,10 @@ vertex.
 Hence, one cannot subtract the \verb|s| values for two successive vertices and expect to get the
 distance between the vertices.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|frequency_map|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{frequency\_map \label{subsec:frequencymap}}
 
 \begin{itemize}
@@ -1914,10 +1914,10 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
 Use of this feature results in a doubling of the number of turns tracked.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|global_settings|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{global\_settings \label{subsec:globalsettings}}
 
 \begin{itemize}
@@ -1962,10 +1962,10 @@ Use of this feature results in a doubling of the number of turns tracked.
     \end{itemize}
   \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|insert_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{insert\_elements \label{subsec:insertelements}}
 
 \begin{itemize}
@@ -2017,10 +2017,10 @@ after which to add the new elements. If \verb|total_occurrences| is non-zero, th
 be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|insert_sceffects|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{insert\_sceffects \label{subsec:insertsceffects}}
 
 \begin{itemize}
@@ -2074,10 +2074,10 @@ command. Those options will erase SCMULT assignments along the
 beamline. In this case, user has to re-calculate twiss using
 \verb|twiss_output| just before tracking.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|linear_chromatic_tracking_setup|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{linear\_chromatic\_tracking\_setup \label{subsec:linearchromatictrackingsetup}}
 
 \begin{itemize}
@@ -2131,10 +2131,10 @@ should be present!
 An alternative for using this command is to use {\tt ILMATRIX} elements in the lattice definition.  This is more
 flexible, since one can include tune shifts with amplitude.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|link_control|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{link\_control \label{subsec:linkcontrol}}
 
 \begin{itemize}
@@ -2159,10 +2159,10 @@ during computations.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|link_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{link\_elements \label{subsec:linkelements}}
 
 \begin{itemize}
@@ -2210,10 +2210,10 @@ assigned to the target parameter.
 \item \verb|exclude_self| --- If nonzero, self-links are blocked. It is not recommended to change this.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|load_parameters|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{load\_parameters \label{subsec:loadparameters}}
 
 \begin{itemize}
@@ -2342,10 +2342,10 @@ changes to parameters.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|matrix_output|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{matrix\_output \label{subsec:matrixoutput}}
 
 \begin{itemize}
@@ -2389,10 +2389,10 @@ from which to begin concatenation and output.
 number of the occurrence of the named element from which to start.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|modulate_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{modulate\_elements\label{subsec:modulateelements}}
 
 \begin{itemize}
@@ -2472,10 +2472,10 @@ is modulated.
         made.  Use for debugging only, since otherwise it may slow the simulation.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|moments_output|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{moments\_output \label{subsec:momentsoutput}}
 
 \begin{itemize}
@@ -2554,10 +2554,10 @@ The results of moments computation may be subjected to optimization
 using values at marker elements.  See the documentation for
 \verb|MARK| for more details.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|momentum_aperture|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{momentum\_aperture \label{subsec:momentumaperture}}
 
 \begin{itemize}
@@ -2707,10 +2707,10 @@ either of two methods:
 When including radiation loss, one must be certain to set the phase of the rf cavity
 correctly.  It is also a good idea to track for several synchrotron oscillation periods.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimize|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimize \label{subsec:optimize}}
 
 \begin{itemize}
@@ -2739,10 +2739,10 @@ run that starts from the optimized result.
 summary of the optimization parameters should be printed.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimization_constraint|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimization\_constraint \label{subsec:optimizationconstraint}}
 
 \begin{itemize}
@@ -2782,10 +2782,10 @@ allowed for the expression.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimization_covariable|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimization\_covariable \label{subsec:optimizationcovariable}}
 
 \begin{itemize}
@@ -2819,10 +2819,10 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
 \item \verb|disable| --- If nonzero, the covariable is ignored.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimization_setup|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimization\_setup \label{subsec:optimizationsetup}}
 
 \begin{itemize}
@@ -3062,10 +3062,10 @@ a significant difference in the optimization speed.
   step and cleanly terminate, allowing subsequent commands, if any, to proceed.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|parallel_optimization_setup|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{parallel\_optimization\_setup \label{subsec:paralleloptimizationsetup}}
 
 \begin{itemize}
@@ -3133,10 +3133,10 @@ to a very large number to use this rule as the stop condition alone.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimization_term|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimization\_term \label{subsec:optimizationterm}}
 
 \begin{itemize}
@@ -3197,10 +3197,10 @@ details on designing optimization terms.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|optimization_variable|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{optimization\_variable \label{subsec:optimizationvariable}}
 
 \begin{itemize}
@@ -3237,10 +3237,10 @@ equal, the range of the parameter is unlimited.
 \item \verb|force_inside| --- If nonzero, the initial value is forced inside the allowed range defined by the \verb|lower_limit| and \verb|upper_limit| parameters.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|print_dictionary|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{print\_dictionary \label{subsec:printdictionary}}
 
 \begin{itemize}
@@ -3261,10 +3261,10 @@ equal, the range of the parameter is unlimited.
 \item \verb|SDDS_form| --- If non-zero, then the output is in  SDDS format.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|ramp_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{ramp\_elements\label{subsec:rampelements}}
 
 \begin{itemize}
@@ -3341,10 +3341,10 @@ Note that $i=0$ on the first pass.
         made.  Use for debugging only, since otherwise it may slow the simulation.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|rf_setup|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{rf\_setup\label{subsec:rfsetup}}
 
 \begin{itemize}
@@ -3416,10 +3416,10 @@ energy loss per turn.
   phase are computed for this voltage.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|replace_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{replace\_elements \label{subsec:replaceelements}}
 
 \begin{itemize}
@@ -3476,10 +3476,10 @@ to replace or delete. If \verb|total_occurrences| is non-zero, then {\bf skip} m
 be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|rpn_expression|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{rpn\_expression \label{subsec:rpnexpression}}
 
 \begin{itemize}
@@ -3498,10 +3498,10 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 used, for example, to read in {\tt rpn} commands from a file or store values in {\tt rpn} memories.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|rpn_load|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{rpn\_load \label{subsec:rpnload}}
 
 \begin{itemize}
@@ -3569,10 +3569,10 @@ a different run.
 \end{itemize}
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|run_control|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{run\_control \label{subsec:runcontrol}}
 
 \begin{itemize}
@@ -3611,10 +3611,10 @@ change the momentum, such as rf cavities.  If zero, then each element is
 fiducialized to the average momentum of the beam.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|run_setup|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{run\_setup \label{subsec:runsetup}}
 
 \begin{itemize}
@@ -3738,10 +3738,10 @@ tracking.
  If -1, then the load balance is checked and reported, but no rebalancing takes place.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sasefel|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sasefel \label{subsec:sasefel}}
 
 \begin{itemize}
@@ -3781,10 +3781,10 @@ supported; the ``Ming-Xie'' model is based on the simple parametrization M. Xie\
         the output file for each slice, plus the whole-beam and slice-averaged results.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|save_lattice|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{save\_lattice \label{subsec:savelattice}}
 
 \begin{itemize}
@@ -3809,10 +3809,10 @@ This feature is intended to be used
 together with \verb|insert_elements| and \verb|replace_elements|. 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sdds_beam|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sdds\_beam \label{subsec:sddsbeam}}
 
 \begin{itemize}
@@ -3911,10 +3911,10 @@ and is useful for tracking very large numbers of particles.
   One can also use \verb|SCATTER| or \verb|DSCATTER| elements in the beamline for this purpose.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|semaphores|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{semaphores \label{subsec:semaphores}}
 
 \begin{itemize}
@@ -3943,10 +3943,10 @@ and is useful for tracking very large numbers of particles.
         command is given.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|slice_analysis|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{slice\_analysis \label{subsec:sliceanalysis}}
 
 \begin{itemize}
@@ -3979,10 +3979,10 @@ long final_values_only = 0;
         only at the end of the beamline.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|subprocess|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{subprocess \label{subsec:subprocess}}
 
 \begin{itemize}
@@ -4002,10 +4002,10 @@ use the sequence ``\%s'' for substitution of the rootname as set by \verb|run_se
 A literal ``\%s'' must be entered as ``\%\%s''.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|steering_element|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{steering\_element \label{subsec:steeringelement}}
 
 \begin{itemize}
@@ -4040,10 +4040,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
 \item \verb|limit| --- The maximum allowed absolute value of the item.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|touschek_scatter|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{touschek\_scatter \label{subsec:touschekscatter}}
 \begin{itemize}
 \item type: setup/action command.
@@ -4162,10 +4162,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
      rather than ``\%s.los''.)
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|transmute_elements|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{transmute\_elements \label{subsec:transmuteelements}}
 
 \begin{itemize}
@@ -4207,10 +4207,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
 \item \verb|clear| --- If nonzero, all prior transmutation specifications are deleted.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|tune_footprint|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{tune\_footprint \label{subsec:tunefootprint}}
 
 \begin{itemize}
@@ -4289,10 +4289,10 @@ while maximizing \verb|FP.deltaLimit|, \verb|FP.xSpread|, and/or \verb|FP.ySprea
 ensuring that \verb|FP.xyArea|, at minimum, doesn't decrease.
 I.e., one wants the maximum stable region for momentum and position deviations with the minimum spread in tunes and minimum diffusion.
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|twiss_analysis|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{twiss\_analysis \label{subsec:twissanalysis}}
 
 \begin{itemize}
@@ -4333,10 +4333,10 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item \verb|clear| --- If nonzero, all previously defined analysis regions are deleted.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|twiss_output|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{twiss\_output \label{subsec:twissoutput}}
 
 \begin{itemize}
@@ -4564,10 +4564,10 @@ h00400 & drives $4 \nu_y$ \\ \hline
 \label{tab:drivingTerms}
 \end{table}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|track|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{track \label{subsec:track}}
 
 \begin{itemize}
@@ -4619,10 +4619,10 @@ for a ring.
 given value.  It will be as if all the particles were lost.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|tune_shift_with_amplitude|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{tune\_shift\_with\_amplitude \label{subsec:tuneshiftwithamplitude}}
 
 \begin{itemize}
@@ -4727,10 +4727,10 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
         results are reliable for a particular lattice.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|vary_element|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{vary\_element \label{subsec:varyelement}}
 
 \begin{itemize}
@@ -4790,7 +4790,7 @@ a brief description of each program.  Full descriptions for many programs are av
 on subsequent pages.  Most programs will return a help message if the program name is
 given with no arguments, which should be sufficient documentation.
 \begin{itemize}
-\item {\tt analyzeMagnets} --- Generates SDDS and \latex files giving magnet parameters.
+\item {\tt analyzeMagnets} --- Generates SDDS and latex files giving magnet parameters.
 \item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA \cite{ASTRA} to a binary
   SDDS file suitable for use with {\tt elegant}.  This program is recommended over
   the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
@@ -4889,10 +4889,10 @@ given with no arguments, which should be sufficient documentation.
 \item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|astra2elegant|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{astra2elegant}
 
 \begin{itemize}
@@ -4926,10 +4926,10 @@ astra2elegant [{\em inputFile}] [{\em outputFile}] [-centerReference] [-pipe=[in
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|coreEmittance|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{coreEmittance}
 
 \begin{itemize}
@@ -4958,10 +4958,10 @@ coreEmittance -input {\em inputFilename} [-nSlices {\em numberOfSlices}] [-pngRo
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|csrImpedance|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{csrImpedance}
 
 \begin{itemize}
@@ -5002,10 +5002,10 @@ csrImpedance {{\em outputFile}  | -pipe[=out]} -height={\em valueInMeters} -radi
 Based on a simplified form\cite{Agoh} of Warnock's \cite{Warnock} formula.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|doubleDist6|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{doubleDist6}
 
 \begin{itemize}
@@ -5046,10 +5046,10 @@ doubleDist6 -input {\em name} -output {\em name} -doublings {\em number} -nt {\e
 \item {\bf see also:} {\tt smoothDist6s}
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|haissinski|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{haissinski}
 
 \begin{itemize}
@@ -5114,10 +5114,10 @@ iterations={\em number},fraction={\em value},tolerance={\em value}
 \item {\bf authors:} L. Emery, M. Borland, ANL/APS.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|ibsEmittance|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{ibsEmittance}
 
 \begin{itemize}
@@ -5194,10 +5194,10 @@ would normally contain columns of growth rate contributions at equilibrium.
 \item {\bf author:} A. Xiao, L. Emery, M. Borland, ANL/APS.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|madto|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{madto}
 \label{madto}
 
@@ -5268,10 +5268,10 @@ madto {\em inputfile} {\em outputfile}
 \item {\bf author:} M. Borland, ANL/APS.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsanalyzebeam|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsanalyzebeam}
 \label{sddsanalyzebeam}
 
@@ -5329,10 +5329,10 @@ is spurious (i.e., uncorrected or due to something like CSR that doesn't admit o
 \item {\bf author:} M. Borland, ANL/APS.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsbrightness|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsbrightness}
 
 \begin{itemize}
@@ -5405,10 +5405,10 @@ and {\tt Brightness{\em i}}.
 \item {\bf authors:} M. Borland, H. Shang, R. Dejus (ANL).
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsemitproc|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsemitproc}
 \label{sddsemitproc}
 
@@ -5544,10 +5544,10 @@ removed and the fit is repeated.
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsfindresonances|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsfindresonances}
 
 \begin{itemize}
@@ -5588,10 +5588,10 @@ the columns {\tt x}, {\tt y}, {\tt nux}, and {\tt nuy}, along with parameters th
 \item {\bf authors:} H. Shang, M. Borland. (ANL).
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsfluxcurve|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsfluxcurve}
 
 \begin{itemize}
@@ -5656,10 +5656,10 @@ plus a column for the flux ({\tt TotalFlux{\em i}}, {\tt PinholeFlux{\em i}}, or
 \item {\bf authors:} M. Borland, H. Shang, R. Dejus (ANL).
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsmatchtwiss|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsmatchtwiss}
 \label{sddsmatchtwiss}
 
@@ -5730,10 +5730,10 @@ passed to {\em outputfile} unchanged.
 \item {\bf authors:} M. Borland, H. Shang, ANL/APS.
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsrandmult|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsrandmult}
 \label{sddsrandmult}
 
@@ -5802,10 +5802,10 @@ The namelist command is {\tt perturbations}.  It has the following fields:
 \end{itemize}
 
 \newpage
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|sddsurgent|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{sddsurgent}
 
 \begin{itemize}
@@ -5926,10 +5926,10 @@ calculations included, or an output from {\tt sddsanalyzebeam}. In the latter ca
 \item {\bf authors:} H. Shang, R. Dejus, M. Borland, X. Jiao (ANL).
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|smoothDist6|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{smoothDist6}
 
 \begin{itemize}
@@ -6008,10 +6008,10 @@ the beam will vary step-wise from slice to slice.  This discontinuous variation 
 \end{itemize}
 
 
-\begin{latexonly}
+%\begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|touschekLifetime|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{touschekLifetime}
 
 \begin{itemize}
@@ -6086,11 +6086,11 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
 
 \end{itemize}
 
-\begin{latexonly}
+%\begin{latexonly}
 
 \newpage
 \begin{center}{\Large\verb|view3dGeometry|}\end{center}
-\end{latexonly}
+%\end{latexonly}
 \subsection{view3dGeometry}
 
 \begin{itemize}
