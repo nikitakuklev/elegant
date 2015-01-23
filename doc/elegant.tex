@@ -4052,7 +4052,7 @@ However, it will not work for orbit correction unless the user also sets \verb|u
    calculated by using Piwinski's formula and from the Monte Carlo
    simulation. Scattered particles can be tracked through the entire
    beamline (one pass only), and beam loss information is recorded.
-\item sequence: must follow \verb|run_setup|.
+\item sequence: must follow \verb|run_setup| and \verb|twiss_output|.
 \item notes: 
 	\begin{itemize} 
       \item A momentum aperture file is required previous using this command. It
@@ -4099,6 +4099,7 @@ However, it will not work for orbit correction unless the user also sets \verb|u
         STRING initial = NULL;
         STRING output = NULL;
         long nbins = 100;
+        double sbin_step = 1;
         long n_simulated = 5E6;
         double ignored_portion = 0.01;
         long i_start = 0;
@@ -4139,10 +4140,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
    histogram of simulated scattered particles are to be written. Recommended value: ``\%s-\%03ld.dis'' 
    \item \verb|initial| --- The (incomplete) name of an SDDS file to which the one dimension 
    histogram of simulated particles before scattering are to be written. Recommended value: ``\%s-\%03ld.ini''
-   \item \verb|output| --- The (incomplete) name of an SDDS file. The loss rate is summarized along the
-   beamline and the average loss rate (particles per second per meter) at each location (1 m step) 
-   is written to this file. Recommended value: ``\%s-\%03ld.out'' 
+   \item \verb|output| --- The (incomplete) name of an SDDS file. The average loss rate (particles per second) over a step size of 
+   \verb|sbin_step| at s location is written to this file. Recommended value: ``\%s-\%03ld.out'' 
    \item \verb|nbins| --- Bin number used for the \verb|distribution| and \verb|initial| table.
+   \item \verb|sbin_step| --- Bin size for loss rate to be summarized.
    \item \verb|n_simulated| --- The total number of simulatted scattered particles with $\delta>\delta_m$. Small
    value will cause unstable simulation rate.
    \item \verb|ignored_portion| --- The total scattering rate ignored from tracking. This will greatly 
@@ -4151,8 +4152,10 @@ However, it will not work for orbit correction unless the user also sets \verb|u
    will cause some of 10\% error. But the simulation is greatly speed up.
    \item \verb|i_start|, \verb|i_end| --- The simulation will be done from the \verb|i_start| to \verb|i_end|
    \verb|TSCATTER| element along the beamline.    
-   \item \verb|do_track| --- If non-zero, then scattered particles will be tracked from the location they are
-   generated to the end of the beamline. The loss property can be analysised using \verb|output| or \verb|loss|. 
+   \item \verb|do_track| --- If non-zero, \verb |run_control| is
+   required to proceed the \verb |touschek_scatter| command. Scattered
+   particles will be tracked from their generation location for \verb|n_passes| (given by \verb|run_control|). 
+   The loss property can be analysised using \verb|output| or \verb|loss|.
    \item \verb|match_position_only| --- If non-zero, then matching of the momentum aperture data to the lattice
      is done using the position data only (\verb|s| column), rather than the element names.  Can be helpful if
      errors appear about files ending prematurely or data not matching.
