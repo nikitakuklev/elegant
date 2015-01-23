@@ -1921,17 +1921,18 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
 }
 
 #define BEAM_SCATTER_LOSS_X0 0
-#define BEAM_SCATTER_LOSS_X1 (BEAM_SCATTER_LOSS_X0+7)
+#define BEAM_SCATTER_LOSS_X1 (BEAM_SCATTER_LOSS_X0+8)
 #define BEAM_SCATTER_LOSS_PASS (BEAM_SCATTER_LOSS_X1+6)
-#define BEAM_SCATTER_LOSS_COLUMNS 16
+#define BEAM_SCATTER_LOSS_COLUMNS 17
 static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
     {"x0", "&column name=x0, units=m, type=double &end"},
     {"xp0", "&column name=xp0, symbol=\"x'\", type=double &end"},
     {"y0", "&column name=y0, units=m, type=double &end"},
     {"yp0", "&column name=yp0, symbol=\"y'\", type=double &end"},
-    {"s0", "&column name=s0, units=m, type=double &end"},
+    {"t0", "&column name=t0, units=s, type=double &end"},
     {"p0", "&column name=p0, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
+    {"s0", "&column name=s0, units=m, type=double &end"},
     {"x", "&column name=x, units=m, type=double &end"},
     {"xp", "&column name=xp, type=double &end"},
     {"y", "&column name=y, units=m, type=double &end"},
@@ -1998,9 +1999,10 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                BEAM_SCATTER_LOSS_X0+1, particleOri[j][1],
                                BEAM_SCATTER_LOSS_X0+2, particleOri[j][2], 
                                BEAM_SCATTER_LOSS_X0+3, particleOri[j][3],
-                               BEAM_SCATTER_LOSS_X0+4, tsptr->s, 
+                               BEAM_SCATTER_LOSS_X0+4, particleOri[j][4]/c_mks,
                                BEAM_SCATTER_LOSS_X0+5, (1.+particleOri[j][5])*tsptr->betagamma, 
                                BEAM_SCATTER_LOSS_X0+6, (long)particleOri[j][6],
+                               BEAM_SCATTER_LOSS_X0+7, tsptr->s, 
                                BEAM_SCATTER_LOSS_X1+0, particleLos[i][0],
                                BEAM_SCATTER_LOSS_X1+1, particleLos[i][1],
                                BEAM_SCATTER_LOSS_X1+2, particleLos[i][2], 

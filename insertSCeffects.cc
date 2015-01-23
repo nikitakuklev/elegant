@@ -157,8 +157,8 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (horizontal)
     sc->horizontal = horizontal;
 
-  if (longitudinal)
-    sc->longitudinal =longitudinal;
+  if (longitudinal) 
+    fprintf(stderr, (char*)"*** Warning: the longitudinal SC effect is not implemented in this module, ignored.");
 
   if (uniform_distribution)
     sc->uniform = 1;

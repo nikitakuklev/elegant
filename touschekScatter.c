@@ -105,8 +105,7 @@ void TouschekEffect(RUN *run,
   if (get_MAInput(Momentum_Aperture, beamline, nElement)<0)
     bombElegant("The input Momentum_Aperture file is not valid for this calculation - not same element location!", NULL);
 
-  /* calculate Twiss function and initial Touschek calculation */
-  run_twiss_output(run, beamline, NULL, -1);
+  /* Initialize Touschek calculation */
   init_TSPEC(run, beamline, nElement);
 
   /* Calculate Piwinski's scattering rate. */

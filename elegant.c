@@ -1642,8 +1642,8 @@ char **argv;
       do_replace_elements(&namelist_text, &run_conditions, beamline);
       break;
     case TOUSCHEK_SCATTER:
-      if (!run_setuped)
-        bombElegant("run_setup must precede touschek_scatter namelist", NULL);
+      if (!run_setuped || !(twiss_computed || do_twiss_output))
+        bombElegant("run_setup and twiss_output must precede touschek_scatter namelist", NULL);
       TouschekEffect(&run_conditions, &run_control, &error_control, beamline, &namelist_text);
       break;
     case TWISS_ANALYSIS:
