@@ -1412,11 +1412,15 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
     short includeRF=0, includeRandom=0, includeNiElements=0;
     
     log_entry("reset_special_elements");
-
-    if (flags&RESET_INCLUDE_RF)
+    
+    if (flags&RESET_INCLUDE_RF) {
+      /* printf("Resetting special rf elements\n"); */
       includeRF = 1;
-    if (flags&RESET_INCLUDE_RANDOM)
+    }
+    if (flags&RESET_INCLUDE_RANDOM) {
+      /* printf("Resetting special random elements\n"); */
       includeRandom = 1;
+    }
     if (flags&RESET_INCLUDE_NIELEM)
       includeNiElements = 1;
     eptr = &(beamline->elem);
