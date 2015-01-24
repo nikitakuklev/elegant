@@ -63,7 +63,7 @@ first version, converted from ws.f by Roger Dejus
 #define CLO_ELECTRON_BEAM 0
 #define CLO_PHOTON_ENERGY 1
 #define CLO_MAGNET 2
-#define CLO_PHIN_HOLE 3
+#define CLO_PINHOLE 3
 #define CLO_CALCULATION_MODE 4
 #define CLO_PIPE 5
 #define CLO_NO_WARNINGS 6
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
         if (bendingMagnet)
           nPeriod = 0.5;
         break;
-      case CLO_PHIN_HOLE:
+      case CLO_PINHOLE:
         if (s_arg[i_arg].n_items<2)
           SDDS_Bomb("invalid -pinhole syntax.");
         s_arg[i_arg].n_items--;
@@ -747,7 +747,7 @@ void space_distribution(long mode, long bendingMagnet, long nxp, long nyp, long 
   ra1 = calloc(sizeof(*ra1), nxp * nyp);
   ra3 = calloc(sizeof(*ra3), nxp * nyp);
   
-  compute_irradiance(nxp, nyp, bendingMagnet,kx, ky, emin, 1, ra0, ra1, ra3);
+  compute_irradiance(nxp, nyp, bendingMagnet, kx, ky, emin, 1, ra0, ra1, ra3);
   a2 = 0;
   ra2 = 0;
   for (i=0; i<nxp; i++) {
