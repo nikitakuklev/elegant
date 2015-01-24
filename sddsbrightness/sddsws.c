@@ -353,7 +353,7 @@ int main(int argc, char **argv)
   case  CLO_INTEGRATED_SPECTRUM_MODE:
     angle_integration(2, nE, &irradiance, &p1, &p2, &p3, &p4, &flux, &power);
     total_rows = nE;
-    sprintf(desc, "Agnule-integrated spectrum.");
+    sprintf(desc, "Angle-integrated spectrum.");
     /*mode = 5, isub=3*/
     break;
   case CLO_POWER_DENSITY_MODE:
