@@ -207,6 +207,9 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   long type, param;
   char *p_elem;
   
+  if (modData->nItems<=0)
+    return 0;
+  
   t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN);
   matricesUpdated = 0;
 
