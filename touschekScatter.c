@@ -585,7 +585,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       beam->p0_original = beam->p0 = tsptr->betagamma;
       beam->bunchFrequency = 0.;
       beam->lost = (double**)czarray_2d(sizeof(double), iTotal, (COORDINATES_PER_PARTICLE+1));
-	  
+
       for (i=0; i<iTotal; i++) {
         beam->original[i][0] = beam->particle[i][0] = beam0->particle[index[i]][0];
         beam->original[i][1] = beam->particle[i][1] = beam0->particle[index[i]][1];
@@ -645,21 +645,28 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	pCentral = run->p_central;
 	if (!do_tracking(NULL, fiducialParticle, 1, NULL, beamline, 
 			 &pCentral, NULL, NULL, NULL, NULL, run, control->i_step,
-			 FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
+			 FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
 	  bombElegant("Fiducial particle was lost", NULL);
 	}
         if (verbosity>1) {
           printf("fiducial particle tracked.\n");
           fflush(stdout);
         }
-        
 #if USE_MPI
       notSinglePart = 1;
       parallelStatus = notParallel;
 #endif
+        if (eptr->pred) {
+          /* particle must look as if it traveled from start of beamline to this location in order to get the right
+           * phase at the rf cavities set up by the fiducial particle
+           */
+          long ip;
+          for (ip=0; ip<iTotal; ip++) 
+            beam->particle[ip][4] += eptr->pred->end_pos;
+        }
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
-                             SILENT_RUNNING+FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL,
+                             FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+(verbosity>2?0:SILENT_RUNNING+INHIBIT_FILE_OUTPUT), control->n_passes, 0, NULL,
                              NULL, NULL, beam->lost, eptr);
 #if USE_MPI
 	if (USE_MPI) {

@@ -57,6 +57,7 @@ void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
 void processGlobalSettings(NAMELIST_TEXT *nltext);
 void freeInputObjects();
+void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -1346,6 +1347,10 @@ char **argv;
         fill_double_array(starting_coord, 6, 0.0);
         if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
           for (i=failed=0; i<correction_iterations; i++) {
+            if (run_control.reset_rf_each_step)
+              delete_phase_references();
+            reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_ALL:0);
+            runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0);
             if (correction_iterations>1) {
               fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
@@ -1398,7 +1403,11 @@ char **argv;
           if (failed)
             continue;
         }
-        
+
+        if (run_control.reset_rf_each_step)
+          delete_phase_references();
+        reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
+        runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1);
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
@@ -2627,3 +2636,36 @@ void exitElegant(long status)
 #endif
   exit(status);
 }
+
+void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final)
+{
+  double **coord, pCentral;
+  
+  /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
+  /* beamline->fiducial_flag = 0; */
+
+  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  if (startCoord)
+    memcpy(coord[0], startCoord, sizeof(double)*6);
+  else
+    memset(coord[0], 0, sizeof(**coord)*6);
+  coord[0][6] = 1;
+  pCentral = run->p_central;
+  fprintf(stdout, "Tracking fiducial particle\n");
+  if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                   NULL, NULL, NULL, NULL, run, control->i_step, 
+                       (control->fiducial_flag&
+                        (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
+                         +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
+                         +RESET_RF_FOR_EACH_STEP))|
+		       ALLOW_MPI_ABORT_TRACKING|INHIBIT_FILE_OUTPUT,
+                   1, 0, NULL, NULL, NULL, NULL, NULL)) {
+    fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+    exitElegant(1);
+  }
+  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && final) {
+    control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
+    beamline->fiducial_flag |= FIDUCIAL_BEAM_SEEN; /* This is the one that matters */
+  }
+}
+

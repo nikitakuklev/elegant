@@ -457,7 +457,10 @@ long doMomentumApertureSearch(
   iElem = 0;
   processElements = process_elements;
   skipElements = skip_elements;
-
+  
+  /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
+  beamline->fiducial_flag = 0;
+  
   if (fiducialize || forbid_resonance_crossing) {
     if (startingCoord)
       memcpy(coord[0], startingCoord, sizeof(double)*6);
@@ -720,7 +723,7 @@ long doMomentumApertureSearch(
 #endif
 #endif
         if (verbosity>0) {
-          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is%e \n", elem->name, elem->occurence, elem->end_pos,
+          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
                   deltaSurvived[slot][outputRow]);
           fflush(stdout);
         }

@@ -61,6 +61,8 @@ void track_through_multipole_deflector(
                                 double pc_central
                                 );
 
+short determineP0ChangeBlocking(ELEMENT_LIST *eptr);
+
 #if USE_MPI
 static short mpiAbortGlobal;
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
@@ -288,24 +290,26 @@ long do_tracking(
      * been activated by computation of correction matrices or trajectory
      * correction.
      */
-    if (flags&RESET_RF_FOR_EACH_STEP)
-      delete_phase_references();
-    reset_special_elements(beamline, RESET_INCLUDE_RF);
-  }
-  reset_driftCSR();
-
-  if (((flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) || !(flags&FIRST_BEAM_IS_FIDUCIAL))) {
+    if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
+      fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
+      fflush(stdout);
+    }
     flags &= ~FIDUCIAL_BEAM_SEEN;
     while (eptr) {
       eptr->Pref_output_fiducial = 0;
       eptr = eptr->succ;
     }
+  }
+  if (flags&RESET_RF_FOR_EACH_STEP) {
+    delete_phase_references();
+    reset_special_elements(beamline, RESET_INCLUDE_RF);
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
-      fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
+      fprintf(stdout, "Rf phases/references reset.\n");
       fflush(stdout);
     }
   }
-  
+  reset_driftCSR();
+
   if (!(flags&FIDUCIAL_BEAM_SEEN) && flags&PRECORRECTION_BEAM)
     flags &= ~FIRST_BEAM_IS_FIDUCIAL; 
   
@@ -522,6 +526,7 @@ long do_tracking(
       /* prepare space charge effects calculation  */
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
 
+    i_elem = 0;
     if (i_pass==0 && startElem) {
       /* start tracking from an interior point in the beamline */
       while (eptr && eptr!=startElem) {
@@ -565,12 +570,12 @@ long do_tracking(
               bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
         }
         eptr = eptr->succ;
+        i_elem++;
       }
       z = startElem->end_pos;
       startElem = NULL; 
     }
 
-    i_elem = 0;
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
       if (trackingOmniWedgeFunction) 
         (*trackingOmniWedgeFunction)(coord, nToTrack, i_pass, i_elem, beamline->n_elems, eptr, P_central);
@@ -1751,23 +1756,32 @@ long do_tracking(
                 eptr->name);
         fflush(stdout);
       }
-      if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
-        if (!(flags&RESTRICT_FIDUCIALIZATION) ||
-            (entity_description[eptr->type].flags&MAY_CHANGE_ENERGY)) {
-	  if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
-	    /* If it is a Diagnostic element, nothing needs to be done */	    
-	    do_match_energy(coord, nLeft, P_central, 0);
+      if (flags&FIRST_BEAM_IS_FIDUCIAL) {
+        if (!(flags&FIDUCIAL_BEAM_SEEN)) {
+          short blockP0Change;
+          /* Look at the change_p0 flag on the element for direction. Prevents, e.g., changing P_central after
+             RFCA elements that have change_p0=0
+             */
+          blockP0Change = determineP0ChangeBlocking(eptr); 
+          if (((run->always_change_p0 && !(flags&RESTRICT_FIDUCIALIZATION)) ||
+               ((entity_description[eptr->type].flags&MAY_CHANGE_ENERGY) && !blockP0Change)) &&
+              !(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR)))) {
+            do_match_energy(coord, nLeft, P_central, 0);
+          }
+          eptr->Pref_output_fiducial = *P_central;
+        } else {
+          if (*P_central!=eptr->Pref_output_fiducial)
+            set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
         }
-        eptr->Pref_output_fiducial = *P_central;
-      } else if (flags&FIDUCIAL_BEAM_SEEN) {
-        if (*P_central!=eptr->Pref_output_fiducial)
-          set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
       } else if (run->always_change_p0) {
 	if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
 	  /* If it is a Diagnostic element, nothing needs to be done */
 	  do_match_energy(coord, nLeft, P_central, 0);
+        eptr->Pref_output_fiducial = *P_central;
       } else if (!(flags&FIDUCIAL_BEAM_SEEN))
         eptr->Pref_output_fiducial = *P_central;
+      if (eptr->Pref_output_fiducial==0)
+        bombElegant("problem with fiducialization. Seek expert help!", NULL);
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {
@@ -3967,6 +3981,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   double total_rate, constTime, *rateCounts;
   MPI_Status status;
   
+  printf("Distributing particles to worker processors\n");
+  fflush(stdout);
+
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   rateCounts = malloc(sizeof(double) * n_processors);
 
@@ -4845,5 +4862,32 @@ double choose_theta(double rho, double x0, double x1, double x2)
     if (x2>0 && x2<temp) temp = x2;
   }
   return temp;
+}
+
+short determineP0ChangeBlocking(ELEMENT_LIST *eptr)
+{
+  if (!(entity_description[eptr->type].flags&MAY_CHANGE_ENERGY))
+    return 1;
+  switch (eptr->type) {
+  case T_RFCA:
+    return !((RFCA*)eptr->p_elem)->change_p0;
+    break;
+  case T_RFTMEZ0:
+    return !((RFTMEZ0*)eptr->p_elem)->change_p0;
+    break;
+  case T_TWLA:
+    return !((TW_LINAC*)eptr->p_elem)->change_p0;
+    break;
+  case T_WAKE:
+    return !((WAKE*)eptr->p_elem)->change_p0;
+    break;
+  case T_CORGPIPE:
+    return !((CORGPIPE*)eptr->p_elem)->change_p0;
+    break;
+  case T_RFCW:
+    return !((RFCW*)eptr->p_elem)->change_p0;
+    break;
+  }
+  return 0;
 }
 
