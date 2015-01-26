@@ -245,7 +245,6 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                     }
                 break;
             }
-       fprintf(fpm, "\"%s\" %s %e 0\n", eptr->name, entity_name[eptr->type], eptr->end_pos);
        start = end = eptr->end_pos;
        eptr = eptr->succ;
        }
