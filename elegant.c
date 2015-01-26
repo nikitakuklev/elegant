@@ -57,7 +57,7 @@ void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
 void processGlobalSettings(NAMELIST_TEXT *nltext);
 void freeInputObjects();
-void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final);
+void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -1350,7 +1350,7 @@ char **argv;
             if (run_control.reset_rf_each_step)
               delete_phase_references();
             reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_ALL:0);
-            runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0);
+            runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0, 0);
             if (correction_iterations>1) {
               fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
@@ -1407,7 +1407,7 @@ char **argv;
         if (run_control.reset_rf_each_step)
           delete_phase_references();
         reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
-        runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1);
+        runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1, 1);
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
@@ -2637,7 +2637,7 @@ void exitElegant(long status)
   exit(status);
 }
 
-void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final)
+void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive)
 {
   double **coord, pCentral;
   
@@ -2660,8 +2660,12 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
                          +RESET_RF_FOR_EACH_STEP))|
 		       ALLOW_MPI_ABORT_TRACKING|INHIBIT_FILE_OUTPUT,
                    1, 0, NULL, NULL, NULL, NULL, NULL)) {
-    fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
-    exitElegant(1);
+    if (mustSurvive) {
+      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      exitElegant(1);
+    } else {
+      fprintf(stdout, "Warning: Fiducial particle lost!\n");
+    }
   }
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && final) {
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
