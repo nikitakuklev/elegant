@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 27.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 27.0.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -39,40 +39,80 @@ Here is a summary of what's changed since release 26.0.2:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item Apertures are now disabled inside \verb|KSEXT| and \verb|KQUAD| elements that are tilted by more than 100 mrad, in order
+  to avoid unexpected consequences (e.g., swapping of horizontal and vertical aperture). This was reported by X. Neul (ESRF).
+\item The fiducialization features were extensively reworked to resolve several issues, such as inadvertent fiducialization of the
+  system by the single-particle beam used for trajectory correction, and unintended reference momentum shifts after rf cavities in 
+  rings. As a consequence, the first-is-fiducial directive (\verb|run_control|)
+  no longer implicitly sets the always-change-p0 (\verb|run_setup|) parameter to 1. Other than that, users should not notice any
+  changes of significance.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
 \item The \verb|floor_coordinates| command would crash if vertex-point computation was requested and a dipole was the
   first element in the beamline. Thanks to C. Behrens (DESY) for help finding this. 
+\item The \verb|load_parameters| command would previously crash when multiple files were given but one or more didn't exist,
+  in spite of the setting of the \verb|allow_missing_files| parameter. This was fixed.
+\item Fixed bugs in the magnet output from \verb|run_setup|, reported by C. Tennant (JLab) and J. Kramer (Dan Fysik).
+\item A. Xiao: A bug was fixed in the \verb|insert_sceffects| command, which resulted in ignoring space charge if the charge was set via
+  the charge-per-macroparticle feature as opposed to the total charge. Also, this feature now properly recognizes the change in
+  bunch charge that accompanies particle loss. 
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|SCATTER| element now has controls to allow determining the starting and ending pass.
 \item The \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE| elements now work in multi-bunch mode (see section \ref{sect:bunchedBeams}).
+  Also, these elements have a new parameter \verb|N_CAVITIES| that results in multiplication of the effect on the beam by the given factor.
+\item The \verb|MULT| element now participates in computation of Twiss parameters, the transport matrix, etc., for multipoles of octupole order or lower.
+\item A. Xiao: The \verb|WATCH| element now includes output of the corrected emittance (i.e., betatron emittance, without dispersive contributions) when in 
+  ``parameter'' output mode.
+\item The \verb|WATCH| element now includes controls (\verb|START_PID| and \verb|END_PID|) to allow selecting output for only a range of particle
+  IDs; this is using for bunched-mode simulation.
+\item The \verb|sdds_beam| command can now duplicate a bunch from the input file, with staggering of coordinates. This is useful in preparing 
+  a multi-bunch beam from an input file containing a single bunch.
+\item A. Xiao: The \verb|IBSCATTER| element can now model intrabeam scattering in rings using a slice-based technique, which previously only worked for
+  single-pass systems.
+\item The \verb|SCATTER| element now has controls to start and stop the scattering on specified passes.
+\item The \verb|HISTOGRAM| element now supports a sparse output mode (suppressing bins with zero population) as well as particle-ID-based filters.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|sdds_beam| command has new features to allow duplicating an input beam to make multiple bunches.
+\item Lattice parsing speed was dramatically improved, which is particularly noticeable for lattices with tens of thousands of
+  elements. This problem was reported by forum user \verb|yuehao|, who helped by providing a test file.
 \item The algorithm for finding fixed-length closed orbits has been significantly improved, resulting in faster convergence
   and less chance of failure to find an orbit. These changes were motivated by problems reported by V. Sajaev (APS).
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now accept wildcards for the names, respectively, of the quadrupoles and
   sextupoles to use for correction.
+\item The \verb|rf_setup| command output file now includes rf frequency and harmonic number.
+\item The \verb|modulate_elements| and \verb|ramp_elements| can now change the parameters of the \verb|CHARGE| element, so beam current
+  and charge can be ramped or modulated during a multi-turn simulation.
+\item The \verb|sdds_beam| command has new features to allow duplicating an input beam to make multiple bunches.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item None.
+\item The MPI implementation for \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE| was reworked to improve parallel efficiency and accuracy.
+\item The multi-particle algorithm for \verb|momentum_aperture| was revised to use lost particle data rather than acceptance data, which gives more 
+  reliable results when the momentum aperture has bands of loss separated by bands of acceptance.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item L. Emery: The \verb|haissinski| program no longer linearizes the rf potential, but uses the exact time dependence. 
+\item A. Xiao: The \verb|touschekLifetime| program has had a number of upgrades, most notably slice-based scattering that uses a beam
+  profile computed with \verb|elegant2genesis|. 
+\item Added the \verb|makeWigglerFromBends| script to create a lattice file fragment that models a wiggler as a series of
+  bending magnets.
+\item R. Soliday, R. Dejus: Added the \verb|sddsecon| program, which performs energy convolution for spectra. 
+\item Added the scripts \verb|elasticScatteringLifetimeDetailed| and \verb|bremsstrahlungLifetimeDetailed|, which can be used
+  for computing elastic and bremsstrahlung lifetimes for rings from multi-species pressure profiles, with detailed output of the local scattering rates.
+\item The \verb|sddssasefel| program will now optimize any input parameter that is set to zero, regardless of whether the value comes from the
+  input file or the commandline.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
