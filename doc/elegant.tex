@@ -40,7 +40,7 @@ Here is a summary of what's changed since release 26.0.2:
 
 \begin{itemize}
 \item Apertures are now disabled inside \verb|KSEXT| and \verb|KQUAD| elements that are tilted by more than 100 mrad, in order
-  to avoid unexpected consequences (e.g., swapping of horizontal and vertical aperture). This was reported by X. Neul (ESRF).
+  to avoid unexpected consequences (e.g., swapping of horizontal and vertical aperture in skew quadrupoles). This was reported by X. Neul (ESRF).
 \item The fiducialization features were extensively reworked to resolve several issues, such as inadvertent fiducialization of the
   system by the single-particle beam used for trajectory correction, and unintended reference momentum shifts after rf cavities in 
   rings. As a consequence, the first-is-fiducial directive (\verb|run_control|)
@@ -397,11 +397,16 @@ A number of commands have parameters for controlling fiducialization:
 	establish the fiducial phases and momentum profile.  If one is simulating,
 	for example, successive beams in a fixed accelerator, this should be set
 	to 1.  Otherwise, the momentum reference is discarded after each bunch
-	is tracked.
+	is tracked. N.B.: as of version 27.0.1, setting \verb|first_is_fiducial=1| 
+        does not imply \verb|always_change_p0=1|. You must set this separately,
+        or use the \verb|CHANGE_P0| parameter on various elements (e.g., \verb|RFCA|)
+        to further specify how to set the fiducial momentum profile.
 	\item \verb|restrict_fiducialization| --- If nonzero, then momentum profile
 	fiducialization occurs only after elements that are known to possibily
 	change the momentum. It would not occur, for example, after a scraper that
 	changes the average beam momentum by removing a low-momentum tail.
+        This is a convenience that, essentially, allows modifying the impact
+        of setting \verb|always_change_p0=1|.
 	\end{itemize}
 \item The \verb|bunched_beam| command has a \verb|first_is_fiducial| parameter
 	that is convenient for use with the \verb|first_is_fiducial| mode
