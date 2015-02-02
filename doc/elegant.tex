@@ -90,6 +90,8 @@ Here is a summary of what's changed since release 26.0.2:
 \item The \verb|modulate_elements| and \verb|ramp_elements| can now change the parameters of the \verb|CHARGE| element, so beam current
   and charge can be ramped or modulated during a multi-turn simulation.
 \item The \verb|sdds_beam| command has new features to allow duplicating an input beam to make multiple bunches.
+\item The \verb|twiss_output| command now allows computation of the s-depedendent resonant driving terms. This was implemented by 
+      M. Carla' (CELLS).
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -4425,6 +4427,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
     long leading_order_driving_terms_only = 0;
+    STRING s_dependent_driving_terms_file = NULL;
     long local_dispersion = 1;
 &end
 \end{verbatim}
@@ -4497,6 +4500,12 @@ used that gives the second-order chromaticity only.
   over sextupole and quadrupole strengths are not computed. However, leading-order octupole terms are computed, even though they affect the same
   terms as the second-order sextupole and quadrupole terms. This option is provided because computing the higher-order terms is time-consuming and
   not always worthwhile.
+\item \verb|s_dependent_driving_terms_file| --- The (incomplete) name of a SDDS file to which magnitude, real and imaginary parts of s-dependent driving terms will be written.
+If you wish to compute s-dependent driving terms, be sure to set this parameter.
+The following first order resonant driving terms are implemented as defined in \cite{sRDT}: {\tt f10010}, {\tt f10100}, 
+{\tt f30000}, {\tt f12000}, {\tt f10200}, {\tt f01200}, {\tt f01110}, 
+{\tt f00300}, {\tt f00120}, {\tt f20100}, {\tt f20010} and {\tt f11010}.
+Please note that the notation and meaning of the driving terms differs from those computed when \verb|compute_driving_terms=1|!
 \item \verb|local_dispersion| ---  Normally, {\tt elegant} will ignore acceleration in computing the
   dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
   was the local fractional momentum deviation.  In a linac or other systems with rf elements, one might also be interested in the ``global'' dispersion
@@ -6507,6 +6516,9 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
  A. Wrulich, CERN Accelerator School 94-01, Vol. 1, 409 (1994).
 \bibitem{LeDuff-NIM239}
  J. LeDuff, NIM A 239 (1985) 83-101.
+
+\bibitem{sRDT}
+ A. Franchi {\em et al.}, Phys. Rev. ST Accel. Beams 17, 074001 (2014).
 
 \end{thebibliography}
 
