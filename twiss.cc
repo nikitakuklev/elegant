@@ -31,6 +31,8 @@
 #include "twiss.h"
 #include <stddef.h>
 
+void computeSDrivingTerms(LINE_LIST *beamline);
+void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, char *name, char *type, long occurence, LINE_LIST *beamline);
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
@@ -67,6 +69,8 @@ static long doTuneShiftWithAmplitude = 0;
 static SDDS_DATASET SDDSTswaTunes;
 static long linearChromaticTrackingInitialized = 0;
 void setLinearChromaticTrackingValues(LINE_LIST *beamline) ;
+
+SDDS_TABLE SDDS_SDrivingTerms;
 
 #define TWISS_ANALYSIS_QUANTITIES 8
 static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay", "alphax", "alphay", "etaxp", "etayp"};
@@ -894,6 +898,7 @@ static long twiss_count = 0;
 #define IC_OCCURENCE 15
 #define IC_TYPE 16
 #define N_COLUMNS 17
+
 #define IC_I1 N_COLUMNS
 #define IC_I2 (N_COLUMNS+1)
 #define IC_I3 (N_COLUMNS+2)
@@ -1389,6 +1394,28 @@ void dump_twiss_parameters(
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
+    if (s_dependent_driving_terms_file) {
+      ELEMENT_LIST *eptr;
+      if (!SDDS_StartTable(&SDDS_SDrivingTerms, beamline->n_elems+1)) {
+        SDDS_SetError((char*)"Unable to start SDDS table (s_dependent_driving_terms_file)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      eptr = elem;
+      i = 0;
+      while (eptr) {
+        SetSDrivingTermsRow(&SDDS_SDrivingTerms, i, i+1, eptr->end_pos, eptr->name, entity_name[eptr->type], eptr->occurence, beamline);
+        if (i == (beamline->n_elems-1)) {
+          SetSDrivingTermsRow(&SDDS_SDrivingTerms, i, 0, 0.0, "_BEG_", entity_name[T_MARK], 1, beamline);
+        }
+        i++;
+        eptr = eptr->succ;
+      }
+      if (!SDDS_WriteTable(&SDDS_SDrivingTerms)) {
+        SDDS_SetError((char*)"Unable to write SDDS table (s_dependent_driving_terms_file)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }   
+    }
+    
     i = 0;
     while (elem) {
       data[0] = elem->end_pos;     /* position */
@@ -1407,6 +1434,7 @@ void dump_twiss_parameters(
         SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+
       if (radIntegrals) {
         if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count,
                                IC_I1, elem->twiss->dI[0],
@@ -1442,6 +1470,7 @@ void dump_twiss_parameters(
     data[0] = elem->end_pos;     /* position */
     data[N_DOUBLE_COLUMNS-1] = elem->Pref_output;
     copy_doubles(data+1, (double*)elem->twiss, N_DOUBLE_COLUMNS-2);
+
     for (j=0; j<N_DOUBLE_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, j, data[j], -1)) {
         SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
@@ -1524,6 +1553,8 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   
   if (filename)
     filename = compose_filename(filename, run->rootname);
+  if (s_dependent_driving_terms_file)
+    s_dependent_driving_terms_file = compose_filename(s_dependent_driving_terms_file, run->rootname);
   twissConcatOrder = concat_order;
   if (twissConcatOrder<default_order)
     twissConcatOrder = default_order;
@@ -1595,6 +1626,102 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     SDDS_twiss_initialized = 0;
   twiss_initialized = 1;
 
+  if (s_dependent_driving_terms_file) {
+    if (!SDDS_InitializeOutput(&SDDS_SDrivingTerms, SDDS_ASCII, 1L, NULL, NULL, s_dependent_driving_terms_file)) {
+      SDDS_SetError((char*)"Unable set up SDDS file (s_dependent_driving_terms_file)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
+    if (SDDS_DefineColumn(&SDDS_SDrivingTerms, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)==-1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0)==-1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0)==-1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0)==-1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f10010", NULL,
+                          "1/m$a1/2$n", "f10010 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f10100", NULL,
+                          "1/m$a1/2$n", "f10100 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f30000", NULL,
+                          "1/m$a1/2$n", "f30000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f12000", NULL,
+                          "1/m$a1/2$n", "f12000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f10200", NULL,
+                          "1/m$a1/2$n", "f10200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f01200", NULL,
+                          "1/m$a1/2$n", "f01200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f01110", NULL,
+                          "1/m$a1/2$n", "f01110 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f00300", NULL,
+                          "1/m$a1/2$n", "f00300 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f00120", NULL,
+                          "1/m$a1/2$n", "f00120 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f20100", NULL,
+                          "1/m$a1/2$n", "f20100 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f20010", NULL,
+                          "1/m$a1/2$n", "f20010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "f11010", NULL,
+                          "1/m$a1/2$n", "f11010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf10010", NULL,
+                          "1/m$a1/2$n", "f10010 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf10100", NULL,
+                          "1/m$a1/2$n", "f10100 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf30000", NULL,
+                          "1/m$a1/2$n", "f30000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf12000", NULL,
+                          "1/m$a1/2$n", "f12000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf10200", NULL,
+                          "1/m$a1/2$n", "f10200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf01200", NULL,
+                          "1/m$a1/2$n", "f01200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf01110", NULL,
+                          "1/m$a1/2$n", "f01110 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf00300", NULL,
+                          "1/m$a1/2$n", "f00300 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf00120", NULL,
+                          "1/m$a1/2$n", "f00120 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf20100", NULL,
+                          "1/m$a1/2$n", "f20100 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf20010", NULL,
+                          "1/m$a1/2$n", "f20010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Imf11010", NULL,
+                          "1/m$a1/2$n", "f11010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref10010", NULL,
+                          "1/m$a1/2$n", "f10010 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref10100", NULL,
+                          "1/m$a1/2$n", "f10100 Skew quadrupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref30000", NULL,
+                          "1/m$a1/2$n", "f30000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref12000", NULL,
+                          "1/m$a1/2$n", "f12000 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref10200", NULL,
+                          "1/m$a1/2$n", "f10200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref01200", NULL,
+                          "1/m$a1/2$n", "f01200 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref01110", NULL,
+                          "1/m$a1/2$n", "f01110 Normal sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref00300", NULL,
+                          "1/m$a1/2$n", "f00300 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref00120", NULL,
+                          "1/m$a1/2$n", "f00120 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref20100", NULL,
+                          "1/m$a1/2$n", "f20100 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref20010", NULL,
+                          "1/m$a1/2$n", "f20010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        SDDS_DefineColumn(&SDDS_SDrivingTerms, "Ref11010", NULL,
+                          "1/m$a1/2$n", "f11010 Skew sextupole-like RDT", NULL, SDDS_DOUBLE, 0) == -1 ||
+        !SDDS_WriteLayout(&SDDS_SDrivingTerms)) {
+      SDDS_SetError((char*)"Unable to define SDDS column (s_dependent_driving_terms_file)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+  beamline->sDrivingTerms.f10010 = beamline->sDrivingTerms.f10100 = NULL;
+  beamline->sDrivingTerms.f30000 = beamline->sDrivingTerms.f12000 = NULL;
+  beamline->sDrivingTerms.f10200 = beamline->sDrivingTerms.f01200 = NULL;
+  beamline->sDrivingTerms.f01110 = beamline->sDrivingTerms.f00300 = NULL;
+  beamline->sDrivingTerms.f00120 = beamline->sDrivingTerms.f20100 = NULL;
+  beamline->sDrivingTerms.f20010 = beamline->sDrivingTerms.f11010 = NULL;
+
   beamline->flags = 0;
   beamline->flags |= BEAMLINE_TWISS_WANTED;
   if (radiation_integrals)
@@ -1605,7 +1732,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   log_exit((char*)"setup_twiss_output");
 }
 
-void finish_twiss_output(void)
+void finish_twiss_output(LINE_LIST *beamline)
 {
   log_entry((char*)"finish_twiss_output");
   if (SDDS_twiss_initialized && !SDDS_Terminate(&SDDS_twiss)) {
@@ -1616,7 +1743,34 @@ void finish_twiss_output(void)
   if (doTuneShiftWithAmplitude && tune_shift_with_amplitude_struct.tune_output)
     SDDS_Terminate(&SDDSTswaTunes);
   doTuneShiftWithAmplitude = 0;
-  free_namelist(&twiss_output);
+
+  if (s_dependent_driving_terms_file) {
+    tfree(beamline->sDrivingTerms.f10010);
+    tfree(beamline->sDrivingTerms.f10100);
+    tfree(beamline->sDrivingTerms.f30000);
+    tfree(beamline->sDrivingTerms.f12000);
+    tfree(beamline->sDrivingTerms.f10200);
+    tfree(beamline->sDrivingTerms.f01200);
+    tfree(beamline->sDrivingTerms.f01110);
+    tfree(beamline->sDrivingTerms.f00300);
+    tfree(beamline->sDrivingTerms.f00120);
+    tfree(beamline->sDrivingTerms.f20100);
+    tfree(beamline->sDrivingTerms.f20010);
+    tfree(beamline->sDrivingTerms.f11010);
+
+    beamline->sDrivingTerms.f10010 = beamline->sDrivingTerms.f10100 = NULL;
+    beamline->sDrivingTerms.f30000 = beamline->sDrivingTerms.f12000 = NULL;
+    beamline->sDrivingTerms.f10200 = beamline->sDrivingTerms.f01200 = NULL;
+    beamline->sDrivingTerms.f01110 = beamline->sDrivingTerms.f00300 = NULL;
+    beamline->sDrivingTerms.f00120 = beamline->sDrivingTerms.f20100 = NULL;
+    beamline->sDrivingTerms.f20010 = beamline->sDrivingTerms.f11010 = NULL;
+
+    if (!SDDS_Terminate(&SDDS_SDrivingTerms)) {
+      SDDS_SetError((char*)"Problem terminating SDDS s-dependent driving term output (finish_twiss_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+
   log_exit((char*)"finish_twiss_output");
 }
 
@@ -1974,6 +2128,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                       starting_coord, n_periods); 
       if (compute_driving_terms)
         computeDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune, n_periods);
+      if (s_dependent_driving_terms_file)
+        computeSDrivingTerms(beamline);
     }
   }
   else {
@@ -4116,6 +4272,225 @@ typedef struct {
   double b2L, b3L, s;
 } ELEMDATA;
 
+void computeSDrivingTerms(LINE_LIST *beamline)
+{
+
+  /* Skew quadrupole */
+  std::complex <double> f10010, f10100;
+  /* Normal sextupole */
+  std::complex <double> f30000, f12000, f10200, f01200, f01110;
+  /* Skew Sextupole */
+  std::complex <double> f00300, f00120, f20100, f20010, f11010;
+
+  std::complex <double> ii = std::complex<double>(0,1);
+
+  double tilt;
+  double k2;               /* k2 <- normal sext */
+  double j1, j2;           /* j1 <- skew quad, j2 <- skew sext */
+  double src_betax, src_betay;   /* betas where the source is located */
+  double obs_phix, obs_phiy;
+  double src_phix, src_phiy;
+  double delta_phix, delta_phiy; /* phase advance between source and observator */
+  double qx, qy;         /* tunes */
+
+  int count;
+  int idx;
+
+  ELEMENT_LIST *src_ptr, *obs_ptr;
+
+  qx = beamline->tune[0];
+  qy = beamline->tune[1];
+
+  if (beamline->sDrivingTerms.f10010 == NULL) {
+    beamline->sDrivingTerms.f10010 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f10100 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f30000 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f12000 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f10200 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f01200 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f01110 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f00300 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f00120 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f20100 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f20010 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+    beamline->sDrivingTerms.f11010 = (double (*)[3])malloc(sizeof(double[3]) * beamline->n_elems);
+  }
+
+  idx = 0;
+  obs_ptr = beamline->elem_twiss;
+  while (obs_ptr) {  /* loop over each observation point */
+
+    f10010 = f10100 = f30000 = f12000 =
+    f10200 = f01200 = f01110 = f00300 =
+    f00120 = f20100 = f20010 = f11010 = std::complex<double>(0,0);
+
+    src_ptr = beamline->elem_twiss;
+
+    if (obs_ptr->pred) {
+      obs_phix  = (obs_ptr->twiss->phix + obs_ptr->pred->twiss->phix)/2;
+      obs_phiy  = (obs_ptr->twiss->phiy + obs_ptr->pred->twiss->phiy)/2;
+    } else {
+      obs_phix  = (obs_ptr->twiss->phix + beamline->twiss0->phix)/2;
+      obs_phiy  = (obs_ptr->twiss->phiy + beamline->twiss0->phiy)/2;
+    }
+
+    while (src_ptr) {  /* loop over each source */
+      k2 = j1 = j2 = 0.;  /* get source strength */
+      switch (src_ptr->type) {
+      case T_SEXT:
+        tilt = ((SEXT*)src_ptr->p_elem)->tilt;
+        k2 = ((SEXT *)src_ptr->p_elem)->k2 * ((SEXT *)src_ptr->p_elem)->length;
+        break;
+      case T_KSEXT:
+        tilt = ((KSEXT*)src_ptr->p_elem)->tilt;
+        k2 = ((KSEXT *)src_ptr->p_elem)->k2 *
+             ((KSEXT *)src_ptr->p_elem)->length;
+        break;
+      case T_KQUSE:
+        tilt = ((KQUSE*)src_ptr->p_elem)->tilt;
+        j1 = -((KQUSE*)src_ptr->p_elem)->k1 *
+             ((KQUSE*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((KQUSE*)src_ptr->p_elem)->k2 * ((KQUSE*)src_ptr->p_elem)->length;
+        break;
+      case T_SBEN:
+      case T_RBEN:
+        tilt = ((BEND*)src_ptr->p_elem)->tilt;
+        j1 = -((BEND*)src_ptr->p_elem)->k1 *
+             ((BEND*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((BEND*)src_ptr->p_elem)->k2 * ((BEND*)src_ptr->p_elem)->length;
+        break;
+      case T_CSBEND:
+        tilt = ((CSBEND*)src_ptr->p_elem)->tilt;
+        j1 = -((CSBEND*)src_ptr->p_elem)->k1 *
+             ((CSBEND*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((CSBEND*)src_ptr->p_elem)->k2 *
+             ((CSBEND*)src_ptr->p_elem)->length;
+        break;
+      case T_CSRCSBEND:
+        tilt = ((CSRCSBEND*)src_ptr->p_elem)->tilt;
+        j1 = -((CSRCSBEND*)src_ptr->p_elem)->k1 *
+             ((CSRCSBEND*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((CSRCSBEND*)src_ptr->p_elem)->k2 *
+             ((CSRCSBEND*)src_ptr->p_elem)->length;
+        break;
+      case T_QUAD:
+        tilt = ((QUAD*)src_ptr->p_elem)->tilt;
+        j1 = -((QUAD*)src_ptr->p_elem)->k1 *
+             ((QUAD*)src_ptr->p_elem)->length * sin(2. * tilt);
+        break;
+      case T_KQUAD:
+        tilt = ((KQUAD*)src_ptr->p_elem)->tilt;
+        j1 = -((KQUAD*)src_ptr->p_elem)->k1 *
+             ((KQUAD*)src_ptr->p_elem)->length * sin(2. * tilt);
+        break;
+      default:
+        break;
+      }
+
+      if (!(k2 || j1 || j2)) {
+        src_ptr = src_ptr->succ;
+        continue;
+      }
+
+      /* Apply rotation */
+      j2 = -k2 * sin(3. * tilt);
+      k2 *= cos(3. * tilt);
+
+      if (src_ptr->pred) {
+        src_betax = (src_ptr->twiss->betax + src_ptr->pred->twiss->betax)/2;
+        src_betay = (src_ptr->twiss->betay + src_ptr->pred->twiss->betay)/2;
+        src_phix = (src_ptr->twiss->phix + src_ptr->pred->twiss->phix)/2;
+        src_phiy  = (src_ptr->twiss->phiy + src_ptr->pred->twiss->phiy)/2;
+      } else {
+        src_betax = (src_ptr->twiss->betax + beamline->twiss0->betax)/2;
+        src_betay = (src_ptr->twiss->betay + beamline->twiss0->betay)/2;
+        src_phix  = (src_ptr->twiss->phix + beamline->twiss0->phix)/2;
+        src_phiy  = (src_ptr->twiss->phiy + beamline->twiss0->phiy)/2;
+      }
+
+      delta_phix = obs_phix - src_phix;
+      delta_phiy = obs_phiy - src_phiy;
+
+      if (delta_phix < 0.) {
+        delta_phix += 2. * M_PI * qx;
+      }
+
+      if (delta_phiy < 0.) {
+        delta_phiy += 2. * M_PI * qy;
+      }
+
+      f10010 += j1 * sqrt(src_betax * src_betay) * exp(ii * (delta_phix - delta_phiy));
+      f10100 += j1 * sqrt(src_betax * src_betay) * exp(ii * (delta_phix + delta_phiy));
+      f30000 += k2 * src_betax * sqrt(src_betax) * exp(3. * ii * delta_phix);
+      f12000 += k2 * src_betax * sqrt(src_betax) * exp(-ii * delta_phix);
+      f10200 += k2 * sqrt(src_betax) * src_betay * exp(ii * (delta_phix + 2. * delta_phiy));
+      f01200 += k2 * sqrt(src_betax) * src_betay * exp(ii * (2. * delta_phiy - delta_phix));
+      f01110 += k2 * sqrt(src_betax) * src_betay * exp(-ii * delta_phix);
+      f00300 += j2 * src_betay * sqrt(src_betay) * exp(ii * 3. * delta_phiy);
+      f00120 += j2 * src_betay * sqrt(src_betay) * exp(-ii * delta_phiy);
+      f20100 += j2 * src_betax * sqrt(src_betay) * exp(ii * (2. * delta_phix + delta_phiy));
+      f20010 += j2 * src_betax * sqrt(src_betay) * exp(ii * (2. * delta_phix - delta_phiy));
+      f11010 += j2 * src_betax * sqrt(src_betay) * exp(-ii * delta_phiy); 
+
+      src_ptr = src_ptr->succ;
+    }
+    f10010 /= 4. * (1. - exp( 2. * M_PI * ii * (qx - qy)));
+    f10100 /= 4. * (1. - exp( 2. * M_PI * ii * (qx + qy)));
+    f30000 /= 48.* (1. - exp( 2. * M_PI * ii * 3. * qx));
+    f12000 /= 16.* (1. - exp( 2. * M_PI * ii * qx));
+    f10200 /= 16.* (1. - exp( 2. * M_PI * ii * (qx + 2. * qy)));
+    f01200 /= 16.* (1. - exp( 2. * M_PI * ii * (2. * qy - qx)));
+    f01110 /= 8. * (1. - exp(-2. * M_PI * ii * qx));
+    f00300 /= 48.* (1. - exp( 2. * M_PI * ii * 3. * qy));
+    f00120 /= 16.* (1. - exp(-2. * M_PI * ii * qy));
+    f20100 /= 16.* (1. - exp( 2. * M_PI * ii * (2. * qx + qy)));
+    f20010 /= 16.* (1. - exp( 2. * M_PI * ii * (2. * qx - qy)));
+    f11010 /= 8.*  (1. - exp(-2. * M_PI * ii * qy));
+
+    beamline->sDrivingTerms.f10010[idx][0] = std::abs<double>(f10010);
+    beamline->sDrivingTerms.f10100[idx][0] = std::abs<double>(f10100);
+    beamline->sDrivingTerms.f30000[idx][0] = std::abs<double>(f30000);
+    beamline->sDrivingTerms.f12000[idx][0] = std::abs<double>(f12000);
+    beamline->sDrivingTerms.f10200[idx][0] = std::abs<double>(f10200);
+    beamline->sDrivingTerms.f01200[idx][0] = std::abs<double>(f01200);
+    beamline->sDrivingTerms.f01110[idx][0] = std::abs<double>(f01110);
+    beamline->sDrivingTerms.f00300[idx][0] = std::abs<double>(f00300);
+    beamline->sDrivingTerms.f00120[idx][0] = std::abs<double>(f00120);
+    beamline->sDrivingTerms.f20100[idx][0] = std::abs<double>(f20100);
+    beamline->sDrivingTerms.f20010[idx][0] = std::abs<double>(f20010);
+    beamline->sDrivingTerms.f11010[idx][0] = std::abs<double>(f11010);
+
+    beamline->sDrivingTerms.f10010[idx][1] = f10010.real();
+    beamline->sDrivingTerms.f10100[idx][1] = f10100.real();
+    beamline->sDrivingTerms.f30000[idx][1] = f30000.real();
+    beamline->sDrivingTerms.f12000[idx][1] = f12000.real();
+    beamline->sDrivingTerms.f10200[idx][1] = f10200.real();
+    beamline->sDrivingTerms.f01200[idx][1] = f01200.real();
+    beamline->sDrivingTerms.f01110[idx][1] = f01110.real();
+    beamline->sDrivingTerms.f00300[idx][1] = f00300.real();
+    beamline->sDrivingTerms.f00120[idx][1] = f00120.real();
+    beamline->sDrivingTerms.f20100[idx][1] = f20100.real();
+    beamline->sDrivingTerms.f20010[idx][1] = f20010.real();
+    beamline->sDrivingTerms.f11010[idx][1] = f11010.real();
+
+    beamline->sDrivingTerms.f10010[idx][2] = f10010.imag();
+    beamline->sDrivingTerms.f10100[idx][2] = f10100.imag();
+    beamline->sDrivingTerms.f30000[idx][2] = f30000.imag();
+    beamline->sDrivingTerms.f12000[idx][2] = f12000.imag();
+    beamline->sDrivingTerms.f10200[idx][2] = f10200.imag();
+    beamline->sDrivingTerms.f01200[idx][2] = f01200.imag();
+    beamline->sDrivingTerms.f01110[idx][2] = f01110.imag();
+    beamline->sDrivingTerms.f00300[idx][2] = f00300.imag();
+    beamline->sDrivingTerms.f00120[idx][2] = f00120.imag();
+    beamline->sDrivingTerms.f20100[idx][2] = f20100.imag();
+    beamline->sDrivingTerms.f20010[idx][2] = f20010.imag();
+    beamline->sDrivingTerms.f11010[idx][2] = f11010.imag();
+
+    idx++;
+    obs_ptr = obs_ptr->succ;
+  }
+}
+
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune, long nPeriods)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 /* Revised to follow C. X. Wang AOP-TN-2009-020 for second-order terms */
@@ -4667,6 +5042,54 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   }
 }
 
-
-
+void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, char *name, char *type, long occurence, LINE_LIST *beamline)
+{
+  if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, row,
+                         "s", position, 
+                         "ElementName", name,
+                         "ElementType", type,
+                         "ElementOccurence", occurence,
+                         "f10010", beamline->sDrivingTerms.f10010[i][0],
+                         "f10100", beamline->sDrivingTerms.f10100[i][0],
+                         "f30000", beamline->sDrivingTerms.f30000[i][0],
+                         "f12000", beamline->sDrivingTerms.f12000[i][0],
+                         "f10200", beamline->sDrivingTerms.f10200[i][0],
+                         "f01200", beamline->sDrivingTerms.f01200[i][0],
+                         "f01110", beamline->sDrivingTerms.f01110[i][0],
+                         "f00300", beamline->sDrivingTerms.f00300[i][0],
+                         "f00120", beamline->sDrivingTerms.f00120[i][0],
+                         "f20100", beamline->sDrivingTerms.f20100[i][0],
+                         "f20010", beamline->sDrivingTerms.f20010[i][0],
+                         "f11010", beamline->sDrivingTerms.f11010[i][0],
+                         
+                         "Ref10010", beamline->sDrivingTerms.f10010[i][1],
+                         "Ref10100", beamline->sDrivingTerms.f10100[i][1],
+                         "Ref30000", beamline->sDrivingTerms.f30000[i][1],
+                         "Ref12000", beamline->sDrivingTerms.f12000[i][1],
+                         "Ref10200", beamline->sDrivingTerms.f10200[i][1],
+                         "Ref01200", beamline->sDrivingTerms.f01200[i][1],
+                         "Ref01110", beamline->sDrivingTerms.f01110[i][1],
+                         "Ref00300", beamline->sDrivingTerms.f00300[i][1],
+                         "Ref00120", beamline->sDrivingTerms.f00120[i][1],
+                         "Ref20100", beamline->sDrivingTerms.f20100[i][1],
+                         "Ref20010", beamline->sDrivingTerms.f20010[i][1],
+                         "Ref11010", beamline->sDrivingTerms.f11010[i][1],
+                               
+                         "Imf10010", beamline->sDrivingTerms.f10010[i][2],
+                         "Imf10100", beamline->sDrivingTerms.f10100[i][2],
+                         "Imf30000", beamline->sDrivingTerms.f30000[i][2],
+                         "Imf12000", beamline->sDrivingTerms.f12000[i][2],
+                         "Imf10200", beamline->sDrivingTerms.f10200[i][2],
+                         "Imf01200", beamline->sDrivingTerms.f01200[i][2],
+                         "Imf01110", beamline->sDrivingTerms.f01110[i][2],
+                         "Imf00300", beamline->sDrivingTerms.f00300[i][2],
+                         "Imf00120", beamline->sDrivingTerms.f00120[i][2],
+                         "Imf20100", beamline->sDrivingTerms.f20100[i][2],
+                         "Imf20010", beamline->sDrivingTerms.f20010[i][2],
+                         "Imf11010", beamline->sDrivingTerms.f11010[i][2],
+                         NULL)) {
+    SDDS_SetError((char*)"Problem setting SDDS rows (s_dependent_driving_terms_file)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+}
 

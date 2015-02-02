@@ -72,6 +72,7 @@
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
     long leading_order_driving_terms_only = 0;
+    STRING s_dependent_driving_terms_file = NULL;
     long local_dispersion = 1;
     long n_periods = 1;
 #end

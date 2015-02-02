@@ -82,10 +82,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 27.0.1"__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 27.0.2"__DATE__", by M. Borland, M. Carla', N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 27.0.1, "__DATE__", by M. Borland, N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 27.0.2, "__DATE__", by M. Borland, M. Carla', N. Carmignani, W. Guo, V. Sajaev, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   time_t timeNow;
   char *timeNowString;
@@ -1115,7 +1115,7 @@ char **argv;
       if (do_closed_orbit)
         finish_clorb_output();
       if (do_twiss_output)
-        finish_twiss_output();
+        finish_twiss_output(beamline);
       if (do_moments_output)
         finishMomentsOutput();
       if (do_coupled_twiss_output)
@@ -1167,7 +1167,7 @@ char **argv;
         delete_phase_references();
         reset_special_elements(beamline, 1);
         reset_driftCSR();
-        finish_twiss_output();
+        finish_twiss_output(beamline);
       }
       break;
     case RF_SETUP:
@@ -1479,7 +1479,7 @@ char **argv;
       if (do_closed_orbit)
         finish_clorb_output();
       if (do_twiss_output)
-        finish_twiss_output();
+        finish_twiss_output(beamline);
       if (do_response_output)
         finish_response_output();
 #ifdef SUNOS4

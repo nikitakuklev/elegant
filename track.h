@@ -45,6 +45,7 @@
 #include <float.h>
 #include <math.h>
 #include <io.h>
+
 /*#define isnan(x) _isnan(x)*/
 #define dup2(x,y) _dup2(x,y)
 #endif
@@ -301,6 +302,21 @@ typedef struct {
   double dnux_dJx, dnux_dJy, dnuy_dJy;
 } DRIVING_TERMS;
 
+typedef struct {
+  double (*f10010)[3];  /* Skew quadrupole */
+  double (*f10100)[3];
+  double (*f30000)[3];  /* Normal sextupole */
+  double (*f12000)[3];
+  double (*f10200)[3];
+  double (*f01200)[3];
+  double (*f01110)[3];
+  double (*f00300)[3];  /* Skew Sextupole */
+  double (*f00120)[3];
+  double (*f20100)[3];
+  double (*f20010)[3];
+  double (*f11010)[3];
+} S_DRIVING_TERMS;
+
 /* Node structure for linked-list of beamline definitions: */
 #define N_TSWA 3
 typedef struct line_list {
@@ -336,6 +352,7 @@ typedef struct line_list {
     double acceptance[4];      /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     double couplingFactor[3];  /* kappa, delta, r from pg 187 of HAPE */
     DRIVING_TERMS drivingTerms;
+    S_DRIVING_TERMS sDrivingTerms; /* s dependent driving terms */
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
     TRAJECTORY *closed_orbit;  /* closed orbit, if previously calculated, starting at recirc element */
@@ -3168,7 +3185,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
                         long default_order);
 void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
-void finish_twiss_output(void);
+void finish_twiss_output(LINE_LIST *beamline);
 void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile);
 void setup_rf_setup(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long do_twiss_output, long *do_rf_setup) ;
 double rfAcceptance_Fq(double q) ;
