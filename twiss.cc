@@ -30,7 +30,9 @@
 #include "fftpackC.h"
 #include "twiss.h"
 #include <stddef.h>
-
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 void computeSDrivingTerms(LINE_LIST *beamline);
 void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, char *name, char *type, long occurence, LINE_LIST *beamline);
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
