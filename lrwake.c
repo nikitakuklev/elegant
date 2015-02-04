@@ -18,11 +18,12 @@ void convolveArrays(double *output, long outputs,
                     double *a2, long n2);
 
 void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
-                                  long *nBuckets)
+                                  long *nBuckets, 
+                                  long lastNBuckets /* Supply this only if the calling algorithm insists that the number of buckets not change */
+                                  )
 {
   long ip, ib;
   long ibMin, ibMax;
-  static long lastNBuckets = -1;
 
 #ifdef DEBUG
   printf("determine_bucket_assignments called\n");
@@ -57,7 +58,6 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
   if (lastNBuckets>0 && *nBuckets>lastNBuckets) 
     bombElegant("Error: number of bunches has increased.", NULL);
-  lastNBuckets = *nBuckets;
   
 #ifdef DEBUG
   fprintf(stdout, "Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
@@ -126,7 +126,8 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   double *xBucket = NULL;     /* array for Q*<x> for bnuches */
   double *yBucket = NULL;     /* array for Q*<y> for buckets */
   double *QBucket = NULL;     /* array for Q for buckets */
-
+  static long lastNBuckets = -1;
+  
   double *VzBucket, *VxBucket, *VyBucket; /* arrays of voltage at each bucket */
   double *time = NULL;        /* array to record arrival time of each particle */
   long ib, ip, nBuckets;
@@ -165,7 +166,8 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 
   P0 = *P0Input;
-  determine_bucket_assignments(part, np, charge?charge->idSlotsPerBunch:0, P0, &time, &ibParticle, NULL, NULL, &nBuckets);
+  determine_bucket_assignments(part, np, charge?charge->idSlotsPerBunch:0, P0, &time, &ibParticle, NULL, NULL, &nBuckets, lastNBuckets);
+  lastNBuckets = nBuckets;
     
 #ifdef DEBUG
   fputs("determine_bucket_assignment returned\n", stdout);

@@ -125,7 +125,7 @@ void track_through_ftrfmode(
     printf("FTRFMODE: Determining bucket assignments\n");
     fflush(stdout);
 #endif
-    determine_bucket_assignments(part0, np0, trfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+    determine_bucket_assignments(part0, np0, trfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #ifdef DEBUG
     printf("FTRFMODE: Done determining bucket assignments\n");
     fflush(stdout);

@@ -941,7 +941,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
 #define N_WIGGLER_PARAMS 10
-#define N_SCRIPT_PARAMS 34
+#define N_SCRIPT_PARAMS 36
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -2665,7 +2665,7 @@ extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
   double length;
   char *command;
-  long useCsh, verbosity, startPass, onPass;
+  long useCsh, verbosity, startPass, endPass, passInterval, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
   long keepFiles, driftMatrix;
   long useParticleID; 
@@ -3616,7 +3616,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
 			  RUN *run, long i_pass, CHARGE *charge);
-void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets);
+void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets,
+                                  long lastNBuckets);
 
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);

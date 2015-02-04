@@ -87,7 +87,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   not_first_call += 1;
 
   if (isSlave || !notSinglePart) {
-    determine_bucket_assignments(part0, np0, (charge && ztransverse->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+    determine_bucket_assignments(part0, np0, (charge && ztransverse->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #ifdef DEBUG
     if (nBuckets>1) {

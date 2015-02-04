@@ -120,7 +120,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
 
   if (isSlave || !notSinglePart) {
-    determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+    determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #ifdef DEBUG
     if (nBuckets>1) {
@@ -272,7 +272,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
       if (isSlave) {
 #if MPI_DEBUG
-        printf("offset = %ld, length = %ld, nb = %ld\n", offset, length, nb);
+        /* printf("offset = %ld, length = %ld, nb = %ld\n", offset, length, nb); */
 #endif
         buffer = malloc(sizeof(double) * length);
         MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);

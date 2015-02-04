@@ -3122,8 +3122,33 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #else
   long npTotal=0, rootnameLength;
 
+  doDrift = 0;
+  if (script->onPass>=0) {
+    if (script->onPass!=iPass)
+      doDrift = 1;
+  } else {
+    if (script->startPass>=0 && script->startPass>iPass)
+      doDrift = 1;
+    if (script->endPass>=0 && iPass>script->endPass)
+      doDrift = 1;
+    if (script->passInterval>0) {
+      if (script->startPass<0)
+        bombElegant("Problem with script element: START_PASS<0 but PASS_INTERVAL>0", NULL);
+      if ((iPass-script->startPass)%script->passInterval!=0)
+        doDrift = 1;
+    }
+  }
+
+  if (doDrift) {
+    drift_beam(part, np, script->length, driftOrder);
+    return np;
+  }
+  
   if (notSinglePart) { 
     MPI_Allreduce (&np, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("n_to_track_total = %ld\n", beam->n_to_track_total);
+#endif
     if (!beam->n_to_track_total)
        return 0;
   }	
@@ -3131,8 +3156,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
   if (!script->rootname || !strlen(script->rootname)) {
     /* generate random rootname */
-    if (isMaster)
-    if (!(rootname = tmpname(NULL)))
+    if (isMaster && !(rootname = tmpname(NULL)))
       bombElegant("problem generating temporary filename for script", NULL);
 #if SDDS_MPI_IO
     if (isMaster)
@@ -3140,9 +3164,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     MPI_Bcast(&rootnameLength, 1, MPI_LONG, 0, MPI_COMM_WORLD);
     if (isSlave) /* Master and slave could have different rootname length if use C-shell, which calls tmpname one more time on master for execution.*/
       rootname = malloc(rootnameLength); 
-  /* As different processors will have different process names, we need
+    /* As different processors will have different process names, we need
      make sure they have the same file name for parallel I/O */
     MPI_Bcast(rootname, rootnameLength, MPI_CHAR, 0, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("rootname = %s\n", rootname);
+#endif
 #endif
   } else 
     rootname = compose_filename(script->rootname, mainRootname);
@@ -3153,18 +3180,17 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       !(output = malloc(sizeof(*output)*nameLength)))
     bombElegant("problem generating temporary filename for script", NULL);
 
-  doDrift = 0;
-  if (script->onPass>=0) {
-    if (script->onPass!=iPass)
-      doDrift = 1;
-  } else if (script->startPass>=0) {
-    if (script->startPass>iPass)
-      doDrift = 1;
-  }
-
-  if (doDrift) {
-    drift_beam(part, np, script->length, driftOrder);
-    return np;
+  if (0) {
+    long pidMin, pidMax;
+    pidMin = LONG_MAX;
+    pidMax = LONG_MIN;
+    for (j=0; j<np; j++) {
+      if (pidMin>part[j][6])
+        pidMin = part[j][6];
+      if (pidMax<part[j][6])
+        pidMax = part[j][6];
+    }
+    fprintf(stdout, "before, pid limits: %ld, %ld\n", pidMin, pidMax);
   }
   
   /* prepare command */
@@ -3277,6 +3303,11 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
   /* read the data from script output file */
 #if SDDS_MPI_IO
+#ifdef MPI_DEBUG
+  printf("Waiting on MPI barrier, notSinglePart = %ld\n", notSinglePart);
+  fflush(stdout);
+#endif
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (notSinglePart) {
@@ -3296,7 +3327,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       SDDS_SetError("Unable to read script output file");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-  }
+  } else 
+    bombElegant("Invalid branch for SCRIPT element. Seek expert help.", NULL);
 #else  
   if (!fexists(output)) 
     SDDS_Bomb("unable to find script output file");
@@ -3337,6 +3369,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_MPI_ReadPage(&SDDSin);
   else if (isMaster) 
     SDDS_ReadPage(&SDDSin);
+#ifdef MPI_DEBUG
+  printf("Finished parallel read of SCRIPT output file\n");
+  fflush(stdout);
+#endif
   if (notSinglePart || (!notSinglePart&&isMaster))
 #endif
   npNew = SDDS_RowCount(&SDDSin);
@@ -3393,6 +3429,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     
     fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
             np+*nLost, np, npNew+*nLost, npNew);
+    fflush(stdout);
     
     if (!beam) {
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
@@ -3408,6 +3445,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       fprintf(stderr, "This could happen if the particleID is not unique.\n");
       exitElegant(1);
     }
+#ifdef MPI_DEBUG
+    printf("Check 1\n");
+    fflush(stdout);
+#endif
 
     if ((npNew+*nLost) > beam->n_particle) {
       if (beam->original==beam->particle) {
@@ -3451,6 +3492,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 2\n");
+    fflush(stdout);
+#endif
   /* Particles could be redistributed, move lost particles into the upper part of the arrays */
   if ((np != npNew) && beam && nLost && beam->lost)
     for (i=0; i<=*nLost-1; i++) {
@@ -3464,27 +3509,38 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     for (j=0; j<npNew; j++) {
-      if (part[j][i] != data[j])
       part[j][i] = data[j];
     }
     free(data);
+    data = NULL;
   }
 
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 3\n");
+    fflush(stdout);
+#endif
   if (!notSinglePart)
     MPI_Bcast(part[0], 7*npNew, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
   if (script->useParticleID ) {
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 4\n");
+    fflush(stdout);
+#endif
     if ((isSlave && notSinglePart) || (isMaster && !notSinglePart))
 #endif
     if (!(data = SDDS_GetColumnInDoubles(&SDDSin, "particleID"))) {
       SDDS_SetError("Unable to read particleID from script output file. Please set USE_PARTICLE_ID=0 if this is desired.\n");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-    if (!script->noNewParticles && (iPass==0))
-	fprintf (stdout, "Warning: New particles are added in the SCRIPT element. The particles lost in the SCRIPT element will not be recorded!\n");
-    else {
+    if (!script->noNewParticles) {
+      if (iPass==0)
+        fprintf (stdout, "Warning: New particles are added in the SCRIPT element. The particles lost in the SCRIPT element will not be recorded!\n");
+      for (j=0; j<npNew; j++)
+        part[j][6] = data[j];
+    } else {
 #if !USE_MPI
       if (npNew<np) {
 	/* Find out which particles are lost */
@@ -3508,6 +3564,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 	}
       }
 #else
+#ifdef MPI_DEBUG
+      printf("Check 5\n");
+      fflush(stdout);
+#endif
       /* Even though particle ID is available, we will not record lost particle coordinates due to particle
 	 redistribution in Pelegant. The particles move from one processor to another make it very complicated 
 	 to find out which particles are lost. While it should be not hard to find the lost particles within 
@@ -3515,18 +3575,38 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       if (beam && (beam->n_to_track_total<npTotal) && (iPass==0))
 	fprintf (stdout, "Warning: Lost particle coordinates in the SCRIPT element will not be recorded.\n");
 #endif
-    } 
+    }
+    if (data)
+      free(data);
   }
 
+  if (0) {
+    long pidMin, pidMax;
+    pidMin = LONG_MAX;
+    pidMax = LONG_MIN;
+    for (j=0; j<npNew; j++) {
+      if (pidMin>part[j][6])
+        pidMin = part[j][6];
+      if (pidMax<part[j][6])
+        pidMax = part[j][6];
+    }
+    fprintf(stdout, "after, np=%ld, pid limits: %ld, %ld\n", npNew, pidMin, pidMax);
+  }
+  
   /* assign new particle IDs if there are new particles */
 #if !USE_MPI
-  if (npNew>np && script->useParticleID) {
+  if (npNew>np && !script->useParticleID) {
+    fprintf(stdout, "Changing particle ID for new particles to make them sequential\n");
     for (j=0; j<npNew; j++)
       part[j][6] = j+1;
   }
 #else
+#ifdef MPI_DEBUG
+    printf("Check 6\n");
+    fflush(stdout);
+#endif
   if (isSlave && notSinglePart) {
-    if (beam && (beam->n_to_track_total>npTotal) && script->useParticleID) {
+    if (beam && (beam->n_to_track_total>npTotal) && !script->useParticleID) {
       long sum=0, tmp, my_offset=0, *offset = tmalloc(n_processors*sizeof(*offset));
       MPI_Allgather (&npNew, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
       tmp = offset[0];
@@ -3546,6 +3626,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
 
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 7\n");
+    fflush(stdout);
+#endif
   if ((!notSinglePart&&isMaster) || notSinglePart)
 #endif
   if (charge) {
@@ -3558,6 +3642,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     charge->charge = totalCharge;
     charge->macroParticleCharge = 0;
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 8\n");
+    fflush(stdout);
+#endif
     if (!notSinglePart) {
       if (npNew)
 	charge->macroParticleCharge = totalCharge/npNew;
@@ -3569,12 +3657,17 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       charge->macroParticleCharge = totalCharge/npNew;
 #endif
     if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8) {
-      printf("*** Warning: macro-particle charge changed after SCRIPT element. This may indicate a problem.\n");
+      printf("*** Warning: macro-particle charge changed after SCRIPT element, from %le to %le. This may indicate a problem.\n",
+             oldMacroParticleCharge, charge->macroParticleCharge);
       printf("             Please ensure that the Charge parameter is set correctly in the output file from your script.\n");
     }
  }
 
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 9\n");
+    fflush(stdout);
+#endif
   if (charge && notSinglePart) {
     MPI_Bcast(&(charge->charge), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&charge->macroParticleCharge, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -3600,8 +3693,18 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     beta = p/sqrt(sqr(p)+1);
     part[j][4] *= beta*c_mks;
   }
-
+  if (!script->useParticleID) {
+    fprintf(stdout, "Assigning fresh IDs to all particles.\n");
+    for (j=0; j<npNew; j++) {
+      part[j][6] = j+1;
+    }
+  }
+  
 #if USE_MPI
+#ifdef MPI_DEBUG
+    printf("Check 10\n");
+    fflush(stdout);
+#endif
   if (isMaster)
 #endif
   if (!script->keepFiles) {
@@ -3613,7 +3716,14 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   /* clean up */
   free(cmdBuffer0);
   free(cmdBuffer1);
-  
+
+#if USE_MPI  
+#ifdef MPI_DEBUG
+    printf("Check 11, npNew = %ld\n", npNew);
+    fflush(stdout);
+#endif
+#endif
+
   return npNew;
 }
 

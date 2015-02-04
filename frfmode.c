@@ -93,7 +93,7 @@ void track_through_frfmode(
 #ifdef DEBUG
     printf("FRFMODE: Determining bucket assignments\n");
 #endif
-    determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets);
+    determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #ifdef DEBUG
     printf("FRFMODE: Done determining bucket assignments\n");
     fflush(stdout);
