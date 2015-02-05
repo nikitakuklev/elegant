@@ -1501,8 +1501,7 @@ long do_tracking(
 	      break;
 	    case T_SCRIPT:
 #if !USE_MPI
-	if (nLeft<nMaximum)
-	      if (((SCRIPT*)eptr->p_elem)->verbosity>1)
+              if (nLeft<nMaximum && ((SCRIPT*)eptr->p_elem)->verbosity>1)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
 			nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
 #endif
@@ -1514,7 +1513,7 @@ long do_tracking(
 	      /* As the particles could be redistributed across processors, we need adjust the beam->n_to_track to dump lost particle coordinate at the end */ 
 	      beam->n_to_track = nLeft+nLost;
 #endif
-	      if (((SCRIPT*)eptr->p_elem)->verbosity>2)
+	      if (((SCRIPT*)eptr->p_elem)->verbosity>2 && nLeft!=nToTrack)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
 			nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
 	      if (beam && coord!=beam->particle) {
@@ -1535,7 +1534,7 @@ long do_tracking(
 	      if (nMaximum<beam->n_to_track)
 		nMaximum = beam->n_to_track;
 #if !USE_MPI
-	      if (((SCRIPT*)eptr->p_elem)->verbosity>1)
+	      if (((SCRIPT*)eptr->p_elem)->verbosity>3)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nMaximum=%ld\n\n",
 			nLost, beam->n_particle, beam->n_to_track, nLeft, nMaximum);
 #endif
@@ -3121,6 +3120,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   long k, lostIndex;
 #else
   long npTotal=0, rootnameLength;
+#endif
 
   doDrift = 0;
   if (script->onPass>=0) {
@@ -3144,6 +3144,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     return np;
   }
   
+#if USE_MPI
   if (notSinglePart) { 
     MPI_Allreduce (&np, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 #if MPI_DEBUG
