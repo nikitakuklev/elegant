@@ -3276,8 +3276,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
 			 "unknown", "unknown",
 			 "transformBeamWithScript");
-    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0, beam?beam->id_slots_per_bunch:0);
-    
+#if USE_MPI
+    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, beam?beam->id_slots_per_bunch:0);
+#else
+    dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np                    :0.0, beam?beam->id_slots_per_bunch:0);
+#endif
+
     if (!SDDS_Terminate(&SDDSout))
       SDDS_Bomb("problem terminating script input file");
   }
@@ -3400,10 +3404,6 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         fflush(stdout);
       }	
     }
-  }
-  if (beam && script->verbosity>0) {
-    fprintf(stdout, "%ld particles in script output file (was %ld)\n", npTotal, beam->n_to_track_total);
-    fflush(stdout);
   }
   if ((!notSinglePart && (npNew>np))||(notSinglePart && (beam->n_to_track_total>npTotal)))
 #endif
