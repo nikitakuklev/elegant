@@ -84,10 +84,12 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #if USE_MPI && defined(DEBUG)  
   static FILE *fpdeb = NULL;
   char s[100];
-  sprintf(s, "zlongit.debu%02d", myid);
-  fpdeb = fopen(s, "w");
-  fprintf(fpdeb, "SDDS1\n&column name=time type=double &end\n&column name=dt1 type=double &end\n&column name=ib type=long &end\n");
-  fprintf(fpdeb, "&column name=V0 type=double &end\n&column name=V1 type=double &end\n&column name=dgamma type=double &end\n&data mode=ascii no_row_counts=1 &end\n");
+  if (!fpdeb) {
+    sprintf(s, "zlongit.debu%02d", myid);
+    fpdeb = fopen(s, "w");
+    fprintf(fpdeb, "SDDS1\n&column name=time type=double &end\n&column name=dt1 type=double &end\n&column name=ib type=long &end\n");
+    fprintf(fpdeb, "&column name=V0 type=double &end\n&column name=V1 type=double &end\n&column name=dgamma type=double &end\n&data mode=ascii no_row_counts=1 &end\n");
+  }
 #endif
   
 #ifdef  USE_MPE /* use the MPE library */
@@ -178,12 +180,16 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-        fprintf(stderr, "%s %s: Time span of bunch (%le s) is more than half the total time span (%le s).\n",
+        fprintf(stdout, "%s %s: Time span of bunch (%le->%le, span %le s) is more than half the total time span (%le s).\n",
                 entity_name[tcontext.elementType],
-                tcontext.elementName, tmax-tmin, nb*dt);
-        fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
-        fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+                tcontext.elementName, tmin, tmax, tmax-tmin, nb*dt);
+        fprintf(stdout, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
+        fprintf(stdout, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
 #if USE_MPI
+#ifdef MPI_DEBUG
+        printf("Issuing MPI abort from ZLONGIT\n");
+        fflush(stdout);
+#endif
         mpiAbort = 1;
         return;
 #else
@@ -430,6 +436,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   
 #if USE_MPI
   MPI_Barrier(workers);
+#endif
+
+#if USE_MPI && defined(DEBUG)
+  fprintf(fpdeb, "\n");
 #endif
 
   if (part && part!=part0)

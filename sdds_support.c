@@ -826,6 +826,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       particles = 0;
 
     MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+    printf("particles = %ld, particles_total = %ld\n", particles, particles_total);
+    fflush(stdout);
+#endif
 #endif
 
     if (isMaster) {
@@ -848,11 +852,22 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
             fflush(stdout);
             abort();
             }
+
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 1\n");
+    fflush(stdout);
+#endif
+
     if (isMaster) 
     if ((watchStartPass==pass) && !SDDS_StartTable(&watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 2\n");
+    fflush(stdout);
+#endif
 
     sample = (pass-watchStartPass)/watch->interval;
     tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
@@ -876,6 +891,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       }
     }
      
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 3\n");
+    fflush(stdout);
+#endif
+
     if (watch->mode_code==WATCH_PARAMETERS) {
       for (i=0; i<2; i++) {
         emitc[i] = emit[i] = 0;
@@ -908,8 +928,17 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       }
     }
 
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 4\n");
+    fflush(stdout);
+#endif
+
 #if SDDS_MPI_IO 
     emittance_l = rms_longitudinal_emittance_p(particle, particles, Po, watch->startPID, watch->endPID);  
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 4.1\n");
+    fflush(stdout);
+#endif
     if (isMaster) {
       if (watch->mode_code==WATCH_PARAMETERS)
 	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
@@ -918,6 +947,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	}
     }
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 4.2\n");
+    fflush(stdout);
+#endif
 #else
     emittance_l=rms_longitudinal_emittance(particle, particles, Po, watch->startPID, watch->endPID);
     if (watch->mode_code==WATCH_PARAMETERS)
@@ -927,6 +960,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
 #endif
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 5\n");
+    fflush(stdout);
+#endif
+
     /* time centroid and sigma */
     for (i=npCount=p_sum=gamma_sum=sum=0; i<particles; i++) {
       if (watch->startPID==watch->endPID || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID)) {
@@ -971,6 +1009,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
+#endif
+
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 6\n");
+    fflush(stdout);
 #endif
 
     if (isMaster) {
@@ -1028,6 +1071,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif   
       log_exit("dump_watch_parameters");
     }
+#ifdef DEBUG
+    printf("dump_watch_parameters checkpoint 7\n");
+    fflush(stdout);
+#endif
+
 }
 
 

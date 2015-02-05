@@ -869,8 +869,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
     double s11, s12, s22, dt, ddp, s[3], s_total[3];
     double tc, dpc, beta, P, tmp[2], tmp_total[2];
     long i, npCount, npCount_total;
-    static double *time = NULL;
-    static long max_n = 0;
+    double *time = NULL;
     long n_total;
 
     if (notSinglePart) {
@@ -881,7 +880,11 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
       if (!n)
 	return(0.0);    
     }
-    
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, n=%ld, n_total=%ld\n", n, n_total);
+    fflush(stdout);
+#endif
+
     if (!n_total)
         return(0.0);
 
@@ -890,6 +893,10 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
         npCount++;
       }
     }
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, npCount=%ld\n", npCount);
+    fflush(stdout);
+#endif
 
     if (isMaster)
       npCount = 0;
@@ -897,9 +904,16 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
     if (!npCount_total)
       return 0.0;
 
-    if (npCount>max_n)
-        time = trealloc(time, sizeof(*time)*(max_n=n));
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, npCount_total=%ld\n", npCount_total);
+    fflush(stdout);
+#endif
+    time = tmalloc(sizeof(*time)*n);
  
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, realloc of time finished\n");
+    fflush(stdout);
+#endif
     if(isMaster)
       log_entry("rms_logitudinal_emittance");
 
@@ -913,6 +927,11 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
         dpc += coord[i][5];
       }
     }
+ 
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, centroid computation finished\n");
+    fflush(stdout);
+#endif
     
     tmp[0] = tc; tmp[1] = dpc;
     MPI_Allreduce (&tmp, &tmp_total, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -930,9 +949,22 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
     s[0] = s11; s[1] = s12; s[2] = s22;
     MPI_Reduce (s, s_total, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
    
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, sigma computation finished\n");
+    fflush(stdout);
+#endif
+    
     if (isMaster)
       log_exit("rms_longitudinal_emittance");
      
+   
+    free(time);
+    
+#ifdef DEBUG 
+    printf("rms_longitudinal_emittance_p, returning\n");
+    fflush(stdout);
+#endif
+
     /* Only the master will return meaningful result */
     return(SAFE_SQRT(s_total[0]*s_total[2]-sqr(s_total[1]))/npCount_total);
     }

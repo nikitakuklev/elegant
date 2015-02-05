@@ -577,6 +577,10 @@ long do_tracking(
     }
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 1\n");
+      fflush(stdout);
+#endif
       if (trackingOmniWedgeFunction) 
         (*trackingOmniWedgeFunction)(coord, nToTrack, i_pass, i_elem, beamline->n_elems, eptr, P_central);
       if (trackingWedgeFunction && eptr==trackingWedgeElement)
@@ -1741,6 +1745,10 @@ long do_tracking(
                                  &(run->apertureData));
           }
 	}
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 10\n");
+      fflush(stdout);
+#endif
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
           fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
@@ -1755,6 +1763,10 @@ long do_tracking(
                 eptr->name);
         fflush(stdout);
       }
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 11\n");
+        fflush(stdout);
+#endif
       if (flags&FIRST_BEAM_IS_FIDUCIAL) {
         if (!(flags&FIDUCIAL_BEAM_SEEN)) {
           short blockP0Change;
@@ -1779,6 +1791,10 @@ long do_tracking(
         eptr->Pref_output_fiducial = *P_central;
       } else if (!(flags&FIDUCIAL_BEAM_SEEN))
         eptr->Pref_output_fiducial = *P_central;
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 12\n");
+        fflush(stdout);
+#endif
       if (eptr->Pref_output_fiducial==0)
         bombElegant("problem with fiducialization. Seek expert help!", NULL);
       if (i_pass==0 && traj_vs_z) {
@@ -1803,6 +1819,10 @@ long do_tracking(
         }
         i_traj++;
       }
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 13\n");
+        fflush(stdout);
+#endif
       if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
 	if (!(classFlags&UNIPROCESSOR)) { /* This function will be parallelized in the future */
@@ -1818,6 +1838,10 @@ long do_tracking(
 				   eptr->name, eptr->end_pos, 0); 
 	sliceAnDone = 1;
       }
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 14\n");
+        fflush(stdout);
+#endif
 #if USE_MPI
       if (notSinglePart) {
 	if (!(classFlags&(UNIPROCESSOR|MPALGORITHM))) {
@@ -1837,6 +1861,10 @@ long do_tracking(
 	}
       }
 #endif
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 15\n");
+        fflush(stdout);
+#endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
         nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
 
@@ -1853,13 +1881,34 @@ long do_tracking(
         	accumulateSCMULT(coord, nToTrack, eptr);
       }
 
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 16\n");
+        fflush(stdout);
+#endif
+
 #if USE_MPI
       if (flags&ALLOW_MPI_ABORT_TRACKING) {
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 16.1\n");
+        fflush(stdout);
+#endif
 	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
 	   to know because it doesn't run the procedure. Here we check for setting of the mpiAbort variable on any processor */
 	MPI_Barrier(MPI_COMM_WORLD);
+#ifdef DEBUG 
+          printf("do_tracking checkpoint 16.2\n");
+          fflush(stdout);
+#endif
 	MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
+#ifdef DEBUG 
+          printf("do_tracking checkpoint 16.3\n");
+          fflush(stdout);
+#endif
 	if (mpiAbortGlobal) {
+#ifdef DEBUG 
+          printf("do_tracking checkpoint 16.4\n");
+          fflush(stdout);
+#endif
 	  exitElegant(1);
 	}
       }
@@ -1871,7 +1920,16 @@ long do_tracking(
       i_elem++;
       nToTrack = nLeft;
         
+#ifdef DEBUG 
+        printf("do_tracking checkpoint 16.5\n");
+        fflush(stdout);
+#endif
+
     } /* end of the while loop */
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 17\n");
+      fflush(stdout);
+#endif
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
       if (notSinglePart) {
@@ -1899,6 +1957,10 @@ long do_tracking(
 #endif
     }
 
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 18\n");
+      fflush(stdout);
+#endif
 
     log_exit("do_tracking.2.2");
 #ifdef WATCH_MEMORY
@@ -1982,6 +2044,11 @@ long do_tracking(
       }
     }
  
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 19\n");
+      fflush(stdout);
+#endif
+
     if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
         (run->wrap_around || i_pass==n_passes-1)) {
       if (i_sums<0)
@@ -1996,6 +2063,11 @@ long do_tracking(
       i_sums++;
     }
  
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 20\n");
+      fflush(stdout);
+#endif
+
 #if USE_MPI
     if (notSinglePart) {
       if (run->load_balancing_on==1) {  /* User can choose if load balancing needs to be done */
@@ -2063,9 +2135,17 @@ long do_tracking(
       if (myid==0)
 	old_nToTrack = nToTrack;
     }
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 21\n");
+      fflush(stdout);
+#endif
 #endif
   } /* end of the for loop for n_passes*/
 
+#ifdef DEBUG 
+      printf("do_tracking checkpoint 22\n");
+      fflush(stdout);
+#endif
 
 #ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
       if (!USE_MPI || needSort)
@@ -3447,7 +3527,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       exitElegant(1);
     }
 #ifdef MPI_DEBUG
-    printf("Check 1\n");
+    printf("Script check 1\n");
     fflush(stdout);
 #endif
 
@@ -3494,7 +3574,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 2\n");
+    printf("Script check 2\n");
     fflush(stdout);
 #endif
   /* Particles could be redistributed, move lost particles into the upper part of the arrays */
@@ -3518,7 +3598,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 3\n");
+    printf("Script check 3\n");
     fflush(stdout);
 #endif
   if (!notSinglePart)
@@ -3527,7 +3607,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (script->useParticleID ) {
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 4\n");
+    printf("Script check 4\n");
     fflush(stdout);
 #endif
     if ((isSlave && notSinglePart) || (isMaster && !notSinglePart))
@@ -3567,7 +3647,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       }
 #else
 #ifdef MPI_DEBUG
-      printf("Check 5\n");
+      printf("Script check 5\n");
       fflush(stdout);
 #endif
       /* Even though particle ID is available, we will not record lost particle coordinates due to particle
@@ -3604,7 +3684,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 #else
 #ifdef MPI_DEBUG
-    printf("Check 6\n");
+    printf("Script check 6\n");
     fflush(stdout);
 #endif
   if (isSlave && notSinglePart) {
@@ -3629,7 +3709,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 7\n");
+    printf("Script check 7\n");
     fflush(stdout);
 #endif
   if ((!notSinglePart&&isMaster) || notSinglePart)
@@ -3645,7 +3725,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     charge->macroParticleCharge = 0;
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 8\n");
+    printf("Script check 8\n");
     fflush(stdout);
 #endif
     if (!notSinglePart) {
@@ -3667,7 +3747,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 9\n");
+    printf("Script check 9\n");
     fflush(stdout);
 #endif
   if (charge && notSinglePart) {
@@ -3683,7 +3763,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (script->verbosity) {
-    fprintf(stdout, "done with file\n");
+    fprintf(stdout, "Done processing particle input file from script\n");
     fflush(stdout);
   }
 
@@ -3704,7 +3784,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   
 #if USE_MPI
 #ifdef MPI_DEBUG
-    printf("Check 10\n");
+    printf("Script check 10\n");
     fflush(stdout);
 #endif
   if (isMaster)
@@ -3721,7 +3801,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
 #if USE_MPI  
 #ifdef MPI_DEBUG
-    printf("Check 11, npNew = %ld\n", npNew);
+    printf("Script check 11, npNew = %ld\n", npNew);
     fflush(stdout);
 #endif
 #endif
