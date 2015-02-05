@@ -4,7 +4,6 @@ all:: elegant.ps elegant.pdf overview.ps overview.pdf Pelegant.ps Pelegant.pdf h
 elegant.ps:
 	rm -f elegant.aux elegant.dvi elegant.log elegant.toc dictionary.tex
 	elegant print_dict.ele
-	replaceText -original=\\begin\{latexonly\},\\end\{latexonly\} -repl=%\\begin\{latexonly\},%\\end\{latexonly\} dictionary.tex
 	latex elegant
 	latex elegant
 	dvips elegant -o elegant.ps
@@ -35,8 +34,9 @@ Pelegant.pdf: Pelegant.ps
 
 html:
 	mkdir -p elegant
+	elegant print_dict.ele
 	htlatex elegant "html,3" "" "-delegant/"
-	rm -f *.html *.png *.css *.4ct *.tmp *.dvi *.idv *.4tc *.lg *.xref *.log *.aux
+	rm -f *.html *.png *.css *.4ct *.tmp *.dvi *.idv *.4tc *.lg *.xref *.log *.aux dictionary.tex 
 	mkdir -p Pelegant
 	htlatex Pelegant "html,3" "" "-dPelegant/"
 	rm -f *.html *.png *.css *.4ct *.tmp *.dvi *.idv *.4tc *.lg *.xref *.log *.aux
