@@ -3428,7 +3428,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     /* We may have to resize the arrays in the BEAM structure */
     
     fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
-            np+*nLost, np, npNew+*nLost, npNew);
+            np+(nLost?*nLost:0), np, npNew+(nLost?*nLost:0), npNew);
     fflush(stdout);
     
     if (!beam) {
@@ -3438,10 +3438,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       exitElegant(1);
     }
     /* Check that previous particle counts are correct */
-    if ((np+*nLost)!=beam->n_to_track) {
+    if ((np+(nLost?*nLost:0))!=beam->n_to_track) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
       fprintf(stderr, "np = %ld, *nLost = %ld, beam->n_to_track = %ld, beam->n_particle=%ld\n",
-              np, *nLost, beam->n_to_track, beam->n_particle);
+              np, (nLost?*nLost:0), beam->n_to_track, beam->n_particle);
       fprintf(stderr, "This could happen if the particleID is not unique.\n");
       exitElegant(1);
     }
@@ -3450,7 +3450,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     fflush(stdout);
 #endif
 
-    if ((npNew+*nLost) > beam->n_particle) {
+    if ((npNew+(nLost?*nLost:0)) > beam->n_particle) {
       if (beam->original==beam->particle) {
         /* This means, oddly enough, that the particle array and original array are the same because the
          * separate original array wasn't needed.  n_original gives the size of both arrays (including
@@ -3463,17 +3463,17 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         copy_particles(beam->particle, beam->original, beam->n_original);
       }
       /* resize the particle array, leaving space for the lost particle data at the top */
-      if (!(beam->particle = (double**)resize_czarray_2d((void**)beam->particle,sizeof(double), npNew+*nLost, 7)) ||
-          !(beam->lost = (double**)resize_czarray_2d((void**)beam->lost,sizeof(double), npNew+*nLost, 8))) {
+      if (!(beam->particle = (double**)resize_czarray_2d((void**)beam->particle,sizeof(double), npNew+(nLost?*nLost:0), 7)) ||
+          !(beam->lost = (double**)resize_czarray_2d((void**)beam->lost,sizeof(double), npNew+(nLost?*nLost:0), 8))) {
         fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
-                npNew+*nLost);
+                npNew+(nLost?*nLost:0));
         exitElegant(1);
       }
-      beam->n_particle = npNew+*nLost;
+      beam->n_particle = npNew+(nLost?*nLost:0);
 #if !USE_MPI
       /* move lost particles into the upper part of the arrays */
       if (beam->lost)
-	for (i=*nLost-1; i>=0; i--) {
+	for (i=(nLost?*nLost:0)-1; i>=0; i--) {
 	  swapParticles(beam->lost[np+i], beam->lost[npNew+i]);
       }
 #endif
@@ -3481,10 +3481,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     
     if (beam->accepted)  {
       /* this data is invalid when particles are added */
-      free_czarray_2d((void**)beam->accepted, np+*nLost, 7);
+      free_czarray_2d((void**)beam->accepted, np+(nLost?*nLost:0), 7);
       beam->accepted = NULL;
     }
-    beam->n_to_track = npNew+*nLost;
+    beam->n_to_track = npNew+(nLost?*nLost:0);
     fprintf(stdout, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
 	    beam->n_particle, beam->n_to_track);
    
@@ -3498,7 +3498,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   /* Particles could be redistributed, move lost particles into the upper part of the arrays */
   if ((np != npNew) && beam && nLost && beam->lost)
-    for (i=0; i<=*nLost-1; i++) {
+    for (i=0; i<=(nLost?*nLost:0)-1; i++) {
       swapParticles(beam->lost[np+i], beam->lost[npNew+i]);
     }
   if ((isSlave && notSinglePart) || (isMaster && !notSinglePart)) 
@@ -3552,7 +3552,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 	  }
 	  if (j==npNew) { /* record the lost particle */
 	    /* Copy the lost particles in the SCRIPT element into the upper part of the arrays. */
-	    (*nLost)++;
+	    if (nLost)
+              (*nLost)++;
 	    if (beam->lost) {
 	      for (k=0; k<7; k++) {
 		beam->lost[lostIndex][k] = part[i][k];
