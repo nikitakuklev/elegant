@@ -1954,7 +1954,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   char buffer[16384];
   char *specialDescription = "Optionally used to assign an element to a group, with a user-defined name.  Group names will appear in the parameter output file in the column ElementGroup";
   if (latex_form) {
-    fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
+    fprintf(fp, "\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
     fprintf(fp, "Parallel capable? : %s\\\\\n", entity_description[type].flags&UNIPROCESSOR?"no":"yes");
@@ -1981,7 +1981,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     if (latex_form && texLines>35) {
       texLines = 0;
       fprintf(fp, "\\end{tabular}\n\n");
-      fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n\\end{latexonly}\n", 
+      fprintf(fp, "\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n", 
               entity_name[type]);
       fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
       fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
