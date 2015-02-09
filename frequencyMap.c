@@ -111,6 +111,12 @@ void setupFrequencyMap(
     SDDS_SetError("Unable to write SDDS layout for aperture search");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+#else
+  /* Open file here for parallel IO */
+  if (!SDDS_MPI_File_Open(SDDS_fmap.MPI_dataset, SDDS_fmap.layout.filename, SDDS_MPI_WRITE_ONLY)) 
+    SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_fmap.MPI_dataset->MPI_file);
+  if (!SDDS_MPI_WriteLayout(&SDDS_fmap))  
+    SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_fmap.MPI_dataset->MPI_file);
 #endif  
 }
 
@@ -139,12 +145,6 @@ long doFrequencyMap(
     sprintf(s, "fma-debug%03d.txt", myid);
     fpd = fopen(s, "w");
   }
-  /* Open file here for parallel IO */
-  if (!SDDS_MPI_File_Open(SDDS_fmap.MPI_dataset, SDDS_fmap.layout.filename, SDDS_MPI_WRITE_ONLY)) 
-    SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_fmap.MPI_dataset->MPI_file);
-  if (!SDDS_MPI_WriteLayout(&SDDS_fmap))  
-    SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_fmap.MPI_dataset->MPI_file);
-
   particles = ndelta*nx*ny/n_processors;
   if (myid < ndelta*nx*ny%n_processors) 
     particles++;
