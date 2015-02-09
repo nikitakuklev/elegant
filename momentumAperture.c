@@ -358,9 +358,6 @@ long doMomentumApertureSearch(
   elementArray = NULL;
   skipElements = skip_elements;
   while (elem && nElem<process_elements && elem->end_pos<s_end) {
-#ifdef DEBUG
-    printf("checking element %s\n", elem->name); fflush(stdout);
-#endif
     if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
         (!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern)) ) {
@@ -374,9 +371,6 @@ long doMomentumApertureSearch(
       nElem++;
       elementArray = SDDS_Realloc(elementArray, sizeof(*elementArray)*(nElem+10));
       elementArray[nElem-1] = elem;
-#ifdef DEBUG
-      printf("  including element %s\n", elem->name); fflush(stdout);
-#endif
     }
     elem = elem->succ;
   }
@@ -488,15 +482,16 @@ long doMomentumApertureSearch(
 #endif
 
   while (elem && processElements>0) {
+#ifdef DEBUG
+    printf("checking element %s#%ld\n", elem->name, elem->occurence); fflush(stdout);
+#endif
     if ((!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern))) {
       if (elem->end_pos>s_end) 
         break;
-      if (skipElements>0) {
-        skipElements --;
-        elem = elem->succ;
-        continue;
-      }
+#ifdef DEBUG
+      printf("including element %s#%ld\n", elem->name, elem->occurence); fflush(stdout);
+#endif
       if (output_mode==0) {
 #if USE_MPI
         jobCounter++;
