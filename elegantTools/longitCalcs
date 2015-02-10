@@ -118,6 +118,7 @@ proc compute {} {
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicCavityPhase
+    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
 
     if [expr $harmonicRatio<=1] {
         set harmonicMode None
@@ -143,7 +144,6 @@ proc compute {} {
             set synchTune [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
             set synchFreq [expr $synchTune*$revFreq1]
             set bunchLength [expr $Sdelta0*$cMKS*sqrt($alphac*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))]
-            set bunchDuration [expr $bunchLength/$cMKS]
             set coupling [expr sqrt($alphac*$voltage*cos($synchPhase)*$omegaRF/($energy*$revFreq1*4.0))]
         }
         Lengthen {
@@ -153,7 +153,7 @@ proc compute {} {
             set k [expr sqrt(1/($m*$m) - 1/(($m*$m-1)*pow($overVoltage,2)))]
             set voltageRatio $k
             set harmonicPhase [expr asin(-1/($overVoltage*($m*$m-1)*$k))]
-            set harmonicCavityPhase [expr $harmonicPhase*180/3.14159265]
+            set harmonicCavityPhase [expr $harmonicPhase*180/$pi]
             if [expr $harmonicCavityPhase<0] {
                 set harmonicCavityPhase [expr $harmonicCavityPhase+360]
             }
@@ -175,14 +175,50 @@ proc compute {} {
             set synchTune [expr $synchTune0*sqrt(1 + $harmonicRatio*$voltageRatio/cos($synchPhase))]
             set synchFreq [expr $synchTune*$revFreq1]
             set bunchLength [expr $Sdelta0*$cMKS*sqrt($alphac*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))/sqrt(1 + $harmonicRatio*$voltageRatio/cos($synchPhase))]
-            set bunchDuration [expr $bunchLength/$cMKS]
             set coupling ?
         }
     }
 
     set synchPhaseDeg [expr 180-180.0*$synchPhase/$pi]
     set lastHarmonicMode $harmonicMode
+    set bunchDuration [expr $bunchLength/$cMKS]
+
+    computeBunchShape
+
     update
+}
+
+proc computeBunchShape {} {
+    global dataItemList
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
+    global bunchDuration superPeriods revFreq1 sMax1 sMax
+    global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicCavityPhase
+    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
+
+    exec sddssequence -pipe=out -define=t,type=double,units=s -sequence=begin=[expr -0.25e-6/$rfFrequency],end=[expr 0.25e-6/$rfFrequency],n=10000 \
+        | sddsprocess -pipe=in $twiss.longit \
+        "-define=param,C1,[expr $alphac*$cMKS*$voltage/($energy*$sMax1*$omegaRF)]" \
+        "-define=param,alphac,$alphac" \
+        "-define=param,Sdelta0,$Sdelta0" \
+        "-define=param,phis,$synchPhaseDeg dtor" \
+        "-define=param,k,$voltageRatio" \
+        "-define=param,n,$harmonicRatio,type=short" \
+        "-define=param,phih,$harmonicCavityPhase dtor" \
+        "-define=param,omega,$omegaRF" \
+        "-define=col,phi,omega t *" \
+        "-define=col,Phi1,phis cos  phi     phis + cos -" \
+        "-define=col,Phi2,phih cos  phi n * phih + cos - k * n /" \
+        "-define=col,Phi3,phis sin  phih sin k * + phi *" \
+        "-define=col,Phi,Phi1 Phi2 + Phi3 - C1 *" \
+        "-define=col,rhoArg,Phi alphac sqr / Sdelta0 sqr / chs" \
+        -process=rhoArg,min,%sMin \
+        "-define=col,rho,rhoArg chs exp" \
+        -process=rho,integ,rhoInteg,functionOf=t \
+        "-redefine=col,rho,rho rhoInteg /" \
+        -process=t,rms,tRms,weight=rho
+
+    exec sddsplot -column=t,rho $twiss.longit -title=@tRms &
 }
 
 compute
