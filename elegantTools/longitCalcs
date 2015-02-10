@@ -68,13 +68,15 @@ APSRadioButtonFrame  .mode -parent .userFrame.hharm.frame -label "Mode: " \
     -commandList [list compute compute compute]
 set harmonicRatio 4
 set voltageRatio 0
+set harmonicPhase 0
 APSLabeledEntry .harmonicRatio -parent .userFrame.hharm.frame \
     -label "Freq. ratio" -textVariable harmonicRatio -type integer -width 22
 APSLabeledEntry .voltageRatio -parent .userFrame.hharm.frame \
     -label "Volt. ratio" -textVariable voltageRatio -width 22 -type real
+APSLabeledEntry .harmonicCavityPhase -parent .userFrame.hharm.frame \
+    -label "Phase (deg)" -textVariable harmonicCavityPhase -width 22 -type real
 bind .userFrame.hharm.frame.harmonicRatio.entry <Return> compute
 bind .userFrame.hharm.frame.voltageRatio.entry <Return> compute
-APSDisableWidget .userFrame.hharm.frame.voltageRatio.entry
 set lastHarmonicMode None
 
 set synchTune 0
@@ -115,7 +117,7 @@ proc compute {} {
     eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune
     global bunchDuration superPeriods revFreq1 sMax1 sMax
-    global harmonicRatio voltageRatio harmonicMode lastHarmonicMode
+    global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicCavityPhase
 
     if [expr $harmonicRatio<=1] {
         set harmonicMode None
@@ -134,8 +136,8 @@ proc compute {} {
     set overVoltage [expr $voltage/$U1]
     switch $harmonicMode {
         None {
-            APSDisableWidget .userFrame.hharm.frame.voltageRatio.entry
             set voltageRatio 0
+            set harmonicCavityPhase 0
             set synchPhase [expr asin($U1/$voltage)]
             set rfAcceptance [expr sqrt(2*$U1/($pi*$alphac*$harmonic*$energy)*(sqrt($overVoltage*$overVoltage-1)-acos(1/$overVoltage)))]
             set synchTune [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
@@ -145,12 +147,18 @@ proc compute {} {
             set coupling [expr sqrt($alphac*$voltage*cos($synchPhase)*$omegaRF/($energy*$revFreq1*4.0))]
         }
         Lengthen {
-            APSDisableWidget .userFrame.hharm.frame.voltageRatio.entry
             set m $harmonicRatio*1.0
             set f1 [expr $m*$m/($m*$m-1)/$overVoltage]
             set synchPhase [expr asin($f1)]
-            set harmonicPhase [expr $f1/$m/sqrt(1-$f1*$f1)]
-            set voltageRatio [expr 1/($m*$m) - 1/(($m*$m-1)*$overVoltage)]
+            set k [expr sqrt(1/($m*$m) - 1/(($m*$m-1)*pow($overVoltage,2)))]
+            set voltageRatio $k
+            set harmonicPhase [expr asin(-1/($overVoltage*($m*$m-1)*$k))]
+            set harmonicCavityPhase [expr $harmonicPhase*180/3.14159265]
+            if [expr $harmonicCavityPhase<0] {
+                set harmonicCavityPhase [expr $harmonicCavityPhase+360]
+            }
+            #set check [expr $voltage*(sin($synchPhase) + $voltageRatio*sin($harmonicPhase))-$U1]
+            #puts stderr "check: $check"
             set synchTune0 [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
             set synchFreq ?
             set synchTune ?
@@ -159,10 +167,6 @@ proc compute {} {
             set bunchLength [expr 2/3.6256*pow(3./($m*$m-1), 0.25)*sqrt(2*$harmonic*$alphac*$Sdelta0/$synchTune0)*$cMKS/$omegaRF]
         }
         Shorten {
-            if [string compare $harmonicMode $lastHarmonicMode]!=0 {
-                APSEnableWidget .userFrame.hharm.frame.voltageRatio.entry
-                set voltageRatio 0
-            }
             if [expr $voltageRatio<0] {
                 set voltageRatio 0
             }
