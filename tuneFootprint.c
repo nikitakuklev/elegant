@@ -501,7 +501,7 @@ long doTuneFootprint(
             lost = 0;
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
-					  startingCoord, x, y, delta, turns,
+					  startingCoord, x, y, delta, turns, 0,
 					  0, endingCoord, NULL, NULL, 1, 1) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
               lost = 1;
@@ -509,7 +509,7 @@ long doTuneFootprint(
               memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
               if (!computeTunesFromTracking(secondTune, secondAmplitude,
                                             beamline->matrix, beamline, run,
-                                            startingCoord, 0.0, 0.0, 0.0, turns,
+                                            startingCoord, 0.0, 0.0, 0.0, turns, turns,
                                             0, endingCoord, NULL, NULL, 1, 1) || 
                   secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                 lost = 1;
@@ -656,7 +656,7 @@ long doTuneFootprint(
             lost = 0;
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
-					  startingCoord, x, y, delta, turns,
+					  startingCoord, x, y, delta, turns, 0,
 					  0, endingCoord, NULL, NULL, 1, 1) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
               lost = 1;
@@ -664,7 +664,7 @@ long doTuneFootprint(
               memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
               if (!computeTunesFromTracking(secondTune, secondAmplitude,
                                             beamline->matrix, beamline, run,
-                                            startingCoord, 0.0, 0.0, 0.0, turns,
+                                            startingCoord, 0.0, 0.0, 0.0, turns, turns,
                                             0, endingCoord, NULL, NULL, 1, 1) || 
                   secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                 lost = 1;

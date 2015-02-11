@@ -3262,7 +3262,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	}
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y, 0,
-                                      tune_shift_with_amplitude_struct.turns, 0, NULL,
+                                      tune_shift_with_amplitude_struct.turns, 0, 0, NULL,
 				      tuneLowerLimit, tuneUpperLimit, 0, nPeriods)) {
 	  lost[ix][iy] = 1;
 	  nLost ++;
@@ -3575,7 +3575,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, double deltaOffset, long turns,
+			      double xAmplitude, double yAmplitude, double deltaOffset, long turns, long turnOffset,
                               long useMatrix,
                               double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit,
 			      long allowLosses, long nPeriods)
@@ -3679,7 +3679,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		       (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, 
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
-                       nPeriods, i-1, NULL, NULL, NULL, NULL, NULL)) {
+                       nPeriods, i-1+turnOffset, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses) {
 	  fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	  fflush(stdout);
