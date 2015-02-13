@@ -3965,6 +3965,8 @@ and is useful for tracking very large numbers of particles.
         equations.  The names of the symbols are the same as the names
         of the columns in the output file.
 \item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
+\item N.B.: slice analysis uses an approximate computation of the normalized emittance, regardless of the
+  setting of the \verb|exact_normalized_emittance| flag in the \verb|global_settings| command.
 \end{itemize}
 
 \begin{verbatim}

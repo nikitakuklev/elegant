@@ -538,12 +538,12 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
   if (S[5][5]) 
     for (i=0; i<4; i++)
       sliceOutput->eta[i] = S[i][5]/S[5][5];
-  sliceOutput->enx[0] = Po*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
-  sliceOutput->eny[0] = Po*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
-  sliceOutput->ecnx[0] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1,
+  sliceOutput->enx[0] = Po*(1+aveCoord[5])*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
+  sliceOutput->eny[0] = Po*(1+aveCoord[5])*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
+  sliceOutput->ecnx[0] = Po*(1+aveCoord[5])*correctedEmittance(S, sliceOutput->eta, 0, 1,
 					       &sliceOutput->betacx[0],
 					       &sliceOutput->alphacx[0]);
-  sliceOutput->ecny[0] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3,
+  sliceOutput->ecny[0] = Po*(1+aveCoord[5])*correctedEmittance(S, sliceOutput->eta, 2, 3,
 					       &sliceOutput->betacy[0],
 					       &sliceOutput->alphacy[0]);
   /* find total bunch duration */
