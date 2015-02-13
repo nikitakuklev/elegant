@@ -657,8 +657,14 @@ long compute_final_properties
 #endif
  
   /* compute normalized emittances */
-  for (i=0; i<4; i++)
-    data[F_NEMIT_OFFSET+i]   = pAverage*data[F_EMIT_OFFSET+i];
+  if (!exactNormalizedEmittance) {
+    for (i=0; i<4; i++)
+      data[F_NEMIT_OFFSET+i]   = pAverage*data[F_EMIT_OFFSET+i];
+  } else {
+    double dummy;
+    for (i=0; i<2; i++)
+      computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+2*i+0, data+F_NEMIT_OFFSET+2*i+1, &dummy, &dummy, sums->sigman, 2*i);
+  }
 
   R = M->R;
   i_data = F_RMAT_OFFSET;

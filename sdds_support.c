@@ -1781,10 +1781,15 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         }
       }
       for (plane=0; plane<=2; plane+=2) {
+        double dummy;
         /* emittance and beam twiss parameters */
         computeEmitTwissFromSigmaMatrix(&emit, &emitc, &beta, &alpha, beam->sigma, plane);
-        emitNorm = emit*beam->p0*(1+beam->centroid[5]);
-        emitcNorm = emitc*beam->p0*(1+beam->centroid[5]);
+        if (exactNormalizedEmittance)
+          computeEmitTwissFromSigmaMatrix(&emitNorm, &emitcNorm, &dummy, &dummy, beam->sigman, plane);
+        else {
+          emitNorm = emit*beam->p0*(1+beam->centroid[5]);
+          emitcNorm = emitc*beam->p0*(1+beam->centroid[5]);
+        }
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+2*plane, emit, 
                                ex_index+1+2*plane, emitNorm,

@@ -2563,6 +2563,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   echoNamelists = echo_namelists;
   mpiRandomizationMode = mpi_randomization_mode;
   srGaussianLimit = SR_gaussian_limit;
+  exactNormalizedEmittance = exact_normalized_emittance;
   if (log_file)
     freopen(log_file, "w", stdout);
   if (error_log_file)

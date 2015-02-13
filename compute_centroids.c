@@ -243,7 +243,7 @@ void zero_beam_sums(
       sums[i].centroid[j] = 0;
     for (j=0; j<7; j++)
       for (k=0; k<7; k++)
-        sums[i].sigma[j][k] = 0;
+        sums[i].sigma[j][k] = sums[i].sigman[j][k] = 0;
     sums[i].n_part = sums[i].z = sums[i].p0 = 0;
   }
 }
@@ -259,8 +259,8 @@ void accumulate_beam_sums(
                           )
 {
   long i_part, i, j;
-  double centroid[7], part[7], *timeCoord;
-  double value, Sij;
+  double centroid[7], centroidn[7], part[7], *timeCoord, *pz = NULL;
+  double value, Sij, Sijn;
   long npCount=0, npCount_total = 0;
   short *chosen = NULL;
   short sparse[7][7] = {
@@ -274,12 +274,18 @@ void accumulate_beam_sums(
   };
   
 #ifdef USE_KAHAN
-  double errorCen[7], errorSig;
+  double errorCen[7], errorCenn[7], errorSig, errorSign;
 #endif
 
   timeCoord = malloc(sizeof(double)*n_part);
   chosen = malloc(sizeof(short)*n_part);
   computeTimeCoordinates(timeCoord, p_central, coord, n_part);
+  
+  if (exactNormalizedEmittance) {
+    pz = malloc(sizeof(double)*n_part);
+    for (i=0; i<n_part; i++) 
+      pz[i] = p_central*(1+coord[i][5])*sqrt(1 + sqr(coord[i][1]) + sqr(coord[i][3]));
+  }
 
   if (!sums->n_part)
     sums->p0 = p_central;
@@ -313,13 +319,21 @@ void accumulate_beam_sums(
     /* compute centroids for present beam and add in to existing centroid data */
     for (i=0; i<7; i++) {
 #ifdef USE_KAHAN
-      errorCen[i] = 0.0;
+      errorCen[i] = errorCenn[i] = 0.0;
 #endif
-      for (centroid[i]=i_part=0; i_part<n_part; i_part++) {
+      for (centroid[i]=centroidn[i]=i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
 #ifndef USE_KAHAN
+          if (exactNormalizedEmittance && (i==1 || i==3)) {
+            /* centroidn[1] and centroidn[3] will be px and py */
+            centroidn[i] += coord[i_part][i]*pz[i_part];
+          }
           centroid[i] += i<6 ? coord[i_part][i] : timeCoord[i_part];
 #else
+          if (exactNormalizedEmittance && (i==1 || i==3)) {
+            /* centroidn[1] and centroidn[3] will be px and py */
+            centroidn[i] = KahanPlus(centroidn[i], coord[i_part][i]*pz[i_part], &errorCenn[i]);
+          }
           centroid[i] = KahanPlus(centroid[i], i<6 ? coord[i_part][i] : timeCoord[i_part], &errorCen[i]); 
 #endif
         }
@@ -327,7 +341,12 @@ void accumulate_beam_sums(
       if (npCount) {	
         sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
         centroid[i] /= npCount;
+        centroidn[i] /= npCount;
       } 
+    }
+    for (i=0; i<6; i++) {
+      if (i!=1 && i!=3)
+        centroidn[i] = centroid[i];
     }
 
     for (i_part=0; i_part<n_part; i_part++)
@@ -364,19 +383,27 @@ void accumulate_beam_sums(
       for (j=i; j<7; j++) {
 #ifdef USE_KAHAN
         double Y, b, SijOld;
-        errorSig=0.0;
+        double Yn, bn, SijOldn;
+        errorSig=errorSign=0.0;
 #endif
-        Sij = 0;
+        Sij = Sijn = 0;
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
           /* Only compute the diagonal blocks and dispersive correlations */
           sums->sigma[j][i] = sums->sigma[i][j] = 0;
+          sums->sigman[j][i] = sums->sigman[i][j] = 0;
           continue;
         }
         for (i_part=0; i_part<n_part; i_part++) {
           if (chosen[i_part]) {
             b = ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part]));
+            if (exactNormalizedEmittance && i<4 && j<4) {
+              bn = (coord[i_part][i]*(i==1 || i==3?pz[i_part]:1)-centroidn[i])*(coord[i_part][j]*(j==1 || j==3?pz[i_part]:1));
+            }
 #ifndef USE_KAHAN
             Sij += b;
+            if (exactNormalizedEmittance && i<4 && j<4) {
+              Sijn += bn;
+            }
 #else
             /* In-line KahanPlus to improve performance */
             /* Sij = KahanPlus(Sij, b, &errorSig); */
@@ -384,10 +411,19 @@ void accumulate_beam_sums(
             SijOld = Sij;
             Sij += Y;
             errorSig = Y - (Sij-SijOld);
+            if (exactNormalizedEmittance && i<4 && j<4) {
+              Yn = bn + errorSign;
+              SijOldn = Sijn;
+              Sijn += Yn;
+              errorSign = Yn - (Sijn-SijOldn);
+            }
 #endif
           }
         }
         sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+        if (exactNormalizedEmittance) {
+          sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*sums->n_part+Sijn)/(sums->n_part+npCount));
+        }
       }
     }
   }
@@ -396,6 +432,8 @@ void accumulate_beam_sums(
   sums->n_part += npCount;
   free(timeCoord);
   free(chosen);
+  if (pz)
+    free(pz);
 }
 
 #else

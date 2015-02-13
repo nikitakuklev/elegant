@@ -78,6 +78,7 @@ extern double srGaussianLimit;
 extern long inhibitFileSync;
 extern long echoNamelists;
 extern long mpiRandomizationMode;
+extern long exactNormalizedEmittance;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -197,6 +198,7 @@ typedef struct {
 typedef struct {
     double centroid[7];  /* centroid[i] = Sum(x[i]/n), i=6 is time */
     double sigma[7][7];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
+    double sigman[7][7]; /* sigman[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n), for normalized coordinates */
     double maxabs[7];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p, max deviation for t */
     double min[7];
     double max[7];

@@ -33,6 +33,7 @@ htab *load_hash;
 long inhibitFileSync = 0;
 long echoNamelists = 1;
 long mpiRandomizationMode = 3;
+long exactNormalizedEmittance = 0;
 
 #if USE_MPI
 short mpiAbort = 0;
