@@ -1887,7 +1887,7 @@ long do_tracking(
 #endif
 
 #if USE_MPI
-      if (flags&ALLOW_MPI_ABORT_TRACKING) {
+      if (flags&ALLOW_MPI_ABORT_TRACKING && !runInSinglePartMode) {
 #ifdef DEBUG 
         printf("do_tracking checkpoint 16.1\n");
         fflush(stdout);
