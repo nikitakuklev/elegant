@@ -982,12 +982,17 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	fflush(fpdebug);
 #endif
 #if MPI_DEBUG
-	  fprintf (stdout, "minimal value is %g on %d\n", result, myid);
+        fprintf (stdout, "minimal value is %g on %d\n", result, myid);
+        fflush(stdout);
 #endif
           if (population_log) {
 	    if (optimization_data->print_all_individuals) 
 	      SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
 	    /* Compute statistics of the results over all processors */
+#if MPI_DEBUG
+            fprintf (stdout, "Computing statistics across cores\n");
+            fflush(stdout);
+#endif
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	    if (isMaster) {
@@ -1006,7 +1011,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	      spread = sqrt(spread/n_processors);
 	    }
 	  }
-
+#if MPI_DEBUG
+        fprintf (stdout, "Finding min/max across cores\n");
+        fflush(stdout);
+#endif
    	  find_global_min_index (&result, &min_location, MPI_COMM_WORLD);
 	  MPI_Bcast(variables->varied_quan_value, variables->n_variables, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 
@@ -1968,7 +1976,7 @@ double optimization_function(double *value, long *invalid)
     rpn_store(twiss_p96.etapy, NULL, twiss_mem[105]);
 
 #if DEBUG
-    fprintf(stdout, "Twiss parameters done.\n");
+    fprintf(stdout, "Twiss parameters stored.\n");
     fflush(stdout);
 #endif
   }
@@ -1996,6 +2004,10 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->radIntegrals.taudelta, NULL, radint_mem[7]);
     for (i=0; i<5; i++)
       rpn_store(beamline->radIntegrals.RI[i], NULL, radint_mem[i+8]);
+#if DEBUG
+    fprintf(stdout, "Radiation integrals stored.\n");
+    fflush(stdout);
+#endif
   }
 
   runMomentsOutput(run, beamline, startingOrbitCoord, 1, 0);
@@ -2034,6 +2046,10 @@ double optimization_function(double *value, long *invalid)
     rpn_store(XYZMin[i], NULL, floorStat_mem[i]);
     rpn_store(XYZMax[i], NULL, floorStat_mem[i+3]);
   }
+#if DEBUG
+    fprintf(stdout, "Floor coordinates stored.\n");
+    fflush(stdout);
+#endif
   compute_end_positions(beamline);
   rpn_store(beamline->revolution_length, NULL, floorCoord_mem[6]);
 
@@ -2065,8 +2081,20 @@ double optimization_function(double *value, long *invalid)
 #endif
     if (center_on_orbit) 
       center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
+#if DEBUG
+    fprintf(stdout, "About to track beam\n");
+#if USE_MPI
+    printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
+           parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+#endif
+    fflush(stdout);
+#endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
+#if DEBUG
+    fprintf(stdout, "Done tracking beam\n");
+    fflush(stdout);
+#endif
 
     if (doFindAperture) {
       double area;
@@ -2269,17 +2297,12 @@ double optimization_function(double *value, long *invalid)
 	if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0)) {
           if (center_on_orbit)
             center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
-	  do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
+	  do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags, 
 			   charge);
         }
   }
   
   
-#if DEBUG
-    fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
-    fflush(stdout);
-#endif
-
 #if USE_MPI
     if (notSinglePart) {
       MPI_Bcast(invalid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
@@ -2299,6 +2322,11 @@ double optimization_function(double *value, long *invalid)
 */
 
     storeOptimRecord(value, variables->n_variables, *invalid, result);
+
+#if DEBUG
+    fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
+    fflush(stdout);
+#endif
 
     log_exit("optimization_function");
     return(result);
