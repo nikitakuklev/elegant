@@ -413,6 +413,10 @@ long compute_final_properties
   static long n_original_total = 0;
 #endif
   log_entry("compute_final_properties");
+#ifdef DEBUG
+  printf("compute_final_properties\n");
+  fflush(stdout);
+#endif  
 
   if (!data)
     bombElegant("return data array is null (compute_final_properties)", NULL);
@@ -423,7 +427,7 @@ long compute_final_properties
   if (isSlave)
   if (!coord)
     bombElegant("particle coordinate array is null (compute_final_properties)", NULL);
-  
+
   /* compute centroids and sigmas */
 #if SDDS_MPI_IO
   if (notSinglePart) {
@@ -546,6 +550,11 @@ long compute_final_properties
       tPosition[i] = deltaPosition[i] = 0;
   }
 
+#ifdef DEBUG
+  printf("compute_final_properties (10)\n");
+  fflush(stdout);
+#endif  
+
   /* transmission */
   if (n_original)
     data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
@@ -619,6 +628,11 @@ long compute_final_properties
       data[F_PERC_OFFSET+i] = tPosition2[i]-tmin;
   }
 
+#ifdef DEBUG
+  printf("compute_final_properties (20)\n");
+  fflush(stdout);
+#endif  
+
   /* compute emittances */
   computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+0, data+F_EMIT_OFFSET+2, NULL, NULL, sums->sigma, 0);
   computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+1, data+F_EMIT_OFFSET+3, NULL, NULL, sums->sigma, 2);
@@ -666,6 +680,11 @@ long compute_final_properties
       computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+2*i+0, data+F_NEMIT_OFFSET+2*i+1, &dummy, &dummy, sums->sigman, 2*i);
   }
 
+#ifdef DEBUG
+  printf("compute_final_properties (30)\n");
+  fflush(stdout);
+#endif  
+
   R = M->R;
   i_data = F_RMAT_OFFSET;
   for (i=0; i<6; i++) 
@@ -691,6 +710,10 @@ long compute_final_properties
   
   /* number of particles */
   data[i_data=F_N_OFFSET] = sums->n_part;
+#ifdef DEBUG
+  printf("compute_final_properties (40)\n");
+  fflush(stdout);
+#endif  
   log_exit("compute_final_properties");
   return(i_data+1);
 }
