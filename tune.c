@@ -313,7 +313,9 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
     
     for (i=0; i<tune->n_families; i++) {
+      short has_wc;
       context = NULL;
+      has_wc = has_wildcards(tune->name[i]);
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
         K1 = (((QUAD*)context->p_elem)->k1 += tune->dK1->a[i][0]);
         if (context->matrix) {
@@ -323,10 +325,13 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         }
         compute_matrix(context, run, NULL);
         type = context->type;
+        if (has_wc && alter_defined_values) {
+          change_defined_parameter(context->name, K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
+        }
       }
       fprintf(stdout, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
       fflush(stdout);
-      if (alter_defined_values) {
+      if (!has_wc && alter_defined_values) {
         fprintf(stdout, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
         fflush(stdout);
         change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
