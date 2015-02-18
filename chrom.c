@@ -312,6 +312,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     unsigned long unstable;
     double lastError, presentError;
     char buffer[256];
+    short has_wc;
     
     log_entry("do_chromaticity_correction");
 
@@ -412,6 +413,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             count = 0;
+            has_wc = has_wildcards(chrom->name[i]);
             while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
                 if (count==0 && (K2_param = confirm_parameter("K2", context->type))<0) {
                     fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
@@ -439,17 +441,20 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
+                if (has_wc && alter_defined_values) {
+                  change_defined_parameter(context->name, K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
+                }
                 /* fprintf(stdout, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
                        chrom->name[i], context->occurence, K2);
                    fflush(stdout);
-                       */
+                   */
               }
             if (verbosityLevel>1) {
               fprintf(stdout, "Change for family %ld (%ld sextupoles): %e\n",
                       i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
               fflush(stdout);
             }
-            if (alter_defined_values)
+            if (!has_wc && alter_defined_values)
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
             }    
 
