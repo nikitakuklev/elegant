@@ -212,6 +212,10 @@ long do_tracking(
   if (notSinglePart && partOnMaster) /* This is a special case when the first beam is fiducial. We need scatter the beam in the second step. */
     distributed = 0;
 #endif 
+#ifdef DEBUG 
+  printf("do_tracking checkpoint 0\n");
+  fflush(stdout);
+#endif
   strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
   if (!coord && !beam)
     bombElegant("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
@@ -235,6 +239,10 @@ long do_tracking(
 #ifdef WATCH_MEMORY
   fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
           cpu_time()/100.0, page_faults(), memory_count());
+  fflush(stdout);
+#endif
+#ifdef DEBUG 
+  printf("do_tracking checkpoint 0.1\n");
   fflush(stdout);
 #endif
   
@@ -281,6 +289,10 @@ long do_tracking(
 #ifdef SORT
   nToTrackAtLastSort = nToTrack;
 #endif
+#ifdef DEBUG 
+  printf("do_tracking checkpoint 0.2\n");
+  fflush(stdout);
+#endif
   
   check_nan = 1;
   eptr = &(beamline->elem);
@@ -309,6 +321,11 @@ long do_tracking(
     }
   }
   reset_driftCSR();
+
+#ifdef DEBUG 
+  printf("do_tracking checkpoint 0.3\n");
+  fflush(stdout);
+#endif
 
   if (!(flags&FIDUCIAL_BEAM_SEEN) && flags&PRECORRECTION_BEAM)
     flags &= ~FIRST_BEAM_IS_FIDUCIAL; 
@@ -363,6 +380,11 @@ long do_tracking(
       }
     }
 
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.4\n");
+    fflush(stdout);
+#endif
+
     ResetNoiseGroupValues();
     if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run, i_pass)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
@@ -394,6 +416,11 @@ long do_tracking(
         bombElegant("space charge calculation can not work together with matrix concatenation tracking. \n Please remove concat_order from run_setup", NULL);
       concatenate_beamline(beamline, run);
     }
+
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.5\n");
+    fflush(stdout);
+#endif
 
     if (run->concat_order && beamline->flags&BEAMLINE_CONCAT_DONE &&
         !(flags&TEST_PARTICLES)) {
@@ -431,6 +458,11 @@ long do_tracking(
       }
     }
       
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.6\n");
+    fflush(stdout);
+#endif
+
     if (sums_vs_z && n_z_points) {
       if (!sums_allocated && !*sums_vs_z) {
         /* allocate storage for beam sums */
@@ -457,6 +489,11 @@ long do_tracking(
     }
     if (run->final_pass && sums_vs_z && n_z_points)
       zero_beam_sums(*sums_vs_z, *n_z_points+1);
+
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.7\n");
+    fflush(stdout);
+#endif
 
     log_exit("do_tracking.2.1");
     log_entry("do_tracking.2.2");
@@ -522,9 +559,19 @@ long do_tracking(
 #endif
     nParticlesStartPass = nToTrack;
 
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.8\n");
+    fflush(stdout);
+#endif
+
     if (getSCMULTSpecCount()) 
       /* prepare space charge effects calculation  */
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
+
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.9\n");
+    fflush(stdout);
+#endif
 
     i_elem = 0;
     if (i_pass==0 && startElem) {
@@ -575,6 +622,11 @@ long do_tracking(
       z = startElem->end_pos;
       startElem = NULL; 
     }
+
+#ifdef DEBUG 
+    printf("do_tracking checkpoint 0.9.9\n");
+    fflush(stdout);
+#endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
 #ifdef DEBUG 
