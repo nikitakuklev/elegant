@@ -18,8 +18,6 @@
 #include "track.h"
 #include "match_string.h"
 
-#define DEBUG 0
-
 typedef struct {
   char *name, *type, *exclude;
 } SC_SPEC;
@@ -180,6 +178,11 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   double sigmax, sigmay, totalCharge;
   int flag;
 
+#ifdef DEBUG
+  printf("entered trackThroughSCMULT\n");
+  fflush(stdout);
+#endif
+
   if ( !USE_MPI || !notSinglePart) {
     if (!np)  
       return;
@@ -193,8 +196,13 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
    if (!np_total)
      return;
     totalCharge = sc->chargePerParticle*(double)np_total;
+#ifdef DEBUG
+    printf("totalCharge = %le, np_total = %ld\n", totalCharge, np_total);
+    fflush(stdout);
+#endif
   }
 #endif
+
   /* compute bunch center */
   for(i=center[0]=center[1]=center[2]=0; i<np; i++) {
     coord = part[i];
@@ -210,6 +218,10 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
     center[1] = center_sum[1]/np_total;
     center[2] = center_sum[2]/np_total;
   } 
+#ifdef DEBUG
+  printf("center[0,1,2] = %le, %le, %le\n", center[0], center[1], center[2]);
+  fflush(stdout);
+#endif
 #else
   center[0] /= np;
   center[1] /= np;
@@ -268,6 +280,10 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   }
 
   sc->dmux=sc->dmuy=0.0;       /* reset space charge strength */
+#ifdef DEBUG
+  printf("returning from trackThroughSCMULT\n");
+  fflush(stdout);
+#endif
 }
 
 void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, double charge)
@@ -325,11 +341,15 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
 
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass )
 {
-  CHARGE *charge;
-	
+  CHARGE *charge = NULL;
+  
   if (!eptr->twiss)
     bombElegant((char*)"Twiss parameters must be calculated before SC tracking.", NULL);
 		
+#ifdef DEBUG
+  printf("initializeSCMULT 0\n"); fflush(stdout);
+#endif
+
   /* initialize charge per particle parameters */
   if (i_pass==0) {
     while(eptr) {
@@ -341,11 +361,15 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
 	  } else {
 #if USE_MPI
 	    long np_total;
-	    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	    sc->chargePerParticle = charge->charge/(double)np_total;	    
+#ifdef DEBUG
+            printf("initializeSCMULT np_total = %ld\n", np_total); fflush(stdout);
+#endif
 #else
 	    sc->chargePerParticle = charge->charge/(double)np;
 #endif	    
+
 	  }
 	} else {
 	  sc->chargePerParticle = charge->chargePerParticle;
@@ -358,6 +382,11 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
       bombElegant((char*)"No charge element is given.", NULL);
 	
   }
+
+#ifdef DEBUG
+  printf("initializeSCMULT 1\n"); fflush(stdout);
+#endif
+
 #if USE_MPI
   /* We set it as single particle case, as the particles have not been distributed 
      when the function is called, all the processors will do the same */
@@ -366,6 +395,9 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   sc->sigmax = computeRmsCoordinate(part, 0, np);
   sc->sigmay = computeRmsCoordinate(part, 2, np);
   sc->sigmaz = computeRmsCoordinate(part, 4, np);
+#ifdef DEBUG
+  printf("initializeSCMULT 2\n"); fflush(stdout);
+#endif
 #if USE_MPI
   /* set it back to parallel execution */
   notSinglePart = 1;
@@ -377,6 +409,10 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
 
   sc->dmux=sc->dmuy=0.0;
   sc->length=0.0;
+#ifdef DEBUG
+  printf("initializeSCMULT 3\n"); fflush(stdout);
+#endif
+
 }
 
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
