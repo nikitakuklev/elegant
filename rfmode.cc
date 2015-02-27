@@ -155,6 +155,20 @@ void track_through_rfmode(
     } else 
       nBuckets = 1;
 
+    if (rfmode->fileInitialized) {
+      long rowsNeeded = nBuckets*(n_passes/rfmode->sample_interval+1);
+      if (pass==0 && (!SDDS_StartPage(&rfmode->SDDSrec, rowsNeeded))) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem setting up RFMODE record file");
+      }
+      if ((pass!=0 || rowsNeeded>rfmode->SDDSrec.n_rows_allocated) && !SDDS_LengthenTable(&rfmode->SDDSrec, rowsNeeded-rfmode->SDDSrec.n_rows_allocated)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem setting up RFMODE record file");
+      }
+      if (pass==0)
+        rfmode->sample_counter = 0;
+    }
+
 #if USE_MPI
     /* Master needs to know the number of buckets */
     MPI_Barrier(MPI_COMM_WORLD);
@@ -278,6 +292,21 @@ void track_through_rfmode(
             if (ib<firstBin)    
               firstBin = ib;
             n_binned++;
+          }
+          if (n_binned!=np) {
+#if USE_MPI
+            if (myid==1) {
+              dup2(fd,fileno(stdout)); 
+              printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n",
+                   np-n_binned, np);
+              fflush(stdout);
+              close(fd);
+            }
+            mpiAbort = 1;
+            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+#else 
+            bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins", NULL);
+#endif
           }
           V_sum = Vr_sum = phase_sum = Q_sum = 0;
           n_summed = max_hist = n_occupied = 0;
@@ -439,7 +468,7 @@ void track_through_rfmode(
         fflush(stdout);
 #endif
 
-        if (rfmode->record && iBucket==(nBuckets-1)) {
+        if (rfmode->record) {
 #if (USE_MPI)
           if (myid == 1) {
 	    /* We let the first slave to dump the parameter */
@@ -448,23 +477,28 @@ void track_through_rfmode(
             printf("Writing record file\n");
             fflush(stdout);
 #endif
-            if ((pass%rfmode->sample_interval)==0 && 
-                (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                    (pass/rfmode->sample_interval),
-                                    (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
-                                    (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
-                                    (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
-                                    (char*)"tPostBeam", rfmode->last_t,
-                                    (char*)"V", n_summed?V_sum/n_summed:0.0,
-                                    (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-                                    (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
-                                    (char*)"Charge", rfmode->mp_charge*np, NULL) ||
-                 !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-	      printf("Warning: problem setting up data for RFMODE record file, row %ld\n", (long)(pass/rfmode->sample_interval));
+            if ((pass%rfmode->sample_interval)==0) {
+              if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                     rfmode->sample_counter++,
+                                     (char*)"Bunch", iBucket, 
+                                     (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+                                     (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
+                                     (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
+                                     (char*)"tPostBeam", rfmode->last_t,
+                                     (char*)"V", n_summed?V_sum/n_summed:0.0,
+                                     (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+                                     (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                                     (char*)"Charge", rfmode->mp_charge*np, NULL)) {
+                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
+              }
+              if (iBucket==nBuckets-1 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
+              }
             }
             if (pass==n_passes-1) {
-	      if (!SDDS_Terminate(&rfmode->SDDSrec)) {
+	      if (!SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 		SDDS_Bomb((char*)"problem writing data for RFMODE record file");
 	      }
@@ -580,11 +614,11 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->sample_interval = 1;
   if (rfmode->record && !(rfmode->fileInitialized)) {
     rfmode->record = compose_filename(rfmode->record, run->rootname);
-    n = n_passes/rfmode->sample_interval;
 #if (USE_MPI)
     if (myid == 1) /* We let the first slave to dump the parameter */
 #endif
     if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Bunch", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"NumberOccupied", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"FractionBinned", NULL, SDDS_DOUBLE) ||
@@ -600,7 +634,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb((char*)"problem setting up RFMODE record file");
     }
-    rfmode->fileInitialized = 0;
+    rfmode->fileInitialized = 1;
   }
   if (rfmode->preload && rfmode->charge) {
     double Vb, omega, To, tau;

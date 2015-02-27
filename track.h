@@ -2191,6 +2191,22 @@ typedef struct {
 extern PARAMETER rfmode_param[N_RFMODE_PARAMS];
 
 typedef struct {
+  /* Data for an IIR filter with input x[i] and output y[i]
+     y[n] = Sum[i=1, N] a[i]*y[n-d[i]] + Sum[i=0, N] b[i]*x[d[i]]
+     d[i]>=0 but if d[i]=0, then a[i] = 0
+     */
+  long nTerms;      /* Number of terms in the filter. If zero, filter is ignored. */
+  long *delay;      /* delay for ith term */
+  double *an, *bn;  /* filter coefficients */
+  long nBuffer;     /* size of buffer is max[d[i]] */
+  double *xn, *yn;  /* input, output buffers, treated as circular buffers */
+  long iBuffer;     /* index of start location in buffer (1 delay value) */
+} IIRFILTER;
+
+int readIIRFilter(IIRFILTER *filterBank, long maxFilters, char *inputFile);
+double applyIIRFilter(IIRFILTER *filterBank, long nFilters, double x);
+
+typedef struct {
     double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, frequency */
     double charge;             /* total initial charge */
     double initial_V;          /* initial voltage */
@@ -2214,6 +2230,9 @@ typedef struct {
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     long n_cavities;           /* multiply effect by this number */
     long bunchedBeamMode;
+    double voltage, phase;     /* desired total voltage and phase, to be achieved by feedback */
+    IIRFILTER amplitudeFilter[4]; /* output of filters is summed */
+    IIRFILTER phaseFilter[4];     /* output of filters is summed */
     /* values for restarting the cavity */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
@@ -2225,6 +2244,7 @@ typedef struct {
     double last_phase;         /* phase at t=last_t */
     double last_omega;         /* omega at t=last_t */
     double last_Q;             /* loaded Q at t=last_t */
+    long sample_counter;       /* row in the output record */
     /* frequency table */
     double *tFreq, *fFreq;
     long nFreq;
