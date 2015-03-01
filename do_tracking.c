@@ -3059,16 +3059,20 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         tune2pi += PIx2*(A[0]*ilmat->tswax[plane] + A[1]*ilmat->tsway[plane]);
       offset = 2*plane;
       if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
-        fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
-                deltaPoP);
-        fprintf(stdout, "particle is lost\n");
-        is_lost = 1;
+	if (ilmat->verbosity) {
+	  fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
+		  deltaPoP);
+	  fprintf(stdout, "particle is lost\n");
+	}
+	is_lost = 1;
         continue;
       }
       if (!allowResonanceCrossing && fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
-        fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
-                deltaPoP);
-        fprintf(stdout, "particle is lost\n");
+	if (ilmat->verbosity) {
+	  fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
+		  deltaPoP);
+	  fprintf(stdout, "particle is lost\n");
+	}
         is_lost = 1;
         continue;
       }
@@ -3091,8 +3095,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
         M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
       if (fabs(det-1)>1e-6) {
-        fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
-        fprintf(stdout, "particle is lost\n");
+	if (ilmat->verbosity) {
+	  fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
+	  fprintf(stdout, "particle is lost\n");
+	}
         is_lost = 1;
         continue;
       }
