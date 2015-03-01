@@ -297,15 +297,16 @@ void track_through_rfmode(
 #if USE_MPI
             if (myid==1) {
               dup2(fd,fileno(stdout)); 
-              printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n",
+              printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n", 
                    np-n_binned, np);
+	      printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
               fflush(stdout);
               close(fd);
             }
             mpiAbort = 1;
             MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
 #else 
-            bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins", NULL);
+            bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins. Also, particleID assignments should be checked.", NULL);
 #endif
           }
           V_sum = Vr_sum = phase_sum = Q_sum = 0;
