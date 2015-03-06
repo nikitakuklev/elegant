@@ -602,6 +602,8 @@ set of computations.  In contrast, a ``setup'' command tells {\tt elegant}
 how to perform computations when it later encounters a ``major'' action
 command (one of \verb|analyze_map|, \verb|find_aperture|, \verb|frequency_map|, \verb|momentum_aperture|, \verb|optimize|, 
 or \verb|track|).
+(N.B.: After each major action command, the problem space is wiped clear. 
+To peform further computations requires introduction of a new \verb|run_setup| command.)
 
 Several commands are switchable between action and setup modes.  These
 include the \verb|coupled_| \verb|twiss_output|,
