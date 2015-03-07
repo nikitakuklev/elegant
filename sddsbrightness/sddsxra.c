@@ -666,7 +666,8 @@ int getAtomicXRayCS_Kissel (int shellID)
 }
 
 void SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, int mode, SDDS_DATASET *SDDSin, long copyCols, char **copyCol, long copyPars, char **copyPar) {
-  long i, cols=0, pars=0;
+  long i;
+  int32_t cols=0, pars=0;
   char **column=NULL, **par=NULL;
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile))
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

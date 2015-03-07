@@ -1332,7 +1332,8 @@ char *modeString (long mode)
 }
 
 void SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode,  SDDS_DATASET *SDDSin, long copyCols, char **copyCol, long copyPars, char **copyPar) {
-  long i, cols=0, pars=0, calc_mode;
+  long i, calc_mode;
+  int32_t cols=0, pars=0;
   char **column=NULL, **par=NULL;
 
   /* calc_mode designate the output quantities */
