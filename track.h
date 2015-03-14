@@ -41,6 +41,9 @@
 #include "rpn.h"
 #include "table.h"
 #include "chbook.h"
+#include "matrixOp.h"
+#include "matlib.h"
+
 #if defined(_WIN32)
 #include <float.h>
 #include <math.h>
@@ -114,6 +117,7 @@ extern int min_value_location; /* The location (which processor) of the optimiza
 extern long enableOutput;
 /* used to abort MPI run in cases where master is not running the same code */
 extern short mpiAbort;
+void doMpiAbort(int code, char *format, ...);
 #endif
 
 #ifndef __cplusplus
@@ -918,7 +922,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 57
 #define N_MATTER_PARAMS 11
-#define N_RFMODE_PARAMS 27
+#define N_RFMODE_PARAMS 33
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2192,22 +2196,20 @@ extern PARAMETER rfmode_param[N_RFMODE_PARAMS];
 
 typedef struct {
   /* Data for an IIR filter with input x[i] and output y[i]
-     y[n] = Sum[i=1, N] a[i]*y[n-d[i]] + Sum[i=0, N] b[i]*x[d[i]]
-     d[i]>=0 but if d[i]=0, then a[i] = 0
+     y[n] = Sum[i=1, N] a[i]*y[n-i] + Sum[i=0, N] b[i]*x[n-i]
      */
   long nTerms;      /* Number of terms in the filter. If zero, filter is ignored. */
-  long *delay;      /* delay for ith term */
   double *an, *bn;  /* filter coefficients */
-  long nBuffer;     /* size of buffer is max[d[i]] */
   double *xn, *yn;  /* input, output buffers, treated as circular buffers */
   long iBuffer;     /* index of start location in buffer (1 delay value) */
 } IIRFILTER;
 
 int readIIRFilter(IIRFILTER *filterBank, long maxFilters, char *inputFile);
 double applyIIRFilter(IIRFILTER *filterBank, long nFilters, double x);
+void freeIIRFilterMemory(IIRFILTER *filterBank, long nFilters);
 
 typedef struct {
-    double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, frequency */
+    double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, mode resonant frequency */
     double charge;             /* total initial charge */
     double initial_V;          /* initial voltage */
     double initial_phase;      /* phase of initial voltage */
@@ -2230,14 +2232,16 @@ typedef struct {
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
     long n_cavities;           /* multiply effect by this number */
     long bunchedBeamMode;
-    double voltage, phase;     /* desired total voltage and phase, to be achieved by feedback */
-    IIRFILTER amplitudeFilter[4]; /* output of filters is summed */
-    IIRFILTER phaseFilter[4];     /* output of filters is summed */
-    /* values for restarting the cavity */
+    double driveFrequency;     /* must be non-zero or no generator voltage */
+    double voltageSetpoint;    /* desired total cavity voltage, to be achieved by feedback */
+    double phaseSetpoint;      /* desired total cavity phase, to be achieved by feedback */
+    long updateInterval;       /* feedback update interval in buckets */
+    char *amplitudeFilterFile, *phaseFilterFile;
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
+    /* BEAM-INDUCED voltage data */
     double V;                  /* magnitude of voltage */
     double Vr, Vi;             /* real, imaginary components of voltage phasor at t=tlast */
     double last_t;             /* time at which last particle was seen */
@@ -2245,6 +2249,22 @@ typedef struct {
     double last_omega;         /* omega at t=last_t */
     double last_Q;             /* loaded Q at t=last_t */
     long sample_counter;       /* row in the output record */
+    /* generator-related data, see T. Berenc RF-TN-2015-001 */
+    double lambdaA;          /* 2/((Ra/Q)*Qloaded) */
+    double Vg, phaseg, tg;   /* Used to determine the voltage and phase seen during the bunch passage according to Vg*cos(omega*(t-tg) + phaseg) */
+    MATRIX *Viq;             /* (2x1) matrix giving I and Q components of generator voltage */
+    MATRIX *Iiq;             /* (2x1) matrix giving I and Q components of generator current */
+    MATRIX *Ig0;             /* I and Q components of reference generator current (gives desired voltage and phase when beam current is zero) */
+    MATRIX *A, *B;           /* Berenc's matrices for evolution of the voltage, used between ticks*/
+    MATRIX *At, *Bt;         /* Berenc's matrices for evolution of the voltage, used for particle bins */
+    MATRIX *Mt1, *Mt2, *Mt3; /* temporary matrices for carrying out computations */
+    long nAmplitudeFilters, nPhaseFilters;
+    IIRFILTER amplitudeFilter[4]; /* output of filters is summed */
+    IIRFILTER phaseFilter[4];     /* output of filters is summed */
+    double fbLastTickTime;   /* time at which last FB tick occurred, adjusted when first bunch is seen */
+    double fbNextTickTime;   /* time at which next FB tick will occur */
+    double tGenerator;       /* reference time for the generator voltage */
+    short fbRunning;         /* if non-zero, fbFirstTickTime has been set */
     /* frequency table */
     double *tFreq, *fFreq;
     long nFreq;
@@ -3267,6 +3287,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form);
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form);
 void bombElegant(char *error, char *usage);
 void bombTracking(char *error);
+void bombElegantVA(char *ptemplate, ...);
 void exitElegant(long status);
 
 /* prototypes for error.c: */

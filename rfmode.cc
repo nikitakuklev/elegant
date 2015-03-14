@@ -34,6 +34,7 @@ double linear_interpolation(double *y, double *t, long n, double t0, long i);
 void runBinlessRfMode(double **part, long np, RFMODE *rfmode, double Po,
 		      char *element_name, double element_z, long pass, long n_passes,
 		      CHARGE *charge);
+void fillBerencABMatrices(MATRIX *A, MATRIX *B, RFMODE *rfmode, double dt);
 
 void track_through_rfmode(
                           double **part0, long np0, RFMODE *rfmode, double Po,
@@ -53,12 +54,15 @@ void track_through_rfmode(
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
     long iBucket, nBuckets, np;
+    static FILE *fpdeb = NULL;
+    static FILE *fpdeb2 = NULL;
+    double phig;
     
     long ip, ib, lastBin=0, firstBin=0, n_binned=0;
     double tmin=0, tmax, last_tmax, tmean, dt=0, P;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
-    double V_sum, Vr_sum, phase_sum;
+    double V_sum, Vr_sum, phase_sum, Vg_sum, phase_g_sum, Vc_sum;
     double Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
@@ -69,13 +73,39 @@ void track_through_rfmode(
     long np_total;
 #endif
 
+    /*
+    if (!fpdeb) {
+      fpdeb = fopen("rfmode.sdds", "w");
+      fprintf(fpdeb, "SDDS1\n");
+      fprintf(fpdeb, "&column name=t type=double units=s &end\n");
+      fprintf(fpdeb, "&column name=VI type=double units=V &end\n");
+      fprintf(fpdeb, "&column name=VQ type=double units=V &end\n");
+      fprintf(fpdeb, "&column name=V type=double units=V &end\n");
+      fprintf(fpdeb, "&column name=phase type=double &end\n");
+      fprintf(fpdeb, "&column name=dV type=double units=V &end\n");
+      fprintf(fpdeb, "&column name=dPhase type=double &end\n");
+      fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+    }
+    if (!fpdeb2) {
+      fpdeb2 = fopen("rfmode2.sdds", "w");
+      fprintf(fpdeb2, "SDDS1\n");
+      fprintf(fpdeb2, "&column name=Pass type=long &end\n");
+      fprintf(fpdeb2, "&column name=t type=double units=s &end\n");
+      fprintf(fpdeb2, "&column name=dt type=double units=s &end\n");
+      fprintf(fpdeb2, "&column name=V type=double units=V &end\n");
+      fprintf(fpdeb2, "&column name=phase type=double units=V &end\n");
+      fprintf(fpdeb2, "&column name=VReal type=double units=V &end\n");
+      fprintf(fpdeb2, "&data mode=ascii no_row_counts=1 &end\n");
+    }
+    */
+
     if (rfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
     fprintf(stdout, (char*)"binless in rfmode is not supported in the current parallel version.\n");
     fprintf(stdout, (char*)"Please use serial version.\n");
     fflush(stdout);
     MPI_Barrier (MPI_COMM_WORLD);
-    MPI_Abort(MPI_COMM_WORLD, 9);
+    MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
 #endif
     runBinlessRfMode(part0, np0, rfmode, Po, element_name, element_z, pass, n_passes, charge);
     return;
@@ -259,6 +289,75 @@ void track_through_rfmode(
         }
         last_tmax = tmax;
 
+        if (rfmode->driveFrequency>0) {
+          /* handle generator voltage, cavity feedback */
+          if (!rfmode->fbRunning) {
+            /* This next statement phases the generator to the first bunch at the desired phase */
+            rfmode->tGenerator = rfmode->fbLastTickTime = tmean - 0.5/rfmode->driveFrequency;
+            rfmode->fbNextTickTime = rfmode->fbLastTickTime + rfmode->updateInterval/rfmode->driveFrequency;
+            rfmode->fbRunning = 1;
+          }
+          if (tmean > rfmode->fbNextTickTime) {
+            /* Need to advance the generator phasors to the next sample time before handling this bunch */
+            long nTicks;
+            double IgAmp, IgPhase, VI, VQ, omegaDrive, omegaRes, dt;
+            
+            nTicks = (tmean-rfmode->fbLastTickTime)/(rfmode->updateInterval/rfmode->driveFrequency)-0.5;
+            while (nTicks--) {
+              /* Update the voltage using the cavity state-space model */
+              m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
+              m_mult(rfmode->Mt2, rfmode->B, rfmode->Iiq);
+              m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
+
+              rfmode->fbLastTickTime = rfmode->fbNextTickTime;
+              rfmode->fbNextTickTime += rfmode->updateInterval/rfmode->driveFrequency;
+
+              /** Do feedback **/
+
+              /* Calculate the net voltage and phase at this time */
+              omegaRes = PIx2*rfmode->freq;
+              omegaDrive = PIx2*rfmode->driveFrequency;
+              /* - Calculate beam-induced voltage components. */
+              dt = rfmode->fbLastTickTime - rfmode->last_t;
+              damping_factor = exp(-dt/tau);
+              /*
+              VI = damping_factor*(rfmode->Vr*cos((omegaRes-omegaDrive)*dt) - rfmode->Vi*sin((omegaRes-omegaDrive)*dt));
+              VQ = damping_factor*(rfmode->Vr*sin((omegaRes-omegaDrive)*dt) + rfmode->Vi*cos((omegaRes-omegaDrive)*dt));
+              */
+              VI = damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt));
+              VQ = damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt));
+              /* - Add generator voltage components */
+              dt = rfmode->fbLastTickTime - rfmode->tGenerator;
+              VI += rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt);
+              VQ += rfmode->Viq->a[0][0]*sin(omegaDrive*dt) + rfmode->Viq->a[1][0]*cos(omegaDrive*dt);
+
+              /* - Compute total voltage amplitude and phase */
+              V = sqrt(VI*VI+VQ*VQ);
+              phase = atan2(VQ, VI);
+              
+              /* Calculate updated generator amplitude and phase
+                 - Compute errors for voltage amplitude and phase
+                 - Run these through the IIR filters
+                 - Add to nominal generator amplitude and phase
+              */
+
+              /*
+                fprintf(fpdeb, "%21.15le %le %le %le %le %le %le\n",
+                      rfmode->fbLastTickTime, VI, VQ, V, phase, rfmode->voltageSetpoint-V, rfmode->phaseg - phase);
+              */
+
+              IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
+                + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
+              IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
+                + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, rfmode->phaseg - phase);
+
+              /* Calculate updated I/Q components for generator current */
+              rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
+              rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+            }
+          }
+        }
+
         if (isSlave) {
 #ifdef DEBUG
           printf("tmin = %21.15le, tmax = %21.15le, tmean = %21.15le\n", tmin, tmax, tmean);
@@ -295,24 +394,22 @@ void track_through_rfmode(
           }
           if (n_binned!=np) {
 #if USE_MPI
-            if (myid==1) {
-              dup2(fd,fileno(stdout)); 
-              printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n", 
+            dup2(fd,fileno(stdout)); 
+            printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n", 
                    np-n_binned, np);
-	      printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
-              fflush(stdout);
-              close(fd);
-            }
+            printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
+            fflush(stdout);
+            close(fd);
             mpiAbort = 1;
-            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+            MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
 #else 
             bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins. Also, particleID assignments should be checked.", NULL);
 #endif
           }
-          V_sum = Vr_sum = phase_sum = Q_sum = 0;
+          V_sum = Vr_sum = phase_sum = Q_sum = Vg_sum = Vc_sum = phase_g_sum = 0;
           n_summed = max_hist = n_occupied = 0;
     
-        /* find frequency and Q at this time */
+          /* find frequency and Q at this time */
           omega = PIx2*rfmode->freq;
           if (rfmode->nFreq) {
             double omegaFactor;
@@ -340,7 +437,7 @@ void track_through_rfmode(
             fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
             fflush(stdout);
             close(fd);
-            MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
+            MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
           }
         }
 #endif
@@ -409,6 +506,15 @@ void track_through_rfmode(
         VPrevious = rfmode->V;
         tPrevious = rfmode->last_t;
         phasePrevious = rfmode->last_phase;
+
+        if (rfmode->driveFrequency>0) {
+          /* compute generator voltage I and Q envelopes at bunch center */
+          fillBerencABMatrices(rfmode->At, rfmode->Bt, rfmode, tmean-rfmode->fbLastTickTime);
+          m_mult(rfmode->Mt1, rfmode->At, rfmode->Viq);
+          m_mult(rfmode->Mt2, rfmode->Bt, rfmode->Iiq);
+          m_add(rfmode->Mt3, rfmode->Mt1, rfmode->Mt2);
+        }
+          
         for (ib=firstBin; ib<=lastBin; ib++) {
           if (!Ihist[ib])
             continue;
@@ -433,7 +539,20 @@ void track_through_rfmode(
             Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
           else 
             Vbin[ib] = rfmode->Vr - Vb/2;
-        
+
+          if (rfmode->driveFrequency>0) {
+            /* add generator-induced voltage */
+            double Vr, Vi, dt;
+            Vg_sum += Ihist[ib]*sqrt(sqr(rfmode->Mt3->a[0][0])+sqr(rfmode->Mt3->a[1][0]));
+            dt = t - rfmode->tGenerator;
+            Vr = rfmode->Mt3->a[0][0]*cos(PIx2*rfmode->driveFrequency*dt) - rfmode->Mt3->a[1][0]*sin(PIx2*rfmode->driveFrequency*dt);
+            Vi = rfmode->Mt3->a[0][0]*sin(PIx2*rfmode->driveFrequency*dt) + rfmode->Mt3->a[1][0]*cos(PIx2*rfmode->driveFrequency*dt);
+            phase_g_sum += Ihist[ib]*atan2(Vi, Vr);
+            Vbin[ib] += Vr;
+            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-Vb/2)+sqr(Vi+rfmode->Vi));
+            /* fprintf(fpdeb2, "%ld %21.15le %21.15le %le %le %le\n", pass, t, dt, sqrt(Vi*Vi+Vr*Vr), atan2(Vi, Vr), Vr); */
+          }
+          
           /* add beam-induced voltage to cavity voltage */
           rfmode->Vr -= Vb;
           rfmode->Vi -= Vb*VbImagFactor;
@@ -446,7 +565,10 @@ void track_through_rfmode(
           Q_sum += Ihist[ib]*rfmode->mp_charge*particleRelSign;
           n_summed  += Ihist[ib];
         }
-
+        /*
+        fprintf(fpdeb, "\n");
+        fflush(fpdeb);
+        */
 #ifdef DEBUG
         printf("Computed voltage values in bins\n");
         fflush(stdout);
@@ -463,7 +585,7 @@ void track_through_rfmode(
             }
           }
         }
-    
+
 #ifdef DEBUG
         printf("Applied voltages to particles\n");
         fflush(stdout);
@@ -489,7 +611,11 @@ void track_through_rfmode(
                                      (char*)"V", n_summed?V_sum/n_summed:0.0,
                                      (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
                                      (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
-                                     (char*)"Charge", rfmode->mp_charge*np, NULL)) {
+                                     (char*)"Charge", rfmode->mp_charge*np, 
+                                     (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
+                                     (char*)"PhaseGenerator", n_summed?phase_g_sum/n_summed:0.0,
+                                     (char*)"VCavity", n_summed?Vc_sum/n_summed:0.0,
+                                     NULL)) {
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                 printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
               }
@@ -582,10 +708,17 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     bombElegant((char*)"pass_interval <= 0 for RFMODE", NULL);
   if (rfmode->long_range_only) {
     if (rfmode->binless)
-      bombElegant((char*)"binless and long-range modes are incompatible in RFMODE", NULL);
+      bombElegantVA((char*)"Error: binless and long-range modes are incompatible in RFMODE (element %s)\n", element_name);
     if (rfmode->single_pass)
-      bombElegant((char*)"single-pass and long-range modes are incompatible in RFMODE", NULL);
+      bombElegantVA((char*)"single-pass and long-range modes are incompatible in RFMODE (element %s)\n", element_name);
   }      
+  if (rfmode->driveFrequency>0) {
+    if (rfmode->Qwaveform || rfmode->fwaveform)
+      bombElegantVA("Error: Unfortunately, can't do Q_WAVEFORM or FREQ_WAVEFORM with RF feedback for RFMODE (element %s)\n", element_name);
+    if (rfmode->binless)
+      bombElegantVA("Error: Unfortunately, can't use BINLESS mode with RF feedback for RFMODE (element %s)\n", element_name);
+  }
+
 #if !SDDS_MPI_IO
   if (n_particles<1)
     bombElegant((char*)"too few particles in set_up_rfmode()", NULL);
@@ -630,6 +763,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Charge", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VGenerator", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhaseGenerator", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VCavity", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&rfmode->SDDSrec) ||
         !SDDS_StartPage(&rfmode->SDDSrec, n+1)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -701,6 +837,61 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     data.xlab = data.ylab = data.title = data.topline = NULL;
     data.c1 = data.c2 = NULL;
   }
+
+  if (rfmode->driveFrequency>0) {
+    /* Set up the generator and related data. */
+    /* See T. Berenc, RF-TN-2015-001 */
+    MATRIX *C;
+    double deltaOmega, decrement, sigma, QL, Tsample, k, b1, alpha, beta, sin1, cos1;
+
+    rfmode->lambdaA = 2*(rfmode->beta+1)/rfmode->RaInternal;
+    m_alloc(&rfmode->A, 2, 2);
+    m_alloc(&rfmode->B, 2, 2);
+    m_alloc(&rfmode->At, 2, 2);
+    m_alloc(&rfmode->Bt, 2, 2);
+    m_alloc(&rfmode->Mt1, 2, 1);
+    m_alloc(&rfmode->Mt2, 2, 1);
+    m_alloc(&rfmode->Mt3, 2, 1);
+    m_alloc(&rfmode->Ig0, 2, 1);
+    m_alloc(&rfmode->Viq, 2, 1);
+    m_alloc(&rfmode->Iiq, 2, 1);
+
+    fillBerencABMatrices(rfmode->A, rfmode->B, rfmode, rfmode->updateInterval/rfmode->driveFrequency);
+
+    /* convert from V*sin(phi) to V*cos(phi) convention and account for fact that the
+     * feedback is performed in the nominally empty part of each bucket (i.e., 180 degrees before 
+     * the nominal beam phase)
+     */
+    rfmode->phaseg = PI/180*rfmode->phaseSetpoint - PI/2 - PI;
+    rfmode->Viq->a[0][0] = rfmode->voltageSetpoint*cos(rfmode->phaseg);
+    rfmode->Viq->a[1][0] = rfmode->voltageSetpoint*sin(rfmode->phaseg);
+
+    /* Compute nominal generator current */
+    QL = rfmode->Q/(1+rfmode->beta);
+    deltaOmega = PIx2*(rfmode->freq - rfmode->driveFrequency);
+    sigma = PIx2*rfmode->freq/(2*QL);
+    Tsample = rfmode->updateInterval/rfmode->driveFrequency;
+    decrement = exp(-sigma*Tsample);
+    k = PIx2*rfmode->freq/4*(rfmode->RaInternal/rfmode->Q);
+    m_alloc(&C, 2, 2);
+    C->a[0][0] = C->a[1][1] = sigma/k;
+    C->a[1][0] = -(C->a[0][1] = deltaOmega/k);
+    m_mult(rfmode->Ig0, C, rfmode->Viq);
+    m_copy(rfmode->Iiq, rfmode->Ig0);
+    m_free(&C);
+
+    rfmode->fbRunning = 0;
+    rfmode->fbNextTickTime = 0;
+    rfmode->fbLastTickTime = 0;
+    
+    /* Read FB filters */
+    rfmode->nAmplitudeFilters = rfmode->nPhaseFilters = 0;
+    if (rfmode->amplitudeFilterFile && !(rfmode->nAmplitudeFilters=readIIRFilter(rfmode->amplitudeFilter, 4, rfmode->amplitudeFilterFile)))
+      bombElegantVA("Error: problem reading amplitude filter file for RFMODE %s\n", element_name);
+    if (rfmode->phaseFilterFile && !(rfmode->nPhaseFilters=readIIRFilter(rfmode->phaseFilter, 4, rfmode->phaseFilterFile))) 
+      bombElegantVA("Error: problem reading phase filter file for RFMODE %s\n", element_name);
+  }
+   
 }
 
 void runBinlessRfMode(
@@ -1032,3 +1223,27 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 #endif
 }
 #endif
+
+void fillBerencABMatrices(MATRIX *A, MATRIX *B, RFMODE *rfmode, double dt)
+{
+  double deltaOmega, decrement, sigma, QL, Tsample, k, b1, alpha, beta, sin1, cos1;
+
+  QL = rfmode->Q/(1+rfmode->beta);
+  deltaOmega = PIx2*(rfmode->freq - rfmode->driveFrequency);
+  sigma = PIx2*rfmode->freq/(2*QL);
+  Tsample = dt;
+  decrement = exp(-sigma*Tsample);
+  
+  sin1 = sin(deltaOmega*Tsample);
+  cos1 = cos(deltaOmega*Tsample);
+  A->a[0][0] = A->a[1][1] = decrement*cos1;
+  A->a[0][1] = -(A->a[1][0] = decrement*sin1);
+  
+  k = PIx2*rfmode->freq/4*(rfmode->RaInternal/rfmode->Q);
+  b1 = k/(sqr(sigma) + sqr(deltaOmega));
+  alpha = deltaOmega*decrement*sin1 - sigma*decrement*cos1 + sigma;
+  beta = sigma*decrement*sin1 + deltaOmega*decrement*cos1 - deltaOmega;
+  B->a[0][0] = B->a[1][1] = b1*alpha;
+  B->a[1][0] = -(B->a[0][1] = b1*beta);
+}
+

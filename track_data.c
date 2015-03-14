@@ -1407,10 +1407,10 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Ra), NULL, 0.0, 0, "shunt impedance, Ra=V^2/P"},
     {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Rs), NULL, 0.0, 0, "shunt impedance (Rs=Ra/2)"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Q), NULL, 0.0, 1, "cavity Q"},
-    {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&rfmode_example.freq), NULL, 0.0, 0, "frequency"},
+    {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&rfmode_example.freq), NULL, 0.0, 0, "Resonant frequency of the cavity mode"},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&rfmode_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
-    {"INITIAL_V", "V", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_V), NULL, 0.0, 0, "initial voltage"},
-    {"INITIAL_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_phase), NULL, 0.0, 0, "initial phase"},
+    {"INITIAL_V", "V", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_V), NULL, 0.0, 0, "initial beam-loading voltage"},
+    {"INITIAL_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_phase), NULL, 0.0, 0, "initial beam-loading phase"},
     {"INITIAL_T", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.initial_t), NULL, 0.0, 0, "time at which INITIAL_V and INITIAL_PHASE held"},
     {"BETA", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
@@ -1431,6 +1431,12 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&rfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
     {"N_CAVITIES", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_cavities), NULL, 0.0, 1, "effect is multiplied by this number, simulating N identical cavities"},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&rfmode_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+    {"DRIVE_FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char *)&rfmode_example.driveFrequency), NULL, 0.0, 0, "drive frequency from generator. If zero, no generator voltage is applied."},
+    {"V_SETPOINT", "V", IS_DOUBLE, 0, (long)((char *)&rfmode_example.voltageSetpoint), NULL, 0.0, 0, "setpoint for total cavity voltage"},
+    {"PHASE_SETPOINT", "DEG", IS_DOUBLE, 0, (long)((char *)&rfmode_example.phaseSetpoint), NULL, 0.0, 0, "setpoint for total cavity phase"},
+    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.updateInterval), NULL, 0.0, 1, "update interval of feedback in units of rf period"},
+    {"AMPLITUDE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.amplitudeFilterFile), NULL, 0.0, 0, "IIR filter specification for amplitude feedback"},
+    {"PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.phaseFilterFile), NULL, 0.0, 0, "IIR filter specification for phase feedback"},
     };
 
 FRFMODE frfmode_example;
