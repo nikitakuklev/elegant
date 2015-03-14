@@ -308,7 +308,7 @@ void track_through_rfmode(
               m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
               m_mult(rfmode->Mt2, rfmode->B, rfmode->Iiq);
               m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
-
+              
               rfmode->fbLastTickTime = rfmode->fbNextTickTime;
               rfmode->fbNextTickTime += rfmode->updateInterval/rfmode->driveFrequency;
 
@@ -317,6 +317,8 @@ void track_through_rfmode(
               /* Calculate the net voltage and phase at this time */
               omegaRes = PIx2*rfmode->freq;
               omegaDrive = PIx2*rfmode->driveFrequency;
+              Q = rfmode->Q/(1+rfmode->beta);
+              tau = 2*Q/omegaRes;
               /* - Calculate beam-induced voltage components. */
               dt = rfmode->fbLastTickTime - rfmode->last_t;
               damping_factor = exp(-dt/tau);
@@ -326,6 +328,7 @@ void track_through_rfmode(
               */
               VI = damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt));
               VQ = damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt));
+              
               /* - Add generator voltage components */
               dt = rfmode->fbLastTickTime - rfmode->tGenerator;
               VI += rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt);
@@ -340,7 +343,6 @@ void track_through_rfmode(
                  - Run these through the IIR filters
                  - Add to nominal generator amplitude and phase
               */
-
               /*
                 fprintf(fpdeb, "%21.15le %le %le %le %le %le %le\n",
                       rfmode->fbLastTickTime, VI, VQ, V, phase, rfmode->voltageSetpoint-V, rfmode->phaseg - phase);
@@ -354,6 +356,16 @@ void track_through_rfmode(
               /* Calculate updated I/Q components for generator current */
               rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+
+              /*
+              if (isnan(rfmode->Iiq->a[0][0]) || isnan(rfmode->Iiq->a[1][0]) || isinf(rfmode->Iiq->a[0][0]) || isinf(rfmode->Iiq->a[1][0])) {
+                printf("V = %le, setpoint = %le\n", V, rfmode->voltageSetpoint);
+                printf("phase = %le, setpoints = %le\n", phase, rfmode->phaseg);
+                printf("Viq = %le, %le\n", rfmode->Viq->a[0][0], rfmode->Viq->a[1][0]);
+                printf("Iiq = %le, %le\n", rfmode->Iiq->a[0][0], rfmode->Iiq->a[1][0]);
+                exit(1);
+              }
+              */
             }
           }
         }
@@ -865,7 +877,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->phaseg = PI/180*rfmode->phaseSetpoint - PI/2 - PI;
     rfmode->Viq->a[0][0] = rfmode->voltageSetpoint*cos(rfmode->phaseg);
     rfmode->Viq->a[1][0] = rfmode->voltageSetpoint*sin(rfmode->phaseg);
-
+    
     /* Compute nominal generator current */
     QL = rfmode->Q/(1+rfmode->beta);
     deltaOmega = PIx2*(rfmode->freq - rfmode->driveFrequency);
