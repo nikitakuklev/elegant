@@ -68,9 +68,9 @@ void track_through_rfmode(
     static long been_warned = 0;
     double Qrp, VbImagFactor, Q=0;
     long deltaPass;
+    long np_total;
 #if USE_MPI
     long nonEmptyBins = 0;
-    long np_total;
 #endif
 
     /*
@@ -135,6 +135,14 @@ void track_through_rfmode(
     printf("RFMODE: np0=%ld, charge=%le, mp_charge=%le\n", np0, rfmode->charge, rfmode->mp_charge);
 #endif
 
+    if (rfmode->fileInitialized && pass==0) {
+      if (!SDDS_StartPage(&rfmode->SDDSrec, n_passes)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem starting page for RFMODE record file");
+      }
+      rfmode->sample_counter = 0;
+    }
+
     if (pass%rfmode->pass_interval)
       return;
     
@@ -184,20 +192,6 @@ void track_through_rfmode(
 #endif 
     } else 
       nBuckets = 1;
-
-    if (rfmode->fileInitialized) {
-      long rowsNeeded = nBuckets*(n_passes/rfmode->sample_interval+1);
-      if (pass==0 && (!SDDS_StartPage(&rfmode->SDDSrec, rowsNeeded))) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb((char*)"problem setting up RFMODE record file");
-      }
-      if ((pass!=0 || rowsNeeded>rfmode->SDDSrec.n_rows_allocated) && !SDDS_LengthenTable(&rfmode->SDDSrec, rowsNeeded-rfmode->SDDSrec.n_rows_allocated)) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb((char*)"problem setting up RFMODE record file");
-      }
-      if (pass==0)
-        rfmode->sample_counter = 0;
-    }
 
 #if USE_MPI
     /* Master needs to know the number of buckets */
@@ -475,6 +469,7 @@ void track_through_rfmode(
     
       
 #if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
         if (nBuckets==0) {
           /* Since nBuckets can never be 0, this code is not called. */
           /* There are unresolved issues with histogram_sums() introducing noise into the results. */
@@ -607,59 +602,111 @@ void track_through_rfmode(
         fflush(stdout);
 #endif
 
-        if (rfmode->record) {
-#if (USE_MPI)
-          if (myid == 1) {
-	    /* We let the first slave to dump the parameter */
-#endif
-#ifdef DEBUG
-            printf("Writing record file\n");
-            fflush(stdout);
-#endif
-            if ((pass%rfmode->sample_interval)==0) {
-              if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                     rfmode->sample_counter++,
-                                     (char*)"Bunch", iBucket, 
-                                     (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
-                                     (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
-                                     (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
-                                     (char*)"tPostBeam", rfmode->last_t,
-                                     (char*)"V", n_summed?V_sum/n_summed:0.0,
-                                     (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-                                     (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
-                                     (char*)"Charge", rfmode->mp_charge*np, 
-                                     (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
-                                     (char*)"PhaseGenerator", n_summed?phase_g_sum/n_summed:0.0,
-                                     (char*)"VCavity", n_summed?Vc_sum/n_summed:0.0,
-                                     NULL)) {
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
-              }
-              if (iBucket==nBuckets-1 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
-              }
-            }
-            if (pass==n_passes-1) {
-	      if (!SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
-		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-		SDDS_Bomb((char*)"problem writing data for RFMODE record file");
-	      }
-	    }
-#ifdef DEBUG
-          printf("Done writing record file\n");
-          fflush(stdout);
-#endif
-#if USE_MPI
-	  }
-#endif
-	}
-
         if (nBuckets!=1) {
           for (ip=0; ip<np; ip++)
             memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
         }
       }
+      
+
+      if (rfmode->record) {
+        long rowsNeeded = nBuckets*(n_passes/rfmode->sample_interval+1);
+#if USE_MPI
+        double sendBuffer[13], receiveBuffer[13];
+#endif
+        if ((pass%rfmode->sample_interval)==0) {
+#if USE_MPI
+          if (myid==0)
+#endif
+          if (rowsNeeded>rfmode->SDDSrec.n_rows_allocated && !SDDS_LengthenTable(&rfmode->SDDSrec, rowsNeeded-rfmode->SDDSrec.n_rows_allocated)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            SDDS_Bomb((char*)"problem lengthening RFMODE record file");
+          }
+
+          np_total = np; /* Used by serial version */
+#if (USE_MPI)
+          /* Sum data across all cores */
+          if (myid==0) {
+            memset(sendBuffer, 0, sizeof(sendBuffer[0])*13);
+          } else {
+            sendBuffer[0]  = n_binned;
+            sendBuffer[1]  = rfmode->V;
+            sendBuffer[2]  = rfmode->last_phase;
+            sendBuffer[3]  = rfmode->last_t;
+            sendBuffer[4]  = V_sum;
+            sendBuffer[5]  = Vr_sum;
+            sendBuffer[6]  = phase_sum;
+            sendBuffer[7]  = np;
+            sendBuffer[8]  = Vg_sum;
+            sendBuffer[9]  = phase_g_sum;
+            sendBuffer[10] = Vc_sum;
+            sendBuffer[11] = n_occupied;
+            sendBuffer[12] = n_summed;
+          }
+          MPI_Reduce(sendBuffer, receiveBuffer, 13, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+          if (myid == 0) {
+            n_binned = receiveBuffer[0];
+            rfmode->V = receiveBuffer[1];
+            rfmode->last_phase = receiveBuffer[2];
+            rfmode->last_t = receiveBuffer[3];
+            V_sum = receiveBuffer[4];
+            Vr_sum = receiveBuffer[5];
+            phase_sum = receiveBuffer[6];
+            np_total = receiveBuffer[7];
+            Vg_sum = receiveBuffer[8];
+            phase_g_sum = receiveBuffer[9];
+            Vc_sum = receiveBuffer[10];
+            n_occupied = receiveBuffer[11];
+            n_summed = receiveBuffer[12];
+#endif
+#ifdef DEBUG
+            printf("Writing record file\n");
+            fflush(stdout);
+#endif
+            if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                   rfmode->sample_counter++,
+                                   (char*)"Bunch", iBucket, (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+                                   (char*)"FractionBinned", np_total?(1.0*n_binned)/np_total:0.0,
+                                   (char*)"VPostBeam", rfmode->V, 
+                                   (char*)"PhasePostBeam", rfmode->last_phase,
+                                   (char*)"tPostBeam", rfmode->last_t,
+                                   (char*)"V", n_summed?V_sum/n_summed:0.0,
+                                   (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+                                   (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                                   (char*)"Charge", rfmode->mp_charge*np_total, 
+                                   (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
+                                   (char*)"PhaseGenerator", n_summed?phase_g_sum/n_summed:0.0,
+                                   (char*)"VCavity", n_summed?Vc_sum/n_summed:0.0,
+                                   NULL)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
+            }
+            if (iBucket==nBuckets-1 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
+            }
+#ifdef DEBUG
+            printf("Done writing record file\n");
+            fflush(stdout);
+#endif
+#if USE_MPI
+          }
+#endif
+        }
+#if USE_MPI
+        if (myid==0) {
+#endif
+          if (pass==n_passes-1) {
+            if (!SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+            }
+          }
+#if USE_MPI
+        }
+#endif
+      }
+
 #if USE_MPI
 #ifdef DEBUG
       printf("Preparing to wait on barrier (1)\n");
@@ -765,7 +812,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   if (rfmode->record && !(rfmode->fileInitialized)) {
     rfmode->record = compose_filename(rfmode->record, run->rootname);
 #if (USE_MPI)
-    if (myid == 1) /* We let the first slave to dump the parameter */
+    if (myid == 0) 
 #endif
     if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Bunch", NULL, SDDS_LONG) ||
@@ -782,8 +829,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VGenerator", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhaseGenerator", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VCavity", NULL, SDDS_DOUBLE) ||
-        !SDDS_WriteLayout(&rfmode->SDDSrec) ||
-        !SDDS_StartPage(&rfmode->SDDSrec, n+1)) {
+        !SDDS_WriteLayout(&rfmode->SDDSrec)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb((char*)"problem setting up RFMODE record file");
     }
