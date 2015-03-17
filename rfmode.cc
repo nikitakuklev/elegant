@@ -316,17 +316,13 @@ void track_through_rfmode(
               /* - Calculate beam-induced voltage components. */
               dt = rfmode->fbLastTickTime - rfmode->last_t;
               damping_factor = exp(-dt/tau);
-              /* This doesn't work
-              VI = damping_factor*(rfmode->Vr*cos((omegaRes-omegaDrive)*dt) - rfmode->Vi*sin((omegaRes-omegaDrive)*dt));
-              VQ = damping_factor*(rfmode->Vr*sin((omegaRes-omegaDrive)*dt) + rfmode->Vi*cos((omegaRes-omegaDrive)*dt));
-              */
-              /* This works pretty well:
-              VI = damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt));
-              VQ = damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt));
-              */
+              /* This produces a significant offset in the cavity voltage
               VI = damping_factor*(rfmode->Vr*cos(omegaRes*dt) - rfmode->Vi*sin(omegaRes*dt));
               VQ = damping_factor*(rfmode->Vr*sin(omegaRes*dt) + rfmode->Vi*cos(omegaRes*dt));
-              
+              */
+              VI = damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt));
+              VQ = damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt));
+
               /* - Add generator voltage components */
               dt = rfmode->fbLastTickTime - rfmode->tGenerator;
               VI += rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt);
