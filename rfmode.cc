@@ -136,14 +136,24 @@ void track_through_rfmode(
 #endif
 
     if (rfmode->fileInitialized && pass==0) {
+#if USE_MPI
+      if (myid==0) {
+#endif
       if (rfmode->record && !SDDS_StartPage(&rfmode->SDDSrec, n_passes)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE record file");
       }
+#if USE_MPI
+      }
+      if (myid==1) {
+#endif
       if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, n_passes)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE feedback record file");
       }
+#if USE_MPI
+      }
+#endif
       rfmode->sample_counter = rfmode->fbSample = 0;
     }
 
@@ -358,7 +368,7 @@ void track_through_rfmode(
               if (rfmode->feedbackRecordFile) {
                 long rowsNeeded = nBuckets*n_passes+1;
 #if USE_MPI
-                if (myid==0) {
+                if (myid==1) {
 #endif
                   if (rowsNeeded>rfmode->SDDSfbrec.n_rows_allocated && 
                       !SDDS_LengthenTable(&rfmode->SDDSfbrec, rowsNeeded-rfmode->SDDSfbrec.n_rows_allocated)) {
@@ -885,7 +895,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     if (rfmode->feedbackRecordFile) {
       rfmode->feedbackRecordFile = compose_filename(rfmode->feedbackRecordFile, run->rootname);
 #if (USE_MPI)
-      if (myid == 0) 
+      if (myid == 1) 
 #endif
         if (!SDDS_InitializeOutput(&rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"Pass", NULL, SDDS_LONG) ||
