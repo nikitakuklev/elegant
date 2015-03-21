@@ -922,7 +922,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 57
 #define N_MATTER_PARAMS 11
-#define N_RFMODE_PARAMS 34
+#define N_RFMODE_PARAMS 35
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
