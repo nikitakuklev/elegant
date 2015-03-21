@@ -922,7 +922,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 57
 #define N_MATTER_PARAMS 11
-#define N_RFMODE_PARAMS 33
+#define N_RFMODE_PARAMS 34
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2217,6 +2217,7 @@ typedef struct {
     double beta;               /* the cavity beta (default is 0) */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins */
+    long interpolate;          /* if nonzero, interpolate within bins */
     long preload;              /* preload with steady-state voltage for point bunch */
     double preload_factor;     /* factor to multiply preload voltage by--usually 1 */
     long rigid_until_pass;     /* beam is "rigid" until this pass */
@@ -2237,6 +2238,7 @@ typedef struct {
     double phaseSetpoint;      /* desired total cavity phase, to be achieved by feedback */
     long updateInterval;       /* feedback update interval in buckets */
     char *amplitudeFilterFile, *phaseFilterFile;
+    char *feedbackRecordFile;
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     double mp_charge;          /* charge per macroparticle */
@@ -2248,7 +2250,6 @@ typedef struct {
     double last_phase;         /* phase at t=last_t */
     double last_omega;         /* omega at t=last_t */
     double last_Q;             /* loaded Q at t=last_t */
-    long sample_counter;       /* row in the output record */
     /* generator-related data, see T. Berenc RF-TN-2015-001 */
     double lambdaA;          /* 2/((Ra/Q)*Qloaded) */
     double Vg, phaseg, tg;   /* Used to determine the voltage and phase seen during the bunch passage according to Vg*cos(omega*(t-tg) + phaseg) */
@@ -2271,7 +2272,11 @@ typedef struct {
     /* Q table */
     double *tQ, *fQ;
     long nQ;
-    SDDS_DATASET SDDSrec;
+    /* files for record output */
+    SDDS_DATASET SDDSrec  ;    /* seen by beam */
+    long sample_counter;       /* row in the output record */
+    SDDS_DATASET SDDSfbrec;  /* seen by  feedback system */
+    long fbSample;           /* row in the output record */
     long fileInitialized;
     } RFMODE;
 

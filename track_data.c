@@ -1415,6 +1415,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"BETA", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfmode_example.interpolate), NULL, 0.0, 0, "if non-zero, interpolate voltage within bins"},
     {"PRELOAD", "", IS_LONG, 0, (long)((char *)&rfmode_example.preload), NULL, 0.0, 0, "preload cavity with steady-state field"},
     {"PRELOAD_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.preload_factor), NULL, 1.0, 0, "multiply preloaded field by this value"},
     {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
@@ -1437,6 +1438,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.updateInterval), NULL, 0.0, 1, "update interval of feedback in units of rf period"},
     {"AMPLITUDE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.amplitudeFilterFile), NULL, 0.0, 0, "IIR filter specification for amplitude feedback"},
     {"PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.phaseFilterFile), NULL, 0.0, 0, "IIR filter specification for phase feedback"},
+    {"FEEDBACK_RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.feedbackRecordFile), NULL, 0.0, 0, "output file for feedback data"},
     };
 
 FRFMODE frfmode_example;

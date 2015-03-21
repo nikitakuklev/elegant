@@ -804,7 +804,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            double revolutionLength, double z)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
-    double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
+    double tc, tc0, p_sum, gamma_sum, sum, error_sum, p=0.0;
     double emit[2], emitc[2];
     long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount, npCount_total=0;
     static BEAM_SUMS sums;
@@ -966,19 +966,27 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif
 
     /* time centroid and sigma */
-    for (i=npCount=p_sum=gamma_sum=sum=0; i<particles; i++) {
+    for (i=npCount=p_sum=gamma_sum=sum=error_sum=0; i<particles; i++) {
       if (watch->startPID==watch->endPID || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID)) {
         p = Po*(1+particle[i][5]);
         p_sum     += p;
         gamma_sum += sqrt(sqr(p)+1);
+#ifndef USE_KAHAN
         sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
+#else
+        sum = KahanPlus(sum, particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks), &error_sum);
+#endif
         npCount++;
-        }
+      }
     }
 #if SDDS_MPI_IO
     if (USE_MPI) {
-      double p_sum_total, gamma_sum_total, sum_total;
+      double p_sum_total, gamma_sum_total, sum_total, error_sum_total;
       MPI_Allreduce (&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#ifdef USE_KAHAN
+      MPI_Allreduce (&error_sum, &error_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      sum_total += error_sum_total;
+#endif
       MPI_Allreduce (&p_sum, &p_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce (&gamma_sum, &gamma_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);     
       MPI_Allreduce (&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
