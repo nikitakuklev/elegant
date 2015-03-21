@@ -140,7 +140,7 @@ void track_through_rfmode(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE record file");
       }
-      if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSrec, n_passes)) {
+      if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, n_passes)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE feedback record file");
       }
@@ -367,19 +367,19 @@ void track_through_rfmode(
                   }
                   if (!SDDS_SetRowValues(&rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                          rfmode->fbSample,
-                                         "Pass", pass, "t", rfmode->fbLastTickTime,
-                                         "fResonance", rfmode->freq,
-                                         "fDrive", rfmode->driveFrequency,
-                                         "VbReal", rfmode->Vr, "VbImag", rfmode->Vi,
-                                         "VgI", VgI, "VgQ", VgQ,
-                                         "VCavity", V, "Phase", phase,
-                                         "IgAmplitude", IgAmp,
-                                         "IgPhase", IgPhase,
+                                         (char*)"Pass", pass, (char*)"t", rfmode->fbLastTickTime,
+                                         (char*)"fResonance", rfmode->freq,
+                                         (char*)"fDrive", rfmode->driveFrequency,
+                                         (char*)"VbReal", rfmode->Vr, (char*)"VbImag", rfmode->Vi,
+                                         (char*)"VgI", VgI, (char*)"VgQ", VgQ,
+                                         (char*)"VCavity", V, (char*)"PhaseCavity", phase,
+                                         (char*)"IgAmplitude", IgAmp,
+                                         (char*)"IgPhase", IgPhase,
                                          NULL)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     SDDS_Bomb((char*)"problem setting values for feedback record file");
                   }
-                  if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
+                  if ((rfmode->fbSample%100==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
                       && !SDDS_UpdatePage(&rfmode->SDDSfbrec, 0)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
@@ -824,9 +824,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }      
   if (rfmode->driveFrequency>0) {
     if (rfmode->Qwaveform || rfmode->fwaveform)
-      bombElegantVA("Error: Unfortunately, can't do Q_WAVEFORM or FREQ_WAVEFORM with RF feedback for RFMODE (element %s)\n", element_name);
+      bombElegantVA((char*)"Error: Unfortunately, can't do Q_WAVEFORM or FREQ_WAVEFORM with RF feedback for RFMODE (element %s)\n", element_name);
     if (rfmode->binless)
-      bombElegantVA("Error: Unfortunately, can't use BINLESS mode with RF feedback for RFMODE (element %s)\n", element_name);
+      bombElegantVA((char*)"Error: Unfortunately, can't use BINLESS mode with RF feedback for RFMODE (element %s)\n", element_name);
   }
 
 #if !SDDS_MPI_IO
@@ -867,16 +867,16 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
             !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Pass", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"NumberOccupied", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"FractionBinned", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"V", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VReal", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Phase", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VPostBeam", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Charge", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VGenerator", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhaseGenerator", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VCavity", NULL, SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"V", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VReal", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Phase", (char*)"rad", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VPostBeam", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", (char*)"rad", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"tPostBeam", (char*)"t", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Charge", (char*)"C", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VGenerator", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhaseGenerator", (char*)"rad", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VCavity", (char*)"V", SDDS_DOUBLE) ||
             !SDDS_WriteLayout(&rfmode->SDDSrec)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem setting up RFMODE record file");
@@ -889,17 +889,17 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 #endif
         if (!SDDS_InitializeOutput(&rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"Pass", NULL, SDDS_LONG) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"t", "s", SDDS_LONG) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"fResonance", "Hz", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"fDrive", "Hz", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbReal", "V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbImag", "V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgI", "V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgQ", "V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VCavity", "V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"PhaseCavity", NULL, SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgAmplitude", "A", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgPhase", "A", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"t", (char*)"s", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"fResonance", (char*)"Hz", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"fDrive", (char*)"Hz", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbReal", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbImag", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgI", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgQ", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VCavity", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"PhaseCavity", (char*)"rad", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgAmplitude", (char*)"A", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgPhase", (char*)"A", SDDS_DOUBLE) ||
             !SDDS_WriteLayout(&rfmode->SDDSfbrec)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem setting up RFMODE feedback record file");
@@ -1021,9 +1021,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     /* Read FB filters */
     rfmode->nAmplitudeFilters = rfmode->nPhaseFilters = 0;
     if (rfmode->amplitudeFilterFile && !(rfmode->nAmplitudeFilters=readIIRFilter(rfmode->amplitudeFilter, 4, rfmode->amplitudeFilterFile)))
-      bombElegantVA("Error: problem reading amplitude filter file for RFMODE %s\n", element_name);
+      bombElegantVA((char*)"Error: problem reading amplitude filter file for RFMODE %s\n", element_name);
     if (rfmode->phaseFilterFile && !(rfmode->nPhaseFilters=readIIRFilter(rfmode->phaseFilter, 4, rfmode->phaseFilterFile))) 
-      bombElegantVA("Error: problem reading phase filter file for RFMODE %s\n", element_name);
+      bombElegantVA((char*)"Error: problem reading phase filter file for RFMODE %s\n", element_name);
   }
    
 }
