@@ -389,7 +389,7 @@ void track_through_rfmode(
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     SDDS_Bomb((char*)"problem setting values for feedback record file");
                   }
-                  if ((rfmode->fbSample%100==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
+                  if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
                       && !SDDS_UpdatePage(&rfmode->SDDSfbrec, 0)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
@@ -909,7 +909,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VCavity", (char*)"V", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"PhaseCavity", (char*)"rad", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgAmplitude", (char*)"A", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgPhase", (char*)"A", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgPhase", (char*)"rad", SDDS_DOUBLE) ||
             !SDDS_WriteLayout(&rfmode->SDDSfbrec)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem setting up RFMODE feedback record file");
