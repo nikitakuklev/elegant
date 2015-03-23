@@ -308,7 +308,7 @@ void track_through_rfmode(
           if (tmean > rfmode->fbNextTickTime) {
             /* Need to advance the generator phasors to the next sample time before handling this bunch */
             long nTicks;
-            double IgAmp, IgPhase, VI, VQ, omegaDrive, omegaRes, dt, VgI, VgQ;
+            double IgAmp, IgPhase, Vrl, Vil, omegaDrive, omegaRes, dt, Vgr, Vgi, Vbr, Vbi;
             
             nTicks = (tmean-rfmode->fbLastTickTime)/(rfmode->updateInterval/rfmode->driveFrequency)-0.5;
             while (nTicks--) {
@@ -327,33 +327,29 @@ void track_through_rfmode(
               omegaDrive = PIx2*rfmode->driveFrequency;
               Q = rfmode->Q/(1+rfmode->beta);
               tau = 2*Q/omegaRes;
-              /* - Calculate beam-induced voltage components. */
+              /* - Calculate beam-induced voltage components (real, imag). */
               dt = rfmode->fbLastTickTime - rfmode->last_t;
+	      phase = rfmode->last_phase + omegaRes*dt;
               damping_factor = exp(-dt/tau);
-              /* This produces a significant *positive* offset in the cavity voltage seen by the beam
-              VI = damping_factor*(rfmode->Vr*cos(omegaRes*dt) - rfmode->Vi*sin(omegaRes*dt));
-              VQ = damping_factor*(rfmode->Vr*sin(omegaRes*dt) + rfmode->Vi*cos(omegaRes*dt));
-              */
-              VI = damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt));
-              VQ = damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt));
-
-              /* - Add generator voltage components */
+              Vrl = (Vbr=damping_factor*rfmode->V*cos(phase));
+	      Vil = (Vbi=damping_factor*rfmode->V*sin(phase));
+	      /*
+              Vrl = (Vbr=damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt)));
+	      Vil = (Vbi=damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt)));
+	      */
+              /* - Add generator voltage components (real, imag) */
               dt = rfmode->fbLastTickTime - rfmode->tGenerator;
-              VI += (VgI=rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt));
-              VQ += (VgQ=rfmode->Viq->a[0][0]*sin(omegaDrive*dt) + rfmode->Viq->a[1][0]*cos(omegaDrive*dt));
+              Vrl += (Vgr=rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt));
+              Vil += (Vgi=rfmode->Viq->a[0][0]*sin(omegaDrive*dt) + rfmode->Viq->a[1][0]*cos(omegaDrive*dt));
 
               /* - Compute total voltage amplitude and phase */
-              V = sqrt(VI*VI+VQ*VQ);
-              phase = atan2(VQ, VI);
+              V = sqrt(Vrl*Vrl+Vil*Vil);
+              phase = atan2(Vil, Vrl);
               
               /* Calculate updated generator amplitude and phase
                  - Compute errors for voltage amplitude and phase
                  - Run these through the IIR filters
                  - Add to nominal generator amplitude and phase
-              */
-              /*
-                fprintf(fpdeb, "%21.15le %le %le %le %le %le %le\n",
-                      rfmode->fbLastTickTime, VI, VQ, V, phase, rfmode->voltageSetpoint-V, rfmode->phaseg - phase);
               */
 
               IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
@@ -380,8 +376,8 @@ void track_through_rfmode(
                                          (char*)"Pass", pass, (char*)"t", rfmode->fbLastTickTime,
                                          (char*)"fResonance", rfmode->freq,
                                          (char*)"fDrive", rfmode->driveFrequency,
-                                         (char*)"VbReal", rfmode->Vr, (char*)"VbImag", rfmode->Vi,
-                                         (char*)"VgI", VgI, (char*)"VgQ", VgQ,
+                                         (char*)"VbReal", Vbr, (char*)"VbImag", Vbi,
+                                         (char*)"VgReal", Vgr, (char*)"VgImag", Vgi,
                                          (char*)"VCavity", V, (char*)"PhaseCavity", phase,
                                          (char*)"IgAmplitude", IgAmp,
                                          (char*)"IgPhase", IgPhase,
@@ -904,8 +900,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"fDrive", (char*)"Hz", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbReal", (char*)"V", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VbImag", (char*)"V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgI", (char*)"V", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgQ", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgReal", (char*)"V", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VgImag", (char*)"V", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"VCavity", (char*)"V", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"PhaseCavity", (char*)"rad", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(&rfmode->SDDSfbrec, (char*)"IgAmplitude", (char*)"A", SDDS_DOUBLE) ||
