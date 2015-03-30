@@ -3250,7 +3250,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   char *rootname, *input, *output=NULL;
   char *cmdBuffer0, *cmdBuffer1=NULL;
   SDDS_DATASET SDDSout, SDDSin;
-  double *data;
+  double *data = NULL;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
   long i, j, npNew, nameLength, doDrift;
   char passString[20];
@@ -3718,6 +3718,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     if (data)
       free(data);
+#ifdef MPI_DEBUG
+      printf("Script check 5.1\n");
+      fflush(stdout);
+#endif
   }
 
   if (0) {
