@@ -16,20 +16,35 @@
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass)
 {
-  double position, output;
-  long i, j;
+  double sum, sumTotal, position, output;
+  long i, j, npTotal;
   
   if (tfbp->initialized==0)
     initializeTransverseFeedbackPickup(tfbp);
 
-  position = 0;
+  sum = position = 0;
   if (np) {
     for (i=0; i<np; i++)
-      position += part[i][tfbp->yPlane?2:0];
-    position /= np;
+      sum += part[i][tfbp->yPlane?2:0];
   }
-  if (tfbp->rmsNoise)
-    position += gauss_rn_lim(0.0, tfbp->rmsNoise, 2, random_3);
+#if USE_MPI
+  MPI_Allreduce(&sum, &sumTotal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&np,  &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (npTotal>0)
+    position = sumTotal/npTotal;
+#else
+  if (np>0)
+    position = sum/np;
+#endif
+
+  if (tfbp->rmsNoise) {
+    double dposition;
+    dposition = gauss_rn_lim(0.0, tfbp->rmsNoise, 2, random_3);
+#if USE_MPI
+    MPI_Bcast(&dposition, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
+    position += dposition;
+  }
 #ifdef DEBUG
   fprintf(stdout, "TFBPICKUP: Putting value %e in slot %ld\n",
           position, pass%tfbp->filterLength);
@@ -86,12 +101,13 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
 }
 
 void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long nPasses, char *rootname)
+
 {
   double kick;
   long i, j;
   
   if (tfbd->initialized==0)
-      initializeTransverseFeedbackDriver(tfbd, beamline, nPasses, rootname);
+    initializeTransverseFeedbackDriver(tfbd, beamline, nPasses, rootname);
   if (pass==0)
     tfbd->dataWritten = 0;
   
@@ -134,6 +150,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
       part[i][j] += kick;
   }
 
+#if USE_MPI
+  if (myid==0) 
+#endif
   if (tfbd->outputFile) {
     if (!SDDS_SetRowValues(&tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                            pass, 
@@ -151,10 +170,15 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
       tfbd->dataWritten = 1;
     }
   }
+
 }
 
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
 {
+#if USE_MPI
+  if (myid!=0)
+    return;
+#endif
   if (tfbd->initialized && !(tfbd->dataWritten)) {
     if (!SDDS_WritePage(&tfbd->SDDSout)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
@@ -197,7 +221,10 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   if (!(tfbd->driverSignal = malloc(sizeof(*(tfbd->driverSignal))*(tfbd->delay+1+TFB_FILTER_LENGTH))))
     bombElegant("memory allocation failure (TFBDRIVER)", NULL);
   tfbd->maxDelay = tfbd->delay;
-  
+
+#if USE_MPI
+  if (myid==0)
+#endif
   if (tfbd->outputFile) {
     tfbd->outputFile = compose_filename(tfbd->outputFile, rootname);
     if (!SDDS_InitializeOutput(&tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
