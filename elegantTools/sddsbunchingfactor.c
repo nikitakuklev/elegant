@@ -21,10 +21,11 @@
 #define SET_OMEGARANGE 1
 #define SET_POINTS 2
 #define SET_MODE 3
-#define N_OPTIONS 4
+#define SET_COMBINE_PAGES 4
+#define N_OPTIONS 5
 
 char *option[N_OPTIONS] = {
-  "pipe", "omegarange", "points", "mode",
+  "pipe", "omegarange", "points", "mode", "combinepages"
 } ;
 
 char *modeOption[2] = {
@@ -32,12 +33,13 @@ char *modeOption[2] = {
 };
 
 char *USAGE="sddsbunchingfactor [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-omegaRange=<lower>,<upper>] [-points=<number>] [-mode={linear|logarithmic}]\n\
+  [-omegaRange=<lower>,<upper>] [-points=<number>] [-mode={linear|logarithmic}] [-combinePages]\n\
 Computes the bunching factor vs angular frequency using time coordinates of particles in the input.\n\
 -pipe         The standard SDDS pipe option.\n\
 -omegaRange   Lower and upper limits of angular frequency in Hz.\n\
 -points       Number of values of omega.\n\
 -mode         Linear or logarithmic spacing of omega points?\n\n\
+-combinePages Combine data from all pages.\n\
 Program by Michael Borland.  (This is version 1, March 30, 2015)\n";
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin);
@@ -47,13 +49,14 @@ int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
-  long i_arg, readCode, omegaMode;
-  long iw, ip, particles;
+  long i_arg, readCode, omegaMode, combinePages;
+  long iw, ip, particles, particlesTotal;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
-  double *t, omega, cosSum, sinSum;
+  double *t, omega;
   double omegaLower, omegaUpper;
   long omegaPoints, tmpFileUsed;
+  double *omegaArray, *cosSum, *sinSum;
   
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
@@ -64,7 +67,8 @@ int main(int argc, char **argv)
   pipeFlags = 0;
   omegaPoints = -1;
   omegaLower = omegaUpper = 0;
-  omegaMode = 0;
+  omegaMode = combinePages = 0;
+  omegaArray = cosSum = sinSum = NULL;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
@@ -90,6 +94,9 @@ int main(int argc, char **argv)
         if (s_arg[i_arg].n_items!=2 ||
             (omegaMode=match_string(s_arg[i_arg].list[1], modeOption, 2, 0))<0)
 	  SDDS_Bomb("invalid -mode syntax");
+        break;
+      case SET_COMBINE_PAGES:
+        combinePages = 1;
         break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
@@ -126,6 +133,21 @@ int main(int argc, char **argv)
   if (!SetUpOutputFile(&SDDSout, outputfile, &SDDSin)) 
     SDDS_Bomb("problem setting up output file");
   
+  omegaArray = tmalloc(sizeof(*omegaArray)*omegaPoints);
+  cosSum = tmalloc(sizeof(*cosSum)*omegaPoints);
+  sinSum = tmalloc(sizeof(*sinSum)*omegaPoints);
+  for (iw=0; iw<omegaPoints; iw++) {
+    cosSum[iw] = sinSum[iw] = 0;
+    if (omegaMode==0) {
+      /* linear */
+      omegaArray[iw] = omegaLower + iw*(omegaUpper-omegaLower)/(omegaPoints-1);
+    } else {
+      /* logarithmic */
+      omegaArray[iw] = omegaLower*pow(10, iw*log10(omegaUpper/omegaLower)/(omegaPoints-1.));
+    }
+  }
+
+  particlesTotal = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (!SDDS_StartPage(&SDDSout, omegaPoints) || !SDDS_CopyParameters(&SDDSout, &SDDSin))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -133,29 +155,46 @@ int main(int argc, char **argv)
       if (!(t =  SDDS_GetColumnInDoubles(&SDDSin, "t")))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       for (iw=0; iw<omegaPoints; iw++) {
-        if (omegaMode==0) {
-          /* linear */
-          omega = omegaLower + iw*(omegaUpper-omegaLower)/(omegaPoints-1);
-        } else {
-          /* logarithmic */
-          omega = omegaLower*pow(10, iw*log10(omegaUpper/omegaLower)/(omegaPoints-1.));
-        }
-        cosSum = sinSum = 0;
+        omega = omegaArray[iw];
+        if (!combinePages)
+          cosSum[iw] = sinSum[iw] = 0;
         for (ip=0; ip<particles; ip++) {
-          cosSum += cos(omega*t[ip]);
-          sinSum += sin(omega*t[ip]);
+          cosSum[iw] += cos(omega*t[ip]);
+          sinSum[iw] += sin(omega*t[ip]);
         }
-        if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iw, 
-                               "omega", omega,
-                               "BunchingFactor", sqrt(cosSum*cosSum+sinSum*sinSum)/particles, 
-                               NULL)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (!combinePages) {
+        for (iw=0; iw<omegaPoints; iw++) {
+          if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iw, 
+                                 "omega", omegaArray[iw],
+                                 "BunchingFactor", sqrt(cosSum[iw]*cosSum[iw]+sinSum[iw]*sinSum[iw])/particles, 
+                                 NULL)) {
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
         }
       }
       free(t);
       t = NULL;
     }
-    if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL) ||
+    if (!combinePages) {
+      if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL) ||
+          !SDDS_WritePage(&SDDSout)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    } else {
+      particlesTotal += particles;
+    }
+  } 
+  if (combinePages) {
+    for (iw=0; iw<omegaPoints; iw++) {
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iw, 
+                             "omega", omegaArray[iw],
+                             "BunchingFactor", sqrt(cosSum[iw]*cosSum[iw]+sinSum[iw]*sinSum[iw])/particlesTotal, 
+                             NULL)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+    if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particlesTotal, NULL) ||
         !SDDS_WritePage(&SDDSout)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
