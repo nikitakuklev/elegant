@@ -22,10 +22,11 @@
 #define SET_POINTS 2
 #define SET_MODE 3
 #define SET_COMBINE_PAGES 4
-#define N_OPTIONS 5
+#define SET_COLUMN 5
+#define N_OPTIONS 6
 
 char *option[N_OPTIONS] = {
-  "pipe", "omegarange", "points", "mode", "combinepages"
+  "pipe", "omegarange", "points", "mode", "combinepages", "column"
 } ;
 
 char *modeOption[2] = {
@@ -34,15 +35,17 @@ char *modeOption[2] = {
 
 char *USAGE="sddsbunchingfactor [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-omegaRange=<lower>,<upper>] [-points=<number>] [-mode={linear|logarithmic}] [-combinePages]\n\
+  [-column=<columnName>]\n\
 Computes the bunching factor vs angular frequency using time coordinates of particles in the input.\n\
 -pipe         The standard SDDS pipe option.\n\
--omegaRange   Lower and upper limits of angular frequency in Hz.\n\
+-omegaRange   Lower and upper limits of angular frequency.\n\
 -points       Number of values of omega.\n\
 -mode         Linear or logarithmic spacing of omega points?\n\n\
 -combinePages Combine data from all pages.\n\
+-column       Name of column for which to compute bunching factor. Default is \"t\".\n\n\
 Program by Michael Borland.  (This is version 1, March 30, 2015)\n";
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin);
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin, char *columnUnits);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 int main(int argc, char **argv)
@@ -57,7 +60,8 @@ int main(int argc, char **argv)
   double omegaLower, omegaUpper;
   long omegaPoints, tmpFileUsed;
   double *omegaArray, *cosSum, *sinSum;
-  
+  char *column, *columnUnits;
+
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) 
@@ -69,7 +73,8 @@ int main(int argc, char **argv)
   omegaLower = omegaUpper = 0;
   omegaMode = combinePages = 0;
   omegaArray = cosSum = sinSum = NULL;
-  
+  column = columnUnits = NULL;
+
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
       switch (match_string(s_arg[i_arg].list[0], option, N_OPTIONS, 0)) {
@@ -98,6 +103,11 @@ int main(int argc, char **argv)
       case SET_COMBINE_PAGES:
         combinePages = 1;
         break;
+      case SET_COLUMN:
+        if (s_arg[i_arg].n_items!=2)
+	  SDDS_Bomb("invalid -column syntax");
+        cp_str(&column, s_arg[i_arg].list[1]);
+        break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
@@ -121,16 +131,16 @@ int main(int argc, char **argv)
   
   if (!SDDS_InitializeInput(&SDDSin, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  /* check the input file for valid data */
-  if (!check_sdds_beam_column(&SDDSin, "t", "s")) {
-    fprintf(stderr, 
-            "sddsbunchingfactor: column t is not present or has the wrong units (should be \"s\") in file %s\n", 
-            inputfile);
-    exit(1);
+  if (!column)
+    cp_str(&column, "t");
+  if (SDDS_GetColumnIndex(&SDDSin, column)<0) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-
-  if (!SetUpOutputFile(&SDDSout, outputfile, &SDDSin)) 
+  if (SDDS_GetColumnInformation(&SDDSin, "units", &columnUnits, SDDS_GET_BY_NAME, column)!=SDDS_STRING) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  
+  if (!SetUpOutputFile(&SDDSout, outputfile, &SDDSin, columnUnits)) 
     SDDS_Bomb("problem setting up output file");
   
   omegaArray = tmalloc(sizeof(*omegaArray)*omegaPoints);
@@ -152,7 +162,7 @@ int main(int argc, char **argv)
     if (!SDDS_StartPage(&SDDSout, omegaPoints) || !SDDS_CopyParameters(&SDDSout, &SDDSin))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if ((particles=SDDS_RowCount(&SDDSin))>1) {
-      if (!(t =  SDDS_GetColumnInDoubles(&SDDSin, "t")))
+      if (!(t =  SDDS_GetColumnInDoubles(&SDDSin, column)))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       for (iw=0; iw<omegaPoints; iw++) {
         omega = omegaArray[iw];
@@ -206,10 +216,15 @@ int main(int argc, char **argv)
   return 0;
 }
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin)
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, SDDS_DATASET *SDDSin, char *columnUnits)
 {
+  char buffer[1024];
+  if (strchr(columnUnits, ' '))
+    sprintf(buffer, "1/(%s)", columnUnits);
+  else 
+    sprintf(buffer, "1/%s", columnUnits);
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
-      SDDS_DefineColumn(SDDSout, "omega", "$gw$r", "1/s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "omega", "$gw$r", buffer, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDSout, "BunchingFactor", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "Particles", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
       !SDDS_TransferAllParameterDefinitions(SDDSout, SDDSin, SDDS_TRANSFER_KEEPOLD)) {
