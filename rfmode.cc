@@ -303,6 +303,7 @@ void track_through_rfmode(
             /* This next statement phases the generator to the first bunch at the desired phase */
             rfmode->tGenerator = rfmode->fbLastTickTime = tmean - 0.5/rfmode->driveFrequency;
             rfmode->fbNextTickTime = rfmode->fbLastTickTime + rfmode->updateInterval/rfmode->driveFrequency;
+            rfmode->fbNextTickTimeError = 0;
             rfmode->fbRunning = 1;
           }
           if (tmean > rfmode->fbNextTickTime) {
@@ -318,7 +319,7 @@ void track_through_rfmode(
               m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
               
               rfmode->fbLastTickTime = rfmode->fbNextTickTime;
-              rfmode->fbNextTickTime += rfmode->updateInterval/rfmode->driveFrequency;
+              rfmode->fbNextTickTime = KahanPlus(rfmode->fbNextTickTime, rfmode->updateInterval/rfmode->driveFrequency, &rfmode->fbNextTickTimeError);
 
               /** Do feedback **/
 

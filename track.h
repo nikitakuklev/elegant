@@ -2264,6 +2264,7 @@ typedef struct {
     IIRFILTER phaseFilter[4];     /* output of filters is summed */
     double fbLastTickTime;   /* time at which last FB tick occurred, adjusted when first bunch is seen */
     double fbNextTickTime;   /* time at which next FB tick will occur */
+    double fbNextTickTimeError; /* Used with Kahan sum rule to reduce error */
     double tGenerator;       /* reference time for the generator voltage */
     short fbRunning;         /* if non-zero, fbFirstTickTime has been set */
     /* frequency table */
