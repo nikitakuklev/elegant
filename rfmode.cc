@@ -44,6 +44,7 @@ void track_through_rfmode(
 {
     long *Ihist = NULL;               /* array for histogram of particle density */
     double *Vbin = NULL;              /* array for voltage acting on each bin */
+    double *tbin = NULL;              /* array for center time of each bin */
     long max_n_bins = 0;
     long max_np = 0;
     long *pbin = NULL;                /* array to record which bin each particle is in */
@@ -193,6 +194,7 @@ void track_through_rfmode(
     if (rfmode->n_bins>max_n_bins) {
       Ihist = (long*)trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
       Vbin = (double*)trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
+      tbin = (double*)trealloc(tbin, sizeof(*tbin)*max_n_bins);
     }
 
     if (isSlave || !notSinglePart) {
@@ -569,13 +571,17 @@ void track_through_rfmode(
         }
           
         for (ib=firstBin; ib<=lastBin; ib++) {
-          if (!Ihist[ib])
+          t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+          if (!Ihist[ib]) {
+            if (rfmode->interpolate) {
+              /* Needed for interpolation of voltage */
+              Vbin[ib] = rfmode->V*exp(-(t-rfmode->last_t)/tau)*cos(rfmode->last_phase + omega*(t-rfmode->last_t));
+            }
             continue;
+          }
           if (Ihist[ib]>max_hist)
             max_hist = Ihist[ib];
           n_occupied++;
-          
-          t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
           
           /* advance cavity to this time */
           phase = rfmode->last_phase + omega*(t - rfmode->last_t);
@@ -592,7 +598,8 @@ void track_through_rfmode(
             Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
           else 
             Vbin[ib] = rfmode->Vr - Vb/2;
-
+          tbin[ib] = t;
+          
           if (rfmode->driveFrequency>0) {
             /* add generator-induced voltage */
             double Vr, Vi, dt;
@@ -632,22 +639,33 @@ void track_through_rfmode(
           /* change particle momentum offsets to reflect voltage in relevant bin */
           /* also recompute slopes for new momentum to conserve transverse momentum */
           for (ip=0; ip<np; ip++) {
-            ib = pbin[ip];
-            if (ib>=0) {
-              /* compute new momentum and momentum offset for this particle */
-              if (rfmode->interpolate) {
-                dt1 = time[ip] - (tmin + dt/2 + dt*ib);
-                if (ib>=(rfmode->n_bins-1)) { 
-                  ib = rfmode->n_bins-2;
-                  dt1 += dt;
-                }
-                V = Vbin[ib] + (Vbin[ib+1]-Vbin[ib])/dt*dt1;
+            /* compute voltage seen by this particle */
+            if (rfmode->interpolate) {
+              long ib1, ib2;
+              ib = pbin[ip];
+              dt1 = time[ip] - (tmin + dt*(ib+0.5));
+              if (dt1<0) {
+                ib1 = ib-1;
+                ib2 = ib;
               } else {
-                V = Vbin[ib];
+                ib1 = ib;
+                ib2 = ib+1;
               }
-              dgamma = rfmode->n_cavities*V/(1e6*particleMassMV*particleRelSign);
-              add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+              if (ib2>lastBin) {
+                ib2--;
+                ib1--;
+              }
+              if (ib1<firstBin) {
+                ib1++;
+                ib2++;
+              }
+              dt1 = time[ip] - (tmin + dt*(ib1+0.5));
+              V = Vbin[ib1] + (Vbin[ib2]-Vbin[ib1])/dt*dt1; 
+            } else {
+              V = Vbin[pbin[ip]];
             }
+            dgamma = rfmode->n_cavities*V/(1e6*particleMassMV*particleRelSign);
+            add_to_particle_energy(part[ip], time[ip], Po, dgamma);
           }
         }
 
@@ -819,6 +837,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   
   if (rfmode->initialized)
     return;
+
+  rfmode->V = rfmode->Vr = rfmode->Vi = rfmode->last_t = rfmode->last_phase = rfmode->last_omega = rfmode->last_Q = 0;
 
   rfmode->initialized = 1;
   if (rfmode->pass_interval<=0)

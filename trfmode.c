@@ -494,6 +494,9 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     return;
   
   trfmode->initialized = 1;
+  trfmode->Vx = trfmode->Vxr = trfmode->Vxi = trfmode->last_xphase =  
+    trfmode->Vy = trfmode->Vyr = trfmode->Vyi = trfmode->last_yphase = 
+      trfmode->last_t = 0;
 
 #if SDDS_MPI_IO
   if (isSlave)

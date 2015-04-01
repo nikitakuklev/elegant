@@ -883,11 +883,13 @@ double rms_longitudinal_emittance(double **coord, long n, double Po, long startP
     dpc /= npCount;
 
     for (i=s11=s12=s22=0; i<n; i++) {
+      if (startPID>=endPID || (coord[i][6]>=startPID && coord[i][6]<=endPID)) {
         s11 += sqr(dt  =  time[i]    - tc);
         s22 += sqr(ddp = coord[i][5] - dpc);
         s12 += dt*ddp;
-        }
-
+      }
+    }
+    
     log_exit("rms_longitudinal_emittance");
     return(SAFE_SQRT(s11*s22-sqr(s12))/npCount);
     }
