@@ -44,7 +44,6 @@ void track_through_rfmode(
 {
     long *Ihist = NULL;               /* array for histogram of particle density */
     double *Vbin = NULL;              /* array for voltage acting on each bin */
-    double *tbin = NULL;              /* array for center time of each bin */
     long max_n_bins = 0;
     long max_np = 0;
     long *pbin = NULL;                /* array to record which bin each particle is in */
@@ -194,7 +193,6 @@ void track_through_rfmode(
     if (rfmode->n_bins>max_n_bins) {
       Ihist = (long*)trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
       Vbin = (double*)trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
-      tbin = (double*)trealloc(tbin, sizeof(*tbin)*max_n_bins);
     }
 
     if (isSlave || !notSinglePart) {
@@ -598,7 +596,6 @@ void track_through_rfmode(
             Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
           else 
             Vbin[ib] = rfmode->Vr - Vb/2;
-          tbin[ib] = t;
           
           if (rfmode->driveFrequency>0) {
             /* add generator-induced voltage */
