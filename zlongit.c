@@ -339,6 +339,9 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       MPE_Log_event(event2b, 0, "end computation");
 #endif
       
+#if USE_MPI
+      if (myid==1) {
+#endif
       if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
         factor = zlongit->macroParticleCharge*particleRelSign/dt;
@@ -375,6 +378,9 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
             SDDS_DoFSync(&zlongit->SDDS_wake);
         }
       }
+#if USE_MPI
+      }
+#endif
 
 #ifdef  USE_MPE
       MPE_Log_event(event3a, 0, "start bunch kicks");
@@ -613,14 +619,15 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         df = df_spect;
       }
 
-    if (zlongit->SDDS_wake_initialized && !SDDS_Terminate(&zlongit->SDDS_wake)) {
-        SDDS_SetError("Problem terminating SDDS output (set_up_zlongit)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    zlongit->SDDS_wake_initialized = 0;
 
-#if (!USE_MPI)  
-    /* Only the serial version will dump this part of output */
+    zlongit->SDDS_wake_initialized = 0;
+#if USE_MPI
+    if (zlongit->SDDS_wake_initialized && !SDDS_Terminate(&zlongit->SDDS_wake)) {
+      SDDS_SetError("Problem terminating SDDS output (set_up_zlongit)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (myid==1) {
+#endif
     if (zlongit->wakes) {
         zlongit->wakes = compose_filename(zlongit->wakes, run->rootname);
         if (zlongit->broad_band) 
@@ -632,8 +639,18 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                                   run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
                                   wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         }
+        if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
+          dup2(fd,fileno(stdout)); 
+          fprintf(stdout, "Error: unable to write layout for ZLONGIT wake file %s\n", zlongit->wakes);
+          fflush(stdout);
+          close(fd);
+          MPI_Abort(MPI_COMM_WORLD, T_ZLONGIT);
+          return;
+        }
         zlongit->SDDS_wake_initialized = 1;
       }
+#if USE_MPI
+    }
 #endif
 
     if (zlongit->highFrequencyCutoff0>0)
