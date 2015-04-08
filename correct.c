@@ -284,6 +284,8 @@ void correction_setup(
                               _correct->CMFx->corr_limit, beamline, run, 0);
       if (!found)
         bombElegant("no horizontal steering elements found", NULL);
+      if (verbose)
+	printf("found %ld horizontal steering elements\n", found);
     }
     if (_correct->SLy.n_corr_types==0) {
       long found = 0;
@@ -299,7 +301,9 @@ void correction_setup(
       found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMFy->default_tweek, 
                               _correct->CMFy->corr_limit, beamline, run, 0);
       if (!found)
-        bombElegant("no horizontal steering elements found", NULL);
+        bombElegant("no vertical steering elements found", NULL);
+      if (verbose)
+	printf("found %ld vertical steering elements\n", found);
     }
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
