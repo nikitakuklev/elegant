@@ -639,6 +639,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                                   run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
                                   wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         }
+#if USE_MPI
         if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
           dup2(fd,fileno(stdout)); 
           fprintf(stdout, "Error: unable to write layout for ZLONGIT wake file %s\n", zlongit->wakes);
@@ -647,6 +648,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
           MPI_Abort(MPI_COMM_WORLD, T_ZLONGIT);
           return;
         }
+#endif
         zlongit->SDDS_wake_initialized = 1;
       }
 #if USE_MPI
