@@ -1228,27 +1228,32 @@ void runBinlessRfMode(
   }
 
   if (rfmode->record) {
-    if ((pass%rfmode->sample_interval)==0 && 
-	(!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			    (pass/rfmode->sample_interval),
-			    (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
-			    (char*)"FractionBinned", 1.0,
-			    (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
-			    (char*)"tPostBeam", rfmode->last_t,
-			    (char*)"V", n_summed?V_sum/n_summed:0.0,
-			    (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-			    (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
-			    NULL) ||
-	 !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
+    if (pass==0 && !SDDS_StartPage(&rfmode->SDDSrec, (int)(n_passes/rfmode->sample_interval+1.5))) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
+      SDDS_Bomb((char*)"problem starting page for RFMODE record file");
+    }
+    if ((pass%rfmode->sample_interval)==0) {
+      if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             (pass/rfmode->sample_interval),
+                             (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+                             (char*)"FractionBinned", 1.0,
+                             (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
+                             (char*)"tPostBeam", rfmode->last_t,
+                             (char*)"V", n_summed?V_sum/n_summed:0.0,
+                             (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+                             (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                             NULL) ||
+          !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
+      }
     }
     if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb((char*)"problem writing data for RFMODE record file");
     }
   }
- 
+  
 #if defined(MINIMIZE_MEMORY)
   free(tData);
   tData = NULL;
