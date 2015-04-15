@@ -1,5 +1,10 @@
 This element simulates a beam-driven monopole mode cavity using the fundamental theorem of beam loading and phasor rotation.
+In addition, a generator-driven field may be included using a feedback system \cite{Berenc-IPAC15-MOPMA006}.
 
 Normally, the field dumped in the cavity by one particle affects trailing particles in the same turn.
 However, if one is also using a \verb|WAKE| or \verb|ZLONGIT| element to simulate the short-range wake of the cavity, this would be double-counting.
 In that case, one can use \verb|LONG_RANGE_ONLY=1| to suppress the same-turn effects of the \verb|RFMODE| element.
+
+Two output files are available: the \verb|RECORD| file includes bunch-by-bunch data on the beam-induced fields and the total cavity fields.
+The \verb|FEEDBACK_RECORD| file includes tick-by-tick data from the feedback system simulation; writing this file this can significantly impact performance.
+
