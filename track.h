@@ -964,7 +964,7 @@ extern char *entity_text[N_TYPES];
 #define N_CWIGGLER_PARAMS 24
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
-#define N_ILMATRIX_PARAMS 34
+#define N_ILMATRIX_PARAMS 35
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 15
 #define N_UKICKMAP_PARAMS 13
@@ -1918,7 +1918,7 @@ typedef struct {
     double tswax[2], tsway[2];
     double beta[2], beta1[2], alpha[2], alpha1[2];
     double eta[4], eta1[4];
-    double alphac[2];
+    double alphac[3];
     double tilt;
     long allowResonanceCrossing, verbosity;
     } ILMATRIX;

@@ -2395,6 +2395,7 @@ PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
     {"ETAPY1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta1[3]), NULL, 0.0, 0, "First chromatic derivative of vertical eta' function"},
     {"ALPHAC", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[0]), NULL, 0.0, 0, "First-order momentum compaction factor"},
     {"ALPHAC2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[1]), NULL, 0.0, 0, "Second-order momentum compaction factor"},
+    {"ALPHAC3", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[2]), NULL, 0.0, 0, "Third-order momentum compaction factor"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tilt), NULL, 0.0, 0, "Rotation angle about the longitudinal axis."},
     {"CROSS_RESONANCE", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.allowResonanceCrossing), NULL, 0.0, 0, "If zero, then particles that cross an integer or half-integer resonance are considered lost."},
     {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.verbosity), NULL, 0.0, 0, "If nonzero, then information about particle losses is printed out."}
