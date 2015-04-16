@@ -195,7 +195,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #else
       IBS->charge = charge->macroParticleCharge*np;
       if (IBS->verbose) {
-	printf("bunch %ld has charge=%e, np=%ld\n", iBucket, IBS->charge, npTotal);
+	printf("bunch %ld has charge=%e, np=%ld\n", iBucket, IBS->charge, np);
 	fflush(stdout);
       }
 #endif
@@ -216,13 +216,20 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
     for (islice=0; islice<IBS->nslice; islice++) {
       if (IBS->verbose) {
 #if USE_MPI
+	long countTemp;
 	MPI_Barrier(MPI_COMM_WORLD);
+	if (myid==0)
+	  countTemp = 0;
+	else
+	  countTemp = count[islice];
+	MPI_Allreduce(&countTemp, &countTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	if (myid==0) {
-#endif
-	  printf("Starting computation of parameters for slice %ld for bunch %ld\n", islice, iBucket);
+	  printf("Starting computation of parameters for slice %ld for bunch %ld (%ld particles)\n", islice, iBucket, countTotal);
 	  fflush(stdout);
-#if USE_MPI
 	}
+#else
+	printf("Starting computation of parameters for slice %ld for bunch %ld (%ld particles)\n", islice, iBucket, count[islice]);
+	fflush(stdout);
 #endif
       }
 
