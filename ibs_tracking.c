@@ -27,16 +27,26 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass);
 void reset_IBS_output(ELEMENT_LIST *element);
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt);
+void slicebeam(double **coord, long np, double *time, double Po, long nslice, long *index, long *count, double *dt);
 void zeroslice (long islice, IBSCATTER *IBS);
 long computeSliceParameters(double C[6], double S[6][6], double **part, long *index, long start, long end, double Po);
 void forth_propagate_twiss(IBSCATTER *IBS, long islice, double betax0, double alphax0, 
                            double betay0, double alphay0, RUN *run);
 void copy_twiss(TWISS *tp0, TWISS *tp1);
 
-void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
+void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po, 
                ELEMENT_LIST *element, CHARGE *charge, long i_pass, long n_passes, RUN *run)
 {
+  double *time0 = NULL;           /* array to record arrival time of each particle */
+  double *time = NULL;           /* array to record arrival time of each particle */
+  double **part = NULL;           /* particle buffer for working bucket */
+  long *pbin = NULL;              /* array to record which bin each particle is in */
+  long *ibParticle = NULL;        /* array to record which bucket each particle is in */
+  long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
+  long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
+  long max_np = 0, np;
+  long ip, iBucket, nBuckets;
+  
   long *index, *count;
   long istart, iend, ipart, icoord, ihcoord, islice;
   double aveCoord[6], S[6][6];
@@ -51,21 +61,14 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 #if USE_MPI
   long npTotal, countTotal;
 
-  MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
 #endif
 
   if (IBS->nslice<1) 
-    bombElegant("NSLICE has to be an integer >= 1", NULL);
-  if (charge) {
-#if USE_MPI
-    IBS->charge = charge->macroParticleCharge*npTotal;
-    /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
-#else
-    IBS->charge = charge->macroParticleCharge*np;
-#endif
-  }
-  if (!IBS->charge)
+    bombElegant("IBSCATTER: NSLICE has to be an integer >= 1", NULL);
+  if (IBS->bunchedBeamMode && !IBS->isRing)
+    bombElegantVA("IBSCATTER %s: has BUNCHED_BEAM_MODE=1 BUT ISRING=0", element->name);
+  if (!charge && charge->macroParticleCharge && !IBS->charge)
     bombElegant("IBSCATTER: bunch charge is not given", NULL);
 
   if (!IBS->s)
@@ -78,27 +81,83 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     eta[2] = IBS->etay[IBS->elements-1];
     eta[3] = IBS->etayp[IBS->elements-1];
 
-    index = (long*)malloc(sizeof(long)*np);
-    count = (long*)malloc(sizeof(long)*IBS->nslice);
-    slicebeam(coord, np, Po, IBS->nslice, index, count, &tLength);
-    bLength = IBS->revolutionLength/IBS->dT*tLength;
-    if ((IBS->nslice == 1) && (!IBS->isRing))
-      bLength /= sqrt(2*PI);
-    if ((IBS->nslice > 1) && (IBS->isRing))
-      bLength /= sqrt(4*PI);
-    
-    iend = 0;
-    for (islice=0; islice<IBS->nslice; islice++) {
-      istart = iend;
-      iend += count[islice];
+#ifdef DEBUG
+    printf("bunchedBeamMode=%ld, charge = %c, ID slots per bunch: %ld\n", IBS->bunchedBeamMode, 
+           charge?'Y':'N', (charge && IBS->bunchedBeamMode)?charge->idSlotsPerBunch:0);
+#endif
+    determine_bucket_assignments(part0, np0, (charge && IBS->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+
+#ifdef DEBUG
+    printf("%ld buckets\n", nBuckets);
+    fflush(stdout);
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+      printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
+      fflush(stdout);
+    }
+#endif
+
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+      if (nBuckets==1) {
+        time = time0;
+        part = part0;
+        np = np0;
+        pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      } else {
+        if ((np=npBucket[iBucket])==0) 
+          continue;
+#ifdef DEBUG
+        printf("IBSCATTER: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
+        fflush(stdout);
+#endif
+        if (np>max_np) {
+          if (part)
+            free_czarray_2d((void**)part, max_np, 7);
+          part = (double**)czarray_2d(sizeof(double), np, 7);
+          time = (double*)trealloc(time, sizeof(*time)*np);
+          pbin = trealloc(pbin, sizeof(*pbin)*np);
+          max_np = np;
+        }
+        for (ip=0; ip<np; ip++) {
+          time[ip] = time0[ipBucket[iBucket][ip]];
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+        }
+      }
+
+      if (charge) {
+#if USE_MPI
+        MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+        IBS->charge = charge->macroParticleCharge*npTotal;
+        /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
+#else
+        IBS->charge = charge->macroParticleCharge*np;
+#endif
+      }
+
+      index = (long*)malloc(sizeof(long)*np);
+      count = (long*)malloc(sizeof(long)*IBS->nslice);
+      slicebeam(part, np, time, Po, IBS->nslice, index, count, &tLength);
+      bLength = IBS->revolutionLength/IBS->dT*tLength;
+      if ((IBS->nslice == 1) && (!IBS->isRing))
+        bLength /= sqrt(2*PI);
+      if ((IBS->nslice > 1) && (IBS->isRing))
+        bLength /= sqrt(4*PI);
       
+      iend = 0;
+      for (islice=0; islice<IBS->nslice; islice++) {
+#ifdef DEBUG
+        printf("Working on slice %ld of %ld\n", islice, IBS->nslice);
+        fflush(stdout);
+#endif
+        istart = iend;
+        iend += count[islice];
+        
 #if USE_MPI
       MPI_Allreduce(&count[islice], &countTotal, 1, MPI_LONG, MPI_SUM, workers);
-      if (countTotal<10) {
-        fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
-        zeroslice (islice, IBS);
-        continue;
-      }
+        if (countTotal<10) {
+          fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+          zeroslice (islice, IBS);
+          continue;
+        }
 #else 
       if (count[islice]<10) {
         fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
@@ -106,95 +165,111 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
         continue;
       }
 #endif
-    
-      computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-      /*** Should update eta[i] here to use values from the sigma matrix ****/
-      IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
-      IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
-      IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
-      IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
-      if (IBS->isRing && IBS->nslice == 1)
+        
+        computeSliceParameters(aveCoord, S, part, index, istart, iend, Po);
+        /*** Should update eta[i] here to use values from the sigma matrix ****/
+        IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
+        IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
+        IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
+        IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
+        if (IBS->isRing && IBS->nslice == 1)
         bLength = sqrt(S[4][4])*c_mks;
-      IBS->sigmaz0[islice] = bLength;
-      /* printf("slice %ld, bLength=%le\n", islice, bLength); */
-      
-      if (!IBS->forceMatchedTwiss)
-        forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
-#if USE_MPI
-      IBS->icharge[islice] = (IBS->charge * countTotal)/npTotal;
-#else
-      IBS->icharge[islice] = IBS->charge * (double)count[islice] / (double)np;
+        IBS->sigmaz0[islice] = bLength;
+#ifdef DEBUG
+        printf("slice %ld, bLength=%le\n", islice, bLength);
+        fflush(stdout);
 #endif
-      IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
-               IBS->elements, 1, 0, IBS->isRing,
-               IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
-               IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
-               IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
-               IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
-               &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1);    
-      IBS->xGrowthRate[islice] *= IBS->factor;
-      IBS->yGrowthRate[islice] *= IBS->factor;
-      IBS->zGrowthRate[islice] *= IBS->factor;
-    }
+      
+        if (!IBS->forceMatchedTwiss)
+          forth_propagate_twiss(IBS, islice, betax0, alphax0, betay0, alphay0, run);
+#if USE_MPI
+        IBS->icharge[islice] = (IBS->charge * countTotal)/npTotal;
+#else
+        IBS->icharge[islice] = IBS->charge * (double)count[islice] / (double)np;
+#endif
+        IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
+                 IBS->elements, 1, 0, IBS->isRing,
+                 IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
+                 IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
+                 IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
+                 IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
+                 &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1);    
+        IBS->xGrowthRate[islice] *= IBS->factor;
+        IBS->yGrowthRate[islice] *= IBS->factor;
+        IBS->zGrowthRate[islice] *= IBS->factor;
+      }
 
-    iend = 0;
-    for (islice=0; islice<IBS->nslice; islice++) {
-      istart = iend;
-      iend += count[islice];
-      
-      zRate[1] = 1.+IBS->dT*IBS->zGrowthRate[islice];
-      if (islice == 0)
-        zRate[0] = zRate[1];
-      else 
-        zRate[0] = 1.+IBS->dT*IBS->zGrowthRate[islice-1];
-      if (islice == IBS->nslice-1)
-        zRate[2] = zRate[1];
-      else
-        zRate[2] = 1.+IBS->dT*IBS->zGrowthRate[islice+1];
-      
-      RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
-      if (!IBS->smooth) {
-        computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-        if (IBS->do_x)
-          RNSigma[0] = sqrt(fabs(sqr(1 + IBS->dT * IBS->xGrowthRate[islice])-1))*sqrt(S[1][1]);
-        if (IBS->do_y)
-          RNSigma[1] = sqrt(fabs(sqr(1 + IBS->dT * IBS->yGrowthRate[islice])-1))*sqrt(S[3][3]);
-        if (IBS->do_z) {
-          RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
-        }
-        for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
-          if (RNSigma[ihcoord]) {
-            RNSigmaCheck[ihcoord] = 0;
-	    for (ipart=istart; ipart<iend; ipart++) {
-	      randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
-	      coord[index[ipart]][icoord] += randomNumber;
-	      RNSigmaCheck[ihcoord] += sqr(randomNumber);
-	    }
-            RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
+      iend = 0;
+      for (islice=0; islice<IBS->nslice; islice++) {
+        istart = iend;
+        iend += count[islice];
+        
+        zRate[1] = 1.+IBS->dT*IBS->zGrowthRate[islice];
+        if (islice == 0)
+          zRate[0] = zRate[1];
+        else 
+          zRate[0] = 1.+IBS->dT*IBS->zGrowthRate[islice-1];
+        if (islice == IBS->nslice-1)
+          zRate[2] = zRate[1];
+        else
+          zRate[2] = 1.+IBS->dT*IBS->zGrowthRate[islice+1];
+        
+        RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
+        if (!IBS->smooth) {
+          computeSliceParameters(aveCoord, S, part, index, istart, iend, Po);
+          if (IBS->do_x)
+            RNSigma[0] = sqrt(fabs(sqr(1 + IBS->dT * IBS->xGrowthRate[islice])-1))*sqrt(S[1][1]);
+          if (IBS->do_y)
+            RNSigma[1] = sqrt(fabs(sqr(1 + IBS->dT * IBS->yGrowthRate[islice])-1))*sqrt(S[3][3]);
+          if (IBS->do_z) {
+            RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
           }
+          for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
+            if (RNSigma[ihcoord]) {
+              RNSigmaCheck[ihcoord] = 0;
+              for (ipart=istart; ipart<iend; ipart++) {
+                randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+                part[index[ipart]][icoord] += randomNumber;
+                RNSigmaCheck[ihcoord] += sqr(randomNumber);
+              }
+              RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/(double)(iend-istart)/S[icoord][icoord]+1.);
+            }
+          }
+          /*
+            fprintf(stdout,"s=%g,islice=%ld,istart=%ld,iend=%ld,checkz=%g\n", 
+            IBS->s[IBS->elements-1], islice, istart, iend, RNSigmaCheck[2]);
+            */
+        } else {
+          /* inflate each emittance by the prescribed factor */
+          inflateEmittance(part, Po, eta, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
+          inflateEmittance(part, Po, eta, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
+          inflateEmittanceZ(part, Po, IBS->isRing, tLength, istart, iend, index, zRate, IBS->dT);
         }
-        /*
-          fprintf(stdout,"s=%g,islice=%ld,istart=%ld,iend=%ld,checkz=%g\n", 
-          IBS->s[IBS->elements-1], islice, istart, iend, RNSigmaCheck[2]);
-          */
-      } else {
-        /* inflate each emittance by the prescribed factor */
-        inflateEmittance(coord, Po, eta, 0, istart, iend, index, (1.+IBS->dT*IBS->xGrowthRate[islice]));
-        inflateEmittance(coord, Po, eta, 2, istart, iend, index, (1.+IBS->dT*IBS->yGrowthRate[islice]));
-        inflateEmittanceZ(coord, Po, IBS->isRing, tLength, istart, iend, index, zRate, IBS->dT);
+        /* update beam emittance information after IBS scatter for IBSCATTER */
+        if (!IBS->isRing) {
+          computeSliceParameters(aveCoord, S, part, index, istart, iend, Po);
+          IBS->emitx[islice] = correctedEmittance(S, eta, 0, 1, 0, 0);
+          IBS->emity[islice] = correctedEmittance(S, eta, 2, 3, 0, 0);
+          IBS->emitl[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
+          IBS->sigmaDelta[islice] = sqrt(S[5][5]);
+          IBS->sigmaz[islice] = sqrt(S[4][4]);
+        }
       }
-      /* update beam emittance information after IBS scatter for IBSCATTER */
-      if (!IBS->isRing) {
-        computeSliceParameters(aveCoord, S, coord, index, istart, iend, Po);
-        IBS->emitx[islice] = correctedEmittance(S, eta, 0, 1, 0, 0);
-        IBS->emity[islice] = correctedEmittance(S, eta, 2, 3, 0, 0);
-        IBS->emitl[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
-        IBS->sigmaDelta[islice] = sqrt(S[5][5]);
-        IBS->sigmaz[islice] = sqrt(S[4][4]);
+      free(index);
+      free(count);
+
+
+      if (nBuckets!=1) {
+        /* copy back to original buffer */
+        for (ip=0; ip<np; ip++)
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
       }
+      
+#ifdef DEBUG
+      printf("Done with slice %ld\n", islice);
+      fflush(stdout);
+#endif
     }
-    free(index);
-    free(count);
   }
   
 #if USE_MPI
@@ -566,11 +641,11 @@ void free_IBS(IBSCATTER *IBS)
   return;
 }
 
-void slicebeam(double **coord, long np, double Po, long nslice, long *index, long *count, double *dt)
+void slicebeam(double **coord, long np, double *time, double Po, long nslice, long *index, long *count, double *dt)
 {
   long i, j, islice, total;
   double tMaxAll, tMinAll, tMin, tMax;
-  double *time, P, beta;
+  double P, beta;
   long *timeIndex, temp=0;
   
   /* Count the number of particles in each slice and the keep the slice index for each particle */
@@ -580,14 +655,6 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
     count[islice] = 0;
 
   if (nslice>1) {
-    time = tmalloc(sizeof(*time)*np);
-    for (i=0; i<np; i++) {
-      P = Po*(1+coord[i][5]);
-      beta = P/sqrt(P*P+1);
-      time[i] = coord[i][4]/(beta*c_mks);
-      temp += time[i];
-    }
-
     /* find limits of bunch longitudinal coordinates */
     find_min_max(&tMinAll, &tMaxAll, time, np);
 #if USE_MPI
@@ -621,7 +688,6 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
       bombElegant(NULL, NULL);
     }
     free(timeIndex);
-    free(time);
   } else {
     /* simplified code for single slice */
     *dt = 1; /* never actually used when only 1 slice present */

@@ -929,7 +929,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
 #define N_ZTRANSVERSE_PARAMS 36
-#define N_IBSCATTER_PARAMS 11
+#define N_IBSCATTER_PARAMS 12
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 14
@@ -2593,6 +2593,7 @@ typedef struct {
   long do_x, do_y, do_z, nslice;
   long smooth, forceMatchedTwiss, isRing, interval;
   char *filename; 
+  long bunchedBeamMode;
   /* internal use only */
   char **name;
   double *s, *pCentral, *icharge;
