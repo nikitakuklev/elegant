@@ -1647,6 +1647,7 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"INTERVAL", "", IS_LONG, 0, (long)((char *)&ibs_example.interval), NULL, 0.0, 1, "Interval in passes at which to update output file."},
   {"FILENAME", "", IS_STRING, 0, (long)((char *)&ibs_example.filename), NULL, 0.0, 0, "Output filename."},
   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&ibs_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+  {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ibs_example.verbose), NULL, 0.0, 0, "If non-zero, then print updates during calculations."},
 };
 
 WAKE wake_example;

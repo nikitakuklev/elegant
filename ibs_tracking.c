@@ -40,7 +40,6 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   double *time0 = NULL;           /* array to record arrival time of each particle */
   double *time = NULL;           /* array to record arrival time of each particle */
   double **part = NULL;           /* particle buffer for working bucket */
-  long *pbin = NULL;              /* array to record which bin each particle is in */
   long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
@@ -60,9 +59,21 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   double eta[4];
 #if USE_MPI
   long npTotal, countTotal;
-
+  MPI_Status mpiStatus;
   /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
 #endif
+
+
+  if (IBS->verbose) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      printf("Starting IBSCATTER\n");
+      fflush(stdout);
+#if USE_MPI
+    }
+#endif
+  }
 
   if (IBS->nslice<1) 
     bombElegant("IBSCATTER: NSLICE has to be an integer >= 1", NULL);
@@ -74,6 +85,17 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   if (!IBS->s)
     init_IBS(element);
   if (IBS->dT == 0) return;
+
+  if (IBS->verbose) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      printf("Beginning IBSCATTER algorithm (tests passed)\n");
+      fflush(stdout);
+#if USE_MPI
+    }
+#endif
+  }
 
   if (isSlave || !notSinglePart) {
     eta[0] = IBS->etax[IBS->elements-1];
@@ -95,13 +117,49 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       fflush(stdout);
     }
 #endif
+  }
+  
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (myid==0)
+    MPI_Recv(&nBuckets, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+  else if (myid==1)
+    MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
+  if (IBS->verbose && myid==0) {
+    printf("Bunch assignment completed\n");
+    fflush(stdout);
+  }
+#endif
 
-    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+  if (IBS->verbose) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      printf("%ld bunches identified\n", nBuckets);
+      fflush(stdout);
+#if USE_MPI
+    }
+#endif
+  }
+  
+  for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    if (IBS->verbose) {
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
+      if (myid==0) {
+#endif
+	printf("Starting IBS for bunch %ld\n", iBucket);
+	fflush(stdout);
+#if USE_MPI
+      }
+#endif
+    }
+
+    if (isSlave || !notSinglePart) {
       if (nBuckets==1) {
         time = time0;
         part = part0;
         np = np0;
-        pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
       } else {
         if ((np=npBucket[iBucket])==0) 
           continue;
@@ -114,7 +172,6 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
             free_czarray_2d((void**)part, max_np, 7);
           part = (double**)czarray_2d(sizeof(double), np, 7);
           time = (double*)trealloc(time, sizeof(*time)*np);
-          pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
         }
         for (ip=0; ip<np; ip++) {
@@ -122,17 +179,29 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
           memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
         }
       }
+    }
 
-      if (charge) {
+    if (charge) {
 #if USE_MPI
-        MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-        IBS->charge = charge->macroParticleCharge*npTotal;
-        /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
-#else
-        IBS->charge = charge->macroParticleCharge*np;
-#endif
+      if (myid==0)
+	np = 0;
+      MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      IBS->charge = charge->macroParticleCharge*npTotal;
+      /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
+      if (myid==0 && IBS->verbose) {
+	printf("bunch %ld has charge=%e, np=%ld\n", iBucket, IBS->charge, npTotal);
+	fflush(stdout);
       }
+#else
+      IBS->charge = charge->macroParticleCharge*np;
+      if (IBS->verbose) {
+	printf("bunch %ld has charge=%e, np=%ld\n", iBucket, IBS->charge, npTotal);
+	fflush(stdout);
+      }
+#endif
+    }
 
+    if (isSlave || !notSinglePart) {
       index = (long*)malloc(sizeof(long)*np);
       count = (long*)malloc(sizeof(long)*IBS->nslice);
       slicebeam(part, np, time, Po, IBS->nslice, index, count, &tLength);
@@ -141,39 +210,77 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
         bLength /= sqrt(2*PI);
       if ((IBS->nslice > 1) && (IBS->isRing))
         bLength /= sqrt(4*PI);
-      
-      iend = 0;
-      for (islice=0; islice<IBS->nslice; islice++) {
-#ifdef DEBUG
-        printf("Working on slice %ld of %ld\n", islice, IBS->nslice);
-        fflush(stdout);
+    }
+    
+    iend = 0;
+    for (islice=0; islice<IBS->nslice; islice++) {
+      if (IBS->verbose) {
+#if USE_MPI
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (myid==0) {
 #endif
-        istart = iend;
-        iend += count[islice];
+	  printf("Starting computation of parameters for slice %ld for bunch %ld\n", islice, iBucket);
+	  fflush(stdout);
+#if USE_MPI
+	}
+#endif
+      }
+
+      if (isSlave || !notSinglePart) {
+	istart = iend;
+	iend += count[islice];
         
 #if USE_MPI
-      MPI_Allreduce(&count[islice], &countTotal, 1, MPI_LONG, MPI_SUM, workers);
+	MPI_Allreduce(&count[islice], &countTotal, 1, MPI_LONG, MPI_SUM, workers);
         if (countTotal<10) {
           fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
           zeroslice (islice, IBS);
           continue;
         }
 #else 
-      if (count[islice]<10) {
-        fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
-        zeroslice (islice, IBS);
-        continue;
-      }
+	if (count[islice]<10) {
+	  fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+	  zeroslice (islice, IBS);
+	  continue;
+	}
 #endif
         
         computeSliceParameters(aveCoord, S, part, index, istart, iend, Po);
+      }
+
+#if USE_MPI
+      if (IBS->verbose) {
+	if (myid==0) {
+	  long i, j;
+	  MPI_Recv(&aveCoord[0], 6, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+	  MPI_Recv(&S[0][0], 36, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+	  printf("aveCoord = %le, %le, %le, %le, %le, %le\n",
+		 aveCoord[0], aveCoord[1], aveCoord[2], 
+		 aveCoord[3], aveCoord[4], aveCoord[5]);
+	  for (i=0; i<6; i++) {
+	    printf("S[%ld]: ", i);
+	    for (j=0; j<6; j++)
+	      printf("  %le", S[i][j]);
+	    printf("\n");
+	  }
+	  fflush(stdout);
+	} 
+	if (myid==1) {
+	  MPI_Send(&aveCoord[0], 6, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+	  MPI_Send(&S[0][0], 36, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+      }
+#endif
+
+      if (isSlave || !notSinglePart) {
         /*** Should update eta[i] here to use values from the sigma matrix ****/
         IBS->emitx0[islice] = correctedEmittance(S, eta, 0, 1, &betax0, &alphax0);
         IBS->emity0[islice] = correctedEmittance(S, eta, 2, 3, &betay0, &alphay0);
         IBS->emitl0[islice] = SAFE_SQRT(S[4][4]*S[5][5]-sqr(S[4][5]));
         IBS->sigmaDelta0[islice] = sqrt(S[5][5]);
         if (IBS->isRing && IBS->nslice == 1)
-        bLength = sqrt(S[4][4])*c_mks;
+	  bLength = sqrt(S[4][4])*c_mks;
         IBS->sigmaz0[islice] = bLength;
 #ifdef DEBUG
         printf("slice %ld, bLength=%le\n", islice, bLength);
@@ -198,9 +305,22 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
         IBS->yGrowthRate[islice] *= IBS->factor;
         IBS->zGrowthRate[islice] *= IBS->factor;
       }
+    }
 
-      iend = 0;
-      for (islice=0; islice<IBS->nslice; islice++) {
+    iend = 0;
+    for (islice=0; islice<IBS->nslice; islice++) {
+      if (IBS->verbose) {
+#if USE_MPI
+	MPI_Barrier(MPI_COMM_WORLD);
+	if (myid==0) {
+#endif
+	  printf("Starting application of IBS effect for slice %ld for bunch %ld\n", islice, iBucket);
+	  fflush(stdout);
+#if USE_MPI
+	}
+#endif
+      }
+      if (isSlave || !notSinglePart) {
         istart = iend;
         iend += count[islice];
         
@@ -255,20 +375,28 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
           IBS->sigmaz[islice] = sqrt(S[4][4]);
         }
       }
+    }
+
+    if (IBS->verbose) {
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
+      if (myid==0) {
+#endif
+	printf("Done applying IBS effects for bunch %ld\n", iBucket);
+	fflush(stdout);
+#if USE_MPI
+      }
+#endif
+    }
+
+    if (isSlave || !notSinglePart) {
       free(index);
       free(count);
-
-
       if (nBuckets!=1) {
-        /* copy back to original buffer */
-        for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+	/* copy back to original buffer */
+	for (ip=0; ip<np; ip++)
+	  memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
       }
-      
-#ifdef DEBUG
-      printf("Done with slice %ld\n", islice);
-      fflush(stdout);
-#endif
     }
   }
   
@@ -299,7 +427,6 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       }
     } else if (myid==0) {
       /* processor 0 (master) receives data from processor 1 */
-      MPI_Status mpiStatus;
       if (MPI_Recv(&IBS->icharge[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
           MPI_Recv(&IBS->emitx0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
           MPI_Recv(&IBS->emity0[0], IBS->nslice, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS ||
@@ -345,6 +472,28 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   
   if (i_pass==n_passes-1)
     free_IBS(IBS);
+
+    if (time && time!=time0) 
+      free(time);
+    if (time0) 
+      free(time0);
+    if (ibParticle) 
+      free(ibParticle);
+    if (ipBucket)
+      free_czarray_2d((void**)ipBucket, nBuckets, np0);
+    if (npBucket)
+      free(npBucket);
+
+  if (IBS->verbose) {
+#if USE_MPI
+    if (myid==0) {
+#endif
+      printf("Returning from IBSCATTER\n");
+      fflush(stdout);
+#if USE_MPI
+    }
+#endif
+  }
 
   return;
 }
@@ -449,7 +598,7 @@ void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
 /* Set twiss parameter arrays etc. */
 void init_IBS(ELEMENT_LIST *element)
 {
-  long count, nElements, i, j, isRing = 0, init=1;
+  long count, nElements, i, j, init=1;
   double startRingPos, finalPos = 0;
   double s0, s1, dt, delta_s, p0, gamma;
   ELEMENT_LIST *element0, *elementStartRing, *eptr=NULL;
@@ -509,7 +658,6 @@ void init_IBS(ELEMENT_LIST *element)
       IBS->offset = count;
       IBS->output = 1;
       count = count + nElements +1;
-      isRing = IBS->isRing;
       if (!(IBS->name = SDDS_Calloc(nElements,  sizeof(*(IBS->name)))) ||
           !(IBS->s = SDDS_Calloc(nElements, sizeof(*(IBS->s)))) ||
           !(IBS->pCentral = SDDS_Calloc(nElements, sizeof(*(IBS->pCentral)))))
