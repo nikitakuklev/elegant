@@ -59,6 +59,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #if USE_MPI
   long npTotal, countTotal;
   MPI_Status mpiStatus;
+  long elemOffset, elemCount;
+  double mpiTemp;
   /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
 #endif
 
@@ -303,13 +305,45 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #else
         IBS->icharge[islice] = IBS->charge * (double)count[islice] / (double)np;
 #endif
+#if USE_MPI
+	elemCount = 0;
+	if (n_processors>2)
+	  elemCount = IBS->elements/(n_processors-1);
+	if (elemCount>10) {
+	  elemOffset = (myid-1)*elemCount;
+	  if (myid==(n_processors-1))
+	    elemCount = IBS->elements - (n_processors-2)*elemCount;
+	  IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
+		   elemCount, 1, 0, IBS->isRing,
+		   IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
+		   IBS->s+elemOffset, IBS->pCentral, IBS->betax[islice]+elemOffset, IBS->alphax[islice]+elemOffset, IBS->betay[islice]+elemOffset, IBS->alphay[islice]+elemOffset,
+		   IBS->etax+elemOffset, IBS->etaxp+elemOffset, IBS->etay+elemOffset, IBS->etayp+elemOffset, 
+		   IBS->xRateVsS[islice]+elemOffset, IBS->yRateVsS[islice]+elemOffset, IBS->zRateVsS[islice]+elemOffset,
+		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, IBS->s[IBS->elements-1]);    
+	  MPI_Allreduce(&IBS->xGrowthRate[islice], &mpiTemp, 1, MPI_DOUBLE, MPI_SUM, workers);
+	  IBS->xGrowthRate[islice] = mpiTemp;
+	  MPI_Allreduce(&IBS->yGrowthRate[islice], &mpiTemp, 1, MPI_DOUBLE, MPI_SUM, workers);
+	  IBS->yGrowthRate[islice] = mpiTemp;
+	  MPI_Allreduce(&IBS->zGrowthRate[islice], &mpiTemp, 1, MPI_DOUBLE, MPI_SUM, workers);
+	  IBS->zGrowthRate[islice] = mpiTemp;
+	} else {
+	  IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
+		   IBS->elements, 1, 0, IBS->isRing,
+		   IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
+		   IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
+		   IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
+		   IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
+		   &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, -1);    
+	}
+#else
         IBSRate (fabs(IBS->icharge[islice]/particleCharge), 
                  IBS->elements, 1, 0, IBS->isRing,
                  IBS->emitx0[islice], IBS->emity0[islice], IBS->sigmaDelta0[islice], bLength,
                  IBS->s, IBS->pCentral, IBS->betax[islice], IBS->alphax[islice], IBS->betay[islice], IBS->alphay[islice],
                  IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp, 
                  IBS->xRateVsS[islice], IBS->yRateVsS[islice], IBS->zRateVsS[islice],
-                 &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1);    
+                 &(IBS->xGrowthRate[islice]), &(IBS->yGrowthRate[islice]), &(IBS->zGrowthRate[islice]), 1, -1);    
+#endif
         IBS->xGrowthRate[islice] *= IBS->factor;
         IBS->yGrowthRate[islice] *= IBS->factor;
         IBS->zGrowthRate[islice] *= IBS->factor;

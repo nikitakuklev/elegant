@@ -20,7 +20,8 @@ void IBSRate (double particles,
               double *s, double *pCentral, double *betax, double *alphax, double *betay, 
               double *alphay, double *etax, double *etaxp, double *etay, double *etayp,
               double *xRateVsS, double *yRateVsS, double *zRateVsS, 
-              double *xGrowthRate, double *yGrowthRate, double *zGrowthRate, long isElegant) 
+              double *xGrowthRate, double *yGrowthRate, double *zGrowthRate, long isElegant,
+	      double sTotal) 
 {
   long i, j, k;
   double test = 1e-5;
@@ -76,13 +77,16 @@ void IBSRate (double particles,
   sigmaDelta = sigmaDelta0;
   sigmaz = sigmaz0;
 
+  if (sTotal<=0)
+    sTotal = s[elements-1];
+
   for( i=0; i<elements; i++) {
     if (i==0) {
-      weight = FABS(s[1]-s[0])/ 2.0/ s[elements-1];
+      weight = FABS(s[1]-s[0])/ 2.0/ sTotal;
     } else if (i==(elements-1) ) {
-      weight = FABS(s[elements-1]-s[elements-2])/ 2.0/ s[elements-1];
+      weight = FABS(s[elements-1]-s[elements-2])/ 2.0/ sTotal;
     } else {
-      weight = FABS(s[i+1]-s[i-1])/ 2.0/ s[elements-1];
+      weight = FABS(s[i+1]-s[i-1])/ 2.0/ sTotal;
     }
 
     if (!weight) {
