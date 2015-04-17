@@ -661,7 +661,7 @@ int main( int argc, char **argv)
              emitx, emity, sigmaDelta, sigmaz, 
              s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
              NULL, NULL, NULL, 
-            &xGrowthRateInitial, &yGrowthRateInitial, &zGrowthRateInitial, 0);
+            &xGrowthRateInitial, &yGrowthRateInitial, &zGrowthRateInitial, 0, -1);
 
     /* iterating for equilibrium emittances and final growth rates */
     if (!integrationTurns && !growthRatesOnly && isRing) {
@@ -751,7 +751,7 @@ int main( int argc, char **argv)
                 emitx, emity, sigmaDelta, sigmaz, 
                 s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
                 xRateVsS, yRateVsS, zRateVsS, 
-               &xGrowthRate, &yGrowthRate, &zGrowthRate, 0);
+               &xGrowthRate, &yGrowthRate, &zGrowthRate, 0, -1);
      } else {
        /* final growth rates and emittances after integration */
        xGrowthRate = xRateInteg[integrationPoints - 1] ;
@@ -920,7 +920,7 @@ double IBSequations(double *x, long *invalid) {
           emitx, emity, sigmaDelta, sigmaz, 
           s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
           NULL, NULL, NULL, 
-          &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
+          &xGrowthRate, &yGrowthRate, &zGrowthRate, 0, -1);
   a = -2./taux*emitx - 2./tauy*emity;
   b = 2./taux * emitx0;
   c = xGrowthRate * emitx + yGrowthRate * emity;
@@ -977,7 +977,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
              emitx, emity, sigmaDelta, sigmaz, 
              s, pCentral, betax, alphax, betay, alphay, etax, etaxp,etay, etayp, 
              NULL, NULL, NULL, 
-            &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
+            &xGrowthRate, &yGrowthRate, &zGrowthRate, 0, -1);
     xRateInteg[slot] = xGrowthRate;
     yRateInteg[slot] = yGrowthRate;
     zRateInteg[slot] = zGrowthRate;
@@ -1001,7 +1001,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
            emitx, emity, sigmaDelta, sigmaz, 
            s, pCentral, betax, alphax, betay, alphay, etax, etaxp,etay, etayp, 
            NULL, NULL, NULL,          
-          &xGrowthRate, &yGrowthRate, &zGrowthRate,0);
+          &xGrowthRate, &yGrowthRate, &zGrowthRate, 0, -1);
   xRateInteg[slot] = xGrowthRate;
   yRateInteg[slot] = yGrowthRate;
   zRateInteg[slot] = zGrowthRate;
