@@ -309,7 +309,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 	elemCount = 0;
 	if (n_processors>2)
 	  elemCount = IBS->elements/(n_processors-1);
-	if (elemCount>10) {
+	if (elemCount>5) {
 	  elemOffset = (myid-1)*elemCount;
 	  if (myid==(n_processors-1))
 	    elemCount = IBS->elements - (n_processors-2)*elemCount;
