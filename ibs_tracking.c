@@ -51,9 +51,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   double aveCoord[6], S[6][6];
   double betax0, alphax0, betay0, alphay0;
   double randomNumber;
-  double beta0, beta1, p;
   double RNSigma[3], RNSigmaCheck[3]={0,0,0};
-  double bLength, tLength, zRate[3];
+  double bLength=0, tLength, zRate[3];
   static SDDS_TABLE outPage;
   static long isInit=0, doOut=0;
   double eta[4];
@@ -62,7 +61,6 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   MPI_Status mpiStatus;
   /* printf("myid=%d, np=%ld, npTotal=%ld\n", myid, np, npTotal);  */
 #endif
-
 
   if (IBS->verbose) {
 #if USE_MPI
@@ -88,6 +86,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 
   if (IBS->verbose) {
 #if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
     if (myid==0) {
 #endif
       printf("Beginning IBSCATTER algorithm (tests passed)\n");
@@ -143,9 +142,12 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   }
   
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
     if (IBS->verbose) {
 #if USE_MPI
-      MPI_Barrier(MPI_COMM_WORLD);
       if (myid==0) {
 #endif
 	printf("Starting IBS for bunch %ld\n", iBucket);
@@ -405,6 +407,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 	  memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
       }
     }
+    
   }
   
 #if USE_MPI
@@ -799,9 +802,8 @@ void free_IBS(IBSCATTER *IBS)
 void slicebeam(double **coord, long np, double *time, double Po, long nslice, long *index, long *count, double *dt)
 {
   long i, j, islice, total;
-  double tMaxAll, tMinAll, tMin, tMax;
-  double P, beta;
-  long *timeIndex, temp=0;
+  double tMaxAll, tMinAll;
+  long *timeIndex;
   
   /* Count the number of particles in each slice and the keep the slice index for each particle */
   for (i=0; i<np; i++)
@@ -872,7 +874,6 @@ long computeSliceParameters(double C[6], double S[6][6], double **part, long *in
   double *time, dt, dp, beta, P;
 #if USE_MPI
   long countTotal, count0;
-  double sum;
 #endif
 
   time = tmalloc(sizeof(*time)*(end-start));
@@ -1061,7 +1062,7 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
 
 void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
 {
-  long i, islice;
+  long islice;
   double gamma;
 
   log_entry("dump_IBScatter");
