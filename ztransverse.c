@@ -196,10 +196,8 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           printf("offset = %ld, length=%ld, nb=%ld\n", offset, length, nb);
 #endif
           buffer = malloc(sizeof(double) * length);
-          MPI_Allreduce(&posItime[0][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
-          memcpy(&posItime[0][offset], buffer, sizeof(double)*length);
-          MPI_Allreduce(&posItime[1][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
-          memcpy(&posItime[1][offset], buffer, sizeof(double)*length);
+          MPI_Allreduce(&posItime[plane][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
+          memcpy(&posItime[plane][offset], buffer, sizeof(double)*length);
           free(buffer);
         }
 
