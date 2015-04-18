@@ -807,11 +807,11 @@ long do_tracking(
       if (eptr->p_elem || eptr->matrix) {
 #ifdef VAX_VMS
         if (run->print_statistics && !(flags&TEST_PARTICLES))
-          fprintf(stdout, "tracking through %s%c", eptr->name, ' ');
+          fprintf(stdout, "Starting %s, pass %ld\n", eptr->name, i_pass);
 	fflush(stdout);
 #else
         if (run->print_statistics && !(flags&TEST_PARTICLES))
-          fprintf(stdout, "tracking through %s%c", eptr->name, '\n');
+          fprintf(stdout, "Starting %s, pass %ld\n", eptr->name, i_pass);
 	fflush(stdout);
 #endif
         show_dE = 0;
@@ -1802,9 +1802,11 @@ long do_tracking(
       fflush(stdout);
 #endif
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
-          report_stats(stdout, ": ");
-          fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
-          fflush(stdout);
+	  if (run->print_statistics>1) {
+	    report_stats(stdout, ": ");
+	    fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
+	    fflush(stdout);
+	  }
           if (nLeft!=nToTrack)
             fprintf(stdout, "%ld particles left\n", nLeft);
 	  fflush(stdout);
