@@ -260,7 +260,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       }
 
 #if USE_MPI
-      if (IBS->verbose) {
+      if (IBS->verbose>2) {
 	if (myid==0) {
 	  long i, j;
 	  MPI_Recv(&aveCoord[0], 6, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
@@ -352,7 +352,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 
     iend = 0;
     for (islice=0; islice<IBS->nslice; islice++) {
-      if (IBS->verbose) {
+      if (IBS->verbose>1) {
 #if USE_MPI
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (myid==0) {
