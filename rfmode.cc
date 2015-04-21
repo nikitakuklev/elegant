@@ -750,7 +750,7 @@ void track_through_rfmode(
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }
-            if (iBucket==nBuckets-1 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+            if (rfmode->sample_counter%100==0 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }

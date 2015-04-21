@@ -51,6 +51,8 @@ Here is a summary of what's changed since release 27.0.2:
 \item The longitudinal emittance calculation in the \verb|final| file from \verb|run_setup| was incorrect for multi-bunch beams.
 \item A bug in the \verb|coupled_twiss| command was found and fixed by M. Ehrlichman (PSI). The bug resulted in incorrect output in 
   strongly coupled lattices.
+\item The output of normalized emittance for the \verb|slice_analysis| command was improved to include the factor $p_\textrm{central}(1+\langle \delta \rangle)$
+  (momentum offset) instead of simply $p_\textrm{central}$.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -62,6 +64,8 @@ Here is a summary of what's changed since release 27.0.2:
 \item The \verb|IBSCATTER| element now works in multi-bunch mode.
 \item The \verb|VERBOSITY| parameter was added to \verb|ILMATRIX| to control the amount of printed output.
 \item The \verb|ILMATRIX| command allows entry of the third-order momentum compaction factor.
+\item The output of time centroids (i.e., \verb|Ct| and \verb|dCt|) from the \verb|WATCH| element has improved accuracy due to 
+  use of the Kahan sum formula.
 \end{itemize}
 
 \subsection{New and Modified Commands}
