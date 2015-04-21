@@ -486,8 +486,18 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
         pow(VR[(i*2+1)*matDim+j*2],2)+pow(VR[(i*2+1)*matDim+j*2+1],2);
     }
   }
+  /*
   for (i=0; i<N; i++) {
     MaxIndex[i]=GetMaxIndex(VV[i], N);
+  }
+  */
+  MaxIndex[0]=GetMaxIndex(VV[0], N);
+  VV[1][MaxIndex[0]] = -1.0;
+  MaxIndex[1]=GetMaxIndex(VV[1], N);
+  if( N>1 ) {
+    VV[2][MaxIndex[0]] = -1.0;
+    VV[2][MaxIndex[1]] = -1.0;
+    MaxIndex[2]=GetMaxIndex(VV[2], N);
   }
 
   /*--- Copying arrays... */
