@@ -79,7 +79,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
     bombElegant("IBSCATTER: NSLICE has to be an integer >= 1", NULL);
   if (IBS->bunchedBeamMode && !IBS->isRing)
     bombElegantVA("IBSCATTER %s: has BUNCHED_BEAM_MODE=1 BUT ISRING=0", element->name);
-  if (!charge && charge->macroParticleCharge && !IBS->charge)
+  if (!charge && !IBS->charge)
     bombElegant("IBSCATTER: bunch charge is not given", NULL);
 
   if (!IBS->s)
