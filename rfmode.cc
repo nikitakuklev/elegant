@@ -391,7 +391,7 @@ void track_through_rfmode(
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
               
               if (rfmode->feedbackRecordFile) {
-                long rowsNeeded = nBuckets*n_passes+1;
+                long rowsNeeded = effectiveBuckets*n_passes+1;
 #if USE_MPI
                 if (myid==1) {
 #endif
