@@ -24,6 +24,11 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 {
   long ip, ib;
   long ibMin, ibMax;
+#if USE_MPI
+  long ibMinGlobal, ibMaxGlobal;
+  long nBucketsRange[2];
+  MPI_Status mpiStatus;
+#endif
 
 #ifdef DEBUG
   printf("determine_bucket_assignments called\n");
@@ -49,7 +54,13 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
         ibMin = ib;
       if (ib>ibMax)
         ibMax = ib;
-      }
+    }
+#if USE_MPI
+    MPI_Allreduce(&ibMin, &ibMinGlobal, 1, MPI_LONG, MPI_MIN, workers);
+    MPI_Allreduce(&ibMax, &ibMaxGlobal, 1, MPI_LONG, MPI_MAX, workers);
+    ibMin = ibMinGlobal;
+    ibMax = ibMaxGlobal;
+#endif
     *nBuckets = (ibMax-ibMin)+1;
 #ifdef DEBUG
     printf("nPPB=%ld, ibMin = %ld, ibMax = %ld\n", idSlotsPerBunch, ibMin, ibMax);
@@ -107,15 +118,15 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
         (*npBucket)[ib] += 1;
       }
     }
-#ifdef DEBUG
-    printf("Leaving determine_bucket_assignment\n");
-    fflush(stdout);
-#endif
 
 #if USE_MPI
   }
 #endif
 
+#ifdef DEBUG
+    printf("Leaving determine_bucket_assignment\n");
+    fflush(stdout);
+#endif
 }
 
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0Input,
