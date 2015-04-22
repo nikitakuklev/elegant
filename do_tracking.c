@@ -807,11 +807,17 @@ long do_tracking(
       if (eptr->p_elem || eptr->matrix) {
 #ifdef VAX_VMS
         if (run->print_statistics && !(flags&TEST_PARTICLES))
-          fprintf(stdout, "Starting %s, pass %ld\n", eptr->name, i_pass);
+          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, nToTrack);
 	fflush(stdout);
 #else
         if (run->print_statistics && !(flags&TEST_PARTICLES))
-          fprintf(stdout, "Starting %s, pass %ld\n", eptr->name, i_pass);
+          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, 
+#if USE_MPI
+                  beam->n_to_track_total
+#else
+                  nToTrack
+#endif
+                  );
 	fflush(stdout);
 #endif
         show_dE = 0;
@@ -854,8 +860,10 @@ long do_tracking(
             if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
               fprintf(stdout, "Tracking matrix for %s\n", eptr->name);
               fflush(stdout);
-              print_elem(stdout, eptr);
-              print_matrices(stdout, "", eptr->matrix);
+              if (run->print_statistics>2) {
+                print_elem(stdout, eptr);
+                print_matrices(stdout, "", eptr->matrix);
+              }
             }
             if (flags&CLOSED_ORBIT_TRACKING) {
               switch (eptr->type) {
@@ -878,7 +886,8 @@ long do_tracking(
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             fprintf(stdout, "Tracking element: ");
             fflush(stdout);
-            print_elem(stdout, eptr);
+            if (run->print_statistics>2)
+              print_elem(stdout, eptr);
           }
 	  type = eptr->type;
 	  if (flags&IBS_ONLY_TRACKING) {
