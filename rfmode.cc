@@ -53,7 +53,8 @@ void track_through_rfmode(
     long *ibParticle = NULL;          /* array to record which bucket each particle is in */
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-    long iBucket, nBuckets, np;
+    long iBucket, nBuckets, np, effectiveBuckets, jBucket;
+    double tOffset;
     static FILE *fpdeb = NULL;
     static FILE *fpdeb2 = NULL;
     double phig;
@@ -71,6 +72,7 @@ void track_through_rfmode(
     long np_total;
 #if USE_MPI
     long nonEmptyBins = 0;
+    MPI_Status mpiStatus;
 #endif
 
     /*
@@ -200,28 +202,43 @@ void track_through_rfmode(
       printf("RFMODE: Determining bucket assignments\n");
 #endif
       determine_bucket_assignments(part0, np0, (charge && rfmode->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
-#ifdef DEBUG
-      printf("RFMODE: Done determining bucket assignments\n");
-      fflush(stdout);
-#endif 
-    } else 
-      nBuckets = 1;
+      if (rfmode->bunchedBeamMode>1) {
+        if (rfmode->bunchInterval>0) {
+          /* Use pseudo-bunched beam mode---only one bunch is really present */
+        } else
+          bombElegantVA("RFMODE %s has invalid values for bunched_beam_mode (>1) and bunch_interval (<=0)\n", element_name);
+      }
+      
+    }
 
 #if USE_MPI
-    /* Master needs to know the number of buckets */
+    /* Master needs to know the number of buckets, check for consistency */
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce(&nBuckets, &iBucket, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+    if (myid==1) 
+      MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
     if (myid==0)
-      nBuckets = iBucket;
+      MPI_Recv(&nBuckets, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
 #endif
 #ifdef DEBUG
     printf("RFMODE: nBuckets = %ld\n", nBuckets);
     fflush(stdout);
 #endif
     
-    for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    effectiveBuckets = nBuckets==1 ? rfmode->bunchedBeamMode : nBuckets;
+    for (jBucket=0; jBucket<effectiveBuckets; jBucket++) {
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
 #ifdef DEBUG
-      printf("iBucket = %ld\n", iBucket);
+      printf("RFMODE: Waiting at top of loop\n");
+      fflush(stdout);
+#endif
+#endif
+      if (nBuckets>1)
+        iBucket = jBucket;
+      else
+        iBucket = 0;
+#ifdef DEBUG
+      printf("iBucket = %ld, jBucket = %ld\n", iBucket, jBucket);
       fflush(stdout);
 #endif
 #if USE_MPI
@@ -235,6 +252,10 @@ void track_through_rfmode(
         np = 0;
       }
       MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+      printf("np_total = %ld\n", np_total);
+      fflush(stdout);
+#endif
       if (np_total==0)
         continue;
 #endif
@@ -246,17 +267,17 @@ void track_through_rfmode(
           np = np0;
           pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
         } else {
-          if ((np = npBucket[iBucket])==0)
-            continue;
-          if (part)
-            free_czarray_2d((void**)part, max_np, 7);
-          part = (double**)czarray_2d(sizeof(double), np, 7);
-          time = (double*)trealloc(time, sizeof(*time)*np);
-          pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
-          max_np = np;
-          for (ip=0; ip<np; ip++) {
-            time[ip] = time0[ipBucket[iBucket][ip]];
-            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+          if ((np = npBucket[iBucket])>0) {
+            if (part)
+              free_czarray_2d((void**)part, max_np, 7);
+            part = (double**)czarray_2d(sizeof(double), np, 7);
+            time = (double*)trealloc(time, sizeof(*time)*np);
+            pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
+            max_np = np;
+            for (ip=0; ip<np; ip++) {
+              time[ip] = time0[ipBucket[iBucket][ip]];
+              memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+            }
           }
         }
 #ifdef DEBUG
@@ -287,8 +308,15 @@ void track_through_rfmode(
         printf("computed tmean = %21.15le\n", tmean);
         fflush(stdout);
 #endif
+        tOffset = 0;
+        if (nBuckets==1 && jBucket) {
+          tOffset = rfmode->bunchInterval*jBucket;
+          tmean += tOffset;
+        }
+        
         tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
         tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
+        
         if (iBucket>0 && tmin<last_tmax) {
 #if USE_MPI
           if (myid==0)
@@ -415,7 +443,7 @@ void track_through_rfmode(
           printf("tmin = %21.15le, tmax = %21.15le, tmean = %21.15le\n", tmin, tmax, tmean);
           fflush(stdout);
 #endif
-          
+
           for (ib=0; ib<rfmode->n_bins; ib++)
             Ihist[ib] = 0;
         
@@ -427,7 +455,7 @@ void track_through_rfmode(
 #endif
           for (ip=0; ip<np; ip++) {
             pbin[ip] = -1;
-            ib = (long)((time[ip]-tmin)/dt);
+            ib = (long)((time[ip]+tOffset-tmin)/dt);
             if (ib<0)
               continue;
             if (ib>rfmode->n_bins - 1)
@@ -640,7 +668,7 @@ void track_through_rfmode(
             if (rfmode->interpolate) {
               long ib1, ib2;
               ib = pbin[ip];
-              dt1 = time[ip] - (tmin + dt*(ib+0.5));
+              dt1 = time[ip]+tOffset - (tmin + dt*(ib+0.5));
               if (dt1<0) {
                 ib1 = ib-1;
                 ib2 = ib;
@@ -656,13 +684,14 @@ void track_through_rfmode(
                 ib1++;
                 ib2++;
               }
-              dt1 = time[ip] - (tmin + dt*(ib1+0.5));
+              dt1 = time[ip]+tOffset - (tmin + dt*(ib1+0.5));
               V = Vbin[ib1] + (Vbin[ib2]-Vbin[ib1])/dt*dt1; 
             } else {
               V = Vbin[pbin[ip]];
             }
             dgamma = rfmode->n_cavities*V/(1e6*particleMassMV*particleRelSign);
-            add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+            if (iBucket==jBucket)
+              add_to_particle_energy(part[ip], time[ip], Po, dgamma);
           }
         }
 
@@ -671,7 +700,7 @@ void track_through_rfmode(
         fflush(stdout);
 #endif
 
-        if (nBuckets!=1) {
+        if (nBuckets!=1 && iBucket==jBucket) {
           for (ip=0; ip<np; ip++)
             memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
         }
@@ -679,7 +708,7 @@ void track_through_rfmode(
       
 
       if (rfmode->record) {
-        long rowsNeeded = nBuckets*(n_passes/rfmode->sample_interval+1);
+        long rowsNeeded = effectiveBuckets*(n_passes/rfmode->sample_interval+1);
 #if USE_MPI
         double sendBuffer[13], receiveBuffer[13];
 #endif
@@ -734,7 +763,7 @@ void track_through_rfmode(
 #endif
             if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                    rfmode->sample_counter++,
-                                   (char*)"Bunch", iBucket, (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+                                   (char*)"Bunch", jBucket, (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
                                    (char*)"FractionBinned", np_total?(1.0*n_binned)/np_total:0.0,
                                    (char*)"VPostBeam", rfmode->V, 
                                    (char*)"PhasePostBeam", rfmode->last_phase,
@@ -783,7 +812,7 @@ void track_through_rfmode(
 #endif
       MPI_Barrier(MPI_COMM_WORLD);
 #ifdef DEBUG
-      printf("Finished waiting on barrier (1)\n");
+      printf("Finished waiting on barrier (1), iBucket=%ld, jBucket=%ld\n", iBucket, jBucket);
       fflush(stdout);
 #endif
 #endif
