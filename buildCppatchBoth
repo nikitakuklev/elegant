@@ -1,0 +1,20 @@
+#!/bin/bash 
+
+if [[ "$1" == "" ]] ; then
+    echo "usage: buildCppatchBoth <cppatchMessage>"
+    exit 1
+fi
+
+make clean 
+make -j 8 
+cd O.linux-x86_64
+cppatch -comment "$1" elegant 
+cd ..
+
+make clean 
+make -j 8 Pelegant
+cd O.linux-x86_64
+cppatch -comment "$1" Pelegant 
+cd ..
+
+make clean 
