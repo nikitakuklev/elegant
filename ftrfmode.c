@@ -75,9 +75,6 @@ void track_through_ftrfmode(
     trfmode->mp_charge = charge->macroParticleCharge;
   else
     bombElegant("CHARGE element required to use FTRFMODE", NULL);
-  if (trfmode->mp_charge==0 || (trfmode->xfactor==0 && trfmode->yfactor==0))
-    return;
-
 #ifdef DEBUG
   printf("mp charge = %le\n", trfmode->mp_charge);
   fflush(stdout);
@@ -96,6 +93,9 @@ void track_through_ftrfmode(
   }
 #endif
 */
+
+  if (trfmode->mp_charge==0 || (trfmode->xfactor==0 && trfmode->yfactor==0))
+    return;
 
 #ifdef DEBUG
   printf("About to allocate memory\n");

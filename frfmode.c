@@ -63,9 +63,6 @@ void track_through_frfmode(
   else
     bombElegant("CHARGE element required to use FRFMODE", NULL);
   
-  if (rfmode->mp_charge==0 || rfmode->factor==0)
-    return ;
-  
   if (!rfmode->initialized)
     bombElegant("track_through_rfmode called with uninitialized element", NULL);
 
@@ -77,6 +74,9 @@ void track_through_frfmode(
 #if (USE_MPI)
   }
 #endif
+
+  if (rfmode->mp_charge==0 || rfmode->factor==0)
+    return ;
   
   if (rfmode->n_bins>max_n_bins) {
     Ihist = trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
