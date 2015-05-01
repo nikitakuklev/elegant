@@ -805,12 +805,13 @@ long do_tracking(
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
-#ifdef VAX_VMS
-        if (run->print_statistics && !(flags&TEST_PARTICLES))
-          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, nToTrack);
-	fflush(stdout);
-#else
-        if (run->print_statistics && !(flags&TEST_PARTICLES))
+        if (run->print_statistics && !(flags&TEST_PARTICLES)) {
+#if USE_MPI
+	  if (!partOnMaster && notSinglePart) {
+	    if (isMaster) nToTrack = 0; 
+	    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	  }
+#endif
           fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
                   beam->n_to_track_total
@@ -818,8 +819,8 @@ long do_tracking(
                   nToTrack
 #endif
                   );
-	fflush(stdout);
-#endif
+	  fflush(stdout);
+	}
         show_dE = 0;
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
         if (eptr==eptrCLMatrix) {
