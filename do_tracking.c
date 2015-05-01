@@ -518,9 +518,6 @@ long do_tracking(
 #else
       if (i_pass%20==0) {
 	if (!partOnMaster && notSinglePart) {
-	  /* We have to collect information from all the processors to print correct info during tracking */
-	  if (isMaster) nToTrack = 0; 
-	  MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  sprintf(s, "%ld particles present after pass %ld        ", 
 		  beam->n_to_track_total, i_pass);
 	}
@@ -1983,13 +1980,23 @@ long do_tracking(
       eptr = eptr->succ;
       i_elem++;
       nToTrack = nLeft;
-        
+#if USE_MPI
+      if (!partOnMaster && notSinglePart) {
+        /* We have to collect information from all the processors to print correct info during tracking */
+        if (isMaster) nToTrack = 0; 
+        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+        sprintf(s, "%ld particles present after pass %ld        ", 
+                beam->n_to_track_total, i_pass);
+      } else 
+        beam->n_to_track_total = nToTrack;
+#endif
+
 #ifdef DEBUG 
         printf("do_tracking checkpoint 16.5\n");
         fflush(stdout);
 #endif
 
-    } /* end of the while loop */
+      } /* end of the while loop */
 #ifdef DEBUG 
       printf("do_tracking checkpoint 17\n");
       fflush(stdout);
