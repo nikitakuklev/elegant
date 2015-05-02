@@ -67,9 +67,11 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
   long id, ie, ip, particleID;
   MALIGN mal;
 #ifdef DEBUG
+#if USE_MPI
   if (i_elem==0)
     fprintf(fpd, "processor %d has %ld particles on pass %ld\n",
             myid, np, pass);
+#endif
 #endif
   if (pass==fireOnPass) {
     for (ie=0; ie<nElements; ie++) {
@@ -100,15 +102,19 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
       mal.dp = delta_negative_limit + id*deltaStep;
       offset_beam(coord+ip, 1, &mal, *pCentral);
 #ifdef DEBUG
+#if USE_MPI
       if (fpd)
         fprintf(fpd, "Imparted error %le to particle %ld (ie=%ld, pId=%ld) on processor %d\n", mal.dp, ip, ie, (long)coord[ip][6], myid);
 #endif
+#endif
     }
 #ifdef DEBUG
+#if USE_MPI
     if (fpd) {
       fprintf(fpd, "Momentum kick done on processor %d\n", myid);
       fflush(fpd);
     }
+#endif
 #endif
   }
 }
