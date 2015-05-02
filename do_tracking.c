@@ -1606,7 +1606,7 @@ long do_tracking(
 	      break;
 	    case T_TFBPICKUP:
 	      if (!(flags&TEST_PARTICLES))
-		transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, nToTrack, i_pass);
+		transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, nToTrack, i_pass, *P_central, beam?beam->id_slots_per_bunch:0);
 	      break;
 	    case T_STRAY:
 	      if (eptr->matrix) {
@@ -1623,7 +1623,7 @@ long do_tracking(
 	      break;
 	    case T_TFBDRIVER:
 	      if (!(flags&TEST_PARTICLES))
-		transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, nToTrack, beamline, i_pass, n_passes, run->rootname);
+		transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, nToTrack, beamline, i_pass, n_passes, run->rootname, *P_central, beam?beam->id_slots_per_bunch:0);
 	      feedbackDriverSeen = 1;
 	      break;
 	    case T_LSRMDLTR:

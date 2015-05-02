@@ -954,8 +954,8 @@ extern char *entity_text[N_TYPES];
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
-#define N_TFBPICKUP_PARAMS 18
-#define N_TFBDRIVER_PARAMS 20
+#define N_TFBPICKUP_PARAMS 19
+#define N_TFBDRIVER_PARAMS 21
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 24
@@ -2748,11 +2748,13 @@ extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
 typedef struct {
   char *ID, *plane;
   double rmsNoise, a[TFB_FILTER_LENGTH];
+  long bunchedBeamMode;
   /* internal parameters */
   long initialized, yPlane, filterLength;
-  double filterOutput;
+  double *filterOutput;
+  long nBunches;
   /* circular buffer for storing past readings */
-  double data[TFB_FILTER_LENGTH];
+  double **data;
 } TFBPICKUP;
 
 /* Transverse Feedback Driver element */
@@ -2763,13 +2765,15 @@ typedef struct {
   long delay;
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
+  long bunchedBeamMode;
   /* internal parameters */
-  long initialized, filterLength, dataWritten;
+  long initialized, filterLength, dataWritten, outputIndex;
   TFBPICKUP *pickup;
   SDDS_DATASET SDDSout;
+  long nBunches;
   /* circular buffer for storing output signal */
   long maxDelay;
-  double *driverSignal;
+  double **driverSignal;
 } TFBDRIVER;
 
 
@@ -3862,9 +3866,9 @@ void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode
 void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos, double **particleOri,
                                    long *lostOnPass, long particles, double *weight, TSCATTER *tsptr);
 
-void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
+void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass, double Po, long idSlotsPerBunch);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
-void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname);
+void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname, double Po, long idSlotsPerBunch);
 void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
 
 long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);

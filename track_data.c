@@ -2273,6 +2273,7 @@ PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"A12", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[12]), NULL, 0.0, 0, "Filter coefficient"},
    {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
+   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
 } ;
 
 TFBDRIVER tfbDriver_example;
@@ -2298,6 +2299,7 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"A12", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[12]), NULL, 0.0, 0, "Filter coefficient"},
    {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
+   {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
 } ;
 
 LSCDRIFT lscdrift_example;
