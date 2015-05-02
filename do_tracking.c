@@ -276,7 +276,8 @@ long do_tracking(
 #if USE_MPI
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0; 
-    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (beam)
+      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   } else { /* singlePart tracking or partOnMaster */
     if (beam)	
       beam->n_to_track_total = nToTrack;
@@ -519,7 +520,7 @@ long do_tracking(
       if (i_pass%20==0) {
 	if (!partOnMaster && notSinglePart) {
 	  sprintf(s, "%ld particles present after pass %ld        ", 
-		  beam->n_to_track_total, i_pass);
+		  beam?beam->n_to_track_total:-1, i_pass);
 	}
 	else { /* singlePart tracking or partOnMaster */
 	  sprintf(s, "%ld particles present after pass %ld        ", 
@@ -806,12 +807,13 @@ long do_tracking(
 #if USE_MPI
 	  if (!partOnMaster && notSinglePart) {
 	    if (isMaster) nToTrack = 0; 
-	    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+            if (beam)
+              MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
           fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                  beam->n_to_track_total
+                  beam?beam->n_to_track_total:-1
 #else
                   nToTrack
 #endif
@@ -1077,9 +1079,11 @@ long do_tracking(
 		break;
 	      if (!partOnMaster && notSinglePart) { /* Update the total particle number to get the correct charge */
 		if (isMaster) nToTrack = 0;
-		MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+                if (beam)
+                  MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	      } else { /* singlePart tracking or partOnMaster */
-		beam->n_to_track_total = nToTrack;
+                if (beam)
+                  beam->n_to_track_total = nToTrack;
 	      }
 #endif
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -1566,7 +1570,7 @@ long do_tracking(
 #if !USE_MPI
               if (nLeft<nMaximum && ((SCRIPT*)eptr->p_elem)->verbosity>1)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
-			nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
+			nLost, beam?beam->n_particle:-1, beam?beam->n_to_track:-1, nLeft, nToTrack, nMaximum);
 #endif
 	      nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
 					      beam, coord, nToTrack, &nLost, 
@@ -1574,7 +1578,8 @@ long do_tracking(
 #if USE_MPI
 	      nToTrack = nLeft;
 	      /* As the particles could be redistributed across processors, we need adjust the beam->n_to_track to dump lost particle coordinate at the end */ 
-	      beam->n_to_track = nLeft+nLost;
+	      if (beam)
+                beam->n_to_track = nLeft+nLost;
 #endif
 	      if (((SCRIPT*)eptr->p_elem)->verbosity>2 && nLeft!=nToTrack)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
@@ -1669,9 +1674,11 @@ long do_tracking(
 #if SDDS_MPI_IO
                     if (!partOnMaster && notSinglePart) {
                       if (isMaster) nToTrack = 0;
-                      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+                      if (beam)
+                        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
                     } else { /* singlePart tracking or partOnMaster */
-                      beam->n_to_track_total = nToTrack;
+                      if (beam)
+                        beam->n_to_track_total = nToTrack;
                     }
 		    if (isMaster && (beam->n_to_track_total<10)) {
 #else
@@ -1984,11 +1991,14 @@ long do_tracking(
       if (!partOnMaster && notSinglePart) {
         /* We have to collect information from all the processors to print correct info during tracking */
         if (isMaster) nToTrack = 0; 
-        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+        if (beam)
+          MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
         sprintf(s, "%ld particles present after pass %ld        ", 
-                beam->n_to_track_total, i_pass);
-      } else 
-        beam->n_to_track_total = nToTrack;
+                beam?beam->n_to_track_total:-1, i_pass);
+      } else  {
+        if (beam)
+          beam->n_to_track_total = nToTrack;
+      }
 #endif
 
 #ifdef DEBUG 
@@ -2308,9 +2318,11 @@ long do_tracking(
 #if SDDS_MPI_IO
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0;
-    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (beam)
+      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   } else { /* singlePart tracking or partOnMaster */
-    beam->n_to_track_total = nToTrack;
+    if (beam)
+      beam->n_to_track_total = nToTrack;
   }
     /* The charge is correct on master only, but it should not affect the output */
     computeSASEFELAtEnd(sasefel, coord, nToTrack, *P_central, charge->macroParticleCharge*beam->n_to_track_total);
@@ -2329,12 +2341,14 @@ long do_tracking(
     if (!partOnMaster && notSinglePart) {
       /* We have to collect information from all the processors to print correct info during tracking */
       if (isMaster) nToTrack = 0; 
-      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (beam)
+        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
       fprintf(stdout, "%ld particles present after pass %ld        \n", 
-	      beam->n_to_track_total, i_pass);
+	      beam?beam->n_to_track_total:-1, i_pass);
     }
     else {
-      beam->n_to_track_total = nToTrack;
+      if (beam)
+        beam->n_to_track_total = nToTrack;
       fprintf(stdout, "%ld particles present after pass %ld        \n", 
 	      nToTrack, i_pass);
     }
@@ -2365,10 +2379,12 @@ long do_tracking(
     if (!partOnMaster) {
       /* We have to collect information from all the processors to print correct info after tracking */
       if (isMaster) nToTrack = 0; 
-      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD); 
+      if (beam)
+        MPI_Reduce(&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD); 
     }
     else {
-      beam->n_to_track_total = nToTrack;
+      if (beam)
+        beam->n_to_track_total = nToTrack;
     }
     /* Only Master will have the correct information */
     *finalCharge = beam->n_to_track_total*charge->macroParticleCharge;
