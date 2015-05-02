@@ -955,7 +955,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 19
-#define N_TFBDRIVER_PARAMS 21
+#define N_TFBDRIVER_PARAMS 22
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 24
@@ -2762,7 +2762,7 @@ extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
 typedef struct {
   char *ID;
   double strength, kickLimit;
-  long delay;
+  long delay, longitudinal;
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
   long bunchedBeamMode;

@@ -248,13 +248,23 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
 
       if (isSlave || !notSinglePart) {
-        j = tfbd->pickup->yPlane?3:1;
-        if (nBuckets==1) {
-          for (i=0; i<np0; i++)
-            part0[i][j] += kick;
+        if (!tfbd->longitudinal) {
+          j = tfbd->pickup->yPlane?3:1;
+          if (nBuckets==1) {
+            for (i=0; i<np0; i++)
+              part0[i][j] += kick/(1+part0[i][5]);
+          } else {
+            for (i=0; i<npBucket[iBucket]; i++) {
+              part0[ipBucket[iBucket][i]][j] += kick/(1+part0[ipBucket[iBucket][i]][5]);
+            }
+          }
         } else {
-          for (i=0; i<npBucket[iBucket]; i++) {
-            part0[ipBucket[iBucket][i]][j] += kick;
+          if (nBuckets==1) {
+            for (i=0; i<np0; i++)
+              part0[i][5] += kick;
+          } else {
+            for (i=0; i<npBucket[iBucket]; i++)
+              part0[ipBucket[iBucket][i]][5] += kick;
           }
         }
       }
