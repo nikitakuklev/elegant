@@ -486,7 +486,7 @@ long new_bunched_beam(
             fprintf(stdout, "dumping bunch\n");
             fflush(stdout);
             dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po,
-                             sqrt(-1.0), 0);
+                             sqrt(-1.0), n_actual_particles);
             if (one_random_bunch && !(firstIsFiducial && beamCounter==1)) {
                 if (!SDDS_Terminate(&SDDS_bunch)) {
                     SDDS_SetError("Problem terminating 'bunch' file (new_bunched_beam)");
