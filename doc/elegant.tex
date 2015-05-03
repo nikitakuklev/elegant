@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 27.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 27.2.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,59 +32,36 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 27.1.0}
+\section{Highlights of What's New in Version 27.2.0}
 
-Here is a summary of what's changed since release 27.0.2:
+Here is a summary of what's changed since release 27.1.0:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A memory management bug was fixed in the \verb|SCRIPT| element.
-\item A bug was fixed for \verb|RFMODE| and \verb|TRFMODE| that resulted in incorrect initialization of the cavity fields in 
-  multi-step runs.
+\item None
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|change_defined_values| control on \verb|chromaticity| and \verb|correct_tunes| was broken in version 27.0.2 for some
-  cases. This was reported by V. Sajaev (ANL).
-\item The longitudinal emittance calculation in the \verb|final| file from \verb|run_setup| was incorrect for multi-bunch beams.
-\item A bug in the \verb|coupled_twiss| command was found and fixed by M. Ehrlichman (PSI). The bug resulted in incorrect output in 
-  strongly coupled lattices.
-\item The output of normalized emittance for the \verb|slice_analysis| command was improved to include the factor $p_{\textrm{central}}(1+\langle \delta \rangle)$
-  (momentum offset) instead of simply $p_{\textrm{central}}$.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|RFMODE| element now includes a generator-driven voltage and an rf feedback model using user-supplied IIR filters. 
-  Output of feedback system data is optionally provided. The element also now optionally uses interpolation within bins and
-  provides bunch-by-bunch output of beam-induced cavity voltages and phases.
-  See the manual entry for details.
-\item The \verb|IBSCATTER| element now works in multi-bunch mode.
-\item The \verb|VERBOSITY| parameter was added to \verb|ILMATRIX| to control the amount of printed output.
-\item The \verb|ILMATRIX| command allows entry of the third-order momentum compaction factor.
-\item The output of time centroids (i.e., \verb|Ct| and \verb|dCt|) from the \verb|WATCH| element has improved accuracy due to 
-  use of the Kahan sum formula.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback
+  and longitudinal feedback.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|global_settings| command now allows switching the computation of normalized emittance to use the momentum coordinates,
-  which provides exact results rather than an approximiation. This feature was requested by forum user Marcello, who provided files for
-  testing.
+\item None
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item The vertical impedance from \verb|ZTRANSVERSE| was incorrectly multiplied by the number of working cores. This was reported by R. Lindberg (ANL), who
-  wins the prize for the most embarrassing bug discovery to date.
-\item Problems were fixed with the \verb|insert_sceffects| command when the beam charge changes.
-\item Fast transverse feedback, using the \verb|TFBPICKUP| and \verb|TRFDRIVER| elements, now works in parallel mode.
-\item The \verb|ZLONGIT| element now provides wake output if requested even for parallel execution. This deficiency was pointed out by R. Lindberg (ANL).
-\item Parallel performance of \verb|IBSCATTER| was dramatically improved by splitting s-dependent integrals across working cores. 
-  The element also now works in multi-bunch mode. Good scaling has been seen up to 640 cores (largest number tested).
+\item None
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}

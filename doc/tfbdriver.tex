@@ -1,5 +1,5 @@
 This element is used together with the {\tt TFBPICKUP} element to
-simulate a digital transverse feedback system.  Each {\tt TFBDRIVER}
+simulate a digital turn-by-turn feedback system.  Each {\tt TFBDRIVER}
 element must have a unique identification string assigned to it using
 the {\tt ID} parameter.  The same identifier must be used on a {\tt
 TFBPICKUP} element.  This is the pickup from which the driver gets its
@@ -20,6 +20,29 @@ many-term filters, the {\tt DELAY} feature must be used.
 The output of the filter is multiplied by the {\tt STRENGTH} parameter
 to get the kick to apply to the beam.  The {\tt KICK\_LIMIT} parameter
 provides a very basic way to simulate saturation of the kicker output.
+
+The plane that the \verb|TFBDRIVER| kicks is determined by the 
+\verb|PLANE| parameter on the corresponding \verb|TFBPICKUP| element, and
+additionally by the \verb|LONGITUDINAL| parameter, as described in 
+Table \ref{tab:tfbdriver}
+
+\begin{table}[htb]
+\begin{tabular}{llll}
+\hline
+\verb|TFBPICKUP| & \verb|TFBDRIVER| & coordinate & note \\
+\verb|PLANE| & \verb|LONGITUDINAL| & kicked & \\
+\hline
+x & 0 & $x^\prime$ & \\
+x & 1 & $\delta$ & pickup should have $\eta_x\neq 0$ \\
+y & 0 & $y\prime$ & \\
+y & 1 & $\delta$ & pickup should have $\eta_y\neq 0$ \\
+delta & 0 & - & invalid \\
+delta & 1 & $\delta$ & \\
+\hline
+\end{tabular}
+\caption{Correspondence between {\tt PLANE} parameter of {\tt TFBPICKUP}, {\tt LONGITUDINAL} parameter of {\tt TFBDRIVER}, and action of feedback loop.}
+\label{tab:tfbdriver}
+\end{table}
 
 See Section 7.2.14 of {\em Handbook of Accelerator Physics and Engineering}
 (Chao and Tigner, eds.) for a discussion of feedback systems.
