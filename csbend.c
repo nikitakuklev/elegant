@@ -2246,11 +2246,11 @@ long binParticleCoordinate_s(double **hist, long *maxBins,
 void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long ns,
                          double Po, double radius, double angle, double dx, char *normMode);
 long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
-                                     double Po, double **accepted, double zStart, char *rootname);
+                                     double Po, double **accepted, double zStart, CHARGE *charge, char *rootname);
 
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
-			    double revolutionLength, char *rootname)
+			    double revolutionLength, CHARGE *charge, char *rootname)
 {
   long iPart, iKick, iBin, binned=0, nKicks, iSpreadMode=0;
   double *coord, p, beta, dz, ct0=0.0, factor, dz0, dzFirst;
@@ -2325,7 +2325,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   csrWake.lastMode = mode;
   
   if (mode&CSRDRIFT_STUPAKOV)
-    return track_through_driftCSR_Stupakov(part, np, csrDrift, Po, accepted, zStart, rootname);
+    return track_through_driftCSR_Stupakov(part, np, csrDrift, Po, accepted, zStart, charge, rootname);
 
   if (!warned) {
     fprintf(stdout, "Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
@@ -2865,7 +2865,7 @@ static double SolveForPhiStupakovDiffSum = 0;
 static long SolveForPhiStupakovDiffCount = 0;
 
 long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
-                            double Po, double **accepted, double zStart, char *rootname)
+				     double Po, double **accepted, double zStart, CHARGE *charge, char *rootname)
 {
   long iPart, iKick, iBin, binned=0, nKicks;
   long nCaseC, nCaseD1, nCaseD2;
@@ -2878,6 +2878,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   long nBins1;
   double dsMax, x;
   TRACKING_CONTEXT tContext;
+  LSCKICK lscKick;
 #if USE_MPI
   long binned_total=1, np_total=1;
   double *buffer;
@@ -2924,14 +2925,22 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       !(ctHistDeriv=SDDS_Malloc(sizeof(*ctHistDeriv)*nBins)) ||
       !(phiSoln=SDDS_Malloc(sizeof(*phiSoln)*nBins)))
     bombElegant("memory allocation failure (track_through_driftCSR)", NULL);
-  
+
+  if ((lscKick.bins = csrDrift->LSCBins)>0) {
+    lscKick.interpolate = csrDrift->LSCInterpolate;
+    lscKick.radiusFactor = csrDrift->LSCRadiusFactor;
+    lscKick.lowFrequencyCutoff0 = csrDrift->LSCLowFrequencyCutoff0;
+    lscKick.lowFrequencyCutoff1 = csrDrift->LSCLowFrequencyCutoff1;
+    lscKick.highFrequencyCutoff0 = csrDrift->LSCHighFrequencyCutoff0;
+    lscKick.highFrequencyCutoff1 = csrDrift->LSCHighFrequencyCutoff1;
+  }
   for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
     if (iKick==1)
       dz = dz0;
     zTravel += dz;
     zOutput += dz;
-    
+
     x = zTravel/csrWake.rho;
     dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
       *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
@@ -3181,6 +3190,9 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 #endif
 #endif 
     }
+
+    if (csrDrift->LSCBins>0)
+      addLSCKick(part, np, &lscKick, Po, charge, dz, 0.0);
   }
   
   /* do final drift of dz0/2 */
@@ -3195,6 +3207,9 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       else
 	coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
     }    
+
+    if (csrDrift->LSCBins>0)
+    addLSCKick(part, np, &lscKick, Po, charge, dz, 0.0);
 
   csrWake.zLast = zStart + length;
   free(ctHist);

@@ -1811,6 +1811,13 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"STUPAKOV_OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrdrift_example.StupakovOutputInterval), NULL, 0.0, 1, "Interval (in kicks) between output of Stupakov wakes."},
     {"SLICE_ANALYSIS_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrdrift_example.sliceAnalysisInterval), NULL, 0.0, 0, "interval (in kicks) of output to slice analysis file (from slice_analysis command)"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char*)&csrdrift_example.linearOptics), NULL, 0.0, 0, "use linear optics for drift pieces?"},
+    {"LSC_BINS", "", IS_LONG, 0, (long)((char*)&csrdrift_example.LSCBins), NULL, 0.0, 0, "If non-zero, include LSC with given number of bins."},
+    {"LSC_INTERPOLATE", "", IS_LONG, 0, (long)((char *)&csrdrift_example.LSCInterpolate), NULL, 0.0, 1, "Interpolate computed LSC wake?"},
+    {"LSC_LOW_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&csrdrift_example.LSCLowFrequencyCutoff0), NULL, -1.0, 0, "Highest spatial frequency at which low-frequency cutoff filter is zero.  If not positive, no low-frequency cutoff filter is applied. Frequency is in units of Nyquist (0.5/binsize)."},
+    {"LSC_LOW_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&csrdrift_example.LSCLowFrequencyCutoff1), NULL, -1.0, 0, "Lowest spatial frequency at which low-frequency cutoff filter is 1.  If not given, defaults to LOW_FREQUENCY_CUTOFF1."},
+    {"LSC_HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&csrdrift_example.LSCHighFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins for LSC.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
+    {"LSC_HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&csrdrift_example.LSCHighFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0 for LSC.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
+    {"LSC_RADIUS_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&csrdrift_example.LSCRadiusFactor), NULL, 1.7, 0, "Radius factor for LSC computation."},
     };
 
 RFCW rfcw_example;

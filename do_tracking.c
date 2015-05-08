@@ -1360,7 +1360,7 @@ long do_tracking(
 	    case T_CSRDRIFT:
 	      nLeft = track_through_driftCSR(coord, nToTrack, (CSRDRIFT*)eptr->p_elem,
 					     *P_central, accepted, last_z, 
-					     beamline->revolution_length,
+					     beamline->revolution_length, charge,
 					     run->rootname);
 	      break;
 	    case T_LSCDRIFT:

@@ -939,7 +939,7 @@ extern char *entity_text[N_TYPES];
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 14
 #define N_CSRCSBEND_PARAMS 70
-#define N_CSRDRIFT_PARAMS 20
+#define N_CSRDRIFT_PARAMS 27
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 40
@@ -2144,6 +2144,8 @@ typedef struct {
   char *StupakovOutput;
   long StupakovOutputInterval, sliceAnalysisInterval;
   long linearOptics;
+  long LSCBins, LSCInterpolate;
+  double LSCLowFrequencyCutoff0, LSCLowFrequencyCutoff1, LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
   /* used internally only */
   FILE *fpSaldin;
 } CSRDRIFT;
@@ -3701,7 +3703,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     double z_start, double *sigmaDelta2);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
-			    double revolutionLength, char *rootname);
+			    double revolutionLength, CHARGE *charge, char *rootname);
 long reset_driftCSR();
 long applyLowPassFilter(double *histogram, long bins, double start, double end);
 long applyLHPassFilters(double *histogram, long bins, double startHP, double endHP,
