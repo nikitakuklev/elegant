@@ -64,15 +64,14 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
 #endif
     sum = position = np = 0;
     if (isSlave || !notSinglePart) {
-      j = tfbp->yPlane?2:0;
       if (nBuckets==1) {
         np = np0;
         for (i=0; i<np0; i++)
-          sum += part0[i][j];
+          sum += part0[i][tfbp->iPlane];
       } else {
         np = npBucket[iBucket];
         for (i=0; i<np; i++)
-          sum += part0[ipBucket[iBucket][i]][j];
+          sum += part0[ipBucket[iBucket][i]][tfbp->iPlane];
       }
     }
     
@@ -147,12 +146,13 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
   tfbp->filterLength = i+1;
 
   if (strcmp(tfbp->plane, "x")==0 || strcmp(tfbp->plane, "X")==0) 
-    tfbp->yPlane = 0;
-  else {
-    if (!(strcmp(tfbp->plane, "y")==0 || strcmp(tfbp->plane, "Y")==0))
-      bombElegant("PLANE must be x or y for TFBPICKUP", NULL);
-    tfbp->yPlane = 1;
-  }
+    tfbp->iPlane = 0;
+  else if (strcmp(tfbp->plane, "y")==0 || strcmp(tfbp->plane, "Y")==0) 
+    tfbp->iPlane = 2;
+  else if (strcmp(tfbp->plane, "delta")==0 || strcmp(tfbp->plane, "DELTA")==0) 
+    tfbp->iPlane = 5;
+  else
+    bombElegant("PLANE parameter for TFBPICKUP must be x, y, or delta", NULL);
 
   if (tfbp->data && tfbp->nBunches) {
     for (i=0; i<tfbp->nBunches; i++)
@@ -194,6 +194,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   
   if (tfbd->initialized==0)
     initializeTransverseFeedbackDriver(tfbd, beamline, nPasses*nBuckets, rootname);
+
+  if (tfbd->pickup->iPlane==5 && !tfbd->longitudinal)
+    bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta, but driver not working on longitudinal plane", NULL);
 
   if (pass==0)
     tfbd->dataWritten = 0;
@@ -249,7 +252,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
       if (isSlave || !notSinglePart) {
         if (!tfbd->longitudinal) {
-          j = tfbd->pickup->yPlane?3:1;
+          j = tfbd->pickup->iPlane+1;
           if (nBuckets==1) {
             for (i=0; i<np0; i++)
               part0[i][j] += kick/(1+part0[i][5]);

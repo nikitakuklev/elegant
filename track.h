@@ -2752,7 +2752,7 @@ typedef struct {
   double rmsNoise, a[TFB_FILTER_LENGTH];
   long bunchedBeamMode;
   /* internal parameters */
-  long initialized, yPlane, filterLength;
+  long initialized, iPlane, filterLength;
   double *filterOutput;
   long nBunches;
   /* circular buffer for storing past readings */
