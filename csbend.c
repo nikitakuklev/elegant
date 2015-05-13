@@ -237,11 +237,32 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
+  if (csbend->refLength>=0 && (!csbend->refTrajectoryChangeSet || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle)) {
+    /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
+    CSBEND csbend0;
+    long j;
+    double **part0;
+    part0 = (double**)czarray_2d(sizeof(double), 1, 7);
+    memset(part0[0], 0, sizeof(**part0)*7);
+    memcpy(&csbend0, csbend, sizeof(*csbend));
+    csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = 0;
+    /* Setting refLength=-1 prevents (1) infinite loop (2) subtracting offsets that haven't been computed yet */
+    csbend0.refLength = -1;  
+    csbend0.refAngle = 0;
+    track_through_csbend(part0, 1, &csbend0, 0, Po, NULL, 0, NULL);
+    memcpy(csbend->refTrajectoryChange, part0[0], sizeof(*csbend->refTrajectoryChange)*6);
+    csbend->refTrajectoryChange[4] -= csbend->length;
+    csbend->refLength = csbend->length;
+    csbend->refAngle = csbend->angle;
+    csbend->refTrajectoryChangeSet = 1;
+    free_czarray_2d((void**)part0, 1, 7);
+  }
+  
   if (csbend->angle==0) {
     exactDrift(part, n_part, csbend->length);
     return n_part;
   }
-  
+
   if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
     bombElegant("CSBEND element doesn't have edge flags set.", NULL);
   
@@ -576,8 +597,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
+    if (csbend->refLength>=0) {
+      long j;
+      for (j=0; j<6; j++) 
+        coord[j] -= csbend->refTrajectoryChange[j];
+    }
   }
   }
+  
   if (distributionBasedRadiation) {
     radiansTotal += fabs(csbend->angle);
     /*
