@@ -245,11 +245,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     part0 = (double**)czarray_2d(sizeof(double), 1, 7);
     memset(part0[0], 0, sizeof(**part0)*7);
     memcpy(&csbend0, csbend, sizeof(*csbend));
-    csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = 0;
+    csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
     /* Setting refLength=-1 prevents (1) infinite loop (2) subtracting offsets that haven't been computed yet */
     csbend0.refLength = -1;  
     csbend0.refAngle = 0;
-    track_through_csbend(part0, 1, &csbend0, 0, Po, NULL, 0, NULL);
+    track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
     memcpy(csbend->refTrajectoryChange, part0[0], sizeof(*csbend->refTrajectoryChange)*6);
     csbend->refTrajectoryChange[4] -= csbend->length;
     csbend->refLength = csbend->length;
