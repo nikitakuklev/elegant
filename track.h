@@ -920,7 +920,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 57
+#define N_CSBEND_PARAMS 58
 #define N_MATTER_PARAMS 11
 #define N_RFMODE_PARAMS 36
 #define N_TRFMODE_PARAMS 24
@@ -2091,6 +2091,7 @@ typedef struct {
     double xReference, f1, f2, f3, f4, f5, f6, f7, f8;
     long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
+    long referenceCorrection;
     /* for internal use only: */
     unsigned long edgeFlags;
     double b[8];

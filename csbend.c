@@ -237,7 +237,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
-  if (csbend->refLength>=0 && (!csbend->refTrajectoryChangeSet || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle)) {
+  if (csbend->referenceCorrection && 
+      (csbend->refLength>=0 && (!csbend->refTrajectoryChangeSet || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle))) {
     /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
     CSBEND csbend0;
     long j;
@@ -597,7 +598,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
-    if (csbend->refLength>=0) {
+
+    if (csbend->referenceCorrection && csbend->refLength>=0) {
       long j;
       for (j=0; j<6; j++) 
         coord[j] -= csbend->refTrajectoryChange[j];
