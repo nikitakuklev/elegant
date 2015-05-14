@@ -1273,6 +1273,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_LONG, 0, (long)((char *)&csbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are add if USE_RAD_DIST is nonzero."},
+    {"REFERENCE_CORRECTION", "", IS_LONG, 0, (long)((char *)&csbend_example.referenceCorrection), NULL, 0.0, 0, "If nonzero, reference trajectory is subtracted from particle trajectories to compensate for inaccuracy in integration."},
     };
 
 
