@@ -2096,8 +2096,8 @@ typedef struct {
     unsigned long edgeFlags;
     double b[8];
     short refTrajectoryChangeSet;
-    double refLength, refAngle;
-    double refTrajectoryChange[6];
+    double refLength, refAngle, **refTrajectoryChange;
+    long refKicks;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */

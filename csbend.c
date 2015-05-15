@@ -59,6 +59,12 @@ static double s_lost;
 
 long inversePoissonCDF(double mu, double C);
 
+#define RECORD_TRAJECTORY 1
+#define SUBTRACT_TRAJECTORY 2
+static short refTrajectoryMode = 0;
+static long refTrajectoryPoints = 0;
+static double **refTrajectoryData = NULL;
+
 #if !defined(PARALLEL)
 /* to avoid problems with HP parallel compiler */
 extern unsigned long multipoleKicksDone ;
@@ -237,27 +243,69 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
-  if (csbend->referenceCorrection && 
-      (csbend->refLength>=0 && (!csbend->refTrajectoryChangeSet || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle))) {
-    /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
-    CSBEND csbend0;
-    long j;
-    double **part0;
-    part0 = (double**)czarray_2d(sizeof(double), 1, 7);
-    memset(part0[0], 0, sizeof(**part0)*7);
-    memcpy(&csbend0, csbend, sizeof(*csbend));
-    csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
-    /* Setting refLength=-1 prevents (1) infinite loop (2) subtracting offsets that haven't been computed yet */
-    csbend0.refLength = -1;  
-    csbend0.refAngle = 0;
-    track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
-    memcpy(csbend->refTrajectoryChange, part0[0], sizeof(*csbend->refTrajectoryChange)*6);
-    csbend->refTrajectoryChange[4] -= csbend->length;
-    csbend->refLength = csbend->length;
-    csbend->refAngle = csbend->angle;
-    csbend->refTrajectoryChangeSet = 1;
-    free_czarray_2d((void**)part0, 1, 7);
-  }
+  if (csbend->referenceCorrection) {
+    if (csbend->refTrajectoryChangeSet==0 || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle || csbend->refKicks!=csbend->n_kicks) {
+      /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
+      CSBEND csbend0;
+      double **part0;
+      TRACKING_CONTEXT tcontext;
+
+      getTrackingContext(&tcontext);
+      printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
+             
+      if (csbend->refTrajectoryChange && csbend->refKicks) {
+        free_czarray_2d((void**)csbend->refTrajectoryChange, refTrajectoryPoints, 5);
+        csbend->refTrajectoryChange = NULL;
+        csbend->refKicks = 0;
+      }
+      
+      part0 = (double**)czarray_2d(sizeof(double), 1, 7);
+      memset(part0[0], 0, sizeof(**part0)*7);
+      memcpy(&csbend0, csbend, sizeof(*csbend));
+      csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
+      
+      csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->n_kicks, 5);
+      refTrajectoryPoints = csbend->n_kicks;
+      /* This forces us into the next branch on the next call to this routine */
+      csbend0.refLength = csbend0.length;
+      csbend0.refAngle = csbend0.angle;
+      csbend0.refKicks = csbend0.n_kicks;
+      csbend0.refTrajectoryChangeSet = 1;
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
+      csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
+      /*
+      if (1) {
+        long i, j;
+        for (i=0; i<csbend->n_kicks; i++) {
+          for (j=0; j<5; j++) 
+            printf("%15.10le  ", csbend->refTrajectoryChange[i][j]);
+          printf("\n");
+        }
+      }
+      */
+
+      csbend->refKicks = csbend->n_kicks;
+      csbend->refLength = csbend->length;
+      csbend->refAngle = csbend->angle;
+      free_czarray_2d((void**)part0, 1, 7);
+
+      refTrajectoryData = csbend->refTrajectoryChange;
+      refTrajectoryPoints = csbend->refKicks;
+      refTrajectoryMode = SUBTRACT_TRAJECTORY;
+    } else if (csbend->refTrajectoryChangeSet==1) {
+      /* indicates reference trajectory is about to be determined */
+      refTrajectoryData = csbend->refTrajectoryChange;
+      refTrajectoryPoints = csbend->n_kicks;
+      refTrajectoryMode = RECORD_TRAJECTORY;
+      csbend->refTrajectoryChangeSet = 2;
+    } else {
+      /* assume that reference trajectory already determined */
+      refTrajectoryData = csbend->refTrajectoryChange;
+      refTrajectoryPoints = csbend->refKicks;
+      refTrajectoryMode = SUBTRACT_TRAJECTORY;
+    }
+  } else
+    refTrajectoryMode = 0;
   
   if (csbend->angle==0) {
     exactDrift(part, n_part, csbend->length);
@@ -598,12 +646,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
-
-    if (csbend->referenceCorrection && csbend->refLength>=0) {
-      long j;
-      for (j=0; j<6; j++) 
-        coord[j] -= csbend->refTrajectoryChange[j];
-    }
   }
   }
   
@@ -647,6 +689,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
+
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -662,6 +705,8 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 #define S Qf[4]
 #define DPoP Qf[5]
 
+  if (refTrajectoryMode && refTrajectoryPoints!=n)
+    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
   if (!Qf)
     bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
@@ -727,6 +772,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
+
     if (rad_coef || isrConstant)
       addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder, 
 		       X, 1./rho0, Fx, Fy, 
@@ -790,6 +836,23 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
       f = cos_phi/cosi;
       X  = rho0*(f-1) + f*X;
     }
+
+    if (refTrajectoryMode==RECORD_TRAJECTORY) {
+      refTrajectoryData[i][0] = X;
+      refTrajectoryData[i][1] = QX;
+      refTrajectoryData[i][2] = Y;
+      refTrajectoryData[i][3] = QY;
+      refTrajectoryData[i][4] = dist - ds;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= refTrajectoryData[i][0];
+      QX -= refTrajectoryData[i][1];
+      Y -= refTrajectoryData[i][2];
+      QY -= refTrajectoryData[i][3];
+      dist -= refTrajectoryData[i][4];
+    }
+
   }
 
   /* convert back to slopes */
@@ -828,6 +891,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   /* BETA is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
+  if (refTrajectoryMode && refTrajectoryPoints!=n)
+    bombElegant("Problem with recorded reference trajectory for CSBEND element---has wrong number of points\n", NULL);
   if (!Qf)
     bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
@@ -1018,6 +1083,22 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
+
+    if (refTrajectoryMode==RECORD_TRAJECTORY) {
+      refTrajectoryData[i][0] = X;
+      refTrajectoryData[i][1] = QX;
+      refTrajectoryData[i][2] = Y;
+      refTrajectoryData[i][3] = QY;
+      refTrajectoryData[i][4] = dist - s;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= refTrajectoryData[i][0];
+      QX -= refTrajectoryData[i][1];
+      Y -= refTrajectoryData[i][2];
+      QY -= refTrajectoryData[i][3];
+      dist -= refTrajectoryData[i][4];
+    }
   }
 
   /* convert back to slopes */
@@ -1141,6 +1222,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     accumulatedAngle = accumulatingAngle = 0;
   
   csrWake.valid = 0;
+  refTrajectoryMode = 0;
   if (isSlave || !notSinglePart) 
     reset_driftCSR();
 
