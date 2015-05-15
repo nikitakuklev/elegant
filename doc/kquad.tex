@@ -19,8 +19,10 @@ data with the following elements:
 \item An integer column named {\tt order} giving the order of the multipole.
 The order is defined as $(N_{poles}-2)/2$, so a quadrupole has order 1, a
 sextupole has order 2, and so on.
-\item Floating point columns {\tt an} (or {\tt normal}) and {\tt bn} (or {\tt skew}) giving the values for the
-normal and skew multipole strengths, respectively.  These are defined as a fraction 
+\item Floating point columns {\tt normal} and {\tt skew} giving the values for the
+normal and skew multipole strengths, respectively.  
+(N.B.: previous versions used the names {\tt an} and {\tt bn}, respectively. This is still accepted but deprecated)
+These are defined as a fraction 
 of the main field strength measured at the reference radius, R: 
 $a_n  = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
 $m=1$ is the order of the main field and $n$ is the order of the error multipole.
@@ -38,8 +40,9 @@ expected to contain a single page of data with the following elements:
 \item An integer column named {\tt order} giving the order of the multipole.
 The order is defined as $(N_{poles}-2)/2$.  The order must be an even number
 because of the quadrupole symmetry.
-\item Floating point column {\tt an} or {\tt normal} giving the values for the normal
+\item Floating point column {\tt normal} giving the values for the normal
 multipole strengths, which are driven by the horizontal steering field.
+(N.B.: previous versions used the name {\tt an} for this data. This is still accepted but deprecated)
 {\tt an} is specifies the multipole strength as a fraction of the steering field strength measured at the reference radius, R: 
 $a_n  = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
 $m=0$ is the order of the steering field and $n$ is the order of the error multipole.
