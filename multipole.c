@@ -42,6 +42,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
+  short anCheck, bnCheck, normalCheck, skewCheck;
+  
   if (!multFile || !strlen(multFile)) {
     multData->orders = 0;
     multData->initialized = 0;
@@ -54,21 +56,44 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     fflush(stdout);
     exitElegant(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      (!steering && SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) ||
-      SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
+  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, NULL)!=SDDS_CHECK_OK ||
+      SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
     fprintf(stdout, "Problems with data in multipole file %s\n", multFile);
     fflush(stdout);
     exitElegant(1);
   }
-  if (steering && SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
-    fprintf(stdout, "Warning: Steering multipole file %s should not have bn.\n",
-            multFile);
-    fprintf(stdout, "Use an to specify multipole content for a horizontal steerer.\n");
-    fprintf(stdout, "Multipole content for vertical steerer is deduced from this.\n");
-    fflush(stdout);
+  anCheck = SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
+  normalCheck = SDDS_CheckColumn(&SDDSin, "normal", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
+  if (!anCheck && !normalCheck) {
+    fprintf(stdout, "Problems with data in multipole file %s: neither \"an\" nor \"normal\" column found\n", multFile);
+    exitElegant(1);
   }
+  if (anCheck && normalCheck) {
+    fprintf(stdout, "*** Warning: multipole file %s has both \"an\" and \"normal\" columns. \"normal\" used.\n", multFile);
+    anCheck = 0;
+  }
+
+  bnCheck = SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
+  skewCheck = SDDS_CheckColumn(&SDDSin, "skew", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
+  if (!steering) {
+    if (!bnCheck && !skewCheck) {
+      fprintf(stdout, "Problems with data in multipole file %s: neither \"bn\" nor \"skew\" column found\n", multFile);
+      exitElegant(1);
+    }
+    if (bnCheck && skewCheck) {
+      fprintf(stdout, "*** Warning: multipole file %s has both \"bn\" and \"skew\" columns. \"skew\" used.\n", multFile);
+      bnCheck = 0;
+    }
+  } else {
+    if (bnCheck || skewCheck) {
+      fprintf(stdout, "*** Warning: Steering multipole file %s should not have bn or skew columns.\n",
+              multFile);
+      fprintf(stdout, "Use \"normal\" column to specify multipole content for a horizontal steerer.\n");
+      fprintf(stdout, "Multipole content for vertical steerer is deduced from this.\n");
+      fflush(stdout);
+    }
+  }
+  
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading multipole file %s\n", multFile);
     SDDS_SetError(buffer);
@@ -82,8 +107,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }
   if (!SDDS_GetParameterAsDouble(&SDDSin, "referenceRadius", &multData->referenceRadius) ||
       !(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
-      !(multData->an=SDDS_GetColumnInDoubles(&SDDSin, "an")) || 
-      (!steering && !(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, "bn")))) {
+      !(multData->an=SDDS_GetColumnInDoubles(&SDDSin, anCheck?"an":"normal")) || 
+      (!steering && !(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, bnCheck?"bn":"skew")))) {
     sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);

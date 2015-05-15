@@ -32,7 +32,7 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 27.2.0}
+\section{Highlights of What's New in Version 28.0.0}
 
 Here is a summary of what's changed since release 27.1.0:
 
@@ -49,9 +49,13 @@ Here is a summary of what's changed since release 27.1.0:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback
-  and longitudinal feedback.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback.
+  In addition, support was added for longitudinal feedback.
 \item The \verb|CSRDRIFT| element can now also include longitudinal space charge, using the algorithm from the \verb|LSCDRIFT| element.
+\item The \verb|CSBEND| element has a new feature that allows suppression of spurious trajectory offsets that result from limitations
+  of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter.
+\item The input of multipole errors for \verb|KQUAD| and \verb|KSEXT| elements was modified so that the input columns have more transparent
+  names. Previously, the names caused some confusion.
 \end{itemize}
 
 \subsection{New and Modified Commands}

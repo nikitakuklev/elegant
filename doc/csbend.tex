@@ -74,3 +74,18 @@ dipole elements directly follow one another or are separated by a MARK element.
 Third, one can use a series of dipoles with different names.  In this case, you
 must also use the \verb|EDGE1_EFFECTS| and \verb|EDGE2_EFFECTS| parameters to
 turn off interior edge effects.  
+
+As of version 28.0 and later, the \verb|REFERENCE_CORRECTION| feature is available
+to compensate for errors inherent in the numerical integration of the trajectories.
+In particular, depending on the number of kicks used, as well as the bending radius and angle,
+an on-axis particle may emerge from the element with a non-zero trajectory.
+With \verb|REFERENCE_CORRECTION| set to a non-zero value, these errors are subtracted from the
+coordinates of all particles.
+This is desirable in eliminating spurious trajectory and orbit errors; it also reduces path-length
+errors.
+However, there are some pitfalls: first, one may not realize that the number of kicks is too small to
+provide good results, since the output trajectory of the central particle will always be
+(nearly) identically zero. Second, in a magnet with a gradient or other field nonuniformities, 
+a particle may emerge centered on the ideal trajectory yet still see the impact of the gradient, sextupole, etc.
+For these reasons, this feature should be used with caution and only when the residual trajectory is 
+large enough to cause problems.
