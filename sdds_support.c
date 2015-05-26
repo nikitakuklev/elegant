@@ -667,7 +667,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           double Po, double length, double charge, double z, long slotsPerBunch)
 {
   long i, row;
-  double p, t0, t;
+  double p, t0, t0Error, t;
 #if SDDS_MPI_IO
   long total_row;
 #endif
@@ -700,8 +700,23 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   row = 0;
-  t0 = (pass-watch->passLast)*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
+
+  if (pass<watch->passLast)
+    watch->t0Last = watch->t0LastError = 0;
+  t0 = watch->t0Last;
+  t0Error = watch->t0LastError;
+  /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
+   * round-off error. Prevents dCt from walking off too much.
+   */
+  for (i=0; i<pass-watch->passLast; i++) {
+#ifndef USE_KAHAN
+    t0 += length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+#else
+    t0 = KahanPlus(t0, length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)), &t0Error);
+#endif
+  }
   watch->t0Last = t0;
+  watch->t0LastError = t0Error;
   watch->passLast = pass;
 #if SDDS_MPI_IO
   if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
@@ -804,7 +819,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            double revolutionLength, double z)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
-    double tc, tc0, p_sum, gamma_sum, sum, error_sum, p=0.0;
+    double tc, tc0, tc0Error, p_sum, gamma_sum, sum, error_sum, p=0.0;
     double emit[2], emitc[2];
     long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount, npCount_total=0;
     static BEAM_SUMS sums;
@@ -870,8 +885,22 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif
 
     sample = (pass-watchStartPass)/watch->interval;
-    tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
+    if (pass<watch->passLast)
+      watch->t0Last = watch->t0LastError = 0;
+    tc0 = watch->t0Last;
+    tc0Error = watch->t0LastError;
+    /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
+     * round-off error. Prevents dCt from walking off too much.
+     */
+    for (i=0; i<pass-watch->passLast; i++) {
+#ifndef USE_KAHAN
+      tc0 += revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+#else
+      tc0 = KahanPlus(tc0, revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)), &tc0Error);
+#endif
+    }
     watch->t0Last = tc0;
+    watch->t0LastError = tc0Error;
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);

@@ -1550,7 +1550,7 @@ typedef struct {
     long initialized, count, mode_code, window_code;
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
     SDDS_TABLE SDDS_table;
-    double t0Last;
+    double t0Last, t0LastError;
     long passLast, flushSample;
     } WATCH;
 
