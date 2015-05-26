@@ -54,9 +54,9 @@ Here is a summary of what's changed since release 27.1.0:
   In addition, support was added for longitudinal feedback.
 \item The \verb|CSRDRIFT| element can now also include longitudinal space charge, using the algorithm from the \verb|LSCDRIFT| element.
 \item The \verb|CSBEND| element has a new feature that allows suppression of spurious trajectory offsets that result from limitations
-  of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter.
+  of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter. 
 \item The input of multipole errors for \verb|KQUAD| and \verb|KSEXT| elements was modified so that the input columns have more transparent
-  names. Previously, the names caused some confusion.
+  names. Previously, the names caused some confusion. Files that worked with previous versions are still accepted.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -73,8 +73,7 @@ Here is a summary of what's changed since release 27.1.0:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A new program, \verb|sddsbunchingfactor| was added, to compute bunching factors from particle output files. This was inspired
-  by questions from A. Halavanau (NIU).
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
