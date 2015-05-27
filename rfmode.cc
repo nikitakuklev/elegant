@@ -744,9 +744,9 @@ void track_through_rfmode(
           MPI_Reduce(sendBuffer, receiveBuffer, 13, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
           if (myid == 0) {
             n_binned = receiveBuffer[0];
-            rfmode->V = receiveBuffer[1];
-            rfmode->last_phase = receiveBuffer[2];
-            rfmode->last_t = receiveBuffer[3];
+            rfmode->V = receiveBuffer[1]/(n_processors-1);
+            rfmode->last_phase = receiveBuffer[2]/(n_processors-1);
+            rfmode->last_t = receiveBuffer[3]/(n_processors-1);
             V_sum = receiveBuffer[4];
             Vr_sum = receiveBuffer[5];
             phase_sum = receiveBuffer[6];
