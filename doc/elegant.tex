@@ -61,7 +61,8 @@ Here is a summary of what's changed since release 27.1.0:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None
+\item The \verb|floor_coordinates| command has a new parameter, \verb|store_vertices|, which allows requesting that dipole vertex points
+  be stored for use in optimization.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -1845,6 +1846,7 @@ aperture for use in the penalty function.  This is available only for the line s
     long include_vertices = 0;
     long vertices_only = 0;
     long magnet_centers = 0;
+    long store_vertices = 0;
 &end
 \end{verbatim}
 
@@ -1859,6 +1861,10 @@ the coordinates of the vertices of bending magnets.
 \item \verb|magnet_centers| --- Flag that, if set, specifies that output will contain 
 the coordinates of the centers of all magnets.  By default, the coordinates of the downstream
 end are given.
+\item \verb|store_vertices| --- Flag that, if set, results in storing the floor coordinates for
+  dipole magnet vertex points. The coordinates are stored in variables with names of the form
+  {\em magnetName}\verb|#|{\em occurrenceNumber}\verb|-VP.|{\em property}, where {\em property}
+  is \verb|X|, \verb|Y|, \verb|Z|, \verb|theta|, \verb|phi|, and \verb|psi|.
 \end{itemize}
 
 The ``vertex  point'' for a dipole or string of dipoles is defined as the intersection of the
