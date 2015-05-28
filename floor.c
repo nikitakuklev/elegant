@@ -72,6 +72,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              SDDS_DATASET *SDDS_floor, long row_index);
 void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W, char *name);
 double nearbyAngle(double angle, double reference);
+void store_vertex_floor_coordinates(char *name, long occurence, double *ve, double *angle);
 
 void setupSurveyAngleMatrix(MATRIX *W0, double theta0, double phi0, double psi0) 
 {
@@ -448,13 +449,17 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
           vec_add(x1, a, 1, ds, c);
           sprintf(label, "%s-VP", preceeds->name);
           ds *= -sqrt(vec_dot(a, a));
-          if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-                                 IC_S, sVertex+ds, IC_DS, ds,
-                                 IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
-                                 IC_THETA, anglesVertex[0], IC_PHI, anglesVertex[1], IC_PSI, anglesVertex[2],
-                                 IC_ELEMENT, label, IC_OCCURENCE, preceeds->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
-            SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          if (store_vertices)
+            store_vertex_floor_coordinates(preceeds->name, preceeds->occurence, c->ve, anglesVertex);
+          if (SDDS_floor) {
+            if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+                                   IC_S, sVertex+ds, IC_DS, ds,
+                                   IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
+                                   IC_THETA, anglesVertex[0], IC_PHI, anglesVertex[1], IC_PSI, anglesVertex[2],
+                                   IC_ELEMENT, label, IC_OCCURENCE, preceeds->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
+              SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
           }
 #ifdef DEBUG
           printf("skewness check (should be 0): %le\n",
@@ -586,7 +591,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax)
 {
-  ELEMENT_LIST *elem;
+  ELEMENT_LIST *elem, *last_elem;
   double X, Y, Z, theta, phi, psi, s;
   MATRIX *V0, *V1;
   MATRIX *Theta, *Phi, *Psi, *W0, *W1, *temp;
@@ -642,9 +647,10 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
     XYZMax[1] = Y0;
     XYZMax[2] = Z0;
   }
-      
+
+  last_elem = NULL;
   while (elem) {
-    advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, NULL, NULL, 0);
+    advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, last_elem, NULL, 0);
     if (elem->type!=T_FLOORELEMENT) {
       long i;
       if (XYZMin)
@@ -687,6 +693,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
     m_copy(V0, V1);
     m_copy(W0, W1);
     elem->end_pos = s;
+    last_elem = elem;
     elem = elem->succ;
   }
   beamline->revolution_length = s;
@@ -695,6 +702,11 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
   Angle[0] = theta;
   Angle[1] = phi;
   Angle[2] = psi;
+  if (elem==NULL && IS_BEND(last_elem->type) && include_vertices) {
+    /* Get final vertex, if needed */
+    advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, 
+                            NULL, last_elem, NULL, 0);
+  }
   m_free(&V0);
   m_free(&V1);
   m_free(&Theta);
@@ -843,5 +855,21 @@ ELEMENT_LIST *bendFollows(ELEMENT_LIST *elem)
   printf("Returning bendFollows=0 for %s (end of line)\n", elem->name);
 #endif
   return NULL;
+}
+
+void store_vertex_floor_coordinates(char *name, long occurence, double *ve, double *angle) 
+{
+  char *buffer;
+  long i;
+  char *vTag[3] = {"X", "Y", "Z"};
+  char *angleTag[3] = {"theta", "phi", "psi"};
+
+  buffer = tmalloc(sizeof(*name)*(strlen(name)+1000));
+  for (i=0; i<3; i++) {
+    sprintf(buffer, "%s#%ld-VP.%s", name, occurence, vTag[i]);
+    rpn_store(ve[i], NULL, rpn_create_mem(buffer, 0));
+    sprintf(buffer, "%s#%ld-VP.%s", name, occurence, angleTag[i]);
+    rpn_store(angle[i], NULL, rpn_create_mem(buffer, 0));
+  }
 }
 
