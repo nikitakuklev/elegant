@@ -66,6 +66,7 @@ Here is a summary of what's changed since release 27.1.0:
 \begin{itemize}
 \item The \verb|floor_coordinates| command has a new parameter, \verb|store_vertices|, which allows requesting that dipole vertex points
   be stored for use in optimization.
+\item The \verb|twiss_output| command now stores the acceptances \verb|Ax| and \verb|Ay| for use in optimization.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -2923,6 +2924,7 @@ with \verb|output_at_each_step=1|:
 \begin{itemize} 
 \item Final Twiss parameters, e.g., \verb|betax|, \verb|alphax|, \verb|etax|.  The names
 are the same as the column names in the twiss output file.
+\item Linear acceptances \verb|Ax| and \verb|Ay| for the horizontal and vertical planes, respectively.
 \item Statistics of Twiss parameters in the form \verb|<statistic>.<parameter-name>|,
 where \verb|<statistic>| is \verb|min|, \verb|max|, \verb|ave|, \verb|p99|, \verb|p98|, or
 \verb|p96|.  \verb|p99| is the 99$^{th}$ pencentile value, a similarly for \verb|p98| and \verb|p96|.
