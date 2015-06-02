@@ -108,6 +108,9 @@ static long nRfca = 0;
 static ELEMENT_LIST **rfcaElem = NULL;
 static FILE *fpRf = NULL;
 
+/* For rpn memory storage of Ax and Ay */
+static long Ax_mem = -1, Ay_mem = -1;
+
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
                                 double *betay, double *alphay, double *etay, double *etapy, double *NUy,
@@ -2061,8 +2064,17 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
   beamline->acceptance[0] = find_acceptance(beamline->elem_twiss, 0, run, &x_acc_name, &x_acc_z);
   beamline->acceptance[1] = find_acceptance(beamline->elem_twiss, 1, run, &y_acc_name, &y_acc_z);
+
+  if (Ax_mem==-1)
+    Ax_mem = rpn_create_mem("Ax", 0);
+  rpn_store(beamline->acceptance[0], NULL, Ax_mem);
+  if (Ay_mem==-1)
+    Ay_mem = rpn_create_mem("Ay", 0);
+  rpn_store(beamline->acceptance[1], NULL, Ay_mem);
+  
   beamline->acceptance[2] = x_acc_z;
   beamline->acceptance[3] = y_acc_z;
+
   if (x_acc_name)
     cp_str(&beamline->acc_limit_name[0], x_acc_name);
   else

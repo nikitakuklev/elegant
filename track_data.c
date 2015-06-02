@@ -493,11 +493,11 @@ PARAMETER moni_param[N_MONI_PARAMS] = {
 RCOL rcol_example;   
 /* name for rectangular collimator physical parameters */
 PARAMETER rcol_param[N_RCOL_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.length), NULL, 0.0, 0, "length"},
-    {"X_MAX", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.x_max), NULL, 0.0, 0, "half-width in x"},
-    {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.y_max), NULL, 0.0, 0, "half-width in y"},
-    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&rcol_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rcol_example.length), NULL, 0.0, 0, "length"},
+    {"X_MAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rcol_example.x_max), NULL, 0.0, 0, "half-width in x"},
+    {"Y_MAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rcol_example.y_max), NULL, 0.0, 0, "half-width in y"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rcol_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rcol_example.dy), NULL, 0.0, 0, "misalignment"},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&rcol_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
     {"INVERT", "", IS_LONG, 0, (long)((char *)&rcol_example.invert), NULL, 0.0, 0, "If non-zero, particles inside the aperture are lost while those outside are transmitted."},
     } ;
@@ -505,11 +505,11 @@ PARAMETER rcol_param[N_RCOL_PARAMS] = {
 ECOL ecol_example;
 /* name for elliptical collimator physical parameters */
 PARAMETER ecol_param[N_ECOL_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.length), NULL, 0.0, 0, "length"},
-    {"X_MAX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.x_max), NULL, 0.0, 0, "half-axis in x"},
-    {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.y_max), NULL, 0.0, 0, "half-axis in y"},
-    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ecol_example.length), NULL, 0.0, 0, "length"},
+    {"X_MAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ecol_example.x_max), NULL, 0.0, 0, "half-axis in x"},
+    {"Y_MAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ecol_example.y_max), NULL, 0.0, 0, "half-axis in y"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ecol_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ecol_example.dy), NULL, 0.0, 0, "misalignment"},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&ecol_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
     {"EXPONENT", "", IS_LONG, 0, (long)((char *)&ecol_example.exponent), NULL, 0.0, 2, "Exponent for boundary equation.  2 is ellipse."},
     {"YEXPONENT", "", IS_LONG, 0, (long)((char *)&ecol_example.yExponent), NULL, 0.0, 0, "y exponent for boundary equation.  2 is ellipse.  If 0, defaults to EXPONENT"},

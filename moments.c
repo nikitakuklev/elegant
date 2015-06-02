@@ -109,7 +109,8 @@ void dumpBeamMoments(
   long n_elem,
   long final_values_only,
   long tune_corrected,
-  RUN *run
+  RUN *run,
+  double *eNatural
   )
 {
   double data[N_COLUMNS], *emit;
@@ -117,7 +118,6 @@ void dumpBeamMoments(
   char *stage;
   ELEMENT_LIST *elem;
   SIGMA_MATRIX *sigma0;
-  double eNatural[3] = {0,0,0};
   
   if (tune_corrected==1)
     stage = "tunes corrected";
@@ -207,8 +207,6 @@ void dumpBeamMoments(
     }
   }
 
-  if (equilibrium)
-    computeNaturalEmittances(beamline->Mld, beamline->sigmaMatrix0->sigma, eNatural); 
   if (!SDDS_SetParameters(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                           IP_E1, eNatural[0], 
                           IP_E2, eNatural[1], 
@@ -290,6 +288,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
 {
   ELEMENT_LIST *eptr, *elast;
   long n_elem, last_n_elem, i;
+  double eNatural[3] = {0,0,0};
   
 #ifdef DEBUG
   fprintf(stdout, "now in runMomentsOutput\n");
@@ -411,8 +410,11 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
         printf("%13.6e%c", elast->sigmaMatrix->sigma[sigmaIndex3[i][j]], j==5?'\n':' ');
   }
 
+  if (equilibrium)
+    computeNaturalEmittances(beamline->Mld, beamline->sigmaMatrix0->sigma, eNatural); 
+
   if (SDDSMomentsInitialized && writeToFile)
-    dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run);
+    dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run, eNatural);
 
   return 1;
 }
@@ -519,6 +521,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
       storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix, elem->Mld->C);
     elem = elem->succ;
   }
+  
   free_matrices(M1); free(M1); M1 = NULL;
   free_matrices(M2); free(M2); M2 = NULL;
   free(S1);
@@ -666,6 +669,12 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
   int N, LDA, LDVL, LDVR, lwork, info;
   double ReV[MATDIM2], ImV[MATDIM2];
   double *M1, *M2, *M3, *M4;
+  static char *enRpnName[3] = {
+    "e1", "e2", "e3"
+    };
+  static long enRpnMemory[3] = {
+    -1, -1, -1
+    };
   
   eigenModesNumber = 3;
  
@@ -746,6 +755,14 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
   emittance[0] = Rdiag[0];
   emittance[1] = Rdiag[2*dim+2];
   emittance[2] = Rdiag[4*dim+4];
+
+  /* Store these in rpn memories in case needed by optimizer */
+  for (i=0; i<3; i++) {
+    if (enRpnMemory[i]==-1)
+      enRpnMemory[i] = rpn_create_mem(enRpnName[i], 0);
+    rpn_store(emittance[i], NULL, enRpnMemory[i]);
+  }
+  
   free(Rdiag);
 }
 

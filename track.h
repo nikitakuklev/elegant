@@ -3932,7 +3932,7 @@ void setStartingMoments(SIGMA_MATRIX *sm,
                         double emit_z, double beta_z, double alpha_z);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
 void dumpBeamMoments(LINE_LIST *beamline, long n_elem, long final_values_only, long tune_corrected,
-                     RUN *run);
+                     RUN *run, double *emittance);
 void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *doMomentsOutput,
                         long default_order);
 void finishMomentsOutput(void);
