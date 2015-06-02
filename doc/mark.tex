@@ -13,7 +13,7 @@ form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the followi
  giving coordinate rms values $\sqrt{\langle (x_i - \langle x_i \rangle)^2\rangle}$ at the marker location from tracking.
 \item The quantity {\tt Particles} will be available, giving the number of particles tracked to the marker location.
 \item The quantities {\tt s{\em i}{\em j}} will be available, giving $\langle ( x_i -\langle x_i\rangle)( x_j - \langle x_j \rangle)\rangle$
- at the marker location, where $1\leq i\leq 6$ and $i<j\leq 6$.
+ from tracking at the marker location, where $1\leq i\leq 6$ and $i<j\leq 6$.
 \item The quantities {\tt betaxBeam}, {\tt alphaxBeam}, {\tt betayBeam}, and {\tt alphayBeam}, which are the twiss parameters computed
       from the beam moments obtained by tracking, will be available.
 \item The quantities {\tt R{\em i}{\em j}} will be available, for $1\leq i \leq 6$ and $1\leq j \leq 6$,
@@ -31,8 +31,8 @@ form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the followi
   (These are the two beta functions for x and y, the coupled dispersion values for x and y, and the beam tilt). 
 \item If moments calculations are being performed (via {\tt moments\_output} with  {\tt output\_at\_each\_step=1}), then the quantities 
  {\tt s{\em i}{\em j}m}, $1 \leq i\leq j\leq 6$, giving the 21 unique elements of the sigma matrix.  The quantities {\tt c{\em i}m}, $1\leq i \leq 6$,
- are also created, giving the 6 centroids from the moments computation.  The
- {\tt m} on the end of the symbols is to distinguish them from the moments computed from tracking.
+ are also created, giving the 6 centroids from the moments computation. In addition, the emittances of the three modes are available using 
+ {\tt e{\em i}m}, $1\leq i \leq 3$. The {\tt m} on the end of the symbols is to distinguish them from the moments computed from tracking.
 \item If closed orbit calculations are being performed (via {\tt correct} or {\tt closed\_orbit}), then
   the quantities {\tt xco}, {\tt yco}, {\tt xpco}, and {\tt ypco} will be available, giving the
   x and y closed orbits and their slopes, respectively, at the marker location.

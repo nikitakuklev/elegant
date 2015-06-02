@@ -57,6 +57,9 @@ Here is a summary of what's changed since release 27.1.0:
   of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter. 
 \item The input of multipole errors for \verb|KQUAD| and \verb|KSEXT| elements was modified so that the input columns have more transparent
   names. Previously, the names caused some confusion. Files that worked with previous versions are still accepted.
+\item The \verb|MARK| element with \verb|FITPOINT=1| now stores the emittances of the three modes as \verb|e1m|, 
+  \verb|e2m|, and \verb|e3m| for optimization if \verb|moments_output| is invoked. This deficiency was pointed out
+  by forum user marlibgin.
 \end{itemize}
 
 \subsection{New and Modified Commands}

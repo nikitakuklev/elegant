@@ -670,7 +670,7 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
   double ReV[MATDIM2], ImV[MATDIM2];
   double *M1, *M2, *M3, *M4;
   static char *enRpnName[3] = {
-    "e1", "e2", "e3"
+    "e1m", "e2m", "e3m"
     };
   static long enRpnMemory[3] = {
     -1, -1, -1
