@@ -379,12 +379,38 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
 
   if (rho0>1e6) {
-    if (!largeRhoWarning) {
-      printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as drift.\n");
-      largeRhoWarning = 1;
+    if (csbend->k1!=0) {
+      ELEMENT_LIST elem;
+      KQUAD kquad;
+      static short largeRhoWarningK1 = 0;
+      if (!largeRhoWarningK1) {
+        printf("Warning: One or more CSBENDs have radius > 1e6 but non-zero K1.  Treated as KQUAD.\n");
+        largeRhoWarningK1 = 1;
+      }
+      memset(&elem, 0, sizeof(elem));
+      memset(&kquad, 0, sizeof(kquad));
+      elem.p_elem = (void*)&kquad;
+      elem.type = T_KQUAD;
+      kquad.length = csbend->length;
+      kquad.k1 = csbend->k1;
+      kquad.tilt = csbend->tilt;
+      kquad.dx = csbend->dx;
+      kquad.dy = csbend->dy;
+      kquad.dz = csbend->dz;
+      kquad.synch_rad = csbend->synch_rad;
+      kquad.isr = csbend->isr;
+      kquad.isr1Particle = csbend->isr1Particle;
+      kquad.n_kicks = csbend->n_kicks;
+      kquad.integration_order = csbend->integration_order;
+      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, 1, 1, 0, NULL, sigmaDelta2);
+    } else {
+      if (!largeRhoWarning) {
+        printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as EDRIFT.\n");
+        largeRhoWarning = 1;
+      }
+      exactDrift(part, n_part, csbend->length);
+      return n_part;
     }
-    exactDrift(part, n_part, csbend->length);
-    return n_part;
   }
   
   fse = csbend->fse;
