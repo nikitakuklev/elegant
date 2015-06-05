@@ -41,6 +41,8 @@ Here is a summary of what's changed since release 27.1.0:
 \begin{itemize}
 \item The \verb|WATCH| element was improved so that the \verb|dCt| column (in parameter or coordinate mode) and \verb|dt| column (in coordinate mode)
   no longer exhibit fictitious drift due to precision limitations in simulations of rings with many turns.
+\item For numerical reasons, any \verb|CSBEND| with $\rho>10^6$ m is replaced with another element. In the past, an \verb|EDRIFT| was used,
+  which would produce incorrect results if the element had non-zero $K_1$ or $K_2$. This was fixed. 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
