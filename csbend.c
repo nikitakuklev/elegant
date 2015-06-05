@@ -379,12 +379,15 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
 
   if (rho0>1e6) {
+    if (csbend->k2!=0)
+      bombElegant("Error: One or more CSBENDs have radius > 1e6 but non-zero K2. Best to convert this to KQUSE or KSEXT.\n", NULL);
     if (csbend->k1!=0) {
       ELEMENT_LIST elem;
       KQUAD kquad;
       static short largeRhoWarningK1 = 0;
       if (!largeRhoWarningK1) {
         printf("Warning: One or more CSBENDs have radius > 1e6 but non-zero K1.  Treated as KQUAD.\n");
+        printf("*** All higher multipoles are ignored for these elements!\n");
         largeRhoWarningK1 = 1;
       }
       memset(&elem, 0, sizeof(elem));
@@ -406,6 +409,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     } else {
       if (!largeRhoWarning) {
         printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as EDRIFT.\n");
+        printf("*** All higher multipoles are ignored for these elements!\n");
         largeRhoWarning = 1;
       }
       exactDrift(part, n_part, csbend->length);
