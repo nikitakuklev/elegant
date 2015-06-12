@@ -954,7 +954,7 @@ extern char *entity_text[N_TYPES];
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
-#define N_TFBPICKUP_PARAMS 19
+#define N_TFBPICKUP_PARAMS 20
 #define N_TFBDRIVER_PARAMS 22
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
@@ -2759,6 +2759,7 @@ typedef struct {
   long initialized, iPlane, filterLength;
   double *filterOutput;
   long nBunches;
+  long updateInterval;
   /* circular buffer for storing past readings */
   double **data;
 } TFBPICKUP;

@@ -2282,6 +2282,7 @@ PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
+   {"UPDATE_INTERVAL", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.updateInterval), NULL, 0.0, 0, "Interval in turns for sampling data and updating filter output."},
 } ;
 
 TFBDRIVER tfbDriver_example;
