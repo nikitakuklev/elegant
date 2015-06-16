@@ -47,8 +47,17 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   printf("TFBPICKUP: %ld bunches\n", nBuckets);
 #endif
 
-  if (tfbp->updateInterval>1 && pass%tfbp->updateInterval!=0)
+  if (tfbp->updateInterval>1 && pass%tfbp->updateInterval!=0) {
+    if (time0) 
+      free(time0);
+    if (ibParticle) 
+      free(ibParticle);
+    if (ipBucket)
+      free_czarray_2d((void**)ipBucket, nBuckets, np0);
+    if (npBucket)
+      free(npBucket);
     return;
+  }
   
   if (tfbp->nBunches==0) {
     tfbp->nBunches = nBuckets;
@@ -207,9 +216,18 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
   if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
     bombElegantVA("TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
-  if (pass%updateInterval!=0)
+  if (pass%updateInterval!=0) {
+    if (time0) 
+      free(time0);
+    if (ibParticle) 
+      free(ibParticle);
+    if (ipBucket)
+      free_czarray_2d((void**)ipBucket, nBuckets, np0);
+    if (npBucket)
+      free(npBucket);
     return;
-
+  }
+  
   if (pass==0)
     tfbd->dataWritten = 0;
   
