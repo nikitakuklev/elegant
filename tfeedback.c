@@ -180,7 +180,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long iBucket, nBuckets;
-  long rpass;
+  long rpass, updateInterval;
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -205,9 +205,11 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (tfbd->pickup->iPlane==5 && !tfbd->longitudinal)
     bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta, but driver not working on longitudinal plane", NULL);
 
-  if (tfbd->pickup->updateInterval>1 && pass%tfbd->pickup->updateInterval!=0)
+  if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
+    bombElegantVA("TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
+  if (pass%updateInterval!=0)
     return;
-  
+
   if (pass==0)
     tfbd->dataWritten = 0;
   
@@ -230,15 +232,15 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
     if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
       kick = SIGN(kick)*tfbd->kickLimit;
-    rpass = pass/tfbd->pickup->updateInterval;
+    rpass = pass/updateInterval;
 #ifdef DEBUG
     fprintf(stdout, "TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
 #endif
   
-    tfbd->driverSignal[iBucket][rpass %(tfbd->delay+tfbd->filterLength)] = kick;
+    tfbd->driverSignal[iBucket][rpass%(tfbd->delay+tfbd->filterLength)] = kick;
   
-    if (pass<tfbd->delay+tfbd->filterLength) {
+    if (rpass<tfbd->delay+tfbd->filterLength) {
 #ifdef DEBUG
       fprintf(stdout, "TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
               pass, tfbd->delay);
@@ -250,10 +252,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       for (i=0; i<tfbd->filterLength; i++) {
 #ifdef DEBUG
         fprintf(stdout, "TFBDRIVER: adding term a[%ld]=%e  *   %e\n",
-                i, tfbd->a[i], tfbd->driverSignal[iBucket][(pass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)]);
+                i, tfbd->a[i], tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)]);
         fflush(stdout);
 #endif
-        kick += tfbd->a[i]*tfbd->driverSignal[iBucket][(pass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)];
+        kick += tfbd->a[i]*tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)];
       }
 #ifdef DEBUG
       fprintf(stdout, "TFBDRIVER: kick = %le\n", kick);
@@ -393,6 +395,9 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     tfbd->driverSignal = NULL;
   }
   tfbd->nBunches = 0;
+
+  if (tfbd->updateInterval<1)
+    tfbd->updateInterval = 1;
 
   tfbd->initialized = 1;
 }

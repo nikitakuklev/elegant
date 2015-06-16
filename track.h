@@ -955,7 +955,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 20
-#define N_TFBDRIVER_PARAMS 22
+#define N_TFBDRIVER_PARAMS 23
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 24
@@ -2758,8 +2758,7 @@ typedef struct {
   /* internal parameters */
   long initialized, iPlane, filterLength;
   double *filterOutput;
-  long nBunches;
-  long updateInterval;
+  long nBunches, updateInterval;
   /* circular buffer for storing past readings */
   double **data;
 } TFBPICKUP;
@@ -2777,7 +2776,7 @@ typedef struct {
   long initialized, filterLength, dataWritten, outputIndex;
   TFBPICKUP *pickup;
   SDDS_DATASET SDDSout;
-  long nBunches;
+  long nBunches, updateInterval;
   /* circular buffer for storing output signal */
   long maxDelay;
   double **driverSignal;

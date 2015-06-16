@@ -2310,6 +2310,7 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
+   {"UPDATE_INTERVAL", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and updating filter output."},
 } ;
 
 LSCDRIFT lscdrift_example;
