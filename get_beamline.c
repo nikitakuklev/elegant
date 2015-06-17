@@ -48,10 +48,10 @@ typedef struct input_object {
 } INPUT_OBJECT;
 static INPUT_OBJECT inputObject, *lastInputObject=NULL;
 
-/* All the quantities listed here should be double-precision values */
-#define N_TRANSMUTE_ITEMS 9
+/* All the quantities listed here must be double-precision values */
+#define N_TRANSMUTE_ITEMS 22
 static char *transmuteItems[N_TRANSMUTE_ITEMS] = {
-  "L", "K1", "K2", "K3", "ANGLE", "DX", "DY", "DZ", "TILT", 
+  "L", "K1", "K2", "K3", "ANGLE", "DX", "DY", "DZ", "TILT", "BORE", "E1", "E2", "H1", "H2", "FINT", "ETILT", "B1", "B2", "FSE", "HGAP", "X_MAX", "Y_MAX",
 };
 
 
@@ -249,15 +249,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 }
               }
               pNew = tmalloc(entity_description[newType].structure_size);
-              zero_memory(pNew, entity_description[newType].structure_size);
+              resetElementToDefaults(pNew, newType);
               for (it=0; it<N_TRANSMUTE_ITEMS; it++) {
-                printf("checking for transferring data for %s parameter on %s from type %ld to type %ld\n",
-                       transmuteItems[it], eptr->name, eptr->type, newType);
                 if ((ip1=find_parameter_offset(transmuteItems[it], eptr->type))>=0 &&
                     (ip2=find_parameter_offset(transmuteItems[it], newType))>=0) {
                   *((double*)(pNew+ip2)) = *((double*)(eptr->p_elem+ip1));
                 }
-                printf("ip1=%d, ip2=%d\n", ip1, ip2);
               }
               free(eptr->p_elem);
               eptr->p_elem = pNew;

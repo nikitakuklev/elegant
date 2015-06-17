@@ -3391,6 +3391,7 @@ extern void parse_element(char *p_elem, PARAMETER *parameter, long n_params,
     char *string, ELEMENT_LIST *eptr, char *type_name);
 extern void parse_pepper_pot(PEPPOT *peppot, FILE *fp, char *name);
 extern long set_max_name_length(long length);
+void resetElementToDefaults(void *p_elem, long type);
  
 /* prototypes for malign_mat.c: */
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_angle);
