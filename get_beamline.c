@@ -24,6 +24,7 @@
 
 void show_elem(ELEMENT_LIST *eptr, long type);
 void process_rename_request(char *s, char **name, long n_names);
+long find_parameter_offset(char *param_name, long elem_type);
 
 /* elem: root of linked-list of ELEM structures 
  * This list contains the definitions of all elements as supplied in the
@@ -46,6 +47,13 @@ typedef struct input_object {
   struct input_object *next;
 } INPUT_OBJECT;
 static INPUT_OBJECT inputObject, *lastInputObject=NULL;
+
+/* All the quantities listed here should be double-precision values */
+#define N_TRANSMUTE_ITEMS 9
+static char *transmuteItems[N_TRANSMUTE_ITEMS] = {
+  "L", "K1", "K2", "K3", "ANGLE", "DX", "DY", "DZ", "TILT", 
+};
+
 
 void addToInputObjectList(void *ptr, long isLine)
 {
@@ -229,6 +237,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             length = 0;
             if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
                 newType>=0) {
+              int it, ip1, ip2;
+              void *pNew;
               if (entity_description[eptr->type].flags&HAS_LENGTH) {
                 length = ((DRIFT*)eptr->p_elem)->length;
                 if (length && !(entity_description[newType].flags&HAS_LENGTH)) {
@@ -238,12 +248,24 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                   exitElegant(1);
                 }
               }
+              pNew = tmalloc(entity_description[newType].structure_size);
+              zero_memory(pNew, entity_description[newType].structure_size);
+              for (it=0; it<N_TRANSMUTE_ITEMS; it++) {
+                printf("checking for transferring data for %s parameter on %s from type %ld to type %ld\n",
+                       transmuteItems[it], eptr->name, eptr->type, newType);
+                if ((ip1=find_parameter_offset(transmuteItems[it], eptr->type))>=0 &&
+                    (ip2=find_parameter_offset(transmuteItems[it], newType))>=0) {
+                  *((double*)(pNew+ip2)) = *((double*)(eptr->p_elem+ip1));
+                }
+                printf("ip1=%d, ip2=%d\n", ip1, ip2);
+              }
               free(eptr->p_elem);
-              eptr->p_elem = tmalloc(entity_description[type].structure_size);
-              zero_memory(eptr->p_elem, entity_description[type].structure_size);
+              eptr->p_elem = pNew;
               eptr->type = newType;
-              if (entity_description[newType].flags&HAS_LENGTH)
+              /* 
+                if (entity_description[newType].flags&HAS_LENGTH)
                 ((DRIFT*)eptr->p_elem)->length = length;
+                */
             }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
               fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
@@ -1394,4 +1416,13 @@ void initializeFTable(FTABLE *ftable)
   ftable->initialized = 1;
   return;
 }
+
+long find_parameter_offset(char *param_name, long elem_type)
+{
+  long param;
+  if ((param=confirm_parameter(param_name, elem_type))<0)
+    return(-1);
+  return(entity_description[elem_type].parameter[param].offset);
+}
+
 

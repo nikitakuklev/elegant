@@ -2737,15 +2737,6 @@ ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types
   return(elem);
 }
 
-long find_parameter_offset(char *param_name, long elem_type)
-{
-  long param;
-  if ((param=confirm_parameter(param_name, elem_type))<0)
-    return(-1);
-  return(entity_description[elem_type].parameter[param].offset);
-}
-
-
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   return 
