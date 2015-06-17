@@ -1117,16 +1117,16 @@ void resetElementToDefaults(void *p_elem, long type)
   for (i=0; i<n_params; i++)  {
     switch (parameter[i].type) {
     case IS_DOUBLE:
-      *(double*)(p_elem+parameter[i].offset) = parameter[i].number;
+      *((double*)p_elem+parameter[i].offset) = parameter[i].number;
       break;
     case IS_LONG:
-      *(long*)(p_elem+parameter[i].offset) = parameter[i].integer;
+      *((long*)p_elem+parameter[i].offset) = parameter[i].integer;
       break;
     case IS_STRING:
       if (parameter[i].string==NULL)
-        *(char**)(p_elem+parameter[i].offset) = NULL;
+        *((char**)p_elem+parameter[i].offset) = NULL;
       else
-        cp_str((char**)(p_elem+parameter[i].offset), 
+        cp_str(((char**)p_elem+parameter[i].offset), 
                parameter[i].string);
       break;
     }
