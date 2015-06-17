@@ -238,7 +238,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
                 newType>=0) {
               int it, ip1, ip2;
-              void *pNew;
+              char *pNew;
               if (entity_description[eptr->type].flags&HAS_LENGTH) {
                 length = ((DRIFT*)eptr->p_elem)->length;
                 if (length && !(entity_description[newType].flags&HAS_LENGTH)) {
