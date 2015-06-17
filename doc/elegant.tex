@@ -47,13 +47,13 @@ Here is a summary of what's changed since release 27.1.0:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback.
-  In addition, support was added for longitudinal feedback.
+  In addition, support was added for longitudinal feedback as well as sample/update intervals greater than one turn.
 \item The \verb|CSRDRIFT| element can now also include longitudinal space charge, using the algorithm from the \verb|LSCDRIFT| element.
 \item The \verb|CSBEND| element has a new feature that allows suppression of spurious trajectory offsets that result from limitations
   of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter. 
@@ -66,6 +66,8 @@ Here is a summary of what's changed since release 27.1.0:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|transmute_elements| command now does a better job of copying common parameters between the old and new element types.
+  In the past, only the length was preserved. A. Zholents (ANL) reported this issue.
 \item The \verb|floor_coordinates| command has a new parameter, \verb|store_vertices|, which allows requesting that dipole vertex points
   be stored for use in optimization.
 \item The \verb|twiss_output| command now stores the acceptances \verb|Ax| and \verb|Ay| for use in optimization.
@@ -96,10 +98,6 @@ Here is a summary of what's changed since release 27.1.0:
 \item Computation of beam moments does not include synchrotron radiation effects from \verb|UKICKMAP| elements.
 \item The file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
-\item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
- Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
- \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
- V. Sajaev (ANL).
 \item Computation of radiation integrals does not include the effect of steering magnets.
 \item There is a bug related to using {\tt ILMATRIX} that will result in a crash
   if one does not request computation of the twiss parameters. If you encounter this
@@ -113,7 +111,7 @@ Here is a summary of what's changed since release 27.1.0:
 
 \section{Credits}
 
-Contributors to {\tt elegant} include M. Borland, W. Guo, R. Soliday, V. Sajaev, C. Wang, Y. Wang, Y. Wu, and A. Xiao.
+Contributors to {\tt elegant} include M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, W. Guo, R. Soliday, V. Sajaev, C. Wang, Y. Wang, Y. Wu, and A. Xiao.
 Contributors to related programs include M. Borland, R. Dejus, L. Emery, A. Petrenko, H. Shang, Y. Wang, 
 A. Xiao, and B. Yang.
 R. Soliday is responsible for multi-platform builds and distribution.
