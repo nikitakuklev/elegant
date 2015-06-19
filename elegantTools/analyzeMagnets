@@ -44,7 +44,10 @@ if ![file exists $rootname.twi] {
 if [expr $H==0] {
     set pCentral [exec sdds2stream -parameter=pCentral $rootname.twi]
     set H [expr -$pCentral*0.51099906e6/2.99792458e+08]
+} else {
+    set pCentral [expr -$H/(0.51099906e6/2.99792458e+08)]
 }
+
 
 # combine repeated elements 
 exec sddsshift $rootname.twi -pipe=out -column=s -shift=1 \
