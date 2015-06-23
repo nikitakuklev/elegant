@@ -5445,6 +5445,47 @@ and {\tt Brightness{\em i}}.
 
 %\begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|sddsbunchingfactor|}\end{center}
+%\end{latexonly}
+\subsection{sddsbunchingfactor}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsbunchingfactor} computes bunching factors for 
+beams from {\tt elegant}, e.g., from \verb|WATCH| elements in coordinate mode or
+the \verb|output| file from \verb|run_setup|.
+
+The bunching factor $B(\omega)$ is defined as
+\begin{equation}
+B(\omega) = \frac{1}{N}\sqrt{\sum_{i=1}^N (\cos^2 \omega t_i + \sin^2\omega t_i)},
+\end{equation}
+where $\omega$ is the angular frequency and $t_i$ is the time coordinate of the $i^{th}$ of $N$ particles.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+sddsbunchingfactor run.out run.bfac -omegaRange=1e9,1e12 -points=300 -mode=log
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsbunchingfactor [-pipe=[input][,output]] [{\em SDDSinputfile}] [{\em SDDSoutputfile>}]
+  [-omegaRange={\em lowerHz},{\em upperHz}] [-points={\em number}] [-mode=\{linear|logarithmic\}] 
+  [-combinePages]
+}\end{flushleft}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt pipe} --- The standard SDDS Toolkit pipe option.
+\item {\tt omegaRange} --- Give the range of $\omega$ values, in Hz.
+\item {\tt points} --- Give the number of points over the range of $\omega$ values.
+\item {\tt mode} --- Choose linear or logarithmic spacing of $\omega$ values.
+\item {\tt combinePages} --- Pages of the input file are combined, i.e., treated as a single bunch.
+\end{itemize}
+
+\item {\bf authors:} M. Borland (ANL).
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|sddsemitproc|}\end{center}
 %\end{latexonly}
 \subsection{sddsemitproc}
