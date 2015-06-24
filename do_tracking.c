@@ -170,7 +170,6 @@ long do_tracking(
   static long warnedAboutChargePosition = 0;
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
-  long limitToOnePass = 0;
   int myid = 0, active = 1, lostSinceSeqMode = 0, needSort = 0;
 #ifdef SORT
   int nToTrackAtLastSort;
@@ -306,7 +305,6 @@ long do_tracking(
      */
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
       fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
-      limitToOnePass = 1;
       fflush(stdout);
     }
     flags &= ~FIDUCIAL_BEAM_SEEN;
@@ -362,8 +360,6 @@ long do_tracking(
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
-    if (limitToOnePass && i_pass>passOffset)
-      break;
     log_entry("do_tracking.2.1");
     if (run->stopTrackingParticleLimit>0) {
 #if !USE_MPI
