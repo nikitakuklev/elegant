@@ -66,8 +66,6 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->n_passes = n_passes;
     _control->reset_rf_each_step = reset_rf_for_each_step;
     _control->reset_scattering_seed = reset_scattering_seed;
-    if (first_is_fiducial && n_passes!=1)
-      bombElegant("can't have fiducial beam and multiple passes", NULL);
     _control->fiducial_flag = 0;
     if (first_is_fiducial)
       _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL |
