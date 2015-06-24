@@ -614,7 +614,8 @@ long track_beam(
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
                          +RESET_RF_FOR_EACH_STEP))|
 		       ALLOW_MPI_ABORT_TRACKING,
-                       control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
+                       first_is_fiducial && control->i_step==1 ? 1 : control->n_passes, 
+                       0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lost, NULL); 
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM)) {
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
