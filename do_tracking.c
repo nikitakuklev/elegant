@@ -2794,7 +2794,7 @@ void scatter(double **part, long np, double Po, SCATTER *scat, long iPass)
 
   if (!np)
     return;
-  if (iPass<scat->startOnPass || (scat->endOnPass>=0 && iPass>scat->endOnPass))
+  if (iPass<scat->startOnPass || (scat->endOnPass>0 && iPass>scat->endOnPass))
     return;
 
   log_entry("scatter");
