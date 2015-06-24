@@ -184,6 +184,11 @@ set mainParameterFile(4) ""
 set mainParameterFile(5) ""
 set forceOccurence 0
 set mainDirectory [pwd]
+if {[string range $mainDirectory 0 11] == "/head2/home/"} {
+    set mainDirectory [string range $mainDirectory 6 end]
+} elseif {[string range $mainDirectory 0 10] == "/head/home/"} {
+    set mainDirectory [string range $mainDirectory 5 end]
+}
 set mainPrefix ""
 set gridEngine 0
 set makePngFiles 0
