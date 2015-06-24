@@ -913,6 +913,7 @@ char **argv;
         break;
       }
       firstPass = 1;
+
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
         fill_double_array(starting_coord, 6, 0.0);
@@ -2717,10 +2718,18 @@ void exitElegant(long status)
 void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST *beamline, short final, short mustSurvive)
 {
   double **coord, pCentral;
+  long code;
+#if USE_MPI
+  long notSinglePart0, partOnMaster0;
+  notSinglePart0 = notSinglePart;
+  partOnMaster0 = partOnMaster;
+  notSinglePart = 0;
+  partOnMaster = 1;
+#endif
   
   /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
   /* beamline->fiducial_flag = 0; */
-
+  
   coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
   if (startCoord)
     memcpy(coord[0], startCoord, sizeof(double)*6);
@@ -2729,14 +2738,14 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
   coord[0][6] = 1;
   pCentral = run->p_central;
   fprintf(stdout, "Tracking fiducial particle\n");
-  if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
-                   NULL, NULL, NULL, NULL, run, control->i_step, 
-                       (control->fiducial_flag&
-                        (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
-                         +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
-                         +RESET_RF_FOR_EACH_STEP))|
-		       ALLOW_MPI_ABORT_TRACKING|INHIBIT_FILE_OUTPUT,
-                   1, 0, NULL, NULL, NULL, NULL, NULL)) {
+  if (!(code=do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                         NULL, NULL, NULL, NULL, run, control->i_step, 
+                         (control->fiducial_flag&
+                          (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
+                           +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
+                           +RESET_RF_FOR_EACH_STEP))|
+                         ALLOW_MPI_ABORT_TRACKING|INHIBIT_FILE_OUTPUT,
+                         1, 0, NULL, NULL, NULL, NULL, NULL))) {
     if (mustSurvive) {
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
@@ -2744,6 +2753,10 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
       fprintf(stdout, "Warning: Fiducial particle lost!\n");
     }
   }
+#if USE_MPI
+  notSinglePart = notSinglePart0;
+  partOnMaster = partOnMaster0;
+#endif
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && final) {
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
     beamline->fiducial_flag |= FIDUCIAL_BEAM_SEEN; /* This is the one that matters */
