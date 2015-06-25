@@ -8,7 +8,6 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-
 /* file: correct.c
  * purpose: trajectory/orbit correction for elegant
  * 
@@ -647,12 +646,6 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     return 1;
 
 #if SDDS_MPI_IO
-  /* We need choose different modes depending on different beams */	
-  if (!correct->use_actual_beam) {
-    notSinglePart = 0;
-    partOnMaster = 1;
-  }
-
   if (correct->start_from_centroid && starting_coord && beam && beam->n_to_track_total && flags&INITIAL_CORRECTION) {
     compute_centroids(starting_coord, beam->particle, beam->n_to_track);
 #else
@@ -661,6 +654,14 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 #endif
   }
   
+#if SDDS_MPI_IO
+  /* We need choose different modes depending on different beams */	
+  if (!correct->use_actual_beam) {
+    notSinglePart = 0;
+    partOnMaster = 1;
+  }
+#endif
+
   closed_orbit = starting_coord;   /* for return of closed orbit at starting point */
 
   if (correct->verbose && correct->n_iterations>=1 && correct->n_xy_cycles>0 && !(flags&NO_OUTPUT_CORRECTION)) {
