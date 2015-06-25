@@ -1308,6 +1308,11 @@ proc FillMomentumApertureFrame {widget args} {
       -variable momentumAperture(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
 
+    APSRadioButtonFrame .rb1a -parent $widget \
+      -label "Include radiation: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable momentumAperture(includeRadiation) -contextHelp \
+      "Choose whether to include the effects of classical synchrotron radiation."
+
     APSLabeledEntry .lesn -parent $widget \
       -label "Number of jobs: " -width 20 -textVariable momentumAperture(numberOfJobs) \
       -contextHelp \
