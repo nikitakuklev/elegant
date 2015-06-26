@@ -386,9 +386,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       KQUAD kquad;
       static short largeRhoWarningK1 = 0;
       if (!largeRhoWarningK1) {
+#if USE_MPI
+	if (myid==1)
+	  dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+#endif
         printf("Warning: One or more CSBENDs have radius > 1e6 but non-zero K1.  Treated as KQUAD.\n");
         printf("*** All higher multipoles are ignored for these elements!\n");
         largeRhoWarningK1 = 1;
+#if USE_MPI
+	if (myid==1) {
+#if defined(_WIN32)
+	  freopen("NUL","w",stdout); 
+#else
+	  freopen("/dev/null","w",stdout); 
+#endif
+	}
+#endif  
       }
       memset(&elem, 0, sizeof(elem));
       memset(&kquad, 0, sizeof(kquad));
@@ -408,8 +421,21 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, 1, 1, 0, NULL, sigmaDelta2);
     } else {
       if (!largeRhoWarning) {
+#if USE_MPI
+	if (myid==1)
+	  dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+#endif
         printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as EDRIFT.\n");
         printf("*** All higher multipoles are ignored for these elements!\n");
+#if USE_MPI
+	if (myid==1) {
+#if defined(_WIN32)
+	  freopen("NUL","w",stdout); 
+#else
+	  freopen("/dev/null","w",stdout); 
+#endif
+	}
+#endif  
         largeRhoWarning = 1;
       }
       exactDrift(part, n_part, csbend->length);
