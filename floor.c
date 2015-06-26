@@ -508,7 +508,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       R->a[2][0] = length;
     }
 
-    if (tilt) {
+    if (tilt && !is_rotation) {
       m_identity(T);
       T->a[0][0] = T->a[1][1] = cos(tilt);
       T->a[1][0] = -(T->a[0][1] = -sin(tilt));
@@ -519,7 +519,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 	  !m_mult(S, temp33, TInv))
 	m_error("making tilt transformation");
     }
-
+    if (is_rotation) {
+      m_zero(R);
+      m_identity(S);
+      S->a[0][0] = S->a[1][1] = cos(tilt);
+      S->a[1][0] = -(S->a[0][1] = -sin(tilt));     
+    }
     m_mult(tempV, W0, R);
     m_add(V1, tempV, V0);
     m_mult(W1, W0, S);
