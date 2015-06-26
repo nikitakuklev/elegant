@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 28.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 28.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,17 +32,15 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 28.0.0}
+\section{Highlights of What's New in Version 28.1.0}
 
-Here is a summary of what's changed since release 27.1.0:
+Here is a summary of what's changed since release 28.0:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|WATCH| element was improved so that the \verb|dCt| column (in parameter or coordinate mode) and \verb|dt| column (in coordinate mode)
-  no longer exhibit fictitious drift due to precision limitations in simulations of rings with many turns.
-\item For numerical reasons, any \verb|CSBEND| with $\rho>10^6$ m is replaced with another element. In the past, an \verb|EDRIFT| was used,
-  which would produce incorrect results if the element had non-zero $K_1$ or $K_2$. This was fixed. 
+\item The ROTATE element was not affecting the floor coordinates. This was found and fixed by A. Xiao (APS).
+\item The \verb|END_PASS| parameter on \verb|SCATTER| now works as expect, after removal of a one-pass offset.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -52,31 +50,19 @@ Here is a summary of what's changed since release 27.1.0:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback.
-  In addition, support was added for longitudinal feedback as well as sample/update intervals greater than one turn.
-\item The \verb|CSRDRIFT| element can now also include longitudinal space charge, using the algorithm from the \verb|LSCDRIFT| element.
-\item The \verb|CSBEND| element has a new feature that allows suppression of spurious trajectory offsets that result from limitations
-  of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter. 
-\item The input of multipole errors for \verb|KQUAD| and \verb|KSEXT| elements was modified so that the input columns have more transparent
-  names. Previously, the names caused some confusion. Files that worked with previous versions are still accepted.
-\item The \verb|MARK| element with \verb|FITPOINT=1| now stores the emittances of the three modes as \verb|e1m|, 
-  \verb|e2m|, and \verb|e3m| for optimization if \verb|moments_output| is invoked. This deficiency was pointed out
-  by forum user marlibgin.
+\item 
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|transmute_elements| command now does a better job of copying common parameters between the old and new element types.
-  In the past, only the length was preserved. A. Zholents (ANL) reported this issue.
-\item The \verb|floor_coordinates| command has a new parameter, \verb|store_vertices|, which allows requesting that dipole vertex points
-  be stored for use in optimization.
-\item The \verb|twiss_output| command now stores the acceptances \verb|Ax| and \verb|Ay| for use in optimization.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item None
+\item Fixed bug that resulted in inconsistent fiducialization across processors when the beam was nonuniform across processors
+  and the \verb|start_from_centroid| flag was given to the \verb|correct| command.
+\item Now issue warnings if \verb|CSBEND| must be replaced by a \verb|EDRIFT| or \verb|KQUAD| because $\rho>10^6$m.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
