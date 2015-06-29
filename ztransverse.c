@@ -78,6 +78,11 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   i_pass0 = i_pass;
   if ((i_pass -= ztransverse->startOnPass)<0)
     return;
+
+#if defined(DEBUG) && USE_MPI
+  printf("ZTRANSVERSE, myid = %ld\n", myid);
+  fflush(stdout);
+#endif
   
   if (i_pass>=(ztransverse->rampPasses-1))
     rampFactor = 1;
@@ -90,8 +95,9 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
     determine_bucket_assignments(part0, np0, (charge && ztransverse->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #ifdef DEBUG
+    printf("%ld buckets\n", nBuckets);
+    fflush(stdout);
     if (nBuckets>1) {
-      printf("%ld buckets\n", nBuckets);
       fflush(stdout);
       for (iBucket=0; iBucket<nBuckets; iBucket++) {
         printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
@@ -148,6 +154,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
 #if USE_MPI && MPI_DEBUG
       printf("tmin_part = %21.15e  tmax_part = %21.15e\n", tmin_part, tmax_part);
       printf("tmin      = %21.15e  tmax      = %21.15e  dt = %21.15e\n", tmin, tmax, dt);
+      fflush(stdout);
 #endif
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
@@ -193,12 +200,17 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           if ((offset+length)>nb)
             length = nb - offset;
 #if MPI_DEBUG
-          printf("offset = %ld, length=%ld, nb=%ld\n", offset, length, nb);
+          printf("plane = %ld, offset = %ld, length=%ld, nb=%ld\n", plane, offset, length, nb);
+          fflush(stdout);
 #endif
           buffer = malloc(sizeof(double) * length);
           MPI_Allreduce(&posItime[plane][offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
           memcpy(&posItime[plane][offset], buffer, sizeof(double)*length);
           free(buffer);
+#if MPI_DEBUG
+          printf("posItime buffer shared\n");
+          fflush(stdout);
+#endif
         }
 
 #endif
@@ -210,10 +222,20 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
             SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
                                ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
           
+#if MPI_DEBUG
+          printf("Smoothing completed\n");
+          fflush(stdout);
+#endif
+
           /* Take the FFT of (x*I)(t) to get (x*I)(f) */
           memcpy(posIfreq, posItime[plane], 2*nb*sizeof(*posIfreq));
           realFFT(posIfreq, nb, 0);
           
+#if MPI_DEBUG
+          printf("FFT completed\n");
+          fflush(stdout);
+#endif
+
           /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
            * to normalize the current waveform
            */
@@ -234,16 +256,29 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
             Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
             Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
           }
+#if MPI_DEBUG
+          printf("Product completed\n");
+          fflush(stdout);
+#endif
           
           /* Compute inverse FFT of V(f) to get V(t) */
           realFFT(Vfreq, nb, INVERSE_FFT);
           Vtime = Vfreq;
           
+#if MPI_DEBUG
+          printf("IFFT completed\n");
+          fflush(stdout);
+#endif
+
           /* change particle transverse momenta to reflect voltage in relevant bin */
           applyTransverseWakeKicks(part, time, pz, pbin, np, 
                                    Po, plane, 
                                    Vtime, nb, tmin, dt, ztransverse->interpolate,
                                    plane==0?ztransverse->xProbeExponent:ztransverse->yProbeExponent);
+#if MPI_DEBUG
+          printf("Wake application completed\n");
+          fflush(stdout);
+#endif
         }
 
         if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
@@ -288,7 +323,15 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           }
         }
         first = 0;
+#if MPI_DEBUG
+        printf("plane = %ld completed completed\n", plane);
+        fflush(stdout);
+#endif
       }
+#ifdef DEBUG
+      printf("Done with both planes\n");
+      fflush(stdout);
+#endif
       
       if (nBuckets!=1) {
 #ifdef DEBUG
@@ -308,6 +351,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   }
     
     
+#ifdef DEBUG
+  printf("Preparing to free memory\n");
+  fflush(stdout);
+#endif
   if (part && part!=part0)
     free_czarray_2d((void**)part, max_np, 7);
   if (time && time!=time0) 
@@ -330,6 +377,12 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
     free(Vtime);
   if (posIfreq)
     free(posIfreq);
+
+#ifdef DEBUG
+  printf("Done with ZTRANSVERSE\n");
+  fflush(stdout);
+#endif
+
 }
 
 
@@ -531,7 +584,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     fclose(fp);
   }
 #endif
-  
+
   ztransverse->initialized = 1;
 }
 

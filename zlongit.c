@@ -118,15 +118,15 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   not_first_call += 1;
 
 #if defined(DEBUG) && USE_MPI
-  printf("myid = %ld\n", myid);
+  printf("ZLONGIT, myid = %d\n", myid);
 #endif
 
   if (isSlave || !notSinglePart) {
     determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
 #ifdef DEBUG
+    printf("%ld buckets\n", nBuckets);
     if (nBuckets>1) {
-      printf("%ld buckets\n", nBuckets);
       fflush(stdout);
       for (iBucket=0; iBucket<nBuckets; iBucket++) {
         printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
@@ -299,7 +299,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 
 #ifdef DEBUG
       /* Output the time-binned data */
-      if (1) {
+      if (0) {
         FILE *fp;
         fp = fopen("zlongit.tbin", "w");
         fprintf(fp, "SDDS1\n&column name=t type=double units=s &end\n&column name=I type=double &end\n&data mode=ascii &end\n");
@@ -403,10 +403,12 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
               dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*particleMassMV*particleRelSign);
             else
               continue;
+            /*
 #if USE_MPI && defined(DEBUG)
             fprintf(fpdeb, "%21.15e %21.15e %ld %21.15e %21.15e %21.15e\n",
                     time[ip], dt1, ib, Vtime[ib-1], Vtime[ib], dgam);
 #endif
+            */
           }
           else
             dgam = Vtime[ib]/(1e6*particleMassMV*particleRelSign);
@@ -431,21 +433,32 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         for (ip=0; ip<np; ip++)
           memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
 
-#ifdef DEBUG
-        printf("Done with bucket %ld\n", iBucket);
-        fflush(stdout);
-#endif
       }
+#ifdef DEBUG
+      printf("Done with bucket %ld\n", iBucket);
+      fflush(stdout);
+#endif
 
     }
   }    
   
 #if USE_MPI
+#ifdef DEBUG
+  printf("Preparing to wait on barrier\n");
+  fflush(stdout);
+#endif
   MPI_Barrier(workers);
 #endif
 
+  /*
 #if USE_MPI && defined(DEBUG)
   fprintf(fpdeb, "\n");
+#endif
+  */
+
+#ifdef DEBUG
+  printf("Preparing to free memory\n");
+  fflush(stdout);
 #endif
 
   if (part && part!=part0)
@@ -468,7 +481,14 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     free(Vtime);
   if (Ifreq)
     free(Ifreq);
+
+#ifdef DEBUG
+  printf("Done with ZLONGIT\n");
+  fflush(stdout);
+#endif
+
 }
+
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,
                     double timeSpan)
