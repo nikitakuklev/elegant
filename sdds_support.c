@@ -2176,6 +2176,7 @@ long memoryUsage()
 /* Memory used across all cores */
 {
   long memoryUsed, memoryUsedTotal;
+  memoryUsed = memory_count();
 #if USE_MPI
   /* collect memory information from all cores */
   MPI_Allreduce(&memoryUsed, &memoryUsedTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
