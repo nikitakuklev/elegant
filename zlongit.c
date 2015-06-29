@@ -79,6 +79,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   double *buffer;
   double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
   long offset, length;
+  long particles_total;
 #endif
 
 #if USE_MPI && defined(DEBUG)  
@@ -340,6 +341,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
       
 #if USE_MPI
+      MPI_Allreduce(&np, &particles_total, 1, MPI_LONG, MPI_SUM, workers);
       if (myid==1) {
 #endif
       if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
@@ -359,7 +361,13 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
             }
           }
           if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                  "Pass", i_pass0, "Bunch", iBucket, "q", zlongit->macroParticleCharge*particleRelSign*np, NULL)) {
+                                  "Pass", i_pass0, "Bunch", iBucket, "q",
+#if USE_MPI
+                                  zlongit->macroParticleCharge*particleRelSign*particles_total, 
+#else
+                                  zlongit->macroParticleCharge*particleRelSign*np, 
+#endif
+                                  NULL)) {
             SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
