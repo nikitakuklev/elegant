@@ -238,7 +238,7 @@ long do_tracking(
   
 #ifdef WATCH_MEMORY
   fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
-          cpu_time()/100.0, page_faults(), memory_count());
+          cpu_time()/100.0, page_faults(), memoryUsage());
   fflush(stdout);
 #endif
 #ifdef DEBUG 
@@ -811,12 +811,13 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles\n", eptr->name, eptr->occurence, last_z, i_pass, 
+          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                  beam?beam->n_to_track_total:-1
+                  beam?beam->n_to_track_total:-1,
 #else
-                  nToTrack
+                  nToTrack,
 #endif
+                  memoryUsage()
                   );
 	  fflush(stdout);
 	}
@@ -2050,7 +2051,7 @@ long do_tracking(
     log_exit("do_tracking.2.2");
 #ifdef WATCH_MEMORY
     fprintf(stdout, "main tracking loop done: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
-            cpu_time()/100.0, page_faults(), memory_count());
+            cpu_time()/100.0, page_faults(), memoryUsage());
     fflush(stdout);
 #endif
     if ((!USE_MPI || !notSinglePart) && (i_pass==0 || watch_pt_seen || feedbackDriverSeen)) {

@@ -668,6 +668,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 {
   long i, row;
   double p, t0, t0Error, t;
+  long memoryUsed;
 #if SDDS_MPI_IO
   long total_row;
 #endif
@@ -768,6 +769,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   }
   if (total_row)
 #endif
+  memoryUsed = memoryUsage();
   if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
@@ -775,7 +777,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           "IDSlotsPerBunch", slotsPerBunch,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", delapsed_time(),
-                          "MemoryUsage", memory_count(),
+                          "MemoryUsage", memoryUsed,
 #if USE_MPI
 		          "ElapsedCoreTime", delapsed_time()*n_processors,
 #else
@@ -824,6 +826,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount, npCount_total=0;
     static BEAM_SUMS sums;
     double emittance_l;
+    long memoryUsed;
 #if USE_MPI  
     long particles_total;
 #ifdef  USE_MPE /* use the MPE library */
@@ -1053,6 +1056,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     fflush(stdout);
 #endif
 
+    memoryUsed = memoryUsage();
     if (isMaster) {
       /* number of particles */
       if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,			     
@@ -1066,7 +1070,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 			     "ElapsedCoreTime", delapsed_time(),
 #endif
 	                     "ElapsedTime", delapsed_time(),
-                             "MemoryUsage", memory_count(),
+                             "MemoryUsage", memoryUsed,
 			     "Pass", pass, 
 			     "Step", step, NULL)) {
 	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
@@ -2168,4 +2172,14 @@ void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, 
   }
 }
 
-
+long memoryUsage() 
+/* Memory used across all cores */
+{
+  long memoryUsed, memoryUsedTotal;
+#if USE_MPI
+  /* collect memory information from all cores */
+  MPI_Allreduce(&memoryUsed, &memoryUsedTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  memoryUsed = memoryUsedTotal;
+#endif
+  return memoryUsed;
+}
