@@ -363,6 +363,8 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
     free(time0);
   if (pbin)
     free(pbin);
+  if (pz)
+    free(pz);
   if (ibParticle) 
     free(ibParticle);
   if (ipBucket)
