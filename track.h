@@ -3797,6 +3797,8 @@ extern void compute_offsets(void);
 extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k, 
                     char *header_file, char *ender_file);
 extern void finishLatticeParametersFile(void);
+extern long memoryUsage();
+
 
 void executeCshCommand(char *cmd);
 extern void doSubprocessCommand(char *command);
