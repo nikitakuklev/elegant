@@ -1532,6 +1532,10 @@ long do_tracking(
 	    case T_ZLONGIT:
 	      track_through_zlongit(coord, nToTrack, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass,
 				    charge);
+#ifdef MPI_DEBUG
+              printf("Returned from ZLONGIT\n");
+              fflush(stdout);
+#endif
 	      break;
 	    case T_ZTRANSVERSE:
 	      track_through_ztransverse(coord, nToTrack, (ZTRANSVERSE*)eptr->p_elem, *P_central, run, i_pass,
@@ -1957,7 +1961,7 @@ long do_tracking(
 #if USE_MPI
       if (flags&ALLOW_MPI_ABORT_TRACKING && !runInSinglePartMode) {
 #ifdef DEBUG 
-        printf("do_tracking checkpoint 16.1\n");
+        printf("do_tracking checkpoint 16.1, mpiAbort=%d\n");
         fflush(stdout);
 #endif
 	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
