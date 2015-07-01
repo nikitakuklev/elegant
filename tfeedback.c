@@ -319,7 +319,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
-        if ((pass+1)==nPasses) {
+        if ((pass+updateInterval)>=nPasses && (iBucket+1)==nBuckets && !tfbd->dataWritten) {
           if (!SDDS_WritePage(&tfbd->SDDSout)) {
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             SDDS_Bomb("problem writing data for TFBDRIVER output file");
