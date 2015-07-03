@@ -839,7 +839,7 @@ void outputTuneFootprint()
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       for (id=iRow=0; id<ndelta; id++) {
-        if (!allDeltaTfData[id].used)
+        if (filtered_output && !allDeltaTfData[id].used)
           continue;
         if (!SDDS_SetRowValues(&sddsOut, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow,
                                0, allDeltaTfData[id].delta,
@@ -878,7 +878,7 @@ void outputTuneFootprint()
       for (ix=iRow=0; ix<nx; ix++) {
         for (iy=0; iy<ny; iy++) {
           id = ix + iy*nx;
-          if (!allXyTfData[id].used)
+          if (filtered_output && !allXyTfData[id].used)
             continue;
           if (!SDDS_SetRowValues(&sddsOut, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow,
                                  0, allXyTfData[id].position[0],

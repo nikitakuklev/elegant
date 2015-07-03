@@ -23,5 +23,6 @@
     long quadratic_spacing = 1;
     long diffusion_rate_limit = -5;
     long immediate = 0;
+    long filtered_output = 1;
 #end
 
