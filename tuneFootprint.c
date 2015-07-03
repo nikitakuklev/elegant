@@ -6,6 +6,7 @@
 * This file is distributed subject to a Software License Agreement found
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
+#define DEBUG 1
 
 /* file: tuneFootprint.c
  * purpose: Do frequency map tracking and analysis to determine the tune footprint.
@@ -433,7 +434,8 @@ long doTuneFootprint(
   MPI_Status mpiStatus;
 #endif
 
-  memset(tfReturn, 0, sizeof(*tfReturn));
+  if (tfReturn)
+    memset(tfReturn, 0, sizeof(*tfReturn));
 
   if (!tuneFootprintOn)
     return 0;
