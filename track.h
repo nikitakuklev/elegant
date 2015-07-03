@@ -3278,6 +3278,8 @@ typedef struct {
   double positionRange[2]; /* span of x and y */
   double chromaticDiffusionMaximum, amplitudeDiffusionMaximum;
   double xyArea;
+  double nuxChromLimit[2], nuyChromLimit[2];
+  double nuxAmpLimit[2], nuyAmpLimit[2];
 } TUNE_FOOTPRINTS;
 long setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,

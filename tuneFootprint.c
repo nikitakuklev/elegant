@@ -56,7 +56,7 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
   return delta1->idelta - delta2->idelta;
 }
 
-void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax)
+void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
 {
   long id, id0, id1, id2, coord;
   double delta0, delta1, delta2, nu0[2];
@@ -143,6 +143,17 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       if (deltaTfData[id].nu[coord]>nuMax)
         nuMax = deltaTfData[id].nu[coord];
     }
+    if (coord==0) {
+      if (nuxLimit) {
+	nuxLimit[0] = nuMin;
+	nuxLimit[1] = nuMax;
+      }
+    } else {
+      if (nuyLimit) {
+	nuyLimit[0] = nuMin;
+	nuyLimit[1] = nuMax;
+      }
+    }
     tuneRange[coord] = nuMax - nuMin;
   }
 
@@ -154,7 +165,8 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
 
 }
 
-void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tuneRange, double *positionRange, double *diffusionRateMax, double *area)
+void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tuneRange, double *positionRange, double *diffusionRateMax, double *area,
+			      double *nuxLimit, double *nuyLimit)
 {
   long id;
   double nuMin, nuMax, pMin, pMax;
@@ -268,6 +280,18 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
       }
     }
     tuneRange[ic] = nuMax - nuMin;
+    if (ic==0) {
+      if (nuxLimit) {
+	nuxLimit[0] = nuMin;
+	nuxLimit[1] = nuMax;
+      }
+    } else {
+      if (nuyLimit) {
+	nuyLimit[0] = nuMin;
+	nuyLimit[1] = nuMax;
+      }
+    }
+
     positionRange[ic] = pMax - pMin;
   }
 
@@ -405,6 +429,7 @@ long doTuneFootprint(
   DELTA_TF_DATA *deltaTfData;
   long my_nxy, my_ndelta;
   double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2], diffusionRateMax, xyArea;
+  double nuxLimit[2], nuyLimit[2];
 
 #ifdef DEBUG
   FILE *fpdebug = NULL;
@@ -610,14 +635,16 @@ long doTuneFootprint(
     fclose(fpdebug);
 #endif
 
-    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax);
+    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
     if (verbosity)
-      printf("nux/chromatic: tune range=%le  delta range = %le\nnuy/chromatic: tune range=%le  delta range = %le\n",
-             chromTuneRange[0], chromDeltaRange[0],
-             chromTuneRange[1], chromDeltaRange[1]);
+      printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
+             chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
+             chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
     if (tfReturn) {
       memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
       memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
+      memcpy(tfReturn->nuxChromLimit, nuxLimit, sizeof(*nuxLimit)*2);
+      memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
       tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
       tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
     }
@@ -751,7 +778,7 @@ long doTuneFootprint(
       bombElegant("Error: counting for nx*ny didn't work", NULL);
     }
 
-    determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange, &diffusionRateMax, &xyArea);
+    determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange, &diffusionRateMax, &xyArea, nuxLimit, nuyLimit);
     if (verbosity)
       printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\nArea = %le\n",
              xyTuneRange[0], xyPositionRange[0],
@@ -759,6 +786,8 @@ long doTuneFootprint(
     if (tfReturn) {
       memcpy(tfReturn->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
       memcpy(tfReturn->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
+      memcpy(tfReturn->nuxAmpLimit, nuxLimit, sizeof(*nuxLimit)*2);
+      memcpy(tfReturn->nuyAmpLimit, nuyLimit, sizeof(*nuyLimit)*2);
       tfReturn->xyArea = xyArea;
       tfReturn->amplitudeDiffusionMaximum = diffusionRateMax;
     }

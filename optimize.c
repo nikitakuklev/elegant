@@ -1599,17 +1599,23 @@ static long floorStat_mem[6] = {
   -1, -1, -1, -1, -1, -1,
 };
 
-static char *tuneFootprintName[10] = {
+static char *tuneFootprintName[18] = {
   "FP.nuxSpreadChrom", "FP.nuySpreadChrom",
   "FP.deltaLimit",
   "FP.nuxSpreadAmp", "FP.nuySpreadAmp",
   "FP.xSpread", "FP.ySpread",
   "FP.diffusionRateMaxChrom",
   "FP.diffusionRateMaxAmp",
-  "FP.xyArea"
+  "FP.xyArea",
+  "FP.nuxChromMin", "FP.nuxChromMax",
+  "FP.nuyChromMin", "FP.nuyChromMax",
+  "FP.nuxAmpMin", "FP.nuxAmpMax",
+  "FP.nuyAmpMin", "FP.nuyAmpMax",
 };
-static long tuneFootprintMem[10] = {
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
+static long tuneFootprintMem[18] = {
+  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, 
+  -1, -1, -1, -1, 
 };
 
 int showTwissMemories(FILE *fp)
@@ -2014,7 +2020,7 @@ double optimization_function(double *value, long *invalid)
 
   if (doTuneFootprint(run, control, startingOrbitCoord, beamline, &tuneFP)) {
     if (tuneFootprintMem[0]==-1) {
-      for (i=0; i<10; i++)
+      for (i=0; i<18; i++)
         tuneFootprintMem[i] = rpn_create_mem(tuneFootprintName[i], 0);
     }
     rpn_store(tuneFP.chromaticTuneRange[0], NULL, tuneFootprintMem[0]);
@@ -2027,8 +2033,16 @@ double optimization_function(double *value, long *invalid)
     rpn_store(tuneFP.chromaticDiffusionMaximum, NULL, tuneFootprintMem[7]);
     rpn_store(tuneFP.amplitudeDiffusionMaximum, NULL, tuneFootprintMem[8]);
     rpn_store(tuneFP.xyArea, NULL, tuneFootprintMem[9]);
+    rpn_store(tuneFP.nuxChromLimit[0], NULL, tuneFootprintMem[10]);
+    rpn_store(tuneFP.nuxChromLimit[1], NULL, tuneFootprintMem[11]);
+    rpn_store(tuneFP.nuyChromLimit[0], NULL, tuneFootprintMem[12]);
+    rpn_store(tuneFP.nuyChromLimit[1], NULL, tuneFootprintMem[13]);
+    rpn_store(tuneFP.nuxAmpLimit[0], NULL, tuneFootprintMem[14]);
+    rpn_store(tuneFP.nuxAmpLimit[1], NULL, tuneFootprintMem[15]);
+    rpn_store(tuneFP.nuyAmpLimit[0], NULL, tuneFootprintMem[16]);
+    rpn_store(tuneFP.nuyAmpLimit[1], NULL, tuneFootprintMem[17]);
     if (optimization_data->verbose>1) {
-      for (i=0; i<10; i++)
+      for (i=0; i<18; i++)
         printf("%s = %le\n", tuneFootprintName[i], rpn_recall(tuneFootprintMem[i]));
     }
   }
