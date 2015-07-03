@@ -389,12 +389,6 @@ long setupTuneFootprint(
     if (delta_min<0)
       delta_min = 0;
   }
-  if (nx<1)
-    nx = 1;
-  if (ny<1)
-    ny = 1;
-  if (ndelta<1)
-    ndelta = 1;
 
   if (delta_output)
     delta_output = compose_filename(delta_output, run->rootname);
@@ -438,6 +432,8 @@ long doTuneFootprint(
   MPI_Status mpiStatus;
 #endif
 
+  memset(tfReturn, 0, sizeof(*tfReturn));
+
   if (!tuneFootprintOn)
     return 0;
   if (allXyTfData) {
@@ -452,21 +448,25 @@ long doTuneFootprint(
 #if USE_MPI
   setupTuneFootprintDataTypes();
   /* Note that the master is a working processor for this algorithm */
-  if (ndelta<n_processors) {
-    ndelta = n_processors;
-    if (myid==0) {
-      printf("NB: ndelta increased to equal the number of working processors (%d)\n", n_processors);
+  if (ndelta) {
+    if (ndelta<n_processors) {
+      ndelta = n_processors;
+      if (myid==0) {
+	printf("NB: ndelta increased to equal the number of working processors (%d)\n", n_processors);
+      }
+    }
+    if (ndelta%n_processors!=0) {
+      /* ensure that all processors have an equal number of particles to work on */
+      ndelta = (ndelta/n_processors+1)*n_processors;
+      if (myid==0) {
+	printf("NB: ndelta increased to equal a multiple (%ld) of the number of working processors (%d)\n", ndelta, n_processors);
+      }
     }
   }
-  if (ndelta%n_processors!=0) {
-    /* ensure that all processors have an equal number of particles to work on */
-    ndelta = (ndelta/n_processors+1)*n_processors;
-    if (myid==0) {
-      printf("NB: ndelta increased to equal a multiple (%ld) of the number of working processors (%d)\n", ndelta, n_processors);
+  if (nx && ny) {
+    if (nx*ny<n_processors && myid==0) {
+      printf("NB: number of x, y grid points less than the number of cores, which is a waste of resources\n");
     }
-  }
-  if (nx*ny<n_processors && myid==0) {
-    printf("NB: number of x, y grid points less than the number of cores, which is a waste of resources\n");
   }
   my_nxy = (nx*ny)/n_processors+1;
   my_ndelta = ndelta/n_processors+1;
@@ -475,8 +475,14 @@ long doTuneFootprint(
   my_ndelta = ndelta;
 #endif
   
-  xyTfData = calloc(my_nxy, sizeof(*xyTfData));
-  deltaTfData = calloc(my_ndelta, sizeof(*deltaTfData));
+  if (my_nxy) 
+    xyTfData = calloc(my_nxy, sizeof(*xyTfData));
+  else
+    xyTfData = NULL;
+  if (my_ndelta)
+    deltaTfData = calloc(my_ndelta, sizeof(*deltaTfData));
+  else
+    deltaTfData = NULL;
 
   /* Perform fiducialization by tracking one turn */
   if (!one_part)
@@ -497,189 +503,192 @@ long doTuneFootprint(
 
   turns = control->n_passes/2;
 
-  /* First perform delta scan */
-  x = x_for_delta;
-  y = y_for_delta;
-  if (ndelta>1)
-    ddelta = (delta_max-delta_min)/(ndelta-1);
-  else
-    ddelta = 0;
-  for (idelta=my_idelta=0; idelta<ndelta; idelta++) {
-    deltaTfData[my_idelta].used = 0;
-    if (!quadratic_spacing)
-      delta = delta_min + idelta*ddelta;
-    else {
-      if (idelta<(ndelta-1.)/2)
-        delta = -((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
-      else
-        delta = ((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
-    }
-    memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
-#if USE_MPI
-    if (myid == idelta%n_processors) /* Partition the job according to particle ID */
-#endif
-	  {
-            if (verbosity>=2) {
-#if USE_MPI
-              if (myid==0)
-#endif
-                printf("computing tune for delta = %le\n", delta);
-            }
-            lost = 0;
-	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
-					  beamline->matrix, beamline, run,
-					  startingCoord, x, y, delta, turns, 0,
-					  0, endingCoord, NULL, NULL, 1, 1) ||
-		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
-              lost = 1;
-	    } else {
-              memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
-              if (!computeTunesFromTracking(secondTune, secondAmplitude,
-                                            beamline->matrix, beamline, run,
-                                            startingCoord, 0.0, 0.0, 0.0, turns, turns,
-                                            0, endingCoord, NULL, NULL, 1, 1) || 
-                  secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
-                lost = 1;
-              }
-            }             
-#if USE_MPI
-            if (my_idelta>=my_ndelta) {
-              fprintf(stderr, "delta index too large on processor %d\n", myid);
-              exit(1);
-            }
-#endif
-            deltaTfData[my_idelta].idelta = idelta;
-            deltaTfData[my_idelta].delta = delta;
-            deltaTfData[my_idelta].used = 1;
-            if (lost) {
-              deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
-              deltaTfData[my_idelta].diffusionRate = 1e300;
-            } else {
-              deltaTfData[my_idelta].nu[0] = firstTune[0];
-              deltaTfData[my_idelta].nu[1] = firstTune[1];
-              deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
-            }
-            my_idelta ++;
-	    if (verbosity>=2) {
-#if USE_MPI
-	      if (myid==0) {
-		double newPercentage = (100.0*idelta)/ndelta;
-		if ((newPercentage-oldPercentage)>=1) {
-		  fprintf(stdout, "About %.1f%% done with energy scan\n", newPercentage);
-		  oldPercentage = newPercentage;
-		  fflush(stdout);
-		}
-	      }
-#else
-	      fprintf(stdout, "Done with particle %ld of %ld for energy scan\n",
-		      idelta+1, ndelta);
-	      fflush(stdout);
-#endif
-	    }
-	  }
-  }
-
-#if USE_MPI
-  /* Collect data onto the master */
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (myid==0) {
-    long id, iTotal;
-    MPI_Status mpiStatus;
-    allDeltaTfData  = calloc(my_ndelta*n_processors, sizeof(*allDeltaTfData));
-    memcpy(allDeltaTfData, deltaTfData, sizeof(*deltaTfData)*my_ndelta);
-    /* receive data */
-    iTotal = my_ndelta;
-    for (id=1; id<n_processors; id++) {
-      if (MPI_Recv(allDeltaTfData+iTotal, my_ndelta, deltaTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
-        printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
-        bombElegant("Communication error", NULL);
+  if (ndelta) {
+    /* First perform delta scan */
+    x = x_for_delta;
+    y = y_for_delta;
+    if (ndelta>1)
+      ddelta = (delta_max-delta_min)/(ndelta-1);
+    else
+      ddelta = 0;
+    for (idelta=my_idelta=0; idelta<ndelta; idelta++) {
+      deltaTfData[my_idelta].used = 0;
+      if (!quadratic_spacing)
+	delta = delta_min + idelta*ddelta;
+      else {
+	if (idelta<(ndelta-1.)/2)
+	  delta = -((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
+	else
+	  delta = ((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
       }
-      iTotal += my_ndelta;
-    }
-    my_ndelta = iTotal;
-  } else {
-    /* send data */
-    MPI_Send(deltaTfData, my_ndelta, deltaTfDataType, 0, 1, MPI_COMM_WORLD);
-    allDeltaTfData = NULL;
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-#else
-  allDeltaTfData = deltaTfData;
-#endif
-
-#if USE_MPI
-  if (myid==0) {
-#endif
-    qsort(allDeltaTfData, my_ndelta, sizeof(*allDeltaTfData), deltaTfDataCompare);
-    for (idelta=0; idelta<my_ndelta; idelta++) {
-      if (allDeltaTfData[idelta].used==0) {
-        my_ndelta = idelta;
-        break;
-      }
-    }
-#ifdef DEBUG
-    fpdebug = fopen("tfDelta.sdds", "w");
-    fprintf(fpdebug, "SDDS1\n&column name=idelta type=short &end\n");
-    fprintf(fpdebug, "&column name=delta type=double &end\n");
-    fprintf(fpdebug, "&column name=nux type=double &end\n");
-    fprintf(fpdebug, "&column name=nuy type=double &end\n");
-    fprintf(fpdebug, "&column name=diffusionRate type=double &end\n");
-    fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
-    for (idelta=0; idelta<my_ndelta; idelta++) {
-      fprintf(fpdebug, "%d %e %e %e %e\n",
-              allDeltaTfData[idelta].idelta, 
-              allDeltaTfData[idelta].delta,
-              allDeltaTfData[idelta].nu[0], allDeltaTfData[idelta].nu[1],
-              allDeltaTfData[idelta].diffusionRate);
-    }
-    fclose(fpdebug);
-#endif
-
-    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
-    if (verbosity)
-      printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
-             chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
-             chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
-    if (tfReturn) {
-      memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
-      memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
-      memcpy(tfReturn->nuxChromLimit, nuxLimit, sizeof(*nuxLimit)*2);
-      memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
-      tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
-      tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
-    }
-#if USE_MPI
-  }
-#endif
-
-  dx = dy = delta = 0;
-  if (!quadratic_spacing) {
-    if (nx>1)
-      dx  = (xmax-xmin)/(nx-1);
-    if (ny>1)
-      dy = (ymax-ymin)/(ny-1);
-  }
-  my_ixy = 0;
-  oldPercentage = 0;
-  for (ix=0; ix<nx; ix++) {
-    if (quadratic_spacing) {
-      if (ix<nx/2) 
-        x = -((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
-      else
-        x = ((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
-    } else {
-      x = xmin + ix*dx;
-    }
-    for (iy=0; iy<ny; iy++) {
-      if (quadratic_spacing) {
-        y = (ymax-ymin)*sqrt(iy/(ny-1.)) + ymin;
-      } else {
-        y = ymin + iy*dy;
-      }
-      xyTfData[my_ixy].used = 0;
       memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
-      if (myid == (ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
+      if (myid == idelta%n_processors) /* Partition the job according to particle ID */
+#endif
+	{
+	  if (verbosity>=2) {
+#if USE_MPI
+	    if (myid==0)
+#endif
+	      printf("computing tune for delta = %le\n", delta);
+	  }
+	  lost = 0;
+	  if (!computeTunesFromTracking(firstTune, firstAmplitude,
+					beamline->matrix, beamline, run,
+					startingCoord, x, y, delta, turns, 0,
+					0, endingCoord, NULL, NULL, 1, 1) ||
+	      firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
+	    lost = 1;
+	  } else {
+	    memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
+	    if (!computeTunesFromTracking(secondTune, secondAmplitude,
+					  beamline->matrix, beamline, run,
+					  startingCoord, 0.0, 0.0, 0.0, turns, turns,
+					  0, endingCoord, NULL, NULL, 1, 1) || 
+		secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
+	      lost = 1;
+	    }
+	  }             
+#if USE_MPI
+	  if (my_idelta>=my_ndelta) {
+	    fprintf(stderr, "delta index too large on processor %d\n", myid);
+	    exit(1);
+	  }
+#endif
+	  deltaTfData[my_idelta].idelta = idelta;
+	  deltaTfData[my_idelta].delta = delta;
+	  deltaTfData[my_idelta].used = 1;
+	  if (lost) {
+	    deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
+	    deltaTfData[my_idelta].diffusionRate = 1e300;
+	  } else {
+	    deltaTfData[my_idelta].nu[0] = firstTune[0];
+	    deltaTfData[my_idelta].nu[1] = firstTune[1];
+	    deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	  }
+	  my_idelta ++;
+	  if (verbosity>=2) {
+#if USE_MPI
+	    if (myid==0) {
+	      double newPercentage = (100.0*idelta)/ndelta;
+	      if ((newPercentage-oldPercentage)>=1) {
+		fprintf(stdout, "About %.1f%% done with energy scan\n", newPercentage);
+		oldPercentage = newPercentage;
+		fflush(stdout);
+	      }
+	    }
+#else
+	    fprintf(stdout, "Done with particle %ld of %ld for energy scan\n",
+		    idelta+1, ndelta);
+	    fflush(stdout);
+#endif
+	  }
+	}
+    }
+
+#if USE_MPI
+    /* Collect data onto the master */
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid==0) {
+      long id, iTotal;
+      MPI_Status mpiStatus;
+      allDeltaTfData  = calloc(my_ndelta*n_processors, sizeof(*allDeltaTfData));
+      memcpy(allDeltaTfData, deltaTfData, sizeof(*deltaTfData)*my_ndelta);
+      /* receive data */
+      iTotal = my_ndelta;
+      for (id=1; id<n_processors; id++) {
+	if (MPI_Recv(allDeltaTfData+iTotal, my_ndelta, deltaTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
+	  printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
+	  bombElegant("Communication error", NULL);
+	}
+	iTotal += my_ndelta;
+      }
+      my_ndelta = iTotal;
+    } else {
+      /* send data */
+      MPI_Send(deltaTfData, my_ndelta, deltaTfDataType, 0, 1, MPI_COMM_WORLD);
+      allDeltaTfData = NULL;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+#else
+    allDeltaTfData = deltaTfData;
+#endif
+    
+#if USE_MPI
+    if (myid==0) {
+#endif
+      qsort(allDeltaTfData, my_ndelta, sizeof(*allDeltaTfData), deltaTfDataCompare);
+      for (idelta=0; idelta<my_ndelta; idelta++) {
+	if (allDeltaTfData[idelta].used==0) {
+	  my_ndelta = idelta;
+	  break;
+	}
+      }
+#ifdef DEBUG
+      fpdebug = fopen("tfDelta.sdds", "w");
+      fprintf(fpdebug, "SDDS1\n&column name=idelta type=short &end\n");
+      fprintf(fpdebug, "&column name=delta type=double &end\n");
+      fprintf(fpdebug, "&column name=nux type=double &end\n");
+      fprintf(fpdebug, "&column name=nuy type=double &end\n");
+      fprintf(fpdebug, "&column name=diffusionRate type=double &end\n");
+      fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
+      for (idelta=0; idelta<my_ndelta; idelta++) {
+	fprintf(fpdebug, "%d %e %e %e %e\n",
+		allDeltaTfData[idelta].idelta, 
+		allDeltaTfData[idelta].delta,
+		allDeltaTfData[idelta].nu[0], allDeltaTfData[idelta].nu[1],
+		allDeltaTfData[idelta].diffusionRate);
+      }
+      fclose(fpdebug);
+#endif
+      
+      determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
+      if (verbosity)
+	printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
+	       chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
+	       chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
+      if (tfReturn) {
+	memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
+	memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
+	memcpy(tfReturn->nuxChromLimit, nuxLimit, sizeof(*nuxLimit)*2);
+	memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
+	tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
+	tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
+      }
+#if USE_MPI
+    }
+#endif
+  }
+
+  if (nx!=0 && ny!=0) {
+    dx = dy = delta = 0;
+    if (!quadratic_spacing) {
+      if (nx>1)
+	dx  = (xmax-xmin)/(nx-1);
+      if (ny>1)
+	dy = (ymax-ymin)/(ny-1);
+    }
+    my_ixy = 0;
+    oldPercentage = 0;
+    for (ix=0; ix<nx; ix++) {
+      if (quadratic_spacing) {
+	if (ix<nx/2) 
+	  x = -((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
+	else
+	  x = ((xmax-xmin)*sqrt(fabs((ix-(nx-1)/2.)/((nx-1)/2.))) + xmin);
+      } else {
+	x = xmin + ix*dx;
+      }
+      for (iy=0; iy<ny; iy++) {
+	if (quadratic_spacing) {
+	  y = (ymax-ymin)*sqrt(iy/(ny-1.)) + ymin;
+	} else {
+	  y = ymin + iy*dy;
+	}
+	xyTfData[my_ixy].used = 0;
+	memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
+#if USE_MPI
+	if (myid == (ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
 #endif
 	  {
             lost = 0;
@@ -732,93 +741,94 @@ long doTuneFootprint(
 	    }
 	  }
       }
-  }
-  
-#if USE_MPI
-  /* Collect data onto the master */
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (myid==0) {
-    long id, iTotal;
-    MPI_Status mpiStatus;
-    allXyTfData  = calloc(my_nxy*n_processors, sizeof(*allXyTfData));
-    memcpy(allXyTfData, xyTfData, sizeof(*xyTfData)*my_nxy);
-    /* receive data */
-    iTotal = my_nxy;
-    for (id=1; id<n_processors; id++) {
-      if (MPI_Recv(allXyTfData+iTotal, my_nxy, xyTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
-        printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
-        bombElegant("Communication error", NULL);
-      }
-      iTotal += my_nxy;
     }
-    my_nxy = iTotal;
-  } else {
-    /* send data */
-    MPI_Send(xyTfData, my_nxy, xyTfDataType, 0, 1, MPI_COMM_WORLD);
-    allXyTfData = NULL;
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
+    
+#if USE_MPI
+    /* Collect data onto the master */
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid==0) {
+      long id, iTotal;
+      MPI_Status mpiStatus;
+      allXyTfData  = calloc(my_nxy*n_processors, sizeof(*allXyTfData));
+      memcpy(allXyTfData, xyTfData, sizeof(*xyTfData)*my_nxy);
+      /* receive data */
+      iTotal = my_nxy;
+      for (id=1; id<n_processors; id++) {
+	if (MPI_Recv(allXyTfData+iTotal, my_nxy, xyTfDataType, id, 1, MPI_COMM_WORLD, &mpiStatus)!=MPI_SUCCESS) {
+	  printf("Error: MPI_Recv returns error retrieving data from processor %ld\n", id);
+	  bombElegant("Communication error", NULL);
+	}
+	iTotal += my_nxy;
+      }
+      my_nxy = iTotal;
+    } else {
+      /* send data */
+      MPI_Send(xyTfData, my_nxy, xyTfDataType, 0, 1, MPI_COMM_WORLD);
+      allXyTfData = NULL;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
 #else
-  allXyTfData = xyTfData;
+    allXyTfData = xyTfData;
 #endif
 
 #if USE_MPI
-  if (myid==0) {
+    if (myid==0) {
 #endif    
-    qsort(allXyTfData, my_nxy, sizeof(*allXyTfData), xyTfDataCompare);
-    my_ixy = 0;
-    for (ixy=0; ixy<my_nxy; ixy++) {
-      if (!allXyTfData[ixy].used) {
-        my_nxy = ixy;
-        break;
+      qsort(allXyTfData, my_nxy, sizeof(*allXyTfData), xyTfDataCompare);
+      my_ixy = 0;
+      for (ixy=0; ixy<my_nxy; ixy++) {
+	if (!allXyTfData[ixy].used) {
+	  my_nxy = ixy;
+	  break;
+	}
       }
-    }
-    if (my_nxy!=nx*ny) {
-      fprintf(stderr, "my_nxy = %ld, nx*ny = %ld\n", my_nxy, nx*ny);
-      bombElegant("Error: counting for nx*ny didn't work", NULL);
-    }
-
-    determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange, &diffusionRateMax, &xyArea, nuxLimit, nuyLimit);
-    if (verbosity)
-      printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\nArea = %le\n",
-             xyTuneRange[0], xyPositionRange[0],
-             xyTuneRange[1], xyPositionRange[1], xyArea);
-    if (tfReturn) {
-      memcpy(tfReturn->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
-      memcpy(tfReturn->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
-      memcpy(tfReturn->nuxAmpLimit, nuxLimit, sizeof(*nuxLimit)*2);
-      memcpy(tfReturn->nuyAmpLimit, nuyLimit, sizeof(*nuyLimit)*2);
-      tfReturn->xyArea = xyArea;
-      tfReturn->amplitudeDiffusionMaximum = diffusionRateMax;
-    }
-
+      if (my_nxy!=nx*ny) {
+	fprintf(stderr, "my_nxy = %ld, nx*ny = %ld\n", my_nxy, nx*ny);
+	bombElegant("Error: counting for nx*ny didn't work", NULL);
+      }
+      
+      determineXyTuneFootprint(allXyTfData, nx, ny, xyTuneRange, xyPositionRange, &diffusionRateMax, &xyArea, nuxLimit, nuyLimit);
+      if (verbosity)
+	printf("nux/amplitude: tune range=%le  position range = %le\nnuy/amplitude: tune range=%le position range = %le\nArea = %le\n",
+	       xyTuneRange[0], xyPositionRange[0],
+	       xyTuneRange[1], xyPositionRange[1], xyArea);
+      if (tfReturn) {
+	memcpy(tfReturn->amplitudeTuneRange, xyTuneRange, sizeof(*xyTuneRange)*2);
+	memcpy(tfReturn->positionRange, xyPositionRange, sizeof(*xyPositionRange)*2);
+	memcpy(tfReturn->nuxAmpLimit, nuxLimit, sizeof(*nuxLimit)*2);
+	memcpy(tfReturn->nuyAmpLimit, nuyLimit, sizeof(*nuyLimit)*2);
+	tfReturn->xyArea = xyArea;
+	tfReturn->amplitudeDiffusionMaximum = diffusionRateMax;
+      }
+      
 #ifdef DEBUG
-    fpdebug = fopen("tfXy.sdds", "w");
-    fprintf(fpdebug, "SDDS1\n");
-    fprintf(fpdebug, "&column name=ix type=short &end\n");
-    fprintf(fpdebug, "&column name=iy type=short &end\n");
-    fprintf(fpdebug, "&column name=x type=double &end\n");
-    fprintf(fpdebug, "&column name=y type=double &end\n");
-    fprintf(fpdebug, "&column name=nux type=double &end\n");
-    fprintf(fpdebug, "&column name=nuy type=double &end\n");
-    fprintf(fpdebug, "&column name=diffusionRate type=double &end\n");
-    fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
-    for (ix=0; ix<nx; ix++) {
-      for (iy=0; iy<ny; iy++) {
-        ixy = ix + iy*nx;
-        fprintf(fpdebug, "%d %d %e %e %e %e %e\n",
-                allXyTfData[ixy].ix,
-                allXyTfData[ixy].iy,
-                allXyTfData[ixy].position[0], allXyTfData[ixy].position[1], 
-                allXyTfData[ixy].nu[0], allXyTfData[ixy].nu[1], 
-                allXyTfData[ixy].diffusionRate);
+      fpdebug = fopen("tfXy.sdds", "w");
+      fprintf(fpdebug, "SDDS1\n");
+      fprintf(fpdebug, "&column name=ix type=short &end\n");
+      fprintf(fpdebug, "&column name=iy type=short &end\n");
+      fprintf(fpdebug, "&column name=x type=double &end\n");
+      fprintf(fpdebug, "&column name=y type=double &end\n");
+      fprintf(fpdebug, "&column name=nux type=double &end\n");
+      fprintf(fpdebug, "&column name=nuy type=double &end\n");
+      fprintf(fpdebug, "&column name=diffusionRate type=double &end\n");
+      fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
+      for (ix=0; ix<nx; ix++) {
+	for (iy=0; iy<ny; iy++) {
+	  ixy = ix + iy*nx;
+	  fprintf(fpdebug, "%d %d %e %e %e %e %e\n",
+		  allXyTfData[ixy].ix,
+		  allXyTfData[ixy].iy,
+		  allXyTfData[ixy].position[0], allXyTfData[ixy].position[1], 
+		  allXyTfData[ixy].nu[0], allXyTfData[ixy].nu[1], 
+		  allXyTfData[ixy].diffusionRate);
+	}
       }
-    }
-    fclose(fpdebug);
+      fclose(fpdebug);
 #endif
 #if USE_MPI
-  }
+    }
 #endif
+  }
 
 #if USE_MPI
   /* Share tfReturn with other ranks */
@@ -826,7 +836,7 @@ long doTuneFootprint(
     if (myid==0) {
       long id;
       for (id=1; id<n_processors; id++)
-        MPI_Send(tfReturn, 1, tfReturnDataType, id, 1, MPI_COMM_WORLD);
+	MPI_Send(tfReturn, 1, tfReturnDataType, id, 1, MPI_COMM_WORLD);
     } else {
       MPI_Recv(tfReturn, 1, tfReturnDataType, 0, 1, MPI_COMM_WORLD, &mpiStatus);
     }
@@ -835,10 +845,10 @@ long doTuneFootprint(
 #endif
 
   /* Free arrays of data, but only if they are not being saved */
-  if (xyTfData!=allXyTfData)
+  if (xyTfData && xyTfData!=allXyTfData)
     free(xyTfData);
   xyTfData = NULL;
-  if (deltaTfData!=allDeltaTfData)
+  if (deltaTfData && deltaTfData!=allDeltaTfData)
     free(deltaTfData);
   deltaTfData = NULL;
   
