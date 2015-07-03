@@ -1774,9 +1774,9 @@ double optimization_function(double *value, long *invalid)
     new_bunched_beam(beam, run, control, output, 0);
     break;
   case SET_SDDS_BEAM:
-    if (new_sdds_beam(beam, run, control, output, 0)<0)
-      bombElegant("unable to get beam for tracking (is file empty or out of pages?)", NULL);
-    break;
+      if (new_sdds_beam(beam, run, control, output, 0)<0)
+	bombElegant("unable to get beam for tracking (is file empty or out of pages?)", NULL);
+      break;
   default:
     bombElegant("unknown beam type code in optimization", NULL);
     break;
@@ -2072,10 +2072,6 @@ double optimization_function(double *value, long *invalid)
 
   if (!*invalid) {
     output->n_z_points = 0;
-    if (output->sums_vs_z) {
-      free(output->sums_vs_z);
-      output->sums_vs_z = NULL;
-    }
     M = accumulate_matrices(&(beamline->elem), run, NULL,
                             optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
 
@@ -2095,20 +2091,26 @@ double optimization_function(double *value, long *invalid)
 #endif
     if (center_on_orbit) 
       center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
+    if (!inhibit_tracking) {
 #if DEBUG
-    fprintf(stdout, "About to track beam\n");
+      fprintf(stdout, "About to track beam\n");
 #if USE_MPI
-    printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
-           parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+      printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
+	     parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
 #endif
-    fflush(stdout);
+      fflush(stdout);
 #endif
-    track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
-               &charge);
+      if (output->sums_vs_z) {
+	free(output->sums_vs_z);
+	output->sums_vs_z = NULL;
+      }
+      track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
+		 &charge);
 #if DEBUG
-    fprintf(stdout, "Done tracking beam\n");
-    fflush(stdout);
+      fprintf(stdout, "Done tracking beam\n");
+      fflush(stdout);
 #endif
+    }
 
     if (doFindAperture) {
       double area;
@@ -2130,7 +2132,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
       if (!output->sums_vs_z)
-        bombElegant("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
+	bombElegant("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
 #if USE_MPI
       if (notSinglePart)
 	beamNoToTrack = beam->n_to_track_total;
@@ -2142,17 +2144,18 @@ double optimization_function(double *value, long *invalid)
 				      charge))
 	  != final_property_values) {
 #else
-      if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
-                                      beam->n_to_track, beam->p0, M, beam->particle, 
-                                      control->i_step, control->indexLimitProduct*control->n_steps,
-                                      charge))
-          != final_property_values) {
+	if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
+					beam->n_to_track, beam->p0, M, beam->particle, 
+					control->i_step, control->indexLimitProduct*control->n_steps,
+					charge))
+	    != final_property_values) {
 #endif
-        fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
-                i, final_property_values);
-        fflush(stdout);
-        abort();
-      }
+	  fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
+		  i, final_property_values);
+	  fflush(stdout);
+	  abort();
+	}
+
       if (isMaster || !notSinglePart) { /* Only the master will execute the block */
 	rpn_store_final_properties(final_property_value, final_property_values);
 	if (optimization_data->matrix_order>1)
