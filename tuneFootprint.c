@@ -91,7 +91,7 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
           (!ignore_half_integer && ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) || 
-          deltaTfData[id].diffusionRate>diffusion_rate_limit) {
+          (compute_diffusion && deltaTfData[id].diffusionRate>diffusion_rate_limit)) {
 #ifdef DEBUG
         printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
              coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
@@ -110,7 +110,7 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
           (!ignore_half_integer && ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) ||
-          deltaTfData[id].diffusionRate>diffusion_rate_limit) {
+          (compute_diffusion && deltaTfData[id].diffusionRate>diffusion_rate_limit)) {
 #ifdef DEBUG
         printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
              coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
@@ -183,7 +183,8 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
         bombElegant("Indexing bug", NULL);
       }
       if (xyTfData[id].nu[0]<=0 || xyTfData[id].nu[0]>=1 ||
-          xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || xyTfData[id].diffusionRate>diffusion_rate_limit)
+          xyTfData[id].nu[1]<=0 || xyTfData[id].nu[1]>=1 || 
+	  (compute_diffusion && xyTfData[id].diffusionRate>diffusion_rate_limit))
         xyTfData[id].used = 0;
     }
   }
@@ -295,7 +296,7 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
     positionRange[ic] = pMax - pMin;
   }
 
-  /* Find the maximum diffusino rate for points with acceptable characteristics */
+  /* Find the maximum diffusion rate for points with acceptable characteristics */
   *diffusionRateMax = -DBL_MAX;
   for (ix=0; ix<nx; ix++) {
     for (iy=0; iy<ny; iy++) {
@@ -539,7 +540,7 @@ long doTuneFootprint(
 					0, endingCoord, NULL, NULL, 1, 1) ||
 	      firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
 	    lost = 1;
-	  } else {
+	  } else if (compute_diffusion) {
 	    memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
 	    if (!computeTunesFromTracking(secondTune, secondAmplitude,
 					  beamline->matrix, beamline, run,
@@ -560,11 +561,14 @@ long doTuneFootprint(
 	  deltaTfData[my_idelta].used = 1;
 	  if (lost) {
 	    deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
-	    deltaTfData[my_idelta].diffusionRate = 1e300;
+	    deltaTfData[my_idelta].diffusionRate = DBL_MAX;
 	  } else {
 	    deltaTfData[my_idelta].nu[0] = firstTune[0];
 	    deltaTfData[my_idelta].nu[1] = firstTune[1];
-	    deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	    if (compute_diffusion)
+	      deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	    else
+	      deltaTfData[my_idelta].diffusionRate = -DBL_MAX;
 	  }
 	  my_idelta ++;
 	  if (verbosity>=2) {
@@ -698,7 +702,7 @@ long doTuneFootprint(
 					  0, endingCoord, NULL, NULL, 1, 1) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
               lost = 1;
-            } else {
+            } else if (compute_diffusion) {
               memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
               if (!computeTunesFromTracking(secondTune, secondAmplitude,
                                             beamline->matrix, beamline, run,
@@ -715,11 +719,14 @@ long doTuneFootprint(
             xyTfData[my_ixy].used = 1;
             if (lost) {
               xyTfData[my_ixy].nu[0] = xyTfData[my_ixy].nu[1] = -2;
-              xyTfData[my_ixy].diffusionRate = 1e300;
+              xyTfData[my_ixy].diffusionRate = DBL_MAX;
             } else {
               xyTfData[my_ixy].nu[0] = firstTune[0];
               xyTfData[my_ixy].nu[1] = firstTune[1];
-              xyTfData[my_ixy].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	      if (compute_diffusion)
+		xyTfData[my_ixy].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	      else
+		xyTfData[my_ixy].diffusionRate = -DBL_MAX;
             }
             my_ixy ++;
 

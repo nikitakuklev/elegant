@@ -21,6 +21,7 @@
     long ndelta = 21;
     long verbosity = 1;
     long quadratic_spacing = 1;
+    long compute_diffusion = 1;
     long diffusion_rate_limit = -5;
     long immediate = 0;
     long filtered_output = 1;
