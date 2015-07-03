@@ -90,7 +90,8 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       /* scan to negative delta side from center until we find a place where the 
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
-          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord])) || deltaTfData[id].diffusionRate>diffusion_rate_limit) {
+          (!ignore_half_integer && ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) || 
+          deltaTfData[id].diffusionRate>diffusion_rate_limit) {
 #ifdef DEBUG
         printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
              coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
@@ -108,7 +109,8 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       /* scan to positive delta side from center until we find a place where the 
        * tune is invalid or crosses a half integer */
       if (deltaTfData[id].nu[coord]<=0 || deltaTfData[id].nu[coord]>=1 || 
-          ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) {
+          (!ignore_half_integer && ((long)(2*deltaTfData[id].nu[coord])!=(long)(2*nu0[coord]))) ||
+          deltaTfData[id].diffusionRate>diffusion_rate_limit) {
 #ifdef DEBUG
         printf("coord = %ld, bad: id = %ld, delta = %le, nu = %le, nu0 = %le, dR = %le\n",
              coord, id, deltaTfData[id].delta, deltaTfData[id].nu[coord], nu0[coord], deltaTfData[id].diffusionRate);
@@ -524,10 +526,10 @@ long doTuneFootprint(
             deltaTfData[my_idelta].idelta = idelta;
             deltaTfData[my_idelta].delta = delta;
             deltaTfData[my_idelta].used = 1;
-            if (lost)
-              deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = 
-                deltaTfData[my_idelta].diffusionRate = -1;
-            else {
+            if (lost) {
+              deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
+              deltaTfData[my_idelta].diffusionRate = 1e300;
+            } else {
               deltaTfData[my_idelta].nu[0] = firstTune[0];
               deltaTfData[my_idelta].nu[1] = firstTune[1];
               deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
@@ -676,8 +678,8 @@ long doTuneFootprint(
             xyTfData[my_ixy].position[1] = y;
             xyTfData[my_ixy].used = 1;
             if (lost) {
-              xyTfData[my_ixy].nu[0] = xyTfData[my_ixy].nu[1] = 
-                xyTfData[my_ixy].diffusionRate = -1;
+              xyTfData[my_ixy].nu[0] = xyTfData[my_ixy].nu[1] = -2;
+              xyTfData[my_ixy].diffusionRate = 1e300;
             } else {
               xyTfData[my_ixy].nu[0] = firstTune[0];
               xyTfData[my_ixy].nu[1] = firstTune[1];

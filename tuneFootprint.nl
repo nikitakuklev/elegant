@@ -24,5 +24,6 @@
     long diffusion_rate_limit = -5;
     long immediate = 0;
     long filtered_output = 1;
+    long ignore_half_integer = 0;
 #end
 
