@@ -89,6 +89,12 @@ void log_entry(char *routine)
 
     in_trace_routine = 1;
 
+    if (immediate) {
+      char s[1000];
+      sprintf(s, "Entering %s\n", routine);
+      printMessageAndTime(stdout, s);
+    }
+      
     if (trace_level<0) {
         fprintf(stdout, "error: trace level is negative (log_entry)\n");
         fflush(stdout);
@@ -141,6 +147,12 @@ void log_exit(char *routine)
 #endif
     if (!trace_mode)
         return;
+
+    if (immediate) {
+      char s[1000];
+      sprintf(s, "Exiting %s\n", routine);
+      printMessageAndTime(stdout, s);
+    }
 
     in_trace_routine = 2;
     if (trace_mode&TRACE_MEMORY_LEVEL) {
@@ -220,3 +232,13 @@ void show_traceback(FILE *fp)
         fprintf(stdout, "log_exit\n");
     fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
     }
+
+
+void printMessageAndTime(FILE *fp, char *message)
+{
+  char *tString;
+  tString = mtimes();
+  fprintf(fp, "%s: %s", tString, message);
+  fflush(fp);
+  free(tString);
+}

@@ -1422,4 +1422,3 @@ long find_parameter_offset(char *param_name, long elem_type)
   return(entity_description[elem_type].parameter[param].offset);
 }
 
-

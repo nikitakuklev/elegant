@@ -338,6 +338,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   double KnL;
   static long asinWarning = 50;
   std::complex <double> kappa;
+  log_entry("propagate_twiss_parameters");
+
   if (!twiss0)
       bombElegant((char*)"initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
@@ -876,6 +878,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   free_matrices(M2); tfree(M2); M2 = NULL;
 
   processTwissAnalysisRequests(elemOrig);
+  log_exit("propagate_twiss_parameters");
 }
 
 
