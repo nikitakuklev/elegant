@@ -6,7 +6,7 @@
  * This file is distributed subject to a Software License Agreement found
  * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
-
+#define DEBUG_BEAM_SUMS
 /* routine: do_tracking()
  * purpose: track a collection of particles through a beamline
  *
@@ -138,6 +138,8 @@ long do_tracking(
 		 ELEMENT_LIST *startElem
                  )
 {
+  double timeCounter[N_TYPES], tStart;
+  long runCounter[N_TYPES];
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
@@ -212,9 +214,8 @@ long do_tracking(
   if (notSinglePart && partOnMaster) /* This is a special case when the first beam is fiducial. We need scatter the beam in the second step. */
     distributed = 0;
 #endif 
-#ifdef DEBUG 
-  printf("do_tracking checkpoint 0\n");
-  fflush(stdout);
+#ifdef DEBUG_CRASH 
+  printMessageAndTime(stdout, "do_tracking checkpoint 0\n");
 #endif
   strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
   if (!coord && !beam)
@@ -241,9 +242,8 @@ long do_tracking(
           cpu_time()/100.0, page_faults(), memoryUsage());
   fflush(stdout);
 #endif
-#ifdef DEBUG 
-  printf("do_tracking checkpoint 0.1\n");
-  fflush(stdout);
+#ifdef DEBUG_CRASH 
+  printMessageAndTime(stdout, "do_tracking checkpoint 0.1\n");
 #endif
   
 #if defined(UNIX) || defined(_WIN32)
@@ -268,7 +268,10 @@ long do_tracking(
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
 #endif
-  
+
+  for (i=0; i<N_TYPES; i++)
+    timeCounter[i] = runCounter[i] = 0;
+
   z = z_recirc = last_z =  0;
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
@@ -290,9 +293,8 @@ long do_tracking(
 #ifdef SORT
   nToTrackAtLastSort = nToTrack;
 #endif
-#ifdef DEBUG 
-  printf("do_tracking checkpoint 0.2\n");
-  fflush(stdout);
+#ifdef DEBUG_CRASH 
+  printMessageAndTime(stdout, "do_tracking checkpoint 0.2\n");
 #endif
   
   check_nan = 1;
@@ -304,8 +306,7 @@ long do_tracking(
      * correction.
      */
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
-      fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
-      fflush(stdout);
+      printMessageAndTime(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
     }
     flags &= ~FIDUCIAL_BEAM_SEEN;
     while (eptr) {
@@ -317,15 +318,13 @@ long do_tracking(
     delete_phase_references();
     reset_special_elements(beamline, RESET_INCLUDE_RF);
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
-      fprintf(stdout, "Rf phases/references reset.\n");
-      fflush(stdout);
+      printMessageAndTime(stdout, "Rf phases/references reset.\n");
     }
   }
   reset_driftCSR();
 
-#ifdef DEBUG 
-  printf("do_tracking checkpoint 0.3\n");
-  fflush(stdout);
+#ifdef DEBUG_CRASH 
+  printMessageAndTime(stdout, "do_tracking checkpoint 0.3\n");
 #endif
 
   if (!(flags&FIDUCIAL_BEAM_SEEN) && flags&PRECORRECTION_BEAM)
@@ -381,9 +380,8 @@ long do_tracking(
       }
     }
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.4\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.4\n");
 #endif
 
     ResetNoiseGroupValues();
@@ -418,9 +416,8 @@ long do_tracking(
       concatenate_beamline(beamline, run);
     }
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.5\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.5\n");
 #endif
 
     if (run->concat_order && beamline->flags&BEAMLINE_CONCAT_DONE &&
@@ -459,9 +456,8 @@ long do_tracking(
       }
     }
       
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.6\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.6\n");
 #endif
 
     if (sums_vs_z && n_z_points) {
@@ -491,9 +487,8 @@ long do_tracking(
     if (run->final_pass && sums_vs_z && n_z_points)
       zero_beam_sums(*sums_vs_z, *n_z_points+1);
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.7\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.7\n");
 #endif
 
     log_exit("do_tracking.2.1");
@@ -557,18 +552,16 @@ long do_tracking(
 #endif
     nParticlesStartPass = nToTrack;
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.8\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.8\n");
 #endif
 
     if (getSCMULTSpecCount()) 
       /* prepare space charge effects calculation  */
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.9\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.9\n");
 #endif
 
     i_elem = 0;
@@ -621,15 +614,15 @@ long do_tracking(
       startElem = NULL; 
     }
 
-#ifdef DEBUG 
-    printf("do_tracking checkpoint 0.9.9\n");
-    fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.9.9\n");
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 1\n");
-      fflush(stdout);
+      if (run->show_element_timing)
+        tStart = getTimeInSecs();
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 1\n");
 #endif
       if (trackingOmniWedgeFunction) 
         (*trackingOmniWedgeFunction)(coord, nToTrack, i_pass, i_elem, beamline->n_elems, eptr, P_central);
@@ -683,9 +676,13 @@ long do_tracking(
       if (sums_vs_z && *sums_vs_z && (!run->final_pass || i_pass==n_passes-1) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bombElegant("attempt to accumulate beam sums with negative index!", NULL);
+#if defined(BEAM_SUMS_DEBUG)
+        printMessageAndTime(stdout, "Accumulating beam sums\n");
+#endif
         accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
+        printMessageAndTime(stdout, "Done accumulating beam sums\n");
         fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
                 i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
         fflush(stdout);
@@ -957,6 +954,7 @@ long do_tracking(
 		  eptr->occurence, eptr->twiss);
 		  }
 		*/
+                /*
                 if (isMaster || !notSinglePart)
        		  store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
 					       eptr->occurence, eptr->accumMatrix);
@@ -964,6 +962,7 @@ long do_tracking(
 					       coord, nToTrack, *P_central); 
 		if (flags&CLOSED_ORBIT_TRACKING)
 		  storeMonitorOrbitValues(eptr, coord, nToTrack);
+                */
 	      }
 	      break;
 	    case T_RECIRC:
@@ -1788,12 +1787,12 @@ long do_tracking(
 	      fflush(stdout);
 	      exitElegant(1);
 	      break;
-	    }
-          }
+              }
+            }
 #ifdef USE_MPE
 	      MPE_Log_event( event2b, 0, bytebuf );
 #endif
-         }
+          }
           
 #if USE_MPI
 	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
@@ -1816,9 +1815,8 @@ long do_tracking(
                                  &(run->apertureData));
           }
 	}
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 10\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 10\n");
 #endif
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
 	  if (run->print_statistics>1) {
@@ -1836,9 +1834,8 @@ long do_tracking(
                 eptr->name);
         fflush(stdout);
       }
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 11\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 11\n");
 #endif
       if (flags&FIRST_BEAM_IS_FIDUCIAL) {
         if (!(flags&FIDUCIAL_BEAM_SEEN)) {
@@ -1864,9 +1861,8 @@ long do_tracking(
         eptr->Pref_output_fiducial = *P_central;
       } else if (!(flags&FIDUCIAL_BEAM_SEEN))
         eptr->Pref_output_fiducial = *P_central;
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 12\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 12\n");
 #endif
       if (eptr->Pref_output_fiducial==0)
         bombElegant("problem with fiducialization. Seek expert help!", NULL);
@@ -1892,9 +1888,8 @@ long do_tracking(
         }
         i_traj++;
       }
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 13\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 13\n");
 #endif
       if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
@@ -1911,9 +1906,8 @@ long do_tracking(
 				   eptr->name, eptr->end_pos, 0); 
 	sliceAnDone = 1;
       }
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 14\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 14\n");
 #endif
 #if USE_MPI
       if (notSinglePart) {
@@ -1934,9 +1928,8 @@ long do_tracking(
 	}
       }
 #endif
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 15\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 15\n");
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
         nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nLeft, accepted, z, *P_central, 0, 0);
@@ -1954,33 +1947,28 @@ long do_tracking(
         	accumulateSCMULT(coord, nToTrack, eptr);
       }
 
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 16\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 16\n");
 #endif
 
 #if USE_MPI
       if (flags&ALLOW_MPI_ABORT_TRACKING && !runInSinglePartMode) {
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 16.1, mpiAbort=%d\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.1, mpiAbort=%d\n");
 #endif
 	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
 	   to know because it doesn't run the procedure. Here we check for setting of the mpiAbort variable on any processor */
 	MPI_Barrier(MPI_COMM_WORLD);
-#ifdef DEBUG 
-          printf("do_tracking checkpoint 16.2\n");
-          fflush(stdout);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.2\n");
 #endif
 	MPI_Allreduce(&mpiAbort, &mpiAbortGlobal, 1, MPI_SHORT, MPI_MAX, MPI_COMM_WORLD);
-#ifdef DEBUG 
-          printf("do_tracking checkpoint 16.3\n");
-          fflush(stdout);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.3\n");
 #endif
 	if (mpiAbortGlobal) {
-#ifdef DEBUG 
-          printf("do_tracking checkpoint 16.4\n");
-          fflush(stdout);
+#ifdef DEBUG_CRASH 
+          printMessageAndTime(stdout, "do_tracking checkpoint 16.4\n");
 #endif
 	  exitElegant(1);
 	}
@@ -2006,15 +1994,18 @@ long do_tracking(
       }
 #endif
 
-#ifdef DEBUG 
-        printf("do_tracking checkpoint 16.5\n");
-        fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 16.5\n");
 #endif
+      
+      if (run->show_element_timing && last_type>=0 && last_type<=N_TYPES) {
+        timeCounter[last_type] += getTimeInSecs() - tStart;
+        runCounter[last_type] += 1;
+      }
 
       } /* end of the while loop */
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 17\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 17\n");
 #endif
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
@@ -2043,9 +2034,8 @@ long do_tracking(
 #endif
     }
 
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 18\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 18\n");
 #endif
 
     log_exit("do_tracking.2.2");
@@ -2061,7 +2051,13 @@ long do_tracking(
         if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
           if (i_sums<0)
             bombElegant("attempt to accumulate beam sums with negative index!", NULL);
+#ifdef DEBUG_BEAM_SUMS
+          printMessageAndTime(stdout, "Accumulating beam sums\n");
+#endif
           accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
+#ifdef DEBUG_BEAM_SUMS
+          printMessageAndTime(stdout, "Done accumulating beam sums\n");
+#endif
           (*sums_vs_z)[i_sums].z = z;
           i_sums++;
         }
@@ -2130,18 +2126,21 @@ long do_tracking(
       }
     }
  
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 19\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 19\n");
 #endif
 
     if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
         (run->wrap_around || i_pass==n_passes-1)) {
       if (i_sums<0)
         bombElegant("attempt to accumulate beam sums with negative index!", NULL);
+#ifdef DEBUG_BEAM_SUMS
+      printMessageAndTime(stdout, "Accumulating beam sums\n");
+#endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
+      printMessageAndTime(stdout, "Done accumulating beam sums\n");
       fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
               i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
@@ -2149,9 +2148,8 @@ long do_tracking(
       i_sums++;
     }
  
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 20\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 20\n");
 #endif
 
 #if USE_MPI
@@ -2221,16 +2219,14 @@ long do_tracking(
       if (myid==0)
 	old_nToTrack = nToTrack;
     }
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 21\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 21\n");
 #endif
 #endif
   } /* end of the for loop for n_passes*/
 
-#ifdef DEBUG 
-      printf("do_tracking checkpoint 22\n");
-      fflush(stdout);
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 22\n");
 #endif
 
 #ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
@@ -2278,9 +2274,13 @@ long do_tracking(
     if (flags&FINAL_SUMS_ONLY) {
       log_entry("do_tracking.3.1");
       i_sums = 0;
+#ifdef DEBUG_BEAM_SUMS
+      printMessageAndTime(stdout, "Accumulating beam sums\n");
+#endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
+      printMessageAndTime(stdout, "Done accumulating beam sums\n");
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
@@ -2292,8 +2292,12 @@ long do_tracking(
       if (i_sums<0)
         bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       /* accumulate sums for final output */
+#ifdef DEBUG_BEAM_SUMS
+      printMessageAndTime(stdout, "Accumulating beam sums\n");
+#endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central, 0, 0, 0);
 #if defined(BEAM_SUMS_DEBUG)
+      printMessageAndTime(stdout, "Done accumulating beam sums\n");
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
@@ -2394,6 +2398,15 @@ long do_tracking(
     /* Only Master will have the correct information */
     *finalCharge = beam->n_to_track_total*charge->macroParticleCharge;
 #endif
+  }
+
+  if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES) && (run->show_element_timing)) {
+    printf("Time spent in different elements:\n");
+    for (i=0; i<N_TYPES; i++) {
+      if (runCounter[i]!=0)
+        printf("%16s: %10ld times, %10.3e s, %10.3e s/element\n", entity_name[i], runCounter[i], timeCounter[i], timeCounter[i]/runCounter[i]);
+    }
+    fflush(stdout);
   }
 
   return(nToTrack);

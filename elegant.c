@@ -688,6 +688,7 @@ char **argv;
       run_conditions.print_statistics = print_statistics;
       run_conditions.combine_bunch_statistics = combine_bunch_statistics;
       run_conditions.wrap_around = wrap_around;
+      run_conditions.show_element_timing = show_element_timing;
       if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;

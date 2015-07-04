@@ -34,6 +34,7 @@
     long default_order = 2;
     long concat_order = 0;
     long print_statistics = 0;
+    long show_element_timing = 0;
     long random_number_seed = 987654321;
     long correction_iterations = 1;
     long echo_lattice = 0;
@@ -77,4 +78,3 @@
         STRING done = "%s.done";
         STRING failed = "%s.failed";
 #end
-

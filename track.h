@@ -427,6 +427,7 @@ typedef struct {
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No;
+    long show_element_timing;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
@@ -3309,6 +3310,7 @@ void bombElegant(char *error, char *usage);
 void bombTracking(char *error);
 void bombElegantVA(char *ptemplate, ...);
 void exitElegant(long status);
+void printMessageAndTime(FILE *fp, char *message);
 
 /* prototypes for error.c: */
 extern void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
