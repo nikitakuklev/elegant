@@ -39,6 +39,8 @@ void checkMatrices(char *label, ELEMENT_LIST *elem)
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
+  VMATRIX *M;
+  log_entry("full_matrix");
 
     if (!elem) {
         fputs("error: NULL element pointer passed to full_matrix", stdout);
@@ -51,7 +53,9 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
     fflush(stdout);
 #endif
     
-    return accumulate_matrices(elem, run, NULL, order, 1);
+    M = accumulate_matrices(elem, run, NULL, order, 1);
+    log_exit("full_matrix");
+    return M;
     }
 
 VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only)
@@ -61,6 +65,8 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   double Pref_input;
   long i;
   
+  log_entry("accumulate_matrices");
+
   if (!elem) {
     fputs("error: NULL element pointer passed to accumulate_matrices", stdout);
     abort();
@@ -124,6 +130,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   if (M2) {
     free_matrices(M2); tfree(M2); M2 = NULL;
   }
+  log_exit("accumulate_matrices");
   return M1;
 }
 
