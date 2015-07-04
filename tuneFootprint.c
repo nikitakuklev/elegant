@@ -311,9 +311,9 @@ void determineXyTuneFootprint(XY_TF_DATA *xyTfData, long nx, long ny, double *tu
 MPI_Datatype xyTfDataType, deltaTfDataType, tfReturnDataType;
 void setupTuneFootprintDataTypes ()
 {
-  MPI_Datatype oldType[5];
-  int blockLength[5];
-  MPI_Aint offset[5];
+  MPI_Datatype oldType[9];
+  int blockLength[9];
+  MPI_Aint offset[9];
   XY_TF_DATA xyTfExample;
   DELTA_TF_DATA deltaTfExample;
   TUNE_FOOTPRINTS tfExample;
@@ -340,20 +340,29 @@ void setupTuneFootprintDataTypes ()
   MPI_Type_struct(2, blockLength, offset, oldType, &deltaTfDataType);
   MPI_Type_commit(&deltaTfDataType);
 
-  oldType[0] = oldType[1] = oldType[2] = oldType[3] = oldType[4] = MPI_DOUBLE;
+  oldType[0] = oldType[1] = oldType[2] = oldType[3] = oldType[4] = oldType[5] =
+    oldType[6] = oldType[7] = oldType[8] = MPI_DOUBLE;
   blockLength[0] = 2;
   blockLength[1] = 3;
   blockLength[2] = 2;
   blockLength[3] = 2;
   blockLength[4] = 3;
+  blockLength[5] = 2;
+  blockLength[6] = 2;
+  blockLength[7] = 2;
+  blockLength[8] = 2;
   MPI_Get_address(&tfExample.chromaticTuneRange, &offset[0]);
   MPI_Get_address(&tfExample.deltaRange, &offset[1]);
   MPI_Get_address(&tfExample.amplitudeTuneRange, &offset[2]);
   MPI_Get_address(&tfExample.positionRange, &offset[3]);
   MPI_Get_address(&tfExample.chromaticDiffusionMaximum, &offset[4]);
-  for (i=4; i>=0; i--)
+  MPI_Get_address(&tfExample.nuxChromLimit, &offset[5]);
+  MPI_Get_address(&tfExample.nuyChromLimit, &offset[6]);
+  MPI_Get_address(&tfExample.nuxAmpLimit, &offset[7]);
+  MPI_Get_address(&tfExample.nuyAmpLimit, &offset[8]);
+  for (i=8; i>=0; i--)
     offset[i] -= offset[0];
-  MPI_Type_struct(5, blockLength, offset, oldType, &tfReturnDataType);
+  MPI_Type_struct(9, blockLength, offset, oldType, &tfReturnDataType);
   MPI_Type_commit(&tfReturnDataType);
 }
 #endif
@@ -448,6 +457,10 @@ long doTuneFootprint(
   }
   
 #if USE_MPI
+  
+  printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
+         parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+
   setupTuneFootprintDataTypes();
   /* Note that the master is a working processor for this algorithm */
   if (ndelta) {
@@ -647,17 +660,6 @@ long doTuneFootprint(
 #endif
 #if USE_MPI
     }
-    /* share data with slaves */
-#if MPI_DEBUG
-    printf("Sharing allDeltaTfData with slaves, my_ndelta = %ld\n", my_ndelta);
-    fflush(stdout);
-#endif
-    MPI_Bcast(&my_ndelta, 1,  MPI_LONG, 0, MPI_COMM_WORLD);
-#if MPI_DEBUG
-    printf("my_ndelta = %ld\n", my_ndelta);
-    fflush(stdout);
-#endif
-    MPI_Bcast(allDeltaTfData, my_ndelta, deltaTfDataType, 0, MPI_COMM_WORLD);
 #endif
       
     determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
