@@ -457,9 +457,10 @@ long doTuneFootprint(
   }
   
 #if USE_MPI
-  
+#ifdef DEBUG  
   printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
          parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+#endif
 
   setupTuneFootprintDataTypes();
   /* Note that the master is a working processor for this algorithm */
