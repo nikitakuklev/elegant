@@ -594,10 +594,10 @@ long doTuneFootprint(
 #if USE_MPI
     /* Collect data onto the master */
     MPI_Barrier(MPI_COMM_WORLD);
+    allDeltaTfData  = calloc(my_ndelta*n_processors, sizeof(*allDeltaTfData));
     if (myid==0) {
       long id, iTotal;
       MPI_Status mpiStatus;
-      allDeltaTfData  = calloc(my_ndelta*n_processors, sizeof(*allDeltaTfData));
       memcpy(allDeltaTfData, deltaTfData, sizeof(*deltaTfData)*my_ndelta);
       /* receive data */
       iTotal = my_ndelta;
@@ -612,7 +612,6 @@ long doTuneFootprint(
     } else {
       /* send data */
       MPI_Send(deltaTfData, my_ndelta, deltaTfDataType, 0, 1, MPI_COMM_WORLD);
-      allDeltaTfData = NULL;
     }
     MPI_Barrier(MPI_COMM_WORLD);
 #else
@@ -646,23 +645,34 @@ long doTuneFootprint(
       }
       fclose(fpdebug);
 #endif
-      
-      determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
-      if (verbosity)
-	printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
-	       chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
-	       chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
-      if (tfReturn) {
-	memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
-	memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
-	memcpy(tfReturn->nuxChromLimit, nuxLimit, sizeof(*nuxLimit)*2);
-	memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
-	tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
-	tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
-      }
 #if USE_MPI
     }
+    /* share data with slaves */
+#if MPI_DEBUG
+    printf("Sharing allDeltaTfData with slaves, my_ndelta = %ld\n", my_ndelta);
+    fflush(stdout);
 #endif
+    MPI_Bcast(&my_ndelta, 1,  MPI_LONG, 0, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("my_ndelta = %ld\n", my_ndelta);
+    fflush(stdout);
+#endif
+    MPI_Bcast(allDeltaTfData, my_ndelta, deltaTfDataType, 0, MPI_COMM_WORLD);
+#endif
+      
+    determineDeltaTuneFootprint(allDeltaTfData, my_ndelta, chromTuneRange, chromDeltaRange, &diffusionRateMax, nuxLimit, nuyLimit);
+    if (verbosity)
+      printf("nux/chromatic: tune range=%le (%le, %le) delta range = %le\nnuy/chromatic: tune range=%le (%le, %le) delta range = %le\n",
+             chromTuneRange[0], nuxLimit[0], nuxLimit[1], chromDeltaRange[0],
+             chromTuneRange[1], nuyLimit[0], nuyLimit[1], chromDeltaRange[1]);
+    if (tfReturn) {
+      memcpy(tfReturn->chromaticTuneRange, chromTuneRange, sizeof(*chromTuneRange)*2);
+      memcpy(tfReturn->deltaRange, chromDeltaRange, sizeof(*chromDeltaRange)*2);
+      memcpy(tfReturn->nuxChromLimit, nuxLimit, sizeof(*nuxLimit)*2);
+      memcpy(tfReturn->nuyChromLimit, nuyLimit, sizeof(*nuyLimit)*2);
+      tfReturn->chromaticDiffusionMaximum = diffusionRateMax;
+      tfReturn->deltaRange[2] = MIN(tfReturn->deltaRange[0], tfReturn->deltaRange[1]);
+    }
   }
 
   if (nx!=0 && ny!=0) {
