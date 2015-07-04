@@ -971,6 +971,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           else
             fputs("warning: maximum number of passes reached in simplex optimization", stdout);
         }
+#ifdef DEBUG
+        printf("Exited from simplexMin\n");
+        fflush(stdout);
+#endif
 #if USE_MPI
       /* check if the result meets the requirement for each point across all the processors here */
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
@@ -1036,7 +1040,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
 	  if (optimization_data->fp_log && optimization_data->verbose >1)
 	    optimization_report (result, variables->varied_quan_value, optimization_data->n_restarts+1-startsLeft, n_evaluations_made, variables->n_variables);
-	} 
+	}
 #endif
         if (simplexMinAbort(0))
           stopOptimization = 1;
@@ -1048,6 +1052,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           } else
             hybrid_simplex_tolerance_counter = 0;
         }
+#endif
+#ifdef DEBUG
+        printf("End of simplex method case\n");
+        fflush(stdout);
 #endif
         break;
       case OPTIM_METHOD_POWELL:
@@ -1201,6 +1209,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         bombElegant("unknown optimization method code (do_optimize())", NULL);
         break;
       }
+
+#ifdef DEBUG
+      printf("Outside optimization method switch\n");
+      fflush(stdout);
+#endif
+
 #if USE_MPI
       if ((optimization_data->method==OPTIM_METHOD_SWARM) || (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX)) { 
 	/* The covariables are updated locally after each optimization_function call no matter if a better result 
@@ -1236,7 +1250,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	      fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
 	    fflush(optimization_data->fp_log);
 	  }
-	}
+        }
 #if MPI_DEBUG
 	if ((isSlave || !notSinglePart)&& (optimization_data->verbose>1)) {
 	  fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
@@ -1266,6 +1280,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       }
 #else 
 
+#ifdef DEBUG
+      printf("Evaluating at optimum point\n");
+      fflush(stdout);
+#endif
+
       /* This part looks like redundant, as this is repeated after exiting the while loop. -- Y. Wang */
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       force_output = 1;
@@ -1274,6 +1293,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       ignoreOptimRecords = 0;
       force_output = 0;
 #endif
+
+#ifdef DEBUG
+      printf("Done evaluating at optimum point (if needed)\n");
+      fflush(stdout);
+#endif
+
       if (result<=optimization_data->target) {
 	if (optimization_data->verbose>1) {
 	  fprintf(stdout, "Target value reached, terminating optimization\n");
@@ -1282,6 +1307,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       }
 #if USE_MPI     
       if ((optimization_data->method!=OPTIM_METHOD_SWARM) && (optimization_data->method!=OPTIM_METHOD_HYBSIMPLEX))
+#endif
+#ifdef DEBUG
+        printf("Doing MPI post-optimization checks\n");
+        fflush(stdout);
 #endif
 	if (fabs(result-lastResult)<optimization_data->tolerance) {
 	  if (optimization_data->verbose>1) {
@@ -1298,6 +1327,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	break;
       }
       if (startsLeft && !stopOptimization) {
+#ifdef DEBUG
+        printf("Preparing to restart\n");
+        fflush(stdout);
+#endif
         for (i=0; i<variables->n_variables; i++) {
           variables->step[i] = variables->orig_step[i];
         }
@@ -1331,6 +1364,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           fflush(stdout);
 	}
       }
+#ifdef DEBUG
+      printf("Bottom of optimization restarts loop\n");
+      fflush(stdout);
+#endif
     }
 
 #if defined(UNIX)
@@ -2016,9 +2053,19 @@ double optimization_function(double *value, long *invalid)
 #endif
   }
 
+#if DEBUG
+  fprintf(stdout, "Starting moments_output if requested\n");
+  fflush(stdout);
+#endif
   runMomentsOutput(run, beamline, startingOrbitCoord, 1, 0);
 
+#if DEBUG
+  printMessageAndTime(stdout, "Starting tune_footprint if requested\n");
+#endif
   if (doTuneFootprint(run, control, startingOrbitCoord, beamline, &tuneFP)) {
+#if DEBUG
+    printMessageAndTime(stdout, "Done computing tune footprint\n");
+#endif
     if (tuneFootprintMem[0]==-1) {
       for (i=0; i<18; i++)
         tuneFootprintMem[i] = rpn_create_mem(tuneFootprintName[i], 0);
@@ -2045,6 +2092,10 @@ double optimization_function(double *value, long *invalid)
       for (i=0; i<18; i++)
         printf("%s = %le\n", tuneFootprintName[i], rpn_recall(tuneFootprintMem[i]));
     }
+#if DEBUG
+    fprintf(stdout, "Done setting values from tune footprint\n");
+    fflush(stdout);
+#endif
   }
   
   if (floorCoord_mem[0]==-1) 
@@ -2075,10 +2126,6 @@ double optimization_function(double *value, long *invalid)
     M = accumulate_matrices(&(beamline->elem), run, NULL,
                             optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
 
-    if (optimization_data->verbose && optimization_data->fp_log) {
-      fprintf(optimization_data->fp_log, "Tracking for optimization\n");
-      fflush(optimization_data->fp_log);
-    }
 #if SDDS_MPI_IO
     if (isMaster && notSinglePart)
       if (beam->n_to_track_total<(n_processors-1)) {
@@ -2092,8 +2139,12 @@ double optimization_function(double *value, long *invalid)
     if (center_on_orbit) 
       center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
     if (!inhibit_tracking) {
+      if (optimization_data->verbose && optimization_data->fp_log) {
+        fprintf(optimization_data->fp_log, "Tracking for optimization\n");
+        fflush(optimization_data->fp_log);
+      }
 #if DEBUG
-      fprintf(stdout, "About to track beam\n");
+      printMessageAndTime(stdout, "About to track beam\n");
 #if USE_MPI
       printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
 	     parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
@@ -2107,8 +2158,7 @@ double optimization_function(double *value, long *invalid)
       track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
 		 &charge);
 #if DEBUG
-      fprintf(stdout, "Done tracking beam\n");
-      fflush(stdout);
+      printMessageAndTime(stdout, "Done tracking beam\n");
 #endif
     }
 
@@ -2316,6 +2366,10 @@ double optimization_function(double *value, long *invalid)
             center_beam_on_coords(beam->particle, beam->n_to_track, startingOrbitCoord, center_momentum_also);
 	  do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags, 
 			   charge);
+          if (optimization_data->verbose && optimization_data->fp_log) {
+            fprintf(optimization_data->fp_log, "Completed post-tracking output\n");
+            fflush(optimization_data->fp_log);
+          }
         }
   }
   
@@ -2327,17 +2381,6 @@ double optimization_function(double *value, long *invalid)
     }
 #endif
  
-/*    printf("%s = %le, %le stored\n", tuneFootprintName[0], tuneFP.chromaticTuneRange[0], rpn(tuneFootprintName[0]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[1], tuneFP.chromaticTuneRange[1], rpn(tuneFootprintName[1]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[2], tuneFP.deltaRange[0], rpn(tuneFootprintName[2]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[3], tuneFP.deltaRange[1], rpn(tuneFootprintName[3]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[4], tuneFP.deltaRange[2], rpn(tuneFootprintName[4]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[5], tuneFP.amplitudeTuneRange[0], rpn(tuneFootprintName[5]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[6], tuneFP.amplitudeTuneRange[1], rpn(tuneFootprintName[6]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[7], tuneFP.positionRange[0], rpn(tuneFootprintName[7]));
-    printf("%s = %le, %le stored\n", tuneFootprintName[8], tuneFP.positionRange[1], rpn(tuneFootprintName[8]));
-*/
-
     storeOptimRecord(value, variables->n_variables, *invalid, result);
 
 #if DEBUG
