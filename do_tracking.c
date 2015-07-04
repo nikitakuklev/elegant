@@ -114,6 +114,31 @@ void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long
   trackingOmniWedgeFunction = wedgeFunc;
 }
 
+static double timeCounter[N_TYPES], tStart;
+static long runCounter[N_TYPES];
+static long elementTimingActive = 0;
+
+void resetElementTiming()
+{
+  long i;
+  for (i=0; i<N_TYPES; i++)
+    timeCounter[i] = runCounter[i] = 0;
+  elementTimingActive = 1;
+}
+
+void reportElementTiming()
+{
+  if (elementTimingActive) {
+    long i;
+    printf("Time spent in different elements:\n");
+    for (i=0; i<N_TYPES; i++) {
+      if (runCounter[i]!=0)
+        printf("%16s: %10ld times, %10.3e s, %10.3e s/element\n", entity_name[i], runCounter[i], timeCounter[i], timeCounter[i]/runCounter[i]);
+    }
+    fflush(stdout);
+  }
+}
+
 long do_tracking(
                  /* Either the beam pointer or the coord pointer must be supplied, but not both */
                  BEAM *beam,  
@@ -138,8 +163,6 @@ long do_tracking(
 		 ELEMENT_LIST *startElem
                  )
 {
-  double timeCounter[N_TYPES], tStart;
-  long runCounter[N_TYPES];
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
@@ -268,9 +291,6 @@ long do_tracking(
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
 #endif
-
-  for (i=0; i<N_TYPES; i++)
-    timeCounter[i] = runCounter[i] = 0;
 
   z = z_recirc = last_z =  0;
   i_sums = i_sums_recirc = 0;
@@ -2398,15 +2418,6 @@ long do_tracking(
     /* Only Master will have the correct information */
     *finalCharge = beam->n_to_track_total*charge->macroParticleCharge;
 #endif
-  }
-
-  if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES) && (run->show_element_timing)) {
-    printf("Time spent in different elements:\n");
-    for (i=0; i<N_TYPES; i++) {
-      if (runCounter[i]!=0)
-        printf("%16s: %10ld times, %10.3e s, %10.3e s/element\n", entity_name[i], runCounter[i], timeCounter[i], timeCounter[i]/runCounter[i]);
-    }
-    fflush(stdout);
   }
 
   return(nToTrack);

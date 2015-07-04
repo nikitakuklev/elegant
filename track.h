@@ -3121,6 +3121,8 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge, double **lostParticles, ELEMENT_LIST *startElem);
+extern void resetElementTiming();
+extern void reportElementTiming();
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);

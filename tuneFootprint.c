@@ -509,6 +509,10 @@ long doTuneFootprint(
       one_part[0][i] = referenceCoord[i];
   }
   p = run->p_central;
+
+  if (run->show_element_timing)
+    resetElementTiming();
+
   if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    NULL, run, 0, TEST_PARTICLES, 1, 0,
                    NULL, NULL, NULL, NULL, NULL)) {
@@ -872,6 +876,9 @@ long doTuneFootprint(
     free(deltaTfData);
   deltaTfData = NULL;
   
+  if (run->show_element_timing)
+    reportElementTiming();
+
   return 1;
 }
 
