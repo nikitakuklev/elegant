@@ -186,7 +186,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         count = 0;
         context = NULL;
         while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
-            if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
+            if (!(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
                 fflush(stdout);
@@ -234,7 +234,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         count = 0;
         context = NULL;
         while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
-            if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
+            if (!(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
                 fflush(stdout);
@@ -415,7 +415,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             count = 0;
             has_wc = has_wildcards(chrom->name[i]);
             while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
-                if (count==0 && (K2_param = confirm_parameter("K2", context->type))<0) {
+                if ((K2_param = confirm_parameter("K2", context->type))<0) {
                     fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
                             context->name);
                     fflush(stdout);
@@ -535,7 +535,7 @@ void computeChromaticities(double *chromx, double *chromy,
 {
   double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M);
   double dR11, dR22, dR12, dR33, dR34, dR44;
-
+  
   dR11 = computeChromaticDerivRElem(1, 1, twiss1, M);
   dR12 = computeChromaticDerivRElem(1, 2, twiss1, M);
   dR22 = computeChromaticDerivRElem(2, 2, twiss1, M);
