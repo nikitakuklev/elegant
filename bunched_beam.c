@@ -569,6 +569,14 @@ long track_beam(
 
   p_central = run->p_central;
 
+#ifdef DEBUG
+  flags &= !SILENT_RUNNING;
+#if USE_MPI
+      printf("parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
+	     parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+#endif
+#endif
+
   /* now track particles */
   if (!(flags&SILENT_RUNNING)) {
 #if !SDDS_MPI_IO
@@ -602,9 +610,19 @@ long track_beam(
 
   if (isSlave || !notSinglePart)
 #endif
+
   if (control->bunch_frequency) {
     makeBucketAssignments(beam, p_central, control->bunch_frequency);
   }
+
+#ifdef DEBUG
+#if USE_MPI
+      printf("About to track: parallelStatus = %d, partOnMaster = %d, notSinglePart = %ld, runInSinglePartMode = %ld\n",
+	     parallelStatus, partOnMaster, notSinglePart, runInSinglePartMode);
+#endif
+      printMessageAndTime(stdout, "Calling do_tracking\n");
+#endif
+
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
@@ -617,6 +635,9 @@ long track_beam(
                        firstIsFiducial && control->i_step==1 ? 1 : control->n_passes, 
                        0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lost, NULL); 
+#ifdef DEBUG
+  printMessageAndTime(stdout, "Returned from do_tracking\n");
+#endif
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM)) {
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
     beamline->fiducial_flag |= FIDUCIAL_BEAM_SEEN; /* This is the one that matters */
@@ -816,12 +837,11 @@ void do_track_beam_output(RUN *run, VARY *control,
        control->i_step, beam->particle, beam->n_to_track_total, p_central, M,
        finalCharge);
 #endif
+    free_matrices(M); free(M); M = NULL;
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "done.\n"); 
       fflush(stdout);
-      fflush(stdout);
     }
-    free_matrices(M); free(M); M = NULL;
   }
 
   if (output->sasefel.active && output->sasefel.filename) {
@@ -832,8 +852,12 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "done.\n");
       fflush(stdout);
-      fflush(stdout);
     }
+  }
+
+  if (!(flags&SILENT_RUNNING)) {
+      fprintf(stdout, "Post-tracking output completed.\n");
+      fflush(stdout);
   }
 }
 
