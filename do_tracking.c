@@ -6,7 +6,7 @@
  * This file is distributed subject to a Software License Agreement found
  * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
-#define DEBUG_BEAM_SUMS
+
 /* routine: do_tracking()
  * purpose: track a collection of particles through a beamline
  *
@@ -974,7 +974,6 @@ long do_tracking(
 		  eptr->occurence, eptr->twiss);
 		  }
 		*/
-                /*
                 if (isMaster || !notSinglePart)
        		  store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
 					       eptr->occurence, eptr->accumMatrix);
@@ -982,7 +981,6 @@ long do_tracking(
 					       coord, nToTrack, *P_central); 
 		if (flags&CLOSED_ORBIT_TRACKING)
 		  storeMonitorOrbitValues(eptr, coord, nToTrack);
-                */
 	      }
 	      break;
 	    case T_RECIRC:
