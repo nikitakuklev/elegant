@@ -624,6 +624,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   ELEMENT_LIST elem;
   MATRIX *Ms;
   long ignoreRadiation = 0;
+  
 /*
   fpdeb = fopen("analyze.sdds", "w");
   fprintf(fpdeb, "SDDS1\n&column name=z type=double &end\n");
@@ -668,6 +669,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.angle /= nSlices;
       length = csbend.length /= nSlices;
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.refTrajectoryChangeSet = 0;
+      csbend.refLength = 0;
+      csbend.refAngle = 0;
+      csbend.refTrajectoryChange = NULL;
+      csbend.referenceCorrection = 0;
       if (slice!=0)
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1) 
@@ -706,6 +712,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.edge2_effects = sbend->edge2_effects;
       csbend.edge_order = sbend->edge_order;
       csbend.edgeFlags = sbend->edgeFlags;
+      csbend.refTrajectoryChangeSet = 0;
+      csbend.refLength = 0;
+      csbend.refAngle = 0;
+      csbend.refTrajectoryChange = NULL;
       if (slice!=0)
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1)
@@ -746,6 +756,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.edge2_effects = csrcsbend->edge2_effects;
       csbend.edge_order = csrcsbend->edge_order;
       csbend.edgeFlags = csrcsbend->edgeFlags;
+      csbend.refTrajectoryChangeSet = 0;
+      csbend.refLength = 0;
+      csbend.refAngle = 0;
+      csbend.refTrajectoryChange = NULL;
       if (slice!=0)
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1)
@@ -1011,7 +1025,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
         D[i] = 0;
   }
   sigmaDelta2 = 0;
-  
+  setTrackingContext(elem->name, elem->occurence, elem->type, run->rootname);
   switch (elem->type) {
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
