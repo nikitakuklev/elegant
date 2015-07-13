@@ -511,7 +511,7 @@ long doTuneFootprint(
   }
   p = run->p_central;
 
-  if (run->show_element_timing)
+  if (run->showElementTiming)
     resetElementTiming();
 
   if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
@@ -877,7 +877,7 @@ long doTuneFootprint(
     free(deltaTfData);
   deltaTfData = NULL;
   
-  if (run->show_element_timing)
+  if (run->showElementTiming)
     reportElementTiming();
 
   return 1;

@@ -159,12 +159,14 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         betax_L_sum = betay_L_sum = 0;
         while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
             if (count==0) {
-                if (context->type!=T_QUAD && context->type!=T_KQUAD) {
-                    fprintf(stdout, "%s is not a QUAD or KQUAD element!\n", context->name);
-                    fflush(stdout);
-                    exitElegant(1);
-                    }
-                }
+	      long K1_param;
+	      if (!(K1_param=confirm_parameter("K1", context->type))) {
+		fprintf(stdout, "error: element %s does not have K1 parameter\n", 
+			context->name);
+		fflush(stdout);
+		exitElegant(1);
+	      }
+	    }
             betax_L_sum += context->twiss->betax*((QUAD*)context->p_elem)->length;
             betay_L_sum += context->twiss->betay*((QUAD*)context->p_elem)->length;
             count++;
@@ -233,6 +235,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   static long tunes_saved=0;
   static double nux_orig, nuy_orig;
   unsigned long unstable;
+  double *K1ptr;
   
   M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                 &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
@@ -297,9 +300,6 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       }
     }
 
-    if (( K1_param = confirm_parameter("K1", T_QUAD))<0)
-      bombElegant("confirm_parameter doesn't return offset for K1 parameter of quadrupole!\n", NULL);
-    
     m_mult(tune->dK1, tune->T, tune->dtune);
     m_scmul(tune->dK1, tune->dK1, gain);
     for (i=0; i<tune->n_families; i++) {
@@ -317,7 +317,15 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       context = NULL;
       has_wc = has_wildcards(tune->name[i]);
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
-        K1 = (((QUAD*)context->p_elem)->k1 += tune->dK1->a[i][0]);
+	if (!(K1_param=confirm_parameter("K1", context->type))) {
+	  fprintf(stdout, "error: element %s does not have K1 parameter\n", 
+		  context->name);
+	  fflush(stdout);
+	  exitElegant(1);
+	}
+	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
+	  bombElegant("K1ptr NULL in do_tune_correction", NULL);
+        K1 =  (*K1ptr +=  tune->dK1->a[i][0]);
         if (context->matrix) {
           free_matrices(context->matrix);
           free(context->matrix);
@@ -378,9 +386,12 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem))))
-        fprintf(fp_sl, "%ld %21.15e %s\n", step, ((QUAD*)context->p_elem)->k1, tune->name[i]);
-    }    
+      while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
+	  bombElegant("K1ptr NULL in do_tune_correction", NULL);
+	fprintf(fp_sl, "%ld %21.15e %s\n", step, *K1ptr, tune->name[i]);
+      }
+    }
     fflush(fp_sl);
   }
 

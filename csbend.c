@@ -251,10 +251,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       TRACKING_CONTEXT tcontext;
 
       getTrackingContext(&tcontext);
-      printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
-             
+      if (tcontext.elementOccurrence>0) {
+	printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
+      }
+      
       if (csbend->refTrajectoryChange && csbend->refKicks) {
-        free_czarray_2d((void**)csbend->refTrajectoryChange, refTrajectoryPoints, 5);
+        free_czarray_2d((void**)csbend->refTrajectoryChange, csbend->refKicks, 5);
         csbend->refTrajectoryChange = NULL;
         csbend->refKicks = 0;
       }
@@ -266,23 +268,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       
       csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->n_kicks, 5);
       refTrajectoryPoints = csbend->n_kicks;
-      /* This forces us into the next branch on the next call to this routine */
       csbend0.refLength = csbend0.length;
       csbend0.refAngle = csbend0.angle;
       csbend0.refKicks = csbend0.n_kicks;
+      /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
+      setTrackingContext("csbend0", 0, T_CSBEND, "none");
       track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
-      /*
-      if (1) {
-        long i, j;
-        for (i=0; i<csbend->n_kicks; i++) {
-          for (j=0; j<5; j++) 
-            printf("%15.10le  ", csbend->refTrajectoryChange[i][j]);
-          printf("\n");
-        }
-      }
-      */
 
       csbend->refKicks = csbend->n_kicks;
       csbend->refLength = csbend->length;

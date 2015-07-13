@@ -688,7 +688,8 @@ char **argv;
       run_conditions.print_statistics = print_statistics;
       run_conditions.combine_bunch_statistics = combine_bunch_statistics;
       run_conditions.wrap_around = wrap_around;
-      run_conditions.show_element_timing = show_element_timing;
+      run_conditions.showElementTiming = show_element_timing;
+      run_conditions.monitorMemoryUsage = monitor_memory_usage;
       if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
@@ -1148,6 +1149,7 @@ char **argv;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
+      show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
@@ -1261,6 +1263,7 @@ char **argv;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
+      show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
@@ -1515,6 +1518,7 @@ char **argv;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
+      show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
@@ -1603,6 +1607,7 @@ char **argv;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
+      show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
@@ -1682,7 +1687,7 @@ char **argv;
     case RAMP_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede ramp_elements", NULL);
-      addRampElements(&(run_conditions.rampData), &namelist_text, beamline);
+      addRampElements(&(run_conditions.rampData), &namelist_text, beamline, &run_conditions);
       break;
     default:
       fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

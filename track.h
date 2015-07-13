@@ -417,6 +417,8 @@ typedef struct {
     double *unperturbedValue;    /* value without modulation */
     long *startPass, *endPass;
     double *startValue, *endValue, *exponent;
+    char **record;
+    FILE **fpRecord;
   } RAMP_DATA;
 
 
@@ -427,7 +429,7 @@ typedef struct {
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No;
-    long show_element_timing;
+    long showElementTiming, monitorMemoryUsage;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
@@ -3124,6 +3126,7 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
 extern void resetElementTiming();
 extern void reportElementTiming();
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
+extern void setTrackingContext(char *name, long occurence, long type, char *rootname);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
@@ -3969,7 +3972,7 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
 long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long i_pass);
 void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run);
 
-void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run);
 long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPass);
 
 #if USE_MPI

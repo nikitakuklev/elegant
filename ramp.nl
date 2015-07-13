@@ -24,5 +24,6 @@
     STRING before = NULL;
     STRING after = NULL;
     long verbose = 0;
+    STRING record = NULL;
 #end
 

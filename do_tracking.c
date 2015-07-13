@@ -196,6 +196,7 @@ long do_tracking(
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
   int myid = 0, active = 1, lostSinceSeqMode = 0, needSort = 0;
+  long memoryBefore, memoryAfter;
 #ifdef SORT
   int nToTrackAtLastSort;
 #endif
@@ -639,8 +640,10 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
-      if (run->show_element_timing)
+      if (run->showElementTiming)
         tStart = getTimeInSecs();
+      if (run->monitorMemoryUsage)
+	memoryBefore = memoryUsage();
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 1\n");
 #endif
@@ -2016,11 +2019,17 @@ long do_tracking(
       printMessageAndTime(stdout, "do_tracking checkpoint 16.5\n");
 #endif
       
-      if (run->show_element_timing && last_type>=0 && last_type<=N_TYPES) {
+      if (run->showElementTiming && last_type>=0 && last_type<=N_TYPES) {
         timeCounter[last_type] += getTimeInSecs() - tStart;
         runCounter[last_type] += 1;
       }
-
+      if (run->monitorMemoryUsage) {
+	if ((memoryAfter = memoryUsage())>memoryBefore) {
+	  printf("Memory usage increased by %ld kB in %s %s#%ld, pass %ld\n",
+		 memoryAfter-memoryBefore, entity_name[last_type], eptrPred->name, eptrPred->occurence, i_pass);
+	  fflush(stdout);
+	}
+      }
       } /* end of the while loop */
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 17\n");
@@ -3214,6 +3223,27 @@ void getTrackingContext(TRACKING_CONTEXT *trackingContext0)
   memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
 }
 
+void setTrackingContext(char *name, long occurence, long type, char *rootname) 
+{
+#if USE_MPI
+  trackingContext.myid = myid;
+#endif
+  trackingContext.sliceAnalysis = NULL;
+  trackingContext.zStart = 0;
+  trackingContext.zEnd = 0;
+  trackingContext.step = 0;
+  if (name)
+    strncpy(trackingContext.elementName, name, CONTEXT_BUFSIZE);
+  else
+    trackingContext.elementName[0] = 0;
+  trackingContext.elementOccurrence = occurence;
+  trackingContext.elementType = type;
+  if (rootname)
+    strncpy(trackingContext.rootname, rootname, CONTEXT_BUFSIZE);
+  else
+    trackingContext.rootname[0] = 0;
+}
+ 
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z)
 /* subtract off <s> prior to using a user-supplied matrix to avoid possible

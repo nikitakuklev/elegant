@@ -11,7 +11,7 @@
 #include "track.h"
 #include "ramp.h"
 
-void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
+void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beamline, RUN *run)
 {
   long n_items, n_added, firstIndexInGroup;
   ELEMENT_LIST *context;
@@ -99,6 +99,8 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
     rampData->startValue       = SDDS_Realloc(rampData->startValue, sizeof(*rampData->startValue)*(n_items+1));
     rampData->endValue         = SDDS_Realloc(rampData->endValue, sizeof(*rampData->endValue)*(n_items+1));
     rampData->exponent         = SDDS_Realloc(rampData->exponent, sizeof(*rampData->exponent)*(n_items+1));
+    rampData->record           = SDDS_Realloc(rampData->record, sizeof(*rampData->record)*(n_items+1));
+    rampData->fpRecord         = SDDS_Realloc(rampData->fpRecord, sizeof(*rampData->fpRecord)*(n_items+1));
 
     rampData->element[n_items] = context;
     rampData->flags[n_items] = (multiplicative?MULTIPLICATIVE_RAMP:0) + (differential?DIFFERENTIAL_RAMP:0) 
@@ -108,6 +110,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
     rampData->startValue[n_items] = start_value;
     rampData->endValue[n_items] = end_value;
     rampData->exponent[n_items] = exponent;
+    rampData->fpRecord[n_items] = NULL;
     
     if ((rampData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
       fprintf(stdout, "error: cannot ramp %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
@@ -123,6 +126,24 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
               context->name, item);
       fflush(stdout);
     }
+
+    if (record 
+#if USE_MPI
+        && myid==0
+#endif
+        ) {
+      rampData->record[n_items] = compose_filename(record, run->rootname);
+      record = NULL;
+      if (!(rampData->fpRecord[n_items] = fopen(rampData->record[n_items], "w")))
+        SDDS_Bomb("problem setting up ramp record file");
+      fprintf(rampData->fpRecord[n_items], "SDDS1\n");
+      fprintf(rampData->fpRecord[n_items], "&column name=Pass, type=long &end\n");
+      fprintf(rampData->fpRecord[n_items], "&column name=Amplitude, type=double &end\n");
+      fprintf(rampData->fpRecord[n_items], "&column name=OriginalValue, type=double &end\n");
+      fprintf(rampData->fpRecord[n_items], "&column name=NewValue, type=double &end\n");
+      fprintf(rampData->fpRecord[n_items], "&data mode=ascii, no_row_counts=1 &end\n");
+    }
+    
     rampData->nItems = ++n_items;
     n_added++;
     if (firstIndexInGroup==-1)
@@ -130,7 +151,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   }
 
   if (!n_added) {
-    fprintf(stdout, "error: no match given modulation\n");
+    fprintf(stdout, "error: no match given ramp\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -191,6 +212,16 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
       break;
     default:
       break;
+    }
+    
+    if (rampData->fpRecord[iMod] 
+#if USE_MPI
+        && myid==0
+#endif
+        ) {
+      fprintf(rampData->fpRecord[iMod], "%ld %le %le %le\n",
+              iPass, modulation, rampData->unperturbedValue[iMod], value);
+      fflush(rampData->fpRecord[iMod]);
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 

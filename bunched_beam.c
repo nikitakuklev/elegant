@@ -622,7 +622,7 @@ long track_beam(
 #endif
       printMessageAndTime(stdout, "Calling do_tracking\n");
 #endif
-  if (run->show_element_timing)
+  if (run->showElementTiming)
     resetElementTiming();
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
@@ -639,7 +639,7 @@ long track_beam(
 #ifdef DEBUG
   printMessageAndTime(stdout, "Returned from do_tracking\n");
 #endif
-  if (run->show_element_timing)
+  if (run->showElementTiming)
     reportElementTiming();
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM)) {
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
