@@ -660,6 +660,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   z = 0;
   
   elem.end_pos = eptr->end_pos;
+  elem.name = NULL;
+  elem.occurence = 0;
+  elem.type = eptr->type;
   for (slice=0; slice<nSlices; slice++) {
     post_xkick = post_ykick = 0; /* use this to handle pre- and post-KQUAD kicks */
     switch (eptr->type) {
