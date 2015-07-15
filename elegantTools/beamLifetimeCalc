@@ -187,8 +187,14 @@ exec oagwish "$0" "$@"
 
 if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+#set auto_path [linsert $auto_path 0  /home/oxygen/SOLIDAY/oag/apps/src/tcltklib]
 
 set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: shang $"
+set apsttk 0
+if {$tcl_platform(os) == "Darwin"} {
+    #This could be set for all operating systems if desired
+    set apsttk 1
+}
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -204,8 +210,8 @@ if [llength $args]>1 {
 }
 
 set status Working.
-APSScrolledStatus .status -parent .userFrame -textVariable status -width 90 \
-  -height 10
+APSScrolledStatus .status -parent .userFrame -textVariable status -width 10 \
+  -height 10 -packOption "-fill x"
 update
 
 proc setStatus {text} {
@@ -313,19 +319,30 @@ set touschekIntegralFile $applicationDir/DTouschek.sdds
 set touschek 1
 set ZAPTouschek 0
 
+if {$apsttk == 0} {
+    set tabwidth 900
+    set tabheight 400
+} else {
+    set tabwidth 750
+    set tabheight 350
+    if {$tcl_platform(os) == "Darwin"} {
+	set tabwidth 750
+	set tabheight 400
+    }
+}
 set widgetList [APSTabFrame .parameters -parent .userFrame -label "" \
                           -labelList {"Gas Input" "Calc. Options" \
                                         "Lattice Input" \
                                         "Beam Inputs" \
                                         "Variation" \
                                         "Loss Rates and Lifetimes" } \
-                          -width 900 -height 400]
+                          -width $tabwidth -height $tabheight]
 
 set widget [lindex $widgetList 0]
 
 APSFrame .input -parent $widget -label "Inputs"
 set w $widget.input.frame
-frame $w.pt
+ttk::frame $w.pt
 pack $w.pt
 APSLabeledEntry .pres -parent $w.pt -label "Pressure (nT):" \
   -textVariable pressure -width 8 \
@@ -356,7 +373,7 @@ bind $w.presFrac.frame.entry4 <Return> "AdjustPressureFraction 4"
 bind $w.presFrac.frame.entry5 <Return> "AdjustPressureFraction 5"
 APSButton .presDefaults -parent $w -text "Revert to gas defaults" -packOption "-side top" \
     -command {SetGasDefaults;RecomputeOutputs} \
-    -contextHelp "Sets gas component and pressure fraction values back to defaults."
+    -contextHelp "Sets gas component and pressure fraction values back to defaults." -width ""
 
 foreach widget {.pt.pres .pt.temperature} {
     bind $w$widget.entry <Return> RecomputeOutputs
@@ -409,7 +426,7 @@ foreach widget {.betaAve .acceptance .energy } {
 
 APSButton .loadlattice -parent $w -text "Load parameters from lattice file" \
     -command "LoadLatticeParameters" -packOption "-side bottom" -contextHelp \
-    "Loads lattice parameters from the lattice file."
+    "Loads lattice parameters from the lattice file." -width ""
 
 set widget [lindex $widgetList 3]
 APSFrame .inputl -parent $widget -label "Inputs" -packOption "-side left -anchor n"
@@ -435,7 +452,7 @@ foreach widget1 {emit coupling energySpread enAperture effEnAperture alpha uo ha
     bind $w.$widget1.entry <Return> RecomputeOutputs
 }
 
-APSFrame .inputr -parent $widget -label "Inputs" -packOption "-side right -anchor n"
+APSFrame .inputr -parent $widget -label "Inputs" -packOption "-side left -anchor n"
 set w $widget.inputr.frame
 APSLabeledEntry .rfvoltage -parent $w -label "Rf Voltage (MV):" -textVariable rfVoltage -width 22 \
   -contextHelp "Enter the rf voltage."
@@ -457,7 +474,7 @@ APSRadioButtonFrame .useHaissinski -parent $w -label "Haissinski eqn? " \
     -contextHelp "If Yes, then the bunch length is computed by solving the Haissinski equation with Emery's haissinski program.  If No, then the user-supplied bunch length factor is applied."
 APSButton .setHaissinski -parent $w -text "Set solver parameters..." \
     -command HaissinskiParameterDialog -packOption "-side top" \
-    -contextHelp "Pops up a dialog box for parameters of the Haissinski equation solver"
+    -contextHelp "Pops up a dialog box for parameters of the Haissinski equation solver" -width ""
 APSLabeledEntry .impedanceZn -parent $w -label "Z/n (Ohms): " \
   -textVariable broadBandImpedanceZn -width 22 -contextHelp \
   "Enter the inductive part (Z/n) broad-band impedance for use in Haissinski equation."
@@ -498,9 +515,9 @@ APSLabeledEntry .vend -parent $w -label "End:" -width 8 \
 APSLabeledEntry .vpoints -parent $w -label "Points:" -width 8 \
   -textVariable varyPoints -contextHelp "Enter the number of points to compute."
 APSButton .run -parent $w -text Run -command \
-  RunVariation -contextHelp "Run the variation specified by the above settings.  You must give a file under Output."
+  RunVariation -contextHelp "Run the variation specified by the above settings.  You must give a file under Output." -width ""
 APSButton .runread -parent $w -text "Run w/file..." -command \
-  RunVariationFromFile -contextHelp "Varies lifetime parameters using data from an SDDS file.  The quantities must have the same names as appear in the output files from this application."
+  RunVariationFromFile -contextHelp "Varies lifetime parameters using data from an SDDS file.  The quantities must have the same names as appear in the output files from this application." -width ""
 APSCheckButtonFrame .merge -parent $w -label ""  -orientation horizontal -contextHelp \
   "Select options for variation.  Merge means merge the variation input file into the output file when done." \
   -variableList {mergeAfterVariation} -buttonList {Merge} 
@@ -516,11 +533,11 @@ APSLabeledEntry .file -parent $w -width 80 -label "File:" -commandButton 1 \
   -textVariable outputFile -contextHelp \
   "Enter the name of an SDDS file to which computations will be written."
 APSButton .clearfile -parent $w -text "Clear file" -command ClearOutputFile \
-  -contextHelp "Clears the filename, closing any existing file."
+  -contextHelp "Clears the filename, closing any existing file." -width ""
 APSButton .startfile -parent $w -text "Start file" -command StartOutputFile \
-  -contextHelp "Begins logging of data to the named file."
+  -contextHelp "Begins logging of data to the named file." -width ""
 APSButton .quickPlot -parent $w -text "quickSDDSplot" -command {RunQuickSDDSPlot $outputFile} \
-  -contextHelp "Launches quickSDDSplot utility to plot the named file."
+  -contextHelp "Launches quickSDDSplot utility to plot the named file." -width ""
 
 
 set widget [lindex $widgetList 5] 
