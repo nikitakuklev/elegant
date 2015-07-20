@@ -165,9 +165,9 @@ void setup_aperture_search(
     sprintf(description, "%s aperture search", search_mode[mode_code]);
     SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
                             description, run->runfile, run->lattice, slope_mode?parameterp_definition:parameter_definition, 
-                            N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
+                            N_PARAMETERS-(mode_code>=ONE_LINE_MODE && mode_code<=LINE_MODE?0:1),
                             slope_mode?columnp_definition:column_definition, 
-			    N_COLUMNS - (mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:3),
+			    N_COLUMNS - (mode_code>=ONE_LINE_MODE && mode_code<=LINE_MODE?0:3),
 			    "setup_aperture_search", SDDS_EOS_NEWFILE);
     if (control->n_elements_to_vary) 
       if (!SDDS_DefineSimpleParameters(&SDDS_aperture, control->n_elements_to_vary,
