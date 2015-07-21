@@ -354,7 +354,9 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
             tmp = M; M = Mtot; Mtot = tmp;
           }
           free_matrices(Mtot); free(Mtot); Mtot = NULL;
-          free_matrices(Mfringe); free(Mfringe); Mfringe = NULL;
+          if (Mfringe) {
+            free_matrices(Mfringe); free(Mfringe); Mfringe = NULL;
+          }
         }
       }
     }
