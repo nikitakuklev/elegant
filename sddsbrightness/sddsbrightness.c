@@ -609,15 +609,15 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
       !SDDS_DefineSimpleColumn(SDDSout, "K", NULL, SDDS_DOUBLE))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineParameter(SDDSout,"current",NULL, "mA", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout,"EnergySpread",NULL, NULL, NULL,NULL,SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout,"EnergySpread","$gs$bd$n$r",NULL, NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmax",NULL, "mm", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmay",NULL, "mm", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmaxprime",NULL,"mrad", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmayprime",NULL,"mrad", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"period",NULL, "m", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"numberOfPeriods",NULL, NULL, NULL,NULL,SDDS_LONG, 0)<0 ||
-      SDDS_DefineParameter(SDDSout,"emitx","m",NULL,NULL,NULL,SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout,"emity","m",NULL,NULL,NULL,SDDS_DOUBLE, 0)<0 )
+      SDDS_DefineParameter(SDDSout,"emitx","$ge$r$bx$n","m",NULL,NULL,SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout,"emity","$ge$r$by$n","m",NULL,NULL,SDDS_DOUBLE, 0)<0 )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (h=1; h<2*harmonics; h+=2) {
     sprintf(buffer, "Brightness%ld", h);
