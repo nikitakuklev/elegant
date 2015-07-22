@@ -110,7 +110,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
         tfbp->tReferenceSet = 1;
       }
       position = tfbp->referenceFrequency*(position - tfbp->tReference);
-      position = (position-(long)position)*PIx2;
+      position = (position-(long)position);
+      if (position>0.5)
+        position -= 1;
+      position *= PIx2;
 #ifdef DEBUG
       printf("positon ==> %le\n", position);
 #endif
