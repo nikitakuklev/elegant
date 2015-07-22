@@ -97,7 +97,25 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
     if (np>0)
       position = sum/np;
 #endif
-
+    if (tfbp->iPlane==4) {
+      double beta;
+      beta = Po/sqrt(Po*Po+1);
+      position /= beta*c_mks;
+#ifdef DEBUG
+      printf("position = %le, tRS=%ld, tR=%le\n",
+             position, tfbp->tReferenceSet, tfbp->tReference);
+#endif
+      if (!tfbp->tReferenceSet) {
+        tfbp->tReference = position;
+        tfbp->tReferenceSet = 1;
+      }
+      position = tfbp->referenceFrequency*(position - tfbp->tReference);
+      position = (position-(long)position)*PIx2;
+#ifdef DEBUG
+      printf("positon ==> %le\n", position);
+#endif
+    }
+    
     if (tfbp->rmsNoise) {
       double dposition;
       dposition = gauss_rn_lim(0.0, tfbp->rmsNoise, 2, random_3);
@@ -163,8 +181,13 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
     tfbp->iPlane = 2;
   else if (strcmp(tfbp->plane, "delta")==0 || strcmp(tfbp->plane, "DELTA")==0) 
     tfbp->iPlane = 5;
+  else if (strcmp(tfbp->plane, "time")==0 || strcmp(tfbp->plane, "TIME")==0) {
+    tfbp->iPlane = 4;
+    if (tfbp->referenceFrequency<=0)
+      bombElegant("PLANE parameter set to \"time\", but REFERENCE_FREQUENCY is non-positive", NULL);
+  }
   else
-    bombElegant("PLANE parameter for TFBPICKUP must be x, y, or delta", NULL);
+    bombElegant("PLANE parameter for TFBPICKUP must be x, y, delta, or time", NULL);
 
   if (tfbp->data && tfbp->nBunches) {
     for (i=0; i<tfbp->nBunches; i++)
@@ -211,8 +234,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (tfbd->initialized==0)
     initializeTransverseFeedbackDriver(tfbd, beamline, nPasses*nBuckets, rootname);
 
-  if (tfbd->pickup->iPlane==5 && !tfbd->longitudinal)
-    bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta, but driver not working on longitudinal plane", NULL);
+  if ((tfbd->pickup->iPlane==5 || tfbd->pickup->iPlane==4) && !tfbd->longitudinal)
+    bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta or time, but driver not working on longitudinal plane", NULL);
 
   if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
     bombElegantVA("TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);

@@ -2264,7 +2264,7 @@ TFBPICKUP tfbPickup_example;
 
 PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.ID), NULL, 0.0, 0, "System identifier"},
-   {"PLANE", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.plane), "x", 0.0, 0, "\"x\" or \"y\""},
+   {"PLANE", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.plane), "x", 0.0, 0, "\"x\", \"y\", \"delta\", or \"phase\""},
    {"RMS_NOISE", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.rmsNoise), NULL, 0.0, 0, "RMS noise to add to position readings."},
    {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[0]), NULL, 0.0, 0, "Filter coefficient"},
    {"A1", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[1]), NULL, 0.0, 0, "Filter coefficient"},
@@ -2283,6 +2283,7 @@ PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.updateInterval), NULL, 0.0, 0, "Interval in turns for sampling data and updating filter output."},
+   {"REFERENCE_FREQUENCY", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.referenceFrequency), NULL, 0.0, 0, "Reference frequency for computing phase offsets."},
 } ;
 
 TFBDRIVER tfbDriver_example;
