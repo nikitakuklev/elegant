@@ -58,6 +58,7 @@ Here is a summary of what's changed since release 28.0:
 \begin{itemize}
 \item The \verb|ramp_elements| and \verb|modulate_elements| commands now has the ability to write a record of their
   output values.
+\item The \verb|run_setup| command now has options, intended primarily for developers, to turn on memory usage and executing time monitoring during tracking.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -3661,6 +3662,8 @@ in \verb|run_setup|.
     long default_order = 2;
     long concat_order = 0;
     long print_statistics = 0;
+    long show_element_timing = 0;
+    long monitor_memory_usage = 0;
     long random_number_seed = 987654321;
     long correction_iterations = 1;
     double p_central = 0.0;
@@ -3729,6 +3732,8 @@ used for elements having matrices.
 concatenation used.
 \item \verb|print_statistics| --- A flag indicating whether to print
 information as each element is tracked.
+\item \verb|show_element_timing| --- A flag indicating whether to collect and report execution time statistics binned by element type.
+\item \verb|monitor_memory_usage| --- A flag indicating whether to monitor memory usage during tracking to detect memory leaks.
 \item \verb|random_number_seed| --- A seed for the random number generators.  If zero, a seed will be generated from the system clock.
 \item \verb|correction_iterations| --- Number of iterations of tune and chromaticity correction.
 \item \verb|p_central| --- Central momentum of the beamline, about which expansions are done.
