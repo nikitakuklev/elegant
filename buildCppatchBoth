@@ -1,5 +1,10 @@
 #!/bin/bash 
 
+if [[ $# -ne 1 ]] ; then
+    echo "usage: buildCppatchBoth <cppatchMessage>"
+    exit 1
+fi
+
 if [[ "$1" == "" ]] ; then
     echo "usage: buildCppatchBoth <cppatchMessage>"
     exit 1
