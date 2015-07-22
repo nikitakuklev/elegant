@@ -45,24 +45,25 @@ Here is a summary of what's changed since release 28.0:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item A bug was fixed that caused a crash when a 1-line aperture search was performed. This was reported by Guohui Wei (JLab).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item 
+\item The \verb|TFBDRIVER| element now has the ability to measure the beam phase for use in longitudinal feedback.
+  Previously, only momentum-based input was available for longitudinal feedback.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|ramp_elements| and \verb|modulate_elements| commands now has the ability to write a record of their
+  output values.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item Fixed bug that resulted in inconsistent fiducialization across processors when the beam was nonuniform across processors
-  and the \verb|start_from_centroid| flag was given to the \verb|correct| command.
-\item Now issue warnings if \verb|CSBEND| must be replaced by a \verb|EDRIFT| or \verb|KQUAD| because $\rho>10^6$m.
+\item None.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -2429,6 +2430,7 @@ number of the occurrence of the named element from which to start.
     STRING before = NULL;
     STRING after = NULL;
     long verbose = 0;
+    STRING record = NULL;
 &end
 \end{verbatim}
 
@@ -2479,6 +2481,8 @@ is modulated.
  that precede the named element in the beamline. 
 \item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
         made.  Use for debugging only, since otherwise it may slow the simulation.
+\item \verb|record| --- Gives a possibly incomplete filename to which will be written a record of the values of
+  the modulation.
 \end{itemize}
 
 %\begin{latexonly}
@@ -3284,7 +3288,7 @@ equal, the range of the parameter is unlimited.
 \end{itemize}
 
 \begin{verbatim}
-&modulate_elements
+&ramp_elements
     STRING name = NULL;
     STRING item = NULL;
     STRING type = NULL;
@@ -3302,6 +3306,7 @@ equal, the range of the parameter is unlimited.
     STRING before = NULL;
     STRING after = NULL;
     long verbose = 0;
+    STRING record = NULL;
 &end
 \end{verbatim}
 
@@ -3349,6 +3354,8 @@ Note that $i=0$ on the first pass.
  that precede the named element in the beamline. 
 \item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
         made.  Use for debugging only, since otherwise it may slow the simulation.
+\item \verb|record| --- Gives a possibly incomplete filename to which will be written a record of the values of
+  the ramp.
 \end{itemize}
 
 %\begin{latexonly}
