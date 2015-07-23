@@ -56,25 +56,42 @@ Here is a summary of what's changed since release 28.0:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ramp_elements| and \verb|modulate_elements| commands now has the ability to write a record of their
+\item The \verb|ramp_elements| and \verb|modulate_elements| commands now have the ability to write a record of their
   output values.
 \item The \verb|run_setup| command now has options, intended primarily for developers, to turn on memory usage and executing time monitoring during tracking.
+\item The units given for loss rate the output files from \verb|touschek_scatter| were incorrect and were fixed. Results were not affected. (A. Xiao, ANL)
+\item The \verb|tune_footprint| command was improved in several ways. It is now possible to ignore half-integer resonances.
+  The upper and lower bounds of the chromatic tune footprints are now available for optimization.
+  It's now possible to turn off either chromatic or amplitude tune footprint deterimination.
+\item The \verb|optimization_setup| command allows suppressing particle tracking in order to improve performance in some unusual cases.
+\item The \verb|correct_tunes| command can now utilize any element that has the \verb|K1| parameter.
+\item The \verb|chromaticity| command can now utilize any element that has the \verb|K2| parameter.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item None.
+\item Fixed a bug that affected tracking when orbit correction was used, \verb|start_from_centroid=1|, and particle distribution
+  was not random across processors.
+\item Warnings about $\rho>10^{6}$ m are now issued by the parallel version, as for the serial version.
+\item Memory usage logging to \verb|WATCH| output files now sums the memory across all cores, rather than just the master core.
+\item A memory leak was fixed in the \verb|ZTRANSVERSE| element that sometimes caused the program to crash. This was reported by
+  R. Lindberg (ANL).
+\item The output of the beam charge in the \verb|ZLONGIT| wake output file was corrected; previously, it only showed the charge on 
+  one core.
+\item The \verb|frequency_map| command now provides an estimate of the time needed to complete.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The program \verb|sddsbunchingfactor| is now part of the distribution.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
+\item The \verb|REFERENCE_CORRECTION| feature of the \verb|CSBEND| element is ignored while performing calculations related
+  to the \verb|moments_output| command.
 \item Setting \verb|CHANGE_T=1| on \verb|RFCA| and \verb|RFCW| elements can give invalid results when tracking beams with very 
   large time spread compared to the bunch length.
 \item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, and tune spreads
@@ -4267,8 +4284,11 @@ However, it will not work for orbit correction unless the user also sets \verb|u
     long ndelta = 21,
     long verbosity = 1,
     long quadratic_spacing = 1,
+    long compute_diffusion = 1;
     long diffusion_rate_limit = -5,
     long immediate = 0
+    long filtered_output = 1;
+    long ignore_half_integer = 0;
 &end
 \end{verbatim}
 
@@ -4283,13 +4303,14 @@ However, it will not work for orbit correction unless the user also sets \verb|u
  is some betatron oscillation from which to get the tune.                      
 \item \verb|delta_min|, \verb|delta_max| --- Limits of grid of initial $\delta$ coordinates
 for tracking.  Not that particles are not centered around the dispersive closed orbit.
-\item \verb|nx| --- Number of values of x coordinate in the grid.
-\item \verb|ny| --- Number of values of y coordinate in the grid.
-\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid.
+\item \verb|nx| --- Number of values of x coordinate in the grid. If zero, amplitude footprint is not determined.
+\item \verb|ny| --- Number of values of y coordinate in the grid. If zero, amplitude footprint is not determined.
+\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid. If zero, chromatic footprint is not determined.
 \item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
 \item \verb|quadratic_spacing| --- If nonzero, points are spaced ``quadratically,'' which actually means that
   their squares are spaced linearly. It is highly recommended to keep this turned on, since otherwise problems determining the
   tune when $x \approx 0$ may result in invalid results.
+\item \verb|compute_diffusion| --- If nonzero, diffusion is computed, which requires tracking twice as many turns.
 \item \verb|diffusion_rate_limit| --- Value of the diffusion rate $d_r$ above which the particle is considered unstable,
 where
 \begin{equation}
@@ -4298,14 +4319,20 @@ where
 where $N$ is the number of turns tracked to determine each tune (equal to half of \verb|n_passes|).
 \item \verb|immediate| --- If nonzero, the calculations take place immediately, instead of only during optimization.
   If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to zero.
+\item \verb|filtered_output| --- If nonzero, output is only provided for particles inside the stable footprint.
+\item \verb|ignore_half_integer| --- If nonzero, half-integer resonances are ignored in determining the tune footprint.
 \end{itemize}
 
 This command makes available the following quantities for optimization. All quantities are limited by 
 particle survival, crossing of integer and half-integer resonances,  and the diffusion rate limit.
 \begin{itemize}
 \item \verb|FP.nuxSpreadChrom|,\verb|FP.nuySpreadChrom| --- Spread in tunes due to chromaticity.
+\item \verb|FP.nuxChromMin|, \verb|FP.nuxChromMax|, \verb|FP.nuyChromMin|, \verb|FP.nuyChromMax| --- Minimum and maximum
+  values of the x and y tunes from chromatic tune footprint.
 \item \verb|FP.deltaLimit| --- Minimum of absolute values of positive and negative $\delta$ limits. 
 \item \verb|FP.nuxSpreadAmp|, \verb|FP.nuySpreadAmp| --- Spread in tunes due to amplitude.
+\item \verb|FP.nuxAmpMin|, \verb|FP.nuxAmpMax|, \verb|FP.nuyAmpMin|, \verb|FP.nuyAmpMax| --- Minimum and maximum
+  values of the x and y tunes from amplitude tune footprint.
 \item \verb|FP.xSpread|, \verb|FP.ySpread| --- Spread in x and y values.
 \item \verb|FP.xyArea| --- Area of the limited x-y region, comparable to a dynamic acceptance. However, this area is determined from a
 fixed grid and is not suitabl to optimization by itself.
@@ -4884,6 +4911,7 @@ given with no arguments, which should be sufficient documentation.
 \item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator brightness curves.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsbs} --- Computes bending magnet spectra.
+\item {\tt sddsbunchingfactor} --- Computes bunching factor vs frequency from phase space data.
 \item {\tt sddsemitproc} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
