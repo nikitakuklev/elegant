@@ -295,6 +295,7 @@ set dampingTime 4.73
 set alpha 2.28e-4
 set Uo 5.45
 set harmonic 1296
+set pFactor 0
 set rfVoltage 9.5
 set coupling 0.01
 set energySpread 9.6e-4
@@ -448,6 +449,8 @@ APSLabeledEntry .uo -parent $w -label "Energy loss (MV/turn):" -textVariable Uo 
   -contextHelp "Enter the energy loss per turn."
 APSLabeledEntry .harmonic -parent $w -label "Harmonic number:" -textVariable harmonic -width 22 \
   -contextHelp "Enter the harmonic number."
+APSLabeledEntry .polarization -parent $w -label "Polarization Factor:" -textVariable pFactor -width 22 \
+  -contextHelp "Enter the beam polarization factor."
 foreach widget1 {emit coupling energySpread enAperture effEnAperture alpha uo harmonic } {
     bind $w.$widget1.entry <Return> RecomputeOutputs
 }
@@ -819,7 +822,7 @@ proc RecomputeOutputs {args} {
     global rateEN rateEE rateIN rateIE rateUser rateTouschek rate rateQuantum
     global outputFile outputFID touschek
     global emittance coupling energySpread bunchLength bunchCurrent revolutionFrequency latticeFile
-    global dampingTime bunchLengthFactor dampingTimeH dampingTimeV aperturePlane
+    global dampingTime bunchLengthFactor dampingTimeH dampingTimeV aperturePlane pFactor
     global effectiveEnergyAperture Uo rfVoltage alpha harmonic syncFrequency
     global touschekIntegralFile ZAPTouschek
     global useHaissinski broadBandImpedanceZn broadBandImpedanceR
@@ -1029,13 +1032,24 @@ proc RecomputeOutputs {args} {
         set tau$type [expr 1./[subst \$rate$type]]
     }
     if $touschek {
+	if [expr $pFactor>1] { 
+	    return -code error {beam polarization factor can not be greater than 1}
+	}
+	set root1 LnD[format %03d [expr int($pFactor/0.1)*10]]
+	set root2 LnD[format %03d [expr int($pFactor/0.1)*10+10]]
+	set fac2 [expr $pFactor/0.1-int($pFactor/0.1)]
+	if [expr $pFactor==1] {
+	    set root2 LnD100
+	}
+
         set tauTouschek [APSTouschekLifetime -latticeFile $latticeFile \
                            -touschekIntegralFile $touschekIntegralFile \
                            -emittance $emittance -coupling $coupling \
                            -energySpread $energySpread \
                            -energyAperture $effectiveEnergyAperture \
                            -energy $energy -bunchLength $bunchLength \
-                           -bunchmA $bunchCurrent -revolutionFrequency $revolutionFrequency]
+                           -bunchmA $bunchCurrent -revolutionFrequency $revolutionFrequency \
+			   -root1 $root1 -root2 $root2 -fac2 $fac2]
     } else {
         set tauTouschek 1e10
     }
@@ -1212,7 +1226,7 @@ proc APSTouschekLifetime {args} {
     set revolutionFrequency 271.55e3
     APSStrictParseArguments {latticeFile emittance coupling energySpread energyAperture \
         energy bunchLength touschekIntegralFile \
-        bunchmA revolutionFrequency}
+        bunchmA revolutionFrequency root1 root2 fac2}
 
     if $bunchmA<=0 {
         return 1e10
@@ -1237,11 +1251,13 @@ proc APSTouschekLifetime {args} {
     # catch {exec sdds2stream -parameter=zetaMin,zetaMax  $tmpFile.1 } result
     # setStatus "zeta range: [lindex $result 0] -> [lindex $result 1]"
 
+    set touschekIntegralFile /home/oxygen/XIAOAM/oag/apps/src/elegant/DTouschek.sdds
     exec sddsinterp $touschekIntegralFile \
-      -pipe=out -column=zeta,LnD \
+      -pipe=out -column=zeta,$root1,$root2 \
       -fileValues=$tmpFile.1,column=zeta \
       | sddsxref -pipe $tmpFile.1 -transfer=param,* \
-      | sddsprocess -pipe {-define=column,factor,LnD exp sigmaxp / sigmax / sigmay /} \
+      | sddsprocess -pipe "-define=column,factor,$root1 1 $fac2 - * $root2 $fac2 * + exp sigmaxp / sigmax / sigmay /" \
+      "-def=col,LnD,$root1 1 $fac2 - * $root2 $fac2 * + " \
       | tee $tmpFile.2 \
       | sddsinteg -integrate=factor -versus=s -pipe \
       | sddsxref $tmpFile.2 -pipe -transfer=param,* \
