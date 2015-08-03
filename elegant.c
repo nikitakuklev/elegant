@@ -1854,7 +1854,7 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
         part[i][j] -= offset;
     }
     
-#ifdef USE_MPI
+#if USE_MPI
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
   }
