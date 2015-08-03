@@ -82,10 +82,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 28.1.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, V. Sajaev, R. Soliday, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 28.2.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, V. Sajaev, R. Soliday, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 28.1.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, V. Sajaev, R. Soliday, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 28.2.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, V. Sajaev, R. Soliday, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   time_t timeNow;
   char *timeNowString;
@@ -1078,8 +1078,9 @@ char **argv;
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
-        if (center_on_orbit)
+        if (center_on_orbit) {
           center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
+        }
 	else if (offset_by_orbit)
           offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
         run_matrix_output(&run_conditions, beamline);
@@ -1838,23 +1839,26 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
 {
     double sum, offset;
     long i, j, lim;
-    
-    if (!np)
-        return;
-    
+    double centroid[6];
+
+    compute_centroids(centroid, part, np);
+
     if (center_dp)
-        lim = 5;
+      lim = 5;
     else
-        lim = 4;
+      lim = 4;
     
     for (j=0; j<=lim; j++) {
-        for (i=sum=0; i<np; i++)
-            sum += part[i][j];
-        offset = sum/np - coord[j];
-        for (i=0; i<np; i++)
-            part[i][j] -= offset;
-        }
+      offset = centroid[j] - coord[j];
+      for (i=0; i<np; i++)
+        part[i][j] -= offset;
     }
+    
+#ifdef USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+  }
+
 
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp)
 {
