@@ -1251,7 +1251,6 @@ proc APSTouschekLifetime {args} {
     # catch {exec sdds2stream -parameter=zetaMin,zetaMax  $tmpFile.1 } result
     # setStatus "zeta range: [lindex $result 0] -> [lindex $result 1]"
 
-    set touschekIntegralFile /home/oxygen/XIAOAM/oag/apps/src/elegant/DTouschek.sdds
     exec sddsinterp $touschekIntegralFile \
       -pipe=out -column=zeta,$root1,$root2 \
       -fileValues=$tmpFile.1,column=zeta \
