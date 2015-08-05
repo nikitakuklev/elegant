@@ -4450,6 +4450,9 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item \verb|filename| --- The (incomplete) name of an SDDS file to which the Twiss parameters will be written.
  Recommended value: ``\%s.twi''.
 \item \verb|matched| --- A flag indicating, if set, that the periodic or matched Twiss parameters should be found.
+  If zero, calculations are performed in transport line mode starting from the given initial values of \verb|betax|, \verb|alphax|, etc. 
+  N.B.: This may give different values for the chromaticity even if the initial values are identical to those for a periodic solution.
+  The reason has to do with different assumptions about the initial conditions for particles in a transport line vs a ring.
 \item \verb|output_at_each_step| --- A flag indicating, if set, that output is desired at each step of the simulation.
   If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to a nonzero value.
 \item \verb|output_before_tune_correction| --- A flag indicating, if set, that output is desired both before and after
