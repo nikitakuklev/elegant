@@ -2282,8 +2282,11 @@ double optimization_function(double *value, long *invalid)
 	    balanceTerms = 0;
 	    fprintf(stdout, "\nOptimization terms balanced.\n");
 	    fflush(stdout);
-	  }
-        
+	  } else {
+            for (i=0; i<optimization_data->terms; i++)
+              optimization_data->termWeight[i] = optimization_data->usersTermWeight[i];
+          }
+
 	  /* compute and return quantity to be optimized */
 	  if (optimization_data->terms) {
 	    long i;
