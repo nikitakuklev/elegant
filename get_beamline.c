@@ -541,31 +541,30 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   hdestroy(occurence_htab);
   free(occurenceCounter);
 
-/*
-      if (eptr->occurence==1 && eptr->type==T_FTABLE)  {
-        initializeFTable((FTABLE*)eptr->p_elem);
-        nBx = ((FTABLE*)eptr->p_elem)->Bx;
-        nBy = ((FTABLE*)eptr->p_elem)->By;
-        nBz = ((FTABLE*)eptr->p_elem)->Bz;
-        ftable_length = ((FTABLE*)eptr->p_elem)->length;
-      }
+
+  eptr = &(lptr->elem);
+  while (eptr) {
+    if (eptr->occurence==1 && eptr->type==T_FTABLE)  {
+      initializeFTable((FTABLE*)eptr->p_elem);
+      nBx = ((FTABLE*)eptr->p_elem)->Bx;
+      nBy = ((FTABLE*)eptr->p_elem)->By;
+      nBz = ((FTABLE*)eptr->p_elem)->Bz;
+      ftable_length = ((FTABLE*)eptr->p_elem)->length;
       
-          eptr1 = eptr->succ;
-          while (eptr1) {
-            if (strcmp(eptr->name, eptr1->name)==0) {
-              if (eptr1->type==T_FTABLE)  {
-                ((FTABLE*)eptr1->p_elem)->initialized=1;
-                ((FTABLE*)eptr1->p_elem)->length=ftable_length;
-                ((FTABLE*)eptr1->p_elem)->Bx = nBx;
-                ((FTABLE*)eptr1->p_elem)->By = nBy;
-                ((FTABLE*)eptr1->p_elem)->Bz = nBz;
-              }
-              eptr1->occurence = ++occurence;
-            }
-            eptr1 = eptr1->succ;
-          }
+      eptr1 = eptr->succ;
+      while (eptr1) {
+        if (eptr1->type==T_FTABLE && eptr1->occurence>1 && strcmp(eptr->name, eptr1->name)==0) {
+          ((FTABLE*)eptr1->p_elem)->initialized=1;
+          ((FTABLE*)eptr1->p_elem)->length=ftable_length;
+          ((FTABLE*)eptr1->p_elem)->Bx = nBx;
+          ((FTABLE*)eptr1->p_elem)->By = nBy;
+          ((FTABLE*)eptr1->p_elem)->Bz = nBz;
         }
-*/
+        eptr1 = eptr1->succ;
+      }
+    }
+    eptr = eptr->succ;
+  }
 
   if (echo) {
     fprintf(stdout, "Step 2 done.\n");
