@@ -323,6 +323,7 @@ Pelegant:
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
 Selegant:
+	$(RM) O.$(HOST_ARCH)/link_date.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
@@ -330,6 +331,7 @@ Selegant:
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
 all buildInstall:
+	$(RM) O.$(HOST_ARCH)/link_date.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
@@ -338,6 +340,7 @@ all buildInstall:
 
 else
 Pelegant:
+	$(RM) O.$(HOST_ARCH)/link_date.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) MPI=1 -f Makefile
