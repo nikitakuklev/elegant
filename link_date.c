@@ -11,7 +11,11 @@
 
 void link_date(void)
 {
+#ifdef SVN_VERSION
+    fprintf(stdout, "Link date: %s %s, SVN revision: %s\n", __DATE__, __TIME__, SVN_VERSION);
+#else
     fprintf(stdout, "Link date: %s %s\n", __DATE__, __TIME__);
+#endif
     fflush(stdout);
     }
 

@@ -84,8 +84,9 @@ else
 PROD_HOST = $(PRODOAG)
 endif
 
+SVN_VERSION=$(shell svnversion ..)
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -DWL=32
+		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
