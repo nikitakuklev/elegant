@@ -32,60 +32,42 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high-level.
 
-\section{Highlights of What's New in Version 28.1.0}
+\section{Highlights of What's New in Version 28.3}
 
-Here is a summary of what's changed since release 28.0:
+Here is a summary of what's changed since release 28.2:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The ROTATE element was not affecting the floor coordinates. This was found and fixed by A. Xiao (APS).
-\item The \verb|END_PASS| parameter on \verb|SCATTER| now works as expect, after removal of a one-pass offset.
+\item Fixed a bug in the \verb|MATRX| element that would crop up in multi-step runs, causing a crash or lock-up.
+  This was reported by P. Emma (SLAC).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed that caused a crash when a 1-line aperture search was performed. This was reported by Guohui Wei (JLab).
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|TFBDRIVER| element now has the ability to measure the beam phase for use in longitudinal feedback.
-  Previously, only momentum-based input was available for longitudinal feedback.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ramp_elements| and \verb|modulate_elements| commands now have the ability to write a record of their
-  output values.
-\item The \verb|run_setup| command now has options, intended primarily for developers, to turn on memory usage and executing time monitoring during tracking.
-\item The units given for loss rate the output files from \verb|touschek_scatter| were incorrect and were fixed. Results were not affected. (A. Xiao, ANL)
-\item The \verb|tune_footprint| command was improved in several ways. It is now possible to ignore half-integer resonances.
-  The upper and lower bounds of the chromatic tune footprints are now available for optimization.
-  It's now possible to turn off either chromatic or amplitude tune footprint deterimination.
-\item The \verb|optimization_setup| command allows suppressing particle tracking in order to improve performance in some unusual cases.
-\item The \verb|correct_tunes| command can now utilize any element that has the \verb|K1| parameter.
-\item The \verb|chromaticity| command can now utilize any element that has the \verb|K2| parameter.
+\item None.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
 
 \begin{itemize}
-\item Fixed a bug that affected tracking when orbit correction was used, \verb|start_from_centroid=1|, and particle distribution
-  was not random across processors.
-\item Warnings about $\rho>10^{6}$ m are now issued by the parallel version, as for the serial version.
-\item Memory usage logging to \verb|WATCH| output files now sums the memory across all cores, rather than just the master core.
-\item A memory leak was fixed in the \verb|ZTRANSVERSE| element that sometimes caused the program to crash. This was reported by
-  R. Lindberg (ANL).
-\item The output of the beam charge in the \verb|ZLONGIT| wake output file was corrected; previously, it only showed the charge on 
-  one core.
-\item The \verb|frequency_map| command now provides an estimate of the time needed to complete.
+\item None.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The program \verb|sddsbunchingfactor| is now part of the distribution.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
