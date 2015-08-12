@@ -1010,7 +1010,8 @@ VMATRIX *compute_matrix(
           matr->matrix_read = 1;
           matr->length = matr->M.C[4];
         }
-        elem->matrix = &(((MATR*)elem->p_elem)->M);
+        elem->matrix = tmalloc(sizeof(*(elem->matrix)));
+        copy_matrices(elem->matrix, &(((MATR*)elem->p_elem)->M));
         break;
       case T_WATCH:
         break;
