@@ -174,7 +174,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
                                    run, dp, start_from_recirc, fixed_length, 
                                    (start_from_centroid?starting_coord:NULL), iteration_fraction,
                                    fraction_multiplier, multiplier_interval,
-                                   deviation, track_for_orbit);
+                                   deviation, tracking_turns);
     free_matrices(M); tfree(M); M = NULL;
     
     /* return closed orbit at the beginning of the ring */
