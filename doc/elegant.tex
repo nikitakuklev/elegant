@@ -55,7 +55,8 @@ Here is a summary of what's changed since release 28.2:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
+  This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \end{itemize}
 
 \subsection{Changes for Parallel Version Only}
@@ -1209,6 +1210,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     long fixed_length = 0;
     long start_from_recirc = 0;
     long verbosity = 0;
+    long tracking_turns = 0;
 &end
 \end{verbatim}
 
@@ -1247,6 +1249,9 @@ element in the beamline.  In general, if one has a recirculation
 element, one should give this flag.
 \item \verb|verbosity| --- A larger value results in more printouts
 during the computations.
+\item \verb|tracking_turns| --- If non-zero, the number of turns to track for detemination 
+  of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
+  complains about convergence issues.
 \end{itemize}
 
 %\begin{latexonly}
@@ -1296,6 +1301,7 @@ during the computations.
     double closed_orbit_accuracy = 1e-12;
     long closed_orbit_iterations = 10;
     double closed_orbit_iteration_fraction = 1;
+    double closed_orbit_tracking_turns = 0;
     long use_perturbed_matrix = 0;
     long disable = 0;
     long use_response_from_computed_orbits = 0;
@@ -1368,6 +1374,10 @@ particle.  This is valid for trajectory correction only.
 \item \verb|closed_orbit_iterations| --- Number of iterations of closed orbit computation.
 \item \verb|closed_orbit_iteration_fraction| --- Fraction of change in closed orbit to
 use at each iteration.
+\item \verb|closed_orbit_tracking_turns| --- If non-zero, the absolute value gives the number of turns to track for detemination 
+  of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
+  complains about convergence issues. If less than zero, then {\em only} this method is used. If greater than zero, 
+  then regular orbit determination is tried first, and tracking is used as a fallback.
 \item \verb|use_perturbed_matrix| --- If nonzero, specifies that prior to each 
 	correction \verb|elegant| shall recompute the response matrix.  This
 	is useful if the lattice is changing significantly between corrections.
