@@ -42,6 +42,7 @@
     double closed_orbit_iteration_fraction = 0.9;
     double closed_orbit_fraction_multiplier = 1.05;
     double closed_orbit_multiplier_interval = 5;
+    long closed_orbit_tracking_turns = 0;
     long use_perturbed_matrix = 0;
     long use_response_from_computed_orbits = 0;
 #end

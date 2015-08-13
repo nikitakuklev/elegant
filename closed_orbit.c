@@ -18,7 +18,7 @@
 
 long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
                                 VMATRIX *M, RUN *run, double dp, long start_from_recirc, double *starting_point, 
-                                double change_fraction, double change_fraction_multiplier, long multiplier_interval, double *deviation);
+                                double change_fraction, double change_fraction_multiplier, long multiplier_interval, double *deviation, long n_turns);
 
 static long SDDS_clorb_initialized = 0;
 static SDDS_TABLE SDDS_clorb;
@@ -174,7 +174,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
                                    run, dp, start_from_recirc, fixed_length, 
                                    (start_from_centroid?starting_coord:NULL), iteration_fraction,
                                    fraction_multiplier, multiplier_interval,
-                                   deviation);
+                                   deviation, track_for_orbit);
     free_matrices(M); tfree(M); M = NULL;
     
     /* return closed orbit at the beginning of the ring */
@@ -288,13 +288,13 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
 long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
                        double dp, long start_from_recirc, long fixed_length, double *starting_point, double change_fraction,
                        double fraction_multiplier, long multiplier_interval,
-                       double *deviation)
+                       double *deviation, long n_turns)
 {
   static MATRIX *R, *ImR, *INV_ImR, *INV_R, *C, *co, *diff, *change;
   static double **one_part;
   static long initialized = 0;
   long i, j, n_iter = 0, bad_orbit = 0, second_try;
-  long n_part, method, goodCount;
+  long n_part, method, goodCount, convergenceProblem = 0;
   double p, error, last_error;
 
 #if SDDS_MPI_IO
@@ -306,11 +306,12 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 
   if (fixed_length)
     return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
-                                      start_from_recirc, starting_point, change_fraction, fraction_multiplier, multiplier_interval, deviation);
+                                      start_from_recirc, starting_point, change_fraction, fraction_multiplier, multiplier_interval, deviation,
+                                      n_turns);
 
 #ifdef DEBUG
-  printf("running find_closed_orbit: clorb_acc=%le, clorb_iter=%ld, dp=%le, start_from_recirc=%ld, fixed_length=%ld, change_fraction=%le\n",
-         clorb_acc, clorb_iter, dp, start_from_recirc, fixed_length, change_fraction);
+  printf("running find_closed_orbit: clorb_acc=%le, clorb_iter=%ld, dp=%le, start_from_recirc=%ld, fixed_length=%ld, change_fraction=%le, n_turns = %ld\n",
+         clorb_acc, clorb_iter, dp, start_from_recirc, fixed_length, change_fraction, n_turns);
 #endif
   
   /* method for finding closed orbit: 
@@ -384,11 +385,14 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   p = run->p_central;
   if (deviation)
     deviation[4] = deviation[5] = 0;
-  /* Set method<1 for the old, single-method algorithm.
-   * Set method<3 to add the new tracking-based algorithm as fallback (not recommended)
+  /* method=0: iterate using the R matrix; only invoked if n_turns>=0
+   * method=1: track a specified number of turns, given by |n_turns|; only invoked if |n_turns|>0
+   * method=2: iterate using the R matrix again, starting from tracking result (n_turns>0); or, fill trajectory buffer (n_turns<0)
    */
-  for (method=0; method<1; method++) {
-    if (method==0 || method==2) {
+  for (method=0; method<(n_turns!=0?3:1); method++) {
+    if ((method==0 || method==2)) {
+      if (method==0 && n_turns<0)
+        continue;
       n_iter = 0;
       error = DBL_MAX/4;
       bad_orbit = 0;
@@ -430,6 +434,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         }
         last_error = error;
         if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
+          break;
+        if (n_turns<0)
           break;
         if (error>2*last_error) {
           change_fraction = change_fraction/2;
@@ -480,6 +486,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           return 0;
         }
         bad_orbit = 1;
+        convergenceProblem = 1;
       } else {
         bad_orbit = 0;
         break;
@@ -488,20 +495,25 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
       /* try to find a good starting point by tracking several turns */
       long turn;
       double buffer[4];
-      fprintf(stdout, "Trying secondary method for orbit determination.\n");
-      fflush(stdout);
+      if (convergenceProblem) {
+        if (n_turns>0)
+          fprintf(stdout, "Trying secondary, tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
+        else
+          fprintf(stdout, "Using tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
+        fflush(stdout);
+      }
       for (i=0; i<4; i++)
         one_part[0][i] = buffer[i] = 0;
       one_part[0][5] = dp;
       bad_orbit = 0;
-      for (turn=0; turn<clorb_iter/10+10; turn++)  {
+      for (turn=0; turn<labs(n_turns); turn++)  {
         n_part = 1;
         if (do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                         (TRAJECTORY*)NULL, run, 0, 
                         CLOSED_ORBIT_TRACKING+TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 
                         1, 0, NULL, NULL, NULL, NULL, NULL)) {
           for (i=0; i<4; i++)
-            one_part[0][i] = (buffer[i] + one_part[0][i])/2;
+            buffer[i] += one_part[0][i];
           one_part[0][5] = dp;
         } else {
           bad_orbit = 1;
@@ -510,14 +522,19 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
       }
       if (!bad_orbit) {
         for (i=0; i<4; i++)
-          co->a[i][0] = one_part[0][i];
+          one_part[0][i] = co->a[i][0] = buffer[i]/labs(n_turns);
         one_part[0][4] = 0;
         one_part[0][5] = dp;
-        fprintf(stdout, "New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
-                turn, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3], 
-                one_part[0][4], one_part[0][5]);
+        /*
+        if (n_turns>0) {
+          fprintf(stdout, "New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
+                  turn, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3], 
+                  one_part[0][4], one_part[0][5]);
+          fflush(stdout);
+        }
+        */
       } else {
-        /* use the previous answer and iterate more */
+        /* set up to use the previous answer and iterate more */
         for (i=0; i<4; i++) 
           one_part[0][i] = co->a[i][0];
         one_part[0][4] = 0;
@@ -532,10 +549,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           one_part[0][4], one_part[0][5]);
   fflush(stdout);
 #endif
-  clorb[0].centroid[0] = one_part[0][0];
-  clorb[0].centroid[1] = one_part[0][1];
-  clorb[0].centroid[2] = one_part[0][2];
-  clorb[0].centroid[3] = one_part[0][3];
+  for (i=0; i<4; i++)
+    clorb[0].centroid[i] = one_part[0][i];
   clorb[0].centroid[4] = 0;
   clorb[0].centroid[5] = dp;
 
@@ -552,7 +567,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
                                 double dp, long start_from_recirc, double *starting_point, double change_fraction,
                                 double change_fraction_multiplier, long multiplier_interval,
-                                double *deviation)
+                                double *deviation, long n_turns)
 {
   long nElems, iterationsLeft, i, iterationsDone;
   double error=0, ds, last_dp, last_ds;
@@ -595,7 +610,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
                            0, 
                            iterationsDone==0?starting_point:startingPoint,
-                           change_fraction, change_fraction_multiplier, multiplier_interval, deviation)) {
+                           change_fraction, change_fraction_multiplier, multiplier_interval, deviation, n_turns)) {
       iterationFactor /= 3;
 #ifdef DEBUG
       printf("find_closed_orbit() failed for iteration=%ld, reducing dp iteration factor to %le\n", iterationsDone, iterationFactor);
