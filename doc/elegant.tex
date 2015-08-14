@@ -45,7 +45,8 @@ Here is a summary of what's changed since release 28.2:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None
+\item Fixed a bug in the \verb|correct_tunes| command that resulted in a crash when \verb|n_iterations=0| and would also have
+  resulted in invalid data in the log file for mixed element types. This was reported by V. Sajaev (ANL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
