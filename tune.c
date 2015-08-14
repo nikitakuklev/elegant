@@ -236,10 +236,20 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   static double nux_orig, nuy_orig;
   unsigned long unstable;
   double *K1ptr;
+
+#ifdef DEBUG
+  printf("do_tune_correction\n");
+  fflush(stdout);
+#endif
   
   M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                 &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                 beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
+#ifdef DEBUG
+  printf("   updated periodic twiss solution\n");
+  fflush(stdout);
+#endif
+
   beamline->twiss0->betax  = beta_x;
   beamline->twiss0->alphax = alpha_x;
   beamline->twiss0->phix   = 0;
@@ -254,6 +264,11 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                              NULL, beamline->elem_twiss, run, clorb,
 			     beamline->couplingFactor);
+
+#ifdef DEBUG
+  printf("   updated full twiss solution\n");
+  fflush(stdout);
+#endif
 
   if (!M || !M->C || !M->R)
     bombElegant("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
@@ -274,6 +289,10 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   gain = tune->gain;
   
   for (iter=0; iter<tune->n_iterations; iter++) {
+#ifdef DEBUG
+  printf("   Starting iteration %ld\n", iter);
+  fflush(stdout);
+#endif
     dtunex = tune->tunex - beamline->tune[0];
     dtuney = tune->tuney - beamline->tune[1];
     if (tune->tolerance>0 &&
@@ -382,11 +401,17 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     fflush(stdout);
   }
 
+#ifdef DEBUG
+  printf("   Finished iterations\n");
+  fflush(stdout);
+#endif
+
   if (fp_sl && last_iteration) {
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+        K1_param = confirm_parameter("K1", context->type);
 	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
 	  bombElegant("K1ptr NULL in do_tune_correction", NULL);
 	fprintf(fp_sl, "%ld %21.15e %s\n", step, *K1ptr, tune->name[i]);
@@ -394,6 +419,11 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
     fflush(fp_sl);
   }
+
+#ifdef DEBUG
+  printf("   Done with tune correction\n");
+  fflush(stdout);
+#endif
 
   return 1;
 }
