@@ -501,6 +501,12 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
+              if (!(K2_param=confirm_parameter("K2", context->type))) {
+                fprintf(stdout, "error: element %s does not have K2 parameter\n", 
+                        context->name);
+                fflush(stdout);
+                exitElegant(1);
+              }
               if (( K2_param = confirm_parameter("K2", context->type))<0)
                 bombElegant("confirm_parameter doesn't return offset for K2 parameter.\n", NULL);
               fprintf(fp_sl, "%ld %e %s\n", 
