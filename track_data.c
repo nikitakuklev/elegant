@@ -1825,7 +1825,7 @@ RFCW rfcw_example;
 /* rf cavity with wakes physical parameters */
 PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.length), NULL, 0.0, 0, "length"},
-    {"CELL_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&rfcw_example.cellLength), NULL, 0.0, 0, "cell length (used to scale wakes, which are assumed to be given for a cell)"},
+    {"CELL_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&rfcw_example.cellLength), NULL, 0.0, 0, "cell length (used to scale wakes, which are assumed to be given for a cell, according to L/CELL_LENGTH)"},
     {"VOLT", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.volt), NULL, 0.0, 0, "voltage"},
     {"PHASE", "DEG", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.phase), NULL, 0.0, 0, "phase"},
     {"FREQ", "Hz", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.freq), NULL, 500.0e6, 0, "frequency"},
