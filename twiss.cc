@@ -1910,10 +1910,10 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   }
 
   if (beamline->acc_limit_name[0])
-    fprintf(stdout, (char*)"x acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[0], beamline->acceptance[2]);
+    fprintf(stdout, (char*)"x acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[0], beamline->acc_limit_name[0], beamline->acceptance[2]);
     fflush(stdout);
   if (beamline->acc_limit_name[1])
-    fprintf(stdout, (char*)"y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
+    fprintf(stdout, (char*)"y acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[1], beamline->acc_limit_name[1], beamline->acceptance[3]);
     fflush(stdout);
 
   if (SDDS_twiss_initialized) {
