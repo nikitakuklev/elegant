@@ -65,14 +65,14 @@ sddscombine $tmpRoot.2 $tmpRoot.3 -merge -pipe=out \
   | tee $output.sdds \
   | sdds2plaindata -pipe=in $output \
     -outputMode=ascii -noRowCount \
-    -column=x,format=%12.4e \
-    -column=y,format=%12.4e \
-    -column=dz,format=%12.4e \
-    -column=px,format=%12.4e \
-    -column=py,format=%12.4e \
-    -column=pz,format=%12.4e \
-    -column=t,format=%12.4e \
-    -column=q,format=%12.4e \
+    -column=x,format=%14.4e \
+    -column=y,format=%14.4e \
+    -column=dz,format=%14.4e \
+    -column=px,format=%14.4e \
+    -column=py,format=%14.4e \
+    -column=pz,format=%14.4e \
+    -column=t,format=%14.4e \
+    -column=q,format=%14.4e \
     -column=particleIndex,format=%4ld \
     -column=statusFlag,format=%4ld 
 
