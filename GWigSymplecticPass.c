@@ -188,6 +188,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     malign.dx = -cwiggler->dx;
     malign.dy = -cwiggler->dy;
     malign.dz = cwiggler->dz;
+    malign.startPID = malign.endPID = -1;
     offset_beam(coord, num_particles, &malign, pCentral);
   }
 

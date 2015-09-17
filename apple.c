@@ -39,6 +39,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
     malign.dx = -apple->dx;
     malign.dy = -apple->dy;
     malign.dz = apple->dz;
+    malign.startPID = malign.endPID = -1;
     offset_beam(coord, np, &malign, pCentral);
   }
 

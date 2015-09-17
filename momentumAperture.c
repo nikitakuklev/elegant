@@ -40,6 +40,7 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
     mal.dx = x_initial;
     mal.dy = y_initial;
     mal.dp = momentumOffsetValue;
+    mal.startPID = mal.endPID = -1;
     offset_beam(coord, np, &mal, *pCentral);
     turnsStored = 0;
   }

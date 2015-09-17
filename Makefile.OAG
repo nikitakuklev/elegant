@@ -1,10 +1,10 @@
 CMPLR = ANSI
 # turn off the -g option
-OP_SYS_CFLAGS =  
+OP_SYS_CFLAGS =  -g 
 #OPT_CFLAGS_NO = 
 #OPT_CFLAGS_YES = -O3
-#HOST_OPT = NO
-Ocustom = -O3
+HOST_OPT = NO
+#Ocustom = -O3
 
 #RATIONAL = purify
 #RATIONAL = quantify

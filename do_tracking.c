@@ -2437,14 +2437,23 @@ void offset_beam(
                  double P_central
                  )
 {
-  long i_part;
+  long i_part, allParticles;
   double *part, pc, beta, gamma, t;
   double ds;
   
   log_entry("offset_beam");
+
+  if (offset->startPID>=0 && offset->startPID>offset->endPID)
+    bombElegant("startPID greater than endPID for MALIGN element (offset_beam)", NULL);
+  if ((offset->endPID>=0 && offset->startPID<0) || (offset->startPID>=0 && offset->endPID<0))
+    bombElegant("Error: Invalid startPID, endPID in MALIGN element (offset_beam)", NULL);
+  
+  allParticles = (offset->startPID==-1) && (offset->endPID==-1);
   
   for (i_part=nToTrack-1; i_part>=0; i_part--) {
     part = coord[i_part];
+    if (!allParticles && (part[6]<offset->startPID || part[6]>offset->endPID))
+      continue;
     if (offset->dz)
       ds = offset->dz*sqrt(1+sqr(part[1])+sqr(part[3]));
     else
