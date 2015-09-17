@@ -561,16 +561,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<2 || csbend->edge1_effects>1) {
+      if (csbend->edge_order==1 && csbend->edge1_effects==1) {
         /* apply edge focusing */
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
           delta_xp = SIGN(delta_xp)*e1_kick_limit;
         xp += delta_xp;
         yp -= tan(e1-psi1/(1+dp))/rho*y;
-      } else
+      } else if (csbend->edge_order==2 && csbend->edge1_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
+      }
     }
+
+      if (csbend->edge1_effects==2) {
+      rho = (1+dp)*rho_actual;
+      dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+      }
 
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
@@ -584,7 +590,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
 
     convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
-    
+     /*     
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1) {
       if (dipoleFringeWarning==0) {
         printf("*** \n");
@@ -592,8 +598,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         printf("*** \n");
         dipoleFringeWarning = 1;
       }
-      dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2, csbend->b[0]/rho0);
-    }
+dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2, csbend->b[0]/rho0);
+    } */
     
 
     particle_lost = 0;
@@ -604,6 +610,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
 
+     /* 
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1) {
       if (dipoleFringeWarning==0) {
         printf("*** \n");
@@ -611,8 +618,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         printf("*** \n");
         dipoleFringeWarning = 1;
       }
-      dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
-    }
+dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
+    } */
     
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
@@ -675,15 +682,21 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<2 || csbend->edge2_effects>1) {
+      if (csbend->edge_order==1 && csbend->edge1_effects==1) {
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
-      } else
+      } else if (csbend->edge_order==2 && csbend->edge1_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
+      }
     }
+
+      if (csbend->edge1_effects==2) {
+      rho = (1+dp)*rho_actual;
+      dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+      }
     
     coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
     coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
@@ -3532,6 +3545,137 @@ void apply_edge_effects(
   *xp = xp0 + R21*x0 + T211*sqr(x0) + T221*x0*xp0 + T233*sqr(y0) + T243*y0*yp0;
   *y  = y0  + T331*x0*y0;
   *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
+}
+
+/* dipole fringe effects symplectic tracking */
+
+void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
+ double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe)
+{
+  double dx, dpx, dy, dpy;
+  double tan_edge, sin_edge, sec_edge, cos_edge;
+  double x0, xp0, y0, yp0, dp0, psi;
+  double k0, k3, k2, Kg;
+  double k4, k5, k6;
+
+  k0 = sqr(PI)/6.;
+  k2 = fint;
+  k3 = 1.0*1./6.;
+  Kg = gap*fint;
+  k4 = 0.0;
+  k5 = 0.0;
+  k6 = 0.0;
+
+  x0 = *x;  xp0 = *xp;  y0 = *y;  yp0 = *yp; dp0 = *dp;
+  dx = dpx = dy = dpy = 0;
+  psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
+
+  sec_edge=1./cos(edge);
+  tan_edge=tan(edge);
+  sin_edge=sin(edge);
+  cos_edge=cos(edge);
+  
+
+    if (higherOrder>1) {
+
+	/* entrance */
+   	if (inFringe==-1.) {
+  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+  	dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+		+tan_edge*x0/rho
+		+ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		+ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
+		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+	dpy  =  -1.*tan_edge*y0/rho 
+		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+		+inFringe*y0*xp0/rho
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+	}
+	/* exit */
+   	if (inFringe==1.) {
+  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+  	dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+		+tan_edge*x0/rho
+		-ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		-ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+	dpy  =  -1.*tan_edge*y0/rho 
+		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+		+inFringe*y0*xp0/rho
+		+x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+		-k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+	}
+          
+    } else if (higherOrder==1) {
+
+	/* entrance */
+   	if (inFringe==-1.) {
+  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+  	dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+		+tan_edge*x0/rho
+		+ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		+ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
+		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+	dpy  =  -1.*tan_edge*y0/rho 
+		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+		+inFringe*y0*xp0/rho
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+	}
+	/* exit */
+   	if (inFringe==1.) {
+  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+  	dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+		+tan_edge*x0/rho
+		-ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		-ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+	dpy  =  -1.*tan_edge*y0/rho 
+		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+		+inFringe*y0*xp0/rho
+		+x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+		-k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+	}
+    }
+  
+  *x  = x0  + dx;
+  *xp = xp0 + dpx/(1+dp0);
+  *y  = y0  + dy;
+  *yp = yp0 + dpy/(1+dp0);
+	/*  printf("x %f y %f xp %f yp %f dp0 %f\n", *x, *y, *xp, *yp, dp0); */
 }
 
 /* this is used solely to convert coordinates inside the element for
