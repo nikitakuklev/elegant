@@ -561,23 +561,21 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order==1 && csbend->edge1_effects==1) {
+      if (csbend->edge_order<=1 && csbend->edge1_effects==1) {
         /* apply edge focusing */
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
           delta_xp = SIGN(delta_xp)*e1_kick_limit;
         xp += delta_xp;
         yp -= tan(e1-psi1/(1+dp))/rho*y;
-      } else if (csbend->edge_order==2 && csbend->edge1_effects==1) {
+      } else if (csbend->edge_order>=2 && csbend->edge1_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
+      } else if (csbend->edge1_effects==2) {
+        rho = (1+dp)*rho_actual;
+        dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
       }
     }
-
-      if (csbend->edge1_effects==2) {
-      rho = (1+dp)*rho_actual;
-      dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
-      }
-
+    
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
@@ -682,21 +680,19 @@ dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order==1 && csbend->edge2_effects==1) {
+      if (csbend->edge_order<=1 && csbend->edge2_effects==1) {
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
-      } else if (csbend->edge_order==2 && csbend->edge2_effects==1) {
+      } else if (csbend->edge_order>=2 && csbend->edge2_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
+      } else if (csbend->edge1_effects==2) {
+        rho = (1+dp)*rho_actual;
+        dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
       }
     }
-
-      if (csbend->edge1_effects==2) {
-      rho = (1+dp)*rho_actual;
-      dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
-      }
     
     coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
     coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
