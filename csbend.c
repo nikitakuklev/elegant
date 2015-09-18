@@ -682,13 +682,13 @@ dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order==1 && csbend->edge1_effects==1) {
+      if (csbend->edge_order==1 && csbend->edge2_effects==1) {
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
-      } else if (csbend->edge_order==2 && csbend->edge1_effects==1) {
+      } else if (csbend->edge_order==2 && csbend->edge2_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
       }
     }
