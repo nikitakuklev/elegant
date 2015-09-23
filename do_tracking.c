@@ -238,6 +238,44 @@ long do_tracking(
   if (notSinglePart && partOnMaster) /* This is a special case when the first beam is fiducial. We need scatter the beam in the second step. */
     distributed = 0;
 #endif 
+
+#ifdef DEBUG
+  if (flags&FINAL_SUMS_ONLY)
+    printf("FINAL_SUMS_ONLY set\n");
+  if (flags&TEST_PARTICLES)
+    printf("TEST_PARTICLES set\n");
+  if (flags&BEGIN_AT_RECIRC)
+    printf("BEGIN_AT_RECIRC set\n");
+  if (flags&TEST_PARTICLE_LOSSES)
+    printf("TEST_PARTICLE_LOSSES set\n");
+  if (flags&SILENT_RUNNING)
+    printf("SILENT_RUNNING set\n");
+  if (flags&TIME_DEPENDENCE_OFF)
+    printf("TIME_DEPENDENCE_OFF set\n");
+  if (flags&INHIBIT_FILE_OUTPUT)
+    printf("INHIBIT_FILE_OUTPUT set\n");
+  if (flags&LINEAR_CHROMATIC_MATRIX)
+    printf("LINEAR_CHROMATIC_MATRIX set\n");
+  if (flags&LONGITUDINAL_RING_ONLY)
+    printf("LONGITUDINAL_RING_ONLY set\n");
+  if (flags&FIRST_BEAM_IS_FIDUCIAL)
+    printf("FIRST_BEAM_IS_FIDUCIAL set\n");
+  if (flags&FIDUCIAL_BEAM_SEEN)
+    printf("FIDUCIAL_BEAM_SEEN set\n");
+  if (flags&PRECORRECTION_BEAM)
+    printf("PRECORRECTION_BEAM set\n");
+  if (flags&RESTRICT_FIDUCIALIZATION)
+    printf("RESTRICT_FIDUCIALIZATION set\n");
+  if (flags&IBS_ONLY_TRACKING)
+    printf("IBS_ONLY_TRACKING set\n");
+  if (flags&CLOSED_ORBIT_TRACKING)
+    printf("CLOSED_ORBIT_TRACKING set\n");
+  if (flags&ALLOW_MPI_ABORT_TRACKING)
+    printf("ALLOW_MPI_ABORT_TRACKING set\n");
+  if (flags&RESET_RF_FOR_EACH_STEP)
+    printf("RESET_RF_FOR_EACH_STEP set\n");
+#endif
+
 #ifdef DEBUG_CRASH 
   printMessageAndTime(stdout, "do_tracking checkpoint 0\n");
 #endif
