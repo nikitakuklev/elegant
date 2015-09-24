@@ -3558,9 +3558,9 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
   k2 = fint;
   k3 = 1.0*1./6.;
   Kg = gap*fint;
-  k4 = 0.0;
+  k4 = -1.0*sqr(PI)/3.;
   k5 = 0.0;
-  k6 = 0.0;
+  k6 = -1.0;
 
   x0 = *x;  xp0 = *xp;  y0 = *y;  yp0 = *yp; dp0 = *dp;
   dx = dpx = dy = dpy = 0;
