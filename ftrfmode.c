@@ -83,7 +83,7 @@ void track_through_ftrfmode(
   if (!trfmode->initialized)
     bombElegant("track_through_ftrfmode called with uninitialized element", NULL);
 
-/*
+
 #if USE_MPI
   if (myid==1) {
 #endif
@@ -92,7 +92,6 @@ void track_through_ftrfmode(
 #if USE_MPI
   }
 #endif
-*/
 
   if (trfmode->mp_charge==0 || (trfmode->xfactor==0 && trfmode->yfactor==0))
     return;
