@@ -744,6 +744,8 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   } /* We let the first slave to dump the parameter */
 #endif
 
+  SDDS_ClearErrors();
+  
   rfmode->initialized = 1;
 }
 
