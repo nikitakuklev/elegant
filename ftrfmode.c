@@ -576,6 +576,8 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
     if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms/m", SDDS_ANY_FLOATING_TYPE,
+                         NULL)!=SDDS_CHECK_OK &&
+        SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohm/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with ShuntImpedanceSymm column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
       exitElegant(1);
@@ -585,6 +587,8 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
     if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms/m", SDDS_ANY_FLOATING_TYPE,
+                         NULL)!=SDDS_CHECK_OK &&
+        SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohm/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with ShuntImpedance column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
       exitElegant(1);
