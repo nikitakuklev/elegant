@@ -153,7 +153,7 @@ impedance.",
     "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude\n\
 and phase modulation.",
     "A map of Bx and By vs x and y.",
-    "A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.",
+    "A simulation of a single-pass broad-band or functionally-specified transverse impedance.",
     "A simulation of intra-beam scattering.",
     "Multipole kick element with coefficient input from an SDDS file.",
     "Longitudinal wake specified as a function of time lag behind the particle.",
