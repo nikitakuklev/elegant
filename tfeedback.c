@@ -60,7 +60,9 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   }
   
   if (tfbp->nBunches==0 || tfbp->nBunches!=nBuckets) {
-    if (tfbp->nBunches) {
+    if (tfbp->nBunches!=nBuckets) {
+      printf("Number of bunches has changed, re-initialization feedback pickup\n");
+      fflush(stdout);
       for (i=0; i<tfbp->nBunches; i++)
 	free(tfbp->data[i]);
     }
@@ -264,7 +266,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     tfbd->dataWritten = 0;
   
   if (tfbd->nBunches==0 || tfbd->nBunches!=nBuckets) {
-    if (tfbd->nBunches) {
+    if (tfbd->nBunches!=nBuckets) {
+      printf("Number of bunches has changed. Reinitializing feedback driver.\n");
+      fflush(stdout);
       for (i=0; i<tfbd->nBunches; i++) {
 	free(tfbd->driverSignal[i]);
 	tfbd->driverSignal[i] = NULL;
