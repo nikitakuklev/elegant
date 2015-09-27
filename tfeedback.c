@@ -59,15 +59,21 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
     return;
   }
   
-  if (tfbp->nBunches==0) {
+  if (tfbp->nBunches==0 || tfbp->nBunches!=nBuckets) {
+    if (tfbp->nBunches) {
+      for (i=0; i<tfbp->nBunches; i++)
+	free(tfbp->data[i]);
+    }
     tfbp->nBunches = nBuckets;
     tfbp->data = SDDS_Realloc(tfbp->data, sizeof(*tfbp->data)*nBuckets);
     tfbp->filterOutput = SDDS_Realloc(tfbp->filterOutput, sizeof(*tfbp->filterOutput)*nBuckets);
-    for (i=0; i<nBuckets; i++) 
+    for (i=0; i<nBuckets; i++) {
       if (!(tfbp->data[i] = calloc(TFB_FILTER_LENGTH, sizeof(**tfbp->data))))
         bombElegant("Memory allocation problem for TFBPICKUP", NULL);
-  } else if (tfbp->nBunches!=nBuckets)
-    bombElegant("Number of bunches has changed while using TFBPICKUP", NULL);
+      tfbp->filterOutput[i] = 0;
+    }
+    tfbp->startPass = pass;
+  }
   
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
 #if USE_MPI
@@ -132,10 +138,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
             position, pass%tfbp->filterLength, iBucket);
 #endif
     tfbp->data[iBucket][pass%tfbp->filterLength] = position;
-    if (pass<tfbp->filterLength) {
+    if ((pass-tfbp->startPass)<tfbp->filterLength) {
       tfbp->filterOutput[iBucket] = 0;
     } else {
-      j = pass/tfbp->updateInterval;
+      j = (pass-tfbp->startPass)/tfbp->updateInterval;
       for (i=output=0; i<tfbp->filterLength; i++, j--) {
         output += tfbp->a[i]*tfbp->data[iBucket][j%tfbp->filterLength];
       }
@@ -257,18 +263,26 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (pass==0)
     tfbd->dataWritten = 0;
   
-  if (tfbd->nBunches==0) {
+  if (tfbd->nBunches==0 || tfbd->nBunches!=nBuckets) {
+    if (tfbd->nBunches) {
+      for (i=0; i<tfbd->nBunches; i++) {
+	free(tfbd->driverSignal[i]);
+	tfbd->driverSignal[i] = NULL;
+      }
+      free(tfbd->driverSignal);
+    }
     tfbd->nBunches = nBuckets;
     if (!(tfbd->driverSignal = tmalloc(sizeof(*tfbd->driverSignal)*nBuckets)))
       bombElegant("memory allocation failure (transverseFeedbackDriver)", NULL);
-    for (iBucket=0; iBucket<nBuckets; iBucket++) 
+    for (iBucket=0; iBucket<nBuckets; iBucket++) {
       tfbd->driverSignal[iBucket] = calloc((tfbd->delay+1+TFB_FILTER_LENGTH), sizeof(**tfbd->driverSignal));
-  } else if (tfbd->nBunches!=nBuckets)
-    bombElegant("number of bunches has changed while using TFBDRIVER", NULL);
+    }
+    tfbd->startPass = pass;
+  } 
 
   if (tfbd->nBunches!=tfbd->pickup->nBunches)
     bombElegant("mismatch in number of buckets between TFBDRIVER and TFBPICKUP", NULL);
-  
+
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
 #if USE_MPI
     MPI_Barrier(MPI_COMM_WORLD);
@@ -276,7 +290,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
     if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
       kick = SIGN(kick)*tfbd->kickLimit;
-    rpass = pass/updateInterval;
+    rpass = (pass-tfbd->startPass)/updateInterval;
 #ifdef DEBUG
     fprintf(stdout, "TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
