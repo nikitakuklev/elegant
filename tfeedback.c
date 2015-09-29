@@ -346,24 +346,31 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         }
       }
       
-#ifdef DEBUG
-      fprintf(stdout, "TFBDRIVER: kick applied for bunch %ld\n", iBucket);
-      fflush(stdout);
-#endif
     }
     
+#ifdef DEBUG
+    fprintf(stdout, "TFBDRIVER: preparing for output for bunch %ld\n", iBucket);
+    fflush(stdout);
+#endif
+
 #if USE_MPI
     if (myid==0) 
 #endif
-      if (tfbd->outputFile && (nBuckets==1 || npBucket[iBucket]!=0)) {
+      if (tfbd->outputFile) {
         if ((tfbd->outputIndex+1)%tfbd->outputBufferSize==0) {
-          /* printf("Flushing output file %s\n", tfbd->outputFile); */
-          /* fflush(stdout); */
+#ifdef DEBUG
+          printf("Flushing output file\n");
+          fflush(stdout);
+#endif
           if (!SDDS_UpdatePage(&tfbd->SDDSout, FLUSH_TABLE)) {
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             SDDS_Bomb("problem flushing data for TFBDRIVER output file");
           }
         }
+#ifdef DEBUG
+        printf("Preparing to set rows\n");
+        fflush(stdout);
+#endif
         if (!SDDS_SetRowValues(&tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                tfbd->outputIndex++, "Bunch", iBucket, "Pass", pass,
                                "PickupOutput", tfbd->pickup->filterOutput[iBucket], 
@@ -372,6 +379,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
         if (tfbd->outputIndex>=tfbd->outputBufferSize && (iBucket+1)==nBuckets && !tfbd->dataWritten) {
+#ifdef DEBUG
+          printf("Preparing to write page\n");
+          fflush(stdout);
+#endif
           if (!SDDS_WritePage(&tfbd->SDDSout)) {
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             SDDS_Bomb("problem writing data for TFBDRIVER output file");
@@ -379,9 +390,19 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           tfbd->outputIndex = 0;
           tfbd->dataWritten = 1;
         }
-      }
+  }
+
+#ifdef DEBUG
+    fprintf(stdout, "TFBDRIVER: end of loop for bunch %ld\n", iBucket);
+    fflush(stdout);
+#endif
   }
   
+#ifdef DEBUG
+  fprintf(stdout, "TFBDRIVER: exited from loop over bunches\n");
+  fflush(stdout);
+#endif
+
   if (time0) 
     free(time0);
   if (ibParticle) 
@@ -391,7 +412,12 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (npBucket)
     free(npBucket);
 
+#ifdef DEBUG
+  fprintf(stdout, "TFBDRIVER: end of routine\n");
+  fflush(stdout);
+#endif
 }
+  
 
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
 {
