@@ -664,7 +664,7 @@ long do_tracking(
 	    if (charge->chargePerParticle)
 	      charge->macroParticleCharge = charge->chargePerParticle;
             if (charge->macroParticleCharge<0) 
-              bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
+              bombElegantVA("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign. Specified value is %g\n", charge->charge);
         }
         eptr = eptr->succ;
         i_elem++;
@@ -1003,7 +1003,7 @@ long do_tracking(
               if (charge->chargePerParticle)
                 charge->macroParticleCharge = charge->chargePerParticle;
               if (charge->macroParticleCharge<0) 
-                bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
+                bombElegantVA("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign. Specified value is %g\n", charge->charge);
 	      break;
 	    case T_MARK:
 	      if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
