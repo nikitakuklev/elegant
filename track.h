@@ -2778,7 +2778,7 @@ typedef struct {
   double a[TFB_FILTER_LENGTH];
   long bunchedBeamMode, updateInterval;
   /* internal parameters */
-  long initialized, filterLength, dataWritten, outputIndex, startPass;
+  long initialized, filterLength, dataWritten, outputIndex, startPass, outputBufferSize;
   TFBPICKUP *pickup;
   SDDS_DATASET SDDSout;
   long nBunches;
