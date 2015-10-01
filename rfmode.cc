@@ -395,8 +395,8 @@ void track_through_rfmode(
 #if USE_MPI
                 if (myid==1) {
 #endif
-                  if (rowsNeeded>rfmode->SDDSfbrec.n_rows_allocated && 
-                      !SDDS_LengthenTable(&rfmode->SDDSfbrec, rowsNeeded-rfmode->SDDSfbrec.n_rows_allocated)) {
+                  if ((rfmode->fbSample+10)>rfmode->SDDSfbrec.n_rows_allocated && 
+                      !SDDS_LengthenTable(&rfmode->SDDSfbrec, 1000)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     SDDS_Bomb((char*)"problem lengthening RFMODE feedback record file");
                   }
