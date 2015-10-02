@@ -366,6 +366,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             SDDS_Bomb("problem flushing data for TFBDRIVER output file");
           }
+          tfbd->dataWritten = 1;
         }
 #ifdef DEBUG
         printf("Preparing to set rows\n");
@@ -378,18 +379,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
-        if (tfbd->outputIndex>=tfbd->outputBufferSize && (iBucket+1)==nBuckets && !tfbd->dataWritten) {
-#ifdef DEBUG
-          printf("Preparing to write page\n");
-          fflush(stdout);
-#endif
-          if (!SDDS_WritePage(&tfbd->SDDSout)) {
-            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-            SDDS_Bomb("problem writing data for TFBDRIVER output file");
-          }
-          tfbd->outputIndex = 0;
-          tfbd->dataWritten = 1;
-        }
+        tfbd->dataWritten = 0;
   }
 
 #ifdef DEBUG

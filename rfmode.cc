@@ -74,7 +74,8 @@ void track_through_rfmode(
     long nonEmptyBins = 0;
     MPI_Status mpiStatus;
 #endif
-
+    long memory1;
+    
     /*
     if (!fpdeb) {
       fpdeb = fopen("rfmode.sdds", "w");
@@ -391,14 +392,14 @@ void track_through_rfmode(
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
               
               if (rfmode->feedbackRecordFile) {
-                long rowsNeeded = effectiveBuckets*n_passes+1;
 #if USE_MPI
                 if (myid==1) {
 #endif
-                  if ((rfmode->fbSample+10)>rfmode->SDDSfbrec.n_rows_allocated && 
-                      !SDDS_LengthenTable(&rfmode->SDDSfbrec, 1000)) {
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                    SDDS_Bomb((char*)"problem lengthening RFMODE feedback record file");
+                  if ((rfmode->fbSample+1)%rfmode->SDDSfbrec.n_rows_allocated==0) {
+                    if (!SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
+                      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                      SDDS_Bomb((char*)"problem flushing RFMODE feedback record file");
+                    }
                   }
                   if (!SDDS_SetRowValues(&rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                          rfmode->fbSample,
@@ -414,11 +415,13 @@ void track_through_rfmode(
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     SDDS_Bomb((char*)"problem setting values for feedback record file");
                   }
+                  /*
                   if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
-                      && !SDDS_UpdatePage(&rfmode->SDDSfbrec, 0)) {
+                      && !SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
                   }
+                  */
                   rfmode->fbSample ++;
 #if USE_MPI
                 }
@@ -716,9 +719,9 @@ void track_through_rfmode(
 #if USE_MPI
           if (myid==0)
 #endif
-          if (rowsNeeded>rfmode->SDDSrec.n_rows_allocated && !SDDS_LengthenTable(&rfmode->SDDSrec, rowsNeeded-rfmode->SDDSrec.n_rows_allocated)) {
+          if ((rfmode->sample_counter+1)%rfmode->SDDSrec.n_rows_allocated==0 && !SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            SDDS_Bomb((char*)"problem lengthening RFMODE record file");
+            SDDS_Bomb((char*)"problem flushing RFMODE record file");
           }
 
           np_total = np; /* Used by serial version */
@@ -779,10 +782,12 @@ void track_through_rfmode(
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }
+            /*
             if (rfmode->sample_counter%100==0 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }
+            */
 #ifdef DEBUG
             printf("Done writing record file\n");
             fflush(stdout);
@@ -794,12 +799,14 @@ void track_through_rfmode(
 #if USE_MPI
         if (myid==0) {
 #endif
+          /*
           if (pass==n_passes-1) {
             if (!SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               SDDS_Bomb((char*)"problem writing data for RFMODE record file");
             }
           }
+          */
 #if USE_MPI
         }
 #endif
@@ -839,17 +846,17 @@ void track_through_rfmode(
     if (Vbin) free(Vbin);
     if (part && part!=part0)
       free_czarray_2d((void**)part, max_np, 7);
-    if (time && time!=time0) 
+    if (time && time!=time0)
       free(time);
-    if (time0) 
+    if (time0)
       free(time0);
     if (pbin)
       free(pbin);
-    if (ibParticle) 
+    if (ibParticle)
       free(ibParticle);
     if (ipBucket)
       free_czarray_2d((void**)ipBucket, nBuckets, np0);
-    if (npBucket)
+    if (npBucket) 
       free(npBucket);
   }
 

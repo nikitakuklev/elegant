@@ -2773,3 +2773,21 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
   }
 }
 
+void watchMemory(long *buffer, char *description, long report)
+{
+  if (!report) 
+    {
+      *buffer = memoryUsage();
+    }
+  else 
+    {
+      long temp;
+      temp = memoryUsage();
+      if (temp!= *buffer) {
+          printf("%s: memory changed by %ld\n", description, temp-*buffer);
+        }
+      *buffer = temp;
+    }
+  
+}
+
