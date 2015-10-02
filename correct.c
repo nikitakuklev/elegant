@@ -1885,8 +1885,10 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
               assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
           }
           if (verbose && bestValue!=origValue) {
-            printf("Beam now reaches element %ld at s=%le m\n", iBest, traj[iBest].elem->end_pos);
-            fflush(stdout);
+            if (traj[iBest].elem) {
+              printf("Beam now reaches element %ld at s=%le m\n", iBest, traj[iBest].elem->end_pos);
+              fflush(stdout);
+            }
           }
           
           /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
