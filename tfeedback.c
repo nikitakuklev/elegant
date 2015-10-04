@@ -292,8 +292,6 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
-    if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
-      kick = SIGN(kick)*tfbd->kickLimit;
     rpass = (pass-tfbd->startPass)/updateInterval;
 #ifdef DEBUG
     fprintf(stdout, "TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
@@ -323,6 +321,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       fprintf(stdout, "TFBDRIVER: kick = %le\n", kick);
       fflush(stdout);
 #endif
+      if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
+        kick = SIGN(kick)*tfbd->kickLimit;
 
       if (isSlave || !notSinglePart) {
         if (!tfbd->longitudinal) {
