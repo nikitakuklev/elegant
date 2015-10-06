@@ -142,7 +142,7 @@ void track_through_rfmode(
 #if USE_MPI
       if (myid==0) {
 #endif
-      if (rfmode->record && !SDDS_StartPage(&rfmode->SDDSrec, n_passes)) {
+      if (rfmode->record && !SDDS_StartPage(&rfmode->SDDSrec, rfmode->flush_interval)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE record file");
       }
@@ -150,7 +150,7 @@ void track_through_rfmode(
       }
       if (myid==1) {
 #endif
-      if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, n_passes)) {
+      if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, rfmode->flush_interval)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE feedback record file");
       }
@@ -341,6 +341,10 @@ void track_through_rfmode(
             double IgAmp, IgPhase, Vrl, Vil, omegaDrive, omegaRes, dt, Vgr, Vgi, Vbr, Vbi;
             
             nTicks = (tmean-rfmode->fbLastTickTime)/(rfmode->updateInterval/rfmode->driveFrequency)-0.5;
+#ifdef DEBUG
+            printf("Advancing %ld feedback ticks\n", nTicks);
+            fflush(stdout);
+#endif
             while (nTicks--) {
               /* Update the voltage using the cavity state-space model */
               m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
@@ -395,7 +399,7 @@ void track_through_rfmode(
 #if USE_MPI
                 if (myid==1) {
 #endif
-                  if ((rfmode->fbSample+1)%rfmode->SDDSfbrec.n_rows_allocated==0) {
+                  if ((rfmode->fbSample+1)%rfmode->flush_interval==0) {
                     if (!SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
                       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                       SDDS_Bomb((char*)"problem flushing RFMODE feedback record file");
@@ -568,8 +572,10 @@ void track_through_rfmode(
           printf("bucket = %ld, firstBin = %ld, lastBin = %ld\n",  iBucket, firstBin_global, lastBin_global);
           if (myid!=0) {
             printf("%ld particles binned\n", n_binned);
+            /*
             for (ib=firstBin; ib<=lastBin; ib++) 
               printf("%ld %ld\n", ib, Ihist[ib]);
+            */
             fflush(stdout);
           }
 #endif
@@ -577,8 +583,10 @@ void track_through_rfmode(
 #else 
 #ifdef DEBUG
         printf("%ld particles binned\n", n_binned);
+        /*
         for (ib=firstBin; ib<=lastBin; ib++) 
           printf("%ld %ld\n", ib, Ihist[ib]);
+        */
         fflush(stdout);
 #endif
 #endif
@@ -716,13 +724,24 @@ void track_through_rfmode(
         double sendBuffer[13], receiveBuffer[13];
 #endif
         if ((pass%rfmode->sample_interval)==0) {
+#ifdef DEBUG
+          printf("sampling RFMODE output, pass=%ld, sample_counter=%ld, n_alloc=%ld\n", pass, rfmode->sample_counter, rfmode->SDDSrec.n_rows_allocated);
+          fflush(stdout);
+#endif
 #if USE_MPI
           if (myid==0)
 #endif
-          if ((rfmode->sample_counter+1)%rfmode->SDDSrec.n_rows_allocated==0 && !SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            SDDS_Bomb((char*)"problem flushing RFMODE record file");
-          }
+            if ((rfmode->sample_counter+1)%rfmode->flush_interval==0) {
+#ifdef DEBUG
+              printf("Preparing to flush table\n");
+              fflush(stdout);
+#endif
+              if (!SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
+                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                SDDS_Bomb((char*)"problem flushing RFMODE record file");
+              }
+            }
+          
 
           np_total = np; /* Used by serial version */
 #if (USE_MPI)
@@ -796,20 +815,6 @@ void track_through_rfmode(
           }
 #endif
         }
-#if USE_MPI
-        if (myid==0) {
-#endif
-          /*
-          if (pass==n_passes-1) {
-            if (!SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-              SDDS_Bomb((char*)"problem writing data for RFMODE record file");
-            }
-          }
-          */
-#if USE_MPI
-        }
-#endif
       }
 
 #if USE_MPI
@@ -836,6 +841,23 @@ void track_through_rfmode(
       printf("Finished waiting on barrier (2)\n");
       fflush(stdout);
 #endif
+
+      if (rfmode->record) {
+          
+#if USE_MPI
+        if (myid==0) {
+#endif
+          if (pass==n_passes-1) {
+            if (!SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+            }
+          }
+#if USE_MPI
+        }
+#endif
+      }
+      
 
 #ifdef DEBUG
     printf("RFMODE: Exited bunch loop\n");
@@ -1264,7 +1286,7 @@ void runBinlessRfMode(
   }
 
   if (rfmode->record) {
-    if (pass==0 && !SDDS_StartPage(&rfmode->SDDSrec, (int)(n_passes/rfmode->sample_interval+1.5))) {
+    if (pass==0 && !SDDS_StartPage(&rfmode->SDDSrec, rfmode->flush_interval)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb((char*)"problem starting page for RFMODE record file");
     }

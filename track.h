@@ -925,7 +925,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 58
 #define N_MATTER_PARAMS 11
-#define N_RFMODE_PARAMS 36
+#define N_RFMODE_PARAMS 37
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2232,6 +2232,7 @@ typedef struct {
     long rigid_until_pass;     /* beam is "rigid" until this pass */
     long detuned_until_pass;   /* cavity is completely detuned until this pass */
     long sample_interval;      /* sample interval for record file */
+    long flush_interval;       /* flush interval for record file */
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     long pass_interval;        /* number of passes between applications of wake */
