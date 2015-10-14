@@ -1062,7 +1062,7 @@ VMATRIX *compute_matrix(
                                          kquad->fse, kquad->xkick, kquad->ykick,
                                          kquad->edge1_effects, kquad->edge2_effects,
                                          "integrals", 0.0,
-                                         kquad->fringeIntM, kquad->fringeIntP, 0);
+                                         kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),
