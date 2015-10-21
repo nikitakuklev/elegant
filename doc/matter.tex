@@ -68,4 +68,9 @@ slotted absorber is simulated. The number of slots is by default infinite, but c
 \verb|N_SLOTS| to a positive value; in this case, the slot array is centered about the transverse coordinate
 given by the \verb|CENTER| parameter.
 
+Note that the simulation contains a simplification in that particles cannot leave or enter the material
+through the side of the slot. I.e., if a particle is inside (outside) the material when it hits the
+front face of the object, it is assumed to remain inside (outside) until it has passed the object.
+For long objects, breaking the simulation up into multiple MATTER elements is suggested if
+a slotted arrangement is being simulated.
 

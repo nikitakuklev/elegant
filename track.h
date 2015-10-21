@@ -2198,8 +2198,8 @@ typedef struct {
     double Xo;       /* radiation length */
     long energyDecay, energyStraggle, nuclearBremsstrahlung, electronRecoil, Z;
     double A, rho, pLimit;
+    double width, spacing, tilt, center;
     long nSlots;
-    double tilt, center, width, spacing;
     } MATTER;
 
 /* names and storage structure for RF mode physical parameters */
