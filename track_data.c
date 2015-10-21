@@ -1402,6 +1402,11 @@ PARAMETER matter_param[N_MATTER_PARAMS] = {
     {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&matter_example.A), NULL, 0.0, 0, "Atomic mass"},
     {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&matter_example.rho), NULL, 0.0, 0, "Density"},       
     {"PLIMIT", "", IS_DOUBLE, 0, (long)((char *)&matter_example.pLimit), NULL, 0.05, 0, "Probability cutoff for each slice"},
+    {"N_SLOTS", "", IS_LONG, 0, (long)((char *)&matter_example.nSlots), NULL, 0.0, 0, "Number of empty slots in material."},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&matter_example.tilt), NULL, 0.0, 0, "Tilt about the longitudinal axis. Ignored if N_SLOTS=0."},
+    {"CENTER", "M", IS_DOUBLE, 0, (long)((char *)&matter_example.center), NULL, 0.0, 0, "Position of center of central slot in rotated frame."},
+    {"WIDTH", "M", IS_DOUBLE, 0, (long)((char *)&matter_example.width), NULL, 0.0, 0, "Full width of slots."},
+    {"SPACING", "M", IS_DOUBLE, 0, (long)((char *)&matter_example.spacing), NULL, 0.0, 0, "Center-to-center spacing of slots."},
     };
 
 RFMODE rfmode_example;

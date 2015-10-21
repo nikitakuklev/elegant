@@ -38,6 +38,7 @@ long track_through_matter(
   long sections, sections0=1, impulseMode;
   double L1, prob, probBS, probER;  
   long multipleScattering = 0;
+  long hitsMatter;
   
   log_entry("track_through_matter");
 
@@ -105,7 +106,36 @@ long track_through_matter(
   for (ip=0; ip<=i_top; ip++) {
     coord = part[ip];
     isLost = 0;
-    if (Nrad) {
+    hitsMatter = 1;
+    if (matter->spacing>0 && matter->width>0) {
+      double q, p, offset;
+      if (matter->spacing<=matter->width)
+        bombElegant("MATTER SPACING parameter is less than WIDTH parameter", NULL);
+      if (matter->spacing<=0)
+        bombElegant("MATTER SPACING parameter is <= 0", NULL);
+      offset = 0;
+      if (matter->nSlots>0 && matter->nSlots%2==0)
+        offset = matter->spacing/2;
+      q = coord[0]*cos(matter->tilt) + coord[2] * sin(matter->tilt) - (matter->center + offset);
+      p = fabs(fmod(fabs(q), matter->spacing));
+      if (p<matter->width/2 || p>(matter->spacing-matter->width/2)) {
+        long slot;
+        if (matter->nSlots>0) {
+          if (matter->nSlots%2) {
+            slot = fabs(q)/matter->spacing + 0.5;
+            if (slot<=matter->nSlots/2)
+              hitsMatter = 0;
+          } else {
+            slot = fabs(q + matter->spacing/2)/matter->spacing ;
+            if (slot<matter->nSlots/2)
+              hitsMatter = 0;
+          }
+        } else 
+          /* infinite slot array */
+          hitsMatter = 0;
+      }
+    }
+    if (hitsMatter && Nrad) {
       if (matter->energyDecay || matter->nuclearBremsstrahlung) {
         P = (1+coord[5])*Po;
         gamma = sqrt(sqr(P)+1);
