@@ -863,7 +863,10 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MRFDF 108
 #define T_CORGPIPE 109
 #define T_LRWAKE 110
-#define N_TYPES   111
+#define T_EHCOR  111
+#define T_EVCOR  112
+#define T_EHVCOR  113
+#define N_TYPES   114
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -981,6 +984,9 @@ extern char *entity_text[N_TYPES];
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 11
+#define N_EHCOR_PARAMS 8
+#define N_EVCOR_PARAMS 8
+#define N_EHVCOR_PARAMS 10
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1173,6 +1179,28 @@ typedef struct {
     double lEffRad;
     } HCOR;
 
+/* names and storage structure for exact corrector physical parameters */
+extern PARAMETER ehcor_param[N_EHCOR_PARAMS] ;
+extern PARAMETER evcor_param[N_EVCOR_PARAMS] ;
+extern PARAMETER ehvcor_param[N_EHVCOR_PARAMS] ;
+   
+typedef struct {
+    double length, kick, tilt, calibration;
+    long steering, synchRad, isr;
+    double lEffRad;
+    } EHCOR;
+
+typedef struct {
+    double length, kick, tilt, calibration;
+    long steering, synchRad, isr; 
+    double lEffRad;
+    } EVCOR;
+
+typedef struct {
+    double length, xkick, ykick, tilt, xcalibration, ycalibration;
+    long steering, synchRad, isr;
+    double lEffRad;
+    } EHVCOR;
 
 /* names and storage structure for vertical corrector physical parameters */
 extern PARAMETER vcor_param[N_VCOR_PARAMS] ;
@@ -3732,6 +3760,8 @@ long applyLHPassFilters(double *histogram, long bins, double startHP, double end
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax);
+
+long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST *eptr, double Po, double **accepted, double z_start, double *sigmaDelta2);
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);

@@ -274,8 +274,12 @@ void correction_setup(
       cp_str(&item, "KICK");
       found += add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMFx->default_tweek, 
                               _correct->CMFx->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHCOR, item, _correct->CMFx->default_tweek, 
+                              _correct->CMFx->corr_limit, beamline, run, 0);
       cp_str(&item, "HKICK");
       found += add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMFx->default_tweek, 
+                              _correct->CMFx->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_EHVCOR, item, _correct->CMFx->default_tweek, 
                               _correct->CMFx->corr_limit, beamline, run, 0);
       cp_str(&item, "HKICK");
       found += add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMFx->default_tweek, 
@@ -292,8 +296,12 @@ void correction_setup(
       cp_str(&item, "KICK");
       found += add_steer_type_to_lists(&_correct->SLy, 2, T_VCOR, item, _correct->CMFy->default_tweek, 
                               _correct->CMFy->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_EVCOR, item, _correct->CMFy->default_tweek, 
+                              _correct->CMFy->corr_limit, beamline, run, 0);
       cp_str(&item, "VKICK");
       found += add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMFy->default_tweek, 
+                              _correct->CMFy->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_EHVCOR, item, _correct->CMFy->default_tweek, 
                               _correct->CMFy->corr_limit, beamline, run, 0);
       cp_str(&item, "VKICK");
       found += add_steer_type_to_lists(&_correct->SLy, 2, T_QUAD, item, _correct->CMFy->default_tweek, 
@@ -573,14 +581,17 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 
   switch (type) {
   case T_HCOR:
+  case T_EHCOR:
     if (plane==0 && param_offset==find_parameter_offset("KICK", type))
       return(1.0);
     break;
   case T_VCOR:
+  case T_EVCOR:
     if (plane!=0 && param_offset==find_parameter_offset("KICK", type))
       return(1.0);
     break;
   case T_HVCOR:
+  case T_EHVCOR:
     if (plane==0 && param_offset==find_parameter_offset("HKICK", type))
       return(1.0);
     if (plane!=0 && param_offset==find_parameter_offset("VKICK", type))
@@ -2893,6 +2904,12 @@ long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane)
         return ((HCOR*)(eptr->p_elem))->steering;
       case T_VCOR:
         return ((VCOR*)(eptr->p_elem))->steering;
+      case T_EHVCOR:
+        return ((EHVCOR*)(eptr->p_elem))->steering;
+      case T_EHCOR:
+        return ((EHCOR*)(eptr->p_elem))->steering;
+      case T_EVCOR:
+        return ((EVCOR*)(eptr->p_elem))->steering;
       case T_QUAD:
         if (plane==0)
           return ((QUAD*)(eptr->p_elem))->xSteering;
@@ -3089,6 +3106,14 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
         if (coord)
             return ((HVCOR*)(elem->p_elem))->ycalibration;
         return ((HVCOR*)(elem->p_elem))->xcalibration;
+      case T_EHCOR:
+        return ((EHCOR*)(elem->p_elem))->calibration;
+      case T_EVCOR:
+        return ((EVCOR*)(elem->p_elem))->calibration;
+      case T_EHVCOR:
+        if (coord)
+            return ((EHVCOR*)(elem->p_elem))->ycalibration;
+        return ((EHVCOR*)(elem->p_elem))->xcalibration;
       case T_QUAD:
         if (coord) 
           return ((QUAD*)(elem->p_elem))->yKickCalibration;

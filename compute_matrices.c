@@ -735,6 +735,7 @@ VMATRIX *compute_matrix(
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
     UKICKMAP *ukmap; SCRIPT *script; FTABLE *ftable;
+    EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
     long fiducialize;
@@ -1308,6 +1309,24 @@ VMATRIX *compute_matrix(
         elem->matrix = mult_matrix(mult=(MULT*)elem->p_elem, Pref_output, run->default_order);
         if (mult->dx || mult->dy || mult->dz)
           misalign_matrix(elem->matrix, mult->dx, mult->dy, mult->dz, 0.0);
+        break;
+      case T_EHCOR:
+        ehcor = (EHCOR*) elem->p_elem;
+        elem->matrix = corrector_matrix(ehcor->length, ehcor->kick, ehcor->tilt, 
+                                        0, ehcor->calibration,
+                                        0, run->default_order);
+        break;
+      case T_EVCOR:
+        evcor = (EVCOR*) elem->p_elem;
+        elem->matrix = corrector_matrix(evcor->length, evcor->kick, evcor->tilt+PI/2,
+                                        0, evcor->calibration,
+                                        0, run->default_order);
+        break;
+      case T_EHVCOR:
+        ehvcor = (EHVCOR*) elem->p_elem;
+        elem->matrix = hvcorrector_matrix(ehvcor->length, ehvcor->xkick, ehvcor->ykick, 
+                                          ehvcor->tilt, 0, ehvcor->xcalibration, ehvcor->ycalibration, 
+                                          0, run->default_order);
         break;
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 

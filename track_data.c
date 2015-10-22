@@ -62,6 +62,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
+    "EHKICK", "EVKICK", "EKICK",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -201,7 +202,10 @@ and phase modulation.",
     "Tracks through a wiggler using generate function method of J. Bahrdt and G. Wuestefeld (BESSY, Berlin, Germany).",
     "Zero-length Multipole RF DeFlector from dipole to decapole",
     "A corrugated round pipe, commonly used as a dechirper in linacs.",
-    "Long-range (inter-bunch and inter-turn) longitudinal and transverse wake"
+    "Long-range (inter-bunch and inter-turn) longitudinal and transverse wake",
+    "A horizontal steering dipole implemented using an exact hard-edge model",
+    "A vertical steering dipole implemented using an exact hard-edge model",
+    "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
     } ;
 
 QUAD quad_example;
@@ -2536,6 +2540,47 @@ PARAMETER mrfdf_param[N_MRFDF_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&mrfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     } ;
 
+EHCOR ehcor_example;
+/* horizontal corrector physical parameters */
+PARAMETER ehcor_param[N_EHCOR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.length), NULL, 0.0, 0, "length"},
+    {"KICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.kick), NULL, 0.0, 0, "kick angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.calibration), NULL, 1.0, 0, "factor applied to obtain kick"},
+    {"STEERING", "", IS_LONG, 0, (long)((char *)&ehcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ehcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&ehcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    };
+
+EVCOR evcor_example;
+/* horizontal corrector physical parameters */
+PARAMETER evcor_param[N_EVCOR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.length), NULL, 0.0, 0, "length"},
+    {"KICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.kick), NULL, 0.0, 0, "kick angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.calibration), NULL, 1.0, 0, "factor applied to obtain kick"},
+    {"STEERING", "", IS_LONG, 0, (long)((char *)&evcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&evcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&evcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&evcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    };
+
+EHVCOR ehvcor_example;
+/* horizontal/vertical corrector physical parameters */
+PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.length), NULL, 0.0, 0, "length"},
+    {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.xkick), NULL, 0.0, 0, "horizontal kick angle"},
+    {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.ykick), NULL, 0.0, 0, "vertical kick angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"HCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.xcalibration), NULL, 1.0, 0, "factor applied to obtain horizontal kick"},
+    {"VCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.ycalibration), NULL, 1.0, 0, "factor applied to obtain vertical kick"},
+    {"STEERING", "", IS_LONG, 0, (long)((char *)&ehvcor_example.steering), NULL, 0.0, 1, "use for steering?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ehvcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&ehvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    };
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2668,6 +2713,9 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_MRFDF_PARAMS,  MPALGORITHM,   sizeof(MRFDF),    mrfdf_param     }, 
     { N_CORGPIPE_PARAMS, MAY_CHANGE_ENERGY|MPALGORITHM|MAT_LEN_NCAT, sizeof(CORGPIPE), corgpipe_param},
     { N_LRWAKE_PARAMS, MPALGORITHM, sizeof(LRWAKE), lrwake_param},
+    {    N_EHCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHCOR),    ehcor_param     }, 
+    {    N_EVCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EVCOR),    evcor_param     }, 
+    {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
 } ;
 
 void compute_offsets()

@@ -4271,6 +4271,36 @@ void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long
 	isr = 1;
     }
     break;
+  case T_EHCOR:
+    kick = ((EHCOR*)elem->p_elem)->kick;
+    if ((length = ((EHCOR*)elem->p_elem)->length)==0) 
+      length = ((EHCOR*)elem->p_elem)->lEffRad;
+    if (((EHCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((EHCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
+  case T_EVCOR:
+    kick = ((EVCOR*)elem->p_elem)->kick;
+    if ((length = ((EVCOR*)elem->p_elem)->length)==0) 
+      length = ((EVCOR*)elem->p_elem)->lEffRad;
+    if (((EVCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((EVCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
+  case T_EHVCOR:
+    kick = sqrt(sqr(((EHVCOR*)elem->p_elem)->xkick)+sqr(((EHVCOR*)elem->p_elem)->ykick));
+    if ((length = ((EHVCOR*)elem->p_elem)->length)==0) 
+      length = ((EHVCOR*)elem->p_elem)->lEffRad;
+    if (((EHVCOR*)elem->p_elem)->synchRad) {
+      sr = 1;
+      if (((EHVCOR*)elem->p_elem)->isr) 
+	isr = 1;
+    }
+    break;
   }
   if (sr==0 || length==0) 
     return ;

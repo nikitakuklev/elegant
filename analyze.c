@@ -616,6 +616,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   KQUAD kquad;  QUAD *quad; CWIGGLER cwig;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
+  EHCOR ehcor; EVCOR evcor; EHVCOR ehvcor;
   double length, z;
   long i, j, k, slice, nSlices0;
   double *accumD1, *accumD2, *dtmp;
@@ -896,6 +897,37 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       hvcor.ykick /= nSlices;
       hvcor.isr = 0;
       break;
+    case T_EHCOR:
+      memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
+      elem.p_elem = &ehcor;
+      memcpy(&ehcor, eptr->p_elem, sizeof(ehcor));
+      length = (ehcor.length /= nSlices);
+      ehcor.lEffRad /= nSlices;
+      ehcor.kick /= nSlices;
+      ehcor.isr = 0;
+      break;
+    case T_EVCOR:
+      memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
+      elem.p_elem = &evcor;
+      memcpy(&evcor, eptr->p_elem, sizeof(evcor));
+      length = (evcor.length /= nSlices);
+      evcor.lEffRad /= nSlices;
+      evcor.kick /= nSlices;
+      evcor.isr = 0;
+      break;
+    case T_EHVCOR:
+      memcpy(&elem, eptr, sizeof(elem));
+      elem.matrix = NULL;
+      elem.p_elem = &ehvcor;
+      memcpy(&ehvcor, eptr->p_elem, sizeof(ehvcor));
+      length = (ehvcor.length /= nSlices);
+      ehvcor.lEffRad /= nSlices;
+      ehvcor.xkick /= nSlices;
+      ehvcor.ykick /= nSlices;
+      ehvcor.isr = 0;
+      break;
     case T_CWIGGLER:
       if (slice==0) {
         memcpy(&cwig, (CWIGGLER*)eptr->p_elem, sizeof(CWIGGLER));
@@ -1061,6 +1093,11 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     track_particles(coord, matrix, coord, n_track);
     addCorrectorRadiationKick(coord, n_track, elem, elem->type, run->p_central, &sigmaDelta2, 1);
     free_matrices(matrix); free(matrix); matrix = NULL;
+    break;
+  case T_EHCOR:
+  case T_EVCOR:
+  case T_EHVCOR:
+    trackThroughExactCorrector(coord, n_track, elem, run->p_central, NULL, 0, &sigmaDelta2);
     break;
   case T_TWLA:
     pCentral = run->p_central;

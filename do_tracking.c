@@ -1840,6 +1840,13 @@ long do_tracking(
 		break;
 	      }
 	      break;
+            case T_EHCOR:
+            case T_EVCOR:
+            case T_EHVCOR:
+	      /* Only the slave CPUs will track */ 
+	      if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0)))
+                trackThroughExactCorrector(coord, nToTrack, eptr, *P_central, accepted, last_z, NULL);
+	      break;
 	    default:
 	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);
