@@ -143,6 +143,24 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                         eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end);
                 start = end;
                 break;
+            case T_EHCOR:
+                end    = start+((EHCOR*)eptr->p_elem)->length;
+                fprintf(fpm, "\"%s\" %s %e .25\n\"%s\" %s %e .25\n\"%s\" %s %e 0\n", 
+                        eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end);
+                start = end;
+                break;
+            case T_EVCOR:
+                end    = start+((EVCOR*)eptr->p_elem)->length;
+                fprintf(fpm, "\"%s\" %s %e -.25\n\"%s\" %s %e -.25\n\"%s\" %s %e 0\n", 
+                        eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end);
+                start = end;
+                break;
+            case T_EHVCOR:
+                end    = start+((EHVCOR*)eptr->p_elem)->length;
+                fprintf(fpm, "\"%s\" %s %e .25\n\"%s\" %s %e -.25\n\"%s\" %s %e 0\n",
+                        eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end);
+                start = end;
+                break;
             case T_DRIF:
                 start = (end = start+((DRIFT*)eptr->p_elem)->length);
                 fprintf(fpm, "\"%s\" %s %e  0\n", eptr->name, entity_name[eptr->type], end);

@@ -1,4 +1,4 @@
-
+#define DEBUG 1
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -579,23 +579,25 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
   if ((param_number=confirm_parameter(item, type))<0 || (param_offset=find_parameter_offset(item, type))<0)
     bombElegant("invalid parameter or element type (compute_kick_coefficient)", NULL);
 
+  coef = 0;
+  
   switch (type) {
   case T_HCOR:
   case T_EHCOR:
     if (plane==0 && param_offset==find_parameter_offset("KICK", type))
-      return(1.0);
+      coef = 1.0;
     break;
   case T_VCOR:
   case T_EVCOR:
     if (plane!=0 && param_offset==find_parameter_offset("KICK", type))
-      return(1.0);
+      coef = 1.0;
     break;
   case T_HVCOR:
   case T_EHVCOR:
     if (plane==0 && param_offset==find_parameter_offset("HKICK", type))
-      return(1.0);
+      coef = 1.0;
     if (plane!=0 && param_offset==find_parameter_offset("VKICK", type))
-      return(1.0);
+      coef = 1.0;
     break;
   default:
     if (entity_description[elem->type].flags&HAS_MATRIX) {
@@ -624,7 +626,6 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
       free_matrices(M2); tfree(M2); M2 = NULL;
       *((double*)(elem->p_elem+param_offset)) = value;
       elem->matrix = M0;
-      return(coef);
     }
     else {
       fprintf(stdout, "error: element %s does not have a matrix--can't be used for steering.\n",
@@ -634,7 +635,8 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
     }
     break;
   }
-  return(0.0);
+  printf("kick coefficient for %s is %le\n", elem->name, coef);
+  return coef;
 }
 
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
@@ -3097,35 +3099,50 @@ void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord)
 
 double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
 {
+  double value = 0;
     switch (elem->type) {
       case T_HCOR:
-        return ((HCOR*)(elem->p_elem))->calibration;
+        value = ((HCOR*)(elem->p_elem))->calibration;
+        break;
       case T_VCOR:
-        return ((VCOR*)(elem->p_elem))->calibration;
+        value = ((VCOR*)(elem->p_elem))->calibration;
+        break;
       case T_HVCOR:
         if (coord)
-            return ((HVCOR*)(elem->p_elem))->ycalibration;
-        return ((HVCOR*)(elem->p_elem))->xcalibration;
+            value = ((HVCOR*)(elem->p_elem))->ycalibration;
+        else
+            value = ((HVCOR*)(elem->p_elem))->xcalibration;
+        break;
       case T_EHCOR:
-        return ((EHCOR*)(elem->p_elem))->calibration;
+        value = ((EHCOR*)(elem->p_elem))->calibration;
+        break;
       case T_EVCOR:
-        return ((EVCOR*)(elem->p_elem))->calibration;
+        value = ((EVCOR*)(elem->p_elem))->calibration;
+        break;
       case T_EHVCOR:
         if (coord)
-            return ((EHVCOR*)(elem->p_elem))->ycalibration;
-        return ((EHVCOR*)(elem->p_elem))->xcalibration;
+            value = ((EHVCOR*)(elem->p_elem))->ycalibration;
+        else
+          value = ((EHVCOR*)(elem->p_elem))->xcalibration;
+        break;
       case T_QUAD:
         if (coord) 
-          return ((QUAD*)(elem->p_elem))->yKickCalibration;
-        return ((QUAD*)(elem->p_elem))->xKickCalibration;
+          value = ((QUAD*)(elem->p_elem))->yKickCalibration;
+        else
+          value = ((QUAD*)(elem->p_elem))->xKickCalibration;
+        break;
       case T_KQUAD:
         if (coord) 
-          return ((KQUAD*)(elem->p_elem))->yKickCalibration;
-        return ((KQUAD*)(elem->p_elem))->xKickCalibration;
+          value = ((KQUAD*)(elem->p_elem))->yKickCalibration;
+        else
+          value = ((KQUAD*)(elem->p_elem))->xKickCalibration;
+        break;
       default:
-        return 1;
-        }
-    }
+        value = 1;
+        break;
+      }
+  return value;
+}
 
 void copy_steering_results(CORMON_DATA *CM, CORMON_DATA *CMA, long iterations)
 {

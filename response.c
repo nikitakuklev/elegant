@@ -206,9 +206,11 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
             if (is_blank(entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit))
                 strcpy_ss(units, "m");
             else {
-                if (unitsCode==KNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                if (unitsCode==KNL_UNITS && (eptr->type==T_HCOR  || eptr->type==T_HVCOR  || eptr->type==T_VCOR || 
+                                             eptr->type==T_EHCOR || eptr->type==T_EHVCOR || eptr->type==T_EVCOR)) 
                     sprintf(units, "m/K0L");
-                else if (unitsCode==BNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                else if (unitsCode==BNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR ||
+                                                  eptr->type==T_EHCOR || eptr->type==T_EHVCOR || eptr->type==T_EVCOR))
                     sprintf(units, "1/T");
                 else {
                     sprintf(units, "m/%s", entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit);
@@ -222,10 +224,12 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
                 strcpy_ss(units, "1/m");
             else {
                 if (unitsCode==KNL_UNITS 
-                    && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                    && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR ||
+                        eptr->type==T_EHCOR || eptr->type==T_EHVCOR || eptr->type==T_EVCOR))
                   sprintf(units, "K0L/m");
                 else if (unitsCode==BNL_UNITS 
-                         && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                         && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR ||
+                             eptr->type==T_EHCOR || eptr->type==T_EHVCOR || eptr->type==T_EVCOR))
                   sprintf(units, "T");
                 else {
                     sprintf(units, "%s/m", entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit);
@@ -453,7 +457,8 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
                 value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
-                if (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR) {
+                if (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR ||
+                    eptr->type==T_EHCOR || eptr->type==T_EHVCOR || eptr->type==T_EVCOR) {
                     value *= (inverse?eptr->Pref_output/586.679:586.679/(eptr->Pref_output+1e-10));
                   }
                 if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
@@ -464,7 +469,8 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
                 value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
-                if (eptr->type==T_HCOR || eptr->type==T_HVCOR)
+                if (eptr->type==T_HCOR || eptr->type==T_HVCOR || 
+                    eptr->type==T_EHCOR || eptr->type==T_EHVCOR)
                     value = -value;
                 if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
                                        respOutput->correctorIndex[j], value, -1))

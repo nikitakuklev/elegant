@@ -90,6 +90,20 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
             param_name = "KICK";
             KnL2PF = 1;
             break;
+          case T_EHCOR:
+            L = ((EHCOR*)eptr->p_elem)->length;
+            KnL = -((EHCOR*)eptr->p_elem)->kick;
+            n = 0;
+            param_name = "KICK";
+            KnL2PF = -1;
+            break;
+          case T_EVCOR:
+            L = ((EVCOR*)eptr->p_elem)->length;
+            KnL = ((EVCOR*)eptr->p_elem)->kick;
+            n = 0;
+            param_name = "KICK";
+            KnL2PF = 1;
+            break;
           case T_SEXT:
             L = ((SEXT*)eptr->p_elem)->length;
             KnL = ((SEXT*)eptr->p_elem)->k2*L;
