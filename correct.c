@@ -634,7 +634,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
     }
     break;
   }
-  printf("kick coefficient for %s is %le\n", elem->name, coef);
+
   return coef;
 }
 

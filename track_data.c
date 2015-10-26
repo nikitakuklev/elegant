@@ -62,7 +62,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
-    "EHKICK", "EVKICK", "EKICK",
+    "EHKICK", "EVKICK", "EKICKER",
     };
 
 char *madcom_name[N_MADCOMS] = {
