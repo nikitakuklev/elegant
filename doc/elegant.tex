@@ -39,7 +39,7 @@ Here is a summary of what's changed since release 28.2:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed a bug in the \verb|MATRX| element that would crop up in multi-step runs, causing a crash or lock-up.
+\item Fixed a bug in the \verb|MATR| element that would crop up in multi-step runs, causing a crash or lock-up.
   This was reported by P. Emma (SLAC).
 \end{itemize}
 
@@ -56,7 +56,8 @@ Here is a summary of what's changed since release 28.2:
 \item Added \verb|EKICKER|, \verb|EHKICK|, and \verb|EVKICK|, which provide various flavors of steering correctors using an Exact 
   model. These may be used in place of the existing \verb|KICKER|, \verb|HKICK|, and \verb|VKICK| elements.
   The need for this was pointed out by L. Yang (BNL).
-\item The \verb|MATTER| element now supports slit arrays.
+\item The \verb|MATTER| element now supports arrays of slits. This can be used for example to model a double-slit spoiler for
+  producing two pulses in an FEL.
 \end{itemize}
 
 \subsection{New and Modified Commands}
