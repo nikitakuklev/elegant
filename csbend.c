@@ -3543,10 +3543,10 @@ void apply_edge_effects(
   *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
 }
 
-/* dipole fringe effects symplectic tracking */
+/* dipole fringe effects symplectic tracking, based on work of Kilean Hwang */
 
 void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
- double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe)
+                     double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe)
 {
   double dx, dpx, dy, dpy;
   double tan_edge, sin_edge, sec_edge, cos_edge;
@@ -3572,106 +3572,106 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
   cos_edge=cos(edge);
   
 
-    if (higherOrder>1) {
+  if (higherOrder>1) {
 
-	/* entrance */
-   	if (inFringe==-1.) {
-  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-  	dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-		+tan_edge*x0/rho
-		+ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		+ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
-		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+    /* entrance */
+    if (inFringe==-1.) {
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+        +tan_edge*x0/rho
+          +ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+            +ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
 		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
-	dpy  =  -1.*tan_edge*y0/rho 
-		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-		+inFringe*y0*xp0/rho
-		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+      dpy  =  -1.*tan_edge*y0/rho 
+        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+            +inFringe*y0*xp0/rho
+              +k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
 		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
-	}
-	/* exit */
-   	if (inFringe==1.) {
-  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-  	dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-		+tan_edge*x0/rho
-		-ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		-ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
-		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
-	dpy  =  -1.*tan_edge*y0/rho 
-		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-		+inFringe*y0*xp0/rho
-		+x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
-		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
-		-k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
-	}
-          
-    } else if (higherOrder==1) {
-
-	/* entrance */
-   	if (inFringe==-1.) {
-  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-  	dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-		+tan_edge*x0/rho
-		+ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		+ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
-		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
-		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
-	dpy  =  -1.*tan_edge*y0/rho 
-		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-		+inFringe*y0*xp0/rho
-		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
-		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
-	}
-	/* exit */
-   	if (inFringe==1.) {
-  	dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-		+ inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-		- inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-  	dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-  	dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-		+tan_edge*x0/rho
-		-ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		-ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-		-inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
-		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-		-k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
-	dpy  =  -1.*tan_edge*y0/rho 
-		+k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-		+inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-		+inFringe*y0*xp0/rho
-		+x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
-		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
-		-k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
-	}
     }
+    /* exit */
+    if (inFringe==1.) {
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+        +tan_edge*x0/rho
+          -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+            -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+      dpy  =  -1.*tan_edge*y0/rho 
+        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+            +inFringe*y0*xp0/rho
+              +x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+                  -k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+    }
+    
+  } else if (higherOrder==1) {
+
+    /* entrance */
+    if (inFringe==-1.) {
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+        +tan_edge*x0/rho
+          +ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+            +ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+      dpy  =  -1.*tan_edge*y0/rho 
+        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+            +inFringe*y0*xp0/rho
+              +k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+    }
+    /* exit */
+    if (inFringe==1.) {
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
+        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
+          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
+      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
+        +tan_edge*x0/rho
+          -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+            -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+      dpy  =  -1.*tan_edge*y0/rho 
+        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
+            +inFringe*y0*xp0/rho
+              +x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
+		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
+                  -k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
+                    +k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+    }
+  }
   
   *x  = x0  + dx;
   *xp = xp0 + dpx/(1+dp0);
   *y  = y0  + dy;
   *yp = yp0 + dpy/(1+dp0);
-	/*  printf("x %f y %f xp %f yp %f dp0 %f\n", *x, *y, *xp, *yp, dp0); */
+  /*  printf("x %f y %f xp %f yp %f dp0 %f\n", *x, *y, *xp, *yp, dp0); */
 }
 
 /* this is used solely to convert coordinates inside the element for
