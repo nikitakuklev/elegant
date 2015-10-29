@@ -571,7 +571,7 @@ void computeChromaticities(double *chromx, double *chromy,
 #endif
   }
   if (dalphax) {
-    *dalphax = computeChromaticBetaValue(dR11, dR12, dR22, 
+    *dalphax = computeChromaticAlphaValue(dR11, dR12, dR22, 
 					M->R[0][0], M->R[0][1], M->R[1][1],
 					twiss0->betax, twiss1->betax,
 					twiss0->alphax, twiss1->alphax,

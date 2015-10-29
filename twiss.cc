@@ -958,39 +958,41 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_PCENTRAL 17
 #define IP_DBETAXDP 18
 #define IP_DBETAYDP 19
-#define IP_ETAX2    20
-#define IP_ETAY2    21
-#define IP_ETAX3    22
-#define IP_ETAY3    23
-#define IP_BETAXMIN 24
-#define IP_BETAXAVE 25
-#define IP_BETAXMAX 26
-#define IP_BETAYMIN 27
-#define IP_BETAYAVE 28
-#define IP_BETAYMAX 29
-#define IP_ETAXMAX 30
-#define IP_ETAYMAX 31
-#define IP_WAISTSX 32
-#define IP_WAISTSY 33
-#define IP_DNUXDAX 34
-#define IP_DNUXDAY 35
-#define IP_DNUYDAX 36
-#define IP_DNUYDAY 37
-#define IP_DNUXDAX2 38
-#define IP_DNUXDAY2 39
-#define IP_DNUXDAXAY 40
-#define IP_DNUYDAX2 41
-#define IP_DNUYDAY2 42
-#define IP_DNUYDAXAY 43
-#define IP_NUXTSWAMIN 44
-#define IP_NUXTSWAMAX 45
-#define IP_NUYTSWAMIN 46
-#define IP_NUYTSWAMAX 47
-#define IP_COUPLINGINTEGRAL 48
-#define IP_COUPLINGOFFSET 49
-#define IP_EMITRATIO 50
-#define IP_ALPHAC2 51
-#define IP_ALPHAC  52
+#define IP_DALPHAXDP 20
+#define IP_DALPHAYDP 21
+#define IP_ETAX2    (20+2)
+#define IP_ETAY2    (21+2)
+#define IP_ETAX3    (22+2)
+#define IP_ETAY3    (23+2)
+#define IP_BETAXMIN (24+2)
+#define IP_BETAXAVE (25+2)
+#define IP_BETAXMAX (26+2)
+#define IP_BETAYMIN (27+2)
+#define IP_BETAYAVE (28+2)
+#define IP_BETAYMAX (29+2)
+#define IP_ETAXMAX (30+2)
+#define IP_ETAYMAX (31+2)
+#define IP_WAISTSX (32+2)
+#define IP_WAISTSY (33+2)
+#define IP_DNUXDAX (34+2)
+#define IP_DNUXDAY (35+2)
+#define IP_DNUYDAX (36+2)
+#define IP_DNUYDAY (37+2)
+#define IP_DNUXDAX2 (38+2)
+#define IP_DNUXDAY2 (39+2)
+#define IP_DNUXDAXAY (40+2)
+#define IP_DNUYDAX2 (41+2)
+#define IP_DNUYDAY2 (42+2)
+#define IP_DNUYDAXAY (43+2)
+#define IP_NUXTSWAMIN (44+2)
+#define IP_NUXTSWAMAX (45+2)
+#define IP_NUYTSWAMIN (46+2)
+#define IP_NUYTSWAMAX (47+2)
+#define IP_COUPLINGINTEGRAL (48+2)
+#define IP_COUPLINGOFFSET (49+2)
+#define IP_EMITRATIO (50+2)
+#define IP_ALPHAC2 (51+2)
+#define IP_ALPHAC  (52+2)
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -1031,6 +1033,8 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"pCentral", (char*)"&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 {(char*)"dbetax/dp", (char*)"&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
 {(char*)"dbetay/dp", (char*)"&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
+{(char*)"dalphax/dp", (char*)"&parameter name=dalphax/dp, type=double, description=\"Derivative of alphax with momentum offset\" &end"},
+{(char*)"dalphay/dp", (char*)"&parameter name=dalphay/dp, type=double, description=\"Derivative of alphay with momentum offset\" &end"},
 {(char*)"etax2", (char*)"&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
 {(char*)"etay2", (char*)"&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
 {(char*)"etax3", (char*)"&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
@@ -1192,6 +1196,7 @@ void dump_twiss_parameters(
   RADIATION_INTEGRALS *radIntegrals,                           
   double *chromaticity,
   double *dbeta,
+  double *dalpha,
   double *acceptance,
   double *alphac,
   long final_values_only_inner_scope,
@@ -1246,6 +1251,7 @@ void dump_twiss_parameters(
 	                  IP_EMITRATIO, beamline->couplingFactor[2],
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
+                          IP_DALPHAXDP, dalpha[0], IP_DALPHAYDP, dalpha[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
                           IP_BETAYMIN, twiss_min.betay, IP_BETAYAVE, twiss_ave.betay, IP_BETAYMAX, twiss_max.betay, 
                           IP_ETAXMAX, MAX(fabs(twiss_min.etax), fabs(twiss_max.etax)),
@@ -1921,6 +1927,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
                           beamline->tune, 
                           radiation_integrals?&(beamline->radIntegrals):NULL, 
                           beamline->chromaticity, beamline->dbeta_dPoP,
+                          beamline->dalpha_dPoP,
                           beamline->acceptance, 
                           beamline->alpha, final_values_only, tune_corrected, run);
   }

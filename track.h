@@ -3279,7 +3279,7 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
 void compute_twiss_percentiles(LINE_LIST *beamline, TWISS *twiss_p99, TWISS *twiss_p98, TWISS *twiss_p96);
 void dump_twiss_parameters(LINE_LIST *beamline, long n_elem, 
                            double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, 
-                           double *dbeta, double *acceptance, double *alphac,
+                           double *dbeta, double *dalpha, double *acceptance, double *alphac,
                            long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output,
                         long default_order);
