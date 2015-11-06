@@ -1170,10 +1170,11 @@ particles.
 \end{verbatim}
 
 \begin{itemize}
-\item \verb|sextupoles| --- List of names of elements to use to correct the chromaticities.  Only two names may be given, but the names may include
+\item \verb|sextupoles| --- List of names of elements to use to correct the chromaticities.  Several names may be given and names may include
   wildcards. If so, then sextupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the sextupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
+  Note that although more than two families may be listed, the results may not be satisfactory.
 \item \verb|dnux_dp|, \verb|dnuy_dp| --- Desired chromaticity values.
 \item \verb|sextupole_tweek| --- Amount by which to tweak the sextupoles to compute derivatives of
 chromaticities with respect to sextupole strength.  [The word ``tweak'' is misspelled ``tweek'' in the code.]
@@ -1478,10 +1479,11 @@ matrix.
 \end{verbatim}
 
 \begin{itemize}
-\item \verb|quadrupoles| --- List of names of quadrupoles to be used.  Only two names may be given, but the names may include
+\item \verb|quadrupoles| --- List of names of quadrupoles to be used.  Several names may be given and the names may include
   wildcards. If so, then quadrupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the quadrupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
+  Note that although more than two families may be listed, the results may not be satisfactory.
 \item \verb|tune_x|, \verb|tune_y| --- Desired x and y tune values.  If not given, the desired values are
 assumed to be the unperturbed tunes.
 \item \verb|n_iterations| --- The number of iterations of the correction to perform.
