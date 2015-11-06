@@ -49,6 +49,10 @@ Here is a summary of what's changed since release 28.1:
   resulted in invalid data in the log file for mixed element types. This was reported by V. Sajaev (ANL).
 \item Fixed a bug in the \verb|chromaticity| command that resulted in a crash when \verb|n_iterations=0| and would also have
   resulted in invalid data in the log file for mixed element types.
+\item Fixed a bug related to optimization of the chromatic derivative of \verb|alpha_x|. The value provided was actually the
+  chromatic derivative of \verb|betax|.
+\item Previous versions of this manual indicated that the \verb|find_aperture| command provided a quantity \verb|Area| giving
+  the dynamic aperture area for optimization. The quantity is in fact called \verb|DaArea|. This was reported by S. Hilbrich (TU Dortmund).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -1838,7 +1842,7 @@ zero for backward compatibility, but the recommended value is 1.
 \item \verb|n_lines| --- In ``n-lines'' mode, the number of lines to search.
 
 \item \verb|optimization_mode| --- If non-zero, then \verb|find_aperture| is a setup command and can be used
-with {\tt elegant}'s internal optimizer.  The quantity \verb|Area| is defined, giving the area of the dynamic
+with {\tt elegant}'s internal optimizer.  The quantity \verb|DaArea| is defined, giving the area of the dynamic
 aperture for use in the penalty function.  This is available only for the line search modes.
 
 \end{itemize}
