@@ -910,7 +910,7 @@ char **argv;
         break;
       case ANALYZE_MAP:
         if (!run_setuped || !run_controled)
-          bombElegant("run_setup, run_control, and beam definition must precede track namelist", NULL);
+          bombElegant("run_setup and run_control must precede analyze_map namelist", NULL);
         setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
         break;
       }

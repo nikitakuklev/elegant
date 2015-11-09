@@ -3303,6 +3303,12 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      long allowLosses, long nPeriods);
 double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 
+/* chrom.c */
+void computeChromaticities(double *chromx, double *chromy, 
+                           double *dbetax, double *dbetay,
+                           double *dalphax, double *dalphay,
+                           TWISS *twiss0, TWISS *twiss1, VMATRIX *M);
+
 /* frequencyMap.c */
 void setupFrequencyMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
@@ -4016,6 +4022,12 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
 #endif
 
 
+extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, double **final, double **error, 
+				 double *step_size, double *maximum_value, int n_points1, int n_points_total,
+				 int max_order_of_fits, int verbose);
+extern int makeInitialParticleEnsemble(double ***initial, double *reference, double ***final, 
+				       double ***error, int n_points1, double *step);
+  
 #ifdef __cplusplus
 }
 #endif

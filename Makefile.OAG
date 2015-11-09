@@ -1,7 +1,7 @@
 CMPLR = ANSI
 # turn off the -g option
 OP_SYS_CFLAGS =  
-#OPT_CFLAGS_NO = 
+#OPT_CFLAGS_NO = -g
 #OPT_CFLAGS_YES = -O3
 #HOST_OPT = NO
 Ocustom = -O3
@@ -352,7 +352,7 @@ else
 gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}' | head -1)
 gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 ifeq ($(gcc-version),$(gfortran-version))
-SYS_PROD_LIBS_Linux += gfortran
+SYS_PROD_LIBS_Linux += gfortran quadmath
 else
   ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
   ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
@@ -473,7 +473,8 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c moments.c \
                 insert_elements.c regexCode.cc touschekScatter.c chbook.c kickmap.c matrixOp.c \
-                replace_elements.c modulate.c ramp.c fringe.c apple.c chaosMap.c lrwake.c iirFilter.c exactCorrector.c
+                replace_elements.c modulate.c ramp.c fringe.c apple.c chaosMap.c lrwake.c iirFilter.c exactCorrector.c \
+                makeInitialParticleEnsemble.c computeMatricesFromTracking.c
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 
