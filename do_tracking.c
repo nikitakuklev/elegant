@@ -797,11 +797,13 @@ long do_tracking(
 	  if ((balanceStatus==badBalance) && (parallelStatus==trueParallel)) {
 	    gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
 	    nMaximum = nToTrack;
+	    nLeft = nToTrack;
 	  } 
-	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */  
+	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */
 	  if ((balanceStatus==badBalance) || (parallelStatus==notParallel)) {
 	    scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			     balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+	    nLeft = nToTrack;
 	    if (myid != 0) {
 	      /* update the nMaximum for recording the nLost on all the slave processors */
 	      nMaximum = nToTrack;  
@@ -814,6 +816,7 @@ long do_tracking(
 	    if (parallelStatus!=trueParallel) {
 	      scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+	      nLeft = nToTrack;
 	      if (myid != 0) {
 		/* update the nMaximum for recording the nLost on all the slave processors */
 		nMaximum = nToTrack; 
@@ -871,7 +874,7 @@ long do_tracking(
 #endif
           fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                  beam?beam->n_to_track_total:-1,
+                  beam?beam->n_to_track_total:(myid==0?-1:nToTrack),
 #else
                   nToTrack,
 #endif
@@ -1202,10 +1205,12 @@ long do_tracking(
 #endif
 		      dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
 #if SDDS_MPI_IO
-		      if (!partOnMaster && notSinglePart) 
+		      if (!partOnMaster && notSinglePart) {
 			scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 					 balanceStatus, my_rate, nParPerElements, round, 
 					 lostSinceSeqMode, &distributed, &reAllocate, P_central);
+			nLeft = nToTrack;
+		      }
 #endif
 		      break;
 		    }
@@ -2330,6 +2335,7 @@ long do_tracking(
       if (partOnMaster && notSinglePart) {
 	scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+	nLeft = nToTrack;
         parallelStatus = trueParallel;
       }
   #endif
@@ -4367,6 +4373,8 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     return ;
   }
 }
+
+#define DEBUG_SCATTER 0
  
 #if USE_MPI
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
@@ -4380,17 +4388,47 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   int my_nToTrack, nItems, *nToTrackCounts;
   double total_rate, constTime, *rateCounts;
   MPI_Status status;
+#if DEBUG_SCATTER
+  FILE *fpdeb;
+  char s[1000];
+#endif
   
-  printf("Distributing particles to worker processors\n");
-  fflush(stdout);
-
+  if (myid==0) {
+    printf("Distributing %ld particles to %d worker processors\n", *nToTrack, n_processors-1);
+    fflush(stdout);
+#if DEBUG_SCATTER
+    fpdeb = fopen("scatter.0", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=t type=double units=s &end\n");
+    fprintf(fpdeb, "&column name=p type=double &end\n");
+    fprintf(fpdeb, "&column name=particleID type=long &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+    for (i=0; i<*nToTrack; i++) {
+      for (j=0; j<6; j++)
+	fprintf(fpdeb, "%le ", coord[i][j]);
+      fprintf(fpdeb, "%.0lf\n", coord[i][j]);
+    }
+    fclose(fpdeb);
+#endif
+  }
+  
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   rateCounts = malloc(sizeof(double) * n_processors);
 
   /* The particles will be distributed to slave processors evenly for the first pass */
   if (((balanceStatus==startMode) && (!*distributed))) {
-    /* || lostSinceSeqMode || *reAllocate )  we don't do redistribution for load balancing, as it could cause memory problem */ 
+    /* || lostSinceSeqMode || *reAllocate )  we don't do redistribution for load balancing, as it could cause memory problem */
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 1\n"); fflush(stdout);
+#endif
     MPI_Bcast(nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 1.1\n"); fflush(stdout);
+#endif
     if (myid==0) 
       my_nToTrack = 0;
     else {
@@ -4399,11 +4437,20 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 	my_nToTrack++;
     } 
     /* gather the number of particles to be sent to each processor */ 
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 1.2\n"); fflush(stdout);
+#endif
     MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-    *distributed = 1; 
+    *distributed = 1;
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 1.3, my_nToTrack=%d\n", my_nToTrack); fflush(stdout);
+#endif
   }
   else if (balanceStatus == badBalance) {
     double minRate;
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 2\n"); fflush(stdout);
+#endif
     if (myid==0)
       my_rate = 1.0;  /* set it to nonzero */
     MPI_Allreduce(&my_rate, &minRate, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD); 
@@ -4422,6 +4469,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
       MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
     }
     else {
+#if DEBUG_SCATTER
+      printf("scatterParticles, branch 3\n"); fflush(stdout);
+#endif
       /* calculating the number of jobs to be sent according to the speed of each processors */
       MPI_Gather(&my_rate, 1, MPI_DOUBLE, rateCounts, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
       MPI_Reduce(&my_rate, &total_rate, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -4458,6 +4508,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     }
   }
   else { /* keep the nToTrack unchanged */
+#if DEBUG_SCATTER
+    printf("scatterParticles, branch 4\n"); fflush(stdout);
+#endif
     if (myid==0)
       my_nToTrack = 0;
     else       
@@ -4471,6 +4524,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     my_nToTrack = 0;
     for (i=1; i<=work_processors; i++) {
       /* calculate the number of elements that will be sent to each processor */
+#if DEBUG_SCATTER
+      printf("Sending %d particles to processor %d\n", nToTrackCounts[i], i);
+#endif
       nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
       MPI_Send (&coord[my_nToTrack][0], nItems, MPI_DOUBLE, i, 104, MPI_COMM_WORLD); 
       if (accepted!=NULL)
@@ -4481,6 +4537,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     *nToTrack = 0;
   } 
   else {
+#if DEBUG_SCATTER
+    printf("receiving %d particles for processor %d\n", my_nToTrack, myid);
+#endif
     MPI_Recv (&coord[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0,
               104, MPI_COMM_WORLD, &status); 
     if (accepted!=NULL)
@@ -4504,6 +4563,30 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   }
 #endif
 
+  if (myid!=0) {
+#if DEBUG_SCATTER
+    printf("%ld particles on processor %d\n", *nToTrack, myid); fflush(stdout);
+
+    sprintf(s, "scatter.%d", myid);
+    fpdeb = fopen(s, "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=t type=double units=s &end\n");
+    fprintf(fpdeb, "&column name=p type=double &end\n");
+    fprintf(fpdeb, "&column name=particleID type=long &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+    for (i=0; i<*nToTrack; i++) {
+      for (j=0; j<6; j++)
+	fprintf(fpdeb, "%le ", coord[i][j]);
+      fprintf(fpdeb, "%.0lf\n", coord[i][j]);
+    }
+    fclose(fpdeb);
+#endif
+  }
+
   free(nToTrackCounts);
   free(rateCounts);
 }
@@ -4517,6 +4600,10 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
  
   MPI_Status status;
 
+  printf("Gathering particles to master, work_processors=%d, n_processors=%d\n",
+	 work_processors, n_processors); fflush(stdout);
+  fflush(stdout);
+  
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   nLostCounts = malloc(sizeof(int) * n_processors);
 
@@ -4528,11 +4615,10 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     my_nToTrack = *nToTrack;
     my_nLost = *nLost;
   }
-
-/* gather nToTrack and nLost from all of the slave processors to the master processors */ 
+  
+  /* gather nToTrack and nLost from all of the slave processors to the master processors */ 
   MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-
   MPI_Reduce (&my_nToTrack, &nToTrack_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce (&my_nLost, &nLost_total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
@@ -4566,7 +4652,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   
   MPI_Bcast(&current_nLost, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-    if (myid==0) {
+  if (myid==0) {
       /* set up the displacement array and the number of elements that are received from each processor */ 
       nLostCounts[0] = 0;
       displs = my_nToTrack;
@@ -4576,7 +4662,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   	displs = displs+nLostCounts[i-1];
         nItems = nLostCounts[i]*COORDINATES_PER_PARTICLE;
         MPI_Recv (&(*coord)[displs][0], nItems, MPI_DOUBLE, i, 102, MPI_COMM_WORLD, &status);
-        if (*accepted!=NULL){
+        if (accepted && *accepted!=NULL){
           MPI_Recv (&(*accepted)[my_nToTrack][0], nToTrackCounts[i]*COORDINATES_PER_PARTICLE, MPI_DOUBLE, i, 101, MPI_COMM_WORLD, &status); 
           MPI_Recv (&(*accepted)[displs][0], nItems, MPI_DOUBLE, i, 103, MPI_COMM_WORLD, &status);
           my_nToTrack = my_nToTrack+nToTrackCounts[i];
@@ -4590,12 +4676,12 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     else {
       /* send information for lost particles */
       MPI_Send (&(*coord)[my_nToTrack][0], my_nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 102, MPI_COMM_WORLD);  
-      if (*accepted!=NULL) {
+      if (accepted && *accepted!=NULL) {
         MPI_Send (&(*accepted)[0][0], my_nToTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 101, MPI_COMM_WORLD);  
         MPI_Send (&(*accepted)[my_nToTrack][0], my_nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 103, MPI_COMM_WORLD); 
       }      
     }
-    MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+  MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   free(nToTrackCounts);
   free(nLostCounts);
