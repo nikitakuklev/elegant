@@ -295,8 +295,8 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp ../fitTraces.nl fitTraces.h
 
-elegantLocation = $(wildcard ../../bin/linux-x86/elegant elegant)
-PelegantLocation = $(wildcard ../../bin/linux-x86/Pelegant Pelegant)
+elegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/elegant elegant)
+PelegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/Pelegant Pelegant)
 
 elegant = $(words $(notdir $(elegantLocation)))
 Pelegant = $(words $(notdir $(PelegantLocation)))
@@ -313,17 +313,19 @@ PelegantNewer=1
 endif
 endif
 
+
 ifeq ($(PelegantNewer), 0)
 Pelegant:
-	$(RM) *.o O.$(HOST_ARCH)/*.o
+	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o O.$(EPICS_HOST_ARCH)/*.h
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) MPI=1 -f Makefile
+	$(RM) O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
 	$(RM) $(TOP)/src/elegant/Makefile
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
-Selegant:
-	$(RM) O.$(HOST_ARCH)/link_date.o
+elegant:
+	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
@@ -331,7 +333,7 @@ Selegant:
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
 all buildInstall:
-	$(RM) O.$(HOST_ARCH)/link_date.o
+	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
@@ -340,15 +342,16 @@ all buildInstall:
 
 else
 Pelegant:
-	$(RM) O.$(HOST_ARCH)/link_date.o
+	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) MPI=1 -f Makefile
+	$(RM) O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
 	$(RM) $(TOP)/src/elegant/Makefile
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
-Selegant:
-	$(RM) *.o O.$(HOST_ARCH)/*.o
+elegant:
+	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
@@ -356,7 +359,7 @@ Selegant:
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 
 all buildInstall:
-	$(RM) *.o O.$(HOST_ARCH)/*.o
+	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o O.$(EPICS_HOST_ARCH)/*.h
 	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
 	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
 	$(MAKE) NOMPI=1 -f Makefile
