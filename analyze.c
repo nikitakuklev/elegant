@@ -254,7 +254,7 @@ void do_transport_analysis(
 			 NULL, NULL, NULL, NULL, run, control->i_step, 
 			 (control->fiducial_flag&
 			  (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
-			 +0*SILENT_RUNNING+0*TEST_PARTICLES,
+			 +SILENT_RUNNING+TEST_PARTICLES,
 			 control->n_passes, 0,
 			 NULL, NULL, NULL, NULL, NULL);
 
