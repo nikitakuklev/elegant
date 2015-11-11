@@ -131,10 +131,18 @@ void setup_transport_analysis(
       bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &analyze_map);
 
+    /* check for data errors */
+    if (!output && !printout)
+        bombElegant("no output filename or printout filename specified", NULL);
     if (printout_order>3) {
       printf("warning: maximum printout_order is 3\n");
       printout_order = 3;
     }
+    
+#if USE_MPI
+      if (myid==0) {
+	/* In MPI mode, all output is handled by the master processor */
+#endif
     if (SDDS_analyze_initialized) {
       if (SDDS_IsActive(&SDDS_analyze) && !SDDS_Terminate(&SDDS_analyze)) {
         SDDS_SetError("Problem terminating SDDS output (finish_transport_analysis)");
@@ -142,12 +150,6 @@ void setup_transport_analysis(
       }
       SDDS_analyze_initialized = 0;
     }
-    
-    /* check for data errors */
-    if (!output && !printout)
-        bombElegant("no output filename or printout filename specified", NULL);
-    if (n_points!=2 && n_points!=4)
-        bombElegant("n_points must be either 2 or 4", NULL);
 
     if (output) {
       output = compose_filename(output, run->rootname);
@@ -156,7 +158,7 @@ void setup_transport_analysis(
 			      analysis_column, N_ANALYSIS_COLUMNS, "setup_transport_analysis", 
 			      SDDS_EOS_NEWFILE);
       SDDS_analyze_initialized = 1;
-
+      
       if (!SDDS_DefineSimpleColumns(&SDDS_analyze, control->n_elements_to_vary,
 				    control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumns(&SDDS_analyze, errcon->n_items, errcon->quan_name, errcon->quan_unit, 
@@ -178,6 +180,9 @@ void setup_transport_analysis(
       printout = compose_filename(printout, run->rootname);
       fpPrintout = fopen(printout, "w");
     }
+#if USE_MPI
+      }
+#endif
     
     log_exit("setup_transport_analysis");
     }
@@ -194,13 +199,17 @@ void do_transport_analysis(
     double *data, *offset, *orbit_p, *orbit_m;
     MATRIX *R;
     double p_central;
-    long n_track, n_trpoint, i, j, k, effort, index;
+    long n_left, n_track, n_trpoint, i, j, k, effort, index;
     TRAJECTORY *clorb=NULL;
     double stepSize[6], maximumValue[6], sum2Difference, maxAbsDifference, difference;
     VMATRIX *M;
     TWISS twiss;
     CHROM_DERIVS chromDeriv;
-    
+#if USE_MPI
+    double round = 0.5;
+    long nLost;
+#endif
+
     log_entry("do_transport_analysis");
         
     if (center_on_orbit && !orbit)
@@ -221,24 +230,52 @@ void do_transport_analysis(
     stepSize[3] = delta_yp;
     stepSize[4] = delta_s;
     stepSize[5] = delta_dp;
-    n_track = n_trpoint = makeInitialParticleEnsemble(&initialCoord,
-						      (orbit && center_on_orbit? orbit: NULL),
-						      &finalCoord, &coordError,
-						      7, stepSize);
 
+    n_track = n_trpoint =
+      makeInitialParticleEnsemble(&initialCoord,
+				  (orbit && center_on_orbit? orbit: NULL),
+				  &finalCoord, &coordError,
+				  7, stepSize);
+#if USE_MPI
+    /* Even though all particles exist on all processors, we pretend they are 
+     only on the master. Then, in do_tracking, scatterParticles() will assign 
+     particles to individual cores. If we don't do it this way, we have to
+     allocate the particle arrays by hand. */
+    partOnMaster = 1;
+    notSinglePart = 1;
+    parallelStatus = notParallel;
+    if (myid!=0)
+      n_track = n_trpoint = 0;
+#endif
+    
     effort = 0;
     p_central = run->p_central;
-    if (do_tracking(NULL, finalCoord, n_trpoint, &effort, beamline, &p_central, 
-                    NULL, NULL, NULL, NULL, run, control->i_step, 
-		    (control->fiducial_flag&
-		     (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
-		    +SILENT_RUNNING+TEST_PARTICLES,
-		    control->n_passes, 0,
-                    NULL, NULL, NULL, NULL, NULL)!=n_track) {
-        fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
-        log_exit("do_transport_analysis");
-        return;
-        }
+    n_left = do_tracking(NULL, finalCoord, n_trpoint, &effort, beamline, &p_central, 
+			 NULL, NULL, NULL, NULL, run, control->i_step, 
+			 (control->fiducial_flag&
+			  (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
+			 +0*SILENT_RUNNING+0*TEST_PARTICLES,
+			 control->n_passes, 0,
+			 NULL, NULL, NULL, NULL, NULL);
+
+#if USE_MPI
+    /* Gather particles back to master */
+    MPI_Barrier(MPI_COMM_WORLD);
+    nLost = 0;
+    gatherParticles(&finalCoord, NULL, &n_left, &nLost, NULL, n_processors, myid, &round);
+#endif
+    
+#if USE_MPI
+    if (myid==0) {
+      /* In MPI mode, only master does analysis and output */
+#endif
+    
+    if (n_left!=n_track) {
+      fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
+      log_exit("do_transport_analysis");
+      return;
+    }
+
     copyParticles(&finalCoordCopy, finalCoord, n_track);
     if (p_central!=run->p_central && verbosity>0)
       fprintf(stdout, "Central momentum changed from %e to %e\n", run->p_central, p_central);
@@ -384,12 +421,16 @@ void do_transport_analysis(
       printf("Error for coordinate %ld: maximum = %le, rms = %le\n",
 	     k, maxAbsDifference, sqrt(sum2Difference/n_trpoint));
     }
+
+#if USE_MPI
+    }
+#endif
     
     free_matrices(M);
     free(M);
-    free_zarray_2d((void**)initialCoord, n_trpoint, 7);
-    free_zarray_2d((void**)finalCoord, n_trpoint, 7);
-    free_zarray_2d((void**)finalCoordCopy, n_trpoint, 7);
+    free_czarray_2d((void**)initialCoord, n_trpoint, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)finalCoord, n_trpoint, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)finalCoordCopy, n_trpoint, COORDINATES_PER_PARTICLE);
     free(data);
     free(offset);
     free(orbit_p);
@@ -461,13 +502,13 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   notSinglePart = 0;
 #endif
    		 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
 
   if (stepSize==NULL)
     stepSize = defaultStep;
   
   n_track = 4*6+1;
-  for (j=0; j<7; j++)
+  for (j=0; j<COORDINATES_PER_PARTICLE; j++)
     for (i=0; i<n_track; i++)
       coord[i][j] = startingCoord ? startingCoord[j] : 0;
 
@@ -596,7 +637,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     }
   }
 
-  free_czarray_2d((void**)coord, 1+4*6, 7);
+  free_czarray_2d((void**)coord, 1+4*6, COORDINATES_PER_PARTICLE);
 
   /*
   if (strlen(eptr->name)<900)
@@ -1043,7 +1084,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   double dP[3], dgamma;
   VMATRIX *matrix;
 
-  coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, COORDINATES_PER_PARTICLE);
 
   Cs0 = startingCoord ? startingCoord[4]: 0;
   n_track = 2*6+1;
@@ -1146,16 +1187,16 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   D[sigmaIndex3[5][5]] = sigmaDelta2;
   
   C[4] += Cs0;
-  free_czarray_2d((void**)coord, 1+2*6, 7);
+  free_czarray_2d((void**)coord, 1+2*6, COORDINATES_PER_PARTICLE);
 
 }
 
 void copyParticles(double ***coordCopy, double **coord, long np)
 {
   long i;
-  *coordCopy = (double**)zarray_2d(sizeof(***coordCopy), np, 7);
+  *coordCopy = (double**)zarray_2d(sizeof(***coordCopy), np, COORDINATES_PER_PARTICLE);
   for (i=0; i<np; i++)
-    memcpy((*coordCopy)[i], coord[i], sizeof(double)*7);
+    memcpy((*coordCopy)[i], coord[i], sizeof(double)*COORDINATES_PER_PARTICLE);
 }
 
 void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv)

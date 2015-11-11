@@ -9,6 +9,7 @@
  */
 
 #include "mdb.h"
+#include "track.h"
 
 int makeInitialParticleEnsemble(
 				double ***initial, /* will be allocated and initialized */
@@ -34,15 +35,13 @@ int makeInitialParticleEnsemble(
     }
   }
 
-  *initial = (double**)zarray_2d(sizeof(***initial), n_points_total, 7);
-  *final   = (double**)zarray_2d(sizeof(***final  ), n_points_total, 7);
-  *error   = (double**)zarray_2d(sizeof(***error  ), n_points_total, 7);
+  *initial = (double**)czarray_2d(sizeof(***initial), n_points_total, COORDINATES_PER_PARTICLE);
+  *final   = (double**)czarray_2d(sizeof(***final  ), n_points_total, COORDINATES_PER_PARTICLE);
+  *error   = (double**)czarray_2d(sizeof(***error  ), n_points_total, COORDINATES_PER_PARTICLE);
 
   /* generate the origin vector */
   for (i=0; i<6; i++)
     (*initial)[0][i] = reference ? reference[i] : 0;
-  for (i=0; i<6; i++)
-    (*final)[0][i] = (*error)[0][i] = 0;
   i_vector = 1;
 
   /* generate other initial vectors */
@@ -87,12 +86,7 @@ int makeInitialParticleEnsemble(
 	  (*initial)[i][3]==(*initial)[j][3] &&
 	  (*initial)[i][4]==(*initial)[j][4] &&
 	  (*initial)[i][5]==(*initial)[j][5] ) {
-	free((*initial)[j]);
-	free((*final  )[j]);
-	free((*error  )[j]);
-	(*initial)[j] = (*initial)[n_points_total-1];
-	(*final  )[j] = (*final  )[n_points_total-1];
-	(*error  )[j] = (*error  )[n_points_total-1];
+	memcpy((*initial)[j], (*initial)[n_points_total-1], COORDINATES_PER_PARTICLE*sizeof(double));
 	j -= 1;
 	n_points_total -= 1;
 	n_duplicates += 1;
@@ -103,7 +97,7 @@ int makeInitialParticleEnsemble(
   for (i=0; i<n_points_total; i++) {
     (*initial)[i][6] = i+1;
     /* since do_tracking() doesn't use initial and final arrays, need to copy the initial coordinates */
-    memcpy((*final)[i], (*initial)[i], sizeof(double)*7);
+    memcpy((*final)[i], (*initial)[i], COORDINATES_PER_PARTICLE*sizeof(double));
   }
   
   printf("%ld duplicates were removed from initial ensemble, leaving %ld vectors\n", n_duplicates, n_points_total);
