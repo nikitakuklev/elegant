@@ -66,6 +66,8 @@ Here is a summary of what's changed since release 28.1:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data.
+  Previously, the analysis was limited to the linear matrix. This was requested by Y. Hao (BNL) and L. Yang (BNL).
 \item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \end{itemize}
@@ -837,13 +839,15 @@ Recommended value: ``\%s.kaf''.
 
 \begin{itemize}
 \item type: major action command.
-\item function: find the approximate first-order matrix and related quantities for an accelerator by tracking.
+\item function: find the transport matrix up to third order based on particle tracking.
+  Also find related quantities, such as chromaticity.
 \item sequence: must follow \verb|run_control|.
 \end{itemize}
 
 \begin{verbatim}
 &analyze_map
     STRING output = NULL;
+    STRING printout = NULL;
     double delta_x = 1e-6;
     double delta_xp = 1e-6;
     double delta_y = 1e-6;
@@ -852,6 +856,7 @@ Recommended value: ``\%s.kaf''.
     double delta_dp = 1e-6;
     long center_on_orbit = 0;
     long verbosity = 0;
+    long printout_order = 2;
 &end
 \end{verbatim}
 
@@ -863,9 +868,11 @@ Recommended value: ``\%s.kaf''.
         the centroid offsets for a single turn, the single-turn R matrix, the matched Twiss parameters, tunes, and 
         dispersion functions.
     \end{itemize}
+\item \verb|printout| --- The (incomplete) name of a file for text output of the matrix.
 \item \verb|delta_X| --- The amount by which to change the quantity X in computing the derivatives that give the matrix elements.
 \item \verb|center_on_orbit| --- A flag directing the expansion to be made about the closed orbit instead of the design orbit.
 \item \verb|verbosity| --- The larger this value, the more output is printed during computations.
+\item \verb|printout_order| --- Order of the matrix to be printed to the \verb|printout| file.
 \end{itemize}
 
 %\begin{latexonly}
