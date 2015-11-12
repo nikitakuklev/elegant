@@ -72,10 +72,10 @@ Here is a summary of what's changed since release 28.1:
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \end{itemize}
 
-\subsection{Changes for Parallel Version Only}
+\subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
-\item None.
+\item The \verb|analyze_map| command, which was improved as described above, can now use parallel resources.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -842,6 +842,7 @@ Recommended value: ``\%s.kaf''.
 \item function: find the transport matrix up to third order based on particle tracking.
   Also find related quantities, such as chromaticity.
 \item sequence: must follow \verb|run_control|.
+\item can use parallel resources (\verb|Pelegant|)
 \end{itemize}
 
 \begin{verbatim}
@@ -923,6 +924,7 @@ Recommended value: ``\%s.kaf''.
 \item type: setup command.
 \item sequence: must follow \verb|run_control|.
 \item function: set up for tracking of particle coordinates with various distributions.
+\item In \verb|Pelegant|, the exact particles generated will change as the number of cores is changed.
 \end{itemize}
 
 \begin{verbatim}
@@ -1758,6 +1760,7 @@ The proper use of this command can be confusing.  A typical sequence will be as 
 \begin{itemize}
 \item type: setup/major action command.
 \item function: find the aperture in (x, y) space for an accelerator.
+\item can use parallel resources (\verb|Pelegant|)
 \end{itemize}
 
 \begin{verbatim}
@@ -1916,6 +1919,7 @@ distance between the vertices.
 \item type: major action command.  
 \item function: compute frequency map from tracking
       Note that the number of turns tracked is set by the \verb|run_control| command.
+\item can use parallel resources (\verb|Pelegant|)
 \end{itemize}
 
 \begin{verbatim}
@@ -2616,6 +2620,7 @@ using values at marker elements.  See the documentation for
 \begin{itemize}
 \item type: major action command.
 \item function: determine momentum aperture as a function of position in the lattice by tracking
+\item can use parallel resources (\verb|Pelegant|)
 \end{itemize}
 
 \begin{verbatim}
@@ -2771,6 +2776,7 @@ correctly.  It is also a good idea to track for several synchrotron oscillation 
 \item type: major action command.
 \item function: perform optimization.
 \item sequence: must follow \verb|optimization_setup| and beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
+\item can use parallel resources (\verb|Pelegant|) for tracking-based optimization.
 \item note: on UNIX systems, the user may press Control-C to force
 \verb|elegant| to terminate optimization and proceed as if
 optimization had converged.  (To genuinely terminate the run during
@@ -4120,6 +4126,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
    simulation. Scattered particles can be tracked through the entire
    beamline (one pass only), and beam loss information is recorded.
 \item sequence: must follow \verb|run_setup| and \verb|twiss_output|.
+\item can use parallel resources (\verb|Pelegant|)
 \item notes: 
 	\begin{itemize} 
       \item A momentum aperture file is required previous using this command. It
@@ -4288,6 +4295,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
 \item function: compute frequency map from tracking and use it to determine the 
   chromatic and amplitude tune footprints.
 \item sequence: must follow \verb|run_control|.
+\item can use parallel resources (\verb|Pelegant|)
 \item N.B.: the number of turns tracked is set by the \verb|run_control| command.
 \end{itemize}
 
@@ -4664,6 +4672,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
 \item type: major action command.
 \item function: track particles.
 \item sequence: must follow \verb|run_setup|, \verb|run_control|, and beam definition with \verb|bunched_beam| or \verb|sdds_beam|.
+\item can use parallel resources (\verb|Pelegant|)
 \end{itemize}
 
 \begin{verbatim}
