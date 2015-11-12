@@ -199,19 +199,18 @@ void do_transport_analysis(
     double *data, *offset, *orbit_p, *orbit_m;
     MATRIX *R;
     double p_central;
-    long n_left, n_track, n_trpoint, i, j, k, effort, index;
+    long n_left, n_track, i, j, k, index, code;
     TRAJECTORY *clorb=NULL;
     double stepSize[6], maximumValue[6], sum2Difference, maxAbsDifference, difference;
     VMATRIX *M;
     TWISS twiss;
     CHROM_DERIVS chromDeriv;
 #if USE_MPI
-    double round = 0.5;
-    long nLost;
+    long *nToTrackCounts, my_nTrack, my_offset, n_leftTotal, nItems;
+    MPI_Status status;
+    notSinglePart = 0;
 #endif
 
-    log_entry("do_transport_analysis");
-        
     if (center_on_orbit && !orbit)
         bombElegant("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
 
@@ -231,38 +230,89 @@ void do_transport_analysis(
     stepSize[4] = delta_s;
     stepSize[5] = delta_dp;
 
-    n_track = n_trpoint =
+    n_track = 
       makeInitialParticleEnsemble(&initialCoord,
 				  (orbit && center_on_orbit? orbit: NULL),
 				  &finalCoord, &coordError,
 				  7, stepSize);
-#if USE_MPI
-    /* Even though all particles exist on all processors, we pretend they are 
-     only on the master. Then, in do_tracking, scatterParticles() will assign 
-     particles to individual cores. If we don't do it this way, we have to
-     allocate the particle arrays by hand. */
-    partOnMaster = 1;
-    notSinglePart = 1;
-    parallelStatus = notParallel;
-    if (myid!=0)
-      n_track = n_trpoint = 0;
-#endif
     
-    effort = 0;
+    /* Track the reference particle for fiducialization. In MPI mode, all cores do this */
+    beamline->fiducial_flag = 0;
     p_central = run->p_central;
-    n_left = do_tracking(NULL, finalCoord, n_trpoint, &effort, beamline, &p_central, 
+    if (verbosity>0) 
+      fprintf(stdout, "Tracking fiducial particle\n");
+    code = do_tracking(NULL, finalCoord, 1, NULL, beamline, &p_central, 
+                       NULL, NULL, NULL, NULL, run, control->i_step, 
+                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
+		       1, 0, NULL, NULL, NULL, NULL, NULL);
+    if (!code) {
+      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      exitElegant(1);
+    }
+    if (verbosity>0)
+      printf("Fiducialization completed\n");
+    
+    /* Track the other particles. */
+    p_central = run->p_central;
+#if USE_MPI
+    /* We partition by processor in MPI mode.
+       The arrays are oversized, but not so large that it will hurt. 
+    */
+    n_left = n_track - 1;
+    my_nTrack = n_left/n_processors+0.5;
+    my_offset = myid*my_nTrack + 1;
+    if (myid==(n_processors-1))
+      my_nTrack = n_left - my_offset + 1;
+#if MPI_DEBUG
+    printf("Tracking %ld particles, offset %ld, processor %d\n",
+	   my_nTrack, my_offset, myid);
+    fflush(stdout);
+#endif    
+    n_left = do_tracking(NULL, finalCoord+my_offset, my_nTrack, NULL, beamline, &p_central, 
 			 NULL, NULL, NULL, NULL, run, control->i_step, 
-			 (control->fiducial_flag&
-			  (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
-			 +SILENT_RUNNING+TEST_PARTICLES,
-			 control->n_passes, 0,
-			 NULL, NULL, NULL, NULL, NULL);
+			 FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
+			 1, 0, NULL, NULL, NULL, NULL, NULL);
+#if MPI_DEBUG
+    printf("Tracking done\n"); fflush(stdout);
+#endif
+    MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (n_leftTotal!=(n_track-1)) {
+      printf("warning: %ld particle(s) lost during transport analysis--continuing with next step", n_track-1-n_leftTotal);
+      return;
+    }
+#else
+    n_left = do_tracking(NULL, finalCoord+1, n_track-1, NULL, beamline, &p_central, 
+			 NULL, NULL, NULL, NULL, run, control->i_step, 
+			 FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
+			 1, 0, NULL, NULL, NULL, NULL, NULL);
+    if (n_left!=(n_track-1)) {
+      fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
+      return;
+    }
+#endif
 
 #if USE_MPI
-    /* Gather particles back to master */
+    /* Gather final particles back to master */
     MPI_Barrier(MPI_COMM_WORLD);
-    nLost = 0;
-    gatherParticles(&finalCoord, NULL, &n_left, &nLost, NULL, n_processors, myid, &round);
+    nToTrackCounts = tmalloc(sizeof(long)*n_processors);
+    MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    if (myid==0) {
+      /* Copy data from each slave */
+      my_nTrack += my_offset; /* to account for the fiducial particle */
+      for (i=1; i<n_processors; i++) {
+	if (verbosity>2) {
+	  printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
+	  fflush(stdout);
+	}
+	nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+	MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
+	my_nTrack += nToTrackCounts[i];
+      }
+    } else {
+      /* Send data to master */
+      MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+    }
+    free(nToTrackCounts);
 #endif
     
 #if USE_MPI
@@ -270,12 +320,6 @@ void do_transport_analysis(
       /* In MPI mode, only master does analysis and output */
 #endif
     
-    if (n_left!=n_track) {
-      fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
-      log_exit("do_transport_analysis");
-      return;
-    }
-
     copyParticles(&finalCoordCopy, finalCoord, n_track);
     if (p_central!=run->p_central && verbosity>0)
       fprintf(stdout, "Central momentum changed from %e to %e\n", run->p_central, p_central);
@@ -309,14 +353,14 @@ void do_transport_analysis(
 
     for (i=0; i<6; i++) {
       maximumValue[i] = -DBL_MAX;
-      for (j=0; j<n_trpoint; j++) {
+      for (j=0; j<n_track; j++) {
 	if (maximumValue[i]<initialCoord[j][i])
 	  maximumValue[i] = initialCoord[j][i];
       }
     }
     
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
-				    maximumValue, 7, n_trpoint, 8, verbosity>1?1:0);
+				    maximumValue, 7, n_track, 8, verbosity>1?1:0);
     
     for (i=0; i<6; i++) 
       data[i+CMATRIX_OFFSET] = M->C[i];
@@ -409,35 +453,41 @@ void do_transport_analysis(
       printMapAnalysisResults(stdout, printout_order, M, &twiss, &chromDeriv, data);
 
     /* check accuracy of matrix in reproducing coordinates */
-    track_particles(initialCoord, M, initialCoord, n_trpoint);
+    /* all processors do this for all particles, which shouldn't take much time */
+    track_particles(initialCoord, M, initialCoord, n_track);
     for (k=0; k<6; k++) {
       sum2Difference = maxAbsDifference = 0;
-      for (i=0; i<n_trpoint; i++) {
+      for (i=0; i<n_track; i++) {
 	difference = fabs(initialCoord[i][k] - finalCoordCopy[i][k]);
 	if (difference > maxAbsDifference)
 	  maxAbsDifference = difference;
 	sum2Difference += sqr(difference);
       }
       printf("Error for coordinate %ld: maximum = %le, rms = %le\n",
-	     k, maxAbsDifference, sqrt(sum2Difference/n_trpoint));
+	     k, maxAbsDifference, sqrt(sum2Difference/n_track));
     }
 
 #if USE_MPI
     }
 #endif
     
-    free_matrices(M);
-    free(M);
-    free_czarray_2d((void**)initialCoord, n_trpoint, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)finalCoord, n_trpoint, COORDINATES_PER_PARTICLE);
-    free_czarray_2d((void**)finalCoordCopy, n_trpoint, COORDINATES_PER_PARTICLE);
+#if USE_MPI
+    if (myid==0) {
+#endif
+      free_matrices(M);
+      free(M);
+      free_czarray_2d((void**)finalCoordCopy, n_track, COORDINATES_PER_PARTICLE);
+#if USE_MPI
+    }
+#endif
+    
+    free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
     free(data);
     free(offset);
     free(orbit_p);
     free(orbit_m);
     m_free(&R);
-    
-    log_exit("do_transport_analysis");
     }
 
 
@@ -901,19 +951,19 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_RFCA:
       nSlices = 1;
       elem.type = T_RFCA;
-      elem.p_elem = eptr->p_elem;
+      elem.p_elem = (void*)eptr->p_elem;
       length = ((RFCA*)eptr->p_elem)->length;
       break;
     case T_TWLA:
       nSlices = 1;
       elem.type = T_TWLA;
-      elem.p_elem = eptr->p_elem;
+      elem.p_elem = (void*)eptr->p_elem;
       length = ((TW_LINAC*)eptr->p_elem)->length/nSlices;
       break;
     case T_HCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &hcor;
+      elem.p_elem = (void*)&hcor;
       memcpy(&hcor, eptr->p_elem, sizeof(hcor));
       length = (hcor.length /= nSlices);
       hcor.lEffRad /= nSlices;
@@ -923,7 +973,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_VCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &vcor;
+      elem.p_elem = (void*)&vcor;
       memcpy(&vcor, eptr->p_elem, sizeof(vcor));
       length = (vcor.length /= nSlices);
       vcor.lEffRad /= nSlices;
@@ -933,7 +983,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_HVCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &hvcor;
+      elem.p_elem = (void*)&hvcor;
       memcpy(&hvcor, eptr->p_elem, sizeof(hvcor));
       length = (hvcor.length /= nSlices);
       hvcor.lEffRad /= nSlices;
@@ -944,7 +994,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_EHCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &ehcor;
+      elem.p_elem = (void*)&ehcor;
       memcpy(&ehcor, eptr->p_elem, sizeof(ehcor));
       length = (ehcor.length /= nSlices);
       ehcor.lEffRad /= nSlices;
@@ -954,7 +1004,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_EVCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &evcor;
+      elem.p_elem = (void*)&evcor;
       memcpy(&evcor, eptr->p_elem, sizeof(evcor));
       length = (evcor.length /= nSlices);
       evcor.lEffRad /= nSlices;
@@ -964,7 +1014,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     case T_EHVCOR:
       memcpy(&elem, eptr, sizeof(elem));
       elem.matrix = NULL;
-      elem.p_elem = &ehvcor;
+      elem.p_elem = (void*)&ehvcor;
       memcpy(&ehvcor, eptr->p_elem, sizeof(ehvcor));
       length = (ehvcor.length /= nSlices);
       ehvcor.lEffRad /= nSlices;
