@@ -195,7 +195,7 @@ void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long 
     }
 
 
-#define CENTROID_COLUMNS 8
+#define CENTROID_COLUMNS 9
 static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS] = {
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
@@ -205,6 +205,7 @@ static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS] = {
     {"Cdelta", "&column name=Cdelta, symbol=\"<$gd$r>\", type=double, description=\"delta centroid\" &end"},
     {"Particles", "&column name=Particles, description=\"Number of particles\", type=long &end"},
     {"pCentral", "&column name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
+    {"Charge", "&column name=Charge, description=\"Charge in the beam\", units=C, type=double &end"},
     } ;
 
 void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -320,8 +321,8 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     }
 
 
-#define WATCH_PARAMETER_MODE_COLUMNS 30
-#define WATCH_CENTROID_MODE_COLUMNS 18
+#define WATCH_PARAMETER_MODE_COLUMNS 31
+#define WATCH_CENTROID_MODE_COLUMNS 19
 static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS] = {
     {"Step", "&column name=Step, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
@@ -337,6 +338,7 @@ static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS]
     {"Ct", "&column name=Ct, symbol=\"<t>\", units=s, type=double, description=\"mean time of flight\" &end"},
     {"dCt", "&column name=dCt, symbol=\"$gD$r<t>\", units=s, type=double, description=\"mean time of flight relative to ideal\" &end"},
     {"Particles", "&column name=Particles, description=\"Number of particles\", type=long, &end"},
+    {"Charge", "&column name=Charge, description=\"Charge in the beam\", units=C, type=double &end"},
     {"Transmission", "&column name=Transmission, description=Transmission, type=double &end"},
     {"pCentral", "&column name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
     {"pAverage", "&column name=pAverage, symbol=\"p$bave$n\", units=\"m$be$nc\", type=double, description=\"Mean beta*gamma\" &end"},
@@ -370,7 +372,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
   char s[100];
   SDDS_TABLE *SDDS_table;
   char *filename;
-  long watch_mode, columns;
+  long watch_mode;
   
 #if USE_MPI && !SDDS_MPI_IO 
     if (myid<0)
@@ -401,7 +403,6 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
       SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_table->MPI_dataset->MPI_file);
 #endif
-    columns = 0;
     if (watch->xData) {
       if ((watch->xIndex[0]=SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (!watch->excludeSlopes &&
@@ -818,7 +819,7 @@ double tmp_safe_sqrt;
 
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, 
                            long particles, long original_particles,  double Po, 
-                           double revolutionLength, double z)
+                           double revolutionLength, double z, double charge)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, tc0Error, p_sum, gamma_sum, sum, error_sum, p=0.0;
@@ -907,7 +908,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
+    accumulate_beam_sums(&sums, particle, particles, Po, charge, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     if (isMaster) {
       if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
@@ -1069,6 +1070,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 			     "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
 			     "ElapsedCoreTime", delapsed_time(),
 #endif
+			     "Charge", charge,
 	                     "ElapsedTime", delapsed_time(),
                              "MemoryUsage", memoryUsed,
 			     "Pass", pass, 
@@ -1616,7 +1618,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 }
 
 void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
-                          double p_central)
+		   double p_central)
 {
     long i, j;
     BEAM_SUMS *beam;
@@ -1688,8 +1690,9 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                Cx_index  , cent[0], Cx_index+1, cent[1], Cx_index+2, cent[2],
                                Cx_index+3, cent[3], Cx_index+4, cent[4], Cx_index+5, cent[5],
-                               Cx_index+6, beam->n_part, Cx_index+7, beam->p0, 
-                               s_index, beam->z, s_index+1, name, s_index+2, occurence,
+                               Cx_index+6, beam->n_part, Cx_index+7, beam->p0,
+			       Cx_index+8, beam->charge, 
+			       s_index, beam->z, s_index+1, name, s_index+2, occurence,
                                s_index+3, type_name, -1)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_centroid)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

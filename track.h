@@ -209,6 +209,7 @@ typedef struct {
     long n_part;         /* number of particles */
     double z;            /* z location */
     double p0;           /* reference momentum (beta*gamma) */
+    double charge;       /* charge in beam */
     } BEAM_SUMS;
 
 typedef struct {
@@ -3067,7 +3068,8 @@ extern void compute_sigmas(double *emit, double *sigma, double *centroid, double
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 #define BEAM_SUMS_SPARSE   0x0001UL
 #define BEAM_SUMS_NOMINMAX 0x0002UL
-extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, long startPID, long endPID, unsigned long flags);
+extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, double charge,
+				 long startPID, long endPID, unsigned long flags);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 extern long computeSliceMoments(double C[6], double S[6][6], 
 			 double **part, long np, 
@@ -3812,7 +3814,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
                                  double length, double charge, double z, long idSlotsPerBunch);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
-				  long original_particles,  double Po, double revolutionLength, double z);
+				  long original_particles,  double Po, double revolutionLength, double z, double charge);
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);

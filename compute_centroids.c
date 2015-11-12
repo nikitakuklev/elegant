@@ -245,6 +245,7 @@ void zero_beam_sums(
       for (k=0; k<7; k++)
         sums[i].sigma[j][k] = sums[i].sigman[j][k] = 0;
     sums[i].n_part = sums[i].z = sums[i].p0 = 0;
+    sums[i].charge = 0;
   }
 }
 
@@ -253,7 +254,8 @@ void accumulate_beam_sums(
                           BEAM_SUMS *sums,
                           double **coord,
                           long n_part,
-                          double p_central, 
+                          double p_central,
+			  double charge,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -428,7 +430,7 @@ void accumulate_beam_sums(
     }
   }
   
-
+  sums->charge = charge;
   sums->n_part += npCount;
   free(timeCoord);
   free(chosen);
@@ -444,6 +446,7 @@ void accumulate_beam_sums(
                           double **coord,
                           long n_part,
                           double p_central, 
+			  double charge,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -766,6 +769,8 @@ void accumulate_beam_sums(
     }
   }
 
+  sums->charge = charge;
+  
   if (!notSinglePart)
     sums->n_part += npCount; 
   else if (!SDDS_MPI_IO) {
