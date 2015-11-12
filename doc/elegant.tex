@@ -62,6 +62,8 @@ Here is a summary of what's changed since release 28.1:
   The need for this was pointed out by L. Yang (BNL).
 \item The \verb|MATTER| element now supports arrays of slits. This can be used for example to model a double-slit spoiler for
   producing two pulses in an FEL.
+\item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
+  a \verb|CHARGE| element is in the beamline.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -70,6 +72,8 @@ Here is a summary of what's changed since release 28.1:
   Previously, the analysis was limited to the linear matrix. This was requested by Y. Hao (BNL) and L. Yang (BNL).
 \item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
+\item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
+  a \verb|CHARGE| element is in the beamline.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
