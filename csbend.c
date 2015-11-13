@@ -3601,8 +3601,7 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
         + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
           - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
       dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-      dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-        +tan_edge*x0/rho
+      dpx  =  tan_edge*x0/rho
           -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
             -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
               -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
@@ -3648,8 +3647,7 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
         + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
           - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
       dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
-      dpx  =  -0.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
-        +tan_edge*x0/rho
+      dpx  =  tan_edge*x0/rho
           -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
             -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
               -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
