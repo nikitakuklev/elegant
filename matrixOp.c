@@ -808,7 +808,7 @@ void matrix_scmul(MAT *mat1, double scalar)
     mat1->base[i] *= scalar;
 }
 
-VEC *vec_add(VEC *a, VEC *b, double as, double bs, VEC *sum)
+VEC *vec_addition(VEC *a, VEC *b, double as, double bs, VEC *sum)
 /* sum = as*a + bs*b */
 {
   long i;

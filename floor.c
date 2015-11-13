@@ -425,9 +425,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
           a = vec_get(3);
           b = vec_get(3);
           c = vec_get(3);
-          vec_add(x2, x1, 1, -1, a);
-          vec_add(x4, x3, 1, -1, b);
-          vec_add(x3, x1, 1, -1, c);
+          vec_addition(x2, x1, 1, -1, a);
+          vec_addition(x4, x3, 1, -1, b);
+          vec_addition(x3, x1, 1, -1, c);
           axb = vec_get(3);
           cxb = vec_get(3);
           vec_cross(c, b, cxb);
@@ -446,7 +446,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #endif
 
           ds = vec_dot(cxb, axb)/vec_dot(axb, axb);
-          vec_add(x1, a, 1, ds, c);
+          vec_addition(x1, a, 1, ds, c);
           sprintf(label, "%s-VP", preceeds->name);
           ds *= -sqrt(vec_dot(a, a));
           if (store_vertices)

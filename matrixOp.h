@@ -80,7 +80,7 @@ typedef	struct	{
 #define	NEW_A(num,type)	((type *)calloc((size_t)(num),(size_t)sizeof(type)))
 
 /* get  vector/matrix to given dimension */
-extern	VEC *vec_get(int), *vec_add(VEC *, VEC *, double, double, VEC *), *vec_cross(VEC *, VEC *, VEC *);
+extern	VEC *vec_get(int), *vec_addition(VEC *, VEC *, double, double, VEC *), *vec_cross(VEC *, VEC *, VEC *);
 extern  double vec_dot(VEC *, VEC *);
 extern	MAT *matrix_get(int,int); 
 extern	int matrix_free(MAT *),vec_free(VEC *);

@@ -18,6 +18,8 @@
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 void convolveArrays1(double *output, long n, double *a1, double *a2);
+void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
+                     double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
 
 static long negativeWarningsLeft = 100;
 static long dipoleFringeWarning = 0;
