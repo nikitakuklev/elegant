@@ -60,7 +60,7 @@ Here is a summary of what's changed since release 28.1:
 \item Added \verb|EKICKER|, \verb|EHKICK|, and \verb|EVKICK|, which provide various flavors of steering correctors using an Exact 
   model. These may be used in place of the existing \verb|KICKER|, \verb|HKICK|, and \verb|VKICK| elements.
   The need for this was pointed out by L. Yang (BNL).
-\item The \verb|MATTER| element now supports arrays of slits. This can be used for example to model a double-slit spoiler for
+\item The \verb|MATTER| element now supports arrays of slits. This can be used, for example, to model a double-slit spoiler for
   producing two pulses in an FEL.
 \item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
   a \verb|CHARGE| element is in the beamline.
@@ -843,7 +843,8 @@ Recommended value: ``\%s.kaf''.
 
 \begin{itemize}
 \item type: major action command.
-\item function: find the transport matrix up to third order based on particle tracking.
+\item function: find the transport matrix up to third order based on particle tracking, based on method described
+  in \cite{Borland_thesis}.
   Also find related quantities, such as chromaticity.
 \item sequence: must follow \verb|run_control|.
 \item can use parallel resources (\verb|Pelegant|)
