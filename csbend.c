@@ -3548,7 +3548,7 @@ void apply_edge_effects(
 /* dipole fringe effects symplectic tracking, based on work of Kilean Hwang */
 
 void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
-                     double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe)
+                     double *dp, double rho, double inFringe, long edgeOrder, double K1, double edge, double gap, double fint, double Rhe)
 {
   double dx, dpx, dy, dpy;
   double tan_edge, sin_edge, sec_edge, cos_edge;
@@ -3574,7 +3574,7 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
   cos_edge=cos(edge);
   
 
-  if (higherOrder>1) {
+  if (edgeOrder>1) {
 
     /* entrance */
     if (inFringe==-1.) {
@@ -3620,50 +3620,31 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
                     +k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
     }
     
-  } else if (higherOrder==1) {
+  } else {
+    /* linear terms in transverse coordinates only */
 
     /* entrance */
     if (inFringe==-1.) {
-      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0);
+      dy  =  0;
       dpx  =  -1.*ipow(sec_edge,3)*sin_edge*ipow(gap,2)*k0/rho/rho/(1+dp0)
         +tan_edge*x0/rho
-          +ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-            +ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
-              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
-		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+          +k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+            -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe;
       dpy  =  -1.*tan_edge*y0/rho 
-        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-            +inFringe*y0*xp0/rho
-              +k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
-		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+        +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3);
     }
+
     /* exit */
     if (inFringe==1.) {
-      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0)
-        + inFringe*ipow(x0,2)*ipow(tan_edge,2)/2/rho/(1+dp0) 
-          - inFringe*ipow(y0,2)*ipow(sec_edge,2)/2/rho/(1+dp0);
-      dy  =  -inFringe*x0*y0*ipow(tan_edge,2)/rho/(1+dp0);
+      dx  =   inFringe*ipow(sec_edge,2)*ipow(gap,2)*k0/rho/(1+dp0);
+      dy  =  0;
       dpx  =  tan_edge*x0/rho
-          -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-            -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
-		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
-                  -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-                    +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
+        +k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
+          -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe;
       dpy  =  -1.*tan_edge*y0/rho 
         +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-            +inFringe*y0*xp0/rho
-              +x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
-		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
-                  -k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
-                    +k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
+          -k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe;
     }
   }
   
