@@ -509,6 +509,8 @@ long beam_scraper(
     matter.A = scraper->A;
     matter.rho = scraper->rho;
     matter.pLimit = scraper->pLimit;
+    matter.width = matter.spacing = matter.tilt = matter.center = 0;
+    matter.nSlots = 0;
     
     for (ip=0; ip<np; ip++) {
       ini = initial[ip];
