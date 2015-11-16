@@ -693,7 +693,7 @@ dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
         yp -= tan(e2-psi2/(1+dp))/rho*y;
       } else if (csbend->edge_order>=2 && csbend->edge2_effects==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
-      } else if (csbend->edge1_effects==2) {
+      } else if (csbend->edge2_effects==2) {
         rho = (1+dp)*rho_actual;
         dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
       }
@@ -1293,9 +1293,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   
   if (!csbend)
     bombElegant("null CSRCSBEND pointer (track_through_csbend)", NULL);
-  if (csbend->integratedGreensFunction && !csbend->steadyState) {
+  if (csbend->integratedGreensFunction && !csbend->steadyState) 
     bombElegant("CSRCSBEND requires STEADYSTATE=1 if IGF=1.", NULL);
-  }
+  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+    bombElegant("CSRCSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
 
   if (csbend->angle==0) {
     if (!csbend->useMatrix)
