@@ -21,6 +21,8 @@ typedef struct {
     long step_up_interval;  /* number of steps to take before increasing gain */
     double delta_gain;      /* amount by which to change the gain */
     double maximum_gain;    /* maximum gain to use */
+    double dK1_weight;      /* how much to weight minimization of dK1 */
+    long verbosity;
     MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
                                chromaticities by given amount */
     MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */

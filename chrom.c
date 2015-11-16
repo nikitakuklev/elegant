@@ -75,6 +75,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->tolerance = tolerance;
     verbosityLevel = verbosity;
     chrom->exit_on_failure = exit_on_failure;
+    if ((chrom->dK2_weight = dK2_weight)<0)
+      chrom->dK2_weight = 0;
     
     if (!use_perturbed_matrix) {
       if (!beamline->twiss0 || !beamline->matrix) {
@@ -158,8 +160,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     long i, count, K2_param=0, max_count=0;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
     
-    m_alloc(&C, 2, chrom->n_families);
-    m_alloc(&Ct, chrom->n_families, 2);
+    m_alloc(&C, 2+chrom->n_families, chrom->n_families);
+    m_zero(C);
+    m_alloc(&Ct, chrom->n_families, 2+chrom->n_families);
     m_alloc(&CtC, chrom->n_families, chrom->n_families);
     m_alloc(&inv_CtC, chrom->n_families, chrom->n_families);
 
@@ -169,9 +172,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
       m_free(&(chrom->dK2));
     if (chrom->dchrom)
       m_free(&(chrom->dchrom));
-    m_alloc(&(chrom->T), chrom->n_families, 2);
+    m_alloc(&(chrom->T), chrom->n_families, 2+chrom->n_families);
     m_alloc(&(chrom->dK2), chrom->n_families, 1);
-    m_alloc(&(chrom->dchrom), 2, 1);
+    m_alloc(&(chrom->dchrom), 2+chrom->n_families, 1);
 
     if (verbosityLevel>2) {
       fprintf(stdout, "Computing chromaticity influence matrix for all named sextupoles.\n");
@@ -274,6 +277,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
       fflush(stdout);
     }
     
+    for (i=0; i<chrom->n_families; i++)
+      C->a[i+2][i] = chrom->dK2_weight;
+    
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
     m_invert(inv_CtC, CtC);
@@ -370,7 +376,6 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
     if (verbosityLevel>0) {
       fprintf(stdout, "\nAdjusting chromaticities:\n");
-      fflush(stdout);
       fprintf(stdout, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
       fflush(stdout);
     }
@@ -490,12 +495,19 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 			      beamline->elast->twiss, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
-        if (verbosityLevel>0) {
+        if (verbosityLevel>1) {
           fprintf(stdout, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
           fprintf(stdout, "min, max sextupole strength:  %e  %e  1/m^2\n", K2_min, K2_max);
           fflush(stdout);
         }
       }
+
+    if (verbosityLevel>0)
+      fprintf(stdout, "Chromaticity correction completed after %ld iterations\n", iter);
+    if (verbosityLevel==1) 
+      fprintf(stdout, "final chromaticities  :  %e  %e\n", chromx0, chromy0);
+    if (verbosityLevel>0)
+      fflush(stdout);
     
     if (fp_sl && last_iteration) {
         for (i=0; i<chrom->n_families; i++) {

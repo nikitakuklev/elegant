@@ -18,7 +18,8 @@
     double strength_limit = 0;
     long use_perturbed_matrix = 0;    
     long exit_on_failure = 0;
-    long verbosity = 2;
+    long verbosity = 1;
+    double dK2_weight = 1;
 #end
 
 

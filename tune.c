@@ -63,6 +63,9 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     tune->maximum_gain = max_correction_fraction;
     tune->step_up_interval = step_up_interval;
     tune->delta_gain = delta_correction_fraction;
+    if ((tune->dK1_weight = dK1_weight)<0)
+      tune->dK1_weight = 0;
+    tune->verbosity = verbosity;
     alter_defined_values = change_defined_values;
 
     if (!beamline->twiss0 || !beamline->matrix) {
@@ -142,13 +145,15 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     if (!(M=beamline->matrix) || !M->C || !M->R)
         bombElegant("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
 
-    m_alloc(&C, 2, tune->n_families);
-    m_alloc(&Ct, tune->n_families, 2);
+    /* Solve dnu = C*dK1 for dK1 */
+    m_alloc(&C, 2+tune->n_families, tune->n_families);
+    m_zero(C);
+    m_alloc(&Ct, tune->n_families, 2+tune->n_families);
     m_alloc(&CtC, tune->n_families, tune->n_families);
     m_alloc(&inv_CtC, tune->n_families, tune->n_families);
-    m_alloc(&(tune->T), tune->n_families, 2);
+    m_alloc(&(tune->T), tune->n_families, 2+tune->n_families);
     m_alloc(&(tune->dK1), tune->n_families, 1);
-    m_alloc(&(tune->dtune), 2, 1);
+    m_alloc(&(tune->dtune), 2+tune->n_families, 1);
 
     fprintf(stdout, "Computing tune influence matrix for all named quadrupoles.\n");
     fflush(stdout);
@@ -197,6 +202,9 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         fprintf(stdout, "%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
         fflush(stdout);
     }
+    
+    for (i=0; i<tune->n_families; i++)
+      C->a[i+2][i] = tune->dK1_weight;
     
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
@@ -273,10 +281,12 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   if (!M || !M->C || !M->R)
     bombElegant("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
 
-  fprintf(stdout, "\nAdjusting tunes:\n");
-  fflush(stdout);
-  fprintf(stdout, "initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
-  fflush(stdout);
+  if (tune->verbosity>0) {
+    fprintf(stdout, "\nAdjusting tunes:\n");
+    fprintf(stdout, "initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
+    fflush(stdout);
+  }
+  
   MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
   
   if (!tunes_saved) {
@@ -356,11 +366,15 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
           change_defined_parameter(context->name, K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
         }
       }
-      fprintf(stdout, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
-      fflush(stdout);
-      if (!has_wc && alter_defined_values) {
-        fprintf(stdout, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
+      if (tune->verbosity>1) {
+        fprintf(stdout, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
         fflush(stdout);
+      }
+      if (!has_wc && alter_defined_values) {
+        if (tune->verbosity>2) {
+          fprintf(stdout, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
+          fflush(stdout);
+        }
         change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
       }
     }    
@@ -396,9 +410,11 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                                NULL, beamline->elem_twiss, run, clorb,
 			       beamline->couplingFactor);
-    fprintf(stdout, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
-
-    fflush(stdout);
+    if (tune->verbosity>1) {
+      fprintf(stdout, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
+      fflush(stdout);
+    }
+  
   }
 
 #ifdef DEBUG
@@ -406,6 +422,13 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   fflush(stdout);
 #endif
 
+  if (tune->verbosity>0)
+    fprintf(stdout, "Tune correction completed after %ld iterations\n", iter);
+  if (tune->verbosity==1)
+    fprintf(stdout, "final tunes  : %e %e\n", beamline->tune[0], beamline->tune[1]);
+  if (tune->verbosity>0)
+    fflush(stdout);
+  
   if (fp_sl && last_iteration) {
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {

@@ -24,6 +24,7 @@ typedef struct {
     double sextupole_tweek;
     double tolerance;         /* how close to get to desired chromaticities */
     long exit_on_failure;     /* exit if fails to converge */
+    double dK2_weight;        /* weight for minimization of changes to K2 values */
     MATRIX *T;                /* Nfx2 matrix to give sextupole strength changes to change 
                                  chromaticities by given amount */
     MATRIX *dK2;              /* Nfx1 matrix of sextupole strength changes */
