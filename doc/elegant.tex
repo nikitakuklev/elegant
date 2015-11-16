@@ -73,6 +73,8 @@ Here is a summary of what's changed since release 28.1:
 \begin{itemize}
 \item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data.
   Previously, the analysis was limited to the linear matrix. This was requested by Y. Hao (BNL) and L. Yang (BNL).
+\item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
+  the strength changes in the even that more than two familes are provided for correction.
 \item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
@@ -1182,7 +1184,8 @@ particles.
     double strength_limit = 0;
     long use_perturbed_matrix = 0;    
     long exit_on_failure = 0;
-    long verbosity = 2;
+    long verbosity = 1;
+    double dK2_weight = 1;
 &end
 \end{verbatim}
 
@@ -1191,7 +1194,8 @@ particles.
   wildcards. If so, then sextupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the sextupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
-  Note that although more than two families may be listed, the results may not be satisfactory.
+\item \verb|dK2_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_2$ values in the
+  event that there are more than two families.
 \item \verb|dnux_dp|, \verb|dnuy_dp| --- Desired chromaticity values.
 \item \verb|sextupole_tweek| --- Amount by which to tweak the sextupoles to compute derivatives of
 chromaticities with respect to sextupole strength.  [The word ``tweak'' is misspelled ``tweek'' in the code.]
@@ -1492,6 +1496,7 @@ matrix.
     STRING strength_log = NULL;
     long change_defined_values = 0;
     long use_perturbed_matrix = 0;
+    double dK1_weight = 1;
 &end
 \end{verbatim}
 
@@ -1500,7 +1505,8 @@ matrix.
   wildcards. If so, then quadrupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the quadrupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
-  Note that although more than two families may be listed, the results may not be satisfactory.
+\item \verb|dK1_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_1$ values in the
+  event that there are more than two families.
 \item \verb|tune_x|, \verb|tune_y| --- Desired x and y tune values.  If not given, the desired values are
 assumed to be the unperturbed tunes.
 \item \verb|n_iterations| --- The number of iterations of the correction to perform.
