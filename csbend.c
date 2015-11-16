@@ -1661,7 +1661,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-      computeCSBENDFields(&Fx, &Fy, x, y);
+      computeCSBENDFields(&Fx, &Fy, X, Y);
 
       dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
         sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
