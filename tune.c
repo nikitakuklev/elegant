@@ -204,7 +204,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     }
     
     for (i=0; i<tune->n_families; i++)
-      C->a[i+2][i] = tune->dK1_weight;
+      C->a[i+2][i] = tune->n_families>2?tune->dK1_weight:0;
     
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);

@@ -159,7 +159,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     ELEMENT_LIST *context;
     long i, count, K2_param=0, max_count=0;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
-    
+
     m_alloc(&C, 2+chrom->n_families, chrom->n_families);
     m_zero(C);
     m_alloc(&Ct, chrom->n_families, 2+chrom->n_families);
@@ -278,7 +278,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     }
     
     for (i=0; i<chrom->n_families; i++)
-      C->a[i+2][i] = chrom->dK2_weight;
+      C->a[i+2][i] = chrom->n_families>2?chrom->dK2_weight:0;
     
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
