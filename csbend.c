@@ -245,6 +245,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
+  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+    bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
+  
   if (csbend->referenceCorrection) {
     if (csbend->refTrajectoryChangeSet==0 || csbend->refLength!=csbend->length || csbend->refAngle!=csbend->angle || csbend->refKicks!=csbend->n_kicks) {
       /* Figure out the reference trajectory offsets to suppress inaccuracy in the integrator */
