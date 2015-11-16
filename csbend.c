@@ -1650,13 +1650,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         track_particles(&coord, Me1, &coord, 1);
       else {
         rho = (1+DP)*rho_actual;
-        if (csbend->edge_order<2) {
+        if (csbend->edge_order<=1 && csbend->edge1_effects==1) {
           delta_xp = tan(e1)/rho*X;
           XP += delta_xp;
           YP -= tan(e1-psi1/(1+DP))/rho*Y;
-        }
-        else
+        } else if (csbend->edge_order>=2 && csbend->edge1_effects==1) 
           apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
+        else if (csbend->edge1_effects>=2) {
+          rho = (1+DP)*rho_actual;
+          dipoleFringeSym(&X, &XP, &Y, &YP, &DP, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+        }
       }
     }
 
@@ -2174,13 +2177,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	else {
 	  /* apply edge focusing */
 	  rho = (1+DP)*rho_actual;
-	  if (csbend->edge_order<2) {
-	    delta_xp = tan(e2)/rho*X;
-	    XP += delta_xp;
-	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
-	  }
-	  else 
-	    apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
+          if (csbend->edge_order<=1 && csbend->edge2_effects==1) {
+            delta_xp = tan(e2)/rho*X;
+            XP += delta_xp;
+            YP -= tan(e2-psi2/(1+DP))/rho*Y;
+          } else if (csbend->edge_order>=2 && csbend->edge2_effects==1)
+            apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
+          else if (csbend->edge2_effects>=2) {
+            rho = (1+DP)*rho_actual;
+            dipoleFringeSym(&X, &XP, &Y, &YP, &DP, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+          }
 	}
       }
 
