@@ -401,6 +401,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
         if (chrom->use_perturbed_matrix)
           computeChromCorrectionMatrix(run, beamline, chrom);
+        m_zero(chrom->dchrom);
         chrom->dchrom->a[0][0] = dchromx;
         chrom->dchrom->a[1][0] = dchromy;
 

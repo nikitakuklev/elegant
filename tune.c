@@ -314,6 +314,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
 
     if (tune->use_perturbed_matrix)
       computeTuneCorrectionMatrix(run, beamline, tune, 0);
+    m_zero(tune->dtune);
     tune->dtune->a[0][0] = dtunex;
     tune->dtune->a[1][0] = dtuney;
   
