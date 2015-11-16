@@ -1650,7 +1650,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         track_particles(&coord, Me1, &coord, 1);
       else {
         rho = (1+DP)*rho_actual;
-        if (csbend->useMatrix || csbend->edge_order<2) {
+        if (csbend->edge_order<2) {
           delta_xp = tan(e1)/rho*X;
           XP += delta_xp;
           YP -= tan(e1-psi1/(1+DP))/rho*Y;
@@ -2174,7 +2174,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	else {
 	  /* apply edge focusing */
 	  rho = (1+DP)*rho_actual;
-	  if (csbend->useMatrix || csbend->edge_order<2) {
+	  if (csbend->edge_order<2) {
 	    delta_xp = tan(e2)/rho*X;
 	    XP += delta_xp;
 	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
