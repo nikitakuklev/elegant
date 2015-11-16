@@ -929,7 +929,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 58
 #define N_MATTER_PARAMS 16
-#define N_RFMODE_PARAMS 37
+#define N_RFMODE_PARAMS 38
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2281,6 +2281,7 @@ typedef struct {
     long updateInterval;       /* feedback update interval in buckets */
     char *amplitudeFilterFile, *phaseFilterFile;
     char *feedbackRecordFile;
+    long muteGenerator;        /* if non-zero, generator output is muted */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     double mp_charge;          /* charge per macroparticle */

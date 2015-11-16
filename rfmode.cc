@@ -390,11 +390,13 @@ void track_through_rfmode(
                 + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
               IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
                 + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, rfmode->phaseg - phase);
-
+              if (rfmode->muteGenerator)
+                IgAmp = 0;
+              
               /* Calculate updated I/Q components for generator current */
               rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
-              
+
               if (rfmode->feedbackRecordFile) {
 #if USE_MPI
                 if (myid==1) {

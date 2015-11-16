@@ -1453,6 +1453,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"AMPLITUDE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.amplitudeFilterFile), NULL, 0.0, 0, "IIR filter specification for amplitude feedback"},
     {"PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.phaseFilterFile), NULL, 0.0, 0, "IIR filter specification for phase feedback"},
     {"FEEDBACK_RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.feedbackRecordFile), NULL, 0.0, 0, "output file for feedback data"},
+    {"MUTE_GENERATOR", "", IS_LONG, 0, (long)((char *)&rfmode_example.single_pass), NULL, 0.0, 0, "if nonzero, generator is muted (output forced to zero)"},
     };
 
 FRFMODE frfmode_example;
