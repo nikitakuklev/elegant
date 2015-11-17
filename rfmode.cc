@@ -489,7 +489,7 @@ void track_through_rfmode(
             printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
             fflush(stdout);
             close(fd);
-            mpiAbort = 1;
+            mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_RFMODE;
             MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
 #else 
             bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins. Also, particleID assignments should be checked.", NULL);
