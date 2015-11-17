@@ -665,7 +665,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 }
 
 void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
-                          double Po, double length, double charge, double z, long slotsPerBunch)
+                          double Po, double length, double mp_charge, double z, long slotsPerBunch)
 {
   long i, row;
   double p, t0, t0Error, t;
@@ -768,13 +768,13 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     if (isMaster)
       row = total_row;
   }
-  if (total_row)
+  /* if (total_row)  */
 #endif
   memoryUsed = memoryUsage();
   if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
-                          "Charge", charge,
+                          "Charge", mp_charge*row,
                           "IDSlotsPerBunch", slotsPerBunch,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", delapsed_time(),
@@ -819,7 +819,7 @@ double tmp_safe_sqrt;
 
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, 
                            long particles, long original_particles,  double Po, 
-                           double revolutionLength, double z, double charge)
+                           double revolutionLength, double z, double mp_charge)
 {
     long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, tc0Error, p_sum, gamma_sum, sum, error_sum, p=0.0;
@@ -908,7 +908,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po, charge, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
+    accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     if (isMaster) {
       if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
@@ -1065,12 +1065,13 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 			     "Particles", npCount_total,
 			     "Transmission", (original_particles?((double)particles_total)/original_particles:(double)0.0),
 			     "ElapsedCoreTime", delapsed_time()*n_processors,
+			     "Charge", mp_charge*npCount_total,
 #else 
 			     "Particles", npCount,
 			     "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
 			     "ElapsedCoreTime", delapsed_time(),
+			     "Charge", mp_charge*npCount,
 #endif
-			     "Charge", charge,
 	                     "ElapsedTime", delapsed_time(),
                              "MemoryUsage", memoryUsed,
 			     "Pass", pass, 

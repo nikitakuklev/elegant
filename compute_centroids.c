@@ -255,7 +255,7 @@ void accumulate_beam_sums(
                           double **coord,
                           long n_part,
                           double p_central,
-			  double charge,
+			  double mp_charge,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -430,7 +430,7 @@ void accumulate_beam_sums(
     }
   }
   
-  sums->charge = charge;
+  sums->charge = mp_charge*npCount;
   sums->n_part += npCount;
   free(timeCoord);
   free(chosen);
@@ -446,7 +446,7 @@ void accumulate_beam_sums(
                           double **coord,
                           long n_part,
                           double p_central, 
-			  double charge,
+			  double mp_charge,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -769,7 +769,7 @@ void accumulate_beam_sums(
     }
   }
 
-  sums->charge = charge;
+  sums->charge = mp_charge*npCount_total;
   
   if (!notSinglePart)
     sums->n_part += npCount; 

@@ -741,11 +741,7 @@ long do_tracking(
         printMessageAndTime(stdout, "Accumulating beam sums\n");
 #endif
         accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
-#if USE_MPI
-			     charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0,
-#else
-			     charge?charge->macroParticleCharge*nToTrack:0.0,
-#endif
+			     charge ? charge->macroParticleCharge : 0.0,
 			     0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
@@ -1178,29 +1174,23 @@ long do_tracking(
                       (watch->end_pass<0 || i_pass<=watch->end_pass)) {
 	            switch (watch->mode_code) {
 	            case WATCH_COORDINATES:
-#if !USE_MPI
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
-					   charge?charge->macroParticleCharge*nToTrack:0.0, z, 
+					   charge?charge->macroParticleCharge:0.0, z, 
                                            beam?beam->id_slots_per_bunch:0);
-#else
-		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
-			        	   beamline->revolution_length, 
-					   charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z,
-                                           beam?beam->id_slots_per_bunch:0);
-#endif
 		      break;
 		    case WATCH_PARAMETERS:
 		    case WATCH_CENTROIDS:
-#if USE_MPI
-		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					    beamline->revolution_length, z,
-					    charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0);
+		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, 
+#if SDDS_MPI_IO
+                                            total_nOriginal,
 #else
-		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					    beamline->revolution_length, z,
-					    charge?charge->macroParticleCharge*nToTrack:0.0);
+                                            nOriginal,
 #endif
+                                            *P_central,
+					    beamline->revolution_length, z,
+					    charge ? charge->macroParticleCharge : 0.0);
+
 		      break;
 		    case WATCH_FFT:
 #if SDDS_MPI_IO
@@ -2140,11 +2130,7 @@ long do_tracking(
           printMessageAndTime(stdout, "Accumulating beam sums\n");
 #endif
           accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
-#if USE_MPI
-			       charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0,
-#else
-			       charge?charge->macroParticleCharge*nToTrack:0.0,
-#endif
+			       charge ? charge->macroParticleCharge : 0.0, 
 			       0, 0, 0);
 #ifdef DEBUG_BEAM_SUMS
           printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -2180,15 +2166,15 @@ long do_tracking(
 		  break;
 		case WATCH_PARAMETERS:
 		case WATCH_CENTROIDS:
+		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, 
 #if SDDS_MPI_IO
-		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, total_nOriginal, *P_central,
-					beamline->revolution_length, z,
-					charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0);
+                                        total_nOriginal, 
 #else
-		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-					beamline->revolution_length, z,
-					charge?charge->macroParticleCharge*nToTrack:0.0);
+                                        nOriginal,
 #endif
+                                        *P_central,
+					beamline->revolution_length, z,
+					charge?charge->macroParticleCharge:0.0);
 		  break;
 		case WATCH_FFT:
 		  dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
@@ -2231,11 +2217,7 @@ long do_tracking(
       printMessageAndTime(stdout, "Accumulating beam sums\n");
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
-#if USE_MPI
-			   charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0,
-#else
-			   charge?charge->macroParticleCharge*nToTrack:0.0,
-#endif
+			   charge ? charge->macroParticleCharge : 0.0,
 			   0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
@@ -2378,11 +2360,7 @@ long do_tracking(
       printMessageAndTime(stdout, "Accumulating beam sums\n");
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
-#if USE_MPI
-			   charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0,
-#else
-			   charge?charge->macroParticleCharge*nToTrack:0.0,
-#endif
+			   charge ? charge->macroParticleCharge : 0.0,
 			   0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
@@ -2402,11 +2380,7 @@ long do_tracking(
       printMessageAndTime(stdout, "Accumulating beam sums\n");
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
-#if USE_MPI
-			   charge && beam?charge->macroParticleCharge*beam->n_to_track_total:0.0,
-#else
-			   charge?charge->macroParticleCharge*nToTrack:0.0,
-#endif
+			   charge ? charge->macroParticleCharge : 0.0,
 			   0, 0, 0);
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
