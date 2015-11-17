@@ -117,6 +117,11 @@ extern int min_value_location; /* The location (which processor) of the optimiza
 extern long enableOutput;
 /* used to abort MPI run in cases where master is not running the same code */
 extern short mpiAbort;
+#define MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT 1
+#define MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE 2
+#define MPI_ABORT_BUNCH_TOO_LONG_RFMODE 3
+#define N_MPI_ABORT_TYPES 4
+extern char *mpiAbortDescription[N_MPI_ABORT_TYPES];
 void doMpiAbort(int code, char *format, ...);
 #endif
 
