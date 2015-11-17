@@ -76,7 +76,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   FILE *fp;
 #endif
   i_pass0 = i_pass;
-  if ((i_pass -= ztransverse->startOnPass)<0)
+  if ((i_pass -= ztransverse->startOnPass)<0 || ztransverse->factor==0)
     return;
 
 #if defined(DEBUG) && USE_MPI
@@ -647,7 +647,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
     if (maxBins2<n_bins) {
       fprintf(stderr, "  Maximum number of bins does not allow sufficient time span!\n");
 #if USE_MPI
-      mpiAbort = 1;
+      mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE;
       return ;
 #else
       exitElegant(1);

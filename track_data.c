@@ -2740,3 +2740,12 @@ long sigmaIndex1[21], sigmaIndex2[21];
  */
 long sigmaIndex3[6][6];
 
+#if USE_MPI
+char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
+  "-",
+  "Bunch too long in ZLONGIT element",
+  "Bunch too long in ZTRANSVERSE element",
+  "Bunch too long in RFMODE element",
+};
+#endif
+

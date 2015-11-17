@@ -107,7 +107,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
 
   i_pass0 = i_pass;
-  if ((i_pass -= zlongit->startOnPass)<0)
+  if ((i_pass -= zlongit->startOnPass)<0 || zlongit->factor==0)
     return;
 
   rampFactor = 0;
@@ -181,17 +181,21 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
+#if USE_MPI
+        if (myid==1)
+          dup2(fd, fileno(stdout));
+#endif
         fprintf(stdout, "%s %s: Time span of bunch (%le->%le, span %le s) is more than half the total time span (%le s).\n",
                 entity_name[tcontext.elementType],
                 tcontext.elementName, tmin, tmax, tmax-tmin, nb*dt);
-        fprintf(stdout, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
+        fprintf(stdout, "If using broad-band impedance, you should increase the number of bins (or use auto-scaling) and rerun.\n");
         fprintf(stdout, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
 #if USE_MPI
 #ifdef MPI_DEBUG
         printf("Issuing MPI abort from ZLONGIT\n");
         fflush(stdout);
 #endif
-        mpiAbort = 1;
+        mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT;
         return;
 #else
         exitElegant(1);
@@ -242,8 +246,8 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       if (n_binned!=np) {
         fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
         if (!not_first_call) {
-          fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
-          fprintf(stdout, "    spacing to cover a longer time span.\n");
+          fprintf(stdout, "*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
+          fprintf(stdout, "    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
         }
         fflush(stdout);
       }
@@ -254,13 +258,21 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           result = ((n_binned==np) ? 1 : 0);
         
         MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
-        if (!all_binned) {
-          if (myid==1) {  
-            /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-            fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-            fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-            fflush(stdout); 
-          }
+        if (!all_binned && !not_first_call) {
+#if MPI_DEBUG
+          if (myid==1) 
+            dup2(fd, fileno(stdout));
+#endif
+          fprintf(stdout, "*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
+          fprintf(stdout, "    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
+          fflush(stdout); 
+#if MPI_DEBUG
+#if defined(_WIN32)
+          if (myid==1) freopen("NUL","w",stdout); 
+#else
+          if (myid==1) freopen("/dev/null","w",stdout); 
+#endif
+#endif
         }
       }
 #endif
