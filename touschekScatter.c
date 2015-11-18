@@ -315,25 +315,31 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 				initial, distribution, output, loss, bunch);
   if (occurenceSeen && noOccurenceSeen)
     bombElegant("Some output files have occurence field and some don't.  Use only one method.", NULL);
-  if (verbosity)
+  if (verbosity) {
     printf("Output filenames will%s have occurence index\n", occurenceSeen?"":" not");
-  
+    fflush(stdout);
+  }
+
   iTotal = 0;  /* Suppress compiler warning */
   
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       iElement++;
       if (i_start>=0 && iElement < i_start) {
-        if (verbosity)
+        if (verbosity) {
           printf("Skipping %s#%ld at s=%le (outside index range)\n",
                  eptr->name, eptr->occurence, eptr->end_pos);
+	  fflush(stdout);
+	}
         eptr = eptr->succ; 
         continue;
       }
       if (i_end>=0 && iElement > i_end) {
-        if (verbosity)
+        if (verbosity) {
           printf("Breaking at %s#%ld at s=%le (outside index range)\n",
                  eptr->name, eptr->occurence, eptr->end_pos);
+	  fflush(stdout);
+	}
         break;
       }
       
@@ -365,32 +371,47 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	  skip = 1;
       }
       if (skip) {
-	if (verbosity)
+	if (verbosity) {
 	  printf("Skipping %s#%ld at s=%le (some files exist)\n",
 		 eptr->name, eptr->occurence, eptr->end_pos);
+	  fflush(stdout);
+	}
 	eptr = eptr->succ;
 	continue;
       }
-      if (verbosity)
-	printf("Working on %s#%ld at s=%le\n",
-	       eptr->name, eptr->occurence, eptr->end_pos);
+      if (verbosity) {
+	printf("Working on %s#%ld at s=%le, n_simulated = %ld\n",
+	       eptr->name, eptr->occurence, eptr->end_pos, n_simulated);
+	fflush(stdout);
+      }
 
       iProcessing ++;
 
       weight = (double*)malloc(sizeof(double)*n_simulated);
       beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, COORDINATES_PER_PARTICLE);
-      beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, COORDINATES_PER_PARTICLE);
+      /* beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, COORDINATES_PER_PARTICLE); */
+      beam0->original = NULL;
       beam0->accepted = NULL;
       beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
       beam0->n_accepted = beam0->n_saved = 0;
       beam0->p0_original = beam0->p0 = tsptr->betagamma;
       beam0->bunchFrequency = 0.;
-      beam0->lost = (double**)czarray_2d(sizeof(double), n_simulated, (COORDINATES_PER_PARTICLE+1));
+      /* beam0->lost = (double**)czarray_2d(sizeof(double), n_simulated, (COORDINATES_PER_PARTICLE+1)); */
+      beam0->lost = NULL;
 
+      if (verbosity>1) {
+	printf("Working arrays allocated\n");
+	fflush(stdout);
+      }
+	
       if (initial) {
         for (i=0; i<6; i++)
           bookBins[i] = tsSpec->nbins;
         iniBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
+	if (verbosity>1) {
+	  printf("iniBook set up\n");
+	  fflush(stdout);
+	}
       }
       if (distribution) {
         for (i=0; i<6; i++)
@@ -398,9 +419,17 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
         tsptr->xmin[5] = -0.1;
         tsptr->xmax[5] = 0.1;
         disBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
+	if (verbosity>1) {
+	  printf("disBook set up\n");
+	  fflush(stdout);
+	}
       }
       if (output) {
         lossDis = chbook1("s", "m", 0, beamline->revolution_length, sTotal);
+	if (verbosity>1) {
+	  printf("lossDis set up\n");
+	  fflush(stdout);
+	}
       }
 #if USE_MPI
       if (isMaster)
@@ -418,15 +447,20 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       if (isMaster)
 #endif
       if (bunch) {
-	if (occurenceSeen || iProcessing==1)
+	if (occurenceSeen || iProcessing==1) {
 	  SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
 				"scattered-beam phase space", run->runfile,
 				run->lattice, "touschek_scatter");
+	  if (verbosity>1) {
+	    printf("bunch output set up\n");
+	    fflush(stdout);
+	  }
+	}
       }
       report_stats(stdout, "Before particle generation: "); 
       i = 0; j=0; total_event=0;
-      while(1) {
-        if(i>=n_simulated)
+      while (1) {
+        if (i>=n_simulated)
           break;
         /* Select the 11 random number then mix them. Use elegant run_setup seed */
         for (j=0; j<11; j++) {
@@ -537,6 +571,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           fprintf(stdout, "warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
         else
           fprintf(stdout, "warning: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+	fflush(stdout);
       }
       tsptr->factor = tsptr->factor / (double)(total_event);
       tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
@@ -559,8 +594,10 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	  pickPart(weight, index, 0, tsptr->simuCount,  
 		   &iTotal, &wTotal, weight_limit, weight_ave);
       }
-      if (verbosity)
+      if (verbosity) {
 	printf("%ld of %ld particles selected for tracking\n", iTotal, tsptr->simuCount);
+	fflush(stdout);
+      }
 
       report_stats(stdout, "After particle selection: ");
 #if USE_MPI
@@ -696,7 +733,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
               if (verbosity>2)
                 printf("i=%ld, nLost = %ld\n", i, nLost);
 	    }
-            fflush(stdout);
+	    if (verbosity>2)
+	      fflush(stdout);
 	  }
 	  else {
 	    MPI_Send (&(beam->lost[n_left][0]), nLost*(COORDINATES_PER_PARTICLE+1), MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
@@ -1045,9 +1083,11 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      if (verbosity>1)
+      if (verbosity>1) {
 	printf("Looking for data for TSCATTER %s#%ld at s=%21.15e\n",
 	       eptr->name, eptr->occurence, eptr->end_pos);
+	fflush(stdout);
+      }
       while (1) {
         if (fabs(*s - eptr->end_pos) < eps &&
 	    (match_position_only || 
@@ -1056,9 +1096,11 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
 	      strcmp(*Type,entity_name[eptr->type]) == 0))) {
           ((TSCATTER*)eptr->p_elem)->deltaN =  (*dpm) * Momentum_Aperture_scale;
           ((TSCATTER*)eptr->p_elem)->deltaP =  (*dpp) * Momentum_Aperture_scale;
-	  if (verbosity>1)
+	  if (verbosity>1) {
 	    printf("Matched by \"%s\"#%ld at s=%21.15e\n",
 		   *Name, (long)*Occurence, *s);
+	    fflush(stdout);
+	  }
           i++;
           s++; dpp++; dpm++; Name++; Type++; Occurence++;
           break;
