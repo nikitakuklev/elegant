@@ -691,9 +691,11 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
 
 #if (USE_MPI)
   if (myid == 1) {/* We let the first slave to dump the parameter */
+    /*
 #ifndef DEBUG
     dup2(fd,fileno(stdout));
 #endif
+    */
 #endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
@@ -734,13 +736,15 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       free(filename);
   }
 #if (USE_MPI)
-#ifndef DEBUG
+  /*
+#ifndef MPI_DEBUG
 #if defined(_WIN32)
     freopen("NUL","w",stdout); 
 #else
     freopen("/dev/null","w",stdout);   
 #endif
 #endif
+  */
   } /* We let the first slave to dump the parameter */
 #endif
 
