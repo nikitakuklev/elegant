@@ -30,6 +30,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   MPI_Status mpiStatus;
 #endif
   
+#ifdef DEBUG
+  printf("TFBPICKUP\n");
+#endif
+
   if (tfbp->initialized==0)
     initializeTransverseFeedbackPickup(tfbp);
 
@@ -88,7 +92,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
         for (i=0; i<np0; i++)
           sum += part0[i][tfbp->iPlane];
       } else {
-        np = npBucket[iBucket];
+        if (npBucket)
+          np = npBucket[iBucket];
+        else
+          np = 0;
         for (i=0; i<np; i++)
           sum += part0[ipBucket[iBucket][i]][tfbp->iPlane];
       }
@@ -228,6 +235,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   MPI_Status mpiStatus;
 #endif
 
+#ifdef DEBUG
+  printf("TFBDRIVER\n");
+#endif
+
   if (isSlave || !notSinglePart) 
     determine_bucket_assignments(part0, np0, tfbd->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
@@ -331,17 +342,19 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
             for (i=0; i<np0; i++)
               part0[i][j] += kick/(1+part0[i][5]);
           } else {
-            for (i=0; i<npBucket[iBucket]; i++) {
-              part0[ipBucket[iBucket][i]][j] += kick/(1+part0[ipBucket[iBucket][i]][5]);
-            }
+            if (npBucket)
+              for (i=0; i<npBucket[iBucket]; i++) {
+                part0[ipBucket[iBucket][i]][j] += kick/(1+part0[ipBucket[iBucket][i]][5]);
+              }
           }
         } else {
           if (nBuckets==1) {
             for (i=0; i<np0; i++)
               part0[i][5] += kick;
           } else {
-            for (i=0; i<npBucket[iBucket]; i++)
-              part0[ipBucket[iBucket][i]][5] += kick;
+            if (npBucket)
+              for (i=0; i<npBucket[iBucket]; i++)
+                part0[ipBucket[iBucket][i]][5] += kick;
           }
         }
       }
