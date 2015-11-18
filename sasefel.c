@@ -548,7 +548,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
 #endif
   if (!(time=malloc(sizeof(*time)*particles)))
     SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
-  computeTimeCoordinates(time, Po, particle, particles);
+  computeTimeCoordinatesOnly(time, Po, particle, particles);
 
   /* compute normal values (over entire beam) */
   /* find center of energy distribution */
