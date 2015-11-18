@@ -93,6 +93,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
 
   if (isSlave || !notSinglePart) {
     determine_bucket_assignments(part0, np0, (charge && ztransverse->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+#if USE_MPI
+    if (mpiAbort)
+      return;
+#endif
 
 #ifdef DEBUG
     printf("%ld buckets\n", nBuckets);
@@ -114,10 +118,25 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
         pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
         pz = trealloc(pz, sizeof(*pz)*np);
       } else {
-        if ((np = npBucket[iBucket])==0)
+        if (npBucket)
+          np = npBucket[iBucket];
+        else 
+          np = 0;
+        if (np && (!ibParticle || !ipBucket || !time0)) {
+#if USE_MPI
+          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          return;
+#else
+          printf("Problem in determine_bucket_assignments. Seek professional help.\n");
+          exitElegant(1);
+#endif
+        }
+#if !USE_MPI
+        if (np==0)
           continue;
+#endif
 #ifdef DEBUG
-        printf("WAKE: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
+        printf("ZTRANSVERSE: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
         fflush(stdout);
 #endif
         if (np>max_np) {
@@ -159,10 +178,14 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-        fprintf(stderr, "%s %s: Time span of bunch (%le s) is more than half the total time span (%le s).\n",
+#ifndef MPI_DEBUG
+        if (myid==1)
+          dup2(fd, fileno(stdout));
+#endif
+        fprintf(stderr, "%s %s: Time span of bunch %ld (%21.15le s) is more than half the total time span (%21.15le s).\n",
                 entity_name[tcontext.elementType],
                 tcontext.elementName,
-                tmax-tmin, nb*dt);
+                iBucket, tmax-tmin, nb*dt);
         fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
         fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
         exitElegant(1);
@@ -196,6 +219,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           if (offset<0) {
             length -= offset;
             offset = 0;
+          }
+          if (offset>=nb) {
+            offset = 0;
+            length = nb;
           }
           if ((offset+length)>nb)
             length = nb - offset;
@@ -335,13 +362,20 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       
       if (nBuckets!=1) {
 #ifdef DEBUG
-        printf("WAKE: copying data back to main array\n");
+        printf("ZTRANSVERSE: copying data back to main array\n");
         fflush(stdout);
 #endif
 
         for (ip=0; ip<np; ip++)
           memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
 
+#if USE_MPI
+#ifdef DEBUG
+      printf("Preparing to wait on barrier at end of loop for bucket %ld\n", iBucket);
+      fflush(stdout);
+#endif
+      MPI_Barrier(workers);
+#endif
 #ifdef DEBUG
         printf("Done with bucket %ld\n", iBucket);
         fflush(stdout);
