@@ -31,7 +31,15 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 #endif
 
 #ifdef DEBUG
-  printf("determine_bucket_assignments called\n");
+  printf("determine_bucket_assignments called, np=%ld, idSlotsPerBunch=%ld, lastNBuckets=%ld\n", 
+         np, idSlotsPerBunch, lastNBuckets);
+  printf("pointer check: part %s, time %s, ibParticle %s, ipBucket %s, npBucket %s, nBuckets %s\n",
+         part ? "ok" : "NULL",
+         time ? "ok" : "NULL",
+         ibParticle ? "ok" : "NULL",
+         ipBucket ? "ok" : "NULL",
+         npBucket ? "ok" : "NULL",
+         nBuckets ? "ok" : "NULL");
   fflush(stdout);
 #endif
 
@@ -45,9 +53,6 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   } else {
     ibMin = LONG_MAX;
     ibMax = LONG_MIN;
-#ifdef DEBUG
-    printf("np=%ld\n",np);
-#endif
     for (ip=0; ip<np; ip++) {
       ib = (part[ip][6]-1)/idSlotsPerBunch;
       if (ib<ibMin)
@@ -56,76 +61,105 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
         ibMax = ib;
     }
 #if USE_MPI
+#ifdef DEBUG
+    printf("Sharing bucket min/max data: %ld, %ld\n", ibMin, ibMax);
+    fflush(stdout);
+#endif
     MPI_Allreduce(&ibMin, &ibMinGlobal, 1, MPI_LONG, MPI_MIN, workers);
     MPI_Allreduce(&ibMax, &ibMaxGlobal, 1, MPI_LONG, MPI_MAX, workers);
     ibMin = ibMinGlobal;
     ibMax = ibMaxGlobal;
 #endif
-    *nBuckets = (ibMax-ibMin)+1;
+    if (ibMin==LONG_MAX || ibMax==LONG_MIN)
+      *nBuckets = 0;
+    else
+      *nBuckets = (ibMax-ibMin)+1;
 #ifdef DEBUG
-    printf("nPPB=%ld, ibMin = %ld, ibMax = %ld\n", idSlotsPerBunch, ibMin, ibMax);
+    printf("nPPB=%ld, ibMin = %ld, ibMax = %ld, nBuckets = %ld\n", idSlotsPerBunch, ibMin, ibMax, *nBuckets);
+    fflush(stdout);
 #endif
   }
-  /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
-  if (lastNBuckets>0 && *nBuckets>lastNBuckets) 
-    bombElegant("Error: number of bunches has increased.", NULL);
-  
+  if (*nBuckets) {
+    /* To prevent problems in LRWAKE, need to ensure that number of buckets does not increase */
+    if (lastNBuckets>0 && *nBuckets>lastNBuckets) {
 #ifdef DEBUG
-  fprintf(stdout, "Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
+      printf("Error: lastNBuckets = %ld, *nBuckets = %ld\n", lastNBuckets, *nBuckets);
+      fflush(stdout);
+#endif
+      bombElegant("Error: number of bunches has increased.", NULL);
+    }
+
+#ifdef DEBUG
+    fprintf(stdout, "Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
+    fflush(stdout);
+#endif
+#if USE_MPI
+    if (isSlave || !notSinglePart) {
+#ifdef DEBUG
+      fprintf(stdout, "...performing bucket assignment\n");
+      fflush(stdout);
+#endif
+#endif
+      if (np) {
+#ifdef DEBUG
+        printf("Doing branch for np!=0 (np=%ld)\n", np);
+        fflush(stdout);
+#endif
+        /* Compute time coordinate of each particle */
+        if (!(*time = tmalloc(sizeof(**time)*np)))
+          bombElegant("Memory allocation problem in determine_bucket_assignments\n", NULL);
+        computeTimeCoordinatesOnly(*time, P0, part, np);
+#ifdef DEBUG
+        printf("Computed time coordinates\n");
+        fflush(stdout);
+#endif
+        *ibParticle = tmalloc(sizeof(**ibParticle)*np);
+        if (ipBucket && npBucket) {
+#ifdef DEBUG
+          printf("Allocating cross-reference arrays\n");
+          fflush(stdout);
+#endif
+          *ipBucket = (long**) czarray_2d(sizeof(***ipBucket), *nBuckets, np);
+          *npBucket = (long*) tmalloc(sizeof(*npBucket)*(*nBuckets));
+          for (ib=0; ib<(*nBuckets); ib++)
+            (*npBucket)[ib] = 0;
+        }
+#ifdef DEBUG
+        printf("Looping over all particles\n");
+        fflush(stdout);
+#endif
+        for (ip=0; ip<np; ip++) {
+          if (*nBuckets==1)
+            ib = 0;
+          else
+            ib = (part[ip][6]-1)/idSlotsPerBunch - ibMin;
+          if (ib<0 || ib>=(*nBuckets)) {
+            fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
+            exitElegant(1);
+          }
+          (*ibParticle)[ip] = ib;
+          if (ipBucket && npBucket) {
+            (*ipBucket)[ib][(*npBucket)[ib]] = ip;
+            (*npBucket)[ib] += 1;
+          }
+        }
+      }
+      
+#if USE_MPI
+    }
+#endif
+
+  }
+
+#if USE_MPI
+  printf("Waiting on barrier at end of determine_bucket_assignment\n");
   fflush(stdout);
-#endif
-#if USE_MPI
-  if (isSlave || !notSinglePart) {
-#ifdef DEBUG
-    fprintf(stdout, "...performing bucket assignment\n");
-    fflush(stdout);
-#endif
-#endif
-    /* Compute time coordinate of each particle */
-    *time = tmalloc(sizeof(**time)*np);
-    computeTimeCoordinates(*time, P0, part, np);
-#ifdef DEBUG
-    printf("Computed time coordinates\n");
-    fflush(stdout);
-#endif
-    *ibParticle = tmalloc(sizeof(**ibParticle)*np);
-    if (ipBucket && npBucket) {
-#ifdef DEBUG
-      printf("Allocating cross-reference arrays\n");
-      fflush(stdout);
-#endif
-      *ipBucket = (long**) czarray_2d(sizeof(***ipBucket), *nBuckets, np);
-      *npBucket = (long*) tmalloc(sizeof(*npBucket)*(*nBuckets));
-      for (ib=0; ib<(*nBuckets); ib++)
-        (*npBucket)[ib] = 0;
-    }
-#ifdef DEBUG
-      printf("Looping over all particles\n");
-      fflush(stdout);
-#endif
-    for (ip=0; ip<np; ip++) {
-      if (*nBuckets==1)
-        ib = 0;
-      else
-        ib = (part[ip][6]-1)/idSlotsPerBunch - ibMin;
-      if (ib<0 || ib>=(*nBuckets)) {
-        fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
-        exitElegant(1);
-      }
-      (*ibParticle)[ip] = ib;
-      if (ipBucket && npBucket) {
-        (*ipBucket)[ib][(*npBucket)[ib]] = ip;
-        (*npBucket)[ib] += 1;
-      }
-    }
-
-#if USE_MPI
-  }
+  MPI_Barrier(workers);
 #endif
 
 #ifdef DEBUG
-    printf("Leaving determine_bucket_assignment\n");
-    fflush(stdout);
+  printf("Leaving determine_bucket_assignment\n");
+  fflush(stdout);
 #endif
 }
 
@@ -139,13 +173,13 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   double *QBucket = NULL;     /* array for Q for buckets */
   static long lastNBuckets = -1;
   
-  double *VzBucket, *VxBucket, *VyBucket; /* arrays of voltage at each bucket */
+  double *VzBucket=NULL, *VxBucket=NULL, *VyBucket=NULL; /* arrays of voltage at each bucket */
   double *time = NULL;        /* array to record arrival time of each particle */
   long ib, ip, nBuckets;
   double factor, P0, rampFactor;
-  long *ibParticle;
+  long *ibParticle = NULL;
 #if USE_MPI
-  double *buffer;
+  double *buffer = NULL;
 #endif
 
 #ifdef DEBUG
@@ -182,7 +216,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     
 #ifdef DEBUG
   fputs("determine_bucket_assignment returned\n", stdout);
-  printf("nBuckets = %ld\n", nBuckets);
+  printf("np = %ld, nBuckets = %ld\n", np, nBuckets);
 #endif
 
   set_up_lrwake(wakeData, run, i_pass, np, charge, nBuckets);
@@ -214,6 +248,10 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 
 #if USE_MPI
     /* sum data across processors */
+#ifdef MPI_DEBUG
+  printf("Summing data across processors\n");
+  fflush(stdout);
+#endif
 
     buffer = tmalloc(sizeof(*buffer)*nBuckets);
     MPI_Allreduce(tBucket, buffer, nBuckets, MPI_DOUBLE, MPI_SUM, workers);
@@ -233,6 +271,11 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     }
 
     free(buffer);
+    buffer = NULL;
+#ifdef MPI_DEBUG
+    printf("Computing values within buckets\n");
+    fflush(stdout);
+#endif
 #endif
 
   /* Compute mean time and space position of particles within buckets, multiplied by charge */
@@ -247,12 +290,21 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     }
   }
 
+#ifdef MPI_DEBUG
+    printf("Moving history data back\n");
+    fflush(stdout);
+#endif
+
   /* Move the existing history data back */
   memmove(wakeData->tHistory, wakeData->tHistory+nBuckets, sizeof(*(wakeData->tHistory))*(wakeData->nHistory-nBuckets));
   memmove(wakeData->QHistory, wakeData->QHistory+nBuckets, sizeof(*(wakeData->QHistory))*(wakeData->nHistory-nBuckets));
   memmove(wakeData->xHistory, wakeData->xHistory+nBuckets, sizeof(*(wakeData->xHistory))*(wakeData->nHistory-nBuckets));
   memmove(wakeData->yHistory, wakeData->yHistory+nBuckets, sizeof(*(wakeData->yHistory))*(wakeData->nHistory-nBuckets));
 
+#ifdef MPI_DEBUG
+    printf("Moving new data into buffer\n");
+    fflush(stdout);
+#endif
   /* Move the new history data into the buffer */
   memmove(wakeData->tHistory+wakeData->nHistory-nBuckets, tBucket, sizeof(*tBucket)*nBuckets);
   memmove(wakeData->QHistory+wakeData->nHistory-nBuckets, QBucket, sizeof(*QBucket)*nBuckets);
@@ -269,6 +321,10 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 #endif
 
+#ifdef MPI_DEBUG
+  printf("Computing wake function at each new bucket\n");
+  fflush(stdout);
+#endif
   /* Compute the wake function at each new bucket */
   VxBucket = tmalloc(sizeof(*VxBucket)*nBuckets);
   VyBucket = tmalloc(sizeof(*VyBucket)*nBuckets);
@@ -314,6 +370,10 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 #endif
 
+#ifdef MPI_DEBUG
+  printf("Imparting kicks to particles\n");
+  fflush(stdout);
+#endif
   for (ip=0; ip<np; ip++) {
     /* Impart kick for each particle */
     double dgam, pz;
@@ -327,15 +387,24 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   }
 
   /* Free memory */
-  free(time);
-  free(tBucket);
-  free(xBucket);
-  free(yBucket);
-  free(QBucket);
-  free(ibParticle);
-  free(VxBucket);
-  free(VyBucket);
-  free(VzBucket);
+  if (time)
+    free(time);
+  if (tBucket)
+    free(tBucket);
+  if (xBucket)
+    free(xBucket);
+  if (yBucket)
+    free(yBucket);
+  if (QBucket)
+    free(QBucket);
+  if (ibParticle)
+    free(ibParticle);
+  if (VxBucket)
+    free(VxBucket);
+  if (VyBucket)
+    free(VyBucket);
+  if (VzBucket)
+    free(VzBucket);
   }
 
 #if USE_MPI
