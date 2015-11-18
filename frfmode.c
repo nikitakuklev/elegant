@@ -92,6 +92,7 @@ void track_through_frfmode(
   if (isSlave || !notSinglePart) {
 #ifdef DEBUG
     printf("FRFMODE: Determining bucket assignments\n");
+    fflush(stdout);
 #endif
     determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 #ifdef DEBUG
@@ -538,9 +539,11 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 
 #if (USE_MPI)
   if (myid == 1) { /* We let the first slave to dump the parameter */
+    /*
 #ifndef MPI_DEBUG
     dup2(fd,fileno(stdout));
 #endif
+    */
 #endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
@@ -578,6 +581,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       free(filename);
   }
 #if (USE_MPI)
+  /*
 #ifndef MPI_DEBUG
 #if defined(_WIN32)
     freopen("NUL","w",stdout); 
@@ -585,6 +589,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     freopen("/dev/null","w",stdout);  
 #endif
 #endif
+  */
   } /* We let the first slave to dump the parameter */
 #endif
 
