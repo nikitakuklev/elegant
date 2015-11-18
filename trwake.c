@@ -480,6 +480,20 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }
 
+void computeTimeCoordinatesOnly(double *time, double Po, double **part, long np)
+{
+  long ip;
+  double P;
+
+  for (ip=0; ip<np; ip++) {
+    P = Po*(part[ip][5]+1);
+    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+  }
+}
+
+/* This routine should call computeTimeCoordinatesOnly() first instead of duplicating
+   the equations */
+
 double computeTimeCoordinates(double *time, double Po, double **part, long np)
 {
   double tmean, P;

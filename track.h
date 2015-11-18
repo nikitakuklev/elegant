@@ -120,7 +120,8 @@ extern short mpiAbort;
 #define MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT 1
 #define MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE 2
 #define MPI_ABORT_BUNCH_TOO_LONG_RFMODE 3
-#define N_MPI_ABORT_TYPES 4
+#define MPI_ABORT_BUCKET_ASSIGNMENT_ERROR 4
+#define N_MPI_ABORT_TYPES 5
 extern char *mpiAbortDescription[N_MPI_ABORT_TYPES];
 void doMpiAbort(int code, char *format, ...);
 #endif
@@ -3740,6 +3741,7 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);
+void computeTimeCoordinatesOnly(double *time, double Po, double **part, long np);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
 void computeDistanceCoordinates(double *time, double Po, double **part, long np);
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
