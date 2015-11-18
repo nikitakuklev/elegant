@@ -866,7 +866,7 @@ long do_tracking(
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
-        if (run->print_statistics && !(flags&TEST_PARTICLES)) {
+        if ((run->print_statistics>0 || (run->print_statistics<0 && (-run->print_statistics)<=(i_pass+1))) && !(flags&TEST_PARTICLES)) {
 #if USE_MPI
 	  if (!partOnMaster && notSinglePart) {
 	    if (isMaster) nToTrack = 0; 
@@ -876,7 +876,7 @@ long do_tracking(
 #endif
           fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                  beam?beam->n_to_track_total:(myid==0?-1:nToTrack),
+                  myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else
                   nToTrack,
 #endif
@@ -972,7 +972,7 @@ long do_tracking(
 	  MPE_Log_event( event2a, 0, NULL );
 	  MPE_Log_pack( bytebuf, &bytebuf_pos, 's', strlen(entity_name[eptr->type]), entity_name[eptr->type]); 
 #endif
-	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || nToTrack || 
+	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || (USE_MPI && beam && beam->n_to_track_total) || (!USE_MPI && nToTrack) || 
 	     (USE_MPI && (classFlags&RUN_ZERO_PARTICLES)))) {
 	    switch (type) {
 	    case -1:
@@ -1887,7 +1887,7 @@ long do_tracking(
 #ifdef DEBUG_CRASH 
         printMessageAndTime(stdout, "do_tracking checkpoint 10\n");
 #endif
-        if (run->print_statistics && !(flags&TEST_PARTICLES)) {
+        if (run->print_statistics>0 && !(flags&TEST_PARTICLES)) {
 	  if (run->print_statistics>1) {
 	    report_stats(stdout, ": ");
 	    fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
@@ -2039,6 +2039,10 @@ long do_tracking(
 #ifdef DEBUG_CRASH 
           printMessageAndTime(stdout, "do_tracking checkpoint 16.4\n");
 #endif
+          if (mpiAbortGlobal<N_MPI_ABORT_TYPES)
+            printf("Run aborted by error in %s: %s\n", eptr->name, mpiAbortDescription[mpiAbortGlobal]);
+          else
+            printf("Run aborted by error in %s: unknown code %ld\n", eptr->name, mpiAbortGlobal);
 	  exitElegant(1);
 	}
       }
