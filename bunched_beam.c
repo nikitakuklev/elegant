@@ -1234,7 +1234,7 @@ void makeBucketAssignments(BEAM *beam, double Po, double frequency)
 
   /* Find time coordinate limits for the beam */
   time = tmalloc(sizeof(*time)*(beam->n_to_track));
-  computeTimeCoordinates(time, Po, beam->particle, beam->n_to_track);
+  computeTimeCoordinatesOnly(time, Po, beam->particle, beam->n_to_track);
   find_min_max(&tmin, &tmax, time, beam->n_to_track);
   /* Determine how many buckets we will span.  Assumes that the bunch length is << bucket spacing */
   if ((buckets = (tmax-tmin)*frequency)>(MAX_BUCKETS-1)) {
