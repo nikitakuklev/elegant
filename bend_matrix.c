@@ -552,10 +552,10 @@ VMATRIX *sbend_matrix(
                       long order
                       )
 {
-  static double kx, cx, sx, kx2, kx4, kx6, cx2, cx3, cx4, sx2, sx3, sx4;
-  static double ky, cy, sy, ky2, ky4, cy2, cy3, cy4, sy2, sy3, sy4;
-  static double h2, ha2;
-  static double e111, e122, e133, e144, e161, e166, e331, e342, e363;
+  double kx, cx, sx, kx2, kx4, kx6, cx2, cx3, cx4, sx2, sx3, sx4;
+  double ky, cy, sy, ky2, ky4, cy2, cy3, cy4, sy2, sy3, sy4;
+  double h2, ha2;
+  double e111, e122, e133, e144, e161, e166, e331, e342, e363;
   double i11111, i21111, i12121, i22121, i11211, i21211, i12221, i22221, i11611, i21611, i12621, i22621, i16611,
   i26611, i11112, i21112, i12122, i22122, i11212, i21212, i12222, i22222, i11612, i21612, i12622, i22622,
   i16612, i26612, i13333, i23333, i14343, i24343, i13433, i23433, i14443, i24443, i13334, i23334, i14344,
