@@ -217,7 +217,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-#ifndef MPI_DEBUG
+#if USE_MPI && !defined(MPI_DEBUG)
         if (myid==1)
           dup2(fd, fileno(stdout));
 #endif
