@@ -178,7 +178,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-#ifndef MPI_DEBUG
+#if USE_MPI && defined(MPI_DEBUG)
         if (myid==1)
           dup2(fd, fileno(stdout));
 #endif
