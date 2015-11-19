@@ -163,6 +163,7 @@ typedef struct {
   double *an, *bn;         /* input for KQUAD, KSEXT, etc. */
   double *anMod, *bnMod;   /* computed for KQUAD, KSEXT, etc.: anMod=an*n!/r^n */
   double *KnL, *JnL;       /* input for FMULT, computed for KQUAD, KSEXT, etc. */
+  short copy;              /* if non-zero, pointers are copies of another structure and shouldn't be freed or reallocated */
 } MULTIPOLE_DATA ;
 
 /* structure used by taylor series map element */
@@ -3112,6 +3113,8 @@ extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
+extern void startMatrixComputationTiming();
+extern void reportMatrixComputationTiming();
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);

@@ -37,13 +37,51 @@ unsigned long multipoleKicksDone = 0;
 
 #define ODD(j) ((j)%2)
 
+typedef struct {
+  char *filename;
+  MULTIPOLE_DATA data;
+  short steering;
+} STORED_MULTIPOLE_DATA;
+static STORED_MULTIPOLE_DATA *storedMultipoleData = NULL;
+static long nMultipoleDataSets = 0;
+
+long searchForStoredMultipoleData(char *multFile)
+{
+  long i;
+  /* should use a hash table ! */
+  for (i=0; i<nMultipoleDataSets; i++)
+    if (strcmp(multFile, storedMultipoleData[i].filename)==0) {
+      return i;
+    }
+  return -1;
+}
+
+void copyMultipoleDataset(MULTIPOLE_DATA *multData, long index)
+{
+  memcpy(multData, &storedMultipoleData[index].data, sizeof(*multData));
+  multData->copy = 1;
+}
+ 
+void addMultipoleDatasetToStore(MULTIPOLE_DATA *multData, char *filename)
+{
+  printf("Adding file %s to multipole data store\n", filename);
+  fflush(stdout);
+  storedMultipoleData = SDDS_Realloc(storedMultipoleData, sizeof(*storedMultipoleData)*(nMultipoleDataSets+1));
+  memcpy(&storedMultipoleData[nMultipoleDataSets].data, multData, sizeof(*storedMultipoleData));
+  storedMultipoleData[nMultipoleDataSets].filename = tmalloc(sizeof(*filename)*(strlen(filename)+1));
+  storedMultipoleData[nMultipoleDataSets].data.copy = 1;
+  strcpy(storedMultipoleData[nMultipoleDataSets].filename, filename);
+  nMultipoleDataSets++;
+}
+
 void readErrorMultipoleData(MULTIPOLE_DATA *multData,
                                char *multFile, long steering)
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
   short anCheck, bnCheck, normalCheck, skewCheck;
-  
+  long index;
+
   if (!multFile || !strlen(multFile)) {
     multData->orders = 0;
     multData->initialized = 0;
@@ -51,6 +89,10 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }
   if (multData->initialized)
     return;
+  if ((index=searchForStoredMultipoleData(multFile))>=0) {
+    copyMultipoleDataset(multData, index);
+    return;
+  }
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
     fprintf(stdout, "Problem opening file %s\n", multFile);
     fflush(stdout);
@@ -169,6 +211,9 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
 #endif
   }
   multData->initialized = 1;
+  multData->copy = 0;
+
+  addMultipoleDatasetToStore(multData, multFile);
 }
 
 void initialize_fmultipole(FMULT *multipole)
@@ -938,7 +983,7 @@ long multipole_tracking2(
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
 
-  if (freeMultData) {
+  if (freeMultData && !multData->copy) {
     if (multData->order)
       free(multData->order);
     if (multData->KnL)
