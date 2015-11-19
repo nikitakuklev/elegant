@@ -24,6 +24,31 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
 VMATRIX *mult_matrix(MULT *mult, double P, long maxOrder);
 
+static double timeCounter[N_TYPES], tStart;
+static long runCounter[N_TYPES];
+static long timingActive = 0;
+void startMatrixComputationTiming()
+{
+  long i;
+  for (i=0; i<N_TYPES; i++) 
+    timeCounter[i] = runCounter[i] = 0;
+  timingActive = 1;
+}
+void reportMatrixComputationTiming()
+{
+  if (timingActive) {
+    long i;
+    printf("Time spent computing matrices for different elements:\n");
+    for (i=0; i<N_TYPES; i++) {
+      if (runCounter[i]!=0)
+        printf("%16s: %10ld times, %10.3e s, %10.3e s/element\n", entity_name[i], runCounter[i], timeCounter[i], timeCounter[i]/runCounter[i]);
+    }
+    fflush(stdout);
+  }
+  timingActive = 0;
+}
+
+
 void checkMatrices(char *label, ELEMENT_LIST *elem)
 {
   ELEMENT_LIST *eptr;
@@ -739,6 +764,7 @@ VMATRIX *compute_matrix(
     double ks, Pref_output, pSave;
     VARY rcContext;
     long fiducialize;
+    double tStart;
 
     getRunControlContext(&rcContext);
     fiducialize = 1;
@@ -768,7 +794,9 @@ VMATRIX *compute_matrix(
       free(elem->matrix);
     }
     elem->matrix = NULL;
-    
+
+    if (timingActive)
+      tStart = getTimeInSecs();
     switch (elem->type) {
       case T_DRIF:
         drift = (DRIFT*)elem->p_elem;
@@ -1345,6 +1373,11 @@ VMATRIX *compute_matrix(
             }
         break;
         }
+
+    if (timingActive) {
+      timeCounter[elem->type] += getTimeInSecs() - tStart;
+      runCounter[elem->type] += 1;
+    }
 
     if (elem->matrix)
       /* This allows us to find the element if we have the matrix */
