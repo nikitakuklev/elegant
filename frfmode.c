@@ -44,7 +44,7 @@ void track_through_frfmode(
   double Qrp, VbImagFactor, Q;
   double rampFactor;
 #if USE_MPI
-  double *buffer; 
+  double *buffer = NULL; 
   long np_total;
   long nonEmptyBins = 0;
 #endif
@@ -95,12 +95,16 @@ void track_through_frfmode(
     fflush(stdout);
 #endif
     determine_bucket_assignments(part0, np0, rfmode->bunchedBeamMode?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+#if USE_MPI
+    if (mpiAbort)
+      return;
+#endif
 #ifdef DEBUG
     printf("FRFMODE: Done determining bucket assignments\n");
     fflush(stdout);
 #endif 
   } else 
-    nBuckets = 1;
+    nBuckets = 0;
 
 #if USE_MPI
   /* Master needs to know the number of buckets */
@@ -119,8 +123,10 @@ void track_through_frfmode(
       if (isSlave || !notSinglePart) {
         if (nBuckets==1)
           np = np0;
-        else
+        else if (npBucket)
           np = npBucket[iBucket];
+        else
+          np = 0;
       } else {
         np = 0;
       }
@@ -136,18 +142,19 @@ void track_through_frfmode(
         np = np0;
         pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
       } else {
-        if ((np = npBucket[iBucket])==0)
-          continue;
-        if (part)
-          free_czarray_2d((void**)part, max_np, 7);
-        part = (double**)czarray_2d(sizeof(double), np, 7);
-        time = (double*)trealloc(time, sizeof(*time)*np);
-        pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
-        max_np = np;
-        for (ip=0; ip<np; ip++) {
-          time[ip] = time0[ipBucket[iBucket][ip]];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
-        }
+        if (npBucket && (np = npBucket[iBucket])>0) {
+          if (part)
+            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+          time = (double*)trealloc(time, sizeof(*time)*np);
+          pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
+          max_np = np;
+          for (ip=0; ip<np; ip++) {
+            time[ip] = time0[ipBucket[iBucket][ip]];
+            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+          }
+        } else 
+          np = 0;
       }
 #ifdef DEBUG
       printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
@@ -167,11 +174,19 @@ void track_through_frfmode(
           MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
           tmean = t_total;
         }
-        tmean /= np_total;
-      } else
+        if (np_total)
+          tmean /= np_total;
+        else 
+          tmean = 0;
+      } else if (np!=0)
         tmean /= np;
+      else 
+        tmean = 0;
 #else
-      tmean /= np;
+      if (np!=0)
+        tmean /= np;
+      else
+        tmean = 0;
 #endif
 
       tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
@@ -268,19 +283,9 @@ void track_through_frfmode(
       }
 #ifdef DEBUG
       printf("firstBin = %ld, lastBin = %ld\n", firstBin_global, lastBin_global);
-      printf("%ld particles binned\n", n_binned);
-      for (ib=firstBin; ib<=lastBin; ib++) 
-        printf("%ld %ld\n", ib, Ihist[ib]);
       fflush(stdout);
 #endif
     }
-#else 
-#ifdef DEBUG
-    printf("%ld particles binned\n", n_binned);
-    for (ib=firstBin; ib<=lastBin; ib++) 
-      printf("%ld %ld\n", ib, Ihist[ib]);
-    fflush(stdout);
-#endif
 #endif
     
     rampFactor = 0;
@@ -387,7 +392,7 @@ void track_through_frfmode(
       
       if (nBuckets!=1) {
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
       }
     }
 #if USE_MPI
@@ -396,13 +401,21 @@ void track_through_frfmode(
   }
   
 #if USE_MPI
+#ifdef DEBUG
+    printf("FRFMODE: Waiting on barrier after main loop\n");
+    fflush(stdout);
+#endif
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     
+#ifdef DEBUG
+    printf("FRFMODE: Preparing to free memory\n");
+    fflush(stdout);
+#endif
   if (Ihist) free(Ihist);
   if (Vbin) free(Vbin);
-  if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, 7);
+  if (part && part!=part0 && max_np>0)
+    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0)
     free(time);
   if (time0)
@@ -411,10 +424,15 @@ void track_through_frfmode(
     free(pbin);
   if (ibParticle)
     free(ibParticle);
-  if (ipBucket)
+  if (ipBucket && nBuckets)
     free_czarray_2d((void**)ipBucket, nBuckets, np0);
   if (npBucket)
     free(npBucket);
+
+#ifdef DEBUG
+    printf("FRFMODE: Returning\n");
+    fflush(stdout);
+#endif
 }
 
 
