@@ -128,9 +128,13 @@ VMATRIX *compute_periodic_twiss(
 
   *unstable = 0;
 
+#if DEBUG
+  startMatrixComputationTiming();
+#endif
   if ((i = fill_in_matrices(elem, run))) {
     if (noticeCounter < 100) {
       fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
+      report_stats(stdout, "statistics: ");
       fflush(stdout);
       if (++noticeCounter==100) {
         fprintf(stdout, (char*) "(Further notices discontinued)\n");
@@ -138,6 +142,9 @@ VMATRIX *compute_periodic_twiss(
       }                     
     }
   }
+#if DEBUG
+  reportMatrixComputationTiming();
+#endif
     
   if (cavities_are_drifts_if_matched) {
     if (run->always_change_p0)
@@ -198,6 +205,9 @@ VMATRIX *compute_periodic_twiss(
     fflush(stdout);
 */
   }
+#ifdef DEBUG
+  report_stats(stdout, "computed revolution matrix: ");
+#endif
 
   R = M->R;
   T = M->T;
@@ -278,6 +288,9 @@ VMATRIX *compute_periodic_twiss(
   m_free(&dispEta);
   m_free(&dispR);
   m_free(&dispMInv);
+#ifdef DEBUG
+  report_stats(stdout, "computed periodic functions: ");
+#endif
   
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
@@ -316,6 +329,9 @@ VMATRIX *compute_periodic_twiss(
   lastPeriodicTwiss.etapy = etapy[0];
   
   log_exit((char*)"compute_periodic_twiss");
+#ifdef DEBUG
+  report_stats(stdout, "exiting compute_periodic_twiss: ");
+#endif
   return(M);
 }
 
@@ -339,6 +355,10 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   static long asinWarning = 50;
   std::complex <double> kappa;
   log_entry("propagate_twiss_parameters");
+
+#ifdef DEBUG
+  report_stats(stdout, "started propagate_twiss_parameters: ");
+#endif
 
   if (!twiss0)
       bombElegant((char*)"initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
@@ -878,6 +898,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   free_matrices(M2); tfree(M2); M2 = NULL;
 
   processTwissAnalysisRequests(elemOrig);
+
+#ifdef DEBUG
+  report_stats(stdout, "finished propagate_twiss_parameters: ");
+#endif
+
   log_exit("propagate_twiss_parameters");
 }
 
@@ -1803,8 +1828,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   log_entry((char*)"run_twiss_output");
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"now in run_twiss_output\n");
-  fflush(stdout);
+  report_stats(stdout, "now in run_twiss_output\n");
 #endif
   if (tune_corrected==0 && !output_before_tune_correction) {
     log_exit((char*)"run_twiss_output");
@@ -1822,97 +1846,74 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     n_elem --;
   }
   n_elem = last_n_elem;
+#ifdef DEBUG
+  report_stats(stdout, "counted elements: ");
+#endif
   compute_twiss_parameters(run, beamline, starting_coord, matched, radiation_integrals,
                            beta_x, alpha_x, eta_x, etap_x,
                            beta_y, alpha_y, eta_y, etap_y, &unstable);
   elast = beamline->elast;
 
-  if (twissConcatOrder) {
-#ifdef DEBUG
-    fprintf(stdout, (char*)"computing chromaticities\n");
-    fflush(stdout);
-#endif
+  if (twissConcatOrder>1) {
     fprintf(stdout, (char*)"%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
             matched?(char*)"periodic":(char*)"final");
-    fflush(stdout);
     fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"--------------------------------------------------------------------------------------------------------------------\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             beamline->chromaticity[0], beamline->dbeta_dPoP[0], 1e6*beamline->acceptance[0]);
-    fflush(stdout);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
       fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
-      fflush(stdout);
       fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
-      fflush(stdout);
       fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
-      fflush(stdout);
     }
     fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             beamline->chromaticity[1], beamline->dbeta_dPoP[1], 1e6*beamline->acceptance[1]);
-    fflush(stdout);
     if (statistics) {
       fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
-      fflush(stdout);
       fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
-      fflush(stdout);
       fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
-      fflush(stdout);
     }
+    fflush(stdout);
   }
   else {
     fprintf(stdout, (char*)"%s Twiss parameters:\n", matched?(char*)"periodic":(char*)"final");
-    fflush(stdout);
     fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'        accept.\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"          m                          1/2pi           m                       mm-mrad\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"---------------------------------------------------------------------------------------\n");
-    fflush(stdout);
     fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             1e6*beamline->acceptance[0]);
-    fflush(stdout);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
       fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
-      fflush(stdout);
       fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
-      fflush(stdout);
       fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
-      fflush(stdout);
     }
     fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             1e6*beamline->acceptance[1]);
-    fflush(stdout);
     if (statistics) {
       fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
-      fflush(stdout);
       fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
-      fflush(stdout);
       fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
-      fflush(stdout);
     }
+    fflush(stdout);
   }
 
   if (beamline->acc_limit_name[0])
