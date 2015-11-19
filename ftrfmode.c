@@ -129,8 +129,12 @@ void track_through_ftrfmode(
     printf("FTRFMODE: Done determining bucket assignments\n");
     fflush(stdout);
 #endif 
+#if USE_MPI
+    if (mpiAbort)
+      return;
+#endif
   } else 
-    nBuckets = 1;
+    nBuckets = 0;
 
 #if USE_MPI
   /* Master needs to know the number of buckets */
@@ -157,8 +161,10 @@ void track_through_ftrfmode(
     if (isSlave || !notSinglePart) {
       if (nBuckets==1)
         np = np0;
-      else
+      else if (npBucket)
         np = npBucket[iBucket];
+      else
+        np = 0;
     } else {
       np = 0;
     }
@@ -174,18 +180,19 @@ void track_through_ftrfmode(
         np = np0;
         pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
       } else {
-        if ((np = npBucket[iBucket])==0)
-          continue;
-        if (part)
-          free_czarray_2d((void**)part, max_np, 7);
-        part = (double**)czarray_2d(sizeof(double), np, 7);
-        time = (double*)trealloc(time, sizeof(*time)*np);
-        pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
-        max_np = np;
-        for (ip=0; ip<np; ip++) {
-          time[ip] = time0[ipBucket[iBucket][ip]];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
-        }
+        if (npBucket && (np = npBucket[iBucket])>0) {
+          if (part)
+            free_czarray_2d((void**)part, max_np, 7);
+          part = (double**)czarray_2d(sizeof(double), np, 7);
+          time = (double*)trealloc(time, sizeof(*time)*np);
+          pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
+          max_np = np;
+          for (ip=0; ip<np; ip++) {
+            time[ip] = time0[ipBucket[iBucket][ip]];
+            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+          }
+        } else
+          np = 0;
       }
 #ifdef DEBUG
       printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
@@ -206,11 +213,19 @@ void track_through_ftrfmode(
           MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
           tmean = t_total;
         }
-        tmean /= np_total;
-      } else
+        if (np_total)
+          tmean /= np_total;
+        else
+          tmean = 0;
+      } else if (np!=0)
         tmean /= np;
+      else
+        tmean = 0;
 #else
-      tmean /= np;
+      if (np!=0)
+        tmean /= np;
+      else
+        tmean = 0;
 #endif
 #ifdef DEBUG
       printf("tmean = %21.15e\n", tmean);
