@@ -165,7 +165,7 @@ void track_through_rfmode(
     
     if (isMaster && (!been_warned)) {        
       if (rfmode->freq<1e3 && rfmode->freq)  {
-        fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+        fprintf(stdout, (char*)"warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
         fflush(stdout);
         been_warned = 1;
       }
@@ -203,6 +203,10 @@ void track_through_rfmode(
       printf("RFMODE: Determining bucket assignments\n");
 #endif
       determine_bucket_assignments(part0, np0, (charge && rfmode->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+#if USE_MPI
+      if (mpiAbort)
+        return;
+#endif
       if (rfmode->bunchedBeamMode>1) {
         if (rfmode->bunchInterval>0) {
           /* Use pseudo-bunched beam mode---only one bunch is really present */
@@ -247,8 +251,10 @@ void track_through_rfmode(
       if (isSlave || !notSinglePart) {
         if (nBuckets==1)
           np = np0;
-        else
+        else if (npBucket)
           np = npBucket[iBucket];
+        else
+          np = 0;
       } else {
         np = 0;
       }
@@ -268,18 +274,19 @@ void track_through_rfmode(
           np = np0;
           pbin = (long*)trealloc(pbin, sizeof(*pbin)*(max_np=np));
         } else {
-          if ((np = npBucket[iBucket])>0) {
+          if (npBucket && (np = npBucket[iBucket])>0) {
             if (part)
-              free_czarray_2d((void**)part, max_np, 7);
-            part = (double**)czarray_2d(sizeof(double), np, 7);
+              free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+            part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
             time = (double*)trealloc(time, sizeof(*time)*np);
             pbin = (long*)trealloc(pbin, sizeof(*pbin)*np);
             max_np = np;
             for (ip=0; ip<np; ip++) {
               time[ip] = time0[ipBucket[iBucket][ip]];
-              memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+              memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
             }
-          }
+          } else 
+            np = 0;
         }
 #ifdef DEBUG
         printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
@@ -300,10 +307,15 @@ void track_through_rfmode(
             tmean = t_total;
           }
           tmean /= np_total;
-        } else
+        } else if (np!=0)
           tmean /= np;
+        else
+          tmean = 0;
 #else
-        tmean /= np;
+        if (np!=0)
+          tmean /= np;
+        else
+          tmean = 0;
 #endif
 #ifdef DEBUG
         printf("computed tmean = %21.15le\n", tmean);
@@ -548,6 +560,10 @@ void track_through_rfmode(
     
       
 #if USE_MPI
+#ifdef DEBUG
+      printf("About to wait on barrier (0)\n");
+      fflush(stdout);
+#endif
       MPI_Barrier(MPI_COMM_WORLD);
         if (nBuckets==0) {
           /* Since nBuckets can never be 0, this code is not called. */
@@ -559,10 +575,22 @@ void track_through_rfmode(
             firstBin = rfmode->n_bins;
             lastBin = 0;
           }
+#ifdef DEBUG
+          printf("Finding first and last bin globally\n");
+          fflush(stdout);
+#endif
           MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
           MPI_Allreduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
           firstBin = firstBin_global;
           lastBin = lastBin_global;
+#ifdef DEBUG
+          printf("bucket = %ld, firstBin = %ld, lastBin = %ld\n",  iBucket, firstBin_global, lastBin_global);
+          fflush(stdout);
+          if (myid!=0) {
+            printf("%ld particles binned\n", n_binned);
+            fflush(stdout);
+          }
+#endif
           if (isSlave || !notSinglePart) { 
             double *buffer;
             buffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
@@ -571,15 +599,8 @@ void track_through_rfmode(
             free(buffer);
           }
 #ifdef DEBUG
-          printf("bucket = %ld, firstBin = %ld, lastBin = %ld\n",  iBucket, firstBin_global, lastBin_global);
-          if (myid!=0) {
-            printf("%ld particles binned\n", n_binned);
-            /*
-            for (ib=firstBin; ib<=lastBin; ib++) 
-              printf("%ld %ld\n", ib, Ihist[ib]);
-            */
-            fflush(stdout);
-          }
+          printf("Summed histogram across processors\n");
+          fflush(stdout);
 #endif
         }
 #else 
@@ -715,7 +736,7 @@ void track_through_rfmode(
 
         if (nBuckets!=1 && iBucket==jBucket) {
           for (ip=0; ip<np; ip++)
-            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+            memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
         }
       }
       
@@ -869,7 +890,7 @@ void track_through_rfmode(
     if (Ihist) free(Ihist);
     if (Vbin) free(Vbin);
     if (part && part!=part0)
-      free_czarray_2d((void**)part, max_np, 7);
+      free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
     if (time && time!=time0)
       free(time);
     if (time0)
