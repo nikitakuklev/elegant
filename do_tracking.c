@@ -972,8 +972,11 @@ long do_tracking(
 	  MPE_Log_event( event2a, 0, NULL );
 	  MPE_Log_pack( bytebuf, &bytebuf_pos, 's', strlen(entity_name[eptr->type]), entity_name[eptr->type]); 
 #endif
-	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || (USE_MPI && beam && beam->n_to_track_total) || (!USE_MPI && nToTrack) || 
-	     (USE_MPI && (classFlags&RUN_ZERO_PARTICLES)))) {
+	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || 
+#if USE_MPI
+			 beam && beam->n_to_track_total || (classFlags&RUN_ZERO_PARTICLES) ||
+#endif
+			 (!USE_MPI && nToTrack))) {
 	    switch (type) {
 	    case -1:
 	      break;
@@ -4599,6 +4602,8 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 #endif
   }
 
+  report_stats(stdout, "Finished distributing particles: ");
+
   free(nToTrackCounts);
   free(rateCounts);
 }
@@ -4612,8 +4617,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
  
   MPI_Status status;
 
-  printf("Gathering particles to master, work_processors=%d, n_processors=%d\n",
-	 work_processors, n_processors); fflush(stdout);
+  printf("Gathering particles to master from %d processors\n", work_processors);
   fflush(stdout);
   
   nToTrackCounts = malloc(sizeof(int) * n_processors);
@@ -4695,6 +4699,8 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     }
   MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
+  report_stats(stdout, "Finished gathering particles to master:");
+  
   free(nToTrackCounts);
   free(nLostCounts);
 }
