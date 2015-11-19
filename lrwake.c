@@ -86,7 +86,12 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
       printf("Error: lastNBuckets = %ld, *nBuckets = %ld\n", lastNBuckets, *nBuckets);
       fflush(stdout);
 #endif
+#if USE_MPI
+      mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+      return;
+#else
       bombElegant("Error: number of bunches has increased.", NULL);
+#endif
     }
 
 #ifdef DEBUG
@@ -106,8 +111,14 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
         fflush(stdout);
 #endif
         /* Compute time coordinate of each particle */
-        if (!(*time = tmalloc(sizeof(**time)*np)))
+        if (!(*time = tmalloc(sizeof(**time)*np))) {
+#if USE_MPI
+          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          return;
+#else
           bombElegant("Memory allocation problem in determine_bucket_assignments\n", NULL);
+#endif
+        }
         computeTimeCoordinatesOnly(*time, P0, part, np);
 #ifdef DEBUG
         printf("Computed time coordinates\n");
@@ -134,8 +145,12 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
           else
             ib = (part[ip][6]-1)/idSlotsPerBunch - ibMin;
           if (ib<0 || ib>=(*nBuckets)) {
+#if USE_MPI
+            mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+            return;
+#else
             fprintf(stdout, "Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
-            exitElegant(1);
+#endif
           }
           (*ibParticle)[ip] = ib;
           if (ipBucket && npBucket) {
