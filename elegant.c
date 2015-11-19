@@ -894,10 +894,12 @@ char **argv;
           bombElegant(NULL, NULL);
         if (echoNamelists) print_namelist(stdout, &track);
         run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
+        /*
 #if USE_MPI
         if (stop_tracking_particle_limit!=-1)
           bombElegant("stop_tracking_particle_limit feature not supported in Pelegant", NULL);
 #endif
+        */
         if (use_linear_chromatic_matrix && 
             !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
           bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
