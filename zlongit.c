@@ -60,7 +60,6 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   double *Itime = NULL;           /* array for histogram of particle density */
   double *Ifreq = NULL;           /* array for FFT of histogram of particle density */
   double *Vtime = NULL;           /* array for voltage acting on each bin */
-  long max_n_bins = 0;
   long *pbin = NULL;              /* array to record which bin each particle is in */
   double *time0 = NULL;           /* array to record arrival time of each particle */
   double *time = NULL;           /* array to record arrival time of each particle */
@@ -70,18 +69,19 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long max_np = 0;
   double *Vfreq, *Z;
-  long np, ip, n_binned, nfreq, iReal, iImag, ib, nb;
+  long np=0, ip, n_binned, nfreq, iReal, iImag, ib, nb=0;
   double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
   long i_pass0;
   long iBucket, nBuckets;
   static long not_first_call = -1;
 #if USE_MPI
-  double *buffer;
+  double *buffer = NULL;
   double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
-  long offset, length;
+  long offset=0, length=0;
   long particles_total;
 #endif
 
+  /*
 #if USE_MPI && defined(DEBUG)  
   static FILE *fpdeb = NULL;
   char s[100];
@@ -92,7 +92,8 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     fprintf(fpdeb, "&column name=V0 type=double &end\n&column name=V1 type=double &end\n&column name=dgamma type=double &end\n&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
-  
+  */
+
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b, event2a, event2b, event3a, event3b;
   event1a = MPE_Log_get_event_number();
@@ -124,18 +125,22 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 
   if (isSlave || !notSinglePart) {
     determine_bucket_assignments(part0, np0, (charge && zlongit->bunchedBeamMode)?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
+#if USE_MPI
+    if (mpiAbort)
+      return;
+#endif
 
 #ifdef DEBUG
     printf("%ld buckets\n", nBuckets);
     if (nBuckets>1) {
       fflush(stdout);
       for (iBucket=0; iBucket<nBuckets; iBucket++) {
-        printf("bucket %ld: %ld particles\n", iBucket, npBucket[iBucket]);
+        printf("bucket %ld: %ld particles\n", iBucket, npBucket ? npBucket[iBucket] : 0);
         fflush(stdout);
       }
     }
 #endif
-
+    
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
       if (nBuckets==1) {
         time = time0;
@@ -143,26 +148,47 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         np = np0;
         pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
       } else {
-        if ((np = npBucket[iBucket])==0)
+        if (npBucket)
+          np = npBucket[iBucket];
+        else 
+          np = 0;
+        if (np && (!ibParticle || !ipBucket || !time0)) {
+#if USE_MPI
+          mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+          return;
+#else
+          printf("Problem in determine_bucket_assignments. Seek professional help.\n");
+          exitElegant(1);
+#endif
+        }
+#if !USE_MPI
+        if (np==0)
           continue;
-#ifdef DEBUG
-        printf("WAKE: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
-        fflush(stdout);
 #endif
         if (np>max_np) {
+#ifdef DEBUG
+          printf("ZLONGIT: setting up work arrays, iBucket=%ld, np=%ld\n", iBucket, np);
+          fflush(stdout);
+#endif
           if (part)
-            free_czarray_2d((void**)part, max_np, 7);
-          part = (double**)czarray_2d(sizeof(double), np, 7);
+            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
           time = (double*)trealloc(time, sizeof(*time)*np);
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
         }
-        for (ip=0; ip<np; ip++) {
-          time[ip] = time0[ipBucket[iBucket][ip]];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+        if (np>0) {
+#ifdef DEBUG
+          printf("ZLONGIT: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
+          fflush(stdout);
+#endif
+          for (ip=0; ip<np; ip++) {
+            time[ip] = time0[ipBucket[iBucket][ip]];
+            memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+          }
         }
       }
-      
+
       find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
       find_global_min_max(&tmin, &tmax, np, workers); 
@@ -175,23 +201,35 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 
       /* use np0 here since we may need to compute the macroparticle charge */
       set_up_zlongit(zlongit, run, i_pass, np0, charge, tmax-tmin);
-
       nb = zlongit->n_bins;
       dt = zlongit->bin_size;
+      
+#ifdef DEBUG
+      printf("Allocating histogram arrays, nb=%ld\n", nb); fflush(stdout);
+#endif
+      if (!Itime)
+        Itime = tmalloc(2*sizeof(*Itime)*nb);
+      if (!Ifreq)
+        Ifreq = tmalloc(2*sizeof(*Ifreq)*nb);
+      if (!Vtime)
+        Vtime = tmalloc(2*sizeof(*Vtime)*(nb+1));
+
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-#if USE_MPI
+#ifndef MPI_DEBUG
         if (myid==1)
           dup2(fd, fileno(stdout));
 #endif
-        fprintf(stdout, "%s %s: Time span of bunch (%le->%le, span %le s) is more than half the total time span (%le s).\n",
+        fprintf(stdout, "%s %s: Time span of bunch %ld (%21.15le->%21.15le, span %21.15le s) is more than half the total time span (%21.15le s).\n",
                 entity_name[tcontext.elementType],
-                tcontext.elementName, tmin, tmax, tmax-tmin, nb*dt);
+                tcontext.elementName, iBucket, tmin, tmax, tmax-tmin, nb*dt);
         fprintf(stdout, "If using broad-band impedance, you should increase the number of bins (or use auto-scaling) and rerun.\n");
         fprintf(stdout, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
 #if USE_MPI
-#ifdef MPI_DEBUG
+#if MPI_DEBUG
+        for (ip=0; ip<np; ip++)
+          printf("particle %5ld: t=%21.15e, delta=%21.15e\n", ip, time[ip], part[ip][5]);
         printf("Issuing MPI abort from ZLONGIT\n");
         fflush(stdout);
 #endif
@@ -202,24 +240,19 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
       }
 
-      if (zlongit->n_bins>max_n_bins) {
-        Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
-        Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
-        Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-      }
-      
       if (zlongit->reverseTimeOrder) {
         for (ip=0; ip<np; ip++)
           time[ip] = 2*tmean-time[ip];
       }
-      tmin = tmean - dt*zlongit->n_bins/2.0;
+
+      tmin = tmean - dt*nb/2.0;
 
 #ifdef DEBUG
       printf("tmin = %21.15e  tmax = %21.15e  dt = %21.15e  nb = %ld\n",
              tmin, tmax, dt, nb);
 #endif
       
-      for (ib=0; ib<zlongit->n_bins; ib++)
+      for (ib=0; ib<nb; ib++)
         Itime[2*ib] = Itime[2*ib+1] = 0;
       
       n_binned=0; 
@@ -259,14 +292,14 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         
         MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
         if (!all_binned && !not_first_call) {
-#if MPI_DEBUG
+#ifndef MPI_DEBUG
           if (myid==1) 
             dup2(fd, fileno(stdout));
 #endif
           fprintf(stdout, "*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
           fprintf(stdout, "    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
           fflush(stdout); 
-#if MPI_DEBUG
+#ifndef MPI_DEBUG
 #if defined(_WIN32)
           if (myid==1) freopen("NUL","w",stdout); 
 #else
@@ -284,6 +317,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         length -= offset;
         offset = 0;
       }
+      if (offset>=nb) {
+        offset = 0;
+        length = nb;
+      }
       if ((offset+length)>nb)
         length = nb - offset;
 #ifdef  USE_MPE
@@ -291,12 +328,13 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
       if (isSlave) {
 #if MPI_DEBUG
-        /* printf("offset = %ld, length = %ld, nb = %ld\n", offset, length, nb); */
+        printf("histogram transfer: offset = %ld, length = %ld, nb = %ld\n", offset, length, nb); fflush(stdout);
 #endif
         buffer = malloc(sizeof(double) * length);
         MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
         memcpy(&Itime[offset], buffer, sizeof(double)*length);
         free(buffer);
+        buffer = NULL;
       }
 #ifdef  USE_MPE
       MPE_Log_event(event1b, 0, "end histogram"); 
@@ -325,7 +363,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
 #endif
 
       /* Take the FFT of I(t) to get I(f) */
-      memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
+      memcpy(Ifreq, Itime, 2*nb*sizeof(*Ifreq));
       realFFT(Ifreq, nb, 0);
 
       /* Compute V(f) = Z(f)*I(f), putting in a factor 
@@ -385,7 +423,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           }
           if (zlongit->broad_band) {
             if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                    "Ra", zlongit->Ra, "fo", zlongit->freq, "Deltaf", zlongit->bin_size, NULL)) {
+                                    "Ra", zlongit->Ra, "fo", zlongit->freq, "Deltaf", 1./dt, NULL)) {
               SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
@@ -444,16 +482,22 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       MPE_Log_event(event3b, 0, "end bunch kicks");
 #endif
       
-      if (nBuckets!=1) {
+      if (nBuckets!=1 && np>0) {
 #ifdef DEBUG
-        printf("WAKE: copying data back to main array\n");
+        printf("ZLONGIT: copying data back to main array\n");
         fflush(stdout);
 #endif
-
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
 
       }
+#if USE_MPI
+#ifdef DEBUG
+      printf("Preparing to wait on barrier at end of loop for bucket %ld\n", iBucket);
+      fflush(stdout);
+#endif
+      MPI_Barrier(workers);
+#endif
 #ifdef DEBUG
       printf("Done with bucket %ld\n", iBucket);
       fflush(stdout);
@@ -477,12 +521,19 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   */
 
 #ifdef DEBUG
-  printf("Preparing to free memory\n");
+  printf("Preparing to free memory, max_np=%ld, nb=%ld, np0=%ld, nBuckets=%ld\n",
+         max_np, nb, np0, nBuckets);
   fflush(stdout);
 #endif
 
-  if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, 7);
+  if (Itime)
+    free(Itime);
+  if (Vtime)
+    free(Vtime);
+  if (Ifreq)
+    free(Ifreq);
+  if (part && part!=part0 && max_np>0)
+    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0) 
     free(time);
   if (time0) 
@@ -491,16 +542,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     free(pbin);
   if (ibParticle) 
     free(ibParticle);
-  if (ipBucket)
+  if (ipBucket && nBuckets>0)
     free_czarray_2d((void**)ipBucket, nBuckets, np0);
   if (npBucket)
     free(npBucket);
-  if (Itime)
-    free(Itime);
-  if (Vtime)
-    free(Vtime);
-  if (Ifreq)
-    free(Ifreq);
 
 #ifdef DEBUG
   printf("Done with ZLONGIT\n");
@@ -681,10 +726,14 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
 #if USE_MPI
         if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
+#ifndef MPI_DEBUG
           dup2(fd,fileno(stdout)); 
+#endif
           fprintf(stdout, "Error: unable to write layout for ZLONGIT wake file %s\n", zlongit->wakes);
           fflush(stdout);
+#ifndef MPI_DEBUG
           close(fd);
+#endif
           MPI_Abort(MPI_COMM_WORLD, T_ZLONGIT);
           return;
         }
@@ -762,7 +811,7 @@ long checkPointSpacing(double *x, long n, double tolerance)
 #if USE_MPI
 double computeAverage_p(double *data, long np, MPI_Comm mpiComm)
 {
-  double tSum=0, tAve;
+  double tSum=0;
   long ip;
   double error = 0.0; 
   long np_total;
