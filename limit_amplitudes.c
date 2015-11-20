@@ -261,7 +261,14 @@ long elliptical_collimator(
   double dx, dy, xo, yo, xsize, ysize;
   TRACKING_CONTEXT context;
   long xe, ye;
-  
+
+  if (ecol->invert && ecol->length) {
+    TRACKING_CONTEXT tc;
+    getTrackingContext(&tc);
+    fprintf(stderr, "Problem for %s#%ld:\n", tc.elementName, tc.elementOccurrence);
+    bombElegant("Cannot have invert=1 and non-zero length for ECOL", NULL);
+  }
+
   xsize = ecol->x_max;
   ysize = ecol->y_max;
   if ((xe=ecol->exponent)<2 || xe%2) {
@@ -295,7 +302,7 @@ long elliptical_collimator(
       rcol.y_max = ecol->y_max;
       rcol.dx = ecol->dx;
       rcol.dy = ecol->dy;
-      rcol.invert = 0;
+      rcol.invert = ecol->invert;
       rcol.openSide = ecol->openSide;
       return rectangular_collimator(initial, &rcol, np, accepted, z, Po);
     } 
@@ -315,6 +322,8 @@ long elliptical_collimator(
     else if (isinf(ini[0]) || isinf(ini[2]) ||
              isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
+    if (ecol->invert)
+      lost = !lost;
     if (lost) {
       swapParticles(initial[ip], initial[itop]);
       initial[itop][4] = z;
@@ -343,6 +352,8 @@ long elliptical_collimator(
     else if (isinf(ini[0]) || isinf(ini[2]) ||
              isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
+    if (ecol->invert)
+      lost = !lost;
     if (lost) {
       swapParticles(initial[ip], initial[itop]);
       initial[itop][4] = z + length;

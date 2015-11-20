@@ -1310,7 +1310,7 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
-    long exponent, yExponent;
+    long exponent, yExponent, invert;
     } ECOL;
 
 /* storage structure for beam cleaner */
