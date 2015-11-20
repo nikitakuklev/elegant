@@ -42,13 +42,14 @@ long rectangular_collimator(
   x_center = rcol->dx;
   y_center = rcol->dy;
 
+  /*
   if (rcol->invert && rcol->length) {
     TRACKING_CONTEXT tc;
     getTrackingContext(&tc);
     fprintf(stderr, "Problem for %s#%ld:\n", tc.elementName, tc.elementOccurrence);
     bombElegant("Cannot have invert=1 and non-zero length for RCOL", NULL);
   }
-  
+  */
 
   if (xsize<=0 && ysize<=0) {
     exactDrift(initial, np, rcol->length);
@@ -109,7 +110,7 @@ long rectangular_collimator(
       --itop;
       --ip;
       --np;
-    } else if (is_out) {
+    } else if ((is_out && !rcol->invert) || (!is_out && rcol->invert)) {
       if (!openCode) {
         zx = zy = DBL_MAX;
         if (is_out&1 && ini[1]!=0)
@@ -262,12 +263,14 @@ long elliptical_collimator(
   TRACKING_CONTEXT context;
   long xe, ye;
 
+  /*
   if (ecol->invert && ecol->length) {
     TRACKING_CONTEXT tc;
     getTrackingContext(&tc);
     fprintf(stderr, "Problem for %s#%ld:\n", tc.elementName, tc.elementOccurrence);
     bombElegant("Cannot have invert=1 and non-zero length for ECOL", NULL);
   }
+  */
 
   xsize = ecol->x_max;
   ysize = ecol->y_max;

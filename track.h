@@ -899,7 +899,7 @@ extern char *entity_text[N_TYPES];
 #define N_VMON_PARAMS 10
 #define N_MONI_PARAMS 13
 #define N_RCOL_PARAMS 7
-#define N_ECOL_PARAMS 8
+#define N_ECOL_PARAMS 9
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
