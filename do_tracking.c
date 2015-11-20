@@ -367,6 +367,8 @@ long do_tracking(
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
       printMessageAndTime(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
     }
+    if (run->n_passes_fiducial>0)
+      n_passes = run->n_passes_fiducial;
     flags &= ~FIDUCIAL_BEAM_SEEN;
     while (eptr) {
       eptr->Pref_output_fiducial = 0;

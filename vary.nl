@@ -10,6 +10,7 @@
     double bunch_frequency = 0;
     long n_indices = 0;
     long n_passes = 1;
+    long n_passes_fiducial = 0;
     long reset_rf_for_each_step = 1;
     long first_is_fiducial = 0;
     long restrict_fiducialization = 0;

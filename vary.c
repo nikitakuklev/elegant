@@ -87,6 +87,9 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->new_data_read = 0;
     _control->at_start = 1;
     _control->i_vary = 0;
+
+    run->n_passes_fiducial = n_passes_fiducial;
+
     log_exit("vary_setup");
     }
 
