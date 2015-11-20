@@ -3665,6 +3665,7 @@ a different run.
     double bunch_frequency = 0;
     long n_indices = 0;
     long n_passes = 1;
+    long n_passes-fiducial = 0;
     long reset_rf_for_each_step = 1;
     long first_is_fiducial = 0;
     long restrict_fiducialization = 0;
@@ -3677,6 +3678,7 @@ If random errors are defined, this is also the number of separate error ensemble
 \item \verb|bunch_frequency| --- The frequency to use in calculating the time delay between repetitions.
 \item \verb|n_indices| --- The number of looping indices for which to expect definitions in subsequent \verb|vary_element| commands.  If nonzero, then \verb|n_steps| is ignored.
 \item \verb|n_passes| --- The number of passes to make through the beamline per repetition.
+\item \verb|n_passes_fiducial| --- The number of passes to make through the beamline per repetition for the fiducial beam. If non-positive, use \verb|n_passes|.
 \item \verb|reset_rf_for_each_step| --- If nonzero, the rf phases are 
 established anew for each bunch tracked.  Should be zero to simulate
 phase and timing jitter. 
@@ -3908,7 +3910,7 @@ together with \verb|insert_elements| and \verb|replace_elements|.
 \begin{verbatim}
 &sdds_beam
     STRING input = NULL;
-    STRING iput_list = NULL;
+    STRING input_list = NULL;
     STRING input_type = "elegant";
     long n_particles_per_ring = 0;
     STRING selection_parameter = NULL;
