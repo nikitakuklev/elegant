@@ -367,7 +367,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   }
   
   if (include_vertices || vertices_only) {
-    ELEMENT_LIST *preceeds, *follow;
+    ELEMENT_LIST *preceeds;
     
     if (is_bend) {
       /* If this element is a bend, may need to record data for vertex computation */
@@ -725,8 +725,9 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
 
 double nearbyAngle(double angle, double reference)
 {
-  double minDiff, bestAngle, diff;
+  double diff;
   return angle;
+  /* double bestAngle, minDiff; */
 
   if ((diff = reference-angle)>0)
     return angle + PIx2*((long)(diff/PIx2+0.5));
@@ -758,8 +759,10 @@ double nearbyAngle(double angle, double reference)
 void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W, char *name)
 {
   double arg;
-  double Wc[3][3];
+#ifdef DEBUG
   long iw, jw;
+  double Wc[3][3];
+#endif
 
   arg = sqrt( sqr(W->a[1][0]) + sqr(W->a[1][1]));  /* |cos(phi)| */
   arg = SIGN(cos(*phi))*arg;
