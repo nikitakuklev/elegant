@@ -1508,6 +1508,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             !SDDS_StartPage(&termLog, optimization_data->terms)) {
           fprintf(stdout, "Problem writing optimization term log\n");
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+          iterm = ivalue = 0; /* suppress spurious compiler warning */
           exitElegant(1);
         }
         for (i=0; i<optimization_data->terms; i++) {
