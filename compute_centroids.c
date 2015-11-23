@@ -261,9 +261,9 @@ void accumulate_beam_sums(
                           )
 {
   long i_part, i, j;
-  double centroid[7], centroidn[7], part[7], *timeCoord, *pz = NULL;
+  double centroid[7], centroidn[7], *timeCoord, *pz = NULL;
   double value, Sij, Sijn;
-  long npCount=0, npCount_total = 0;
+  long npCount=0;
   short *chosen = NULL;
   short sparse[7][7] = {
     { 1, 1, 0, 0, 0, 1, 0 },
@@ -381,7 +381,6 @@ void accumulate_beam_sums(
     
     /* compute Sigma[i][j] for present beam and add to existing data */
     for (i=0; i<7; i++) {
-      int compute;
       for (j=i; j<7; j++) {
 #ifdef USE_KAHAN
         double Y, b, SijOld;
