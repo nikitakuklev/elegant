@@ -570,6 +570,7 @@ void (*set_up_derivatives(
       }
       else {
         /* phase to v=c */
+        gamma = sqrt(1+sqr(P_central_inner_scope));
         rftmEz0->phase0 = get_reference_phase((long)(rftmEz0->phase_reference+.5),
                                            -rftmEz0->k*rftmEz0->length/2 + z_start);
         rftmEz0->fiducial_part = part[0];
@@ -623,6 +624,7 @@ void (*set_up_derivatives(
       }
       else {
         /* phase to v=c */
+        gamma = sqrt(1+sqr(P_central_inner_scope));
         tmcf->phase0 = get_reference_phase((long)(tmcf->phase_reference+.5),
                                            -tmcf->k*tmcf->length/2 + z_start);
         tmcf->fiducial_part = part[0];
@@ -746,6 +748,7 @@ void (*set_up_derivatives(
     twla->alphaS = twla->alpha/(*kscale);
     if (twla->change_p0)
       change_p0 = 1;
+    gamma = sqrt(1+sqr(P_central_inner_scope));
     if (!twla->fiducial_part) {
       /* This is the fiducial particle--the phase offset phase0 is 
        * set so that its initial phase will be twla->phase + 
@@ -869,7 +872,9 @@ void (*set_up_derivatives(
     break;
   }
   exitElegant(1);
+  return NULL; /* suppresses spurious compiler warning */
 }
+
 
 void (*set_up_stochastic_effects(long field_type))(double *, double, double)
 {
@@ -2498,6 +2503,9 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
     Vy = y;
     x =  Vx*cos_tilt + Vy*sin_tilt;
     y = -Vx*sin_tilt + Vy*cos_tilt;
+  } else {
+    cos_tilt = 1;
+    sin_tilt = 0;
   }
   
   if (timeValue) {
@@ -2590,6 +2598,7 @@ double HermitePolynomial(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
+    result = 0; /* suppresses spurious compiler warning */
     exitElegant(1);
     break;
   }
@@ -2618,6 +2627,7 @@ double HermitePolynomialDeriv(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
+    result = 0; /* suppresses spurious compiler warning */
     exitElegant(1);
     break;
   }
@@ -2646,6 +2656,7 @@ double HermitePolynomial2ndDeriv(double x, long n)
     break;
   default:
     fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
+    result = 0; /* suppresses spurious compiler warning */
     exitElegant(1);
     break;
   }
