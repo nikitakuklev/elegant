@@ -22,7 +22,6 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
                      double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
 
 static long negativeWarningsLeft = 100;
-static long dipoleFringeWarning = 0;
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
@@ -593,17 +592,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
 
     convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
-     /*     
-    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && csbend->edge1_effects>1) {
-      if (dipoleFringeWarning==0) {
-        printf("*** \n");
-        printf("*** Warning: nonlinear dipole fringe effects are experimental and may give incorrect or misleading results.\n");
-        printf("*** \n");
-        dipoleFringeWarning = 1;
-      }
-dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2, csbend->b[0]/rho0);
-    } */
-    
 
     particle_lost = 0;
     if (!particle_lost) {
@@ -613,17 +601,6 @@ dipoleFringe(Qi, rho0, -1, csbend->edge1_effects-2, csbend->b[0]/rho0);
         integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
 
-     /* 
-    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && csbend->edge2_effects>1) {
-      if (dipoleFringeWarning==0) {
-        printf("*** \n");
-        printf("*** Warning: nonlinear dipole fringe effects are experimental and may give incorrect or misleading results.\n");
-        printf("*** \n");
-        dipoleFringeWarning = 1;
-      }
-dipoleFringe(Qf, rho0, 1, csbend->edge2_effects-2, csbend->b[0]/rho0);
-    } */
-    
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
     if (particle_lost) {
@@ -738,7 +715,7 @@ void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 
 void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 {
-  double f, delta;
+  double f;
   f = 1/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
   Qi[1] *= f;
   Qi[3] *= f;
@@ -748,7 +725,7 @@ void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrde
 void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
-  double factor, f, phi, ds, dsh, dp, dist;
+  double factor, f, phi, ds, dsh, dist;
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
@@ -932,7 +909,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
-  double factor, f, phi, ds, dsh, dp, dist;
+  double factor, f, phi, ds, dsh, dist;
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
@@ -2892,6 +2869,7 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
     break;
   default:
     fprintf(stderr, "Error: unknown Saldin-54 normalization mode: %s\n", normMode);
+    f = 0; /* suppress spurious compiler warning */
     exitElegant(1);
     break;
   }
