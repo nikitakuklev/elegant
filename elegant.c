@@ -887,6 +887,7 @@ char **argv;
       break;
     case TRACK:
     case ANALYZE_MAP:
+    case TOUSCHEK_SCATTER:
       switch (commandCode) {
       case TRACK:
         if (!run_setuped || !run_controled || beam_type==-1) 
@@ -918,6 +919,10 @@ char **argv;
           bombElegant("run_setup and run_control must precede analyze_map namelist", NULL);
         setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
         break;
+      case TOUSCHEK_SCATTER:
+	if (!run_setuped || !(twiss_computed || do_twiss_output))
+	  bombElegant("run_setup and twiss_output must precede touschek_scatter namelist", NULL);
+	break;
       }
       firstPass = 1;
 
@@ -1109,6 +1114,9 @@ char **argv;
           do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
                                 (do_closed_orbit || correct.mode!=-1?starting_coord:NULL));
           break;
+	case TOUSCHEK_SCATTER:
+	  TouschekEffect(&run_conditions, &run_control, &error_control, beamline, &namelist_text);
+	  break;
         }
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
@@ -1662,11 +1670,6 @@ char **argv;
       if (!run_setuped)
         bombElegant("run_setup must precede replace_element namelist", NULL);
       do_replace_elements(&namelist_text, &run_conditions, beamline);
-      break;
-    case TOUSCHEK_SCATTER:
-      if (!run_setuped || !(twiss_computed || do_twiss_output))
-        bombElegant("run_setup and twiss_output must precede touschek_scatter namelist", NULL);
-      TouschekEffect(&run_conditions, &run_control, &error_control, beamline, &namelist_text);
       break;
     case TWISS_ANALYSIS:
       if (do_twiss_output)
