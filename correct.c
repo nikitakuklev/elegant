@@ -1817,7 +1817,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
           for (direction=-1; !improved && !done && direction<2 ; direction+=2) {
             worsened = 0;
             if (verbose>1) {
-              printf("Trying corrector %ld of %ld at s=%e m in direction %ld\n", i_corr, CM->ncor, corr->end_pos, direction);
+              printf("Trying corrector %ld of %ld at s=%e m in direction %ld\n", i_corr, (long)CM->ncor, corr->end_pos, direction);
               fflush(stdout);
             }
             for (iScan=0; !worsened && !done && iScan<nScan; iScan++) {
@@ -1957,6 +1957,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
   default:
     fprintf(stdout, "error: invalid coordinate for correction: %ld\n", plane);
     fflush(stdout);
+    moni_type_1 = moni_type_2 = 0; /* suppress spurious compiler warning */
     exitElegant(1);
     break;
   }
@@ -3218,7 +3219,7 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
   }
   CMA->T = matrix_invert(CMA->C, CMA->equalW?NULL:CMA->weight, (int32_t)CMA->keep_largest_SVs, (int32_t)CMA->remove_smallest_SVs,
 			CMA->minimum_SV_ratio, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &conditionNumber);
-  printf("Inverted matrix with %ld (of %ld) correctors active, condition number = %le\n", CMA->ncor, CM->ncor, conditionNumber);
+  printf("Inverted matrix with %ld (of %ld) correctors active, condition number = %le\n", (long)CMA->ncor, (long)CM->ncor, conditionNumber);
   matrix_scmul(CMA->T, -1);
   return 0;
 }
