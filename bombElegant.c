@@ -27,8 +27,6 @@ void bombElegantVA(char *template, ...)
   int i;
   long j;
   va_list argp;
-  char buffer[256];
-  float f;
   double d;
   
   va_start(argp, template);
@@ -44,15 +42,15 @@ void bombElegantVA(char *template, ...)
           break;
         case 'e':
           d =  va_arg(argp, double);
-          printf("%21.15le", f);
+          printf("%21.15le", d);
           break;
         case 'f':
           d =  va_arg(argp, double);
-          printf("%lf", f);
+          printf("%lf", d);
           break;
         case 'g':
           d =  va_arg(argp, double);
-          printf("%21.15lg", f);
+          printf("%21.15lg", d);
           break;
         default:
           printf("%%l%c", *p);

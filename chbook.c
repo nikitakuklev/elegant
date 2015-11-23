@@ -462,6 +462,7 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        index = 0; /* eliminate spurious warning */
         exitElegant(1);
       }
       if (index!=(last_index+1))
@@ -557,6 +558,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        index = 0; /* eliminate spurious warning */
         exitElegant(1);
       }
       if (index!=(last_index+1))
@@ -658,7 +660,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
     if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
                                description, description, filename))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
+ 
     for (i=0; i<n_parameters; i++) {
       if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
           (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name))<0) {
@@ -666,10 +668,11 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        index = 0; /* eliminate spurious warning */
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        fprintf(stdout, "WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
       fflush(stdout);
       last_index = index;
     }
@@ -787,6 +790,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        index = 0; /* eliminate spurious warning */
         exitElegant(1);
       }
       if (index!=(last_index+1))

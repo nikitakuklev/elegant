@@ -86,7 +86,7 @@ void freeInputObjects()
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
 {
   long type=0, i;
-  long occurence, iMad;
+  long iMad;
   static ELEMENT_LIST *eptr, *eptr1, *eptr_sc, *eptr_add, *eptr_del;
   static LINE_LIST *lptr;
   static long n_elems, n_lines;

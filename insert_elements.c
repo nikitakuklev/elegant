@@ -75,7 +75,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (name) {
     char *ptr;
     str_toupper(name);
-    while (ptr=get_token_t(name, ", ")) {
+    while ((ptr=get_token_t(name, ", "))) {
       nameList = SDDS_Realloc(nameList, sizeof(*nameList)*(nNames+1));
       nameList[nNames] = ptr;
       if (has_wildcards(ptr) && strchr(ptr, '-')) {
