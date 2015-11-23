@@ -24,7 +24,7 @@ VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
 VMATRIX *mult_matrix(MULT *mult, double P, long maxOrder);
 
-static double timeCounter[N_TYPES], tStart;
+static double timeCounter[N_TYPES];
 static long runCounter[N_TYPES];
 static long timingActive = 0;
 void startMatrixComputationTiming()
@@ -569,7 +569,7 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
     }
 
     if (Medge1 && Medge2) {
-      VMATRIX *M1, *M2, *tmp, *Md;
+      VMATRIX *M1, *M2, *Md;
       M1 = tmalloc(sizeof(*M1));
       initialize_matrices(M1, M->order);
       M2 = tmalloc(sizeof(*M2));
@@ -764,7 +764,7 @@ VMATRIX *compute_matrix(
     double ks, Pref_output, pSave;
     VARY rcContext;
     long fiducialize;
-    double tStart;
+    double tStart = 0;
 
     getRunControlContext(&rcContext);
     fiducialize = 1;
@@ -2258,7 +2258,6 @@ VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long sid
 {
   VMATRIX *M;
   double *C, **R, ***T, ****U;
-  double temp;
   
   M = tmalloc(sizeof(*M));
   initialize_matrices(M, M->order=MIN(3,maxOrder));
