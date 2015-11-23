@@ -378,6 +378,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
+      parameter = element = NULL; /* suppress compiler warning */
       exitElegant(1);
     }
     type = NULL;
@@ -388,6 +389,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
+      parameter = element = NULL; /* suppress compiler warning */
       exitElegant(1);
     }
     valueString = NULL;
@@ -401,6 +403,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       }
+      parameter = element = NULL; /* suppress compiler warning */
       exitElegant(1);
     }
 
