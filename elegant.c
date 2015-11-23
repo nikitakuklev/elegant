@@ -517,8 +517,11 @@ char **argv;
             }
             processorMask |= (unsigned long)(ipow(2, k)+0.5);
           }
+          /*
+             This code isn't valid with the current version of sched_setaffinity
           printf("processorMask = %lx\n", processorMask);
           sched_setaffinity(0, sizeof(processorMask), &processorMask);
+          */
         }
 #else /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) */
         printf("warning: CPU list ignored\n");
@@ -1726,6 +1729,7 @@ char **argv;
     hdestroy(load_hash);                         /* destroy hash table */
   free_scanargs(&scanned, argc);
   exitElegant(0);
+  return 0; /* suppresses compiler warning */
 }
 
 void printFarewell(FILE *fp)
@@ -1839,7 +1843,7 @@ void check_heap()
 
 void center_beam_on_coords(double **part, long np, double *coord, long center_dp)
 {
-    double sum, offset;
+    double offset;
     long i, j, lim;
     double centroid[6];
 
@@ -2613,8 +2617,6 @@ void bombElegantVA(char *template, ...)
   int i;
   long j;
   va_list argp;
-  char buffer[256];
-  float f;
   double d;
   
   va_start(argp, template);
