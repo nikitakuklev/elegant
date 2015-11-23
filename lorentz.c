@@ -949,6 +949,10 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         case 0:
           q0I  = -flen/2/cos(alpha) + nibend->rho0*(cos_ah*tan(alpha) - sin_ah);
           break;
+        default:
+          q0I = 0;
+          bombElegant("fringe position error in nibend_coord_transform", NULL);
+          break;
         }
         ds   = (-q0[1]*tan(alpha) + q0I - q0[0])/(dqds[0] + dqds[1]*tan(alpha));
 #ifdef DEBUG
