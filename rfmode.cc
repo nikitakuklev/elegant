@@ -53,14 +53,15 @@ void track_through_rfmode(
     long *ibParticle = NULL;          /* array to record which bucket each particle is in */
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-    long iBucket, nBuckets, np, effectiveBuckets, jBucket;
+    long iBucket, nBuckets, np=-1, effectiveBuckets, jBucket;
     double tOffset;
+    /*
     static FILE *fpdeb = NULL;
     static FILE *fpdeb2 = NULL;
-    double phig;
+    */
     
     long ip, ib, lastBin=0, firstBin=0, n_binned=0;
-    double tmin=0, tmax, last_tmax, tmean, dt=0, P;
+    double tmin=0, tmax, last_tmax, tmean, dt=0;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
     double V_sum, Vr_sum, phase_sum, Vg_sum, phase_g_sum, Vc_sum;
@@ -74,7 +75,10 @@ void track_through_rfmode(
     long nonEmptyBins = 0;
     MPI_Status mpiStatus;
 #endif
-    long memory1;
+
+    /* These are here just to quash apparently spurious compiler warnings about possibly using uninitialzed variables */
+    tOffset = last_tmax = k = tau = V_sum = Vr_sum = phase_sum = Vg_sum = Vc_sum = phase_g_sum = VbImagFactor = tmean = DBL_MAX;
+    n_summed = n_occupied = LONG_MAX;
     
     /*
     if (!fpdeb) {
@@ -474,6 +478,10 @@ void track_through_rfmode(
 #if USE_MPI
           nonEmptyBins = 0;
 #endif
+          if (np==-1) {
+            /* This shouldn't happen, but compiler says it might... */
+            bombElegant("np==-1 in track_through_rfmode\n", NULL);
+          }
           for (ip=0; ip<np; ip++) {
             pbin[ip] = -1;
             ib = (long)((time[ip]+tOffset-tmin)/dt);
@@ -742,7 +750,6 @@ void track_through_rfmode(
       
 
       if (rfmode->record) {
-        long rowsNeeded = effectiveBuckets*(n_passes/rfmode->sample_interval+1);
 #if USE_MPI
         double sendBuffer[13], receiveBuffer[13];
 #endif
@@ -909,7 +916,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
                    RUN *run, long n_particles,
                    double Po, double total_length)
 {
-  long i, n;
+  long i;
   double T;
   TABLE data;
   
