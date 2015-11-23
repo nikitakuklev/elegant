@@ -346,6 +346,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       short has_wc;
       context = NULL;
       has_wc = has_wildcards(tune->name[i]);
+      K1_param = -1;
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
 	if (!(K1_param=confirm_parameter("K1", context->type))) {
 	  fprintf(stdout, "error: element %s does not have K1 parameter\n", 
@@ -376,6 +377,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
           fprintf(stdout, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
           fflush(stdout);
         }
+        if (K1_param==-1)
+          bombElegant("Error: K1_param==-1 in do_tune_correction---seek expert help!\n", NULL);
         change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
       }
     }    
