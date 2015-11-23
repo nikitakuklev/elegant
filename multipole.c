@@ -649,7 +649,7 @@ long multipole_tracking2(
   double *coef, *coord;
   double drift;
   double tilt, rad_coef, isr_coef, xkick, ykick, dzLoss;
-  KQUAD *kquad;
+  KQUAD *kquad = NULL;
   KSEXT *ksext;
   KQUSE *kquse;
   KOCT *koct;
@@ -853,6 +853,8 @@ long multipole_tracking2(
   default:
     fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
+    KnL = dx = dy = dz = tilt = drift = 0;
+    integ_order = order = n_kicks = 0;
     exitElegant(1);
     break;
   }
