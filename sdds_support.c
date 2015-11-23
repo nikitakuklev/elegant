@@ -58,6 +58,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 
     /* define SDDS parameters */
     for (i=0; i<n_parameters; i++) {
+        index = -1;
         if (!SDDS_ProcessParameterString(SDDS_table, parameter_definition[i].text, 0) ||
             (index=SDDS_GetParameterIndex(SDDS_table, parameter_definition[i].name))<0) {
             fprintf(stdout, "Unable to define SDDS parameter for %s--string was:\n%s\n", caller,
@@ -78,6 +79,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     last_index = -1;
     /* define SDDS columns */
     for (i=0; i<n_columns; i++) {
+        index = -1;
         if (!SDDS_ProcessColumnString(SDDS_table, column_definition[i].text, 0) ||
             (index=SDDS_GetColumnIndex(SDDS_table, column_definition[i].name))<0) {
             fprintf(stdout, "Unable to define SDDS column for %s--string was:\n%s\n", caller,
@@ -821,15 +823,15 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            long particles, long original_particles,  double Po, 
                            double revolutionLength, double z, double mp_charge)
 {
-    long sample, i, j, watchStartPass=watch->start_pass;
+    long sample, i, watchStartPass=watch->start_pass;
     double tc, tc0, tc0Error, p_sum, gamma_sum, sum, error_sum, p=0.0;
     double emit[2], emitc[2];
-    long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount, npCount_total=0;
+    long Cx_index=0, Sx_index=0, ex_index=0, ecx_index=0, npCount;
     static BEAM_SUMS sums;
     double emittance_l;
     long memoryUsed;
 #if USE_MPI  
-    long particles_total;
+    long particles_total, npCount_total=0;
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -2179,12 +2181,18 @@ void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, 
 long memoryUsage() 
 /* Memory used across all cores */
 {
-  long memoryUsed, memoryUsedTotal;
+  long memoryUsed;
+#if USE_MPI
+  long memoryUsedTotal;
+#endif
+
   memoryUsed = memory_count();
+
 #if USE_MPI
   /* collect memory information from all cores */
   MPI_Allreduce(&memoryUsed, &memoryUsedTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   memoryUsed = memoryUsedTotal;
 #endif
+
   return memoryUsed;
 }
