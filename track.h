@@ -623,7 +623,7 @@ typedef struct {
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
     long n_lost;            /* number of lost paricles */
-    long id_slots_per_bunch;       /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
+    int32_t id_slots_per_bunch;       /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
   long n_original_total;    /* The total number of particles read from data file */
@@ -3736,6 +3736,8 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
                               long interpolate, long exponent);
 void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
+void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *Pcentral, 
+                            RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
 void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,

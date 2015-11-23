@@ -57,7 +57,7 @@ static char *elegantColumn[6] = {
 #define IEC_T 4
 #define IEC_P 5
 
-long get_sdds_particles(double ***particle, long *id_slots_per_bunch, long one_dump, long n_skip);
+long get_sdds_particles(double ***particle, int32_t *id_slots_per_bunch, long one_dump, long n_skip);
 
 static char **inputFile = NULL;     /* input filenames */
 static long inputFiles = 0;         /* number of input files */
@@ -727,7 +727,7 @@ long new_sdds_beam(
  *     for elegant input:  (*particle)[i] = (x, xp, y, yp, t, p) for ith particle
  */
 long get_sdds_particles(double ***particle,
-                        long *id_slots_per_bunch, 
+                        int32_t *id_slots_per_bunch, 
                         long one_dump,   /* read only one page */
                         long n_skip      /* number of pages to skip */
                         )
@@ -879,7 +879,7 @@ long get_sdds_particles(double ***particle,
           !SDDS_GetParameterAsLong(&SDDS_input, "IDSlotsPerBunch", id_slots_per_bunch)) {
           bombElegant("Error: IDSlotsPerBunch parameter exists but could not be read. Check data type.\n", NULL);
         }
-        printf("%ld particle ID slots per bunch\n", *id_slots_per_bunch);
+        printf("%ld particle ID slots per bunch\n", (long)(*id_slots_per_bunch));
       }
 #if !SDDS_MPI_IO
       if ((rows = SDDS_RowCount(&SDDS_input))<=0) {
