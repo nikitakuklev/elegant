@@ -624,7 +624,13 @@ VMATRIX *sbend_matrix(
         kx = sqrt(-kx2);
         cx = cosh(kx*t0);
         sx = sinh(kx*t0)/kx;
-        }
+      } else {
+        /* This code should actual never be executed, but it keeps the compiler warnings at bay */
+        kx = 0;
+        cx = 1;
+        sx = 1;
+      }
+  
 
     if (FABS(ky2)<small3) {
       ky2 = sqr(small3/t0);
@@ -640,7 +646,13 @@ VMATRIX *sbend_matrix(
         ky = sqrt(-ky2);
         cy = cosh(ky*t0);
         sy = sinh(ky*t0)/ky;
-        } 
+      } else {
+        /* This code should actual never be executed, but it keeps the compiler warnings at bay */
+        ky = 0;
+        cy = 1;
+        sy = 1;
+      }
+  
 
 #ifdef DEBUG
     fprintf(stdout, "kx = %.16le, ky = %.16le\ncx = %.16le, cy = %.16le\nsx = %.16le, sy=%.16le\n",
