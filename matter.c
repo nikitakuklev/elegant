@@ -54,7 +54,8 @@ long track_through_matter(
   }
   else 
     return np;
-
+  L1 = L; /* mostly to suppress compiler warning. */
+  
   if (matter->energyDecay && (matter->nuclearBremsstrahlung || matter->electronRecoil))
     bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 or ELECTRON_RECOIL=1 options to MATTER/SCATTER element are mutually exclusive", NULL);
 
