@@ -195,12 +195,11 @@ long do_tracking(
   static long warnedAboutChargePosition = 0;
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
-  int myid = 0, active = 1, lostSinceSeqMode = 0, needSort = 0;
-  long memoryBefore, memoryAfter;
-#ifdef SORT
-  int nToTrackAtLastSort;
-#endif
+  int myid = 0, active = 1;
+  long memoryBefore=0, memoryAfter=0;
 #if USE_MPI 
+  int nToTrackAtLastSort, needSort = 0;
+  int lostSinceSeqMode = 0;
   long old_nToTrack = 0, nParElements, nElements; 
   int checkFlags;
   double my_wtime, start_wtime, end_wtime, nParPerElements, my_rate;
@@ -3416,7 +3415,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
                              BEAM *beam, double **part, long np, long *nLost,
                              char *mainRootname, long iPass, long driftOrder)
 {
-  char *rootname, *input, *output=NULL;
+  char *rootname=NULL, *input, *output=NULL;
   char *cmdBuffer0, *cmdBuffer1=NULL;
   SDDS_DATASET SDDSout, SDDSin;
   double *data = NULL;
@@ -3481,6 +3480,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   } else 
     rootname = compose_filename(script->rootname, mainRootname);
+  if (!rootname)
+    bombElegant("problem generating temporary rootname for script", NULL);
   nameLength = (script->directory?strlen(script->directory):0) + \
     strlen(rootname) + strlen(script->inputExtension) +
     strlen(script->outputExtension) + 4;
@@ -4256,10 +4257,12 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 
 void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long nLeft,long  nToTrack, long pass)
 {
-  long ip, j, nLost0;
-  static FILE *fp = NULL;
+  long ip, j;
 
-/*  if (fp==NULL) {
+/* 
+  static FILE *fp = NULL;
+  long nLost0;
+  if (fp==NULL) {
     char s[1024];
     RUN run;
     getRunSetupContext(&run);
@@ -5203,7 +5206,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         }
         theta=choose_theta(rho, theta0, theta1, theta2);
        if (debug) 
-        fprintf(stdout, "%5d \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \t %20f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], p[2], rho, theta);
+        fprintf(stdout, "%5ld \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \t %20f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], p[2], rho, theta);
 
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
@@ -5332,7 +5335,7 @@ void interpolateFTable(double *B, double *xyz, FTABLE *ftable)
 
 void rotate_coordinate(double **A, double *x, long inverse) {
   long i, j;
-  double temp[3];
+  double temp[3] = {0,0,0}; /* prevent spurious compiler warning */
 
   for (i=0; i<3; i++) {
     temp[i] = 0;
@@ -5353,20 +5356,21 @@ void rotate_coordinate(double **A, double *x, long inverse) {
 /* choose suitable value from cubic solver */
 double choose_theta(double rho, double x0, double x1, double x2)
 {
-  double temp;
+  double temp = 0;
 
   if (rho<0) {
     temp = -DBL_MAX;
     if (x0<0 && x0>temp) temp = x0;
     if (x1<0 && x1>temp) temp = x1;
     if (x2<0 && x2>temp) temp = x2;
-  }
-  if (rho>0) {
+  } else if (rho>0) {
     temp = DBL_MAX;
     if (x0>0 && x0<temp) temp = x0;
     if (x1>0 && x1<temp) temp = x1;
     if (x2>0 && x2<temp) temp = x2;
-  }
+  } else 
+    bombElegant("rho = 0 in choose_theta (FTABLE). Seek expert help.", NULL);
+  
   return temp;
 }
 
