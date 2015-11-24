@@ -975,7 +975,7 @@ long do_tracking(
 #endif
 	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || 
 #if USE_MPI
-			 beam && beam->n_to_track_total || (classFlags&RUN_ZERO_PARTICLES) ||
+			 (beam && beam->n_to_track_total) || (classFlags&RUN_ZERO_PARTICLES) ||
 #endif
 			 (!USE_MPI && nToTrack))) {
 	    switch (type) {
@@ -2511,9 +2511,9 @@ void offset_beam(
   log_entry("offset_beam");
 
   if (offset->startPID>=0 && offset->startPID>offset->endPID)
-    bombElegant("startPID greater than endPID for MALIGN element (offset_beam)", NULL);
+    bombElegantVA("Error: startPID (%ld) greater than endPID (%ld) for MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
   if ((offset->endPID>=0 && offset->startPID<0) || (offset->startPID>=0 && offset->endPID<0))
-    bombElegant("Error: Invalid startPID, endPID in MALIGN element (offset_beam)", NULL);
+    bombElegantVA("Error: Invalid startPID (%ld) and endPID (%ld) in MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
   
   allParticles = (offset->startPID==-1) && (offset->endPID==-1);
   

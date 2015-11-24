@@ -84,6 +84,7 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
     mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;    
     mal.dx = x_initial;
     mal.dy = y_initial;
+    mal.startPID = mal.endPID = -1;
     for (ip=0; ip<np; ip++) {
       if ((particleID = coord[ip][6])<0) {
 #ifdef DEBUG
