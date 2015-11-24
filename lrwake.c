@@ -166,6 +166,12 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 
   }
 
+#ifdef DEBUG
+  printf("%ld buckets found\n", *nBuckets);
+  for (ib=0; ib<*nBuckets; ib++) 
+    printf("npBucket[%ld] = %ld\n", ib, (*npBucket)[ib]);
+#endif
+
 #if USE_MPI
   printf("Waiting on barrier at end of determine_bucket_assignment\n");
   fflush(stdout);
