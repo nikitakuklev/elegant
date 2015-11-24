@@ -292,16 +292,14 @@ void track_through_rfmode(
           } else 
             np = 0;
         }
-#ifdef DEBUG
-        printf("Working on bucket %ld of %ld, %ld particles\n", iBucket, nBuckets, np);
-        fflush(stdout);
-#endif
-        tmean = 0;
+
+        tmean = DBL_MAX;
         if (isSlave) {
-          for (ip=0; ip<np; ip++) {
+          for (ip=tmean=0; ip<np; ip++) {
             tmean += time[ip];
           }
         }
+
 #if USE_MPI
         if (notSinglePart) {
           if (isSlave) {
@@ -334,9 +332,9 @@ void track_through_rfmode(
         tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
         tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
         
-        if (iBucket>0 && tmin<last_tmax) {
+        if (np && iBucket>0 && tmin<last_tmax) {
 #if USE_MPI
-          if (myid==0)
+          if (myid==0) 
 #endif
             bombElegant("Error: time range overlap between buckets\n", NULL);
         }
