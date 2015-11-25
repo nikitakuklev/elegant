@@ -517,7 +517,7 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
      */
     if (!(sSave=malloc(sizeof(*sSave)*particles)))
       SDDS_Bomb("memory allocation failure (performSliceAnalysis)");
-    computeTimeCoordinates(sSave, Po, particle, particles);
+    computeTimeCoordinatesOnly(sSave, Po, particle, particles);
     for (i=0; i<particles; i++)
       SWAP_DOUBLE(sSave[i], particle[i][4]);
   }
