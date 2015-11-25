@@ -444,7 +444,7 @@ char **argv;
     showUsageOrGreeting(SHOW_USAGE|SHOW_GREETING);
     fflush(stdout);
     link_date();
-    exitElegant(1);
+    exitElegant(0);
   }
   
   showUsageOrGreeting(SHOW_GREETING);
@@ -2728,7 +2728,8 @@ void exitElegant(long status)
 {
 #if USE_MPI
   /* allow slaves to print messages. may get many copies */
-  dup2(fd, fileno(stdout));
+  if (status)
+    dup2(fd, fileno(stdout));
 #endif
   if (status && semaphoreFile[2]) 
     createSemaphoreFile(semaphoreFile[2]);
