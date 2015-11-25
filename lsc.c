@@ -28,7 +28,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double *Vfreq, ZImag;
   short kickMode = 0;
   long ib, nb, n_binned=0, nfreq, iReal, iImag;
-  double factor, tmin, tmax, tmean, dt, df, dk, a1, a2;
+  double factor, tmin, tmax, dt, df, dk, a1, a2;
   double lengthLeft, Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
@@ -59,7 +59,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   }
   
 #if DEBUG
-  fprintf(stdout, "%ld bins for LSC\n", nb);
+  fprintf(stdout, "LSC: np=%ld, nb=%ld\n", np, nb);
   fflush(stdout);
 #endif
 
@@ -94,10 +94,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     lengthLeft = LSC->lEffective;
     kickMode = 1;
   }
-  while (lengthLeft>0) {
+  while (lengthLeft>0) { 
     /* compute time coordinates and make histogram */
     if (isSlave ||  !notSinglePart)
-      tmean = computeTimeCoordinates(time, Po, part, np);
+      computeTimeCoordinatesOnly(time, Po, part, np);
     find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
     if (notSinglePart) {
@@ -110,8 +110,8 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
     dt = (tmax-tmin)/(nb-3);
 #if DEBUG
-    fprintf(stdout, "tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
-            tmean, tmin, tmax, dt);
+    fprintf(stdout, "tmin=%e, tmax=%e, dt=%e\n",
+            tmin, tmax, dt);
     fflush(stdout);
 #endif
     if (isSlave ||  !notSinglePart)
@@ -363,7 +363,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   static long max_np = 0;
   double *Vfreq, ZImag;
   long ib, nb, n_binned, nfreq, iReal, iImag;
-  double factor, tmin, tmax, tmean, dt, df, dk, a1, a2;
+  double factor, tmin, tmax, dt, df, dk, a1, a2;
   double Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
@@ -396,7 +396,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   }
 
   /* compute time coordinates and make histogram */
-  tmean = computeTimeCoordinates(time, Po, part, np);
+  computeTimeCoordinatesOnly(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
   if (isSlave && notSinglePart)
@@ -404,8 +404,8 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #endif
   dt = (tmax-tmin)/(nb-3);
 #if DEBUG
-  fprintf(stdout, "tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
-          tmean, tmin, tmax, dt);
+  fprintf(stdout, "tmin=%e, tmax=%e, dt=%e\n",
+          tmin, tmax, dt);
   fflush(stdout);
 #endif
   n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
