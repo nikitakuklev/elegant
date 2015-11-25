@@ -74,6 +74,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
 
+  i_top = -1;
   if (isSlave || !notSinglePart) {
     i_top = n_part-1;
 

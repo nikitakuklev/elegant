@@ -426,7 +426,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
     SDDS_Bomb("Invalid matrix provided for invert (matrix_invert)!");
   n = A->n;
   m = A->m;
-  if (deletedVectors)
+  if (deletedVectors) /* Should this be "deleteVectors" ? */
     deletedVectors[0] = '\0';
   if (S_Vec)
     SValue = *S_Vec;
@@ -743,10 +743,10 @@ double matrix_det(MAT *A)
   dgetrf_(&m, &n, B->base, &lda, ipvt, &info);
 #endif
   if (info<0) {
-    fprintf(stderr, "Error in LU decomposition, the %d-th argument had an illegal value.\n", -info);
+    fprintf(stderr, "Error in LU decomposition, the %d-th argument had an illegal value.\n", (int)(-info));
     return 0;
   } else if (info>0) {
-    fprintf(stderr, "Error in LU decomposition, U(%d,%d) is exactly zero. The factorization has been completed, but the factor U is exactly singular, and division by zero will occur if it is used to solve a system of equations.\n", info);
+    fprintf(stderr, "Error in LU decomposition, U(%d,%d) is exactly zero. The factorization has been completed, but the factor U is exactly singular, and division by zero will occur if it is used to solve a system of equations.\n", (int)n, (int)m);
     return 0;
   }
   for (i=0; i<n; i++) 

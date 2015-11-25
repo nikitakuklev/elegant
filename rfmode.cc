@@ -53,7 +53,7 @@ void track_through_rfmode(
     long *ibParticle = NULL;          /* array to record which bucket each particle is in */
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-    long iBucket, nBuckets, np=-1, effectiveBuckets, jBucket;
+    long iBucket, nBuckets, np, effectiveBuckets, jBucket;
     double tOffset;
     /*
     static FILE *fpdeb = NULL;
@@ -235,6 +235,7 @@ void track_through_rfmode(
     
     effectiveBuckets = nBuckets==1 ? rfmode->bunchedBeamMode : nBuckets;
     for (jBucket=0; jBucket<effectiveBuckets; jBucket++) {
+      np = -1;
 #if USE_MPI
       MPI_Barrier(MPI_COMM_WORLD);
 #ifdef DEBUG
@@ -323,12 +324,17 @@ void track_through_rfmode(
         printf("computed tmean = %21.15le\n", tmean);
         fflush(stdout);
 #endif
+        if (tmean==DBL_MAX) {
+          /* should never happen... */
+          bombElegant("Error: tmean==DBL_MAX for RFMODE. Seek professional help!", NULL);
+        }
+        
         tOffset = 0;
         if (nBuckets==1 && jBucket) {
           tOffset = rfmode->bunchInterval*jBucket;
           tmean += tOffset;
         }
-        
+      
         tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
         tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
         
@@ -478,7 +484,7 @@ void track_through_rfmode(
 #endif
           if (np==-1) {
             /* This shouldn't happen, but compiler says it might... */
-            bombElegant("np==-1 in track_through_rfmode\n", NULL);
+            bombElegant("np==-1 in track_through_rfmode. Seek professional help!\n", NULL);
           }
           for (ip=0; ip<np; ip++) {
             pbin[ip] = -1;
@@ -1357,6 +1363,8 @@ typedef struct {
 
 void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
 {
+  bombElegant("error: retired function histogram_sums() was called. Seek professional help!", NULL);
+#if 0
   static long *nonEmptyArray = NULL;
   long lastBin_global, firstBin_global;
   long nonEmptyBins_total = 0, offset = 0;
@@ -1469,6 +1477,7 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his)
   } 
 #ifdef DEBUG
   printf("histogram_sums 9\n"); fflush(stdout);
+#endif
 #endif
 }
 #endif

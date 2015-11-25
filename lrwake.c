@@ -26,8 +26,6 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   long ibMin, ibMax;
 #if USE_MPI
   long ibMinGlobal, ibMaxGlobal;
-  long nBucketsRange[2];
-  MPI_Status mpiStatus;
 #endif
 
 #ifdef DEBUG

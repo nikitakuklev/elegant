@@ -13,7 +13,7 @@ static long savedRandomNumberSeed[4] = {0,0,0,0};
 void seedElegantRandomNumbers(long iseed, unsigned long restart)
 {
 #if USE_MPI
-  long i, offset;
+  long i, offset = 0;
 #endif
   if (restart) {
     if (!initialized)

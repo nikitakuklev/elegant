@@ -1284,7 +1284,6 @@ long do_aperture_search_line_p(
   double *x0, *y0, *dx, *dy, *dxFactor, *dyFactor;
   double *xLimit, *yLimit, *xLost, *yLost, *sLost;
   double **xLost2, **yLost2, **sLost2;
-  long originStable;
   double **survived, **buffer;
   long maxSteps;
 #if DEBUG

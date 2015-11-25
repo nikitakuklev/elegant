@@ -76,7 +76,7 @@ void process_trace_request(NAMELIST_TEXT *nltext)
         }
     }
 
-void log_entry(char *routine)
+void log_entry(const char *routine)
 {
     long len;
 
@@ -138,7 +138,7 @@ void log_entry(char *routine)
     in_trace_routine = 0;
     }
 
-void log_exit(char *routine)
+void log_exit(const char *routine)
 {
     long memlev;
 

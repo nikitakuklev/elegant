@@ -410,7 +410,6 @@ long compute_final_properties
 #if SDDS_MPI_IO
   double tmp;
   long n_part_total;
-  static long n_original_total = 0;
 #endif
   log_entry("compute_final_properties");
 #ifdef DEBUG

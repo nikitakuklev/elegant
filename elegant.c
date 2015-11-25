@@ -112,7 +112,7 @@ void showUsageOrGreeting (unsigned long mode)
 #define TRACK           10
 #define STOP            11
 #define OPTIMIZATION_SETUP  12
-#define OPTIMIZE        13
+#define OPTIMIZE_CMD    13
 #define OPTIMIZATION_VARIABLE   14
 #define OPTIMIZATION_CONSTRAINT 15
 #define OPTIMIZATION_COVARIABLE 16
@@ -1254,7 +1254,7 @@ char **argv;
       do_parallel_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
       break;
 #endif
-    case OPTIMIZE:
+    case OPTIMIZE_CMD:
       if (beam_type==-1)
         bombElegant("beam definition must come before optimize command", NULL);
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -2590,7 +2590,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
     freopen(error_log_file, "w", stderr);
 }
 
-void bombTracking(char *error)
+void bombTracking(const char *error)
 {
   TRACKING_CONTEXT tc;
   getTrackingContext(&tc);
@@ -2613,7 +2613,7 @@ void bombTracking(char *error)
 }
 
 /* This version accepts a printf-style template and variable number of arguments to be printed */
-void bombElegantVA(char *template, ...) 
+void bombElegantVA(const char *template, ...) 
 {
   char *p;
   char c, *s;
@@ -2622,6 +2622,11 @@ void bombElegantVA(char *template, ...)
   va_list argp;
   double d;
   
+#if USE_MPI
+  /* allow slaves to print messages. may get many copies */
+  dup2(fd, fileno(stdout));
+#endif
+
   va_start(argp, template);
   p = template;
   while (*p) {
@@ -2684,11 +2689,17 @@ void bombElegantVA(char *template, ...)
     }
     p++;
   }
+  va_end(argp);
   bombElegant(NULL, NULL);
 }
 
-void bombElegant(char *error, char *usage)
+void bombElegant(const char *error, const char *usage)
 {
+#if USE_MPI
+  /* allow slaves to print messages. may get many copies */
+  if (error || usage) 
+    dup2(fd, fileno(stdout));
+#endif
   if (error)
     fprintf(stdout, "error: %s\n", error);
   if (usage)
@@ -2715,6 +2726,10 @@ void mpiSetAbort() {
 
 void exitElegant(long status)
 {
+#if USE_MPI
+  /* allow slaves to print messages. may get many copies */
+  dup2(fd, fileno(stdout));
+#endif
   if (status && semaphoreFile[2]) 
     createSemaphoreFile(semaphoreFile[2]);
   if (!status && semaphoreFile[1])

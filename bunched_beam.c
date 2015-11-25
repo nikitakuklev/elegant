@@ -292,8 +292,8 @@ long new_bunched_beam(
     char s[100];
 #endif
 #if USE_MPI
-    double save_emit_x, save_emit_y,
-           save_sigma_dp, save_sigma_s;
+    double save_emit_x=0, save_emit_y=0,
+           save_sigma_dp=0, save_sigma_s=0; /* initialize these to prevent spurious compiler warning */
 
     if ((firstIsFiducial && beamCounter==0) || do_find_aperture || runInSinglePartMode || (beam->n_original_total==1)) {
       notSinglePart = 0;

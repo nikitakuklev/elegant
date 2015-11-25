@@ -15,6 +15,8 @@
    double *hist, *cdf, xMin, xMax, xCenter, xRange;
    long i, j, k;
 
+   hist = cdf = NULL;
+   
    if (!notSinglePart)
      return approximate_percentiles(position, percent, positions, x, n, bins);
 
@@ -26,7 +28,7 @@
    if (isMaster && notSinglePart)
      n = 0;
    find_min_max(&xMin, &xMax, x, n);
-   if(isMaster) {
+   if (isMaster) {
      xMin = DBL_MAX;
      xMax = -DBL_MAX;
    }
@@ -36,9 +38,11 @@
    xRange = (xMax-xMin)*(1+1./bins)/2;
    xMin = xCenter-xRange;
    xMax = xCenter+xRange;
-   if (isSlave)
+   cdf = NULL;
+   if (isSlave) {
      make_histogram(hist, bins, xMin, xMax, x, n, 1);
-   else {
+     cdf = NULL;
+   } else {
      if (!(cdf = calloc(sizeof(*cdf), bins)))
        return 0;
    }
@@ -61,11 +65,14 @@
        /* printf ("p%ld,cdf[%ld] = %lf %", j, k, cdf[k]*100); */
        position[j] = xMin + (k*(xMax-xMin))/bins;
      }
-     free (cdf);
+     if (cdf)
+       free (cdf);
    }
    MPI_Bcast(position, positions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-   free(hist);
+   if (hist)
+     free(hist);
+
    return 1;               
  }
 

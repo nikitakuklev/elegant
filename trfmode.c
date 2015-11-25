@@ -43,7 +43,7 @@ void track_through_trfmode(
   long max_np = 0;
   double tPrevious, VxPrevious, xPhasePrevious, VyPrevious, yPhasePrevious;
   long ip, ib;
-  double tmin, tmax, tmean, dt, P, last_tmax;
+  double tmin, tmax, tmean, dt, P, last_tmax=-DBL_MAX;
   double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
@@ -173,6 +173,8 @@ void track_through_trfmode(
 #endif
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    np = -1;
+    tmean = DBL_MAX;
 #ifdef DEBUG
     printf("working on bucket %ld of %ld\n", iBucket, nBuckets);
 #endif
@@ -221,6 +223,10 @@ void track_through_trfmode(
       }
     }
 
+    if (tmean==DBL_MAX) {
+      /* should never happen... */
+      bombElegant("Error: tmean==DBL_MAX in trfmode. Seek professional help!", NULL);
+    }
 #if USE_MPI
     if (!isSlave)
       tmean = np = 0;
@@ -240,14 +246,19 @@ void track_through_trfmode(
         bombElegant("Error: time range overlap between buckets\n", NULL);
     }
     last_tmax = tmax;
-    
+    dt = (tmax - tmin)/trfmode->n_bins;
+
+    n_binned = 0;
+    lastBin = -1;
+    firstBin = trfmode->n_bins;
+
     if (isSlave) {   
       for (ib=0; ib<trfmode->n_bins; ib++)
         xsum[ib] = ysum[ib] = count[ib] = 0;
-      dt = (tmax - tmin)/trfmode->n_bins;
-      n_binned = 0;
-      lastBin = -1;
-      firstBin = trfmode->n_bins;
+      if (np==-1) {
+        /* should never happen... */
+        bombElegant("np==-1 in TRFMODE. Seek professional help!", NULL);
+      }
       for (ip=0; ip<np; ip++) {
         pbin[ip] = -1;
         ib = (time[ip]-tmin)/dt;

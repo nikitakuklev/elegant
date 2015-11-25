@@ -3364,9 +3364,9 @@ void link_date(void);
 void check_heap(void);
 void do_print_dictionary(char *filename, long latex_form, long SDDS_form);
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form);
-void bombElegant(char *error, char *usage);
-void bombTracking(char *error);
-void bombElegantVA(char *ptemplate, ...);
+void bombElegant(const char *error, const char *usage);
+void bombTracking(const char *error);
+void bombElegantVA(const char *ptemplate, ...);
 void exitElegant(long status);
 void printMessageAndTime(FILE *fp, char *message);
 
@@ -3640,8 +3640,8 @@ void run_rpn_expression(NAMELIST_TEXT *nltext);
 
 /* prototypes for trace.c */
 void process_trace_request(NAMELIST_TEXT *nltext);
-void log_entry(char *routine);
-void log_exit(char *routine);
+void log_entry(const char *routine);
+void log_exit(const char *routine);
 void show_traceback(FILE *fp);
 
 /* flag word for trace mode */

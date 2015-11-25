@@ -100,7 +100,7 @@ int makeInitialParticleEnsemble(
     memcpy((*final)[i], (*initial)[i], COORDINATES_PER_PARTICLE*sizeof(double));
   }
   
-  printf("%ld duplicates were removed from initial ensemble, leaving %ld vectors\n", n_duplicates, n_points_total);
+  printf("%ld duplicates were removed from initial ensemble, leaving %ld vectors\n", (long)n_duplicates, (long)n_points_total);
   
   return n_points_total;
 }

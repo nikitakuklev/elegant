@@ -34,7 +34,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 void computeSDrivingTerms(LINE_LIST *beamline);
-void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, char *name, char *type, long occurence, LINE_LIST *beamline);
+void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, const char *name, const char *type, long occurence, LINE_LIST *beamline);
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
@@ -75,7 +75,7 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline) ;
 SDDS_TABLE SDDS_SDrivingTerms;
 
 #define TWISS_ANALYSIS_QUANTITIES 8
-static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay", "alphax", "alphay", "etaxp", "etayp"};
+static const char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay", "alphax", "alphay", "etaxp", "etayp"};
 static long twissAnalysisQuantityOffset[TWISS_ANALYSIS_QUANTITIES] = {
   offsetof(TWISS, betax), offsetof(TWISS, betay), offsetof(TWISS, etax), offsetof(TWISS, etay),
   offsetof(TWISS, alphax), offsetof(TWISS, alphay), 
@@ -85,7 +85,7 @@ static long twissAnalysisQuantityOffset[TWISS_ANALYSIS_QUANTITIES] = {
 #define TWISS_ANALYSIS_MIN 1
 #define TWISS_ANALYSIS_MAX 2
 #define TWISS_ANALYSIS_STATS 3
-static char *twissAnalysisStatName[TWISS_ANALYSIS_STATS] = {"ave", "min", "max" };
+static const char *twissAnalysisStatName[TWISS_ANALYSIS_STATS] = {"ave", "min", "max" };
 static long twissAnalysisStatCode[TWISS_ANALYSIS_STATS] = {
   TWISS_ANALYSIS_AVE, TWISS_ANALYSIS_MIN, TWISS_ANALYSIS_MAX };
 
@@ -137,7 +137,7 @@ VMATRIX *compute_periodic_twiss(
       report_stats(stdout, "statistics: ");
       fflush(stdout);
       if (++noticeCounter==100) {
-        fprintf(stdout, (char*) "(Further notices discontinued)\n");
+        fputs("(Further notices discontinued)\n", stdout);
         fflush(stdout);
       }                     
     }
@@ -1628,7 +1628,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   }
 
 #if USE_MPI
-  if (writePermitted)
+  if (writePermitted) {
 #endif 
   if (filename) {
 #if SDDS_MPI_IO
@@ -1640,7 +1640,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
                             column_definition, (radiation_integrals?N_COLUMNS_WRI:N_COLUMNS), (char*)"setup_twiss_output",
                             SDDS_EOS_NEWFILE);
     if (compute_driving_terms) {
-      long i, index;
+      long i;
       for (i=0; i<N_DT_PARAMETERS; i++) {
         if (!SDDS_ProcessParameterString(&SDDS_twiss, driving_term_parameter_definition[i].text, 0) ||
             (SDDS_GetParameterIndex(&SDDS_twiss, driving_term_parameter_definition[i].name))<0) {
@@ -1663,8 +1663,14 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   }
   else
     SDDS_twiss_initialized = 0;
+#if USE_MPI
+  }
+#endif
   twiss_initialized = 1;
 
+#if USE_MPI
+  if (writePermitted) {
+#endif 
   if (s_dependent_driving_terms_file) {
     if (!SDDS_InitializeOutput(&SDDS_SDrivingTerms, SDDS_ASCII, 1L, NULL, NULL, s_dependent_driving_terms_file)) {
       SDDS_SetError((char*)"Unable set up SDDS file (s_dependent_driving_terms_file)");
@@ -1754,6 +1760,10 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
+#if USE_MPI
+  }
+#endif
+
   beamline->sDrivingTerms.f10010 = beamline->sDrivingTerms.f10100 = NULL;
   beamline->sDrivingTerms.f30000 = beamline->sDrivingTerms.f12000 = NULL;
   beamline->sDrivingTerms.f10200 = beamline->sDrivingTerms.f01200 = NULL;
@@ -3219,6 +3229,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
   long i, j, m, n, ix1, iy1, nTSWA, order;
 
+  tune1[0] = tune1[1] = -1; /* suppress a compiler warning */
+  
   if (tune_shift_with_amplitude_struct.turns==0) {
     /* use the matrix only without tracking */
     xTuneExtrema[0] = xTuneExtrema[1] = 0;
@@ -4318,7 +4330,6 @@ void computeSDrivingTerms(LINE_LIST *beamline)
   double delta_phix, delta_phiy; /* phase advance between source and observator */
   double qx, qy;         /* tunes */
 
-  int count;
   int idx;
 
   ELEMENT_LIST *src_ptr, *obs_ptr;
@@ -4360,7 +4371,7 @@ void computeSDrivingTerms(LINE_LIST *beamline)
     }
 
     while (src_ptr) {  /* loop over each source */
-      k2 = j1 = j2 = 0.;  /* get source strength */
+      k2 = j1 = j2 = tilt = 0.;  /* get source strength */
       switch (src_ptr->type) {
       case T_SEXT:
         tilt = ((SEXT*)src_ptr->p_elem)->tilt;
@@ -4529,7 +4540,7 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   std::complex <double> periodicFactor[9][9];
 #define PF(i,j) (periodicFactor[4+i][4+j])
   double betax1, betay1, phix1, phiy1, etax1, termSign;
-  double coef, b2L, a2L, b3L, b4L, nux, nuy;
+  double b2L, a2L, b3L, b4L, nux, nuy;
   ELEMENT_LIST *eptr1;
   double two=2, three=3, four=4;
   ELEMDATA *ed = NULL;
@@ -5067,7 +5078,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   }
 }
 
-void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, char *name, char *type, long occurence, LINE_LIST *beamline)
+void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, const char *name, const char *type, long occurence, LINE_LIST *beamline)
 {
   if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_NAME | SDDS_PASS_BY_VALUE, row,
                          "s", position, 

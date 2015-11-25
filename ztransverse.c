@@ -17,6 +17,7 @@
 #include "table.h"
 #include "fftpackC.h"
 
+#if !USE_MPI
 #define WAKE_COLUMNS 5
 static SDDS_DEFINITION wake_column[WAKE_COLUMNS] = {
     {"Deltat", "&column name=Deltat, symbol=\"$gD$rt\", units=s, type=double, description=\"Time after head of bunch\" &end"},
@@ -37,7 +38,7 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
     {"fo", "&parameter name=fo, symbol=\"f$bo$n\", units=Hz, type=double, description=\"Frequency of BB resonator\" &end"},
     {"Deltaf", "&parameter name=Deltaf, symbol=\"$gD$rf\", units=Hz, type=double, description=\"Frequency sampling interval\" &end"},
     } ;
-
+#endif
 
 void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge,
                         double timeSpan);
@@ -62,11 +63,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   long max_np = 0;
   double *Vfreq = NULL, *iZ = NULL;
   long nBuckets, iBucket, np;
+#if USE_MPI
   long offset, length;
   double tmin_part, tmax_part;
-#if USE_MPI
   double *buffer;
-  long i;
 #endif
   long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;

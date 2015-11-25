@@ -537,7 +537,10 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
 
   if ((n_bins = corgpipe->n_bins) == 0) {
     if (corgpipe->tmax==0) {
-      double beta, gamma, sMin, sMax, dtBeam, result;
+      double beta, gamma, sMin, sMax, dtBeam;
+#if USE_MPI
+      double result;
+#endif
       sMax = -(sMin = DBL_MAX);
       for (i=0; i<np; i++) {
         if (part[i][4]>sMax)

@@ -451,7 +451,7 @@ void accumulate_beam_sums(
                           )
 {
   long i_part, i, j;
-  double centroid[7], part[7], *timeCoord;
+  double centroid[7], *timeCoord;
   double value;
   long active = 1;
   double Sij;
@@ -471,7 +471,7 @@ void accumulate_beam_sums(
 #endif
 
   double buffer[7], Sij_p[28], Sij_total[28];
-  long n_total, offset=0, index;  
+  long offset=0, index;  
 #ifdef USE_KAHAN
   double error_sum=0.0, error_total=0.0,
     **sumMatrixCen, **errorMatrixCen,

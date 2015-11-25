@@ -34,7 +34,7 @@ void track_through_rf_deflector(
   double t_part;      /* time at which a particle enters cavity */
   double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2) */
   double x, xp, y, yp;
-  double beta, px, py, pz, beta_z, pc, gamma, dpx;
+  double beta, px, py, pz, beta_z, pc, gamma;
   double omega, k, Ephase, voltFactor, t0;
   double cos_tilt, sin_tilt, dtLight, tLight;
   double length;

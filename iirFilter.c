@@ -9,7 +9,6 @@
 
 #include "mdb.h"
 #include "track.h"
-void bombElegantVA(char *template, ...);
 
   
 int readIIRFilter(IIRFILTER *filterBank, long maxFilters, char *inputFile)

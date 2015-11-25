@@ -114,8 +114,11 @@ long doChaosMap(
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip, turns;
   static double **one_part;
-  double p, dJx, dJy, oldPercentage=0;
+  double p, dJx, dJy;
   long n_part;
+#if USE_MPI
+  double oldPercentage=0;
+#endif
 #if SDDS_MPI_IO
   long points;
   /* Open file here for parallel IO */

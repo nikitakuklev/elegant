@@ -31,14 +31,13 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long max_np = 0;
-  short shortBunchWarning = 0;
   long ib, nb=0, n_binned=0, plane;
   long iBucket, nBuckets, ip, np;
   double factor, tmin, tmean=0, tmax, dt=0, rampFactor=1;
 #if USE_MPI
   double *buffer;
 #endif
-
+  
   set_up_trwake(wakeData, run, i_pass, np0, charge);
 
   if (i_pass>=(wakeData->rampPasses-1))
@@ -513,12 +512,13 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 #endif
   }
   return tmean/np;
-#else
+#else /* MPI */
+  tmean = 0;
   if (!partOnMaster){
     long np_total;
     double tmean_total;
     if (isSlave || !notSinglePart) {
-      for (ip=tmean=0; ip<np; ip++) {
+      for (ip=0; ip<np; ip++) {
 	P = Po*(part[ip][5]+1);
 #ifndef USE_KAHAN
 	tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
@@ -528,6 +528,7 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 #endif
       }
     }
+    tmean_total = DBL_MAX;
     if (notSinglePart) {
       if (isMaster) {
 	tmean = 0;
@@ -542,6 +543,8 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 #endif
       }
     }
+    if (tmean_total==DBL_MAX) 
+      bombElegant("invalid value of tmean_total in computeTimeCoordinates. Seek professional help!", NULL);
     return tmean_total/np_total;
   }
   else { /* This serial part can be removed after all the upper level functions (e.g. wake) are parallelized */

@@ -13,9 +13,12 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic", "hybridsimplex", "swarm"
     } ;
 
+#if USE_MPI
+/* This is needed by the parallel version. There will be a warning that it is unused when compiling the serial version */
 static char *crossover_type[N_CROSSOVER_TYPES] = {
     "onepoint", "twopoint", "uniform"
     } ;
+#endif
 	
 #namelist optimization_term,struct
     STRING term = NULL;

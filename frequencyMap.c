@@ -134,8 +134,11 @@ long doFrequencyMap(
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip, turns;
   static double **one_part;
-  double p, oldPercentage=0;
+  double p;
   long n_part;
+#if USE_MPI
+  double oldPercentage=0;
+#endif
 
 #if SDDS_MPI_IO
   long particles;

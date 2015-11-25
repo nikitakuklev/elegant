@@ -60,9 +60,12 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
 #ifdef DEBUG
 FILE *fpd = NULL;
 #endif
-static long nElements, nDelta;
-static double deltaStep;
+static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
+#if USE_MPI
+static double deltaStep;
+static long nDelta;
+
 static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
 {
   long id, ie, ip, particleID;
@@ -120,6 +123,7 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
 #endif
   }
 }
+#endif
 
 void setupMomentumApertureSearch(
                                  NAMELIST_TEXT *nltext,
@@ -329,16 +333,15 @@ long doMomentumApertureSearch(
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
 #if USE_MPI
-  FILE *fpdMpi = NULL;
-  notSinglePart = 0;
-
 #if defined(DEBUG)
+  FILE *fpdMpi = NULL;
   sprintf(s, "%s-debug-%02d", output, myid);
   if (!(fpdMpi = fopen(s, "w")))
     fpdMpi = NULL;
   fprintf(fpdMpi, "ID = %d\n", myid);
   fflush(fpdMpi);
 #endif
+  notSinglePart = 0;
 #else
 #if defined(DEBUG)
   FILE *fpdeb = NULL;
@@ -848,20 +851,21 @@ long multiparticleLocalMomentumAcceptance(
 {    
 #if USE_MPI
   double **coord;
-  double round = 0.5;
-  long nTotal, ip, ie, idelta, id, nLeft, nLost, nElem, nEachProcessor, code;
+  long nTotal, ip, ie, idelta, nLeft, nLost, nElem, nEachProcessor, code;
   double pCentral, delta;
-  ELEMENT_LIST *elem, *elem0;
-  char s[1000];
   double *sStart, **deltaSurvived, **deltaLost;
   char **ElementName, **ElementType;
   int32_t *ElementOccurence;
   short **loserFound;
-  char logFile[100];
   long n_working_processors = n_processors - 1;
   double **lostParticles;
 
 #ifdef DEBUG
+  double round = 0.5;
+  long id;
+  ELEMENT_LIST *elem0;
+  char s[1000];
+  char logFile[100];
   FILE *fpd;
   sprintf(logFile, "mmap-%03d.log", myid);
   fpd = fopen(logFile, "w");
@@ -978,8 +982,9 @@ long multiparticleLocalMomentumAcceptance(
     printf("Done tracking nLeft = %ld, nLost = %ld\n", nLeft, nLost);
     fflush(stdout);
     setTrackingOmniWedgeFunction(NULL);
-  }
-  
+  } else
+    nLeft = 0;
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* gather lost particle data to master */
@@ -1080,9 +1085,9 @@ long multiparticleLocalMomentumAcceptance(
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta)
 {
   double amplitude[4], frequency[4], phase[4], dummy;
-  long i;
 
 #if defined(DEBUG)
+  long i;
   static FILE *fpd = NULL;
   if (!fpd) {
     fpd = fopen("tbt.sdds", "w");

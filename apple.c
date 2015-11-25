@@ -168,6 +168,8 @@ void f_ijk(double *X, long End_Pole, double step,
   double Ay1x, Ay2x, Ay3x;
   double Ax1y, Ax2y, Ax3y;
   double Ay1y, Ay2y, Ay3y;
+
+  Dx = Dy = 0;
   
   xpp = X[0]+apple->x0;
   xmm = X[0]-apple->x0;
@@ -349,12 +351,16 @@ void InitializeAPPLE(char *file, APPLE *apple)
   SDDS_DATASET SDDSin, SDDSshim;
   double *Cmn, *kx, *ky, *kz, kw;
   double bo4, BxAmp, ByAmp;
-  long row, rows, j, ishim;
+  long row, rows, j;
   int32_t *xHarm, *zHarm, *sHarm;
   double kx_shim, *c_shim, *s_shim;
   
   if (apple->initialized) 
     return;
+
+  c_shim = s_shim = NULL;
+  Cmn = kx = ky = kz = NULL;
+  xHarm = zHarm = sHarm = NULL;
   
   if (apple->shimOn) {
     if(!apple->shimInput) {
@@ -500,6 +506,25 @@ void InitializeAPPLE(char *file, APPLE *apple)
   apple->BPeak[1] = fabs(apple->BPeak[1]*ByAmp);
   
   apple->initialized = 1;
+
+  if (c_shim)
+    free(c_shim);
+  if (s_shim)
+    free(s_shim);
+  if (Cmn)
+    free(Cmn);
+  if (kx)
+    free(kx);
+  if (ky)
+    free(ky);
+  if (kz)
+    free(kz);
+  if (xHarm)
+    free(xHarm);
+  if (zHarm)
+    free(zHarm);
+  if (sHarm)
+    free(sHarm);
   
   return;
 }

@@ -34,7 +34,7 @@ void track_through_ftrfmode(
   long *ibParticle = NULL;          /* array to record which bucket each particle is in */
   long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-  long iBucket, nBuckets, np, np_total;
+  long iBucket, nBuckets, np;
 
   long max_np = 0;
   double *VxPrevious = NULL, *VyPrevious = NULL, *xPhasePrevious = NULL, *yPhasePrevious = NULL, tPrevious;
@@ -46,7 +46,7 @@ void track_through_ftrfmode(
   long firstBin, lastBin, imode;
   double rampFactor;
 #if USE_MPI
-  long firstBin_global, lastBin_global;
+  long firstBin_global, lastBin_global, np_total;;
 #endif
 #ifdef DEBUG
   static FILE *fpdeb = NULL;
@@ -156,6 +156,7 @@ void track_through_ftrfmode(
   }
   
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    np = -1;
 #if USE_MPI
     /* Master needs to know if this bucket has particles */
     if (isSlave || !notSinglePart) {
@@ -172,6 +173,16 @@ void track_through_ftrfmode(
     if (np_total==0)
       continue;
 #endif
+
+    /* these are mostly to suppress compiler warnings */
+    tmin = DBL_MAX;
+    tmax = -DBL_MAX;
+    tPrevious = 0;
+    last_tmax = -DBL_MAX;
+    dt = 0;
+    
+    lastBin = 0;
+    firstBin = trfmode->n_bins;
 
     if (isSlave || !notSinglePart) {
       if (nBuckets==1) {

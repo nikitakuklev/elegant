@@ -287,7 +287,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
   long i, j, total_event, n_left, iElement=0;
   ELEMENT_LIST *eptr;
   TSCATTER *tsptr;
-  double pTemp[6], p1[6], p2[6], densTemp, dens1, dens2;
+  double pTemp[6], p1[6], p2[6], dens1, dens2;
   double theta, phi, qa[3], qb[3], beta[3], qabs, gamma;
   double beta0, cross, temp;
   static SDDS_TABLE SDDS_bunch, SDDS_loss;

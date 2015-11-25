@@ -198,11 +198,14 @@ long do_tracking(
   int myid = 0, active = 1;
   long memoryBefore=0, memoryAfter=0;
 #if USE_MPI 
-  int nToTrackAtLastSort, needSort = 0;
+#ifdef SORT
+  int nToTrackAtLastSort;
+#endif
+  int needSort = 0;
   int lostSinceSeqMode = 0;
-  long old_nToTrack = 0, nParElements, nElements; 
+  long old_nToTrack = 0, nParElements=0, nElements=0; 
   int checkFlags;
-  double my_wtime, start_wtime, end_wtime, nParPerElements, my_rate;
+  double my_wtime=0, start_wtime=0, end_wtime, nParPerElements=0, my_rate;
   double round = 0.5;
   balance balanceStatus;
 #if SDDS_MPI_IO
@@ -2046,7 +2049,7 @@ long do_tracking(
           if (mpiAbortGlobal<N_MPI_ABORT_TYPES)
             printf("Run aborted by error in %s: %s\n", eptr->name, mpiAbortDescription[mpiAbortGlobal]);
           else
-            printf("Run aborted by error in %s: unknown code %ld\n", eptr->name, mpiAbortGlobal);
+            printf("Run aborted by error in %s: unknown code %ld\n", eptr->name, (long)mpiAbortGlobal);
 	  exitElegant(1);
 	}
       }
@@ -4414,7 +4417,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 #endif
   
   if (myid==0) {
-    printf("Distributing %ld particles to %d worker processors\n", *nToTrack, n_processors-1);
+    printf("Distributing %ld particles to %ld worker processors\n", *nToTrack, n_processors-1);
     fflush(stdout);
 #if DEBUG_SCATTER
     fpdeb = fopen("scatter.0", "w");
@@ -4622,7 +4625,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
  
   MPI_Status status;
 
-  printf("Gathering particles to master from %d processors\n", work_processors);
+  printf("Gathering particles to master from %ld processors\n", work_processors);
   fflush(stdout);
   
   nToTrackCounts = malloc(sizeof(int) * n_processors);

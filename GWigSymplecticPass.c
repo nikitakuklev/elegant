@@ -432,6 +432,8 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
   double *Cmn, *kx, *ky, *kz, *phase;
   long row, rows;
 
+  Cmn = kx = ky = kz = phase = NULL;
+  
   if (!file) {
     *harmonics = 0;
     return 0;
@@ -511,5 +513,12 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
   }    
   if (!SDDS_Terminate(&SDDSin))
     printf("*** Warning: problem terminating CWIGGLER input file\n");
+
+  free(Cmn);
+  free(kx);
+  free(ky);
+  free(kz);
+  free(phase);
+
   return rows;
 }

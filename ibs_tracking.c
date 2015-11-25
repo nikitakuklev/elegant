@@ -46,7 +46,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   long max_np = 0, np;
   long ip, iBucket, nBuckets;
   
-  long *index, *count;
+  long *index=NULL, *count=NULL;
   long istart, iend, ipart, icoord, ihcoord, islice;
   double aveCoord[6], S[6][6];
   double betax0, alphax0, betay0, alphay0;
@@ -144,6 +144,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   }
   
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    np = -1;
+    
 #if USE_MPI
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
@@ -165,8 +167,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
         part = part0;
         np = np0;
       } else {
-        if ((np=npBucket[iBucket])==0) 
-          continue;
+        np = npBucket[iBucket];
 #ifdef DEBUG
         printf("IBSCATTER: copying data to work array, iBucket=%ld, np=%ld\n", iBucket, np);
         fflush(stdout);
@@ -189,6 +190,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #if USE_MPI
       if (myid==0)
 	np = 0;
+      if (np==-1)
+        bombElegant("Error: np==-1 in IBSCATTER. Seek professional help!", NULL);
       MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       IBS->charge = charge->macroParticleCharge*npTotal;
       /* printf("myid=%d, np=%ld, npTotal=%ld, charge=%le\n", myid, np, npTotal, IBS->charge); */
@@ -197,6 +200,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 	fflush(stdout);
       }
 #else
+      if (np==-1)
+        bombElegant("Error: np==-1 in IBSCATTER. Seek professional help!", NULL);
       IBS->charge = charge->macroParticleCharge*np;
       if (IBS->verbose) {
 	printf("bunch %ld has charge=%e, np=%ld\n", iBucket, IBS->charge, np);
@@ -204,6 +209,16 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       }
 #endif
     }
+
+#if USE_MPI
+    if (npTotal==0) 
+      continue;
+#else
+    if (np==0)
+      continue;
+#endif
+    if (!IBS->charge)
+      continue;
 
     if (isSlave || !notSinglePart) {
       index = (long*)malloc(sizeof(long)*np);
@@ -224,8 +239,11 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (myid==0)
 	  countTemp = 0;
-	else
+	else {
+          if (!count)
+            bombElegant("Error: count array is null in track_IBS", NULL);
 	  countTemp = count[islice];
+        }
 	MPI_Allreduce(&countTemp, &countTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	if (myid==0) {
 	  printf("Starting computation of parameters for slice %ld for bunch %ld (%ld particles)\n", islice, iBucket, countTotal);
@@ -387,6 +405,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
           if (IBS->do_z) {
             RNSigma[2] = sqrt(fabs(sqr(1 + IBS->dT * IBS->zGrowthRate[islice])-1))*sqrt(S[5][5]);
           }
+          if (index==NULL)
+            bombElegant("index array is NULL in track_IBS. Seek professional help!", NULL);
           for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
             if (RNSigma[ihcoord]) {
               RNSigmaCheck[ihcoord] = 0;
@@ -433,8 +453,14 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
     }
 
     if (isSlave || !notSinglePart) {
-      free(index);
-      free(count);
+      if (index) {
+        free(index);
+        index = NULL;
+      }
+      if (count) {
+        free(count);
+        count = NULL;
+      }
       if (nBuckets!=1) {
 	/* copy back to original buffer */
 	for (ip=0; ip<np; ip++)
@@ -545,10 +571,11 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 void inflateEmittance(double **coord, double Po, double eta[4], 
                       long offset, long istart, long iend, long *index, double factor)
 {
-  long ipart, np, npTotal;
+  long ipart, np;
   double factorSqrt, dpc=0, c[2]={0,0}, cp[2]={0,0};
 
 #if USE_MPI
+  long npTotal;
   np = iend - istart;
   MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
   if (!npTotal)
@@ -587,10 +614,11 @@ void inflateEmittance(double **coord, double Po, double eta[4],
 void inflateEmittanceZ(double **coord, double Po, long isRing, double dt,
 		       long istart, long iend, long *index, double zRate[3], double Duration)
 {
-  long i, ipart, np, npTotal;
+  long i, ipart, np;
   double c0, tc, dpc, *time, p, beta0, beta1;
 
 #if USE_MPI
+  long npTotal;
   np = iend - istart;
   MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, workers);
   if (!npTotal)
@@ -1051,6 +1079,7 @@ static SDDS_DEFINITION ibscatter_print_parameter[IBSCATTER_LINAC_PARAMETERS] = {
   {"sigmaDelta", "&parameter name=sigmaDelta, symbol=\"$gs$r$bd$n\", type=double, description=\"Momentum spread with IBS\" &end"},
   {"sigmaz", "&parameter name=sigmaz, symbol=\"$gs$r$bz$n\", units=m, type=double, description=\"Bunch length with IBS\" &end"},
 };
+/*
 #define IBSCATTER_COLUMNS 13
 static SDDS_DEFINITION ibscatter_print_column[IBSCATTER_COLUMNS] = {
     {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
@@ -1067,6 +1096,7 @@ static SDDS_DEFINITION ibscatter_print_column[IBSCATTER_COLUMNS] = {
     {"etay", "&column name=etay, type=double, units=m, symbol=\"$gc$r$by$n\", description=\"Vertical dispersion\" &end"},
     {"etayp", "&column name=etayp, type=double, symbol=\"$gc$r$by$n$a'$n\", description=\"Slope of vertical dispersion\" &end"},
 };
+*/
 
 void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                          char *command_file, char *lattice_file, char *caller, long isRing)
@@ -1085,11 +1115,11 @@ void SDDS_IBScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long
 */
     if (isRing)
       SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, NULL, NULL,
+                            ibscatter_print_parameter, IBSCATTER_RING_PARAMETERS, NULL, 0,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     else
       SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, NULL, NULL,
+                            ibscatter_print_parameter, IBSCATTER_LINAC_PARAMETERS, NULL, 0,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_IBScatterSetup");
 }

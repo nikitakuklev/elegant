@@ -36,7 +36,7 @@ void track_through_frfmode(
 
   double *VPrevious = NULL, *phasePrevious = NULL, tPrevious;
   long ip, ib, nb2, firstBin, lastBin, n_binned;
-  double tmin, tmax, last_tmax, tmean, dt, P;
+  double tmin, tmax, last_tmax, tmean, dt;
   double Vb, V, omega, phase, t, k, damping_factor, tau;
   double V_sum, Vr_sum, phase_sum;
   double Vc, Vcr, dgamma;
@@ -44,7 +44,6 @@ void track_through_frfmode(
   double Qrp, VbImagFactor, Q;
   double rampFactor;
 #if USE_MPI
-  double *buffer = NULL; 
   long np_total;
   long nonEmptyBins = 0;
 #endif
@@ -118,6 +117,7 @@ void track_through_frfmode(
 #endif
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    np = -1;
 #if USE_MPI
       /* Master needs to know if this bucket has particles */
       if (isSlave || !notSinglePart) {
@@ -134,6 +134,15 @@ void track_through_frfmode(
       if (np_total==0)
         continue;
 #endif
+
+    /* these are mostly to suppress compiler warnings */
+    tmin = DBL_MAX;
+    tmax = -DBL_MAX;
+    last_tmax = -DBL_MAX;
+    dt = 0;
+    
+    n_binned = lastBin = 0;
+    firstBin = rfmode->n_bins;
 
     if (isSlave || !notSinglePart) {
       if (nBuckets==1) {
@@ -166,6 +175,7 @@ void track_through_frfmode(
           tmean += time[ip];
         }
       }
+      
 #if USE_MPI
       if (notSinglePart) {
         if (isSlave) {
@@ -228,8 +238,6 @@ void track_through_frfmode(
         fflush(stdout);
 #endif
         dt = (tmax - tmin)/rfmode->n_bins;
-        n_binned = lastBin = 0;
-        firstBin = rfmode->n_bins;
 #if USE_MPI
         nonEmptyBins = 0;
 #endif
