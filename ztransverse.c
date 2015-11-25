@@ -75,6 +75,10 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
 #if defined(DEBUG)
   FILE *fp;
 #endif
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
+
   i_pass0 = i_pass;
   if ((i_pass -= ztransverse->startOnPass)<0 || ztransverse->factor==0)
     return;

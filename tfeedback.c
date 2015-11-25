@@ -34,6 +34,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   printf("TFBPICKUP\n");
 #endif
 
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
+
   if (tfbp->initialized==0)
     initializeTransverseFeedbackPickup(tfbp);
 
@@ -238,6 +242,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #ifdef DEBUG
   printf("TFBDRIVER\n");
 #endif
+
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
 
   if (isSlave || !notSinglePart) 
     determine_bucket_assignments(part0, np0, tfbd->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);

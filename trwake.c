@@ -38,6 +38,10 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   double *buffer;
 #endif
   
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
+
   set_up_trwake(wakeData, run, i_pass, np0, charge);
 
   if (i_pass>=(wakeData->rampPasses-1))
@@ -534,18 +538,18 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 	tmean = 0;
 	np = 0;
       }
-      else {
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 #ifndef USE_KAHAN
-	MPI_Allreduce(&tmean, &tmean_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce(&tmean, &tmean_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-	tmean_total = KahanParallel (tmean, error, workers);
+      tmean_total = KahanParallel (tmean, error, MPI_COMM_WORLD);
 #endif
-      }
     }
     if (tmean_total==DBL_MAX) 
       bombElegant("invalid value of tmean_total in computeTimeCoordinates. Seek professional help!", NULL);
-    return tmean_total/np_total;
+    if (np_total>0)
+      return tmean_total/np_total;
+    return (double)0;
   }
   else { /* This serial part can be removed after all the upper level functions (e.g. wake) are parallelized */
     for (ip=tmean=0; ip<np; ip++) {

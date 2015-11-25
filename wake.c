@@ -44,6 +44,10 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 #endif
 #endif
 
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
+
   set_up_wake(wakeData, run, i_pass, np0, charge);
 
   if (isSlave || !notSinglePart) {
@@ -492,6 +496,10 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   double Z0, k, kappa, dt, omega;
   WAKE wakeData;
   long i, n_bins;
+
+  if (notSinglePart==0)
+    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+    return;
 
 #if USE_MPI
   if (myid==1) {
