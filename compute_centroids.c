@@ -495,7 +495,7 @@ void accumulate_beam_sums(
 
   timeCoord = malloc(sizeof(double)*n_part);
   chosen = malloc(sizeof(short)*n_part);
-  computeTimeCoordinates(timeCoord, p_central, coord, n_part);
+  computeTimeCoordinatesOnly(timeCoord, p_central, coord, n_part);
 
   if (!sums->n_part) 
     sums->p0 = p_central;
