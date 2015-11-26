@@ -227,10 +227,6 @@ void track_through_trfmode(
       }
     }
 
-    if (tmean==DBL_MAX) {
-      /* should never happen... */
-      bombElegant("Error: tmean==DBL_MAX in trfmode. Seek professional help!", NULL);
-    }
 #if USE_MPI
     if (!isSlave)
       tmean = np = 0;

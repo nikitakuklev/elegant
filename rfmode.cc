@@ -328,10 +328,6 @@ void track_through_rfmode(
         printf("computed tmean = %21.15le\n", tmean);
         fflush(stdout);
 #endif
-        if (tmean==DBL_MAX) {
-          /* should never happen... */
-          bombElegant("Error: tmean==DBL_MAX for RFMODE. Seek professional help!", NULL);
-        }
         
         tOffset = 0;
         if (nBuckets==1 && jBucket) {
