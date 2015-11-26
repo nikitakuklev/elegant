@@ -81,7 +81,10 @@ static SLICE_OUTPUT *sliceOutput = NULL;
 long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice);
 
 void clearSliceAnalysis() 
-{
+{  
+#if USE_MPI
+  return ;
+#endif
   if (sliceOutput && sliceOutput->active && sliceOutput->filename) {
     SDDS_Terminate(&(sliceOutput->SDDSout));
     SDDS_ClearErrors();
@@ -154,8 +157,8 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 #if USE_MPI
   /* This function will be parallelized in the future */
   fprintf(stdout, "Slice analysis is not supported in this version of parallel elegant.\n");
-  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
-  MPI_Abort(MPI_COMM_WORLD, 1);	
+  MPI_Barrier(MPI_COMM_WORLD); 
+  return ;
 #endif
 
   /* process namelist text */
@@ -285,6 +288,10 @@ long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
   SDDS_DATASET *SDDSout;
   char buffer[100], sliceNumString[20];
     
+#if USE_MPI
+  return 1;
+#endif
+
   SDDSout = &(sliceOutput->SDDSout);
   if (slice && sliceOutput->nSlices>1) {
     if (slice<=sliceOutput->nSlices) {
@@ -403,6 +410,10 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
   SDDS_DATASET *SDDSout;
   long slice;
 
+#if USE_MPI
+  return ;
+#endif
+
   if (!sliceOutput || !sliceOutput->active) 
     return;
   if (sliceOutput->sStart<sliceOutput->sEnd &&
@@ -493,7 +504,11 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
   long count, slicesFound=0;
   double aveCoord[6], S[6][6];
   
-  if (!particles) {
+#if USE_MPI
+  return ;
+#endif 
+
+ if (!particles) {
     fprintf(stdout, "no particles left---can't compute slice analysis");
     fflush(stdout);
     /* fill in some dummy values */
