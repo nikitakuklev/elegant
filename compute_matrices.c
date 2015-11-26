@@ -797,6 +797,9 @@ VMATRIX *compute_matrix(
 
     if (timingActive)
       tStart = getTimeInSecs();
+#if DEBUG
+    printf("computing matrix for %s\n", elem->name);
+#endif
     switch (elem->type) {
       case T_DRIF:
         drift = (DRIFT*)elem->p_elem;
@@ -954,16 +957,6 @@ VMATRIX *compute_matrix(
         break;
       case T_ALPH:
         alph = (ALPH*)elem->p_elem;
-#if DEBUG
-        print_elem(stdout, elem);
-        fprintf(stdout, "part = %ld, threshold = %e, order = %ld\nxmax = %e, xs1 = %e, xs2 = %e\n",
-               alph->part, alph->threshold, alph->order, alph->xs1, alph->xs2);
-        fflush(stdout);
-        fprintf(stdout, "dp1 = %e, dp2 = %e, dx = %e, dy = %e, gradient = %e\n",
-               alph->dp1, alph->dp2, alph->dx, alph->dy, alph->gradient);
-        fflush(stdout);
-        print_elem(stdout, elem);
-#endif
         if (alph->xmax)
             alph->gradient = elem->Pref_input*sqr(ALPHA_CONST/alph->xmax);
         else
