@@ -1640,11 +1640,16 @@ char **argv;
       do_alter_element(&namelist_text, &run_conditions, beamline);
       break;
     case SLICE_ANALYSIS:
+#if USE_MPI
+      printf("\n********\nslice_analysis not supported for parallel version\n********\n\n");
+      fflush(stdout);
+#else
       if (!run_setuped)
         bombElegant("run_setup must precede slice_analysis namelist", NULL);
       if (beam_type!=-1)
         bombElegant("slice_analysis namelist must precede beam definition", NULL);
       setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
+#endif
       break;
     case DIVIDE_ELEMENTS: 
       if (run_setuped)
