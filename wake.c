@@ -44,10 +44,15 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 #endif
 #endif
 
+  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+#if USE_MPI
   if (notSinglePart==0)
-    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
     return;
-
+#else
+  if (np0<2)
+    return;
+#endif
+  
   set_up_wake(wakeData, run, i_pass, np0, charge);
 
   if (isSlave || !notSinglePart) {

@@ -224,9 +224,11 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 #endif
 
-  if (notSinglePart==0)
     /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+#if USE_MPI
+  if (notSinglePart==0)
     return;
+#endif
 
   if (isSlave || !notSinglePart) {
 #ifdef DEBUG

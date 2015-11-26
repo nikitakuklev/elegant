@@ -107,9 +107,14 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   MPE_Describe_state(event3a, event3b, "Kick", "orange");
 #endif
 
+  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+#if USE_MPI
   if (notSinglePart==0)
-    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
     return;
+#else
+  if (np0<2)
+    return;
+#endif
 
   i_pass0 = i_pass;
   if ((i_pass -= zlongit->startOnPass)<0 || zlongit->factor==0)

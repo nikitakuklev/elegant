@@ -58,9 +58,14 @@ void track_through_trfmode(
   long np_total, binned_total;
 #endif
 
+  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+#if USE_MPI
   if (notSinglePart==0)
-    /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
     return;
+#else
+  if (np0<2)
+    return;
+#endif
 
   if (trfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
