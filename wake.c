@@ -502,9 +502,14 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   WAKE wakeData;
   long i, n_bins;
 
+#if USE_MPI
   if (notSinglePart==0)
     /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
     return;
+#else
+  if (np<2)
+    return;
+#endif
 
 #if USE_MPI
   if (myid==1) {
