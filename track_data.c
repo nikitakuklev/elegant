@@ -1652,7 +1652,6 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
 IBSCATTER ibs_example;
 PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.factor), NULL, 1.0, 0, "factor by which to multiply growth rates before using"},
-  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ibs_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
   {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
