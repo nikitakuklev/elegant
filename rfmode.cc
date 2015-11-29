@@ -106,15 +106,6 @@ void track_through_rfmode(
     }
     */
 
-  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
-#if USE_MPI
-  if (notSinglePart==0)
-    return;
-#else
-  if (np0<2)
-    return;
-#endif
-
     if (rfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
     fprintf(stdout, (char*)"binless in rfmode is not supported in the current parallel version.\n");

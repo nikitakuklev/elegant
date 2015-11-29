@@ -71,15 +71,6 @@ void track_through_ftrfmode(
   fflush(stdout);
 #endif
 
-  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
-#if USE_MPI
-  if (notSinglePart==0)
-    return;
-#else
-  if (np0<2)
-    return;
-#endif
-
   if (charge)
     trfmode->mp_charge = charge->macroParticleCharge;
   else

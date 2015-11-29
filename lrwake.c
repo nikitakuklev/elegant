@@ -41,6 +41,11 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   fflush(stdout);
 #endif
 
+  if (notSinglePart==0) {
+    /* in single particle mode (e.g., orbit and trajectory correction), ignore bunch assignments */
+    idSlotsPerBunch = -1;
+  }
+  
   if (idSlotsPerBunch<=0) {
     ibMin = 0;
     *nBuckets = 1;
@@ -171,9 +176,14 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 #endif
 
 #if USE_MPI
+#ifdef DEBUG
   printf("Waiting on barrier at end of determine_bucket_assignment\n");
   fflush(stdout);
-  MPI_Barrier(workers);
+#endif
+  if (notSinglePart)
+    MPI_Barrier(workers);
+  else
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
 #ifdef DEBUG
@@ -225,10 +235,12 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 #endif
 
     /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
+/*
 #if USE_MPI
   if (notSinglePart==0)
     return;
 #endif
+*/
 
   if (isSlave || !notSinglePart) {
 #ifdef DEBUG

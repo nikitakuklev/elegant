@@ -57,15 +57,6 @@ void track_through_frfmode(
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
-#if USE_MPI
-  if (notSinglePart==0)
-    return;
-#else
-  if (np0<2)
-    return;
-#endif
-
   if (charge)
     rfmode->mp_charge = charge->macroParticleCharge;
   else

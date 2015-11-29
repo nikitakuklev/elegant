@@ -38,15 +38,6 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   double *buffer;
 #endif
   
-  /* this element does nothing in single particle mode (e.g., trajectory, orbit, ..) */
-#if USE_MPI
-  if (notSinglePart==0)
-    return;
-#else
-  if (np0<2)
-    return;
-#endif
-
   set_up_trwake(wakeData, run, i_pass, np0, charge);
 
   if (i_pass>=(wakeData->rampPasses-1))
