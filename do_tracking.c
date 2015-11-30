@@ -241,6 +241,8 @@ long do_tracking(
     distributed = 0;
 #endif 
 
+  trajectoryTracking = (flags&TEST_PARTICLES);
+  
 #ifdef DEBUG
   if (flags&FINAL_SUMS_ONLY)
     printf("FINAL_SUMS_ONLY set\n");

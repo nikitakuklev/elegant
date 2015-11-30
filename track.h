@@ -97,6 +97,8 @@ extern long runInSinglePartMode;
 extern htab *load_hash;
 /* A factor used for distibuting memory on slave processors */
 extern double factor;
+/* Indicate that we are doing single-particle trajectory or orbit tracking */
+extern long trajectoryTracking;
 
 #if USE_MPI
 /* pMode will be used to specify where the information is stored, i.e., on Master or Slave. */

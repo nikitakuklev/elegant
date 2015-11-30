@@ -39,6 +39,8 @@ long exactNormalizedEmittance = 0;
 short mpiAbort = 0;
 #endif
 
+long trajectoryTracking = 0;
+
 long particleID = 1;
 
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */

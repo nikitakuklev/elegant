@@ -41,8 +41,8 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
   fflush(stdout);
 #endif
 
-  if (notSinglePart==0) {
-    /* in single particle mode (e.g., orbit and trajectory correction), ignore bunch assignments */
+  if (trajectoryTracking) {
+    /* when tracking for trajectory, ignore bunch assignments */
     idSlotsPerBunch = -1;
   }
   
