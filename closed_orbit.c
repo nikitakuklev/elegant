@@ -63,7 +63,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 static TRAJECTORY *clorb = NULL;
 
-void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+long setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
 
     log_entry("setup_closed_orbit");
@@ -78,6 +78,8 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (processNamelist(&closed_orbit, nltext)==NAMELIST_ERROR)
       bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &closed_orbit);
+    if (disable)
+      return 0;
 
 #if (USE_MPI) 
     if (isSlave)
@@ -106,6 +108,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       bombElegant("change_t is nonzero on one or more RF cavities. This is incompatible with fixed-length orbit computations.", NULL);
     
     log_exit("setup_closed_orbit");
+    return 1;
 }
 
 long checkChangeT(LINE_LIST *beamline) {

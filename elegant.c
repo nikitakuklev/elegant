@@ -1326,8 +1326,7 @@ char **argv;
       fl_do_tune_correction = 1;
       break;
     case CLOSED_ORBIT:
-      setup_closed_orbit(&namelist_text, &run_conditions, beamline);
-      do_closed_orbit = 1;
+      do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
       if (correction_setuped)
         fprintf(stdout, "warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
       fflush(stdout);

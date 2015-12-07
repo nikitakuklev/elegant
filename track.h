@@ -3678,7 +3678,7 @@ void finish_clorb_output(void);
 #define CLOSED_ORBIT_OUTPUT 0x01UL
 #define CLOSED_ORBIT_IGNORE_BEAM 0x02UL
 long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, unsigned long flags);
-void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+long setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long checkChangeT(LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */
