@@ -19,5 +19,13 @@
     long n_points = 2;  /* backward compatibility. ignored */
     long printout_order = 2;
     long periodic = 1;
+    double beta_x = 1;
+    double alpha_x = 0;
+    double eta_x = 0;
+    double etap_x = 0;
+    double beta_y = 1;
+    double alpha_y = 0;
+    double eta_y = 0;
+    double etap_y = 0;
 #end
 

@@ -114,6 +114,7 @@ typedef struct {
 void copyParticles(double ***coordCopy, double **coord, long np);
 void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv);
 void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data);
+void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M);
   
 void setup_transport_analysis(
     NAMELIST_TEXT *nltext,
@@ -503,19 +504,20 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *tw
     fprintf(fp, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
 	    data[CLORB_ETA_OFFSET  ], data[CLORB_ETA_OFFSET+1],
 	    data[CLORB_ETA_OFFSET+2], data[CLORB_ETA_OFFSET+3]);
-  if (periodic) {
+  if (periodic)
     fprintf(fp, "Lattice functions computed on assumption of periodic system:\n");
-    fprintf(fp, " horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-            twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
-    fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-            chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
-    fflush(fp);
-    fprintf(fp, " vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-            twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
-    fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-            chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
-    fflush(fp);
-  }
+  else
+    fprintf(fp, "Lattice functions computed on assumption of non-periodic system:\n");
+  fprintf(fp, " horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+          twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
+  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+          chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
+  fflush(fp);
+  fprintf(fp, " vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+          twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
+  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+          chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
+  fflush(fp);
 }
 
 
@@ -1301,19 +1303,67 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
                           &(chromDeriv->alpha1[0]), &(chromDeriv->alpha1[1]),
                           twiss, twiss, M);
   } else {
-    twiss->betax = 0;
-    twiss->alphax = 0;
-    twiss->phix = 0;
-    twiss->etax = 0;
-    twiss->etapx = 0;
-    twiss->betay = 0;
-    twiss->alphay = 0;
-    twiss->phiy = 0;
-    twiss->etay = 0;
-    twiss->etapy = 0;
-    chromDeriv->tune1[0] = chromDeriv->tune1[1] = 0;
-    chromDeriv->beta1[0] = chromDeriv->beta1[1] = 0;
-    chromDeriv->alpha1[0] = chromDeriv->alpha1[1] = 0;
+    TWISS twiss0;
+    twiss0.betax = beta_x;
+    twiss0.alphax = alpha_x;
+    twiss0.phix = 0;
+    twiss0.etax = eta_x;
+    twiss0.etapx = etap_x;
+    twiss0.betay = beta_y;
+    twiss0.alphay = alpha_y;
+    twiss0.phiy = 0;
+    twiss0.etay = eta_y;
+    twiss0.etapy = etap_y;
+
+    
+    propagateTwissParameters(twiss, &twiss0, M);
+    
+    twiss->periodic = 0;
+    
+    computeChromaticities(&(chromDeriv->tune1[0]), &(chromDeriv->tune1[1]),
+                          &(chromDeriv->beta1[0]), &(chromDeriv->beta1[1]),
+                          &(chromDeriv->alpha1[0]), &(chromDeriv->alpha1[1]),
+                          &twiss0, twiss, M);
   }
 }
+
+void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M)
+{
+  size_t offset;
+  double C, S, Cp, Sp;
+  double beta1, alpha1;
+  double beta0, alpha0, eta0, etap0, gamma0;
+  double cos_dphi, sin_dphi, dphi;
+  long plane;
+  
+  
+  for (plane=offset=0; plane<2; plane++) {
+    beta0  = *(&(twiss0->betax )+offset);
+    alpha0 = *(&(twiss0->alphax)+offset);
+    eta0   = *(&(twiss0->etax  )+offset);
+    etap0  = *(&(twiss0->etapx )+offset);
+    gamma0 = (1+alpha0*alpha0)/beta0;
+    C  = M->R[plane*2  ][plane*2  ];
+    S  = M->R[plane*2  ][plane*2+1];
+    Cp = M->R[plane*2+1][plane*2  ];
+    Sp = M->R[plane*2+1][plane*2+1];
+    beta1  = *(&(twiss1->betax )+offset) = C*C*beta0 - 2*S*C*alpha0 + S*S*gamma0;
+    alpha1 = *(&(twiss1->alphax)+offset) = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
+    *(&(twiss1->etax )+offset) = eta0*C  + etap0*S  + M->R[plane*2  ][5];
+    *(&(twiss1->etapx)+offset) = eta0*Cp + etap0*Sp + M->R[plane*2+1][5];
+    if ((sin_dphi = S/sqrt(beta0*beta1))>1) {
+      sin_dphi = 1;
+      cos_dphi = 0;
+    } else if (sin_dphi<-1) {
+      sin_dphi = -1;
+      cos_dphi = 0;
+    } else 
+      cos_dphi = sqrt(beta0/beta1)*C - alpha0*sin_dphi;
+    if ((dphi = atan2(sin_dphi, cos_dphi))<0)
+      dphi += PIx2;
+    *(&(twiss1->phix)+offset) = dphi + *(&(twiss0->phix)+offset);
+    offset = TWISS_Y_OFFSET;
+  }
+}
+
 
