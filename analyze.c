@@ -1291,6 +1291,8 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
       twiss->etapy = etap;
     }
   }
+  twiss->periodic = 1;
+
   computeChromaticities(&(chromDeriv->tune1[0]), &(chromDeriv->tune1[1]),
 			&(chromDeriv->beta1[0]), &(chromDeriv->beta1[1]),
 			&(chromDeriv->alpha1[0]), &(chromDeriv->alpha1[1]),
