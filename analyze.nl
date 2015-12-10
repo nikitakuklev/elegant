@@ -18,5 +18,6 @@
     long verbosity = 0;
     long n_points = 2;  /* backward compatibility. ignored */
     long printout_order = 2;
+    long periodic = 1;
 #end
 

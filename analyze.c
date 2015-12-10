@@ -503,17 +503,19 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *tw
     fprintf(fp, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
 	    data[CLORB_ETA_OFFSET  ], data[CLORB_ETA_OFFSET+1],
 	    data[CLORB_ETA_OFFSET+2], data[CLORB_ETA_OFFSET+3]);
-  fprintf(fp, "Lattice functions computed on assumption of periodic system:\n");
-  fprintf(fp, " horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-	  twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
-  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-	  chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
-  fflush(fp);
-  fprintf(fp, " vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-	  twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
-  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-	  chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
-  fflush(fp);
+  if (periodic) {
+    fprintf(fp, "Lattice functions computed on assumption of periodic system:\n");
+    fprintf(fp, " horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+            twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
+    fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+            chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
+    fflush(fp);
+    fprintf(fp, " vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+            twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
+    fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+            chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
+    fflush(fp);
+  }
 }
 
 
@@ -1253,48 +1255,65 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
 {
   long i;
   double beta, alpha, cos_phi, sin_phi, phi, det, eta, etap;
-  for (i=0; i<4; i+=2) {
-    /* find nu, beta, alpha */
-    if (fabs(cos_phi = (M->R[i][i] + M->R[i+1][i+1])/2)>1) {
-      fprintf(stdout, "warning: beamline unstable for %c plane\n", i==0?'x':'y');
-      fflush(stdout);
-      beta = alpha = phi = 0;
-    } else {
-      beta = fabs(M->R[i][i+1]/sin(acos(cos_phi)));
-      sin_phi = M->R[i][i+1]/beta;
-      if ((phi = atan2(sin_phi, cos_phi))<0)
-	phi += PIx2;
-      alpha = (M->R[i][i]-M->R[i+1][i+1])/(2*sin_phi);
-    }
 
-    /* compute eta and eta' */
-    if ((det = (2 - M->R[i][i] - M->R[i+1][i+1]))<=0) {
+  if (periodic) {
+    for (i=0; i<4; i+=2) {
+      /* find nu, beta, alpha */
+      if (fabs(cos_phi = (M->R[i][i] + M->R[i+1][i+1])/2)>1) {
+        fprintf(stdout, "warning: beamline unstable for %c plane\n", i==0?'x':'y');
+        fflush(stdout);
+        beta = alpha = phi = 0;
+      } else {
+        beta = fabs(M->R[i][i+1]/sin(acos(cos_phi)));
+        sin_phi = M->R[i][i+1]/beta;
+        if ((phi = atan2(sin_phi, cos_phi))<0)
+          phi += PIx2;
+        alpha = (M->R[i][i]-M->R[i+1][i+1])/(2*sin_phi);
+      }
+      
+      /* compute eta and eta' */
+      if ((det = (2 - M->R[i][i] - M->R[i+1][i+1]))<=0) {
         fprintf(stdout, "error: beamline unstable for %c plane--can't match dispersion functions\n",
 		i==0?'x':'y');
         fflush(stdout);
         det = 1e-6;
+      }
+      eta  = ((1-M->R[i+1][i+1])*M->R[i][5]+M->R[i][i+1]*M->R[i+1][5])/det;
+      etap = (M->R[i+1][i]*M->R[i][5] + (1-M->R[i][i])*M->R[i+1][5])/det;
+      if (i==0) {
+        twiss->betax = beta;
+        twiss->alphax = alpha;
+        twiss->phix = phi;
+        twiss->etax = eta;
+        twiss->etapx = etap;
+      } else {
+        twiss->betay = beta;
+        twiss->alphay = alpha;
+        twiss->phiy = phi;
+        twiss->etay = eta;
+        twiss->etapy = etap;
+      }
     }
-    eta  = ((1-M->R[i+1][i+1])*M->R[i][5]+M->R[i][i+1]*M->R[i+1][5])/det;
-    etap = (M->R[i+1][i]*M->R[i][5] + (1-M->R[i][i])*M->R[i+1][5])/det;
-    if (i==0) {
-      twiss->betax = beta;
-      twiss->alphax = alpha;
-      twiss->phix = phi;
-      twiss->etax = eta;
-      twiss->etapx = etap;
-    } else {
-      twiss->betay = beta;
-      twiss->alphay = alpha;
-      twiss->phiy = phi;
-      twiss->etay = eta;
-      twiss->etapy = etap;
-    }
+    
+    twiss->periodic = 1;
+    computeChromaticities(&(chromDeriv->tune1[0]), &(chromDeriv->tune1[1]),
+                          &(chromDeriv->beta1[0]), &(chromDeriv->beta1[1]),
+                          &(chromDeriv->alpha1[0]), &(chromDeriv->alpha1[1]),
+                          twiss, twiss, M);
+  } else {
+    twiss->betax = 0;
+    twiss->alphax = 0;
+    twiss->phix = 0;
+    twiss->etax = 0;
+    twiss->etapx = 0;
+    twiss->betay = 0;
+    twiss->alphay = 0;
+    twiss->phiy = 0;
+    twiss->etay = 0;
+    twiss->etapy = 0;
+    chromDeriv->tune1[0] = chromDeriv->tune1[1] = 0;
+    chromDeriv->beta1[0] = chromDeriv->beta1[1] = 0;
+    chromDeriv->alpha1[0] = chromDeriv->alpha1[1] = 0;
   }
-  twiss->periodic = 1;
-
-  computeChromaticities(&(chromDeriv->tune1[0]), &(chromDeriv->tune1[1]),
-			&(chromDeriv->beta1[0]), &(chromDeriv->beta1[1]),
-			&(chromDeriv->alpha1[0]), &(chromDeriv->alpha1[1]),
-			twiss, twiss, M);
 }
 
