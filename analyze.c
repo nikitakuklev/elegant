@@ -498,22 +498,21 @@ void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *tw
   M->order = printout_order>3 ? 3 : printout_order;
   print_matrices(fp, "Matrix from fitting:", M);
   M->order = saveOrder;
-  fprintf(fp, "horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-	  twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
-  fprintf(fp, "              dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-	  chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
-  fflush(fp);
-  fprintf(fp, "vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
-	  twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
-  fprintf(fp, "              dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
-	  chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
-  fflush(fp);
   fprintf(fp, "determinant of R = 1 + %14.6e\n", data[DETR_OFFSET]-1);
-  fflush(fp);
   if (delta_dp && center_on_orbit) 
     fprintf(fp, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
 	    data[CLORB_ETA_OFFSET  ], data[CLORB_ETA_OFFSET+1],
 	    data[CLORB_ETA_OFFSET+2], data[CLORB_ETA_OFFSET+3]);
+  fprintf(fp, "Lattice functions computed on assumption of periodic system:\n");
+  fprintf(fp, " horizontal:   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+	  twiss->phix/PIx2, twiss->betax, twiss->alphax, twiss->etax, twiss->etapx);
+  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+	  chromDeriv->tune1[0], chromDeriv->beta1[0], chromDeriv->alpha1[0]);
+  fflush(fp);
+  fprintf(fp, " vertical  :   tune = %14.6e  beta = %14.6e alpha = %14.6e  eta = %14.6e  eta' = %14.6e\n",
+	  twiss->phiy/PIx2, twiss->betay, twiss->alphay, twiss->etay, twiss->etapy);
+  fprintf(fp, "               dnu/dp = %14.6e  dbeta/dp = %14.6e  dalpha/dp = %14.6e\n",
+	  chromDeriv->tune1[1], chromDeriv->beta1[1], chromDeriv->alpha1[1]);
   fflush(fp);
 }
 
