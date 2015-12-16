@@ -602,6 +602,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       report_stats(stdout, "After particle selection: ");
 #if USE_MPI
       if (USE_MPI) {
+	/* Share the number of particles to track for purposes of setting array sizes on the slaves */
 	long iTotal_orig;
 	long work_processors = n_processors-1;
 	
@@ -623,6 +624,10 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       beam->bunchFrequency = 0.;
       beam->lost = (double**)czarray_2d(sizeof(double), iTotal, (COORDINATES_PER_PARTICLE+1));
 
+#if USE_MPI
+      if (myid!=0)
+	iTotal = 0; /* This will be set when we scatter in do_tracking */
+#endif
       for (i=0; i<iTotal; i++) {
         beam->original[i][0] = beam->particle[i][0] = beam0->particle[index[i]][0];
         beam->original[i][1] = beam->particle[i][1] = beam0->particle[index[i]][1];
@@ -673,6 +678,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
 #if USE_MPI
       notSinglePart = 0;
+      partOnMaster = 1;
       parallelStatus = notParallel;
 #endif
       if (do_track) {
@@ -689,10 +695,6 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           printf("fiducial particle tracked.\n");
           fflush(stdout);
         }
-#if USE_MPI
-      notSinglePart = 1;
-      parallelStatus = notParallel;
-#endif
         if (eptr->pred) {
           /* particle must look as if it traveled from start of beamline to this location in order to get the right
            * phase at the rf cavities set up by the fiducial particle
@@ -701,6 +703,15 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
           for (ip=0; ip<iTotal; ip++) 
             beam->particle[ip][4] += eptr->pred->end_pos;
         }
+#if USE_MPI && MPI_DEBUG
+	printf("%ld particles on processor %d\n", iTotal, myid);
+	fflush(stdout);
+#endif
+#if USE_MPI
+	notSinglePart = 1;
+	partOnMaster = 1;
+	parallelStatus = notParallel;
+#endif
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+(verbosity>2?0:SILENT_RUNNING+INHIBIT_FILE_OUTPUT), control->n_passes, 0, NULL,
@@ -708,6 +719,13 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 	if (verbosity>1)
 	  report_stats(stdout, "Tracking completed: ");
 #if USE_MPI
+#if MPI_DEBUG
+	printf("%ld particles on processor %d\n", iTotal, myid);
+	fflush(stdout);
+#endif
+	notSinglePart = 0;
+	partOnMaster = 1;
+	parallelStatus = notParallel;
 	if (USE_MPI) {
 	  MPI_Status status;
 	  long nLost, n_left_total; 
