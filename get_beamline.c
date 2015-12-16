@@ -1378,6 +1378,8 @@ ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
   ELEMENT_LIST *eptr;
   eptr = tmalloc(sizeof(*eptr));
   copy_element(eptr, elem1, 0, 0, 0);
+  printf("Replacing occurrence %ld of %s with %s\n",
+	 elem0->occurence, elem0->name, elem1->name);
 
   (elem0->pred)->succ = eptr;
   if (elem0->succ)
