@@ -705,6 +705,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
                              &beam->p0, NULL, NULL, NULL, NULL, run, control->i_step,
                              FIRST_BEAM_IS_FIDUCIAL+FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+(verbosity>2?0:SILENT_RUNNING+INHIBIT_FILE_OUTPUT), control->n_passes, 0, NULL,
                              NULL, NULL, beam->lost, eptr);
+	if (verbosity>1)
+	  report_stats(stdout, "Tracking completed: ");
 #if USE_MPI
 	if (USE_MPI) {
 	  MPI_Status status;
@@ -758,8 +760,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #endif
         if (loss) {
           if (verbosity>2) {
-            printf("dumping \"loss\" file: %ld particles of %ld\n", n_left, beam->n_to_track);
-            fflush(stdout);
+	    char s[1000];
+            sprintf(s, "dumping \"loss\" file, %ld particles of %ld", n_left, beam->n_to_track);
+	    report_stats(stdout, s);
           }
           dump_scattered_loss_particles(&SDDS_loss, beam->lost+n_left, beam->original,  
                                         NULL, beam->n_to_track-n_left, weight, tsptr);
@@ -774,8 +777,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 #endif
         if (output) {
           if (verbosity>2) {
-            printf("Dumping \"output\" file\n");
-            fflush(stdout);
+	    report_stats(stdout, "Dumping \"output\" file:");
           }
           for (i=0; i< beam->n_to_track-n_left; i++) {
             j = (beam->lost+n_left)[i][6]-1;
@@ -794,15 +796,14 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       }
 
       if (verbosity>2) {
-        printf("Freeing beam data\n");
+        report_stats(stdout, "Freeing beam data: ");
         fflush(stdout);
       }
       free_beamdata(beam);
       free_beamdata(beam0);
 
       if (verbosity>2) {
-        printf("Freeing other data\n");
-        fflush(stdout);
+        report_stats(stdout, "Freeing other data: ");
       }
       free(weight);
       free(index);
@@ -826,6 +827,8 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
     }
     eptr = eptr->succ; 
   }
+  if (verbosity>1)
+    report_stats(stdout, "Main touschek loop completed: ");
 
   if (!occurenceSeen && !SDDS_Terminate(&SDDS_loss)) {
     SDDS_SetError("Problem terminating 'losses' file");
@@ -835,6 +838,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
     SDDS_SetError("Problem terminating 'bunch' file");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+
+  if (verbosity>1)
+    report_stats(stdout, "Touschek I/O completed: ");
 
   return;
 }
