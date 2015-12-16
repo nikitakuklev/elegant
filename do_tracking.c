@@ -4420,6 +4420,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   
   if (myid==0) {
     printf("Distributing %ld particles to %ld worker processors\n", *nToTrack, n_processors-1);
+#if MPI_DEBUG
+    printf("Distributing particles, %ld particles now on processor %d\n", *nToTrack, myid);
+#endif
     fflush(stdout);
 #if DEBUG_SCATTER
     fpdeb = fopen("scatter.0", "w");
@@ -4611,6 +4614,10 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     fclose(fpdeb);
 #endif
   }
+
+#if MPI_DEBUG
+  printf("%ld particles now on processor %d\n", *nToTrack, myid);
+#endif
 
   report_stats(stdout, "Finished distributing particles: ");
 
