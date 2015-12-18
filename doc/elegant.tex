@@ -67,14 +67,17 @@ Here is a summary of what's changed since release 28.1:
   producing two pulses in an FEL.
 \item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
   a \verb|CHARGE| element is in the beamline.
+\item Elements that read multipole error files (e.g., \verb|KQUAD| and \verb|KSEXT|) now share data internally rather than each
+  reading the data files separately. This provides a significant speed improvement for massively parallel execution in particular.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data.
-  Previously, the analysis was limited to the linear matrix. This was requested by Y. Hao (BNL) and L. Yang (BNL).
+  Previously, the analysis was limited to the linear matrix. Also, the terminal lattice functions and their chromatic derivatives
+  are determined for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
-  the strength changes in the even that more than two familes are provided for correction.
+  the strength changes in the event that more than two familes are provided for correction.
 \item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
