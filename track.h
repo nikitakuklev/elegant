@@ -972,7 +972,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 21
-#define N_TFBDRIVER_PARAMS 23
+#define N_TFBDRIVER_PARAMS 24
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 24
@@ -2820,9 +2820,9 @@ typedef struct {
   long delay, longitudinal;
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
-  long bunchedBeamMode, updateInterval;
+  long bunchedBeamMode, updateInterval, outputInterval;
   /* internal parameters */
-  long initialized, filterLength, dataWritten, outputIndex, startPass, outputBufferSize;
+  long initialized, filterLength, dataWritten, outputIndex, startPass;
   TFBPICKUP *pickup;
   SDDS_DATASET SDDSout;
   long nBunches;

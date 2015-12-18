@@ -382,7 +382,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     if (myid==0) 
 #endif
       if (tfbd->outputFile) {
-        if ((tfbd->outputIndex+1)%tfbd->outputBufferSize==0) {
+        if ((tfbd->outputIndex+1)%tfbd->outputInterval==0) {
 #ifdef DEBUG
           printf("Flushing output file\n");
           fflush(stdout);
@@ -480,19 +480,20 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   
   if (tfbd->delay<0)
     bombElegant("TFBDRIVER delay is negative", NULL);
+  if (tfbd->outputInterval<1)
+    bombElegant("TFBDRIVER output interval is less than 1", NULL);
 
 #if USE_MPI
   if (myid==0)
 #endif
   if (tfbd->outputFile) {
     tfbd->outputFile = compose_filename(tfbd->outputFile, rootname);
-    tfbd->outputBufferSize = 100;
     if (!SDDS_InitializeOutput(&tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
-        !SDDS_WriteLayout(&tfbd->SDDSout) || !SDDS_StartPage(&tfbd->SDDSout, tfbd->outputBufferSize)) {
+        !SDDS_WriteLayout(&tfbd->SDDSout) || !SDDS_StartPage(&tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
     }
