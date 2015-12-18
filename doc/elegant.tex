@@ -4198,25 +4198,31 @@ A literal ``\%s'' must be entered as ``\%\%s''.
         long i_start = 0;
         long i_end = 1;
         long do_track = 0;
-	long match_position_only = 0;
-	long overwrite_files = 1;
+        long match_position_only = 0;
+        long overwrite_files = 1;
         long verbosity = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
-   \item \verb|charge| --- Bunch charge in ``C''. Can not be zero.
-   \item \verb|frequency| --- Bunch repeating frequency.
-   \item \verb|emit_x|, \verb|emit_y| --- RMS emittance for the X, Y plane. Ignored 
+   \item \verb|charge| --- Bunch charge in Coulombs. May  not be zero.
+   \item \verb|frequency| --- Bunch repetition frequency in Hz. The product of the \verb|charge| and \verb|frequency| gives
+     the average current in Amps.
+   \item \verb|emit_x|, \verb|emit_y| --- RMS emittance for the x and y planes.  Ignored 
    if RMS normalized emittance is nonzero.
-   \item \verb|emit_nx|, \verb|emit_ny| --- RMS normalized emittance for the X, Y plane.
-   \item \verb|sigma_dp|, \verb|sigma_s| --- Fractional momentum spread, $\delta$, and bunch length.
-   \item \verb|distribution_cutoff| --- The number of sigmas to use at each plane for Gaussian beam.
-   \item \verb|Momentum_Aperture| --- Input filename contains estimated momentum aperture at each
-   \verb|TSCATTER| element.
+   \item \verb|emit_nx|, \verb|emit_ny| --- RMS normalized emittance for the x and y planes.
+   \item \verb|sigma_dp|, \verb|sigma_s| --- Rms fractional momentum spread, $\sigma_\delta$, and rms bunch length.
+   \item \verb|distribution_cutoff| --- The number of sigmas to use in each plane for Gaussian beam.
+   \item \verb|Momentum_Aperture| --- Input file containing the estimated momentum aperture at each
+   \verb|TSCATTER| element. This can be obtained from the \verb|momentum_aperture| command in a separate run.
+   (If using the parallel version to obtain the momentum aperture, it will be necessary to use \verb|output_mode=0|
+   or else reorganize the data if \verb|output_mode\neq 0|. Also, it will be necessary to use \verb|sddssort| to
+   sort the data by the \verb|s| column.)
    \item \verb|Momentum_Aperture_scale| --- This value times the aperture value from \verb|Momentum_Aperture|
-   file sets up the limitation $\delta_m$ of the simulation. Only particles have $\delta>\delta_m$ 
-   will be kept. And the scattering rate is calulated at this value.
+   file sets up the limit on $\delta_m$ in the simulation. Only particles that have $\delta>\delta_m$ 
+   will be kept for tracking. 
+   % Amin, what does this sentence mean??
+   And the scattering rate is calculated at this value.
    \item \verb|XDist|, \verb|YDist|, \verb|ZDist| --- Input filename of 2D histogram table of X, Y, and Z plane. 
    X and Y are ignored when \verb|TranDist| or \verb|FullDist| is present. 
    \item \verb|TranDist| --- Input file name of the 4D histogram table of transverse plane. 
@@ -4225,30 +4231,33 @@ A literal ``\%s'' must be entered as ``\%\%s''.
    tables are ignored.
    \item \verb|bunch| --- The (incomplete) name of an SDDS file to which the phase-space coordinates of 
    the simulated scattered particles are to be written. Recommended value: ``\%s-\%03ld.bun''. If ``\%03ld''
-   or the equivalent is not provided then only the last simulated bunch is kept (One bunch for one \verb|TSCATTER| element).
+   or the equivalent is not provided then only the last simulated bunch is kept (one bunch for one \verb|TSCATTER| element).
    \item \verb|loss| --- The (incomplete) name of an SDDS file to which the original and final 
    phase-space coordinates of the lost simulated scattered particles are to be written. 
    Recommended value: ``\%s-\%03ld.los''. Used together with \verb|do_track = 1|.
-   \item \verb|distribution| --- The (incomplete) name of an SDDS file to which the one dimension 
+   \item \verb|distribution| --- The (incomplete) name of an SDDS file to which the one-dimensional
    histogram of simulated scattered particles are to be written. Recommended value: ``\%s-\%03ld.dis'' 
    \item \verb|initial| --- The (incomplete) name of an SDDS file to which the one dimension 
    histogram of simulated particles before scattering are to be written. Recommended value: ``\%s-\%03ld.ini''
    \item \verb|output| --- The (incomplete) name of an SDDS file. The average loss rate (particles per second) over a step size of 
-   \verb|sbin_step| at s location is written to this file. Recommended value: ``\%s-\%03ld.out'' 
-   \item \verb|nbins| --- Bin number used for the \verb|distribution| and \verb|initial| table.
-   \item \verb|sbin_step| --- Bin size for loss rate to be summarized.
-   \item \verb|n_simulated| --- The total number of simulatted scattered particles with $\delta>\delta_m$. Small
-   value will cause unstable simulation rate.
-   \item \verb|ignored_portion| --- The total scattering rate ignored from tracking. This will greatly 
-   increase the tracking speed. This number should be much less than the total loss rate. For example, if
-   the total loss rate is 50\% of the total scattering rate, then ignor 5\% (0.05) of the scattering particles
-   will cause some of 10\% error. But the simulation is greatly speed up.
-   \item \verb|i_start|, \verb|i_end| --- The simulation will be done from the \verb|i_start| to \verb|i_end|
+   \verb|sbin_step| at location \verb|s| is written to this file. Recommended value: ``\%s-\%03ld.out'' 
+   \item \verb|sbin_step| --- Bin size for loss rate summary output to the \verb|output| file.
+   \item \verb|nbins| --- Number of bins used for the \verb|distribution| and \verb|initial| table.
+   \item \verb|n_simulated| --- The total number of simulated scattered particles with $\delta>\delta_m$. Choosing too small
+   a value will cause unreliable results.
+   \item \verb|ignored_portion| --- Fraction of the total scattering rate ignored in tracking. Using this parameter will greatly 
+   increase the tracking speed. 
+   % This number should be much less than the total loss rate. 
+   % ?? much less than 1 ?
+   For example, if
+   the total loss rate is 50\% of the total scattering rate, then ignoring for tracking purposes 5\% (0.05) of the scattered particles
+   will cause a $\sim$10\% error, but the simulation is greatly sped up.
+   \item \verb|i_start|, \verb|i_end| --- The simulation will be done from the \verb|i_start|$^{th}$ to the \verb|i_end|$^{th}$
    \verb|TSCATTER| element along the beamline.    
-   \item \verb|do_track| --- If non-zero, \verb |run_control| is
-   required to proceed the \verb |touschek_scatter| command. Scattered
+   \item \verb|do_track| --- If non-zero, scattered
    particles will be tracked from their generation location for \verb|n_passes| (given by \verb|run_control|). 
-   The loss property can be analysised using \verb|output| or \verb|loss|.
+   If non-zero, the \verb|run_control| command must proceed the \verb |touschek_scatter| command.
+   The loss property can be analysed using \verb|output| or \verb|loss|.
    \item \verb|match_position_only| --- If non-zero, then matching of the momentum aperture data to the lattice
      is done using the position data only (\verb|s| column), rather than the element names.  Can be helpful if
      errors appear about files ending prematurely or data not matching.
