@@ -2045,14 +2045,14 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
 } ;
 #define BEAM_SCATTER_LOSS_PARAMETERS 9
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
-  {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scatted particles\" &end"},
+  {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scattered particles\" &end"},
   {"S0", "&parameter name=S0, type=double, units=m, description=\"Scatter location\" &end"},
   {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
   {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
   {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate\" &end"},
-  {"NScatter", "&parameter name=NScatter, type=double, units=\"1/s\", description=\"Total Scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
-  {"TotalLoss", "&parameter name=TotalLoss, type=double, units=\"1/s\", description=\"Total lossed scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
+  {"NScatter", "&parameter name=NScatter, type=double, units=\"1/s\", description=\"Total scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
+  {"TotalLoss", "&parameter name=TotalLoss, type=double, units=\"1/s\", description=\"Total lost scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
   {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 };
 
