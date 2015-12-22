@@ -242,7 +242,10 @@ long do_tracking(
 #endif 
 
   trajectoryTracking = (flags&TEST_PARTICLES);
-  
+#if MPI_DEBUG && USE_MPI
+  printf("do_tracking called with nOriginal=%ld, beam=%x\n", nOriginal, beam);
+  fflush(stdout);
+#endif
 #ifdef DEBUG
   if (flags&FINAL_SUMS_ONLY)
     printf("FINAL_SUMS_ONLY set\n");

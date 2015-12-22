@@ -682,6 +682,10 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
       parallelStatus = notParallel;
 #endif
       if (do_track) {
+        if (verbosity>1) {
+          printf("Tracking fiducial particle\n");
+          fflush(stdout);
+        }
 	memset(fiducialParticle[0], 0, sizeof(**fiducialParticle)*COORDINATES_PER_PARTICLE);
 	delete_phase_references();
 	reset_special_elements(beamline, RESET_INCLUDE_ALL);
