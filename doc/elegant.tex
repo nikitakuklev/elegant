@@ -41,10 +41,17 @@ Here is a summary of what's changed since release 28.1:
 \begin{itemize}
 \item Fixed a bug in the \verb|MATR| element that would crop up in multi-step runs, causing a crash or lock-up.
   This was reported by P. Emma (SLAC).
+\item The output file feature was restored for the \verb|FTRFMODE| element.
+\item The \verb|TFBDRIVER| and \verb|TFBPICKUP| feedback elements can now handle changes in the number of bunches.
+\item The drive limit for \verb|TFBDRIVER| is now imposed after application of the filter, rather than before.
+\item The \verb|KQUAD| element now has a valid associated transfer matrix for \verb|RADIAL=1|. This bug was reported
+  by forum user \verb|libov|.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
+\item The \verb|touschek_scatter| command now behaves as a regular major action command, meaning that error generation, scanning,
+  parameter loading, etc.  behave as expected.
 \item Fixed a bug in the \verb|correct_tunes| command that resulted in a crash when \verb|n_iterations=0| and would also have
   resulted in invalid data in the log file for mixed element types. This was reported by V. Sajaev (ANL).
 \item Fixed a bug in the \verb|chromaticity| command that resulted in a crash when \verb|n_iterations=0| and would also have
@@ -54,6 +61,8 @@ Here is a summary of what's changed since release 28.1:
   the \verb|track| command.
 \item Previous versions of this manual indicated that the \verb|find_aperture| command provided a quantity \verb|Area| giving
   the dynamic aperture area for optimization. The quantity is in fact called \verb|DaArea|. This was reported by S. Hilbrich (TU Dortmund).
+\item Fixed a bug in the optimization feature that resulted in the user's weighting factors being ignored. This was pointed out
+  by A. Zholents (ANL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -65,35 +74,62 @@ Here is a summary of what's changed since release 28.1:
   The need for this was pointed out by L. Yang (BNL).
 \item The \verb|MATTER| element now supports arrays of slits. This can be used, for example, to model a double-slit spoiler for
   producing two pulses in an FEL.
+\item The \verb|ECOL| and \verb|RCOL| collimator elements now support an \verb|INVERT| parameter to allow simulation of an
+  obstruction instead of an opening.
 \item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
   a \verb|CHARGE| element is in the beamline.
 \item Elements that read multipole error files (e.g., \verb|KQUAD| and \verb|KSEXT|) now share data internally rather than each
   reading the data files separately. This provides a significant speed improvement for massively parallel execution in particular.
+\item The \verb|MALIGN| element was improved to allow optionally applying misalignments to only part of the beam, based on 
+  the particle ID.
+\item The \verb|RFMODE| element now has a feature that allows ``muting'' the rf generator on a specified pass, to simulate
+  a trip of the rf source. 
+\item In order to eliminate problems with the parallel version, the \verb|IBSCATTER| element no longer has a separate \verb|CHARGE| parameter. 
+  Instead, the \verb|CHARGE| element should be used.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data.
+\item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data,
+  using the method described in \cite{Borland_thesis}.
   Previously, the analysis was limited to the linear matrix. Also, the terminal lattice functions and their chromatic derivatives
-  are determined for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
+  are determined from the map for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
-  the strength changes in the event that more than two familes are provided for correction.
+  the strength changes in the event that more than two familes are provided for correction. (In the future this will be replaced
+  with an SVD-based implemenetation.)
 \item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
   This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
 \item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
   a \verb|CHARGE| element is in the beamline.
+\item The \verb|run_control| command now includes a variable, \verb|n_passes_fiducial|, that allows specifying a different number of
+  tracking passes for fiducialization than for tracking. For ring fiducialization, this should probably always be 1.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
 \item The \verb|analyze_map| command, which was improved as described above, can now use parallel resources.
+\item A bug was fixed in the \verb|center_on_orbit| feature of the \verb|track| command. The bug caused the
+  particles on each processor to be offset by different amounts related to the centroid of the local particles
+  only. This was reported by M. Furseman (DLS).
+\item Fixed a bug in \verb|FTABLE| introduced in version 26.0. The bug would cause the program to crash.
+\item Memory management was improved in the \verb|touschek_scatter| command, allowing a larger number of particles
+  to be utilized.
+\item Tracking instigated via the \verb|track| command is now more forgiving of uneven particle losses among 
+  cores. In particular, the program should no longer crash if one core has lost all of its particles or
+  all of the particles in a particular bunch.
+\item The \verb|stop_tracking_particle_limit| feature of the \verb|track| command now works in the parallel version.
+\item Instead of exiting, the parallel version now simply ignores the \verb|slice_anlysis| command.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The script \verb|reorganizeMmap| was added to convert momentum aperture data from \verb|Pelegant| in \verb|output_mode=1| 
+  into the same form as produced by \verb|elegant|. This was a result of correspondence with S. Tian (IHEP).
+\item A bug was fixed in \verb|elegant2astra| that resulting in slightly erroneous values for the longitudinal coordinate.
+\item The \verb|beamLifetimeCalc| can now perform approximate Touschek lifetime calculations for polarized beams.
+  This was added by A. Xiao (ANL) following an inquiry from forum user \verb|marlibgin|.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -120,6 +156,8 @@ Here is a summary of what's changed since release 28.1:
         matched = 1
 &end
 \end{verbatim}
+\item The \verb|OUTPUT_FILE| feature of the \verb|TFBDRIVER| will produce a file with missing data at the end of
+  the buffer if the \verb|OUTPUT_INTERVAL| parameter is not a divisor of the number of passes.
 \end{itemize}
 
 \section{Credits}
@@ -371,7 +409,7 @@ A number of commands have parameters for controlling fiducialization:
 	However, it can have unexpected consequences, such as changing the
 	central momentum to match changes in beam momentum due to synchrotron
 	radiation.
-\item \verb|run_control| has three parameters that affect fiducialization,
+\item \verb|run_control| has four parameters that affect fiducialization,
 	which come into play when multi-step runs are made.  Typically, these
 	are runs that involve variation of elements, addition of errors,
 	or loading of multiple sets of parameters.
@@ -396,6 +434,9 @@ A number of commands have parameters for controlling fiducialization:
 	changes the average beam momentum by removing a low-momentum tail.
         This is a convenience that, essentially, allows modifying the impact
         of setting \verb|always_change_p0=1|.
+        \item \verb|n_passes_fiducial| --- If positive, sets the number  passes used
+          for fiducial tracking to be different from the \verb|n_passes| value.
+          For ring fiducialization, should probably always be set to 1.
 	\end{itemize}
 \item The \verb|bunched_beam| command has a \verb|first_is_fiducial| parameter
 	that is convenient for use with the \verb|first_is_fiducial| mode
@@ -2789,6 +2830,9 @@ To sort the data, simply use \verb|sddssort| from the commandline, e.g.,
 \begin{verbatim}
 sddssort -column=s output.mmap
 \end{verbatim}
+Also, if it is desirable for the output from \verb|Pelegant| to have exactly the same form as that from 
+\verb|elegant|, then the script \verb|reorganizeMmap| should be used. This script is provided with 
+\verb|elegant| and \verb|Pelegant| distributions.
 
 %\begin{latexonly}
 \newpage
@@ -3675,7 +3719,7 @@ a different run.
     double bunch_frequency = 0;
     long n_indices = 0;
     long n_passes = 1;
-    long n_passes-fiducial = 0;
+    long n_passes_fiducial = 0;
     long reset_rf_for_each_step = 1;
     long first_is_fiducial = 0;
     long restrict_fiducialization = 0;
@@ -3689,6 +3733,7 @@ If random errors are defined, this is also the number of separate error ensemble
 \item \verb|n_indices| --- The number of looping indices for which to expect definitions in subsequent \verb|vary_element| commands.  If nonzero, then \verb|n_steps| is ignored.
 \item \verb|n_passes| --- The number of passes to make through the beamline per repetition.
 \item \verb|n_passes_fiducial| --- The number of passes to make through the beamline per repetition for the fiducial beam. If non-positive, use \verb|n_passes|.
+  For ring tracking, should probably always be set to 1.
 \item \verb|reset_rf_for_each_step| --- If nonzero, the rf phases are 
 established anew for each bunch tracked.  Should be zero to simulate
 phase and timing jitter. 
@@ -3803,7 +3848,8 @@ used for elements having matrices.
 \item \verb|concat_order| --- If non-zero, the order of matrix
 concatenation used.
 \item \verb|print_statistics| --- A flag indicating whether to print
-information as each element is tracked.
+information as each element is tracked. If greater than 0, information is printed after each element from the beginning of tracking.
+If equal to $n$ with $n<0$, information is printed only after pass $\left|n\right$.
 \item \verb|show_element_timing| --- A flag indicating whether to collect and report execution time statistics binned by element type.
 \item \verb|monitor_memory_usage| --- A flag indicating whether to monitor memory usage during tracking to detect memory leaks.
 \item \verb|random_number_seed| --- A seed for the random number generators.  If zero, a seed will be generated from the system clock.
@@ -4273,6 +4319,9 @@ A literal ``\%s'' must be entered as ``\%\%s''.
      Touschek scattering run, provided the output filenames are index (e.g., of the form ``\%s-\%03ld.los''
      rather than ``\%s.los''.)
 \end{itemize}
+
+{\bf Note:} If using \verb|Pelegant| to compute the momentum aperture with \verb|output_mode=1|, it is necessary to first run the script
+  \verb|reorganizeMmap| to put the data into the form needed by \verb|touschekLifetime|.
 
 %\begin{latexonly}
 \newpage
@@ -6258,6 +6307,9 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
   methods give you same results.
 \end{itemize}
 
+\item {\bf Note:} If using \verb|Pelegant| to compute the momentum aperture with \verb|output_mode=1|, it is necessary to first run the script
+  \verb|reorganizeMmap| to put the data into the form needed by \verb|touschekLifetime|.
+
 \item {\bf author:} A. Xiao, ANL/APS.
 
 \end{itemize}
@@ -6643,6 +6695,10 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 \bibitem{Berenc-IPAC15-MOPMA006}
  T. Berenc, M. Borland, and R. R. Lindberg, ``Modeling RF Feedback in Elegant for Bunch-Lengthening Studies for the Advanced Photon Source Upgrade,''
  Proc. of IPAC15, MOPMA006 (2015).
+
+\bibitem{KHwang}
+  K. Hwang and S. Y. Lee, ``Dipole fringe field thin map for compact synchrotrons, submitted to PRSTAB; K. Hwang, ``On intrinsic nonlinear particle 
+  motion in compact synchrotrons,'' Indiana University Ph. D. Thesis, 2015.
 
 \end{thebibliography}
 
