@@ -2760,7 +2760,7 @@ although the method is applied separately for negative values as well:
 \item Increase $\delta$ by step size $\Delta\delta$ and return to step 2.
 \item If no splitting steps remain, proceed to the next step.  Otherwise:
 \begin{enumerate}
-\item Change $\delta$ to $delta_s - s_b\Delta\delta$., where $\delta_s$ is
+\item Change $\delta$ to $\delta_s - s_b\Delta\delta$., where $\delta_s$ is
  the largest $\delta$ for which the particle survived, and $s_b$ is the
  \verb|steps_back| parameter.
 \item Divide the step size by \verb|split_step_divisor| to get a new step size  $\Delta\delta$.
