@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 28.3.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 29.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,7 +32,7 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 28.3}
+\section{Highlights of What's New in Version 29.0}
 
 Here is a summary of what's changed since release 28.1:
 
@@ -2780,8 +2780,15 @@ either of two methods:
  can include a \verb|twiss_output| command with \verb|radiation_integrals=1|.
 \item Use {\tt CSBEND} and {\tt KQUAD} elements with \verb|SYNCH_RAD=1| and \verb|ISR=0|.
 \end{enumerate}
-When including radiation loss, one must be certain to set the phase of the rf cavity
-correctly.  It is also a good idea to track for several synchrotron oscillation periods.
+When including radiation loss, one must be certain to set the frequency and phase of the rf cavity
+correctly.  The \verb|rf_setup| command can be used for this purpose.
+It is also a good idea to track for several synchrotron oscillation periods.
+
+{\bf Note for Pelegant:} Unlike for {\tt elegant}, the data in the output file will not be sorted by \verb|s|.
+To sort the data, simply use \verb|sddssort| from the commandline, e.g.,
+\begin{verbatim}
+sddssort -column=s output.mmap
+\end{verbatim}
 
 %\begin{latexonly}
 \newpage
