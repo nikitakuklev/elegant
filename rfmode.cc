@@ -991,7 +991,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"FractionBinned", NULL, NULL, (char*)"Fraction of particles that are binned", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"V", NULL, (char*)"V", (char*)"Beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VReal", NULL, (char*)"V", (char*)"Real part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Phase", NULL, (char*)"rad", (char*)"Imaginary part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Phase", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VPostBeam", NULL, (char*)"V", (char*)"Beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, (char*)"s", (char*)"Time at which VPostBeam and PhasePostBeam hold", NULL, SDDS_DOUBLE, 0)<0 ||
