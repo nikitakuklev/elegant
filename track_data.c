@@ -1456,7 +1456,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"AMPLITUDE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.amplitudeFilterFile), NULL, 0.0, 0, "IIR filter specification for amplitude feedback"},
     {"PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.phaseFilterFile), NULL, 0.0, 0, "IIR filter specification for phase feedback"},
     {"FEEDBACK_RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.feedbackRecordFile), NULL, 0.0, 0, "output file for feedback data"},
-    {"MUTE_GENERATOR", "", IS_LONG, 0, (long)((char *)&rfmode_example.muteGenerator), NULL, 0.0, 0, "if nonzero, generator is muted (output forced to zero)"},
+    {"MUTE_GENERATOR", "", IS_LONG, 0, (long)((char *)&rfmode_example.muteGenerator), NULL, 0.0, -1, "If nonnegative, gives the pass on which to mute the generator. This simulates an rf trip."},
     };
 
 FRFMODE frfmode_example;
@@ -2327,7 +2327,7 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and updating filter output."},
-   {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.outputInterval), NULL, 0.0, 1000, "Number of samples to buffer between writing output file updates."},
+   {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.outputInterval), NULL, 0.0, 1024, "Number of samples to buffer between writing output file updates."},
 } ;
 
 LSCDRIFT lscdrift_example;
