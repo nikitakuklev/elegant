@@ -831,7 +831,7 @@ void track_through_rfmode(
                                    (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
                                    (char*)"Charge", rfmode->mp_charge*np_total, 
                                    NULL)
-                || (rfmode->driveFrequency<0 &&
+                || (rfmode->driveFrequency>0 &&
                     !SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                        rfmode->sample_counter-1,                
                                        (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
@@ -1120,8 +1120,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
      * the nominal beam phase)
      */
     rfmode->phaseg = PI/180*rfmode->phaseSetpoint - PI/2 - PI;
-    rfmode->Viq->a[0][0] = rfmode->voltageSetpoint*cos(rfmode->phaseg);
-    rfmode->Viq->a[1][0] = rfmode->voltageSetpoint*sin(rfmode->phaseg);
+    rfmode->Viq->a[0][0] = rfmode->voltageSetpoint*cos(rfmode->phaseg) + rfmode->V*cos(rfmode->last_phase);
+    rfmode->Viq->a[1][0] = rfmode->voltageSetpoint*sin(rfmode->phaseg) + rfmode->V*sin(rfmode->last_phase);
     
     /* Compute nominal generator current */
     QL = rfmode->Q/(1+rfmode->beta);
