@@ -1095,6 +1095,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     data.c1 = data.c2 = NULL;
   }
 
+  if (rfmode->V) 
+    printf("Beam loading initialization: V = %le, phase = %le, V*cos(phase) = %le, V*sin(phase) = %le, last_t = %21.15e\n",
+           rfmode->V, rfmode->last_phase, rfmode->V*cos(rfmode->last_phase), rfmode->V*sin(rfmode->last_phase), rfmode->last_t);
+
   if (rfmode->driveFrequency>0) {
     /* Set up the generator and related data. */
     /* See T. Berenc, RF-TN-2015-001 */
