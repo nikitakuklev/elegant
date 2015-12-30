@@ -1432,6 +1432,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfmode_example.interpolate), NULL, 0.0, 0, "if non-zero, interpolate voltage within bins"},
     {"PRELOAD", "", IS_LONG, 0, (long)((char *)&rfmode_example.preload), NULL, 0.0, 0, "preload cavity with steady-state field"},
+    {"PRELOAD_CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&rfmode_example.preloadCharge), NULL, 0.0, 0, "beam charge used for preloading calculations"},
     {"PRELOAD_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.preload_factor), NULL, 1.0, 0, "multiply preloaded field by this value"},
     {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
     {"DETUNED_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.detuned_until_pass), NULL, 0.0, 0, "cavity is completely detuned until this pass"},

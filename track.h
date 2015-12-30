@@ -939,7 +939,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 58
 #define N_MATTER_PARAMS 16
-#define N_RFMODE_PARAMS 38
+#define N_RFMODE_PARAMS 39
 #define N_TRFMODE_PARAMS 24
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2260,7 +2260,7 @@ void freeIIRFilterMemory(IIRFILTER *filterBank, long nFilters);
 
 typedef struct {
     double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, mode resonant frequency */
-    double charge;             /* total initial charge */
+    double charge;             /* total initial charge (use of CHARGE element is better) */
     double initial_V;          /* initial voltage */
     double initial_phase;      /* phase of initial voltage */
     double initial_t;          /* time offset (match with the beam arrival time) */
@@ -2269,6 +2269,7 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     long interpolate;          /* if nonzero, interpolate within bins */
     long preload;              /* preload with steady-state voltage for point bunch */
+    double preloadCharge;      /* preload with steady-state voltage for point bunch using this total beam charge */
     double preload_factor;     /* factor to multiply preload voltage by--usually 1 */
     long rigid_until_pass;     /* beam is "rigid" until this pass */
     long detuned_until_pass;   /* cavity is completely detuned until this pass */

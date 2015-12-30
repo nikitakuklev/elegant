@@ -1030,28 +1030,29 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     }
     rfmode->fileInitialized = 1;
   }
-  if (rfmode->preload && rfmode->charge) {
-    double Vb, omega, To, tau;
-    std::complex <double> Vc;
+  if (rfmode->preload && (rfmode->charge || rfmode->preloadCharge)) {
+    double To, fref, psi, I, charge;
+    if (rfmode->preloadCharge)
+      charge = rfmode->preloadCharge;
+    else
+      charge = rfmode->charge;
     if (rfmode->fwaveform || rfmode->Qwaveform) {
       printf((char*)"Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
       printf((char*)"unless the initial values of the frequency and Q factors are 1.\n");
     }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
-    omega = rfmode->freq*PIx2;
-    Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor * particleRelSign;
-    tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
-
-    Vc = -Vb/(1.0-cexpi(omega*To)*exp(-To/tau));
-    rfmode->V = std::abs<double>(Vc);
-    rfmode->last_phase = atan2(Vc.imag(), Vc.real());
-    fprintf(stdout, (char*)"RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
-            element_name, element_z, Vc.real(), Vc.imag(),
-            rfmode->V, rfmode->last_phase*180/PI);
+    fref = ((int)(rfmode->freq*To+0.5))/To;
+    psi = atan(2*(rfmode->freq-fref)/fref*(rfmode->Q/(1+rfmode->beta)));
+    I = charge/To;
+    rfmode->V = I*rfmode->RaInternal/(1+rfmode->beta)*cos(psi);
+    rfmode->last_phase = psi-PI;
+    fprintf(stdout, (char*)"RFMODE %s at z=%fm preloaded:  %eV at %fdeg \n",
+            element_name, element_z, rfmode->V, rfmode->last_phase*180/PI);
     fflush(stdout);
-    fprintf(stdout, (char*)"omega=%21.15e To=%21.15es, Vb = %21.15eV, tau = %21.15es\n", omega, To, Vb, tau);
+    fprintf(stdout, (char*)"To=%21.15es, I = %21.15eA, fref = %21.15eHz, df = %21.15eHz, psi = %21.15e\n", To, I, fref, rfmode->freq-fref, psi);
+    fprintf(stdout, (char*)"Q = %le, Ra = %le, beta = %le\n", rfmode->Q, rfmode->RaInternal, rfmode->beta);
     fflush(stdout);
-    rfmode->last_t = element_z/c_mks - To;
+    rfmode->last_t = element_z/c_mks - 2*To;
   }
   else if (rfmode->initial_V) {
     rfmode->last_phase = rfmode->initial_phase;
