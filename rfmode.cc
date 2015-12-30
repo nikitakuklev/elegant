@@ -1042,7 +1042,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
     if (rfmode->preloadHarmonic)
-      fref = rfmode->preloadHarmonic*To;
+      fref = rfmode->preloadHarmonic/To;
     else
       fref = ((int)(rfmode->freq*To+0.5))/To;
     psi = atan(2*(rfmode->freq-fref)/fref*(rfmode->Q/(1+rfmode->beta)));
