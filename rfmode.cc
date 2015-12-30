@@ -1041,7 +1041,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       printf((char*)"unless the initial values of the frequency and Q factors are 1.\n");
     }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
-    fref = ((int)(rfmode->freq*To+0.5))/To;
+    if (rfmode->preloadHarmonic)
+      fref = rfmode->preloadHarmonic*To;
+    else
+      fref = ((int)(rfmode->freq*To+0.5))/To;
     psi = atan(2*(rfmode->freq-fref)/fref*(rfmode->Q/(1+rfmode->beta)));
     I = charge/To;
     rfmode->V = I*rfmode->RaInternal/(1+rfmode->beta)*cos(psi);

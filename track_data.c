@@ -1434,6 +1434,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"PRELOAD", "", IS_LONG, 0, (long)((char *)&rfmode_example.preload), NULL, 0.0, 0, "preload cavity with steady-state field"},
     {"PRELOAD_CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&rfmode_example.preloadCharge), NULL, 0.0, 0, "beam charge used for preloading calculations"},
     {"PRELOAD_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.preload_factor), NULL, 1.0, 0, "multiply preloaded field by this value"},
+    {"PRELOAD_HARMONIC", "", IS_LONG, 0, (long)((char *)&rfmode_example.preloadHarmonic), NULL, 0.0, 0, "If detuning from harmonic is greater than half the revolution frequency, automatic determination of the rf harmonic will fail. Give the harmonic explicitly with this parameter."},
     {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
     {"DETUNED_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.detuned_until_pass), NULL, 0.0, 0, "cavity is completely detuned until this pass"},
     {"SAMPLE_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.sample_interval), NULL, 0.0, 1, "passes between samples to RECORD file"},
