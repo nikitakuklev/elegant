@@ -1055,7 +1055,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     fprintf(stdout, (char*)"To=%21.15es, I = %21.15eA, fref = %21.15eHz, df = %21.15eHz, psi = %21.15e\n", To, I, fref, rfmode->freq-fref, psi);
     fprintf(stdout, (char*)"Q = %le, Ra = %le, beta = %le\n", rfmode->Q, rfmode->RaInternal, rfmode->beta);
     fflush(stdout);
-    rfmode->last_t = element_z/c_mks - 2*To;
+    rfmode->last_t = element_z/c_mks;
   }
   else if (rfmode->initial_V) {
     rfmode->last_phase = rfmode->initial_phase;
