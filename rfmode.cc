@@ -646,16 +646,12 @@ void track_through_rfmode(
           
         for (ib=firstBin; ib<=lastBin; ib++) {
           t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-          if (!Ihist[ib]) {
-            if (rfmode->interpolate) {
-              /* Needed for interpolation of voltage */
-              Vbin[ib] = rfmode->V*exp(-(t-rfmode->last_t)/tau)*cos(rfmode->last_phase + omega*(t-rfmode->last_t));
-            }
+          if (!Ihist[ib] && !rfmode->interpolate) 
             continue;
-          }
           if (Ihist[ib]>max_hist)
             max_hist = Ihist[ib];
-          n_occupied++;
+          if (Ihist[ib])
+            n_occupied++;
           
           /* advance cavity to this time */
           phase = rfmode->last_phase + omega*(t - rfmode->last_t);
@@ -682,7 +678,7 @@ void track_through_rfmode(
             Vi = rfmode->Mt3->a[0][0]*sin(PIx2*rfmode->driveFrequency*dt) + rfmode->Mt3->a[1][0]*cos(PIx2*rfmode->driveFrequency*dt);
             phase_g_sum += Ihist[ib]*atan2(Vi, Vr);
             Vbin[ib] += Vr;
-            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-Vb/2)+sqr(Vi+rfmode->Vi));
+            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-(rfmode->long_range_only?0:Vb/2))+sqr(Vi+rfmode->Vi));
             /* fprintf(fpdeb2, "%ld %21.15le %21.15le %le %le %le\n", pass, t, dt, sqrt(Vi*Vi+Vr*Vr), atan2(Vi, Vr), Vr); */
           }
           
