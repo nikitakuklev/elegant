@@ -964,60 +964,61 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 };
 
 #define IP_STEP 0
-#define IP_NUX 1
-#define IP_DNUXDP 2
-#define IP_DNUXDP2 3
-#define IP_DNUXDP3 4
-#define IP_AX 5
-#define IP_NUY 6
-#define IP_DNUYDP 7
-#define IP_DNUYDP2 8
-#define IP_DNUYDP3 9
-#define IP_AY 10
-#define IP_DPHRANGE 11
-#define IP_NUXUPPER 12
-#define IP_NUXLOWER 13
-#define IP_NUYUPPER 14
-#define IP_NUYLOWER 15
-#define IP_STAGE 16
-#define IP_PCENTRAL 17
-#define IP_DBETAXDP 18
-#define IP_DBETAYDP 19
-#define IP_DALPHAXDP 20
-#define IP_DALPHAYDP 21
-#define IP_ETAX2    (20+2)
-#define IP_ETAY2    (21+2)
-#define IP_ETAX3    (22+2)
-#define IP_ETAY3    (23+2)
-#define IP_BETAXMIN (24+2)
-#define IP_BETAXAVE (25+2)
-#define IP_BETAXMAX (26+2)
-#define IP_BETAYMIN (27+2)
-#define IP_BETAYAVE (28+2)
-#define IP_BETAYMAX (29+2)
-#define IP_ETAXMAX (30+2)
-#define IP_ETAYMAX (31+2)
-#define IP_WAISTSX (32+2)
-#define IP_WAISTSY (33+2)
-#define IP_DNUXDAX (34+2)
-#define IP_DNUXDAY (35+2)
-#define IP_DNUYDAX (36+2)
-#define IP_DNUYDAY (37+2)
-#define IP_DNUXDAX2 (38+2)
-#define IP_DNUXDAY2 (39+2)
-#define IP_DNUXDAXAY (40+2)
-#define IP_DNUYDAX2 (41+2)
-#define IP_DNUYDAY2 (42+2)
-#define IP_DNUYDAXAY (43+2)
-#define IP_NUXTSWAMIN (44+2)
-#define IP_NUXTSWAMAX (45+2)
-#define IP_NUYTSWAMIN (46+2)
-#define IP_NUYTSWAMAX (47+2)
-#define IP_COUPLINGINTEGRAL (48+2)
-#define IP_COUPLINGOFFSET (49+2)
-#define IP_EMITRATIO (50+2)
-#define IP_ALPHAC2 (51+2)
-#define IP_ALPHAC  (52+2)
+#define IP_SVN 1
+#define IP_NUX (1+1)
+#define IP_DNUXDP (2+1)
+#define IP_DNUXDP2 (3+1)
+#define IP_DNUXDP3 (4+1)
+#define IP_AX (5+1)
+#define IP_NUY (6+1)
+#define IP_DNUYDP (7+1)
+#define IP_DNUYDP2 (8+1)
+#define IP_DNUYDP3 (9+1)
+#define IP_AY (10+1)
+#define IP_DPHRANGE (11+1)
+#define IP_NUXUPPER (12+1)
+#define IP_NUXLOWER (13+1)
+#define IP_NUYUPPER (14+1)
+#define IP_NUYLOWER (15+1)
+#define IP_STAGE (16+1)
+#define IP_PCENTRAL (17+1)
+#define IP_DBETAXDP (18+1)
+#define IP_DBETAYDP (19+1)
+#define IP_DALPHAXDP (20+1)
+#define IP_DALPHAYDP (21+1)
+#define IP_ETAX2    ((20+2)+1)
+#define IP_ETAY2    ((21+2)+1)
+#define IP_ETAX3    ((22+2)+1)
+#define IP_ETAY3    ((23+2)+1)
+#define IP_BETAXMIN ((24+2)+1)
+#define IP_BETAXAVE ((25+2)+1)
+#define IP_BETAXMAX ((26+2)+1)
+#define IP_BETAYMIN ((27+2)+1)
+#define IP_BETAYAVE ((28+2)+1)
+#define IP_BETAYMAX ((29+2)+1)
+#define IP_ETAXMAX ((30+2)+1)
+#define IP_ETAYMAX ((31+2)+1)
+#define IP_WAISTSX ((32+2)+1)
+#define IP_WAISTSY ((33+2)+1)
+#define IP_DNUXDAX ((34+2)+1)
+#define IP_DNUXDAY ((35+2)+1)
+#define IP_DNUYDAX ((36+2)+1)
+#define IP_DNUYDAY ((37+2)+1)
+#define IP_DNUXDAX2 ((38+2)+1)
+#define IP_DNUXDAY2 ((39+2)+1)
+#define IP_DNUXDAXAY ((40+2)+1)
+#define IP_DNUYDAX2 ((41+2)+1)
+#define IP_DNUYDAY2 ((42+2)+1)
+#define IP_DNUYDAXAY ((43+2)+1)
+#define IP_NUXTSWAMIN ((44+2)+1)
+#define IP_NUXTSWAMAX ((45+2)+1)
+#define IP_NUYTSWAMIN ((46+2)+1)
+#define IP_NUYTSWAMAX ((47+2)+1)
+#define IP_COUPLINGINTEGRAL ((48+2)+1)
+#define IP_COUPLINGOFFSET ((49+2)+1)
+#define IP_EMITRATIO ((50+2)+1)
+#define IP_ALPHAC2 ((51+2)+1)
+#define IP_ALPHAC  ((52+2)+1)
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -1039,6 +1040,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define N_PARAMETERS IP_U0+1
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"Step", (char*)"&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+{(char*)"SVNVersion", (char*)"&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
 {(char*)"nux", (char*)"&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
 {(char*)"dnux/dp", (char*)"&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
 {(char*)"dnux/dp2", (char*)"&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},

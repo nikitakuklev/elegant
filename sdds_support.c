@@ -115,9 +115,10 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     }
 
 
-#define STANDARD_PARAMETERS 1
+#define STANDARD_PARAMETERS 2
 static SDDS_DEFINITION standard_parameter[STANDARD_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     } ;
 
 #define ELEMENT_COLUMNS 4
@@ -140,13 +141,14 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"particleID", "&column name=particleID, type=long &end"},
     } ;
 
-#define PHASE_SPACE_PARAMETERS 5
+#define PHASE_SPACE_PARAMETERS 6
 static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
   {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
   {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Beam charge\" &end"},
   {"Particles", "&parameter name=Particles, type=long, description=\"Number of particles\" &end"},
   {"IDSlotsPerBunch", "&parameter name=IDSlotsPerBunch, type=long, description=\"Number of particle ID slots reserved to a bunch\" &end"},
+  {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
 };
   
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1931,7 +1933,7 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
-#define BEAM_SCATTER_PARAMETERS 7
+#define BEAM_SCATTER_PARAMETERS 8
 static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total simulated scatted particles\" &end"},
   {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
@@ -1940,6 +1942,7 @@ static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
   {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
   {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
+  {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
 };
 #define BEAM_SCATTER_COLUMNS 9
 static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
@@ -2043,7 +2046,7 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
     {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
     {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate between 2 TSCATTER elements of a beam\" &end"},
 } ;
-#define BEAM_SCATTER_LOSS_PARAMETERS 9
+#define BEAM_SCATTER_LOSS_PARAMETERS 10
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scattered particles\" &end"},
   {"S0", "&parameter name=S0, type=double, units=m, description=\"Scatter location\" &end"},
@@ -2054,6 +2057,7 @@ static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS]
   {"NScatter", "&parameter name=NScatter, type=double, units=\"1/s\", description=\"Total scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
   {"TotalLoss", "&parameter name=TotalLoss, type=double, units=\"1/s\", description=\"Total lost scattered particles/s between 2 TSCATTER elements for a beam\" &end"},
   {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
+  {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
 };
 
 void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 

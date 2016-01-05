@@ -1447,7 +1447,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&rfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"BINLESS", "", IS_LONG, 0, (long)((char *)&rfmode_example.binless), NULL, 0.0, 0, "If nonzero, use algorithm that doesn't requiring binning.  Best for few particles, widely spaced."},
     {"RESET_FOR_EACH_STEP", "", IS_LONG, 0, (long)((char *)&rfmode_example.reset_for_each_step), NULL, 0.0, 1, "If nonzero, voltage and phase are reset for each simulation step."},
-    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&rfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Short range wake should be included via WAKE or ZLONGIT element."},
+    {"LONG_RANGE_ONLY", "", IS_LONG, 0, (long)((char *)&rfmode_example.long_range_only), NULL, 0.0, 0, "If nonzero, induced voltage from present turn does not affect bunch. Results are not self-consistent!"},
     {"N_CAVITIES", "", IS_LONG, 0, (long)((char *)&rfmode_example.n_cavities), NULL, 0.0, 1, "effect is multiplied by this number, simulating N identical cavities"},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&rfmode_example.bunchedBeamMode), NULL, 0.0, 1, "If 1, then do calculations bunch-by-bunch. If >1, use pseudo bunches."},
     {"BUNCH_INTERVAL", "S", IS_DOUBLE, 0, (long)((char *)&rfmode_example.bunchInterval), NULL, 0.0, 0, "For pseudo-bunch mode, time between bunches."},

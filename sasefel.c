@@ -304,7 +304,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
         }
       }
     }
-    if (!SDDS_WriteLayout(SDDSout))
+    if (0>SDDS_DefineParameter(SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+        !SDDS_WriteLayout(SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 }

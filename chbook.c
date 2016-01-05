@@ -482,7 +482,8 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
         0>SDDS_DefineParameter(&outPage, "VariableDimension", NULL, NULL, 
                                NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
-                               "n_Dimension Table", NULL, SDDS_LONG, NULL))
+                               "n_Dimension Table", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(&outPage, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
     sprintf(buffer, "%sFrequency", bName->vname);
@@ -588,7 +589,8 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
         0>SDDS_DefineParameter(&outPage, "Variable2Dimension", NULL, NULL, 
                                NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
-                               "n_Dimension Table", NULL, SDDS_LONG, NULL))
+                               "n_Dimension Table", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(&outPage, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     
     sprintf(buffer, "%s-%sFrequency", bName->xname, bName->yname);
@@ -712,7 +714,8 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
     if (0>SDDS_DefineColumn(&outPage, "Index", NULL, NULL, 
                             NULL, NULL, SDDS_LONG, 0) ||
         0>SDDS_DefineColumn(&outPage, "Frequency", NULL, NULL, 
-                            NULL, NULL, SDDS_DOUBLE, 0))
+                            NULL, NULL, SDDS_DOUBLE, 0) ||
+        0>SDDS_DefineParameter(&outPage, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     
     if (!SDDS_WriteLayout(&outPage))
@@ -829,7 +832,8 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
     }
 
     if (0>SDDS_DefineParameter(&outPage, "ND", NULL, NULL, 
-                               "n_Dimension Table", NULL, SDDS_LONG, NULL))
+                               "n_Dimension Table", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(&outPage, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     for (i=0; i< bName->nD; i++) {
       sprintf(name, "%s", bName->vname[i]);

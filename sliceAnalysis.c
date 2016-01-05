@@ -248,6 +248,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
   sliceOutput->filename = compose_filename(output, run->rootname);
   SDDSout = &(sliceOutput->SDDSout);
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, sliceOutput->filename) ||
+      0>SDDS_DefineParameter(SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
       !SDDS_DefineSimpleParameter(SDDSout, "Step", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ElementName", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(SDDSout, "s", "m", SDDS_DOUBLE) ||

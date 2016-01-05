@@ -29,8 +29,9 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9+4+6)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
+#define FINAL_PROPERTY_OTHER_PARAMETERS 1
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
 #define F_CENTROID_OFFSET F_SIGMA_OFFSET+F_SIGMA_QUANS
@@ -54,7 +55,7 @@ static double tmp_safe_sqrt;
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
 #define F_STATS_QUANS 5
 #define F_N_OFFSET F_STATS_OFFSET+F_STATS_QUANS
-#define F_N_QUANS 1
+#define F_N_QUANS 2
 #if (F_N_QUANS+F_N_OFFSET)!=FINAL_PROPERTY_PARAMETERS
 #error "FINAL_PROPERTY_PARAMETERS is inconsistent with parameter offsets"
 #endif
@@ -177,6 +178,8 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Step",  "&parameter name=Step, type=long &end"},
     {"Steps",  "&parameter name=Steps, type=long &end"},
     {"Particles", "&parameter name=Particles, description=\"Number of particles\", type=long &end"},
+/* other */
+    {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     } ;
 
 
@@ -321,7 +324,7 @@ void dump_final_properties
         SDDS_SetError("Problem getting SDDS index of Sx parameter (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      for (i=0; i<FINAL_PROPERTY_PARAMETERS-FINAL_PROPERTY_LONG_PARAMETERS; i++)
+      for (i=0; i<FINAL_PROPERTY_PARAMETERS-FINAL_PROPERTY_LONG_PARAMETERS-FINAL_PROPERTY_OTHER_PARAMETERS; i++)
         if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
 				i+index, computed_properties[i+index], -1)) {
 	  SDDS_SetError("Problem setting SDDS parameter values for computed properties (dump_final_properties)");
@@ -714,7 +717,7 @@ long compute_final_properties
   fflush(stdout);
 #endif  
   log_exit("compute_final_properties");
-  return(i_data+1);
+  return(i_data+F_N_QUANS);
 }
 
 double beam_width(double fraction, double **coord, long n_part, 

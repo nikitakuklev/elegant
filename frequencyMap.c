@@ -47,9 +47,10 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     } ;
 
 #define IP_STEP 0
-#define N_PARAMETERS 1
+#define N_PARAMETERS 2
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     } ;
 
 static SDDS_DATASET SDDS_fmap;

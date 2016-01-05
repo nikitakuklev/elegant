@@ -92,7 +92,7 @@ Here is a summary of what's changed since release 28.1:
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data,
-  using the method described in \cite{Borland_thesis}.
+  using the method described in \cite{Borland_thesis}. Parallel tracking is used for this command in {\tt Pelegant}.
   Previously, the analysis was limited to the linear matrix. Also, the terminal lattice functions and their chromatic derivatives
   are determined from the map for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
 \item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
@@ -104,6 +104,8 @@ Here is a summary of what's changed since release 28.1:
   a \verb|CHARGE| element is in the beamline.
 \item The \verb|run_control| command now includes a variable, \verb|n_passes_fiducial|, that allows specifying a different number of
   tracking passes for fiducialization than for tracking. For ring fiducialization, this should probably always be 1.
+\item Most output files from {\tt elegant} now include a parameter giving the SVN revision number of
+  the version used to create the output.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}

@@ -265,9 +265,12 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   printf("TFBDRIVER: %ld bunches\n", nBuckets);
 #endif
   
-  if (tfbd->initialized==0)
+  if (tfbd->initialized==0) {
+    if (nPasses<tfbd->outputInterval)
+      tfbd->outputInterval = nPasses;
     initializeTransverseFeedbackDriver(tfbd, beamline, nPasses*nBuckets, rootname);
-
+  }
+  
   if ((tfbd->pickup->iPlane==5 || tfbd->pickup->iPlane==4) && !tfbd->longitudinal)
     bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta or time, but driver not working on longitudinal plane", NULL);
 

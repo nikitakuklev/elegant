@@ -1491,6 +1491,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->particleOutputFile = compose_filename(csbend->particleOutputFile, rootname);
     if (!SDDS_InitializeOutput(&csbend->SDDSpart, SDDS_BINARY, 1, 
                                NULL, NULL, csbend->particleOutputFile) ||
+        0>SDDS_DefineParameter(&csbend->SDDSpart, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Kick", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
@@ -1516,6 +1517,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->wakeFileActive = 1;
     csbend->histogramFile = compose_filename(csbend->histogramFile, rootname);
     if (!SDDS_InitializeOutput(&csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
+        0>SDDS_DefineParameter(&csbend->SDDSpart, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Kick", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
@@ -3440,6 +3442,7 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
   long i;
   if (!*active) {
     if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, filename) ||
+        0>SDDS_DefineParameter(SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         !SDDS_DefineSimpleParameter(SDDSout, "z", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDSout, "CaseC", "#", SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(SDDSout, "CaseD1", "#", SDDS_LONG) ||

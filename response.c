@@ -181,6 +181,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
     SDDS_DefineParameter1(&respOutput->SDDSout, "NMonitors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
                           &CM->nmon);
     SDDS_DefineParameter(&respOutput->SDDSout, "Stage", NULL, NULL, "Simulation stage", NULL, SDDS_STRING, NULL);
+    SDDS_DefineParameter(&respOutput->SDDSout, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION);
     if (SDDS_NumberOfErrors())
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 

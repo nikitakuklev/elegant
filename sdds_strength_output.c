@@ -33,6 +33,7 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
                              beamline->name)<0 ||
         SDDS_DefineParameter(&SDDS_table, "TimeStamp", NULL, NULL, "TimeStamp", NULL, SDDS_STRING,
                              mtime())<0 ||
+        SDDS_DefineParameter(&SDDS_table, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
         SDDS_DefineColumn(&SDDS_table, "s", NULL, NULL, "s", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&SDDS_table, "ElementName", NULL, NULL, "Element name", "%10s", SDDS_STRING, 0)<0 ||
         SDDS_DefineColumn(&SDDS_table, "ElementOccurence", NULL, NULL, "Occurence number of name", "%4ld", SDDS_LONG, 0)<0 ||

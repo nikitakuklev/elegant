@@ -46,14 +46,17 @@ static SDDS_DEFINITION columnp_definition[N_COLUMNS] = {
     } ;
 
 #define IP_STEP 0
-#define IP_AREA 1
-#define N_PARAMETERS 2
+#define IP_SVN 1
+#define IP_AREA 2
+#define N_PARAMETERS 3
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     {"Area", "&parameter name=Area, type=double, units=\"m$a2$n\" &end"},
     } ;
 static SDDS_DEFINITION parameterp_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     {"Area", "&parameter name=Area, type=double, &end"},
     } ;
 
@@ -514,10 +517,10 @@ long do_aperture_search_mp(
     SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, IP_STEP, control->i_step, -1);
   if (control->n_elements_to_vary) {
     for (ix=0; ix<control->n_elements_to_vary; ix++)
-      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+1,
+      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+N_PARAMETERS,
 			      control->varied_quan_value[ix], -1))
 	break;
   }
@@ -835,10 +838,10 @@ long do_aperture_search_sp(
     SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, IP_STEP, control->i_step, -1);
   if (control->n_elements_to_vary) {
     for (ix=0; ix<control->n_elements_to_vary; ix++)
-      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+1,
+      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+N_PARAMETERS,
                               control->varied_quan_value[ix], -1))
         break;
   }
@@ -1000,10 +1003,10 @@ long do_aperture_search_line(
       SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, IP_STEP, control->i_step, -1);
     if (control->n_elements_to_vary) {
       for (index=0; index<control->n_elements_to_vary; index++)
-        if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+1,
+        if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+N_PARAMETERS,
                                 control->varied_quan_value[index], -1))
           break;
     }
@@ -1376,10 +1379,10 @@ long do_aperture_search_line_p(
       SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, IP_STEP, control->i_step, -1);
     if (control->n_elements_to_vary) {
       for (index=0; index<control->n_elements_to_vary; index++)
-        if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+1,
+        if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+N_PARAMETERS,
                                 control->varied_quan_value[index], -1))
           break;
     }

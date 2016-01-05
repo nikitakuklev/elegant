@@ -2576,6 +2576,7 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
   if (isMaster) {
     if (population_log && strlen(population_log)) {
       if (!SDDS_InitializeOutput(popLogPtr, SDDS_BINARY, 1, NULL, NULL, population_log) ||
+          0>SDDS_DefineParameter(popLogPtr, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "Iteration", NULL, SDDS_LONG) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "ElapsedTime", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleParameter(popLogPtr, "ElapsedCoreTime", "s", SDDS_DOUBLE) ||
