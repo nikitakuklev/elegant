@@ -19,7 +19,7 @@
 #include "matlib.h"
 
 #define CMATRIX_OFFSET 0
-#define RMATRIX_OFFSET 6
+#define RMATRIX_OFFSET CMATRIX_OFFSET+6
 #define X_BETA_OFFSET RMATRIX_OFFSET+36
 #define Y_BETA_OFFSET X_BETA_OFFSET+6
 #define DETR_OFFSET Y_BETA_OFFSET+6
@@ -374,18 +374,18 @@ void do_transport_analysis(
     data[X_BETA_OFFSET  ] = twiss.betax;
     data[X_BETA_OFFSET+1] = twiss.alphax;
     data[X_BETA_OFFSET+2] = twiss.phix/PIx2;
-    data[X_BETA_OFFSET+3] = chromDeriv.tune1[0];
-    data[X_BETA_OFFSET+4] = chromDeriv.beta1[0];
-    data[X_BETA_OFFSET+5] = chromDeriv.alpha1[0];
+    data[X_BETA_OFFSET+3] = chromDeriv.beta1[0];
+    data[X_BETA_OFFSET+4] = chromDeriv.alpha1[0];
+    data[X_BETA_OFFSET+5] = chromDeriv.tune1[0];
     data[X_ETA_OFFSET   ] = twiss.etax;
     data[X_ETA_OFFSET+1 ] = twiss.etapx;
 
     data[Y_BETA_OFFSET  ] = twiss.betay;
     data[Y_BETA_OFFSET+1] = twiss.alphay;
     data[Y_BETA_OFFSET+2] = twiss.phiy/PIx2;
-    data[Y_BETA_OFFSET+3] = chromDeriv.tune1[1];
-    data[Y_BETA_OFFSET+4] = chromDeriv.beta1[1];
-    data[Y_BETA_OFFSET+5] = chromDeriv.alpha1[1];
+    data[Y_BETA_OFFSET+3] = chromDeriv.beta1[1];
+    data[Y_BETA_OFFSET+4] = chromDeriv.alpha1[1];
+    data[Y_BETA_OFFSET+5] = chromDeriv.tune1[1];
     data[Y_ETA_OFFSET   ] = twiss.etay;
     data[Y_ETA_OFFSET+1 ] = twiss.etapy;
 
