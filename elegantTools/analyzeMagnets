@@ -71,7 +71,7 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
                 -print=parameter,ElementTag,%s.%.0lf,ElementName,ElementOccurence \
                 -convert=parameter,Length,m,,1 \
                 | sddscollapse -pipe \
-                | sddsxref -pipe $rootname.twi.1 -match=ElementName -take=s \
+                | sddsxref -pipe $rootname.twi -match=ElementName -take=s \
                 | sddssort -pipe=in -column=s $paramFile.1} result] {
         puts stderr "No results for $wc"
         continue
@@ -108,8 +108,8 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
             -delete=param,* "-description=contents=$typeName magnet parameters,text=[pwd]/$rootname"  \
             | sdds2spreadsheet -pipe=in -excel $rootname-$type.xls}
     }
+    file delete $paramFile.nz $paramFile.1
 }
-
 # bends
 eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* \
   -match=column,ElementParameter=L \
@@ -120,7 +120,7 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* \
   -print=parameter,ElementTag,%s.%.0lf,ElementName,ElementOccurence \
   -convert=parameter,Length,m,,1 \
   | sddscollapse -pipe \
-  | sddsxref -pipe $rootname.twi.1 -match=ElementName -take=s \
+  | sddsxref -pipe $rootname.twi -match=ElementName -take=s \
   | sddssort -pipe=in -column=s $paramFile.1 
 
 exec sddsprocess $paramFile $rootname-B-K1 -match=col,ElementType=*BEN* \
