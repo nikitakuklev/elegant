@@ -41,6 +41,8 @@ Here is a summary of what's changed since release 28.1:
 \begin{itemize}
 \item Fixed a bug in the \verb|MATR| element that would crop up in multi-step runs, causing a crash or lock-up.
   This was reported by P. Emma (SLAC).
+\item Fixed a bug in the \verb|RFMODE| element that resulted in a few percent error between the voltage seen by the beam and
+  the feedback-regulated voltage. T. Berenc (ANL) helped resolve this.
 \item The output file feature was restored for the \verb|FTRFMODE| element.
 \item The \verb|TFBDRIVER| and \verb|TFBPICKUP| feedback elements can now handle changes in the number of bunches.
 \item The drive limit for \verb|TFBDRIVER| is now imposed after application of the filter, rather than before.
