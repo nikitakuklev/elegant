@@ -246,7 +246,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	    (!nChangedDefinedParameter ||
 	    match_string(eptr->name, changedDefinedParameter, 
 			 nChangedDefinedParameter, EXACT_MATCH)==-1)) {
-          change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
+          change_defined_parameter(eptr->name, iParam, thisType, value, string_value,
                                    differential?LOAD_FLAG_DIFFERENTIAL:
                                    (multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
 	  if (!(changedDefinedParameter=SDDS_Realloc(changedDefinedParameter,
