@@ -122,6 +122,9 @@ Here is a summary of what's changed since release 28.1:
 \item Fixed a bug in \verb|FTABLE| introduced in version 26.0. The bug would cause the program to crash.
 \item Memory management was improved in the \verb|touschek_scatter| command, allowing a larger number of particles
   to be utilized.
+\item The \verb|SCRIPT| element would cause a crash when \verb|twiss_output|, \verb|matrix_output|, or
+  similar commands were included but when tracking was required to determine the transfer matrix of the element.
+  This was fixed.
 \item Tracking instigated via the \verb|track| command is now more forgiving of uneven particle losses among 
   cores. In particular, the program should no longer crash if one core has lost all of its particles or
   all of the particles in a particular bunch.
