@@ -474,7 +474,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		coupled_twiss.c drand_oag.c moments.c \
                 insert_elements.c regexCode.cc touschekScatter.c chbook.c kickmap.c matrixOp.c \
                 replace_elements.c modulate.c ramp.c fringe.c apple.c chaosMap.c lrwake.c iirFilter.c exactCorrector.c \
-                makeInitialParticleEnsemble.c computeMatricesFromTracking.c
+                makeInitialParticleEnsemble.c computeMatricesFromTracking.c transformBeamWithScript.c
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 

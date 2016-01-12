@@ -633,8 +633,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
     break;
   case T_SCRIPT:
+#if USE_MPI
+    if (myid==0)
+      transformBeamWithScript_s((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
+                                NULL, 0, 2);
+    MPI_Bcast(&(coord[0][0]), n_track*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#else
     transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
-                            NULL, 0, 2);
+                              NULL, 0, 2);
+#endif
     break;
   case T_TWMTA:
   case T_MAPSOLENOID:

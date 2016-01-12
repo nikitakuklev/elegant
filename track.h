@@ -3197,6 +3197,12 @@ void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long
 void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
                              long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
+                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+#ifdef USE_MPI
+long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
+                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+#endif
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
