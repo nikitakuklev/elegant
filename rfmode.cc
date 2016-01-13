@@ -351,122 +351,126 @@ void track_through_rfmode(
             rfmode->fbNextTickTimeError = 0;
             rfmode->fbRunning = 1;
           }
-          if (tmean > rfmode->fbNextTickTime) {
+          while (tmean>rfmode->fbNextTickTime) {
             /* Need to advance the generator phasors to the next sample time before handling this bunch */
-            long nTicks;
             double IgAmp, IgPhase, Vrl, Vil, omegaDrive, omegaRes, dt, Vgr, Vgi, Vbr, Vbi;
             
-            nTicks = (tmean-rfmode->fbLastTickTime)/(rfmode->updateInterval/rfmode->driveFrequency)-0.5;
 #ifdef DEBUG
-            printf("Advancing %ld feedback ticks\n", nTicks);
+            printf("Advancing feedback ticks\n");
             fflush(stdout);
 #endif
-            while (nTicks--) {
-              /* Update the voltage using the cavity state-space model */
-              m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
-              m_mult(rfmode->Mt2, rfmode->B, rfmode->Iiq);
-              m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
-              
-              rfmode->fbLastTickTime = rfmode->fbNextTickTime;
-              rfmode->fbNextTickTime = KahanPlus(rfmode->fbNextTickTime, rfmode->updateInterval/rfmode->driveFrequency, &rfmode->fbNextTickTimeError);
-
-              /** Do feedback **/
-
-              /* Calculate the net voltage and phase at this time */
-              omegaRes = PIx2*rfmode->freq;
-              omegaDrive = PIx2*rfmode->driveFrequency;
-              Q = rfmode->Q/(1+rfmode->beta);
-              tau = 2*Q/omegaRes;
-              /* - Calculate beam-induced voltage components (real, imag). */
-              dt = rfmode->fbLastTickTime - rfmode->last_t;
-	      phase = rfmode->last_phase + omegaRes*dt;
-              damping_factor = exp(-dt/tau);
-              Vrl = (Vbr=damping_factor*rfmode->V*cos(phase));
-	      Vil = (Vbi=damping_factor*rfmode->V*sin(phase));
-	      /*
+            /* Update the voltage using the cavity state-space model */
+            m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
+            m_mult(rfmode->Mt2, rfmode->B, rfmode->Iiq);
+            m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
+            
+            rfmode->fbLastTickTime = rfmode->fbNextTickTime;
+            rfmode->fbNextTickTime = KahanPlus(rfmode->fbNextTickTime, rfmode->updateInterval/rfmode->driveFrequency, &rfmode->fbNextTickTimeError);
+            
+            /** Do feedback **/
+            
+            /* Calculate the net voltage and phase at this time */
+            omegaRes = PIx2*rfmode->freq;
+            omegaDrive = PIx2*rfmode->driveFrequency;
+            Q = rfmode->Q/(1+rfmode->beta);
+            tau = 2*Q/omegaRes;
+            /* - Calculate beam-induced voltage components (real, imag). */
+            dt = rfmode->fbLastTickTime - rfmode->last_t;
+            phase = rfmode->last_phase + omegaRes*dt;
+            damping_factor = exp(-dt/tau);
+#ifdef DEBUG
+            printf("Advancing beamloading from %21.15le to %21.15le, tau = %le, DF=%le\n", rfmode->last_t, rfmode->fbLastTickTime, tau, damping_factor);
+            printf("Before: Vb=%le\n", rfmode->V);
+#endif
+            Vrl = (Vbr=damping_factor*rfmode->V*cos(phase));
+            Vil = (Vbi=damping_factor*rfmode->V*sin(phase));
+            /*
               Vrl = (Vbr=damping_factor*(rfmode->Vr*cos(omegaDrive*dt) - rfmode->Vi*sin(omegaDrive*dt)));
 	      Vil = (Vbi=damping_factor*(rfmode->Vr*sin(omegaDrive*dt) + rfmode->Vi*cos(omegaDrive*dt)));
-	      */
-              /* - Add generator voltage components (real, imag) */
-              dt = rfmode->fbLastTickTime - rfmode->tGenerator;
-              Vrl += (Vgr=rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt));
-              Vil += (Vgi=rfmode->Viq->a[0][0]*sin(omegaDrive*dt) + rfmode->Viq->a[1][0]*cos(omegaDrive*dt));
-
-              /* - Compute total voltage amplitude and phase */
-              V = sqrt(Vrl*Vrl+Vil*Vil);
-              phase = atan2(Vil, Vrl);
-              
-              /* Calculate updated generator amplitude and phase
-                 - Compute errors for voltage amplitude and phase
-                 - Run these through the IIR filters
-                 - Add to nominal generator amplitude and phase
-              */
-
-              IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
-                + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
-              IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
-                + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, rfmode->phaseg - phase);
-              if (rfmode->muteGenerator>=0) {
-                if (rfmode->muteGenerator==pass) {
-                  printf("Generator muted for RFMODE %s on pass %ld\n", element_name, pass);
-                  fflush(stdout);
-                  IgAmp = 0;
-                } else if (rfmode->muteGenerator<pass) 
-                  IgAmp = 0;
-              }
-
-              /* Calculate updated I/Q components for generator current */
-              rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
-              rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
-
-              if (rfmode->feedbackRecordFile) {
-#if USE_MPI
-                if (myid==1) {
-#endif
-                  if ((rfmode->fbSample+1)%rfmode->flush_interval==0) {
-                    if (!SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
-                      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                      SDDS_Bomb((char*)"problem flushing RFMODE feedback record file");
-                    }
-                  }
-                  if (!SDDS_SetRowValues(&rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                         rfmode->fbSample,
-                                         (char*)"Pass", pass, (char*)"t", rfmode->fbLastTickTime,
-                                         (char*)"fResonance", rfmode->freq,
-                                         (char*)"fDrive", rfmode->driveFrequency,
-                                         (char*)"VbReal", Vbr, (char*)"VbImag", Vbi,
-                                         (char*)"VgReal", Vgr, (char*)"VgImag", Vgi,
-                                         (char*)"VCavity", V, (char*)"PhaseCavity", phase,
-                                         (char*)"IgAmplitude", IgAmp,
-                                         (char*)"IgPhase", IgPhase,
-                                         NULL)) {
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                    SDDS_Bomb((char*)"problem setting values for feedback record file");
-                  }
-                  /*
-                  if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
-                      && !SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                    printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
-                  }
-                  */
-                  rfmode->fbSample ++;
-#if USE_MPI
-                }
-#endif
-              }
-              
-              /*
-              if (isnan(rfmode->Iiq->a[0][0]) || isnan(rfmode->Iiq->a[1][0]) || isinf(rfmode->Iiq->a[0][0]) || isinf(rfmode->Iiq->a[1][0])) {
-                printf("V = %le, setpoint = %le\n", V, rfmode->voltageSetpoint);
-                printf("phase = %le, setpoints = %le\n", phase, rfmode->phaseg);
-                printf("Viq = %le, %le\n", rfmode->Viq->a[0][0], rfmode->Viq->a[1][0]);
-                printf("Iiq = %le, %le\n", rfmode->Iiq->a[0][0], rfmode->Iiq->a[1][0]);
-                exit(1);
-              }
-              */
+            */
+            /* - Add generator voltage components (real, imag) */
+            dt = rfmode->fbLastTickTime - rfmode->tGenerator;
+            Vrl += (Vgr=rfmode->Viq->a[0][0]*cos(omegaDrive*dt) - rfmode->Viq->a[1][0]*sin(omegaDrive*dt));
+            Vil += (Vgi=rfmode->Viq->a[0][0]*sin(omegaDrive*dt) + rfmode->Viq->a[1][0]*cos(omegaDrive*dt));
+            
+            /* - Compute total voltage amplitude and phase */
+            V = sqrt(Vrl*Vrl+Vil*Vil);
+            phase = atan2(Vil, Vrl);
+            
+            /* Calculate updated generator amplitude and phase
+               - Compute errors for voltage amplitude and phase
+               - Run these through the IIR filters
+               - Add to nominal generator amplitude and phase
+            */
+            
+            IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
+              + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
+            IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
+              + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, rfmode->phaseg - phase);
+            if (rfmode->muteGenerator>=0) {
+              if (rfmode->muteGenerator==pass) {
+                printf("Generator muted for RFMODE %s on pass %ld\n", element_name, pass);
+                fflush(stdout);
+                IgAmp = 0;
+              } else if (rfmode->muteGenerator<pass) 
+                IgAmp = 0;
             }
-          }
+            
+            /* Calculate updated I/Q components for generator current */
+            rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
+            rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+
+            if (rfmode->feedbackRecordFile) {
+#if USE_MPI
+              if (myid==1) {
+#endif
+                if ((rfmode->fbSample+1)%rfmode->flush_interval==0) {
+                  if (!SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
+                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                    SDDS_Bomb((char*)"problem flushing RFMODE feedback record file");
+                  }
+                }
+                if (!SDDS_SetRowValues(&rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                       rfmode->fbSample,
+                                       (char*)"Pass", pass, (char*)"t", rfmode->fbLastTickTime,
+                                       (char*)"fResonance", rfmode->freq,
+                                       (char*)"fDrive", rfmode->driveFrequency,
+                                       (char*)"VbReal", Vbr, (char*)"VbImag", Vbi,
+                                       (char*)"VgReal", Vgr, (char*)"VgImag", Vgi,
+                                       (char*)"VCavity", V, (char*)"PhaseCavity", phase,
+                                       (char*)"IgAmplitude", IgAmp,
+                                       (char*)"IgPhase", IgPhase,
+                                       NULL)) {
+                  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                  SDDS_Bomb((char*)"problem setting values for feedback record file");
+                }
+                /*
+                  if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
+                  && !SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
+                  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                  printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
+                  }
+                */
+                rfmode->fbSample ++;
+#if USE_MPI
+              }
+#endif
+            }
+              
+            /*
+              if (isnan(rfmode->Iiq->a[0][0]) || isnan(rfmode->Iiq->a[1][0]) || isinf(rfmode->Iiq->a[0][0]) || isinf(rfmode->Iiq->a[1][0])) {
+              printf("V = %le, setpoint = %le\n", V, rfmode->voltageSetpoint);
+              printf("phase = %le, setpoints = %le\n", phase, rfmode->phaseg);
+              printf("Viq = %le, %le\n", rfmode->Viq->a[0][0], rfmode->Viq->a[1][0]);
+              printf("Iiq = %le, %le\n", rfmode->Iiq->a[0][0], rfmode->Iiq->a[1][0]);
+              exit(1);
+              }
+            */
+#ifdef DEBUG
+            printf("After tick: Vb = %le V, Vbr = %le, Vbi = %le, phase = %21.15le, t=%21.15le s, tNext=%21.15le\n", 
+                   sqrt(Vbr*Vbr+Vbi*Vbi), Vbr, Vbi, atan2(Vbi, Vbr), rfmode->fbLastTickTime, rfmode->fbNextTickTime);
+#endif
+          } /* end while loop for feedback ticks */
         }
 
         if (isSlave) {
@@ -654,18 +658,28 @@ void track_through_rfmode(
             n_occupied++;
           
           /* advance cavity to this time */
+#ifdef DEBUG
+          printf("Advancing beamloading from %21.15le to %21.15le, dt=%le, tau=%le, last_phase=%le\n",
+                 rfmode->last_t, t, t-rfmode->last_t, tau, rfmode->last_phase);
+          printf("Before: Vb = %le V, Vbr = %le, Vbi = %le, phase = %21.15le, t=%21.15les\n", 
+                 rfmode->V, rfmode->Vr, rfmode->Vi, fmod(rfmode->last_phase, PIx2), rfmode->last_t);
+#endif
           phase = rfmode->last_phase + omega*(t - rfmode->last_t);
           damping_factor = exp(-(t-rfmode->last_t)/tau);
           rfmode->last_t = t;
           rfmode->last_phase = phase;
-          V = rfmode->V*damping_factor;
+          rfmode->V = V = rfmode->V*damping_factor;
           rfmode->Vr = V*cos(phase);
           rfmode->Vi = V*sin(phase);
+#ifdef DEBUG
+          printf("After: Vb = %le V, Vbr = %le, Vbi = %le, phase = %21.15le, t=%21.15les, tau=%le, DF=%le\n", 
+                 rfmode->V, rfmode->Vr, rfmode->Vi, fmod(rfmode->last_phase, PIx2), rfmode->last_t, tau, damping_factor);
+#endif
 
           /* compute beam-induced voltage for this bin */
           Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval*Ihist[ib];
           if (rfmode->long_range_only)
-            Vbin[ib] = VPrevious*exp(-(t-tPrevious)/tau)*cos(phasePrevious + omega*(t - tPrevious));
+            Vbin[ib] = VPrevious*(damping_factor=exp(-(t-tPrevious)/tau))*cos(phasePrevious + omega*(t - tPrevious));
           else 
             Vbin[ib] = rfmode->Vr - Vb/2;
           
@@ -678,15 +692,19 @@ void track_through_rfmode(
             Vi = rfmode->Mt3->a[0][0]*sin(PIx2*rfmode->driveFrequency*dt) + rfmode->Mt3->a[1][0]*cos(PIx2*rfmode->driveFrequency*dt);
             phase_g_sum += Ihist[ib]*atan2(Vi, Vr);
             Vbin[ib] += Vr;
-            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-(rfmode->long_range_only?0:Vb/2))+sqr(Vi+rfmode->Vi));
+            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-Vb/2)+sqr(Vi+rfmode->Vi));
             /* fprintf(fpdeb2, "%ld %21.15le %21.15le %le %le %le\n", pass, t, dt, sqrt(Vi*Vi+Vr*Vr), atan2(Vi, Vr), Vr); */
           }
           
-          /* add beam-induced voltage to cavity voltage */
+          /* add slice contribution to beam-induced voltage */
           rfmode->Vr -= Vb;
           rfmode->Vi -= Vb*VbImagFactor;
           rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
           rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
+#ifdef DEBUG
+          printf("BL+: Vb = %le V, Vbr = %le, Vbi = %le, phase = %21.15le, t=%21.15les, tau=%le, DF=%le\n", 
+                 rfmode->V, rfmode->Vr, rfmode->Vi, fmod(rfmode->last_phase, PIx2), rfmode->last_t, tau, damping_factor);
+#endif
         
           V_sum  += Ihist[ib]*rfmode->V;
           Vr_sum += Ihist[ib]*rfmode->Vr;
