@@ -112,7 +112,9 @@ APSLabeledOutput .bdur -parent .userFrame \
 APSLabeledOutput .coupling -parent .userFrame \
   -label "Longitudinal coupling: " -textVariable coupling -width 22
 
-proc compute {} {
+proc compute {args} {
+    set plot 1
+    APSStrictParseArguments {plot}
     global dataItemList
     eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune
@@ -221,5 +223,34 @@ proc computeBunchShape {} {
     exec sddsplot -column=t,rho $twiss.longit -title=@tRms &
 }
 
+proc outputForElegantDialog {} {
+    global code outputFile rfMainName rfHarmonicName 
+    global voltage rfFrequency synchPhaseDeg voltageRatio harmonicRatio harmonicCavityPhase
+    APSDialogBox .output -modal 0 -okCommand "set code 1" -cancelCommand "set code 0" \
+        -name "Elegant output"
+    APSLabeledEntry .le1 -parent .output.userFrame -label "Filename: " \
+        -textVariable outputFile -width 80 
+    APSLabeledEntry .le2 -parent .output.userFrame -label "Main rf element name: " \
+        -textVariable rfMainName -width 80 
+    APSLabeledEntry .le3 -parent .output.userFrame -label "Harmonic rf element name: " \
+        -textVariable rfHarmonicName -width 80 
+    update
+    tkwait variable code
+    if {$code && [string length $outputFile] && [string length $rfMainName] && [string length $rfHarmonicName]} {
+        compute -plot 0
+        lappend ElementNameList $rfMainName $rfMainName $rfMainName 
+        lappend ElementParameterList VOLT FREQ PHASE
+        lappend ParameterValueList [expr $voltage*1e6] [expr $rfFrequency*1e6] $synchPhaseDeg
+        lappend ElementNameList $rfHarmonicName $rfHarmonicName $rfHarmonicName
+        lappend ElementParameterList VOLT FREQ PHASE
+        lappend ParameterValueList [expr $voltage*1e6*$voltageRatio] [expr $rfFrequency*1e6*$harmonicRatio] $harmonicCavityPhase
+    }
+    exec sddsmakedataset $outputFile \
+      -column=ElementName,type=string -data=[join $ElementNameList ,] \
+      -column=ElementParameter,type=string -data=[join $ElementParameterList ,] \
+      -column=ParameterValue,type=double -data=[join $ParameterValueList ,]
+}
+
 compute
 APSButton .compute -parent .userFrame -text Compute -command compute
+APSButton .output  -parent .userFrame -text ">Elegant" -command outputForElegantDialog
