@@ -5025,6 +5025,9 @@ given with no arguments, which should be sufficient documentation.
         (Program by L. Emery, M. Borland, and A. Xiao)
 \item {\tt impact2elegant} --- Tranlates IMPACT-T \cite{IMPACT} output into {\tt elegant} conventions.
 \item {\tt impact2sdds} --- Translates IMPACT-T output files into SDDS for easier postprocessing.
+\item {\tt longitCalcs} --- Performs calculations of longitudinal dynamics parameters in storage rings,
+  using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
+  bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
 \item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
@@ -5055,7 +5058,7 @@ given with no arguments, which should be sufficient documentation.
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element. (Program by M. Borland.)
-\item {\tt sddsws} --- Computes wiggler spectra, using code from WS (bry R. Dejus).
+\item {\tt sddsws} --- Computes wiggler spectra, using code from WS (by R. Dejus).
 \item {\tt sddsurgent} --- Uses algorithms from the programs US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
   radiation properties, including power density and intensity distributions.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
