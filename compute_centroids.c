@@ -22,6 +22,9 @@
  */
 #include "mdb.h"
 #include "track.h"
+#ifdef HAVE_GPU
+#include <gpu_compute_centroids.h>
+#endif
 
 void compute_centroids(
 		       double *centroid,
@@ -35,6 +38,20 @@ void compute_centroids(
 #ifdef USE_KAHAN
   double error[6];
 #endif
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_compute_centroids(centroid, n_part);
+#ifdef GPU_VERIFY
+    startCpuTimer();
+    copyReductionArrays(centroid, NULL);
+    compute_centroids(centroid, coordinates, n_part);
+    compareReductionArrays(centroid, NULL, NULL, "compute_centroids");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
   long n_total;
@@ -279,6 +296,22 @@ void accumulate_beam_sums(
   double errorCen[7], errorCenn[7], errorSig, errorSign;
 #endif
 
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+#ifdef GPU_VERIFY
+    BEAM_SUMS* gpusums = (BEAM_SUMS*) getGpuBeamSums(sums);
+    startGpuTimer();
+    gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, startPID, endPID, flags);
+    startCpuTimer();
+    accumulate_beam_sums(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
+    compareReductionArrays(NULL, NULL, sums, "accumulate_beam_sums");
+#else 
+    gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
+
   timeCoord = malloc(sizeof(double)*n_part);
   chosen = malloc(sizeof(short)*n_part);
   computeTimeCoordinates(timeCoord, p_central, coord, n_part);
@@ -469,6 +502,22 @@ void accumulate_beam_sums(
 #ifdef USE_KAHAN
   double errorCen[7], errorSig[28];
 #endif
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+#ifdef GPU_VERIFY
+    BEAM_SUMS* gpusums = (BEAM_SUMS*) getGpuBeamSums(sums);
+    startGpuTimer();
+    gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, startPID, endPID, flags);
+    startCpuTimer();
+    accumulate_beam_sums(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
+    compareReductionArrays(NULL, NULL, sums, "accumulate_beam_sums");
+#else 
+    gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   double buffer[7], Sij_p[28], Sij_total[28];
   long offset=0, index;  

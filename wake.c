@@ -11,6 +11,9 @@
 #include "track.h"
 #include "table.h"
 #include "fftpackC.h"
+#ifdef HAVE_GPU
+#include "gpu_wake.h"
+#endif /* HAVE_GPU */
 
 void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
@@ -43,6 +46,20 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
   fflush(stdout);
 #endif
 #endif
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    double cpu_PoInput = *PoInput;
+    gpu_track_through_wake(np0, wakeData, &cpu_PoInput, run, i_pass, charge);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    track_through_wake(part0, np0, wakeData, PoInput, run, i_pass, charge);
+    compareGpuCpu(np, "track_through_wake");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   set_up_wake(wakeData, run, i_pass, np0, charge);
 

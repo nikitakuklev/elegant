@@ -15,13 +15,31 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "csbend.h"
+#ifdef HAVE_GPU
+#include "gpu_base.h"
+#include "gpu_csbend.h"
+#include "gpu_funcs.h"
+#endif
+
+/* global variables */
+long negativeWarningsLeft = 100;
+long dipoleFringeWarning = 0;
+long expansionOrder1 = 11;  /* order of expansion+1 */
+double rho0, rho_actual, rad_coef=0, isrConstant=0;
+double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
+long distributionBasedRadiation, includeOpeningAngle;
+long photonCount = 0;
+double energyCount = 0, radiansTotal = 0;
+long particle_lost;
+double s_lost;
+double **Fx_xy = NULL, **Fy_xy = NULL;
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 void convolveArrays1(double *output, long n, double *a1, double *a2);
 void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
                      double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
 
-static long negativeWarningsLeft = 100;
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
@@ -46,30 +64,15 @@ long correctDistribution(double *array, long npoints, double desiredSum);
 void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
 void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
 
-static double **Fx_xy = NULL, **Fy_xy = NULL;
-static long expansionOrder1 = 11;  /* order of expansion+1 */
-
-static double rho0, rho_actual, rad_coef=0, isrConstant=0;
-static double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
-static long distributionBasedRadiation, includeOpeningAngle;
-static long photonCount = 0;
-static double energyCount = 0, radiansTotal = 0;
-
-static long particle_lost;
-static double s_lost;
-
 long inversePoissonCDF(double mu, double C);
 
 #define RECORD_TRAJECTORY 1
 #define SUBTRACT_TRAJECTORY 2
-static short refTrajectoryMode = 0;
-static long refTrajectoryPoints = 0;
-static double **refTrajectoryData = NULL;
+short refTrajectoryMode = 0;
+long refTrajectoryPoints = 0;
+double **refTrajectoryData = NULL;
 
-#if !defined(PARALLEL)
-/* to avoid problems with HP parallel compiler */
-extern unsigned long multipoleKicksDone ;
-#endif
+
 
 void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 {
@@ -241,6 +244,20 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double e1_kick_limit, e2_kick_limit;
   static long largeRhoWarning = 0;
 
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted, 
+                                      z_start, sigmaDelta2);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2);
+    compareGpuCpu(n_part, "track_through_csbend");
+#endif /* GPU_VERIFY */
+    return i_part;
+  }
+#endif /* HAVE_GPU */
+
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -308,7 +325,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     exactDrift(part, n_part, csbend->length);
     return n_part;
   }
-
+  
   if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
     bombElegant("CSBEND element doesn't have edge flags set.", NULL);
   
@@ -579,7 +596,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
       }
     }
-    
+
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
@@ -592,7 +609,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
 
     convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
-
+    
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
@@ -729,7 +746,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-
+  
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -1151,44 +1168,9 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   Qf[4] += dist;
 }
 
-typedef struct {
-  unsigned long lastMode;
-#define CSRDRIFT_STUPAKOV          0x0001UL
-#define CSRDRIFT_SALDIN54          0x0002UL
-#define CSRDRIFT_OVERTAKINGLENGTH  0x0004UL
-#define CSRDRIFT_ATTENUATIONLENGTH 0x0008UL
-#define CSRDRIFT_SPREAD            0x0010UL
-  long bins, valid;
-  double dctBin, s0, ds0, zLast, z0;
-  double S11, S12, S22;
-  double *dGamma;
-  double rho, bendingAngle, Po, perc68BunchLength, perc90BunchLength, peakToPeakWavelength, rmsBunchLength;
-  /* for Saldin eq 54 (NIM A 398 (1997) 373-394) mode: */
-  FILE *fpSaldin;
-  long nSaldin;
-  double *FdNorm;   /* Saldin's Fd(sh, x)/Fd(sh, 0), sh = bunch-length*gamma^3/rho */
-  double *xSaldin;  /* distance from end of bend */
-  double lastFdNorm; /* last value obtained from interpolation */
-  /* for Stupakov mode */
-  long SGOrder, SGHalfWidth, SGDerivHalfWidth, SGDerivOrder;
-  double binRangeFactor;
-  double GSConstant, MPCharge;
-  char *StupakovOutput;
-  SDDS_DATASET SDDS_Stupakov;
-  long StupakovFileActive, StupakovOutputInterval;
-  long trapazoidIntegration;
-  double lowFrequencyCutoff0, lowFrequencyCutoff1;
-  double highFrequencyCutoff0, highFrequencyCutoff1;
-  long clipNegativeBins;
-  long wffValues;
-  double *wffFreqValue, *wffRealFactor, *wffImagFactor;
-} CSR_LAST_WAKE;
+
 CSR_LAST_WAKE csrWake;
 
-#define DERBENEV_CRITERION_DISABLE 0
-#define DERBENEV_CRITERION_EVAL 1
-#define DERBENEV_CRITERION_ENFORCE 2
-#define N_DERBENEV_CRITERION_OPTIONS 3
 static char *derbenevCriterionOption[N_DERBENEV_CRITERION_OPTIONS] = {
   "disable", "evaluate", "enforce"};
 
@@ -1246,6 +1228,36 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   fprintf(fpdeb, "&data mode=ascii &end\n");
 #endif
 
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    /* Copy the csrWake global struct (it is reset below) */
+    CSR_LAST_WAKE gpuCsrWake;
+    memcpy(&gpuCsrWake, &csrWake, sizeof(CSR_LAST_WAKE));
+    csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
+    csrWake.StupakovFileActive = 0; /* Reset doesn't close */
+
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname);
+    compareGpuCpu(n_part, "track_through_csbendCSR");
+
+    /* compare CSR_LAST_WAKE structs */
+    compareCSR_LAST_WAKE(&gpuCsrWake, &csrWake);
+    /* Deallocate gpuCsrWake */
+    if (gpuCsrWake.FdNorm) {
+      free(gpuCsrWake.FdNorm);
+      free(gpuCsrWake.xSaldin);
+    }
+    if (gpuCsrWake.StupakovFileActive)
+      if (!SDDS_Terminate(&gpuCsrWake.SDDS_Stupakov))
+        bombElegant("problem terminating data file for Stupakov output from CSRDRIFT", NULL);
+#endif /* GPU_VERIFY */
+    return i_part;
+  }
+#endif /* HAVE_GPU */
+ 
   gamma2 = Po*Po+1;
   gamma3 = pow(gamma2, 3./2);
 
@@ -2157,15 +2169,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  /* apply edge focusing */
 	  rho = (1+DP)*rho_actual;
           if (csbend->edge_order<=1 && csbend->edge2_effects==1) {
-            delta_xp = tan(e2)/rho*X;
-            XP += delta_xp;
-            YP -= tan(e2-psi2/(1+DP))/rho*Y;
+	    delta_xp = tan(e2)/rho*X;
+	    XP += delta_xp;
+	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
           } else if (csbend->edge_order>=2 && csbend->edge2_effects==1)
             apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
           else if (csbend->edge2_effects>=2) {
             rho = (1+DP)*rho_actual;
             dipoleFringeSym(&X, &XP, &Y, &YP, &DP, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
-          }
+	  }
 	}
       }
 
@@ -2426,6 +2438,24 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 #if USE_MPI 
   long np_total=1, np_tmp=np, binned_total;
 #endif
+  
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+#ifdef GPU_VERIFY     
+    CSR_LAST_WAKE initCsrWake;
+    memcpy(&initCsrWake, &csrWake, sizeof(CSR_LAST_WAKE));
+#endif
+    startGpuTimer();
+    iPart = gpu_track_through_driftCSR(np, csrDrift, Po, accepted, zStart, revolutionLength, charge, rootname);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    memcpy(&csrWake, &initCsrWake, sizeof(CSR_LAST_WAKE));
+    track_through_driftCSR(part, np, csrDrift, Po, accepted, zStart, revolutionLength, charge, rootname);
+    compareGpuCpu(np, "track_through_driftCSR");
+#endif /* GPU_VERIFY */
+    return iPart;
+  }
+#endif /* HAVE_GPU */
   
   getTrackingContext(&tContext);
 
@@ -3005,6 +3035,20 @@ void exactDrift(double **part, long np, double length)
 {
   long i;
   double *coord;
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_exactDrift(np, length);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    exactDrift(part, np, length);
+    compareGpuCpu(np, "exactDrift");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
+
   for (i=0; i<np; i++) {
     coord = part[i];
     coord[0] += coord[1]*length;
@@ -3022,8 +3066,8 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
                         long nCaseC, long nCaseD1,long nCaseD2,
                         double x, double dsMax, double phi0, double phi1) ;
 
-static double SolveForPhiStupakovDiffSum = 0;
-static long SolveForPhiStupakovDiffCount = 0;
+double SolveForPhiStupakovDiffSum = 0;
+long SolveForPhiStupakovDiffCount = 0;
 
 long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
 				     double Po, double **accepted, double zStart, CHARGE *charge, char *rootname)
@@ -3086,7 +3130,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       !(ctHistDeriv=SDDS_Malloc(sizeof(*ctHistDeriv)*nBins)) ||
       !(phiSoln=SDDS_Malloc(sizeof(*phiSoln)*nBins)))
     bombElegant("memory allocation failure (track_through_driftCSR)", NULL);
-
+  
   if ((lscKick.bins = csrDrift->LSCBins)>0) {
     lscKick.interpolate = csrDrift->LSCInterpolate;
     lscKick.radiusFactor = csrDrift->LSCRadiusFactor;
@@ -3101,7 +3145,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       dz = dz0;
     zTravel += dz;
     zOutput += dz;
-
+    
     x = zTravel/csrWake.rho;
     dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
       *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
@@ -4206,6 +4250,19 @@ void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long
   double isrCoef, radCoef, dp, p, beta0, beta1, deltaFactor;
   short isr, sr;
   long i;
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_addCorrectorRadiationKick(np, elem, type, Po, sigmaDelta2, disableISR);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    addCorrectorRadiationKick(coord, np, elem, type, Po, sigmaDelta2, disableISR);
+    compareGpuCpu(np, "addCorrectorRadiationKick");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   if (!np)
     return;

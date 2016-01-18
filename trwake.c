@@ -15,6 +15,10 @@
 void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void dumpTransverseTimeDistributions(double **posItime, long nb);
 
+#ifdef HAVE_GPU
+#include <gpu_base.h>
+#include <gpu_trwake.h>
+#endif
 void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
                         RUN *run, long i_pass, CHARGE *charge
                         )
@@ -37,7 +41,20 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
 #if USE_MPI
   double *buffer;
 #endif
-  
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_track_through_trwake(np0, wakeData, Po, run, i_pass, charge);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    track_through_trwake(part0, np0, wakeData, Po, run, i_pass, charge);
+    compareGpuCpu(np, "track_through_trwake");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif
+
   set_up_trwake(wakeData, run, i_pass, np0, charge);
 
   if (i_pass>=(wakeData->rampPasses-1))
@@ -109,6 +126,8 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
           tmin -= dt;
           tmax += dt;
         }
+        if (nb>np)
+          bombElegant("track_through_wake: gpuElegant requires nbins<nparticles", NULL);
 
         if (tmin>tmax || nb<=0) {
           fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
@@ -540,11 +559,11 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 #else
       tmean_total = KahanParallel (tmean, error, MPI_COMM_WORLD);
 #endif
-    }
+      }
     if (tmean_total==DBL_MAX) 
       bombElegant("invalid value of tmean_total in computeTimeCoordinates. Seek professional help!", NULL);
     if (np_total>0)
-      return tmean_total/np_total;
+    return tmean_total/np_total;
     return (double)0;
   }
   else { /* This serial part can be removed after all the upper level functions (e.g. wake) are parallelized */

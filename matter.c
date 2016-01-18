@@ -22,6 +22,10 @@
 
 #define BS_Y0 (1e-8)
 
+#ifdef HAVE_GPU
+#include <gpu_matter.h>
+#endif
+
 double radiationLength(long Z, double A, double rho);
 double solveBremsstrahlungCDF(double F);
 
@@ -40,6 +44,19 @@ long track_through_matter(
   long multipleScattering = 0;
   long hitsMatter;
   
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_track_through_matter(np, matter, Po, accepted, z0);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      track_through_matter(part, np, matter, Po, accepted, z0);
+      compareGpuCpu(np, "track_through_matter");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
+
   log_entry("track_through_matter");
 
   if (particleIsElectron==0)
@@ -55,7 +72,7 @@ long track_through_matter(
   else 
     return np;
   L1 = L; /* mostly to suppress compiler warning. */
-  
+
   if (matter->energyDecay && (matter->nuclearBremsstrahlung || matter->electronRecoil))
     bombElegant("ENERGY_DECAY=1 and NUCLEAR_BREHMSSTRAHLUNG=1 or ELECTRON_RECOIL=1 options to MATTER/SCATTER element are mutually exclusive", NULL);
 
@@ -298,11 +315,12 @@ double radiationLength(long Z, double A, double rho)
   return 1e-3/(4*alpha*sqr(re_mks)*NAvogadro/A*(Z*Z*(Lrad - fZ) + Z*Lradp))/rho;
 }
 
+double *lnyTable = NULL, *FTable = NULL;
+
 double solveBremsstrahlungCDF(double F)
 /* Solve F == G(y)/G(1) where G(y)=(ln(y/y0) - (y-y0) + 3/8*(y^2-y0^2)
  */
 {
-  static double *lnyTable = NULL, *FTable = NULL;
   static double dy, y0=BS_Y0;
   static long beenWarned = 0;
   double y;

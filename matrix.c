@@ -25,6 +25,9 @@
  */
 #include "mdb.h"
 #include "track.h"
+#ifdef HAVE_GPU
+#include <gpu_matrix.h>
+#endif
 
 void print_matrices(FILE *fp, char *string, VMATRIX *M)
 {
@@ -208,6 +211,21 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     double *fin, *ini;
     double *Ri;
     static double temp[6];
+
+#ifdef HAVE_GPU
+  char fname[20];
+  if (getElementOnGpu()) {
+    startGpuTimer();
+    gpu_track_particles(M, n_part);
+#ifdef GPU_VERIFY
+    startCpuTimer();
+    track_particles(final, M, initial, n_part);
+    sprintf(fname,"track_particles_M%d", M->order);
+    compareGpuCpu(n_part, fname);
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
     
     log_entry("track_particles");
     

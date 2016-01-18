@@ -14,6 +14,10 @@
  */
 #include "mdb.h"
 #include "track.h"
+#ifdef HAVE_GPU
+#include "gpu_simple_rfca.h"
+#endif
+
 
 static char *fiducialModeChoice[4] = {
     "light", "tmean", "first", "pmaximum",
@@ -47,6 +51,19 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 {
   double tFid=0.0;
   
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    tFid = gpu_findFiducialTime(np, s0, sOffset, p0, mode);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    findFiducialTime(part, np, s0, sOffset, p0, mode);
+    compareGpuCpu(np, "findFiducialTime");
+#endif /* GPU_VERIFY */
+    return tFid;
+  }
+#endif /* HAVE_GPU */
+
   if (mode&FID_MODE_LIGHT) 
     tFid =  (s0+sOffset)/c_mks;
   else if (mode&FID_MODE_FIRST) {
@@ -173,6 +190,31 @@ long simple_rf_cavity(
     double **part, long np, RFCA *rfca, double **accepted, double *P_central, double zEnd
     )
 {
+
+#ifdef HAVE_GPU
+  long nLeft;
+#ifdef GPU_VERIFY
+  double P_central_input = *P_central;
+#endif
+
+  if(getElementOnGpu()){
+    startGpuTimer();
+    nLeft = gpu_trackRfCavityWithWakes(np, rfca, accepted, P_central, zEnd, 0,
+                                       NULL, NULL, NULL, NULL, NULL, 0);
+#ifdef GPU_VERIFY
+    startCpuTimer();
+    trackRfCavityWithWakes(part, np, rfca, accepted, &P_central_input, zEnd, 0,
+                           NULL, NULL, NULL, NULL, NULL, 0);
+    compareGpuCpu(np, "simple_rf_cavity");
+    if ( *P_central/P_central_input-1 > 1e-12 ) {
+      printf("simple_rf_cavity: Warning: GPU P_central=%le vs CPU=%le\n",
+             *P_central, P_central_input);
+    }
+#endif
+    return nLeft;
+  }
+#endif /* HAVE_GPU */
+
   return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
                          NULL, NULL, NULL, NULL, NULL, 0);
 }
@@ -734,6 +776,31 @@ long track_through_rfcw
    RUN *run, long i_pass, CHARGE *charge
    )
 {
+
+
+#ifdef HAVE_GPU
+  long nLeft;
+  if(getElementOnGpu()){
+    startGpuTimer();
+#ifdef GPU_VERIFY
+    double P_central_input = *P_central;
+#endif
+    nLeft = gpu_track_through_rfcw(np, rfcw, accepted, P_central, zEnd, 
+                                   run, i_pass, charge);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    track_through_rfcw(part, np, rfcw, accepted, &P_central_input, zEnd, 
+                       run, i_pass, charge);
+    compareGpuCpu(np, "track_through_rfcw");
+    if ( *P_central/P_central_input-1 > 1e-12 ) {
+      printf("track_through_rfcw: Warning: GPU P_central=%le vs CPU=%le\n",
+             *P_central, P_central_input);
+    }
+#endif /* GPU_VERIFY */
+    return nLeft;
+  }
+#endif /* HAVE_GPU */
+
   static long warned = 0;
   if (rfcw->cellLength<=0) 
     bombElegant("invalid cell length for RFCW", NULL);

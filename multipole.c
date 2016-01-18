@@ -14,24 +14,10 @@
  */
 #include "mdb.h"
 #include "track.h"
-
-double *expansion_coefficients(long n);
-void apply_canonical_multipole_kicks(double *qx, double *qy,
-                                   double *sum_Fx, double *sum_Fy,
-                                   double x, double y,
-                                   long order, double KnL, long skew);
-void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
-					double *sum_Fx_return, double *sum_Fy_return,
-					double x, double y,
-					long order, double KnL, long skew);
-void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
-                                      MULTIPOLE_DATA *systematicMult,
-                                      MULTIPOLE_DATA *randomMult,
-                                      MULTIPOLE_DATA *steeringMult,
-                                      double KmL, long rootOrder);
-void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
-
-#define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
+#include "multipole.h"
+#ifdef HAVE_GPU
+#include "gpu_multipole.h"
+#endif
 
 unsigned long multipoleKicksDone = 0;
 
@@ -129,7 +115,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   } else {
     if (bnCheck || skewCheck) {
       fprintf(stdout, "*** Warning: Steering multipole file %s should not have bn or skew columns.\n",
-              multFile);
+            multFile);
       fprintf(stdout, "Use \"normal\" column to specify multipole content for a horizontal steerer.\n");
       fprintf(stdout, "Multipole content for vertical steerer is deduced from this.\n");
       fflush(stdout);
@@ -660,6 +646,20 @@ long multipole_tracking2(
   MULT_APERTURE_DATA apertureData;
   double K2L;
   
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    i_part = gpu_multipole_tracking2(n_part, elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    multipole_tracking2(particle, n_part, elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+    compareGpuCpu(n_part, "multipole_tracking2");
+#endif /* GPU_VERIFY */
+    return i_part;
+  }
+#endif /* HAVE_GPU */
+
+
   log_entry("multipole_tracking2");
 
   if (!particle)

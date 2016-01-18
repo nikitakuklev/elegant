@@ -19,6 +19,12 @@
 #include "gsl/gsl_poly.h"
 #endif
 /* #include "smath.h" */
+#ifdef HAVE_GPU
+#include <gpu_base.h>
+#include <gpu_funcs.h>
+#include <gpu_limit_amplitudes.h>
+#endif /* HAVE_GPU */
+
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd);
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
 void track_through_frfmode(double **part, long np, FRFMODE *rfmode, double Po,char *element_name, double element_z, long pass, long n_passes,CHARGE *charge);
@@ -337,7 +343,7 @@ long do_tracking(
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
 #endif
-
+  
   z = z_recirc = last_z =  0;
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
@@ -346,7 +352,7 @@ long do_tracking(
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0; 
     if (beam)
-      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   } else { /* singlePart tracking or partOnMaster */
     if (beam)	
       beam->n_to_track_total = nToTrack;
@@ -365,6 +371,11 @@ long do_tracking(
   
   check_nan = 1;
   eptr = &(beamline->elem);
+
+#ifdef HAVE_GPU
+  gpuBaseInit(coord, nOriginal, accepted, lostParticles, isMaster);
+#endif
+
   flags |= beamline->fiducial_flag;
   if ((flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) || !(flags&FIRST_BEAM_IS_FIDUCIAL)) {
     /* this is required just in case rf elements etc. have previously
@@ -373,14 +384,14 @@ long do_tracking(
      */
     if (!(flags&SILENT_RUNNING) && !(flags&TEST_PARTICLES)) {
       printMessageAndTime(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
-    }
+  }
     if (run->n_passes_fiducial>0)
       n_passes = run->n_passes_fiducial;
     flags &= ~FIDUCIAL_BEAM_SEEN;
-    while (eptr) {
+  while (eptr) {
       eptr->Pref_output_fiducial = 0;
-      eptr = eptr->succ;
-    }
+    eptr = eptr->succ;
+  }
   }
   if (flags&RESET_RF_FOR_EACH_STEP) {
     delete_phase_references();
@@ -436,6 +447,9 @@ long do_tracking(
       if (total_nToTrack<run->stopTrackingParticleLimit)
 #endif
       {
+#ifdef HAVE_GPU
+        coord = forceParticlesToCpu("stopTrackingParticleLimit reached");
+#endif
 	/* force loss of all the particles */
 	for (i=0; i<nToTrack; i++) {
 	  coord[i][4] = z;
@@ -624,9 +638,13 @@ long do_tracking(
     printMessageAndTime(stdout, "do_tracking checkpoint 0.8\n");
 #endif
 
-    if (getSCMULTSpecCount()) 
+    if (getSCMULTSpecCount()) {
       /* prepare space charge effects calculation  */
+#ifdef HAVE_GPU
+      coord = forceParticlesToCpu("initializeSCMULT");
+#endif
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
+    }
 
 #ifdef DEBUG_CRASH 
     printMessageAndTime(stdout, "do_tracking checkpoint 0.9\n");
@@ -694,10 +712,18 @@ long do_tracking(
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 1\n");
 #endif
-      if (trackingOmniWedgeFunction) 
+      if (trackingOmniWedgeFunction) {
+#ifdef HAVE_GPU
+        coord = forceParticlesToCpu("trackingOmniWedgeFunction");
+#endif
         (*trackingOmniWedgeFunction)(coord, nToTrack, i_pass, i_elem, beamline->n_elems, eptr, P_central);
-      if (trackingWedgeFunction && eptr==trackingWedgeElement)
+      }
+      if (trackingWedgeFunction && eptr==trackingWedgeElement) {
+#ifdef HAVE_GPU
+        coord = forceParticlesToCpu("trackingWedgeFunction");
+#endif
         (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
+      }
 
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
@@ -729,15 +755,34 @@ long do_tracking(
 
       log_entry("do_tracking.2.2.1");
 
+#ifdef HAVE_GPU
+      setElementGpuData((void*)eptr);
+#ifndef GPU_VERIFY
+      /* Ensure coord array is not used during GPU operations. */
+      if (getGpuBase()->elementOnGpu)
+        coord=NULL;
+      else
+        coord=getGpuBase()->coord;
+#endif
+#endif      
+
 #ifdef SORT
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0)
             fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
           else {
-            qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-            if (accepted!=NULL)
-              qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+#ifdef HAVE_GPU
+            if (getElementOnGpu())
+              sortByPID(nToTrack);
+            else {
+#endif
+              qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+              if (accepted!=NULL)
+                qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+#ifdef HAVE_GPU
+            }
+#endif
             nToTrackAtLastSort = nToTrack;
             needSort = 0;
           }   
@@ -810,7 +855,7 @@ long do_tracking(
 	    nMaximum = nToTrack;
 	    nLeft = nToTrack;
 	  } 
-	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */
+	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */  
 	  if ((balanceStatus==badBalance) || (parallelStatus==notParallel)) {
 	    scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			     balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
@@ -891,7 +936,7 @@ long do_tracking(
 #endif
                   memoryUsage()
                   );
-	  fflush(stdout);
+	fflush(stdout);
 	}
         show_dE = 0;
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
@@ -934,9 +979,9 @@ long do_tracking(
               fprintf(stdout, "Tracking matrix for %s\n", eptr->name);
               fflush(stdout);
               if (run->print_statistics>2) {
-                print_elem(stdout, eptr);
-                print_matrices(stdout, "", eptr->matrix);
-              }
+              print_elem(stdout, eptr);
+              print_matrices(stdout, "", eptr->matrix);
+            }
             }
             if (flags&CLOSED_ORBIT_TRACKING) {
               switch (eptr->type) {
@@ -960,7 +1005,7 @@ long do_tracking(
             fprintf(stdout, "Tracking element: ");
             fflush(stdout);
             if (run->print_statistics>2)
-              print_elem(stdout, eptr);
+            print_elem(stdout, eptr);
           }
 	  type = eptr->type;
 	  if (flags&IBS_ONLY_TRACKING) {
@@ -1156,10 +1201,10 @@ long do_tracking(
 	      if (!partOnMaster && notSinglePart) { /* Update the total particle number to get the correct charge */
 		if (isMaster) nToTrack = 0;
                 if (beam)
-                  MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+		MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	      } else { /* singlePart tracking or partOnMaster */
                 if (beam)
-                  beam->n_to_track_total = nToTrack;
+		beam->n_to_track_total = nToTrack;
 	      }
 #endif
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -1657,7 +1702,7 @@ long do_tracking(
 	      nToTrack = nLeft;
 	      /* As the particles could be redistributed across processors, we need adjust the beam->n_to_track to dump lost particle coordinate at the end */ 
 	      if (beam)
-                beam->n_to_track = nLeft+nLost;
+	      beam->n_to_track = nLeft+nLost;
 #endif
 	      if (((SCRIPT*)eptr->p_elem)->verbosity>2 && nLeft!=nToTrack)
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
@@ -1753,10 +1798,10 @@ long do_tracking(
                     if (!partOnMaster && notSinglePart) {
                       if (isMaster) nToTrack = 0;
                       if (beam)
-                        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+                      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
                     } else { /* singlePart tracking or partOnMaster */
                       if (beam)
-                        beam->n_to_track_total = nToTrack;
+                      beam->n_to_track_total = nToTrack;
                     }
 		    if (isMaster && (beam->n_to_track_total<10)) {
 #else
@@ -1868,12 +1913,12 @@ long do_tracking(
 	      fflush(stdout);
 	      exitElegant(1);
 	      break;
-              }
-            }
+	    }
+	  }
 #ifdef USE_MPE
 	      MPE_Log_event( event2b, 0, bytebuf );
 #endif
-          }
+	}
           
 #if USE_MPI
 	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
@@ -1893,17 +1938,17 @@ long do_tracking(
             }
             if (run->apertureData.initialized) 
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 
-                                 &(run->apertureData));
+                                         &(run->apertureData));
+            }
           }
-	}
 #ifdef DEBUG_CRASH 
         printMessageAndTime(stdout, "do_tracking checkpoint 10\n");
 #endif
         if (run->print_statistics>0 && !(flags&TEST_PARTICLES)) {
 	  if (run->print_statistics>1) {
-	    report_stats(stdout, ": ");
-	    fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
-	    fflush(stdout);
+          report_stats(stdout, ": ");
+          fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
+          fflush(stdout);
 	  }
           if (nLeft!=nToTrack)
             fprintf(stdout, "%ld particles left\n", nLeft);
@@ -1928,13 +1973,13 @@ long do_tracking(
           if (((run->always_change_p0 && !(flags&RESTRICT_FIDUCIALIZATION)) ||
                ((entity_description[eptr->type].flags&MAY_CHANGE_ENERGY) && !blockP0Change)) &&
               !(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR)))) {
-            do_match_energy(coord, nLeft, P_central, 0);
-          }
-          eptr->Pref_output_fiducial = *P_central;
-        } else {
-          if (*P_central!=eptr->Pref_output_fiducial)
-            set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
+	    do_match_energy(coord, nLeft, P_central, 0);
         }
+        eptr->Pref_output_fiducial = *P_central;
+        } else {
+        if (*P_central!=eptr->Pref_output_fiducial)
+          set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
+      }
       } else if (run->always_change_p0) {
 	if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
 	  /* If it is a Diagnostic element, nothing needs to be done */
@@ -1961,11 +2006,19 @@ long do_tracking(
             traj_vs_z[i_traj].centroid[i] = 0;
         }
         else {
-          for (i=0; i<6; i++) {
-            for (j=sum=0; j<nToTrack; j++)
-              sum += coord[j][i];
-            traj_vs_z[i_traj].centroid[i] = sum/nLeft;
+#ifdef HAVE_GPU
+          if (getElementOnGpu()) {
+            gpu_collect_trajectory_data(traj_vs_z[i_traj].centroid, nLeft);
+          } else {
+#endif
+            for (i=0; i<6; i++) {
+              for (j=sum=0; j<nToTrack; j++)
+                sum += coord[j][i];
+              traj_vs_z[i_traj].centroid[i] = sum/nLeft;
+            }
+#ifdef HAVE_GPU
           }
+#endif
         }
         i_traj++;
       }
@@ -1979,6 +2032,9 @@ long do_tracking(
 	  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 	  MPI_Abort(MPI_COMM_WORLD, 1); 
 	}
+#endif  
+#ifdef HAVE_GPU
+        coord = forceParticlesToCpu("performSliceAnalysisOutput");
 #endif
 	performSliceAnalysisOutput(sliceAnalysis, coord, nToTrack, 
 				   !sliceAnDone, step, 
@@ -2018,14 +2074,18 @@ long do_tracking(
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
 	    recordLostParticles(lostParticles, coord, &nLost, nLeft, nToTrack, i_pass);
+          }
 	}
-      }  
 
       if (getSCMULTSpecCount() && entity_description[eptr->type].flags&HAS_LENGTH) {
 	/* calcaulate beam size at exit of element for use in space  charge calculation with SCMULT */
 	/* need special care for element with 0 length but phase space rotation */
-      	if (((DRIFT*)eptr->p_elem)->length > 0.0) 
-        	accumulateSCMULT(coord, nToTrack, eptr);
+      	if (((DRIFT*)eptr->p_elem)->length > 0.0) {
+#ifdef HAVE_GPU
+          coord = forceParticlesToCpu("accumulateSCMULT");
+#endif
+          accumulateSCMULT(coord, nToTrack, eptr);
+        }
       }
 
 #ifdef DEBUG_CRASH 
@@ -2094,7 +2154,7 @@ long do_tracking(
 	  fflush(stdout);
 	}
       }
-      } /* end of the while loop */
+    } /* end of the while loop */
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 17\n");
 #endif
@@ -2106,6 +2166,9 @@ long do_tracking(
 	  MPI_Abort(MPI_COMM_WORLD, 1); 
 	}
       }
+#endif
+#ifdef HAVE_GPU
+      coord = forceParticlesToCpu("performSliceAnalysisOutput");
 #endif
       performSliceAnalysisOutput(sliceAnalysis, coord, nToTrack, 
 				 !sliceAnDone, step, 
@@ -2182,6 +2245,9 @@ long do_tracking(
 		  break;
 		case WATCH_PARAMETERS:
 		case WATCH_CENTROIDS:
+#ifdef HAVE_GPU
+                  coord = forceParticlesToCpu("dump_watch_parameters");
+#endif
 		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, 
 #if SDDS_MPI_IO
                                         total_nOriginal, 
@@ -2193,6 +2259,9 @@ long do_tracking(
 					charge?charge->macroParticleCharge:0.0);
 		  break;
 		case WATCH_FFT:
+#ifdef HAVE_GPU
+                  coord = forceParticlesToCpu("dump_watch_FFT");
+#endif
 		  dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
 		  break;
 		}
@@ -2332,9 +2401,17 @@ long do_tracking(
           if (beam && beam->bunchFrequency!=0)
             fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
           else { 
-            qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-            if (accepted!=NULL)
-              qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+#ifdef HAVE_GPU
+            if (getElementOnGpu()) 
+              sortByPID(nToTrack);
+            else {
+#endif
+              qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+              if (accepted!=NULL)
+                qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+#ifdef HAVE_GPU
+            }
+#endif
             nToTrackAtLastSort = nToTrack;
           }   
         }
@@ -2420,6 +2497,14 @@ long do_tracking(
     }
   }
 
+#ifdef HAVE_GPU      
+#ifdef GPU_VERIFY
+  displayTimings();
+#endif
+  if (!coord) coord = getGpuBase()->coord;
+  gpuBaseDealloc(); 
+#endif
+
   if (sasefel && sasefel->active) {
     if (!charge) {
       fprintf(stdout, "Can't compute SASE FEL---no CHARGE element seen");
@@ -2430,10 +2515,10 @@ long do_tracking(
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0;
     if (beam)
-      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   } else { /* singlePart tracking or partOnMaster */
     if (beam)
-      beam->n_to_track_total = nToTrack;
+    beam->n_to_track_total = nToTrack;
   }
     /* The charge is correct on master only, but it should not affect the output */
     computeSASEFELAtEnd(sasefel, coord, nToTrack, *P_central, charge->macroParticleCharge*beam->n_to_track_total);
@@ -2453,13 +2538,13 @@ long do_tracking(
       /* We have to collect information from all the processors to print correct info during tracking */
       if (isMaster) nToTrack = 0; 
       if (beam)
-        MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+      MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
       fprintf(stdout, "%ld particles present after pass %ld        \n", 
 	      beam?beam->n_to_track_total:-1, i_pass);
     }
     else {
       if (beam)
-        beam->n_to_track_total = nToTrack;
+      beam->n_to_track_total = nToTrack;
       fprintf(stdout, "%ld particles present after pass %ld        \n", 
 	      nToTrack, i_pass);
     }
@@ -2495,7 +2580,7 @@ long do_tracking(
     }
     else {
       if (beam)
-        beam->n_to_track_total = nToTrack;
+      beam->n_to_track_total = nToTrack;
     }
     /* Only Master will have the correct information */
     *finalCharge = beam->n_to_track_total*charge->macroParticleCharge;
@@ -2516,15 +2601,28 @@ void offset_beam(
   double *part, pc, beta, gamma, t;
   double ds;
   
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_offset_beam(nToTrack, offset, P_central);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    offset_beam(coord, nToTrack, offset, P_central);
+    compareGpuCpu(nToTrack, "offset_beam");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
+
   log_entry("offset_beam");
 
   if (offset->startPID>=0 && offset->startPID>offset->endPID)
     bombElegantVA("Error: startPID (%ld) greater than endPID (%ld) for MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
   if ((offset->endPID>=0 && offset->startPID<0) || (offset->startPID>=0 && offset->endPID<0))
     bombElegantVA("Error: Invalid startPID (%ld) and endPID (%ld) in MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
-  
+ 
   allParticles = (offset->startPID==-1) && (offset->endPID==-1);
-  
+
   for (i_part=nToTrack-1; i_part>=0; i_part--) {
     part = coord[i_part];
     if (!allParticles && (part[6]<offset->startPID || part[6]>offset->endPID))
@@ -2567,7 +2665,7 @@ void do_match_energy(
                      )
 {
   long ip;
-  double P_average, dP_centroid, P, t;
+  double P_average, dP_centroid, P, t, dp, dr;
   long active = 1;
 #ifdef USE_KAHAN
   double error = 0.0;
@@ -2582,6 +2680,22 @@ void do_match_energy(
       active = 0;
   }  
 #endif
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+#ifdef GPU_VERIFY     
+    double P_central_init = *P_central;
+#endif /* GPU_VERIFY */
+    startGpuTimer();
+    gpu_do_match_energy(np, P_central, change_beam);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    do_match_energy(coord, np, &P_central_init, change_beam);
+    compareGpuCpu(np, "do_match_energy");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   log_entry("do_match_energy");
 
@@ -2648,10 +2762,14 @@ void do_match_energy(
               *P_central, P_average, trackingContext.elementName, trackingContext.zEnd);
 #endif
     if (fabs(P_average-(*P_central))/(*P_central)>1e-14){ 
-     /* if (P_average!= *P_central) { */
+      /* if (P_average!= *P_central) { */
+      /* new dp/dr formula for update coord[5] improves accuracy */
+      dp = (*P_central - P_average)/P_average;
+      dr = (*P_central)/P_average;
       if (active) {
 	for (ip=0; ip<np; ip++)
-	  coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_average)/ P_average;
+          /*coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_average)/ P_average;*/
+          coord[ip][5] = dp + coord[ip][5]*dr;
       }
       *P_central =  P_average;
     }
@@ -2746,6 +2864,22 @@ void set_central_momentum(
 {
   long ip;
 
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+#ifdef GPU_VERIFY     
+    double P_central_init = *P_central;
+#endif /* GPU_VERIFY */
+    startGpuTimer();
+    gpu_set_central_momentum(np, P_new, P_central);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    set_central_momentum(coord, np, P_new, P_central);
+    compareGpuCpu(np, "set_central_momentum");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
+
 #if (!USE_MPI)  
   if (!np) {
     *P_central =  P_new;
@@ -2835,6 +2969,19 @@ void center_beam(double **part, CENTER *center, long np, long iPass, double p0)
 {
   double sum, offset;
   long i, ic;
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_center_beam(center, np, iPass, p0);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    center_beam(part, center, np, iPass, p0);
+    compareGpuCpu(np, "center_beam");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   if (!np) {
     return;
@@ -3215,18 +3362,18 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       offset = 2*plane;
       if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
 	if (ilmat->verbosity) {
-	  fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
-		  deltaPoP);
-	  fprintf(stdout, "particle is lost\n");
+        fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
+                deltaPoP);
+        fprintf(stdout, "particle is lost\n");
 	}
-	is_lost = 1;
+        is_lost = 1;
         continue;
       }
       if (!allowResonanceCrossing && fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
 	if (ilmat->verbosity) {
-	  fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
-		  deltaPoP);
-	  fprintf(stdout, "particle is lost\n");
+        fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
+                deltaPoP);
+        fprintf(stdout, "particle is lost\n");
 	}
         is_lost = 1;
         continue;
@@ -3251,8 +3398,8 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
       if (fabs(det-1)>1e-6) {
 	if (ilmat->verbosity) {
-	  fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
-	  fprintf(stdout, "particle is lost\n");
+        fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
+        fprintf(stdout, "particle is lost\n");
 	}
         is_lost = 1;
         continue;
@@ -3335,6 +3482,20 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
  */
 {
   long i;
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_matr_element_tracking(M, matr, np, z);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    matr_element_tracking(coord, M, matr, np, z);
+    compareGpuCpu(np, "matr_element_tracking");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
+
 #if !USE_MPI
   if (!np)
     return;
@@ -3378,6 +3539,19 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
  */
 {
   long i;
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_ematrix_element_tracking(M, matr, np, z, P_central);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    ematrix_element_tracking(coord, M, matr, np, z, P_central);
+    compareGpuCpu(np, "ematr_element_tracking");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
 #if !USE_MPI
   if (!np)
@@ -3664,6 +3838,16 @@ void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long 
  /* printf("recording lost particles: nLost=%ld->%ld, nLeft=%ld, nToTrack=%ld\n", 
 	 nLost0, *nLost, nLeft, nToTrack);
  */ 
+
+#ifdef HAVE_GPU
+  if (getGpuBase()->particlesOnGpu) {
+    syncWithGpuLossBuffer(nToTrack, nLeft);
+    for (ip=nLeft; ip<nToTrack; ip++) 
+      lossBuffer[ip][7] = (double) pass;
+    return; 
+  }
+#endif
+
   for (ip=nLeft; ip<nToTrack; ip++) {  /* copy the lost particle coordinates and pass information */
 /*    if (!lossBuffer) {
       fprintf(stderr, "NULL loss buffer main pointer for ip=%ld\n");
@@ -3771,7 +3955,7 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     return ;
   }
 }
-
+ 
 #define DEBUG_SCATTER 0
  
 #if USE_MPI
@@ -3791,6 +3975,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   char s[1000];
 #endif
   
+#ifdef HAVE_GPU
+  coord = forceParticlesToCpu("scatterParticles");
+#endif
   if (myid==0) {
     printf("Distributing %ld particles to %ld worker processors\n", *nToTrack, n_processors-1);
 #if MPI_DEBUG
@@ -3816,13 +4003,13 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     fclose(fpdeb);
 #endif
   }
-  
+
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   rateCounts = malloc(sizeof(double) * n_processors);
 
   /* The particles will be distributed to slave processors evenly for the first pass */
   if (((balanceStatus==startMode) && (!*distributed))) {
-    /* || lostSinceSeqMode || *reAllocate )  we don't do redistribution for load balancing, as it could cause memory problem */
+    /* || lostSinceSeqMode || *reAllocate )  we don't do redistribution for load balancing, as it could cause memory problem */ 
 #if DEBUG_SCATTER
     printf("scatterParticles, branch 1\n"); fflush(stdout);
 #endif
@@ -3842,7 +4029,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     printf("scatterParticles, branch 1.2\n"); fflush(stdout);
 #endif
     MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
-    *distributed = 1;
+    *distributed = 1; 
 #if DEBUG_SCATTER
     printf("scatterParticles, branch 1.3, my_nToTrack=%d\n", my_nToTrack); fflush(stdout);
 #endif
@@ -4005,11 +4192,15 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   int my_nToTrack, my_nLost, *nToTrackCounts, 
     *nLostCounts, current_nLost=0, nToTrack_total, nLost_total; 
  
+#ifdef HAVE_GPU
+  coord = forceParticlesToCpu("gatherParticles");
+#endif
+
   MPI_Status status;
 
   printf("Gathering particles to master from %ld processors\n", work_processors);
   fflush(stdout);
-  
+
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   nLostCounts = malloc(sizeof(int) * n_processors);
 
@@ -4021,7 +4212,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     my_nToTrack = *nToTrack;
     my_nLost = *nLost;
   }
-  
+
   /* gather nToTrack and nLost from all of the slave processors to the master processors */ 
   MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
@@ -4058,7 +4249,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   
   MPI_Bcast(&current_nLost, 1, MPI_INT, root, MPI_COMM_WORLD);
 
-  if (myid==0) {
+    if (myid==0) {
       /* set up the displacement array and the number of elements that are received from each processor */ 
       nLostCounts[0] = 0;
       displs = my_nToTrack;
@@ -4087,7 +4278,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
         MPI_Send (&(*accepted)[my_nToTrack][0], my_nLost*COORDINATES_PER_PARTICLE, MPI_DOUBLE, root, 103, MPI_COMM_WORLD); 
       }      
     }
-  MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+    MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
 
   report_stats(stdout, "Finished gathering particles to master:");
   

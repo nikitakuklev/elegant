@@ -11,6 +11,9 @@
 #include "mdb.h"
 #include "track.h"
 #include "sort.h"
+#ifdef HAVE_GPU
+#include <gpu_limit_amplitudes.h>
+#endif
 
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
@@ -36,6 +39,19 @@ long rectangular_collimator(
   double xsize, ysize;
   double x_center, y_center;
   double x1, y1, zx, zy, dx, dy;
+
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_rectangular_collimator(rcol, np, accepted, z, Po);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      rectangular_collimator(initial, rcol, np, accepted, z, Po);
+      compareGpuCpu(np, "rectangular_collimator");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
 
   xsize  = rcol->x_max;
   ysize  = rcol->y_max;
@@ -160,6 +176,21 @@ long limit_amplitudes(
     double *part;
     double dz, dzx, dzy;
 
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_limit_amplitudes(xmax, ymax, np, accepted, z, Po, 
+                                extrapolate_z, openCode);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      limit_amplitudes(coord, xmax, ymax, np, accepted, z, Po,
+                       extrapolate_z, openCode);
+      compareGpuCpu(np, "limit_amplitudes");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
+
     if (xmax<0 && ymax<0) {
       return(np);
     }
@@ -219,6 +250,19 @@ long removeInvalidParticles(
     long ip, itop, is_out, ic;
     double *part;
 
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_removeInvalidParticles(np, accepted, z, Po);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      removeInvalidParticles(coord, np, accepted, z, Po);
+      compareGpuCpu(np, "removeInvalidParticles");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
+
     itop = np-1;
     for (ip=0; ip<np; ip++) {
         part = coord[ip];
@@ -262,15 +306,19 @@ long elliptical_collimator(
   double dx, dy, xo, yo, xsize, ysize;
   TRACKING_CONTEXT context;
   long xe, ye;
-
-  /*
-  if (ecol->invert && ecol->length) {
-    TRACKING_CONTEXT tc;
-    getTrackingContext(&tc);
-    fprintf(stderr, "Problem for %s#%ld:\n", tc.elementName, tc.elementOccurrence);
-    bombElegant("Cannot have invert=1 and non-zero length for ECOL", NULL);
-  }
-  */
+  
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_elliptical_collimator(ecol, np, accepted, z, Po);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      elliptical_collimator(initial, ecol, np, accepted, z, Po);
+      compareGpuCpu(np, "elliptical_collimator");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
 
   xsize = ecol->x_max;
   ysize = ecol->y_max;
@@ -403,6 +451,21 @@ long elimit_amplitudes(
     TRACKING_CONTEXT context;
     long xe, ye;
     
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_elimit_amplitudes(xmax, ymax, np, accepted, z, Po, 
+                                extrapolate_z, openCode, exponent, yexponent);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      elimit_amplitudes(coord, xmax, ymax, np, accepted, z, Po,
+                       extrapolate_z, openCode, exponent, yexponent);
+      compareGpuCpu(np, "elimit_amplitudes");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
+
     if ((xe=exponent)<2 || xe%2) {
       getTrackingContext(&context);
       fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
@@ -490,6 +553,19 @@ long beam_scraper(
   double length, *ini;
   long do_x, do_y, ip, itop;
   double limit;
+
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_beam_scraper(scraper, np, accepted, z, Po); 
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      beam_scraper(initial, scraper, np, accepted, z, Po); 
+      compareGpuCpu(np, "beam_scraper");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
 
   log_entry("beam_scraper");
 
@@ -972,7 +1048,7 @@ long interpolateApertureData(double z, APERTURE_DATA *apData,
 {
   double z0, period;
   long iz;
-  
+ 
   z0 = z;
   if (apData->s[apData->points-1]<z) {
     if (apData->periodic) {
@@ -1012,6 +1088,19 @@ long imposeApertureData(
   double xSize, ySize;
   double xCenter, yCenter;
   double dx, dy;
+
+#ifdef HAVE_GPU
+   if(getElementOnGpu()){
+      startGpuTimer();
+      ip = gpu_imposeApertureData(np, accepted, z, Po, apData);
+#ifdef GPU_VERIFY     
+      startCpuTimer();
+      imposeApertureData(initial, np, accepted, z, Po, apData);
+      compareGpuCpu(np, "imposeApertureData");
+#endif /* GPU_VERIFY */
+      return ip;
+    }
+#endif /* HAVE_GPU */
 
 #if DEBUG_APERTURE
   static FILE *fp = NULL;

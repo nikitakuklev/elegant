@@ -15,6 +15,9 @@
 #include "track.h"
 
 #include "fftpackC.h"
+#ifdef HAVE_GPU
+#include "gpu_lsc.h"
+#endif
 
 void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CHARGE *charge)
 {
@@ -38,6 +41,19 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if USE_MPI
   double *buffer;
 #endif
+
+#ifdef HAVE_GPU
+  if(getElementOnGpu()){
+    startGpuTimer();
+    gpu_track_through_lscdrift(np, LSC, Po, charge);
+#ifdef GPU_VERIFY     
+    startCpuTimer();
+    track_through_lscdrift(part, np, LSC, Po, charge);
+    compareGpuCpu(np, "track_through_lscdrift");
+#endif /* GPU_VERIFY */
+    return;
+  }
+#endif /* HAVE_GPU */
 
   if (LSC->lsc==0) {
     if (isSlave || !notSinglePart) 
@@ -94,7 +110,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     lengthLeft = LSC->lEffective;
     kickMode = 1;
   }
-  while (lengthLeft>0) { 
+  while (lengthLeft>0) {
     /* compute time coordinates and make histogram */
     if (isSlave ||  !notSinglePart)
       computeTimeCoordinatesOnly(time, Po, part, np);

@@ -10,6 +10,10 @@
 #include "mdb.h"
 #include "track.h"
 #include "modulate.h"
+#ifdef HAVE_GPU
+#include <gpu_base.h>
+#include <gpu_simple_rfca.h>
+#endif
 
 long loadModulationTable(double **t, double **value, char *file, char *timeColumn, char *amplitudeColumn);
 
@@ -206,11 +210,16 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   double modulation, value, t;
   long type, param;
   char *p_elem;
-  
+ 
   if (modData->nItems<=0)
     return 0;
-  
-  t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN);
+
+#ifdef HAVE_GPU
+  if (getGpuBase()->elementOnGpu)
+    t = gpu_findFiducialTime(np,0, 0, pCentral, FID_MODE_TMEAN);
+  else 
+#endif
+    t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN);
   matricesUpdated = 0;
 
 
