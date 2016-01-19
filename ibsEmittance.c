@@ -1189,4 +1189,8 @@ void IBSRateForDistribution
       zRateVsSTotal[j] *= 2*sqrt(PI);
     free(zRateVsS);
   }
+  if (verbosity>4) {
+    printf("emitx = %le, emity=%le, sigmaz/sigmaz0 = %le\n", emitx, emity, sigmaz/sigmaz0);
+    printf("rates = %le, %le, %le\n", *xGrowthRateTotal, *yGrowthRateTotal, *zGrowthRateTotal);
+  }
 }

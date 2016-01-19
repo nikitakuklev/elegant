@@ -219,7 +219,7 @@ void IBSRate (double particles,
     txi = constant * zintx;
     tyi = constant * zinty;
     tzi = constant * zintz;
-  if (verbosity > 1) {
+  if (verbosity > 5) {
     fprintf( stdout, "i=%ld, coulombLogReturn=%g, constant=%g, zintx=%g, zinty=%g, zintz=%g\n", 
              i, coulombLogReturn, constant/coulombLogReturn, zintx, zinty, zintz);
   }
