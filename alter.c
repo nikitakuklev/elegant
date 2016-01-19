@@ -57,6 +57,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       bombElegant("can't combine start_occurence/end_occurence, s_start/s_end, and after/before---use one method only", NULL);
     if (start_occurence>end_occurence) 
       bombElegant("start_occurence > end_occurence", NULL);
+    if ((start_occurence!=0 && end_occurence!=0) && occurence_step<=0)
+      bombElegant("occurence_step<=0", NULL);
     if (after || before) {
       ELEMENT_LIST *context;
       context = NULL;
@@ -122,9 +124,11 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     while ((eptr=wfind_element(name, &context, &(beamline->elem)))) {
       if (exclude && strlen(exclude) && wild_match(eptr->name, exclude))
         continue;
-      if (start_occurence!=0 && end_occurence!=0 && 
-          (eptr->occurence<start_occurence || eptr->occurence>end_occurence))
+      if (start_occurence!=0 && end_occurence!=0) {
+        if (eptr->occurence<start_occurence || eptr->occurence>end_occurence ||
+            (eptr->occurence-start_occurence)%occurence_step!=0)
         continue;
+      }
       if (s_start>=0 && s_end>=0 &&
           (eptr->end_pos<s_start || eptr->end_pos>s_end))
         continue;
@@ -152,8 +156,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       switch (entity_description[eptr->type].parameter[iParam].type) {
       case IS_DOUBLE:
         if (verbose && printingEnabled)
-          fprintf(stdout, "Changing %s.%s from %21.15e to ",
-                  eptr->name, 
+          fprintf(stdout, "Changing %s#%ld.%s from %21.15e to ",
+                  eptr->name, eptr->occurence,
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
@@ -187,8 +191,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         break;
       case IS_LONG:
         if (verbose && printingEnabled)
-          fprintf(stdout, "Changing %s.%s from %ld to ",
-                  eptr->name, 
+          fprintf(stdout, "Changing %s#%ld.%s from %ld to ",
+                  eptr->name, eptr->occurence,
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
@@ -233,8 +237,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
          * pointing to static memory
          */
         if (verbose && printingEnabled)
-          fprintf(stdout, "Changing %s.%s from %s to ",
-                  eptr->name, 
+          fprintf(stdout, "Changing %s#%ld.%s from %s to ",
+                  eptr->name, eptr->occurence,
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         cp_str((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset),
