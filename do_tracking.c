@@ -1782,7 +1782,7 @@ long do_tracking(
                                             last_z);
               break;
             case T_TWISSELEMENT:
-	      if (((TWISSELEMENT*)eptr->p_elem)->disable)
+	      if (((TWISSELEMENT*)eptr->p_elem)->disable || flags&TEST_PARTICLES)
 		break;
               if ( ((TWISSELEMENT*)eptr->p_elem)->applyOnce==0 || i_pass==passOffset) {
                 /* If applying once, do so on the first pass through only */
@@ -1807,7 +1807,7 @@ long do_tracking(
 #else
                     if (nToTrack<10) {
 #endif		     
-                      printf("*** Error: too few particles (<10) for computation of twiss parameters from beam\n");
+                      printf("*** Error: too few particles (%ld) for computation of twiss parameters from beam\n", nToTrack);
                       exitElegant(1);
                     }
                     computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
