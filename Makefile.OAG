@@ -89,7 +89,7 @@ PROD_HOST = $(PRODOAG)
 endif
 
 SVN_VERSION=$(shell svnversion ..)
-ifeq ($(SVN_VERSION,)
+ifeq ($(SVN_VERSION),)
 SVN_VERSION=unknown
 endif
 
