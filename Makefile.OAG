@@ -20,6 +20,10 @@ endif
                                        # -g should be turned off for comparison
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
+
+OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
+
+
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1 # 1 for parallel elegant, 0 for serial elegant  
   #USER_MPI_FLAGS += -DMPI_DEBUG=1 
@@ -85,6 +89,10 @@ PROD_HOST = $(PRODOAG)
 endif
 
 SVN_VERSION=$(shell svnversion ..)
+ifeq ($(SVN_VERSION,)
+SVN_VERSION=unknown
+endif
+
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
 USR_CPPFLAGS = 	$(USR_CFLAGS)
