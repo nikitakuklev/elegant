@@ -21,7 +21,7 @@ endif
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 
-OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
+#OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
 
 
 ifeq ($(MPI),1)
