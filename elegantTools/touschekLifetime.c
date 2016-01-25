@@ -523,6 +523,7 @@ int main( int argc, char **argv)
   \****************************************************/
   if (has_beam) {
     double sSum, s2Sum;
+    short increasing = 0;
     if (verbosity)
       fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
     if (!SDDS_InitializeInput(&beamProfPage, beamInput))
@@ -544,6 +545,17 @@ int main( int argc, char **argv)
     gammaSlice = SDDS_GetColumnInDoubles(&beamProfPage, "gamma");
     NP = sz = sigmap = emitx = emity = 0;
     sSum = s2Sum = 0;
+    for (i=1; i<nSlice; i++) {
+      if (szSlice[i]>szSlice[i-1])
+	increasing++;
+    }
+    if (increasing!=(nSlice-1) && increasing!=0) {
+      fprintf(stdout, "Error: slice data is not monotonic in the 's' coordinate\n");
+      exit(1);
+    }
+    if (increasing==0)
+      for (i=0; i<nSlice; i++)
+	szSlice[i] *= -1;
     for (i=0; i<nSlice; i++) {
       NP += npSlice[i];
       sSum += npSlice[i]*szSlice[i];
