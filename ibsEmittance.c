@@ -623,14 +623,15 @@ int main( int argc, char **argv)
     sigmaz0 = sqrt(sum2);
 
     /* Find the spacing of the z points */
-    if ((dz = distZData[1] - distZData[0])<=0)
-      bomb("check spacing of time data in distribution file. Must be monotonically increasing.", NULL);
+    if ((dz = distZData[1] - distZData[0])==0)
+      bomb("Check spacing of time data in distribution file. Must be monotonically increasing or decreasing.", NULL);
     for (i=2; i<nDistData; i++) {
       double dz1;
       dz1 = distZData[i] - distZData[i-1];
-      if (fabs(dz1-dz)/dz>1e-6)
-        bomb("check spacing of time data in distribution file. Must be monotonically increasing and equispaced.", NULL);
+      if (fabs((dz1-dz)/dz)>1e-6)
+        bomb("Check spacing of time data in distribution file. Must change monotonically and be equispaced.", NULL);
     }
+    dz = fabs(dz);
     free(distZData);
   }
 
