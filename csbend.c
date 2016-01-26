@@ -499,7 +499,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     /* Sands 5.15 */
     meanPhotonsPerRadian0 = 5.0/(2.0*sqrt(3))*Po/137.0359895;  
     meanPhotonsPerMeter0 = (5*c_mks*Po*particleMass*particleRadius)/(2*sqrt(3)*hbar_mks*rho_actual);
-    /* Critical energy normalized to beam energy, Sands 5.9 */
+    /* Critical energy normalized to reference energy, Sands 5.9 */
     normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*particleMass*sqr(c_mks));
     /* fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
             meanPhotonsPerRadian0, normalizedCriticalEnergy0);
@@ -4092,21 +4092,24 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
     *Qx *= (1 + *dPoP);
     *Qy *= (1 + *dPoP);
   } else {
+    double dtheta=0, dphi=0;
     F = sqrt(F2);
     /* Compute the mean number of photons emitted = meanPhotonsPerMeter*meters */
+    /* Note that unlike the #photons/radian, this is independent of energy */
     nMean = meanPhotonsPerMeter*dsISR*dsFactor*F;
     /* Pick the actual number of photons emitted from Poisson distribution */
     nEmitted = inversePoissonCDF(nMean, random_2(1));
     /* Adjust normalized critical energy to local field strength (FSE is already included via rho_actual) */
-    /* Variation with energy offset included below. */
-    normalizedCriticalEnergy = normalizedCriticalEnergy0*(1+*dPoP)*F;
+    normalizedCriticalEnergy = normalizedCriticalEnergy0*F;
     /* For each photon, pick its energy and emission angles */
     for (i=0; i<nEmitted; i++) {
       /* Pick photon energy normalized to critical energy */
       y=pickNormalizedPhotonEnergy(random_2(1));
-      /* Multiply by critical energy normalized to beam energy, adjusting for variation with
-       * individual electron energy offset. */
-      dDelta = normalizedCriticalEnergy*(1 + *dPoP)*y;
+      /* Multiply by critical energy normalized to central beam energy, adjusting for variation with
+       * individual electron energy offset. Note that it goes like (1+delta)^2, not (1+delta)^3 
+       * because the bending radius also depends on (1+delta) 
+       */
+      dDelta = normalizedCriticalEnergy*sqr(1 + *dPoP)*y;
       photonCount ++;
       energyCount += y;
       /* Change the total electron momentum */
@@ -4119,8 +4122,19 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                               + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
                                                                    -logy*6.181818621278201e-03)))/Po;
         /* Compute change in electron angle due to photon angle */
-        xp += thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-        yp += thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        dtheta = thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        dphi = thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+/*
+        if (SDDSphotons)
+          logPhoton(dDelta, xp-dtheta/dDelta, yp-dphi/dDelta);
+*/
+        xp += dtheta;
+        yp += dphi;
+      } else {
+/*
+        if (SDDSphotons)
+          logPhoton(dDelta, xp, yp);
+*/
       }
     }
     f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
@@ -4367,3 +4381,9 @@ void convolveArrays1(double *output, long n, double *a1, double *a2)
       output[ib] += a1[ib1]*a2[ib1-ib];
   }
 }
+
+void logPhoton(double y, double xp, double yp)
+{
+  
+}
+
