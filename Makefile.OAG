@@ -21,7 +21,10 @@ endif
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 
-#OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
+ifeq ($(GPU),1)
+OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
+STATIC_BUILD=NO
+endif
 
 
 ifeq ($(MPI),1)
@@ -502,6 +505,66 @@ kahan_CFLAGS = /O0
 else
 kahan_CFLAGS = -O0
 endif
+
+
+ifeq ($(GPU),1)
+madto_OBJS =    ../gpuElegant/gpu_base.o \
+                ../gpuElegant/gpu_matrix.o \
+                ../gpuElegant/gpu_memory_management.o \
+                ../gpuElegant/madto_gpu.o
+madto_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+
+elegant_OBJS =  ../gpuElegant/gpu_base.o \
+                ../gpuElegant/gpu_bin_time_distribution.o \
+                ../gpuElegant/gpu_bin_transverse_distribution.o \
+                ../gpuElegant/gpu_compute_centroids.o \
+                ../gpuElegant/gpu_convolve_arrays.o \
+                ../gpuElegant/gpu_csbend.o \
+                ../gpuElegant/gpu_final_props.o \
+                ../gpuElegant/gpu_funcs.o \
+                ../gpuElegant/gpu_kahan.o \
+                ../gpuElegant/gpu_killParticles.o \
+                ../gpuElegant/gpu_limit_amplitudes.o \
+                ../gpuElegant/gpu_lrwake.o \
+                ../gpuElegant/gpu_lsc.o \
+                ../gpuElegant/gpu_matrix.o \
+                ../gpuElegant/gpu_matter.o \
+                ../gpuElegant/gpu_memory_management.o \
+                ../gpuElegant/gpu_multipole.o \
+                ../gpuElegant/gpu_reductions.o \
+                ../gpuElegant/gpu_simple_rfca.o \
+                ../gpuElegant/gpu_trwake.o \
+                ../gpuElegant/gpu_wake.o \
+                ../gpuElegant/printCudaDeviceProp.o \
+                ../gpuElegant/elegant_gpu.o
+elegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+
+Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.o \
+                ../gpuElegant/mpi_gpu_bin_time_distribution.o \
+                ../gpuElegant/mpi_gpu_bin_transverse_distribution.o \
+                ../gpuElegant/mpi_gpu_compute_centroids.o \
+                ../gpuElegant/mpi_gpu_convolve_arrays.o \
+                ../gpuElegant/mpi_gpu_csbend.o \
+                ../gpuElegant/mpi_gpu_final_props.o \
+                ../gpuElegant/mpi_gpu_funcs.o \
+                ../gpuElegant/mpi_gpu_kahan.o \
+                ../gpuElegant/mpi_gpu_killParticles.o \
+                ../gpuElegant/mpi_gpu_limit_amplitudes.o \
+                ../gpuElegant/mpi_gpu_lrwake.o \
+                ../gpuElegant/mpi_gpu_lsc.o \
+                ../gpuElegant/mpi_gpu_matrix.o \
+                ../gpuElegant/mpi_gpu_matter.o \
+                ../gpuElegant/mpi_gpu_memory_management.o \
+                ../gpuElegant/mpi_gpu_multipole.o \
+                ../gpuElegant/mpi_gpu_reductions.o \
+                ../gpuElegant/mpi_gpu_simple_rfca.o \
+                ../gpuElegant/mpi_gpu_trwake.o \
+                ../gpuElegant/mpi_gpu_wake.o \
+                ../gpuElegant/mpi_printCudaDeviceProp.o \
+                ../gpuElegant/Pelegant_gpu.o
+Pelegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+endif
+
 
 
 madto_LIBS += $(GSLLIB)
