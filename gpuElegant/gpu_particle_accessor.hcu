@@ -1,0 +1,67 @@
+#ifndef GPU_PARTICLE_ACCESSOR_HCU
+#define GPU_PARTICLE_ACCESSOR_HCU
+
+#define BIT1 0x00000001
+#define BIT2 0x00000002
+#define BIT3 0x00000004
+#define BIT4 0x00000008
+#define BIT5 0x00000010
+#define BIT6 0x00000020
+#define BIT7 0x00000040
+#define BIT8 0x00000080
+
+class gpuParticleAccessor {
+  double p0,p1,p2,p3,p4,p5,p6;
+  char flag;
+  unsigned int particleIndex;
+  unsigned int particlePitch;
+  double* d_particles;
+public:
+  __device__ gpuParticleAccessor(double* d_particles, 
+      unsigned int particleIndex, unsigned int particlePitch){    
+    this->particleIndex = particleIndex;
+    this->d_particles = d_particles;
+    this->particlePitch = particlePitch;
+    p0 = p1 = p2 = p3 = p4 = p5 = p6 = 0.;
+    flag=0x00000000;
+  }
+  __device__ ~gpuParticleAccessor(){
+    if(flag&BIT1) d_particles[particleIndex + 0*particlePitch] = p0;
+    if(flag&BIT2) d_particles[particleIndex + 1*particlePitch] = p1;
+    if(flag&BIT3) d_particles[particleIndex + 2*particlePitch] = p2;
+    if(flag&BIT4) d_particles[particleIndex + 3*particlePitch] = p3;
+    if(flag&BIT5) d_particles[particleIndex + 4*particlePitch] = p4;
+    if(flag&BIT6) d_particles[particleIndex + 5*particlePitch] = p5;
+    if(flag&BIT7) d_particles[particleIndex + 6*particlePitch] = p6;
+  }
+  __device__ inline unsigned int getParticleIndex(){ return particleIndex; }
+  __device__ inline unsigned int getParticlePitch(){ return particlePitch; }
+  __device__ inline double* getParticleArray(){ return d_particles; }
+  __device__ inline double& operator[](unsigned int index){
+    switch (index){
+    case 0:
+      if(flag&BIT1) return p0;
+      else { flag|=BIT1; return p0 = d_particles[particleIndex + index * particlePitch]; }
+    case 1:
+      if(flag&BIT2) return p1;
+      else { flag|=BIT2; return p1 = d_particles[particleIndex + index * particlePitch]; }
+    case 2:
+      if(flag&BIT3) return p2;
+      else { flag|=BIT3; return p2 = d_particles[particleIndex + index * particlePitch]; }
+    case 3:
+      if(flag&BIT4) return p3;
+      else { flag|=BIT4; return p3 = d_particles[particleIndex + index * particlePitch]; }
+    case 4:
+      if(flag&BIT5) return p4;
+      else { flag|=BIT5; return p4 = d_particles[particleIndex + index * particlePitch]; }
+    case 5:
+      if(flag&BIT6) return p5;
+      else { flag|=BIT6; return p5 = d_particles[particleIndex + index * particlePitch]; }
+    default: //case 6:
+      if(flag&BIT7) return p6;
+      else { flag|=BIT7; return p6 = d_particles[particleIndex + index * particlePitch]; }
+    };    
+  }
+};
+
+#endif // GPU_PARTICLE_ACCESSOR_HCU

@@ -1,0 +1,72 @@
+#ifndef GPU_KAHAN_HCU
+#define GPU_KAHAN_HCU
+template<class FLOATTYPE>
+__device__ inline FLOATTYPE KahanPlusDevice(volatile FLOATTYPE oldSum, 
+    volatile FLOATTYPE b, volatile FLOATTYPE& error){
+  FLOATTYPE sum, Y;
+  Y = b + error;
+  sum = oldSum + Y;
+  error = Y - (sum-oldSum);
+  return sum; 
+}
+
+template <class FLOATTYPE>
+__device__ inline void kahanSumDevice(volatile FLOATTYPE& sum, 
+    volatile FLOATTYPE& c, volatile FLOATTYPE a){
+  FLOATTYPE Y, T;
+  Y = a - c;
+  T = sum + Y;
+  c = (T-sum) - Y;
+  sum = T;
+}
+
+template<class FLOATTYPE>
+__device__ inline void kahanSumTwo(volatile FLOATTYPE& sumA, 
+    volatile FLOATTYPE& sumB, volatile FLOATTYPE& errorA, 
+    volatile FLOATTYPE errorB){
+  sumA = KahanPlusDevice(sumA, sumB, errorA);
+  sumA = KahanPlusDevice(sumA, errorB, errorA);
+}
+
+// reduce a thread block, using KahanAdd
+//
+//  Template Parameters:
+//  T  type. E.g., double, float, unsigned int, etc
+//
+//  Parameters
+//  s_sumArray:  Shared data array, of size n.
+//  s_errorArray: Shared error data array, of size n.
+//  mySum:  thread's data.
+//  myError:  thread's error.
+//  tid:  index of thread
+//  n:  size of reduction
+template<class T, unsigned int NTHREADS>
+__device__ inline void reduceBlockKahanAdd(volatile T* s_sumArray, 
+    volatile T* s_errorArray, T& mySum, T& error, const unsigned int& tid, 
+    const unsigned int& n){
+  s_sumArray[tid] = mySum;
+  s_errorArray[tid] = error; 
+  __syncthreads();
+
+  unsigned int blkStep = NTHREADS;
+  while (blkStep >= 2) {
+    if(n > blkStep) {
+      if(tid + blkStep < n && tid < blkStep) {
+        kahanSumTwo(s_sumArray[tid], s_sumArray[tid+blkStep],
+                    s_errorArray[tid], s_errorArray[tid+blkStep]);
+        mySum = s_sumArray[tid];
+        error = s_errorArray[tid];
+      }
+      __syncthreads();
+    }
+    blkStep >>= 1;
+  }
+  if( tid == 0 ) {
+    kahanSumTwo(s_sumArray[tid], s_sumArray[tid+1],
+                s_errorArray[tid], s_errorArray[tid+1]);
+    mySum = s_sumArray[tid];
+    error = s_errorArray[tid];
+  }
+}
+
+#endif /* GPU_KAHAN_HCU */

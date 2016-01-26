@@ -1,0 +1,151 @@
+#ifndef GPU_PARTICLE_TEMPLATE_FUNCTION_HCU
+#define GPU_PARTICLE_TEMPLATE_FUNCTION_HCU
+
+#include <gpu_base.h>
+#include <gpu_particle_accessor.hcu>
+#include <stdio.h>
+
+/* Fundamental class for particle interactions. Based on particleAccessor class */
+class gpuFunctionIfc {
+public:
+  virtual __device__ void operator()(gpuParticleAccessor& particle) = 0;
+};
+
+// Print function
+class gpuPrintFunction : public gpuFunctionIfc{  
+public:
+  unsigned int nToPrint, startIndex;
+  gpuPrintFunction(unsigned int nToPrint = 1, unsigned int startIndex = 0){
+    this->nToPrint = nToPrint;
+    this->startIndex = startIndex;
+  }
+
+  __device__ void inline operator()(gpuParticleAccessor& particle){
+    if(particle.getParticleIndex() >= startIndex &&
+       particle.getParticleIndex() < startIndex + nToPrint){
+      double p0 = particle[0];
+      double p1 = particle[1];
+      double p2 = particle[2];
+      double p3 = particle[3];
+      double p4 = particle[4];
+      double p5 = particle[5];
+      double p6 = particle[6];
+      printf("GPU print function.  particle[%d] is %.15le %.15le %.15le  %.15le %.15le %.15le  %d \n",
+             particle.getParticleIndex(), p0, p1, p2, p3, p4, p5, (int)p6);
+    }
+  }
+};
+
+// Fill function
+class gpuFill: public gpuFunctionIfc{
+public:
+  gpuFill(double value, unsigned int index) {
+    this->value = value;
+    this->index = index;
+  }
+  __device__ void inline operator()(gpuParticleAccessor& particle) {
+    particle[index] = value;
+  }
+  double value;
+  unsigned int index;
+};
+
+// Exact Drift Function -- common to multiple elements
+class gpuExactDrift{
+public:
+  gpuExactDrift(double len) : length(len) {}
+  __device__ void inline operator()(gpuParticleAccessor& coord){
+    coord[0] += coord[1]*length;
+    coord[2] += coord[3]*length;
+    coord[4] += length*sqrt(1+coord[1]*coord[1]+coord[3]*coord[3]);
+  }
+  double length;
+};
+
+// Template Kernel.  Not instantiated yet.
+template<class FUNCTION>
+__global__ void gpuTemplatedKernel(double* d_particles,
+                  unsigned int particlePitch, unsigned int np,
+                  FUNCTION function) {
+  for(unsigned int tid=threadIdx.x + blockIdx.x*blockDim.x ; tid < np;
+      tid += blockDim.x*gridDim.x){
+    gpuParticleAccessor iterator(d_particles, tid, particlePitch);
+  
+    function(iterator);           
+  }
+}
+
+// Driver Function.  Not instantiated yet.
+template<class FUNCTION>
+inline void gpuDriver(unsigned int np, FUNCTION function) {
+  if (!np) return;
+  struct GPUBASE* gpuBase = getGpuBase();
+  unsigned int nTx = gpuBase->nThreads;
+  unsigned int nBx = (np + nTx - 1) / nTx;
+  if(nBx > gpuBase->maxBlocks) nBx = gpuBase->maxBlocks;
+
+  gpuTemplatedKernel<<<nBx,nTx>>>(gpuBase->d_particles,
+         gpuBase->gpu_array_pitch, np, function);
+}
+
+// Template Kernel.  Not instantiated yet.
+template<class FUNCTION_1, class FUNCTION_2>
+__global__ void gpuTemplatedKernel(double* d_particles,
+                  unsigned int particlePitch, unsigned int np,
+                  FUNCTION_1 function_1, FUNCTION_2 function_2) {
+  for(unsigned int tid=threadIdx.x + blockIdx.x*blockDim.x ; tid < np;
+      tid += blockDim.x*gridDim.x){
+    gpuParticleAccessor iterator(d_particles, tid, particlePitch);
+  
+    function_1(iterator);           
+
+    function_2(iterator);
+  }
+}
+
+// Driver Function.  Not instantiated yet.
+template<class FUNCTION_1, class FUNCTION_2>
+inline void gpuDriver(unsigned int np, FUNCTION_1 function_1,
+                      FUNCTION_2 function_2) {
+  if (!np) return;
+  struct GPUBASE* gpuBase = getGpuBase();
+  unsigned int nTx = gpuBase->nThreads;
+  unsigned int nBx = (np + nTx - 1) / nTx;
+  if(nBx > gpuBase->maxBlocks) nBx = gpuBase->maxBlocks;
+
+  gpuTemplatedKernel<<<nBx,nTx>>>(gpuBase->d_particles,
+         gpuBase->gpu_array_pitch, np, function_1, function_2);
+}
+
+// Template Kernel.  Not instantiated yet.
+template<class FUNCTION_1, class FUNCTION_2, class FUNCTION_3>
+__global__ void gpuTemplatedKernel(double* d_particles, unsigned int particlePitch, 
+                                   unsigned int np, FUNCTION_1 function_1, 
+                                   FUNCTION_2 function_2, FUNCTION_3 function_3) {
+  for(unsigned int tid=threadIdx.x + blockIdx.x*blockDim.x ; tid < np; 
+      tid += blockDim.x*gridDim.x){
+    gpuParticleAccessor iterator(d_particles, tid, particlePitch);
+  
+    function_1(iterator);           
+
+    function_2(iterator);
+
+    function_3(iterator);
+  }
+}
+
+// Driver Function.  Not instantiated yet.
+template<class FUNCTION_1, class FUNCTION_2, class FUNCTION_3>
+inline void gpuDriver(unsigned int np, FUNCTION_1 function_1, 
+                      FUNCTION_2 function_2, FUNCTION_3 function_3) {
+  if (!np) return;
+  struct GPUBASE* gpuBase = getGpuBase();
+  unsigned int nTx = gpuBase->nThreads;
+  unsigned int nBx = (np + nTx - 1) / nTx;
+  if(nBx > gpuBase->maxBlocks) nBx = gpuBase->maxBlocks;
+
+  gpuTemplatedKernel<<<nBx,nTx>>>(gpuBase->d_particles,
+         gpuBase->gpu_array_pitch, np, function_1, function_2, function_3);
+}
+
+#endif // GPU_PARTICLE_TEMPLATE_FUNCTION_HCU

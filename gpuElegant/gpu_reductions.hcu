@@ -1,0 +1,435 @@
+#ifndef GPU_REDUCTIONS_HCU
+#define GPU_REDUCTIONS_HCU
+
+// inline functions to avoid more verbose template specializations
+inline __device__ unsigned int device_max(unsigned int a, unsigned int b) {
+  return max(a,b); 
+};
+inline __device__ float device_max(float a, float b) { 
+  return fmaxf(a,b);
+};
+inline __device__ double device_max(double a, double b) { 
+  return a > b ? a : b ; 
+};
+inline __device__ unsigned int device_min(unsigned int a, unsigned int b) {
+  return min(a,b); 
+};
+inline __device__ float device_min(float a, float b){
+  return fminf(a,b);
+};
+inline __device__ double device_min(double a, double b){
+  return a < b ? a : b ; 
+};
+
+#include <limits.h>
+#include <values.h>
+inline __device__ unsigned int device_initial_max(unsigned int a){ 
+  return UINT_MAX; 
+}
+inline __device__ int device_initial_max(int a){
+  return INT_MAX; 
+}
+inline __device__ double device_initial_max(double a){
+  return DBL_MAX; 
+}
+inline __device__ float device_initial_max(float a){
+  return FLT_MAX; 
+}
+
+inline __device__ unsigned int device_initial_min(unsigned int a){
+  return 0;
+}
+inline __device__ int device_initial_min(int a){
+  return INT_MIN;
+}
+inline __device__ double device_initial_min(double a){
+  return -DBL_MAX;
+}
+inline __device__ float device_initial_min(float a){
+  return -FLT_MAX;
+}
+
+template<class T>
+class Add {
+public:
+  inline __device__ T operator()( T a,  T b) const { return a + b; }
+  inline __device__ __host__ T initialValue() const { return 0; }
+};
+
+template<class T>
+class Sub {
+public:
+  inline __device__ T operator()( T a,  T b) const { return a - b; }
+  inline __device__ __host__ T initialValue() const { return 0; }
+};
+
+template<class T>
+class Max {
+public:
+  inline __device__ T operator()( T a,  T b) const {
+    return device_max(a,b);
+  }
+  inline __device__ __host__ T initialValue() const {
+    T a;
+    return device_initial_min(a);
+  }
+};
+
+template<class T>
+class Min {
+public:
+  inline __device__ T operator()( T a,  T b) const {
+    return device_min(a,b);
+  }
+  inline __device__ __host__ T initialValue() const {
+    T a;
+    return device_initial_max(a); 
+  }
+};
+
+template <> inline __device__ double Max<double>::initialValue() const {
+  return -DBL_MAX; 
+}
+template <> inline __device__ float Max<float>::initialValue() const {
+  return -FLT_MAX; 
+}
+template <> inline __device__ unsigned int Max<unsigned int>::initialValue() const {
+  return 0; 
+} 
+template <> inline __device__ int Max<int>::initialValue() const {
+  return INT_MIN; 
+}
+
+template <> inline __device__ double Min<double>::initialValue() const {
+  return DBL_MAX;
+}
+template <> inline __device__ float Min<float>::initialValue() const {
+  return FLT_MAX;
+}
+template <> inline __device__ unsigned int Min<unsigned int>::initialValue() const {
+  return UINT_MAX;
+}
+template <> inline __device__ int Min<int>::initialValue() const {
+  return INT_MAX;
+}
+
+// reduce a thread block, per a given FUNCTOR class like Add or Max.
+//
+//  Template Parameters:
+//  T  type. E.g., double, float, unsigned int, etc
+//  FUNCTOR function operation, needs to implement '__device__ T operator(T a, T b)'.
+//
+//  Parameters
+//  sdata:  Shared data array, of size n.
+//  myData:  thread's data input.
+//  tid:  index of thread
+//  n:  size of reduction
+//  functor:  functor of reduction.
+template<class T, unsigned int NTHREADS, class FUNCTOR>
+inline __device__ void reduceBlock(volatile T* sdata, volatile T &myData, 
+    const unsigned int& tid, const unsigned int& n, FUNCTOR functor){
+
+  sdata[tid] = myData;
+  for (unsigned int ttid = tid+blockDim.x; ttid < n; ttid += blockDim.x)
+    sdata[ttid] = functor.initialValue();
+  __syncthreads();
+ 
+  unsigned int blkStep = NTHREADS;
+  while (blkStep >= 2) {
+    if(n > blkStep) {
+      if(tid + blkStep < n && tid < blkStep) 
+        sdata[tid] = myData = functor(myData, sdata[tid + blkStep]);
+      __syncthreads(); 
+    }
+    blkStep >>= 1;
+  }
+  if( tid == 0 ) sdata[tid] = functor(myData, sdata[tid + 1]);
+}
+
+template<class T, unsigned int NTHREADS, class FUNCTOR>
+__global__ void gpuReduceKernel(T* d_data, T* d_result, unsigned int n,
+    unsigned int* retirementCount, FUNCTOR functor){
+
+  volatile __shared__ T sh_data[NTHREADS]; // size of blockDim.x
+  sh_data[threadIdx.x] = functor.initialValue();
+  volatile T r_data = functor.initialValue();
+  for(unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x; tid < n;
+      tid+= blockDim.x*gridDim.x){
+    r_data = functor(r_data, d_data[tid] );
+  }
+  reduceBlock<T, NTHREADS, FUNCTOR>
+      (sh_data, r_data, threadIdx.x, NTHREADS, functor);
+
+  if(threadIdx.x==0){
+    r_data = sh_data[threadIdx.x];
+    d_result[blockIdx.x] =r_data;
+  }
+
+  // code taken and modified from the threadFenceReduction CUDA SDK example
+  if(retirementCount && gridDim.x > 1){
+    __shared__ volatile bool amLast;
+    __threadfence();
+    // each block takes a ticket, the last block to finish the calculation
+    // does the reduction
+    if(threadIdx.x==0){
+      uint ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads();    
+
+    if( amLast ){
+      r_data = functor.initialValue();
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_data = functor(r_data, d_result[tx]);
+      }
+      // find the maximum value of histogram
+      reduceBlock<T, NTHREADS, FUNCTOR>
+          (sh_data, r_data, threadIdx.x, gridDim.x, functor);
+      
+      if(threadIdx.x==0){
+	r_data = sh_data[0];
+	d_result[0] = r_data;
+      }
+    }//amLast
+  }// gridDim.x > 1
+}
+
+template<class T1, class T2>
+class LessThan {
+public:
+  __device__ inline void operator()(volatile T1& keyA, volatile T2& valA, 
+                                    volatile T1& keyB, volatile T2& valB){
+    T1 t1;
+    T2 t2;
+    if( keyB < keyA  || ((keyB == keyA)&&(valB < valA))){
+      // this maintains the serial ordering of a for-loop
+      t1 = keyA;
+      t2 = valA;
+      
+      keyA = keyB;
+      valA = valB;
+
+      keyB = t1;
+      valB = t2;
+    }
+  }
+  inline __device__ T1 initialValue() const {
+    T1 a = 0;
+    return device_initial_max(a);
+  };
+};
+
+template<class T1, class T2>
+class GreaterThan {
+public:
+  __device__ inline void operator()(volatile T1& keyA, volatile T2& valA,
+                                    volatile T1& keyB, volatile T2& valB){
+    T1 t1;
+    T2 t2;
+    if( keyB > keyA  || ((keyB == keyA)&&(valB > valA))){
+      // this maintains the serial ordering of a for-loop
+      t1 = keyA;
+      t2 = valA;
+      
+      keyA = keyB;
+      valA = valB;
+
+      keyB = t1;
+      valB = t2;
+    }
+  }
+  inline __device__ T1 initialValue() const {
+    T1 a = 0;
+    return device_initial_min(a);
+  };
+};
+
+template<class T>
+class nullTransform {
+public:
+  T* d_a;
+  nullTransform(T* a) : d_a(a) { }
+
+  __device__ inline T operator()(unsigned int tid){
+    //if(isnan(d_a[tid])) printf("Nan at tid %u\n",tid);
+    return d_a[tid];
+  }
+};
+
+template<class T, unsigned int NTHREADS, class TRANSFORM_FUNCTOR,
+         class REDUCTION_FUNCTOR_ALPHA, class REDUCTION_FUNCTOR_BETA>
+__global__ void gpuDoubleReduceKernel(T* d_resultAlpha, T* d_resultBeta,
+   unsigned int n, unsigned int* retirementCount, 
+   TRANSFORM_FUNCTOR transformFunction,  
+   REDUCTION_FUNCTOR_ALPHA reductionFunctorAlpha,
+   REDUCTION_FUNCTOR_BETA reductionFunctorBeta){
+
+  volatile __shared__ T s_alpha[NTHREADS]; 
+  volatile __shared__ T s_beta[NTHREADS]; 
+
+  T r_alpha= reductionFunctorAlpha.initialValue();
+  T r_beta = reductionFunctorBeta.initialValue();
+
+  for(unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x; tid < n;
+      tid+= blockDim.x*gridDim.x){
+    T r_input = transformFunction(tid);
+    r_alpha = reductionFunctorAlpha(r_alpha, r_input);
+    r_beta = reductionFunctorBeta(r_beta, r_input);
+  }
+  
+  reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR_ALPHA>
+      (s_alpha, r_alpha, threadIdx.x, blockDim.x, reductionFunctorAlpha);
+  if(threadIdx.x==0){
+    d_resultAlpha[blockIdx.x] = s_alpha[0];
+  }
+
+  reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR_BETA>
+      (s_beta, r_beta, threadIdx.x, blockDim.x, reductionFunctorBeta);
+  if(threadIdx.x==0){
+    d_resultBeta[blockIdx.x] = s_beta[0];
+  }
+  
+  // code taken and modified from the threadFenceReduction CUDA SDK example
+  if(gridDim.x > 1){
+    __shared__ volatile bool amLast;
+    __threadfence();
+    // each block takes a ticket, the last block to finish the calculation
+    // does the reduction
+    if(threadIdx.x==0){
+      uint ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads();
+
+    if( amLast ){
+      r_alpha = reductionFunctorAlpha.initialValue();
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_alpha = reductionFunctorAlpha(r_alpha, d_resultAlpha[tx]);
+      }
+
+      r_beta = reductionFunctorBeta.initialValue();
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_beta = reductionFunctorBeta(r_beta, d_resultBeta[tx]);
+      }
+
+      // find the maximum value of histogram
+      reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR_ALPHA>
+          (s_alpha, r_alpha, threadIdx.x, gridDim.x, reductionFunctorAlpha);
+      if(threadIdx.x==0){
+	d_resultAlpha[0] = s_alpha[0];
+      }
+      // find the maximum value of histogram
+      reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR_BETA>
+          (s_beta, r_beta, threadIdx.x, gridDim.x, reductionFunctorBeta);
+      if(threadIdx.x==0){
+	d_resultBeta[0] = s_beta[0];
+      }
+    }//amLast
+  }// gridDim.x > 1
+}
+
+// keyed reduction of a thread block, per a given COMPARATOR class like 
+// GreaterThan
+//
+//  Template Parameters:
+//  T  type. e.g., double, float, unsigned int, etc
+//  COMPARATOR comparator, e.g. GreaterThan or LessThan
+//
+//  Parameters
+//  skeys:  Shared data key array, of size n.
+//  svals:  Shared data value array, of size n.
+//  myKey:  thread's data key.
+//  myVal:  thread's data value.
+//  tid:  index of thread
+//  n:  size of reduction
+//  comparator:  comparator of reduction.
+template<class T1, class T2, unsigned int NTHREADS, class COMPARATOR>
+inline __device__ void comparatorReduceBlock(volatile T1* skeys,
+    volatile T2* svals, volatile T1 &myKey, volatile T2 &myVal,
+    const unsigned int& tid, const unsigned int& n, COMPARATOR comparator){
+  skeys[tid] = myKey;
+  svals[tid] = myVal;
+  __syncthreads();
+  
+  unsigned int blkStep = NTHREADS;
+  while (blkStep >= 1) {
+    if(n > blkStep) {
+      if(tid + blkStep < n && tid < blkStep) 
+        comparator(skeys[tid], svals[tid], skeys[tid+blkStep], svals[tid+blkStep]);
+      __syncthreads(); 
+    }
+    blkStep >>= 1;
+  }
+
+  myKey = skeys[tid];
+  myVal = svals[tid];
+}
+
+template<class T1, class T2, class COMPARATOR, unsigned int NTHREADS>
+__global__ void gpuComparatorReduceKernel(T1* d_keys, T2* d_vals, 
+    T1* d_resultKeys, T2* d_resultVals,  unsigned int n, 
+    unsigned int* retirementCount, COMPARATOR comparator){
+
+  __shared__ T1 skeys[NTHREADS]; // size of blockDim.x
+  __shared__ T2 svals[NTHREADS]; // size of blockDim.x
+  
+  T1 rkey = comparator.initialValue();
+  T2 rval = 0;
+  for(unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x; tid < n; 
+      tid+= blockDim.x*gridDim.x){
+    T1 newkey = d_keys[tid];
+    T2 newval = tid;
+    // default to just using the tid as the value.
+    if(d_vals)
+      newval = d_vals[tid];
+      
+    comparator(rkey, rval, newkey, newval );
+  }
+  
+  comparatorReduceBlock<T1, T2, NTHREADS, COMPARATOR>
+      (skeys, svals, rkey, rval, threadIdx.x, blockDim.x, comparator);
+
+  if(threadIdx.x==0){
+    d_resultKeys[blockIdx.x] = rkey;
+    d_resultVals[blockIdx.x] = rval;
+  }
+
+  // code taken and modified from the threadFenceReduction CUDA SDK example
+  if(gridDim.x > 1){
+    __shared__ volatile bool amLast;
+    __threadfence();
+    // each block takes a ticket, the last block to finish the calculation
+    // does the reduction
+    if(threadIdx.x==0){
+      uint ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads();    
+
+    if( amLast ){
+      rkey = comparator.initialValue();
+      rval = 0;
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	T1 newkey = d_resultKeys[tx];
+	T2 newval = d_resultVals[tx];
+	comparator(rkey, rval, newkey, newval);
+      }
+      // find the maximum value of histogram
+      comparatorReduceBlock<T1, T2, NTHREADS, COMPARATOR>
+          (skeys, svals, rkey, rval, threadIdx.x, gridDim.x, comparator);
+      if(threadIdx.x==0){
+	d_resultKeys[0] = skeys[0];
+	d_resultVals[0] = svals[0];
+      }
+    }//amLast
+  }// gridDim.x > 1
+}
+
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif 
+
+#endif //GPU_REDUCTIONS_HCU

@@ -1,0 +1,94 @@
+inline __device__ double gpu_LagrangeInterp(double *x, double *f, int order1, double x0,
+                                     int *returnCode)
+{
+  int i, j;
+  double denom, numer, sum;
+
+  for (i=sum=0; i<order1; i++) {
+    denom = 1;
+    numer = 1;
+    for (j=0; j<order1; j++) {
+      if (i!=j) {
+        denom *= (x[i] - x[j]);
+        numer *= (x0   - x[j]);
+        if (numer==0) {
+          *returnCode = 1;
+          return f[j];
+        }
+      }
+    }
+    if (denom==0) {
+      *returnCode = 0;
+      return 0.0;
+    }
+    sum += f[i]*numer/denom;
+  }
+  *returnCode = 1;
+  return sum;
+}
+
+inline __device__ double gpu_interp(double *f, double *x, int n, double xo,
+                            int warnings, int order, int *returnCode)
+{
+   int hi, lo, mid, offset;
+
+   lo = 0;
+   hi = n-1;
+   if (lo==hi) {
+      //if (warnings)
+      // printf("warning: only one point--returning value for that point\n");
+      *returnCode = 0;
+      return(f[0]);
+   }
+   if (x[lo]<x[hi]) {
+      if (xo<x[lo=0]) {
+         //if (warnings)
+         // printf("warning: %22.15e outside [%22.15e,%22.15e] (interp)\n",
+         //        xo, x[0], x[n-1]);
+         *returnCode = 0;
+         return(f[lo]);
+      }
+      if (xo>x[hi=n-1]) {
+         //if (warnings)
+         // printf("warning: %22.15e outside [%22.15e,%22.15e] (interp)\n",
+         //        xo, x[0], x[n-1]);
+         *returnCode = 0;
+         return(f[hi]);
+      }
+
+      while ((hi-lo)>1) {
+         mid = (lo+hi)/2;
+         if (xo<x[mid])
+         hi = mid;
+         else lo = mid;
+      }
+   }
+   else {
+      if (xo>x[lo=0]) {
+         //if (warnings)
+         // printf("warning: %22.15e outside [%22.15e,%22.15e] (interp)\n",
+         //        xo, x[n-1], x[0]);
+         *returnCode = 0;
+         return(f[lo]);
+      }
+      if (xo<x[hi=n-1]) {
+         //if (warnings)
+         // printf("warning: %22.15e outside [%22.15e,%22.15e] (interp)\n",
+         //        xo, x[n-1], x[0]);
+         *returnCode = 0;
+         return(f[hi]);
+      }
+
+      while ((hi-lo)>1) {
+         mid = (lo+hi)/2;
+         if (xo>x[mid])
+         hi = mid;
+         else lo = mid;
+      }
+   }
+   offset = lo - (order-1)/2;
+   offset = MAX( offset, 0 );
+   offset = MIN( offset, n-order-1);
+   offset = MAX( offset, 0 );
+   return gpu_LagrangeInterp(x+offset, f+offset, order+1, xo, returnCode);
+}

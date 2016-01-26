@@ -1,0 +1,205 @@
+#ifdef sqr
+#undef sqr
+#endif
+#define sqr(x) (x*x)
+
+#include <curand.h>
+#include <curand_kernel.h>
+
+#include <gpu_interp.hcu> // gpu_interp
+
+#define SQRT_3 (1.7320508075688772)
+#define SQR_PI (PI*PI)
+#define BS_Y0 (1e-8)
+#define y0 (BS_Y0)
+
+#define NF 1000
+
+static __device__ __constant__ double c_FTable[NF];
+static __device__ __constant__ double c_lnyTable[NF];
+
+inline __device__ double gpu_solveBremsstrahlungCDF(double F)
+/* Solve F == G(y)/G(1) where G(y)=(ln(y/y0) - (y-y0) + 3/8*(y^2-y0^2)
+ */
+{
+  double y;
+  int code;
+  
+  y = gpu_interp(c_lnyTable, c_FTable, NF, F, 0, 1, &code);
+  if (code==1) {
+    y = y0*exp(y);
+  } else {
+    //if (!beenWarned)  {
+    //  beenWarned = 1; 
+    //  printf("*** Warning: interpolation problem for bremsstrahlung.\n");
+    //}
+    y = y0;
+  }
+  return y;
+}
+
+inline __device__ unsigned int
+    gpu_track_through_matter_dfunc(gpuParticleAccessor& coord, 
+      int energyDecay, int nuclearBremsstrahlung, int energyStraggle,
+      int nSlots, double spacing, double width, double tilt, double center,
+      int multipleScattering, double Nrad, double L, double theta_rms,
+      int sections0, double prob, double L1, double K2, 
+      double probBS, double probER, double Po, double dGammaFactor, double z0,
+      unsigned int *d_sortIndex, curandState_t *d_state) {
+
+  double P, gamma, dgamma, beta, t, z1, z2, dx, dy, ds;
+  unsigned int tid = coord.getParticleIndex();
+  curandState_t* state = &(d_state[tid]);
+  unsigned int isLost = 0;
+  unsigned int hitsMatter;
+
+  hitsMatter = 1;
+  if (spacing>0 && width>0) {
+    double q, p, offset;
+    offset = 0;
+    if (nSlots>0 && nSlots%2==0)
+      offset = spacing/2;
+    q = coord[0]*cos(tilt) + coord[2] * sin(tilt) - (center + offset);
+    p = fabs(fmod(fabs(q), spacing));
+    if (p<width/2 || p>(spacing-width/2)) {
+      long slot;
+      if (nSlots>0) {
+        if (nSlots%2) {
+          slot = fabs(q)/spacing + 0.5;
+          if (slot<=nSlots/2)
+            hitsMatter = 0;
+        } else {
+          slot = fabs(q + spacing/2)/spacing ;
+          if (slot<nSlots/2)
+            hitsMatter = 0;
+        }
+      } else
+        /* infinite slot array */
+        hitsMatter = 0;
+    }
+  }
+  if (hitsMatter && Nrad) {
+    if (energyDecay || nuclearBremsstrahlung) {
+      P = (1+coord[5])*Po;
+      gamma = sqrt(sqr(P)+1);
+      beta = P/gamma;
+      t = coord[4]/beta;
+    }
+    if (multipleScattering) {
+      /* use the multiple scattering formula */
+      z1 = curand_normal_double(state); //gauss_rn(0, random_2);
+      z2 = curand_normal_double(state); //gauss_rn(0, random_2);
+      coord[0] += (dx=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[1]);
+      coord[1] += z2*theta_rms;
+      z1 = curand_normal_double(state); //gauss_rn(0, random_2);
+      z2 = curand_normal_double(state); //gauss_rn(0, random_2);
+      coord[2] += (dy=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[3]);
+      coord[3] += z2*theta_rms;
+      ds = sqrt(sqr(L)+sqr(dx)+sqr(dy));
+    } else {
+      /* model scattering using the cross section */
+      double F, theta, phi, zs, dxp, dyp;
+      int is;
+      ds = dgamma = 0;
+      for (is=0; is<sections0 && !isLost; is++) {
+        if (curand_uniform_double(state)<prob) { //(random_2(1)<prob) {
+          //nScatters ++;
+          /* single-scattering computation */
+          /* scatter occurs at location 0<=zs<=L */
+          zs = L1*curand_uniform_double(state); //random_2(1);
+          /* pick a value for CDF and get corresponding angle */
+          F = curand_uniform_double(state); //random_2(1);
+          theta = sqrt((1-F)*K2*SQR_PI/(K2+F*SQR_PI));
+          phi = curand_uniform_double(state)*PIx2; //random_2(1)*PIx2;
+          dxp = theta*sin(phi);
+          dyp = theta*cos(phi);
+          /* advance to location of scattering event */
+          ds += zs*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          /* scatter */
+          coord[1] += dxp;
+          coord[3] += dyp;
+          /* advance to end of slice */
+          coord[0] += dxp*(L1-zs);
+          coord[2] += dyp*(L1-zs);
+          ds += (L1-zs)*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        } else {
+          ds += L1*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          coord[0] += coord[1]*L1;
+          coord[2] += coord[3]*L1;
+        }
+        if (energyDecay || nuclearBremsstrahlung) {
+          if (probBS!=0 && curand_uniform_double(state)<probBS) //random_2(1)<probBS)
+            gamma -= gamma*gpu_solveBremsstrahlungCDF(curand_uniform_double(state));
+          if (probER!=0 && curand_uniform_double(state)<probER); //random_2(1)<probER)
+            gamma -= BS_Y0/(1-curand_uniform_double(state)*(1-BS_Y0));
+          if (gamma<=1) {
+            isLost = 1;
+            break;
+          }
+        }
+      }
+    }
+    if (!isLost) {
+      if (nuclearBremsstrahlung) {
+        P = sqrt(sqr(gamma)-1);
+        coord[5] = (P-Po)/Po;
+        beta = P/gamma;
+        coord[4] = t*beta+ds;
+      } else if (energyDecay) {
+        dgamma = gamma*dGammaFactor;
+        if (energyStraggle) {
+          double dgamma1;
+          /* very simple-minded estimate: StDev(dE) = Mean(dE)/2 */
+          while ((dgamma1 = dgamma*(1+0.5*curand_normal_double(state)))<0)
+            ;
+          dgamma = dgamma1;
+        }
+        gamma -= dgamma;
+        if (gamma<=1) 
+          isLost = 1;
+        else {
+          P = sqrt(sqr(gamma)-1);
+          coord[5] = (P-Po)/Po;
+          beta = P/gamma;
+          coord[4] = t*beta+ds;
+        }
+      }
+      else
+        coord[4] += ds;
+    }
+    if (isLost) {
+      coord[4] = z0+ds;
+      coord[5] = 0;
+      d_sortIndex[tid] = tid + coord.getParticlePitch();
+      return 0;
+    }
+  }
+  else {
+    coord[0] += L*coord[1];
+    coord[2] += L*coord[3];
+    coord[4] += L*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  }
+  d_sortIndex[tid] = tid;
+  return 1;
+}
+
+extern "C" {
+
+double solveBremsstrahlungCDF(double F);
+extern double *lnyTable, *FTable;
+
+} // extern C
+
+inline void gpu_setMatterTables() {
+  static bool firstCall=true;
+  if (firstCall) {
+    /*ensure table allocation*/ 
+    if (!FTable) solveBremsstrahlungCDF(1.0);
+
+    cudaMemcpyToSymbol(c_FTable, FTable, sizeof(double)*NF,
+                       0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(c_lnyTable, lnyTable, sizeof(double)*NF,
+                       0, cudaMemcpyHostToDevice);
+    firstCall=false;
+  }
+}

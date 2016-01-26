@@ -1,0 +1,443 @@
+#ifndef GPU_PARICLE_REDUCTIONS_HCU
+#define GPU_PARICLE_REDUCTIONS_HCU
+
+#include <gpu_particle_accessor.hcu>
+#include <gpu_reductions.hcu>
+#include <gpu_base.h>
+
+template<class T, unsigned int NTHREADS, class PARTICLE_FUNCTOR,
+         class REDUCTION_FUNCTOR>
+__global__ void gpuParticleReductionKernel(double* d_particles, 
+    unsigned int particlePitch, unsigned int np, T* d_result, 
+    unsigned int* retirementCount, PARTICLE_FUNCTOR particleFunctor, 
+    REDUCTION_FUNCTOR reductionFunctor){
+
+  volatile __shared__ T shr_data[NTHREADS];
+  T r_data = reductionFunctor.initialValue();
+
+  for(unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x; tid < np; 
+      tid+= blockDim.x*gridDim.x){
+    gpuParticleAccessor particle(d_particles, tid, particlePitch);
+    r_data = reductionFunctor(r_data, particleFunctor(particle) );
+  }
+  // reduce over threads
+  reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR>
+      (shr_data, r_data, threadIdx.x, blockDim.x, reductionFunctor);
+  if(threadIdx.x==0){
+    d_result[blockIdx.x] = shr_data[0];
+  }
+
+  // accumulate over the block results
+  if(gridDim.x > 1){
+    // each block takes a ticket, and the last block to finish the
+    // previous calculation does the reduction
+    __shared__ volatile bool amLast;
+    if(threadIdx.x==0){
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads(); // sync within a block for amLast
+    __threadfence(); // sync wrt to global memory d_result for all blocks
+
+    if( amLast ){
+      r_data = reductionFunctor.initialValue();
+      for(unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_data = reductionFunctor(r_data, d_result[tx]);
+      }
+      // reduce over blocks
+      reduceBlock<T, NTHREADS, REDUCTION_FUNCTOR>
+          (shr_data, r_data, threadIdx.x, gridDim.x, reductionFunctor);
+      if(threadIdx.x==0){
+	d_result[0] = shr_data[0];
+      }
+    }
+  }
+}
+
+template<class PARTICLE_FUNCTOR, class REDUCTION_FUNCTOR>
+double gpuParticleReduction(unsigned int np, PARTICLE_FUNCTOR particleFunctor, 
+    REDUCTION_FUNCTOR reductionFunctor){
+  if (!np) return 0;
+
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  double* d_tempf = gpuBase->d_blockTempf;
+  unsigned int* d_retirementCount = gpuBase->d_retirementCount;  
+  cudaMemset(d_retirementCount, 0, 128);
+  
+  unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  if (nTx==256)
+    gpuParticleReductionKernel<double, 256, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempf, d_retirementCount,
+      particleFunctor, reductionFunctor);
+  else if (nTx==512)
+    gpuParticleReductionKernel<double, 512, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempf, d_retirementCount,
+      particleFunctor, reductionFunctor);
+  else if (nTx==1024)
+    gpuParticleReductionKernel<double, 1024, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempf, d_retirementCount,
+      particleFunctor, reductionFunctor);
+  else if (nTx==2048)
+    gpuParticleReductionKernel<double, 2048, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempf, d_retirementCount,
+      particleFunctor, reductionFunctor);
+
+  double result = 0;
+  cudaMemcpy(&result, d_tempf, sizeof(double), cudaMemcpyDeviceToHost); 
+
+  return result;
+}
+
+template<class PARTICLE_FUNCTOR, class REDUCTION_FUNCTOR>
+unsigned int gpuUnsignedIntParticleReduction(unsigned int np, 
+    PARTICLE_FUNCTOR particleFunctor, REDUCTION_FUNCTOR reductionFunctor){
+  if (!np) return 0;
+
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  unsigned int* d_tempu = gpuBase->d_blockTempu;
+  unsigned int* d_retirementCount = gpuBase->d_retirementCount;  
+  cudaMemset(d_retirementCount, 0, 128);
+  
+  const unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  if (nTx==256)
+    gpuParticleReductionKernel<unsigned int, 256, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempu, d_retirementCount, 
+      particleFunctor, reductionFunctor);
+  else if (nTx==512)
+    gpuParticleReductionKernel<unsigned int, 512, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempu, d_retirementCount, 
+      particleFunctor, reductionFunctor);
+  else if (nTx==1024)
+    gpuParticleReductionKernel<unsigned int, 1024, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempu, d_retirementCount, 
+      particleFunctor, reductionFunctor);
+  else if (nTx==2048)
+    gpuParticleReductionKernel<unsigned int, 2048, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, d_tempu, d_retirementCount, 
+      particleFunctor, reductionFunctor);
+
+  unsigned int result = 0;
+  cudaMemcpy(&result, d_tempu, sizeof(unsigned int), cudaMemcpyDeviceToHost); 
+
+  return result;
+}
+
+template<class PARTICLE_FUNCTOR, class REDUCTION_FUNCTOR>
+void gpuParticleReductionAsync(unsigned int np, double* result, 
+    PARTICLE_FUNCTOR particleFunctor, REDUCTION_FUNCTOR reductionFunctor){
+  if (!np) return;
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  double *d_tempf=NULL, *pinresult=NULL;
+  unsigned int* d_retirementCount=NULL;
+  cudaStream_t* stream = (cudaStream_t*) getNextReductionStream(&d_tempf, 
+                         &d_retirementCount, result, &pinresult, NULL, NULL);
+  
+  const unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  if (nTx==256)
+    gpuParticleReductionKernel<double, 256, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx,0,*stream>>>(d_particles, particlePitch, np, d_tempf,
+      d_retirementCount, particleFunctor, reductionFunctor );
+  else if (nTx==512)
+    gpuParticleReductionKernel<double, 512, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx,0,*stream>>>(d_particles, particlePitch, np, d_tempf,
+      d_retirementCount, particleFunctor, reductionFunctor );
+  else if (nTx==1024)
+    gpuParticleReductionKernel<double, 1024, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx,0,*stream>>>(d_particles, particlePitch, np, d_tempf,
+      d_retirementCount, particleFunctor, reductionFunctor );
+  else if (nTx==2048)
+    gpuParticleReductionKernel<double, 2048, PARTICLE_FUNCTOR, REDUCTION_FUNCTOR>
+      <<<nBx,nTx,0,*stream>>>(d_particles, particlePitch, np, d_tempf,
+      d_retirementCount, particleFunctor, reductionFunctor );
+
+  cudaMemcpyAsync(pinresult, d_tempf, sizeof(double), 
+    cudaMemcpyDeviceToHost, *stream); 
+}
+
+template<unsigned int NTHREADS, class PARTICLE_FUNCTOR, 
+  class REDUCTION_FUNCTOR_ALPHA, class REDUCTION_FUNCTOR_BETA>
+__global__ void gpuParticleDoubleReductionKernel(double* d_particles, 
+    unsigned int particlePitch, unsigned int np, double* d_resultAlpha, 
+    double* d_resultBeta, unsigned int* retirementCount, 
+    PARTICLE_FUNCTOR particleFunctor, 
+    REDUCTION_FUNCTOR_ALPHA reductionFunctorAlpha,
+    REDUCTION_FUNCTOR_BETA reductionFunctorBeta){
+
+  volatile __shared__ double s_alpha[NTHREADS];
+  volatile __shared__ double s_beta[NTHREADS];
+  
+  double r_alpha = reductionFunctorAlpha.initialValue();
+  double r_beta = reductionFunctorBeta.initialValue();
+  for(unsigned int tid = threadIdx.x + blockIdx.x * blockDim.x; tid < np; 
+        tid+= blockDim.x*gridDim.x){
+    gpuParticleAccessor particle(d_particles, tid, particlePitch);
+    double r_input = particleFunctor(particle);
+    r_alpha = reductionFunctorAlpha(r_alpha, r_input );
+    r_beta = reductionFunctorBeta(r_beta, r_input );
+  }
+  
+  reduceBlock<double, NTHREADS, REDUCTION_FUNCTOR_ALPHA>
+      (s_alpha, r_alpha, threadIdx.x, blockDim.x, reductionFunctorAlpha);
+  if(threadIdx.x==0) d_resultAlpha[blockIdx.x] = s_alpha[0];
+
+  reduceBlock<double, NTHREADS, REDUCTION_FUNCTOR_BETA>
+      (s_beta, r_beta, threadIdx.x, blockDim.x, reductionFunctorBeta);
+  if(threadIdx.x==0) d_resultBeta[blockIdx.x] = s_beta[0];
+
+  // code taken and modified from the threadFenceReduction CUDA SDK example
+  if(gridDim.x > 1){
+    __shared__ volatile bool amLast;
+    __threadfence();
+    // each block takes a ticket, the last block to finish the calculation does the reduction
+    if(threadIdx.x==0){
+      uint ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads();    
+
+    if( amLast ){
+      r_alpha = reductionFunctorAlpha.initialValue();
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_alpha = reductionFunctorAlpha(r_alpha, d_resultAlpha[tx]);
+      }
+
+      r_beta = reductionFunctorBeta.initialValue();
+      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+	r_beta = reductionFunctorBeta(r_beta, d_resultBeta[tx]);
+      }
+
+      // find the maximum value of histogram
+      reduceBlock<double, NTHREADS, REDUCTION_FUNCTOR_ALPHA>
+        (s_alpha, r_alpha, threadIdx.x, gridDim.x, reductionFunctorAlpha);
+      if(threadIdx.x==0) d_resultAlpha[0] = s_alpha[0];
+
+      reduceBlock<double, NTHREADS, REDUCTION_FUNCTOR_BETA>
+        (s_beta, r_beta, threadIdx.x, gridDim.x, reductionFunctorBeta);
+      if(threadIdx.x==0) d_resultBeta[0] = s_beta[0];
+
+    }//amLast
+  }// gridDim.x > 1
+}
+
+template<class PARTICLE_FUNCTOR, class REDUCTION_FUNCTOR_ALPHA, 
+         class REDUCTION_FUNCTOR_BETA>
+void gpuParticleDoubleReduction(unsigned int np,
+    PARTICLE_FUNCTOR particleFunctor, 
+    REDUCTION_FUNCTOR_ALPHA reductionFunctorAlpha, 
+    REDUCTION_FUNCTOR_BETA reductionFunctorBeta,
+    double* resultAlpha, double* resultBeta){
+  if (!np) return;
+
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  double* d_tempAlpha = gpuBase->d_blockTempf;
+  double* d_tempBeta  = gpuBase->d_blockTempf + gpuBase->nReductionBlocks;
+  unsigned int* d_retirementCount = gpuBase->d_retirementCount;  
+  cudaMemset(d_retirementCount, 0, 128);
+  
+  const unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  if (nTx==256)
+    gpuParticleDoubleReductionKernel<256, PARTICLE_FUNCTOR,
+      REDUCTION_FUNCTOR_ALPHA, REDUCTION_FUNCTOR_BETA>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, 
+      d_tempAlpha, d_tempBeta, d_retirementCount, particleFunctor, 
+      reductionFunctorAlpha, reductionFunctorBeta );
+  else if (nTx==512)
+    gpuParticleDoubleReductionKernel<512, PARTICLE_FUNCTOR,
+      REDUCTION_FUNCTOR_ALPHA, REDUCTION_FUNCTOR_BETA>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, 
+      d_tempAlpha, d_tempBeta, d_retirementCount, particleFunctor, 
+      reductionFunctorAlpha, reductionFunctorBeta );
+  else if (nTx==1024)
+    gpuParticleDoubleReductionKernel<1024, PARTICLE_FUNCTOR,
+      REDUCTION_FUNCTOR_ALPHA, REDUCTION_FUNCTOR_BETA>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, 
+      d_tempAlpha, d_tempBeta, d_retirementCount, particleFunctor, 
+      reductionFunctorAlpha, reductionFunctorBeta );
+  else if (nTx==2048)
+    gpuParticleDoubleReductionKernel<2048, PARTICLE_FUNCTOR,
+      REDUCTION_FUNCTOR_ALPHA, REDUCTION_FUNCTOR_BETA>
+      <<<nBx,nTx>>>(d_particles, particlePitch, np, 
+      d_tempAlpha, d_tempBeta, d_retirementCount, particleFunctor, 
+      reductionFunctorAlpha, reductionFunctorBeta );
+
+  *resultAlpha = 0; *resultBeta = 0;
+  cudaMemcpy(resultAlpha, d_tempAlpha, sizeof(double), cudaMemcpyDeviceToHost); 
+  cudaMemcpy(resultBeta,  d_tempBeta,  sizeof(double), cudaMemcpyDeviceToHost); 
+}
+
+#include <gpu_kahan.hcu>
+#include <gpu_reductions.hcu>
+
+template<class FLOATTYPE, class PARTICLE_FUNCTOR, unsigned int NTHREADS>
+__global__ void gpuParticleKahanAddKernel(FLOATTYPE* d_particles, 
+        unsigned int particlePitch, unsigned int np, FLOATTYPE* d_blockSum, 
+        FLOATTYPE* d_blockError,unsigned int* retirementCount, 
+        PARTICLE_FUNCTOR particleFunctor){
+  // perform reduction in shared memory first
+  __shared__ FLOATTYPE s_sum[NTHREADS];
+  __shared__ FLOATTYPE s_error[NTHREADS];
+  FLOATTYPE sum = 0;
+  FLOATTYPE c = 0;
+  
+  // loop over lots of particles per thread to minimize tree reductions.
+  for(unsigned int tid = threadIdx.x + blockIdx.x*blockDim.x; 
+          tid < np; tid += gridDim.x * blockDim.x){
+    gpuParticleAccessor particle(d_particles,tid,particlePitch);
+    kahanSumDevice(sum, c, particleFunctor(particle));
+  }
+  FLOATTYPE error = -c;
+  s_sum[threadIdx.x] = sum;
+  s_error[threadIdx.x] = error;
+  __syncthreads();
+
+  // perform shared memory reduction
+  reduceBlockKahanAdd<FLOATTYPE, NTHREADS>
+      (s_sum, s_error, sum, error, threadIdx.x, blockDim.x);
+
+  // write out per-block results
+  if(threadIdx.x==0){
+    d_blockSum[blockIdx.x] = sum = s_sum[0];
+    d_blockError[blockIdx.x] = error = s_error[0];
+  }
+
+  // the last block reads the results of all previous blocks, performs a 
+  // reduction, and writes the result back to global
+  if(gridDim.x > 1){
+    __shared__ volatile bool amLast;
+    __threadfence();
+  
+    if(threadIdx.x==0){
+      uint ticket = atomicInc(retirementCount, gridDim.x);
+      amLast = (ticket == gridDim.x - 1);
+    }
+    __syncthreads();
+  
+    if( amLast ){
+      FLOATTYPE sum = 0;
+      FLOATTYPE error = 0;
+      if(threadIdx.x < gridDim.x){
+	kahanSumTwo(sum, d_blockSum[threadIdx.x], error, d_blockError[threadIdx.x]);
+      }
+  
+      reduceBlockKahanAdd<FLOATTYPE, NTHREADS>
+          (s_sum, s_error, sum, error, threadIdx.x, gridDim.x);
+      
+      if(threadIdx.x==0){
+	d_blockSum[0] = sum = s_sum[0];
+	d_blockError[0] = error = s_error[0];
+      }  
+    }//amLast
+  }// gridDim.x > 1    
+}
+ 
+template<class PARTICLE_FUNCTOR>
+double gpuParticleKahanReduction(unsigned int np, double* error,
+        PARTICLE_FUNCTOR particleFunctor){
+  if (!np) return 0;
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  double* d_tempf = gpuBase->d_blockTempf;
+  unsigned int* d_retirementCount = gpuBase->d_retirementCount;
+  cudaMemset(d_retirementCount, 0, 128);
+
+  const unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  double* d_tempf_alpha = d_tempf;
+  double* d_tempf_beta = d_tempf + gpuBase->nReductionBlocks;
+
+  dim3 dimBlock(nTx,1,1);
+  dim3 dimGrid(nBx,1,1);
+
+  if (nTx==256)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 256>
+        <<<dimGrid,dimBlock>>>(d_particles, particlePitch, np, d_tempf_alpha, 
+        d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==512)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 512>
+        <<<dimGrid,dimBlock>>>(d_particles, particlePitch, np, d_tempf_alpha, 
+        d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==1024)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 1024>
+        <<<dimGrid,dimBlock>>>(d_particles, particlePitch, np, d_tempf_alpha, 
+        d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==2048)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 2048>
+        <<<dimGrid,dimBlock>>>(d_particles, particlePitch, np, d_tempf_alpha, 
+        d_tempf_beta, d_retirementCount, particleFunctor);
+
+  double sum = 0;
+  cudaMemcpy(&sum, d_tempf_alpha, sizeof(double), cudaMemcpyDeviceToHost);
+  cudaMemcpy(error, d_tempf_beta, sizeof(double), cudaMemcpyDeviceToHost);
+
+  return sum;
+}
+
+template<class PARTICLE_FUNCTOR>
+void gpuParticleKahanReductionAsync(unsigned int np, double* sum, double* error,
+    PARTICLE_FUNCTOR particleFunctor){
+  if (!np) return;
+  GPUBASE* gpuBase = getGpuBase();
+  double* d_particles = gpuBase->d_particles;
+  unsigned int particlePitch = gpuBase->gpu_array_pitch;
+  double *d_tempf=NULL, *pinsum=NULL, *pinerr=NULL;
+  unsigned int* d_retirementCount=NULL;
+  cudaStream_t* stream = (cudaStream_t*) getNextReductionStream(&d_tempf, 
+                         &d_retirementCount, sum, &pinsum, error, &pinerr);
+  
+  const unsigned int nTx = gpuBase->nReductionThreads;
+  unsigned int nBx = (np + nTx -1 )/nTx;
+  if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  double* d_tempf_alpha = d_tempf;
+  double* d_tempf_beta = d_tempf + gpuBase->nReductionBlocks;
+
+  dim3 dimBlock(nTx,1,1);
+  dim3 dimGrid(nBx,1,1);
+
+  if (nTx==256)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 256>
+      <<<dimGrid,dimBlock,0,*stream>>>(d_particles, particlePitch, np, 
+      d_tempf_alpha, d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==512)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 512>
+      <<<dimGrid,dimBlock,0,*stream>>>(d_particles, particlePitch, np, 
+      d_tempf_alpha, d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==1024)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 1024>
+      <<<dimGrid,dimBlock,0,*stream>>>(d_particles, particlePitch, np, 
+      d_tempf_alpha, d_tempf_beta, d_retirementCount, particleFunctor);
+  else if (nTx==2048)
+    gpuParticleKahanAddKernel<double, PARTICLE_FUNCTOR, 2048>
+      <<<dimGrid,dimBlock,0,*stream>>>(d_particles, particlePitch, np, 
+      d_tempf_alpha, d_tempf_beta, d_retirementCount, particleFunctor);
+
+  cudaMemcpyAsync(pinsum, d_tempf_alpha, sizeof(double), 
+                  cudaMemcpyDeviceToHost, *stream);
+  cudaMemcpyAsync(pinerr, d_tempf_beta, sizeof(double), 
+                  cudaMemcpyDeviceToHost, *stream);
+}
+
+#endif //GPU_PARTICLE_REDUCTIONS_HCU

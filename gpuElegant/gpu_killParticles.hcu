@@ -1,0 +1,232 @@
+#ifndef GPU_KILLPARTICLES_HCU
+#define GPU_KILLPARTICLES_HCU
+
+#include <thrust/device_ptr.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/gather.h>
+#include <thrust/remove.h>
+#include <thrust/sort.h>
+#include <thrust/scan.h>
+
+#include <gpu_track.h> // bombElegant
+
+#include <gpu_particle_template_function.hcu>
+#include <gpu_particle_reduction.hcu>
+
+#ifndef USE_SWAP
+#define USE_SWAP 1
+#endif
+#if USE_SWAP
+/**
+ * Convert the sort index from +/- particlePitch to a boolean
+ */
+class convertSortIndex {
+public:
+  unsigned int* d_sortIndex;
+  convertSortIndex(unsigned int* d_sortIndex) :
+    d_sortIndex(d_sortIndex) {}
+
+  __device__ void inline operator()(gpuParticleAccessor& part){
+    unsigned int ind = part.getParticleIndex();
+    unsigned int particlePitch = part.getParticlePitch();
+    if(d_sortIndex[ind] >= particlePitch)
+      d_sortIndex[ind]=1;
+    else
+      d_sortIndex[ind]=0;
+  }
+};
+
+/**
+ * Setup a mapping to killed particle indicies from d_linearIndex
+ * which is the result of an inclusive scan of a killed particle boolean
+ * @param d_map (output) the map array
+ * @param d_linearIndex (input) the scanned killed particle boolean array
+ * @param np number of particles
+ */
+__global__ void setMap(unsigned int* d_map, unsigned int* d_linearIndex, 
+                       unsigned int np);
+
+/**
+ * swap killed particles to the end of the array
+ * @param d_part device particles array
+ * @param d_map map to killed particle indicies
+ * @param particlePitch particle SoA array pitch
+ * @param nLeft number of particles remaining
+ * @param nKilled number of particles lost
+ */
+__global__ void swapKilledInPlace(double* d_part, unsigned int* d_map,
+    unsigned int particlePitch, unsigned int nLeft, unsigned int nKilled);
+#endif /* USE_SWAP */
+
+/**
+ * kill particles when d_sortIndex is greater than particlePitch as 
+ * returned by particleFunctor
+ * @param np number of particles
+ * @param d_sortIndex a particle is lost if the sortIndex is greater than
+ *          the particle pitch. This array should also be passed into
+ *          particleFunctor
+ * @param accepted accepted array pointer (from CPU, used a boolean)
+ * @param particleFunctor callback to a particle loss routine
+ * return the number of particles remaining
+ */
+template<class PARTICLE_FUNCTOR>
+unsigned int killParticles(unsigned int np, unsigned int* d_sortIndex, 
+                       double** accepted, PARTICLE_FUNCTOR particleFunctor) {
+  GPUBASE* gpuBase = getGpuBase();  
+  double* d_particles = gpuBase->d_particles;
+  double* d_accepted = gpuBase->d_accepted;
+  double** lostParticles = gpuBase->lostParticles;
+  double* d_lostParticles = gpuBase->d_lostParticles;
+  double* d_temp_particles = gpuBase->d_temp_particles;
+  unsigned particlePitch = gpuBase->gpu_array_pitch;
+  unsigned int* d_linearIndex = gpuBase->d_tempu_alpha+particlePitch;
+  unsigned int nLeft = gpuUnsignedIntParticleReduction(np, 
+                         particleFunctor, Add<unsigned int>());
+
+  if(nLeft==np || nLeft==0) return nLeft;
+
+  /* Create iterators over the device arrays */
+  thrust::device_ptr<unsigned int> tdp_sortIndex(d_sortIndex);
+  thrust::device_ptr<unsigned int> tdp_linearIndex(d_linearIndex);
+
+  thrust::device_ptr<double> tdp_initial_0(d_particles + 0*particlePitch);
+  thrust::device_ptr<double> tdp_initial_1(d_particles + 1*particlePitch);
+  thrust::device_ptr<double> tdp_initial_2(d_particles + 2*particlePitch);
+  thrust::device_ptr<double> tdp_initial_3(d_particles + 3*particlePitch);
+  thrust::device_ptr<double> tdp_initial_4(d_particles + 4*particlePitch);
+  thrust::device_ptr<double> tdp_initial_5(d_particles + 5*particlePitch);
+  thrust::device_ptr<double> tdp_initial_6(d_particles + 6*particlePitch);
+
+  thrust::device_ptr<double> tdp_final_0(d_temp_particles + 0*particlePitch);
+  thrust::device_ptr<double> tdp_final_1(d_temp_particles + 1*particlePitch);
+  thrust::device_ptr<double> tdp_final_2(d_temp_particles + 2*particlePitch);
+  thrust::device_ptr<double> tdp_final_3(d_temp_particles + 3*particlePitch);
+  thrust::device_ptr<double> tdp_final_4(d_temp_particles + 4*particlePitch);
+  thrust::device_ptr<double> tdp_final_5(d_temp_particles + 5*particlePitch);
+  thrust::device_ptr<double> tdp_final_6(d_temp_particles + 6*particlePitch);
+
+  typedef thrust::zip_iterator< thrust::tuple< thrust::device_ptr<double>,
+          thrust::device_ptr<double>,thrust::device_ptr<double>,
+          thrust::device_ptr<double>,thrust::device_ptr<double>,
+          thrust::device_ptr<double>,thrust::device_ptr<double> > > 
+          tdp7_zip_iterator;
+
+  tdp7_zip_iterator zipInitial = 
+    make_zip_iterator( thrust::make_tuple(tdp_initial_0, tdp_initial_1, 
+          tdp_initial_2, tdp_initial_3, tdp_initial_4, tdp_initial_5,
+          tdp_initial_6) );
+  tdp7_zip_iterator zipFinal = 
+    make_zip_iterator( thrust::make_tuple(tdp_final_0, tdp_final_1, 
+          tdp_final_2, tdp_final_3, tdp_final_4, tdp_final_5, tdp_final_6) );
+
+  tdp7_zip_iterator zipAccept;
+  if (accepted) {
+    thrust::device_ptr<double> dap_0(d_accepted + 0*particlePitch);
+    thrust::device_ptr<double> dap_1(d_accepted + 1*particlePitch);
+    thrust::device_ptr<double> dap_2(d_accepted + 2*particlePitch);
+    thrust::device_ptr<double> dap_3(d_accepted + 3*particlePitch);
+    thrust::device_ptr<double> dap_4(d_accepted + 4*particlePitch);
+    thrust::device_ptr<double> dap_5(d_accepted + 5*particlePitch);
+    thrust::device_ptr<double> dap_6(d_accepted + 6*particlePitch);
+
+    zipAccept =  make_zip_iterator(
+       thrust::make_tuple(dap_0, dap_1, dap_2, dap_3, dap_4, dap_5, dap_6) );
+  }  
+
+
+#if USE_SWAP
+  /* sort the killed portion of the array (size nLeft - np) */
+  thrust::counting_iterator<unsigned int> counter(0);
+  thrust::copy(counter, counter+np-nLeft, tdp_linearIndex);
+  thrust::sort_by_key(tdp_sortIndex+nLeft, tdp_sortIndex+np, 
+                      tdp_linearIndex);
+  thrust::gather(tdp_linearIndex, tdp_linearIndex+np-nLeft, 
+                 zipInitial+nLeft, zipFinal);
+  thrust::copy_n(zipFinal, np-nLeft, zipInitial+nLeft);
+
+  if (accepted) {
+    thrust::gather(tdp_linearIndex, tdp_linearIndex+np-nLeft,
+                   zipAccept+nLeft, zipFinal);
+    thrust::copy_n(zipFinal, np-nLeft, zipAccept+nLeft);
+  }
+
+  gpuDriver(nLeft, convertSortIndex(d_sortIndex));
+  thrust::inclusive_scan(tdp_sortIndex, tdp_sortIndex+nLeft, tdp_linearIndex);
+
+  /* setup the map in d_sortIndex */
+  unsigned int nTx = gpuBase->nThreads;
+  unsigned int nBx = (np + nTx - 1) / nTx;
+  if (nBx > gpuBase->maxBlocks) nBx = gpuBase->maxBlocks;
+  unsigned int memSz = sizeof(unsigned int)*(nTx+1);
+  setMap<<<nBx,nTx,memSz>>>(d_sortIndex, d_linearIndex, nLeft);
+  gpuErrorHandler("killParticles::setMap");
+
+  /* determine block size */
+#define MIN_SWAP_THREADS 8
+#define MAX_SWAP_THREADS 256
+  unsigned int nKilled = np - nLeft;
+  nBx = nKilled/MIN_SWAP_THREADS + 1;
+  if (nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
+
+  /* find power of 2 value of nTx */
+  unsigned int maxKilledPerBlk = nKilled/nBx + 1;
+  nTx = 1;
+  while (nTx < maxKilledPerBlk) nTx <<= 1;
+  if (nTx > MAX_SWAP_THREADS) nTx = MAX_SWAP_THREADS;
+  if (nTx < MIN_SWAP_THREADS) nTx = MIN_SWAP_THREADS;
+
+  /* in place swap */
+  swapKilledInPlace<<<nBx,nTx>>>(d_particles, d_sortIndex, particlePitch,
+                                 nLeft, nKilled);
+  gpuErrorHandler("killParticles::swapKilledInPlace");
+  
+  if (accepted) {
+    swapKilledInPlace<<<nBx,nTx>>>(d_accepted, d_sortIndex, particlePitch,
+                                   nLeft, nKilled);
+  }
+
+#else /* use a sort instead of USE_SWAP */
+  /* thrust sort killed particles */
+  thrust::counting_iterator<unsigned int> counter(0);
+  thrust::copy(counter, counter + np, tdp_linearIndex);
+  thrust::sort_by_key(tdp_sortIndex, tdp_sortIndex + np, tdp_linearIndex);
+  /* apply the sort */
+  thrust::gather(tdp_linearIndex, tdp_linearIndex + np, 
+                 zipInitial, zipFinal);
+
+  /* copy previously lost particles and then swap the device arrays */
+  thrust::copy(zipInitial+np, zipInitial+gpuBase->nOriginal, zipFinal+np);
+  std::swap(gpuBase->d_particles, gpuBase->d_temp_particles);
+
+  if (accepted) {
+    /* apply the sort (copies accepted to zipInit which is now the temp array) */
+    thrust::gather(tdp_linearIndex, tdp_linearIndex + np, 
+                   zipAccept, zipInitial);
+    thrust::copy(zipAccept+np, zipAccept+gpuBase->nOriginal, zipInitial+np);
+    std::swap(gpuBase->d_accepted, gpuBase->d_temp_particles);
+  }
+#endif /* USE_SWAP */
+
+  /* record lost if requested */
+  if (lostParticles) {
+    thrust::device_ptr<double> dlp_0(d_lostParticles + 0*particlePitch);
+    thrust::device_ptr<double> dlp_1(d_lostParticles + 1*particlePitch);
+    thrust::device_ptr<double> dlp_2(d_lostParticles + 2*particlePitch);
+    thrust::device_ptr<double> dlp_3(d_lostParticles + 3*particlePitch);
+    thrust::device_ptr<double> dlp_4(d_lostParticles + 4*particlePitch);
+    thrust::device_ptr<double> dlp_5(d_lostParticles + 5*particlePitch);
+    thrust::device_ptr<double> dlp_6(d_lostParticles + 6*particlePitch);
+
+    tdp7_zip_iterator zipLost = make_zip_iterator(
+       thrust::make_tuple(dlp_0, dlp_1, dlp_2, dlp_3, dlp_4, dlp_5, dlp_6) );
+
+    thrust::copy(zipFinal+nLeft, zipFinal+np, zipLost+nLeft);  
+  }
+
+  /* mark particles as unsorted */
+  gpuBase->particlesUnsorted = 1;
+
+  return nLeft;
+}
+
+#endif
