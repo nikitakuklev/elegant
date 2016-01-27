@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 29.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 29.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -32,114 +32,41 @@ bugs via email.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 29.0}
+\section{Highlights of What's New in Version 29.1}
 
-Here is a summary of what's changed since release 28.1:
+Here is a summary of what's changed since release 29.0:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed a bug in the \verb|MATR| element that would crop up in multi-step runs, causing a crash or lock-up.
-  This was reported by P. Emma (SLAC).
-\item Fixed a bug in the \verb|RFMODE| element that resulted in a few percent error between the voltage seen by the beam and
-  the feedback-regulated voltage. T. Berenc (ANL) helped resolve this.
-\item The output file feature was restored for the \verb|FTRFMODE| element.
-\item The \verb|TFBDRIVER| and \verb|TFBPICKUP| feedback elements can now handle changes in the number of bunches.
-\item The drive limit for \verb|TFBDRIVER| is now imposed after application of the filter, rather than before.
-\item The \verb|KQUAD| element now has a valid associated transfer matrix for \verb|RADIAL=1|. This bug was reported
-  by forum user \verb|libov|.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|touschek_scatter| command now behaves as a regular major action command, meaning that error generation, scanning,
-  parameter loading, etc.  behave as expected.
-\item Fixed a bug in the \verb|correct_tunes| command that resulted in a crash when \verb|n_iterations=0| and would also have
-  resulted in invalid data in the log file for mixed element types. This was reported by V. Sajaev (ANL).
-\item Fixed a bug in the \verb|chromaticity| command that resulted in a crash when \verb|n_iterations=0| and would also have
-  resulted in invalid data in the log file for mixed element types.
-\item Fixed a bug related to optimization of the chromatic derivative of \verb|alpha_x|. The value provided was actually the
-  chromatic derivative of \verb|betax|. A related error gave incorrect results for the \verb|use_linear_chromatic_matrix| mode of 
-  the \verb|track| command.
-\item Previous versions of this manual indicated that the \verb|find_aperture| command provided a quantity \verb|Area| giving
-  the dynamic aperture area for optimization. The quantity is in fact called \verb|DaArea|. This was reported by S. Hilbrich (TU Dortmund).
-\item Fixed a bug in the optimization feature that resulted in the user's weighting factors being ignored. This was pointed out
-  by A. Zholents (ANL).
-\item Fixed a bug in the \verb|alter_elements| command that caused string values not to be reflected in the output file created
-  with \verb|save_lattice|. This was reported by T. Pulampong (SLRI/DLS).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added nonlinear symplectic fringe field model to CSBEND and CSRCSBEND, based on theoretical work of K. Hwang (IU) \cite{KHwang}. The implementation was
-  performed by Y. Sun (APS) with assistance from K. Hwang and M. Borland.
-\item Added \verb|EKICKER|, \verb|EHKICK|, and \verb|EVKICK|, which provide various flavors of steering correctors using an Exact 
-  model. These may be used in place of the existing \verb|KICKER|, \verb|HKICK|, and \verb|VKICK| elements.
-  The need for this was pointed out by L. Yang (BNL).
-\item The \verb|MATTER| element now supports arrays of slits. This can be used, for example, to model a double-slit spoiler for
-  producing two pulses in an FEL.
-\item The \verb|ECOL| and \verb|RCOL| collimator elements now support an \verb|INVERT| parameter to allow simulation of an
-  obstruction instead of an opening.
-\item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
-  a \verb|CHARGE| element is in the beamline.
-\item Elements that read multipole error files (e.g., \verb|KQUAD| and \verb|KSEXT|) now share data internally rather than each
-  reading the data files separately. This provides a significant speed improvement for massively parallel execution in particular.
-\item The \verb|MALIGN| element was improved to allow optionally applying misalignments to only part of the beam, based on 
-  the particle ID.
-\item The \verb|RFMODE| element now has a feature that allows ``muting'' the rf generator on a specified pass, to simulate
-  a trip of the rf source. 
-\item The voltage ``preloading'' feature of the \verb|RFMODE| element now works even when rf feedback is used.
-\item In order to eliminate problems with the parallel version, the \verb|IBSCATTER| element no longer has a separate \verb|CHARGE| parameter. 
-  Instead, the \verb|CHARGE| element should be used.
+\item Added logging of photon coordinates and angles to the \verb|CSBEND| element. Works in serial mode only.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data,
-  using the method described in \cite{Borland_thesis}. Parallel tracking is used for this command in {\tt Pelegant}.
-  Previously, the analysis was limited to the linear matrix. Also, the terminal lattice functions and their chromatic derivatives
-  are determined from the map for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
-\item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
-  the strength changes in the event that more than two familes are provided for correction. (In the future this will be replaced
-  with an SVD-based implemenetation.)
-\item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
-  This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
-\item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
-  a \verb|CHARGE| element is in the beamline.
-\item The \verb|run_control| command now includes a variable, \verb|n_passes_fiducial|, that allows specifying a different number of
-  tracking passes for fiducialization than for tracking. For ring fiducialization, this should probably always be 1.
-\item Most output files from {\tt elegant} now include a parameter giving the SVN revision number of
-  the version used to create the output.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
-\item The \verb|analyze_map| command, which was improved as described above, can now use parallel resources.
-\item A bug was fixed in the \verb|center_on_orbit| feature of the \verb|track| command. The bug caused the
-  particles on each processor to be offset by different amounts related to the centroid of the local particles
-  only. This was reported by M. Furseman (DLS).
-\item Fixed a bug in \verb|FTABLE| introduced in version 26.0. The bug would cause the program to crash.
-\item Memory management was improved in the \verb|touschek_scatter| command, allowing a larger number of particles
-  to be utilized.
-\item The \verb|SCRIPT| element would cause a crash when \verb|twiss_output|, \verb|matrix_output|, or
-  similar commands were included but when tracking was required to determine the transfer matrix of the element.
-  This was fixed.
-\item Tracking instigated via the \verb|track| command is now more forgiving of uneven particle losses among 
-  cores. In particular, the program should no longer crash if one core has lost all of its particles or
-  all of the particles in a particular bunch.
-\item The \verb|stop_tracking_particle_limit| feature of the \verb|track| command now works in the parallel version.
-\item Instead of exiting, the parallel version now simply ignores the \verb|slice_anlysis| command.
+\item None.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The script \verb|reorganizeMmap| was added to convert momentum aperture data from \verb|Pelegant| in \verb|output_mode=1| 
-  into the same form as produced by \verb|elegant|. This was a result of correspondence with S. Tian (IHEP).
-\item A bug was fixed in \verb|elegant2astra| that resulting in slightly erroneous values for the longitudinal coordinate.
-\item The \verb|beamLifetimeCalc| can now perform approximate Touschek lifetime calculations for polarized beams.
-  This was added by A. Xiao (ANL) following an inquiry from forum user \verb|marlibgin|.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}

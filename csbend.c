@@ -4391,17 +4391,26 @@ void convolveArrays1(double *output, long n, double *a1, double *a2)
 
 void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
 {
-  photonLowEnergyCutoff = csbend->photonLowEnergyCutoff;
+  TRACKING_CONTEXT tc;
+#if USE_MPI
+  SDDSphotons = NULL;
+  return;
+#endif
   if (!csbend->photonOutputFile) {
     SDDSphotons = NULL;
     return;
   }
+  photonLowEnergyCutoff = csbend->photonLowEnergyCutoff;
+  getTrackingContext(&tc);
   if (!csbend->photonFileActive) {
     csbend->photonOutputFile = compose_filename(csbend->photonOutputFile, rootname);
     if (!SDDS_InitializeOutput(&csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&csbend->SDDSphotons, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
         0>SDDS_DefineParameter(&csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
         0>SDDS_DefineParameter(&csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, tc.elementName) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
@@ -4414,7 +4423,8 @@ void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
     csbend->photonFileActive = 1;
   }
   if (!SDDS_StartPage(&csbend->SDDSphotons, 10000) || 
-      !SDDS_SetParameters(&csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "LowEnergyCutoff", photonLowEnergyCutoff, NULL)) {
+      !SDDS_SetParameters(&csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
+                          "LowEnergyCutoff", photonLowEnergyCutoff, "ElementName", tc.elementName, "ElementOccurence", tc.elementOccurrence, NULL)) {
     SDDS_SetError("Problem setting up photon output file for CSBEND");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
