@@ -83,7 +83,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 
     for (i_part=0; i_part<=i_top; i_part++) {
       if (!(coord = part[i_part])) {
-        fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+        fprintf(stdout, "error: null coordinate pointer for particle %ld (trackThroughExactCorrector)\n", i_part);
         fflush(stdout);
         abort();
       }

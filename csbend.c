@@ -42,7 +42,7 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
 
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
-		      double x, double h0, double Fx, double Fy,
+		      double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle,
                       double meanPhotonsPerMeter,
@@ -65,6 +65,12 @@ void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
 void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
 
 long inversePoissonCDF(double mu, double C);
+
+void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np);
+void logPhoton(double Ep, double x, double xp, double y, double yp, double theta, double thetaf, double rho);
+SDDS_DATASET *SDDSphotons;
+long photonRows;
+double photonLowEnergyCutoff;
 
 #define RECORD_TRAJECTORY 1
 #define SUBTRACT_TRAJECTORY 2
@@ -225,7 +231,7 @@ void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long ex
 
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start, double *sigmaDelta2)
+                          double z_start, double *sigmaDelta2, char *rootname)
 {
   double h;
   long i_part, i_top;
@@ -251,7 +257,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
                                       z_start, sigmaDelta2);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2);
+    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname);
     compareGpuCpu(n_part, "track_through_csbend");
 #endif /* GPU_VERIFY */
     return i_part;
@@ -261,6 +267,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
+  setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
+  
   if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
@@ -295,7 +303,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none");
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refKicks = csbend->n_kicks;
@@ -719,6 +727,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     /* Return average value for all particles */
     *sigmaDelta2 /= i_top+1;
 
+  if (csbend->photonOutputFile && !SDDS_UpdatePage(&csbend->SDDSphotons, FLUSH_TABLE))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  
   return(i_top+1);
 }
 
@@ -832,7 +843,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 
     if (rad_coef || isrConstant)
       addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder, 
-		       X, 1./rho0, Fx, Fy, 
+		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, ds, isrConstant, 
                        distributionBasedRadiation, includeOpeningAngle,
                        meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
@@ -1018,7 +1029,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) {
       addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
-		       X, 1./rho0, Fx, Fy, 
+		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
                        meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
@@ -1064,7 +1075,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant)
       addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
-		       X, 1./rho0, Fx, Fy, 
+		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
                        meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
@@ -1108,7 +1119,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) 
       addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
-		       X, 1./rho0, Fx, Fy, 
+		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
                        meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
@@ -4061,16 +4072,12 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
 }
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
-		      double x, double h0, double Fx, double Fy,
+		      double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,
                       double normalizedCriticalEnergy0, double Po)
 {
   double f, xp, yp, F2, F, deltaFactor, dsFactor;
-  double nMean, dDelta, thetaRms;
-  long i, nEmitted;
-  double y, logy;
-  double normalizedCriticalEnergy;
   
   f = (1+x*h0)/EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
   xp = *Qx*f;
@@ -4093,6 +4100,10 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
     *Qy *= (1 + *dPoP);
   } else {
     double dtheta=0, dphi=0;
+    double yph, logyph;
+    double normalizedCriticalEnergy;
+    double nMean, dDelta, thetaRms;
+    long i, nEmitted;
     F = sqrt(F2);
     /* Compute the mean number of photons emitted = meanPhotonsPerMeter*meters */
     /* Note that unlike the #photons/radian, this is independent of energy */
@@ -4104,37 +4115,33 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
     /* For each photon, pick its energy and emission angles */
     for (i=0; i<nEmitted; i++) {
       /* Pick photon energy normalized to critical energy */
-      y=pickNormalizedPhotonEnergy(random_2(1));
+      yph=pickNormalizedPhotonEnergy(random_2(1));
       /* Multiply by critical energy normalized to central beam energy, adjusting for variation with
        * individual electron energy offset. Note that it goes like (1+delta)^2, not (1+delta)^3 
        * because the bending radius also depends on (1+delta) 
        */
-      dDelta = normalizedCriticalEnergy*sqr(1 + *dPoP)*y;
+      dDelta = normalizedCriticalEnergy*sqr(1 + *dPoP)*yph;
       photonCount ++;
-      energyCount += y;
+      energyCount += yph;
       /* Change the total electron momentum */
       *dPoP -= dDelta;
       if (includeOpeningAngle) {
         /* Compute rms spread in electron angle = (rms photon angle)*dDelta */
-        logy = log10(y);
+        logyph = log10(yph);
         thetaRms = dDelta*pow(10,
                               -2.418673276661232e-01
-                              + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
-                                                                   -logy*6.181818621278201e-03)))/Po;
+                              + logyph*(-4.472680955382907e-01+logyph*(-4.535350424882360e-02
+                                                                   -logyph*6.181818621278201e-03)))/Po;
         /* Compute change in electron angle due to photon angle */
         dtheta = thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
         dphi = thetaRms*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-/*
         if (SDDSphotons)
-          logPhoton(dDelta, xp-dtheta/dDelta, yp-dphi/dDelta);
-*/
+          logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
         xp += dtheta;
         yp += dphi;
       } else {
-/*
         if (SDDSphotons)
-          logPhoton(dDelta, xp, yp);
-*/
+          logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
       }
     }
     f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
@@ -4382,8 +4389,74 @@ void convolveArrays1(double *output, long n, double *a1, double *a2)
   }
 }
 
-void logPhoton(double y, double xp, double yp)
+void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
 {
+  photonLowEnergyCutoff = csbend->photonLowEnergyCutoff;
+  if (!csbend->photonOutputFile) {
+    SDDSphotons = NULL;
+    return;
+  }
+  if (!csbend->photonFileActive) {
+    csbend->photonOutputFile = compose_filename(csbend->photonOutputFile, rootname);
+    if (!SDDS_InitializeOutput(&csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(&csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "y", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "yp", "", SDDS_FLOAT) ||
+        !SDDS_WriteLayout(&csbend->SDDSphotons)) {
+      SDDS_SetError("Problem setting up photon output file for CSBEND");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    csbend->photonFileActive = 1;
+  }
+  if (!SDDS_StartPage(&csbend->SDDSphotons, 10000) || 
+      !SDDS_SetParameters(&csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "LowEnergyCutoff", photonLowEnergyCutoff, NULL)) {
+    SDDS_SetError("Problem setting up photon output file for CSBEND");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  photonRows = 0;
+  SDDSphotons = &csbend->SDDSphotons;
+}
+
+void logPhoton(double Ep, double x, double xp, double y, double yp, double thetar, double thetaf, double rho)
+{
+  double Xi, Zi, thetai, phii;
+  double L, R;
+  double XBar, thetaBar, phiBar, yBar;
   
+
+  if ((Ep *= me_mev*1e6)<photonLowEnergyCutoff)
+    return;
+  
+  /* emission */
+  thetai = thetar - atan(xp);
+  phii = atan(yp);
+  Xi = -rho*(1-cos(thetar)) + x*cos(thetar);
+  Zi = (x+rho)*sin(thetar);
+  
+  /* intersection with exit plane */
+  L = (Zi*cos(thetaf)-(rho+Xi)*sin(thetaf))/cos(thetaf-thetai);
+  R = ((rho+Xi)*cos(thetai)+Zi*sin(thetai))/cos(thetaf-thetai);
+  XBar = R - rho;
+  thetaBar = thetai - thetaf;
+  phiBar = phii;
+  yBar = y + L*tan(phii);
+
+  if (!SDDS_SetRowValues(SDDSphotons, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, photonRows++,
+                         0, (float)Ep,
+                         1, (float)XBar,
+                         2, (float)(-tan(thetaBar)),
+                         3, (float)yBar,
+                         4, (float)tan(phiBar),
+                         -1))
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  if (photonRows%10000==0) {
+    if (!SDDS_UpdatePage(SDDSphotons, FLUSH_TABLE))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
 }
 

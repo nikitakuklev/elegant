@@ -937,7 +937,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 58
+#define N_CSBEND_PARAMS 60
 #define N_MATTER_PARAMS 16
 #define N_RFMODE_PARAMS 40
 #define N_TRFMODE_PARAMS 24
@@ -2133,6 +2133,8 @@ typedef struct {
     double xReference, f1, f2, f3, f4, f5, f6, f7, f8;
     long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
+    char *photonOutputFile;
+    double photonLowEnergyCutoff;
     long referenceCorrection;
     /* for internal use only: */
     unsigned long edgeFlags;
@@ -2140,6 +2142,8 @@ typedef struct {
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
     long refKicks;
+    short photonFileActive;
+    SDDS_DATASET SDDSphotons;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
@@ -3781,7 +3785,7 @@ void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start, double z_end, CHARGE *charge, char *rootname);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-    double z_start, double *sigmaDelta2);
+    double z_start, double *sigmaDelta2, char *rootname);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, CHARGE *charge, char *rootname);

@@ -1460,7 +1460,7 @@ long do_tracking(
 		((CSBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
-					   *P_central, accepted, last_z, NULL);
+					   *P_central, accepted, last_z, NULL, run->rootname);
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
