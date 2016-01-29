@@ -371,7 +371,7 @@ extern "C" {
 
 long gpu_track_through_csbend(long n_part, CSBEND *csbend, 
        double p_error, double Po, double **accepted, double z_start, 
-       double *sigmaDelta2)
+       double *sigmaDelta2, char *rootname)
 {
   double h;
   double n, fse;
@@ -425,7 +425,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       setTrackingContext((char*)"csbend0", 0, T_CSBEND, (char*)"none");
       // keep single particle csbend on CPU
       gpuBase->elementOnGpu=0;
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, rootname);
       gpuBase->elementOnGpu=1;
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
