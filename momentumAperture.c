@@ -470,6 +470,7 @@ long doMomentumApertureSearch(
   beamline->fiducial_flag = 0;
   
   if (fiducialize || forbid_resonance_crossing) {
+    long i;
     if (startingCoord)
       memcpy(coord[0], startingCoord, sizeof(double)*6);
     else
