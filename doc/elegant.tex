@@ -66,7 +66,8 @@ Here is a summary of what's changed since release 29.0:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The script \verb|prepareForTAPAs| was added, which allows processing files from \verb|twiss_output| into a form
+  that is accepted by the Android App TAPAs \cite{TAPAs}.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -4961,6 +4962,10 @@ given with no arguments, which should be sufficient documentation.
         data.  (Program by M. Borland.)
 \item {\tt plotTwiss} -- Plots the twiss parameters using data from the \verb|twiss_output| command.
 \item {\tt plotTwissBeamsize} -- Plots the beam sizes using data from the \verb|twiss_output| command.
+\item {\tt prepareForTAPAs} --- Allows processing files from \verb|twiss_output| into a form
+  that is accepted by the Android App TAPAs \cite{TAPAs}. The resultant files can be copied to, e.g., 
+  the downloads area on the Android device, from which they can be read by TAPAs for configuration of
+  the Storage Ring Scaling activity.
 \item {\tt radiationEnvelope} --- A tool for use with the output of {\tt sddsbrightness} and {\tt sddsfluxcurve}.
   It analyzes data for many harmonics and produces a single curve that shows the envelope of maximum
   brightness or flux over all harmonics.
@@ -6637,8 +6642,11 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
  Proc. of IPAC15, MOPMA006 (2015).
 
 \bibitem{KHwang}
-  K. Hwang and S. Y. Lee, ``Dipole fringe field thin map for compact synchrotrons, submitted to PRSTAB; K. Hwang, ``On intrinsic nonlinear particle 
+  K. Hwang and S. Y. Lee, ``Dipole fringe field thin map for compact synchrotrons'', Phys. Rev. ST Accel. Beams {\bf 18}, 122401, 2015; K. Hwang, ``On intrinsic nonlinear particle 
   motion in compact synchrotrons,'' Indiana University Ph. D. Thesis, 2015.
+
+\bibitem{TAPAs}
+  M. Borland, ``Android application for accelerator physics and engineering calculations,'' Proc. of PAC 2013, 1364-1366.
 
 \end{thebibliography}
 
