@@ -486,6 +486,9 @@ long doMomentumApertureSearch(
       exitElegant(1);
     }
     printf("Fiducialization completed\n");
+    if (verbosity>2)
+      for (i=0; i<6; i++) 
+        printf("%le%s", coord[0][i], i==5?"\n":", ");
   }
 
   outputRow = -1;
