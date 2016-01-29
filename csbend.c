@@ -254,7 +254,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if(getElementOnGpu()){
     startGpuTimer();
     i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted, 
-                                      z_start, sigmaDelta2);
+                                      z_start, sigmaDelta2, rootname);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname);
