@@ -92,7 +92,17 @@ HNAMES = gpu_base.h \
 	 gpu_wake.h \
 	 printCudaDeviceProp.h
 
-CFLAGS=-O3 --gpu-architecture=sm_30 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE)
+CFLAGS = -O3 --gpu-architecture=sm_30 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE)
+#CFLAGS += --use_fast_math
+#CFLAGS += --fmad=true
+#CFLAGS += --fmad=false
+#CFLAGS += -DCUDA_DEVICE_COUNT=<count>
+#CFLAGS += -DGPU_VERIFY
+#OBJNAMES += gpu_verify.o
+#MPIOBJNAMES += mpi_gpu_verify.o
+#CFLAGS += -DDEBUG -DCUDA_DEBUG -DMPI_DEBUG -DDEBUG_APERTURE -DDEBUG_IGF
+#CFLAGS += -DDEBUG_FIDUCIALIZATION
+
 MPI_CFLAGS=-DUSE_MPI -DSDDS_MPI_IO -I$(MPI_INCLUDE)
 
 %.o: %.cu $(HCUNAMES) $(HNAMES)
@@ -164,6 +174,8 @@ mpi_gpu_wake.o: gpu_wake.cu $(HCUNAMES) $(HNAMES)
 mpi_printCudaDeviceProp.o: printCudaDeviceProp.cu $(HCUNAMES) $(HNAMES)
 	$(NVCC) $(CFLAGS) $(MPI_CFLAGS) --output-file mpi_printCudaDeviceProp.o printCudaDeviceProp.cu
 
+mpi_gpu_verify.o: gpu_verify.cu $(HCUNAMES) $(HNAMES)
+	$(NVCC) $(CFLAGS) $(MPI_CFLAGS) --output-file mpi_gpu_verify.o gpu_verify.cu
 
 
 madto_gpu.o: gpu_base.o gpu_matrix.o gpu_memory_management.o
