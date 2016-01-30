@@ -479,6 +479,8 @@ long doMomentumApertureSearch(
     pCentral = run->p_central;
     if (verbosity>1) 
       fprintf(stdout, "Tracking fiducial particle\n");
+    delete_phase_references();
+    reset_special_elements(beamline, RESET_INCLUDE_ALL);
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
@@ -581,7 +583,7 @@ long doMomentumApertureSearch(
         
         if (verbosity>1) {
           fprintf(stdout, " Searching for %s side from %e toward %e with interval %e\n", side==0?"negative":"positive",
-                  deltaStart, deltaLimit1[slot], delta_step_size);
+                  deltaStart, deltaLimit1[side], delta_step_size);
           fflush(stdout);
         }
 
@@ -597,7 +599,7 @@ long doMomentumApertureSearch(
           pCentral = run->p_central;
           code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                              NULL, NULL, NULL, NULL, run, control->i_step, 
-                             (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
+                             (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
 	                     control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             fprintf(stdout, "Fiducial particle tune is undefined.\n");
@@ -607,7 +609,7 @@ long doMomentumApertureSearch(
             fprintf(stdout, "  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
         }
         
-        deltaLimit = deltaLimit1[slot];
+        deltaLimit = deltaLimit1[side];
         for (split=0; split<=splits; split++) {
           delta = deltaStart;
           
@@ -646,7 +648,7 @@ long doMomentumApertureSearch(
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
-                               (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+(allow_watch_file_output?0:INHIBIT_FILE_OUTPUT), 
+                               (fiducialize?FIDUCIAL_BEAM_SEEN:0)+FIRST_BEAM_IS_FIDUCIAL+(verbosity>4?0:SILENT_RUNNING)+(allow_watch_file_output?0:INHIBIT_FILE_OUTPUT), 
 			       control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
             if (code && turnsStored>2) {
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
@@ -937,9 +939,11 @@ long multiparticleLocalMomentumAcceptance(
     fprintf(stdout, "Tracking fiducial particle\n");
     fflush(stdout);
   }
+  delete_phase_references();
+  reset_special_elements(beamline, RESET_INCLUDE_ALL);
   code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                      NULL, NULL, NULL, NULL, run, control->i_step, 
-                     FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                     FIRST_BEAM_IS_FIDUCIAL+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
   if (!code) {
     if (myid==0)
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
@@ -981,7 +985,7 @@ long multiparticleLocalMomentumAcceptance(
     fflush(stdout);
     nLeft = do_tracking(NULL, coord, nEachProcessor, NULL, beamline, &pCentral, 
                         NULL, NULL, NULL, NULL, run, control->i_step, 
-                        (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
+                        FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT, 
                         control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
     nLost = nEachProcessor - nLeft;
 #ifdef DEBUG
