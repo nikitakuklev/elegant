@@ -16,7 +16,7 @@
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pass, double Po, long idSlotsPerBunch)
 {
-  double sum, position, output;
+  double sum, position, output, offset;
   long i, j;
   long np;
   double *time0 = NULL;           /* array to record arrival time of each particle */
@@ -118,7 +118,11 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
     if (np>0)
       position = sum/np;
 #endif
-    if (tfbp->iPlane==4) {
+    if (tfbp->iPlane==0) {
+      position -= tfbp->dx;
+    } else if (tfbp->iPlane==2) {
+      position -= tfbp->dy;
+    } else if (tfbp->iPlane==4) {
       double beta;
       beta = Po/sqrt(Po*Po+1);
       position /= beta*c_mks;

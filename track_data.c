@@ -2303,6 +2303,8 @@ PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.updateInterval), NULL, 0.0, 0, "Interval in turns for sampling data and updating filter output."},
    {"REFERENCE_FREQUENCY", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.referenceFrequency), NULL, 0.0, 0, "Reference frequency for computing phase offsets."},
+   {"DX", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.dx), NULL, 0.0, 0, "Horizontal offset (subtracted from pickup signal)."},
+   {"DY", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.dy), NULL, 0.0, 0, "Vertical offset (subtracted from pickup signal)"},
 } ;
 
 TFBDRIVER tfbDriver_example;
