@@ -981,7 +981,7 @@ extern char *entity_text[N_TYPES];
 #define N_CWIGGLER_PARAMS 24
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
-#define N_ILMATRIX_PARAMS 35
+#define N_ILMATRIX_PARAMS 41
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 15
 #define N_UKICKMAP_PARAMS 13
@@ -1957,7 +1957,9 @@ extern PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS] ;
 typedef struct {
     double length;
     double tune[2], chrom[2], chrom2[2], chrom3[2];
-    double tswax[2], tsway[2];
+    double tswax[2], tsway[2]; /* dnux/dAx, dnuy/dAx, dnux/dAy, dnuy/dAy */
+    double tswax2[2], tsway2[2]; /* dnux/dAx^2, dnuy/dAx^2, dnux/dAy^2, dnuy/dAy^2 */
+    double tswaxay[2]; /* dnux/dAx/dAy, dnuy/dAx/dAy */
     double beta[2], beta1[2], alpha[2], alpha1[2];
     double eta[4], eta1[4];
     double alphac[3];

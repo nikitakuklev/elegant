@@ -3358,7 +3358,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
                                 deltaPoP/2*(chrom2[plane] + 
                                             deltaPoP/3*chrom3[plane])));
       if (ilmat)
-        tune2pi += PIx2*(A[0]*ilmat->tswax[plane] + A[1]*ilmat->tsway[plane]);
+        tune2pi += PIx2*(A[0]*(ilmat->tswax[plane] + A[0]*ilmat->tswax2[plane]/2) +
+			 A[1]*(ilmat->tsway[plane] + A[1]*ilmat->tsway2[plane]/2) +
+			 A[0]*A[1]*ilmat->tswaxay[plane]
+			 );
       offset = 2*plane;
       if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
 	if (ilmat->verbosity) {
