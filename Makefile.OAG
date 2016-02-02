@@ -316,6 +316,11 @@ OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -
 endif
 endif
 
+ifeq (cori, $(findstring cori, $(HOSTNAME)))
+LAPACK = 1
+OP_SYS_LDLIBS += -L/global/homes/s/soliday/cori/lib64
+endif
+
 ifneq ($(ESSL), 0)
 USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
 USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
