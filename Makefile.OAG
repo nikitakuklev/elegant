@@ -316,11 +316,6 @@ OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -
 endif
 endif
 
-ifeq (cori, $(findstring cori, $(HOSTNAME)))
-LAPACK = 1
-OP_SYS_LDLIBS += -L/global/homes/s/soliday/cori/lib64
-endif
-
 ifneq ($(ESSL), 0)
 USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
 USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
@@ -359,7 +354,9 @@ ifneq ($(LAPACK), 0)
 USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
+ifneq (cori, $(findstring cori, $(HOSTNAME)))
 SYS_PROD_LIBS_Linux += lapack blas
+endif
 
 GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.* /usr/lib/i386-linux-gnu/libgfortran.* /usr/lib/x86_64-linux-gnu/libgfortran.* )))
 ifeq ($(GFORTRAN), 0)
@@ -420,7 +417,9 @@ else
       USR_LIBS += lapack
     else
       # there is no lapack header file
+ifneq (cori, $(findstring cori, $(HOSTNAME)))
       OP_SYS_LDLIBS += -llapack -lblas 
+endif
 #	-lgfortran
       USR_CPPFLAGS += -DLAPACK 
     endif
