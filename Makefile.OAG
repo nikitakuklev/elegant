@@ -279,6 +279,13 @@ ifeq (intrepid, $(findstring intrepid, $(HOSTNAME)))
 OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
 endif
 
+# On Cori, we need build our own lapack and blas libraries for Pelegant
+ifeq ($(MPI),1)
+ifeq (cori, $(findstring cori, $(HOSTNAME)))
+OP_SYS_LDLIBS += -L/global/homes/s/soliday/cori/lib64 -llapack -lblas 
+endif
+endif
+
 LAPACK = 0
 #Use LAPACK on Linux by default.
 #This is available as an RPM package.
