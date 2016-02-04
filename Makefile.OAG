@@ -284,6 +284,9 @@ ifeq ($(MPI),1)
 ifeq (cori, $(findstring cori, $(HOSTNAME)))
 OP_SYS_LDLIBS += -L/global/homes/s/soliday/cori/lib64 -llapack -lblas 
 endif
+ifeq (edison, $(findstring edison, $(HOSTNAME)))
+OP_SYS_LDLIBS += -L/global/homes/s/soliday/edison/lib64 -llapack -lblas 
+endif
 endif
 
 LAPACK = 0
@@ -362,7 +365,9 @@ USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 ifneq (cori, $(findstring cori, $(HOSTNAME)))
+ifneq (edison, $(findstring edison, $(HOSTNAME)))
 SYS_PROD_LIBS_Linux += lapack blas
+endif
 endif
 
 GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.* /usr/lib/i386-linux-gnu/libgfortran.* /usr/lib/x86_64-linux-gnu/libgfortran.* )))
@@ -425,7 +430,9 @@ else
     else
       # there is no lapack header file
 ifneq (cori, $(findstring cori, $(HOSTNAME)))
+ifneq (edison, $(findstring edison, $(HOSTNAME)))
       OP_SYS_LDLIBS += -llapack -lblas 
+endif
 endif
 #	-lgfortran
       USR_CPPFLAGS += -DLAPACK 

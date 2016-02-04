@@ -77,10 +77,12 @@ F77 = f77 -m64
 solaris_libs = -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
+F77 = gfortran -m64 -ffixed-line-length-132
 ifeq (cori, $(findstring cori, $(HOSTNAME)))
 F77 = ftn -m64 -ffixed-line-length-132
-else
-F77 = gfortran -m64 -ffixed-line-length-132
+endif
+ifeq (edison, $(findstring edison, $(HOSTNAME)))
+F77 = ftn -m64 -ffixed-line-length-132
 endif
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
