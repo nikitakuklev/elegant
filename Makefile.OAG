@@ -46,11 +46,21 @@ else
     MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.1.1/bin/ )
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
+  CC += $(USER_MPI_FLAGS)
+  CCC += $(USER_MPI_FLAGS)
+else	
+  ifeq (cori, $(findstring cori, $(HOSTNAME)))
     CC += $(USER_MPI_FLAGS)
     CCC += $(USER_MPI_FLAGS)
-else	
-    CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
-    CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
+  else
+    ifeq (cori, $(findstring edison, $(HOSTNAME)))
+      CC += $(USER_MPI_FLAGS)
+      CCC += $(USER_MPI_FLAGS)
+    else
+      CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
+      CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
+    endif
+  endif
 endif
     # memory debugging with totalview
     # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
@@ -277,16 +287,6 @@ endif
 # On Intrepid, we need build our own lapack and blas libraries
 ifeq (intrepid, $(findstring intrepid, $(HOSTNAME)))
 OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
-endif
-
-# On Cori, we need build our own lapack and blas libraries for Pelegant
-ifeq ($(MPI),1)
-ifeq (cori, $(findstring cori, $(HOSTNAME)))
-OP_SYS_LDLIBS += -L/global/homes/s/soliday/cori/lib64 -llapack -lblas 
-endif
-ifeq (edison, $(findstring edison, $(HOSTNAME)))
-OP_SYS_LDLIBS += -L/global/homes/s/soliday/edison/lib64 -llapack -lblas 
-endif
 endif
 
 LAPACK = 0
