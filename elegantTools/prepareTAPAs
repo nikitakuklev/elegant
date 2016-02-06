@@ -14,7 +14,7 @@ set output ""
 set nCells -1
 set name ""
 set args $argv
-if {[APSStrictParseArguments {input nCells name}] || ![string length $input] || ![string length $name] || $nCells<0} {
+if {[APSStrictParseArguments {input output nCells name}] || ![string length $input] || ![string length $name] || $nCells<0} {
     return -code error "$usage"
 }
 
