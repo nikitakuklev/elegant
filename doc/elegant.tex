@@ -4186,7 +4186,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
         STRING output = NULL;
         long nbins = 100;
         double sbin_step = 1;
-        long n_simulated = 5E6;
+        long n_simulated = 5000000;
         double ignored_portion = 0.01;
         long i_start = 0;
         long i_end = 1;
@@ -4237,7 +4237,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
    \item \verb|sbin_step| --- Bin size for loss rate summary output to the \verb|output| file.
    \item \verb|nbins| --- Number of bins used for the \verb|distribution| and \verb|initial| table.
    \item \verb|n_simulated| --- The total number of simulated scattered particles with $\delta>\delta_m$. Choosing too small
-   a value will cause unreliable results.
+   a value will cause unreliable results. Note: use an integer number here. A number such as 5E6 sometimes will cause you trouble.
    \item \verb|ignored_portion| --- Fraction of the total scattering rate ignored in tracking. Using this parameter will greatly 
    increase the tracking speed. 
    % This number should be much less than the total loss rate. 
