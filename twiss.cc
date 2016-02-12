@@ -990,35 +990,39 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_ETAY2    ((21+2)+1)
 #define IP_ETAX3    ((22+2)+1)
 #define IP_ETAY3    ((23+2)+1)
-#define IP_BETAXMIN ((24+2)+1)
-#define IP_BETAXAVE ((25+2)+1)
-#define IP_BETAXMAX ((26+2)+1)
-#define IP_BETAYMIN ((27+2)+1)
-#define IP_BETAYAVE ((28+2)+1)
-#define IP_BETAYMAX ((29+2)+1)
-#define IP_ETAXMAX ((30+2)+1)
-#define IP_ETAYMAX ((31+2)+1)
-#define IP_WAISTSX ((32+2)+1)
-#define IP_WAISTSY ((33+2)+1)
-#define IP_DNUXDAX ((34+2)+1)
-#define IP_DNUXDAY ((35+2)+1)
-#define IP_DNUYDAX ((36+2)+1)
-#define IP_DNUYDAY ((37+2)+1)
-#define IP_DNUXDAX2 ((38+2)+1)
-#define IP_DNUXDAY2 ((39+2)+1)
-#define IP_DNUXDAXAY ((40+2)+1)
-#define IP_DNUYDAX2 ((41+2)+1)
-#define IP_DNUYDAY2 ((42+2)+1)
-#define IP_DNUYDAXAY ((43+2)+1)
-#define IP_NUXTSWAMIN ((44+2)+1)
-#define IP_NUXTSWAMAX ((45+2)+1)
-#define IP_NUYTSWAMIN ((46+2)+1)
-#define IP_NUYTSWAMAX ((47+2)+1)
-#define IP_COUPLINGINTEGRAL ((48+2)+1)
-#define IP_COUPLINGOFFSET ((49+2)+1)
-#define IP_EMITRATIO ((50+2)+1)
-#define IP_ALPHAC2 ((51+2)+1)
-#define IP_ALPHAC  ((52+2)+1)
+#define IP_ETAPX2    (IP_ETAY3+1)
+#define IP_ETAPY2    (IP_ETAY3+2)
+#define IP_ETAPX3    (IP_ETAY3+3)
+#define IP_ETAPY3    (IP_ETAY3+4)
+#define IP_BETAXMIN ((24+2)+5)
+#define IP_BETAXAVE ((25+2)+5)
+#define IP_BETAXMAX ((26+2)+5)
+#define IP_BETAYMIN ((27+2)+5)
+#define IP_BETAYAVE ((28+2)+5)
+#define IP_BETAYMAX ((29+2)+5)
+#define IP_ETAXMAX ((30+2)+5)
+#define IP_ETAYMAX ((31+2)+5)
+#define IP_WAISTSX ((32+2)+5)
+#define IP_WAISTSY ((33+2)+5)
+#define IP_DNUXDAX ((34+2)+5)
+#define IP_DNUXDAY ((35+2)+5)
+#define IP_DNUYDAX ((36+2)+5)
+#define IP_DNUYDAY ((37+2)+5)
+#define IP_DNUXDAX2 ((38+2)+5)
+#define IP_DNUXDAY2 ((39+2)+5)
+#define IP_DNUXDAXAY ((40+2)+5)
+#define IP_DNUYDAX2 ((41+2)+5)
+#define IP_DNUYDAY2 ((42+2)+5)
+#define IP_DNUYDAXAY ((43+2)+5)
+#define IP_NUXTSWAMIN ((44+2)+5)
+#define IP_NUXTSWAMAX ((45+2)+5)
+#define IP_NUYTSWAMIN ((46+2)+5)
+#define IP_NUYTSWAMAX ((47+2)+5)
+#define IP_COUPLINGINTEGRAL ((48+2)+5)
+#define IP_COUPLINGOFFSET ((49+2)+5)
+#define IP_EMITRATIO ((50+2)+5)
+#define IP_ALPHAC2 ((51+2)+5)
+#define IP_ALPHAC  ((52+2)+5)
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -1066,6 +1070,10 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"etay2", (char*)"&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
 {(char*)"etax3", (char*)"&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
 {(char*)"etay3", (char*)"&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etaxp2", (char*)"&parameter name=etaxp2, symbol=\"$gc$r$bx2$n$a'$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etayp2", (char*)"&parameter name=etayp2, symbol=\"$gc$r$by2$n$a'$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etaxp3", (char*)"&parameter name=etaxp3, symbol=\"$gc$r$bx3$n$a'$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etayp3", (char*)"&parameter name=etayp3, symbol=\"$gc$r$by3$n$a'$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
 {(char*)"betaxMin", (char*)"&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
 {(char*)"betaxAve", (char*)"&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
 {(char*)"betaxMax", (char*)"&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
@@ -1300,9 +1308,13 @@ void dump_twiss_parameters(
 			  IP_NUYTSWAMIN, beamline->nuyTswaExtrema[0],
 			  IP_NUYTSWAMAX, beamline->nuyTswaExtrema[1],
                           IP_ETAX2, beamline->eta2[0],
+                          IP_ETAPX2, beamline->eta2[1],
                           IP_ETAY2, beamline->eta2[2],
+                          IP_ETAPY2, beamline->eta2[3],
                           IP_ETAX3, beamline->eta3[0],
+                          IP_ETAPX3, beamline->eta3[1],
                           IP_ETAY3, beamline->eta3[2],
+                          IP_ETAPY3, beamline->eta3[3],
                           IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError((char*)"Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
