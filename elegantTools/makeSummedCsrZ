@@ -9,7 +9,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: makeSummedCsrZ -output <filename> -paramFile <filename> \[-fmax <Hz>(100e9)] \[-log2N <base-2LogOfNumberOfPoints>(14)\[-height <meters>(0=free space)]\nMakes a combined CSR impedance for lattice that may have several types of dipoles.\nUses steady-state formula with parallel plate shielding or free-space limit for each unique bending radius, then sums."
+set usage "usage: makeSummedCsrZ -output <filename> -paramFile <filename> \[-fmax <Hz>(100e9)] \[-log2N <base-2LogOfNumberOfPoints>(14)] \[-height <meters>(0=free space)]\nMakes a combined CSR impedance for lattice that may have several types of dipoles.\nUses steady-state formula with parallel plate shielding or free-space limit for each unique bending radius, then sums."
 set paramFile ""
 set output ""
 set height 0.0
