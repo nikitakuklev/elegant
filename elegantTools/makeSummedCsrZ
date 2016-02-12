@@ -9,12 +9,14 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: makeSummedCsrZ -output <filename> -paramFile <filename> \[-height <meters>(0=free space)]\nMakes a combined CSR impedance for lattice that may have several types of dipoles.\nUses steady-state formula with parallel plate shielding or free-space limit for each unique bending radius, then sums."
+set usage "usage: makeSummedCsrZ -output <filename> -paramFile <filename> \[-fmax <Hz>(100e9)] \[-log2N <base-2LogOfNumberOfPoints>(14)\[-height <meters>(0=free space)]\nMakes a combined CSR impedance for lattice that may have several types of dipoles.\nUses steady-state formula with parallel plate shielding or free-space limit for each unique bending radius, then sums."
 set paramFile ""
 set output ""
 set height 0.0
+set fmax 100e9
+set log2N 14
 set args $argv
-if {[APSStrictParseArguments {output paramFile height}] || ![string length $paramFile] || ![string length $output] || [expr $height<0]} {
+if {[APSStrictParseArguments {output paramFile fmax log2N height}] || ![string length $paramFile] || ![string length $output] || [expr $height<0]} {
     puts stderr "$usage"
     exit 1
 }
@@ -66,19 +68,20 @@ if [expr abs($ratio-1)>1e-6] {
 
 set index 0
 set fileList ""
+set n [expr pow(2, $log2N)]
 foreach rho [lindex $data(Column.rho) 0] angle [lindex $data(Column.AngleContribution) 0] {
     puts stdout "Working on rho=$rho, angle=$angle"
     flush stdout
     if [expr $height==0] {
         # formula from Handbook of Accelerator Physics and Engineering.
         # the sign of the imaginary part is changed to match elegant's convention
-        exec sddssequence -pipe=out -define=f,units=Hz,type=double -sequence=begin=0,end=100e9,number=16384 \
+        exec sddssequence -pipe=out -define=f,units=Hz,type=double -sequence=begin=0,end=$fmax,number=16384 \
           | sddsprocess -pipe=in $output.$index \
           "-define=parameter,Coef,120 pi * 2 3 / lngam exp * 2 / pi / 3 c_mks * $rho sqr * 3 rec pow / $rho $angle * *" \
           "-define=col,ZReal,Coef pi 6 / cos * f 2 * pi * 3 rec pow *,units=Ohms" \
           "-define=col,ZImag,Coef pi 6 / sin * f 2 * pi * 3 rec pow * chs,units=Ohms" 
     } else {
-        exec csrImpedance $output.$index -radius=$rho -angle=$angle -frequencyLimit=maximum=100e9,minimum=0 -n=14 -height=$height
+        exec csrImpedance $output.$index -radius=$rho -angle=$angle -frequencyLimit=maximum=$fmax,minimum=0 -n=$log2N -height=$height
     }
     lappend fileList $output.$index
     incr index
