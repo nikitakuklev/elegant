@@ -5,10 +5,11 @@ exec oagwish "$0" "$@"
 if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
-set usage "usage: longitCalcs -twiss <filename>"
+set usage "usage: longitCalcs -twiss <filename> \[-voltage <MV>\]"
 set twiss ""
+set voltage -1.0
 set args $argv
-if {[APSStrictParseArguments {twiss}] || ![string length $twiss]} {
+if {[APSStrictParseArguments {twiss voltage}] || ![string length $twiss]} {
     puts stderr $usage
     exit 1
 }
@@ -40,10 +41,11 @@ set extradE 0
 set harmonic2 3
 set voltage2 0
 set superPeriods 1
-# initial start with overvoltage of 1.5
-# to avoid problem with arcsin function
-set voltage [expr $superPeriods*($U0+$extradE) * 1.5]
-if {$voltage < 9} {set voltage 9}
+if [expr $voltage<0] {
+    # initial start with overvoltage of 1.5
+    # to avoid problem with arcsin function
+    set voltage [expr $superPeriods*($U0+$extradE) * 1.5]
+}
 
 APSLabeledEntry .voltage -parent .userFrame \
   -label "Voltage (MV): " -textVariable voltage -width 22
