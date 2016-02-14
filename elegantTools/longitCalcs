@@ -97,7 +97,7 @@ APSLabeledOutput .revFreq -parent .userFrame \
 APSLabeledOutput .rfFreq -parent .userFrame \
     -label "RF frequency (MHz): " -textVariable rfFrequency -width 22
 APSLabeledOutput .synchphase -parent .userFrame \
-  -label "Synchrotron Phase: " -textVariable synchPhaseDeg -width 22
+  -label "Synchronous Phase: " -textVariable synchPhaseDeg -width 22
 APSLabeledOutput .overvolt -parent .userFrame \
     -label "Over Voltage: " -textVariable overVoltage  -width 22
 APSLabeledOutput .accept -parent .userFrame \
@@ -190,8 +190,65 @@ proc compute {args} {
     set lastHarmonicMode $harmonicMode
 
     computeBunchShape -plot $plot
-
+    findFixedPoints
+    computeBucketHH
+    
     update
+}
+
+proc findFixedPoints {} {
+    global dataItemList
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
+    global bunchDuration superPeriods revFreq1 sMax1 sMax
+    global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
+    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
+
+    set dataList [exec sddssequence -pipe=out -define=dphi -sequence=begin=[expr -1.99*$pi],end=[expr 1.99*$pi],n=100000 \
+		      | sddsprocess -pipe \
+		      "-define=param,V1,$voltage" "-define=param,Vh,$voltage $voltageRatio *" \
+		      "-define=param,h,$harmonicRatio" \
+		      "-define=param,phi1,$synchPhaseDeg pi * 180 /" "-define=param,phih,$harmonicPhaseDeg pi * 180 /" \
+		      "-define=param,U0,$U1" \
+		      "-define=column,error,U0 V1 phi1 dphi + sin * - Vh phih dphi h * + sin * -" \
+		      | tee ds1 \
+		      | sddszerofind -pipe -zeroesOf=error -columns=dphi \
+		      | sdds2stream -pipe -column=dphi]
+    global fixedPoint
+    if [llength $dataList]==3 {
+	set fixedPoint(1) [lindex $dataList 0]
+	set fixedPoint(2) [lindex $dataList 1]
+	set fixedPoint(3) [lindex $dataList 2]
+	set fixedPoint(valid) 1
+    } else {
+	set fixedPoint(valid) 0
+    }
+}
+
+proc computeBucketHH {args} {
+    global dataItemList
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
+    global bunchDuration superPeriods revFreq1 sMax1 sMax
+    global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
+    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
+    global fixedPoint rfAcceptance
+
+    if $fixedPoint(valid)==0 return
+    set fp $fixedPoint(1)
+    set phi1 [expr $synchPhaseDeg*$pi/180]
+    set phih [expr $harmonicPhaseDeg*$pi/180]
+    set Vh [expr $voltageRatio*$voltage]
+    set W1 [expr $voltage*(cos($phi1) - cos($phi1+$fp))]
+    set W2 [expr $Vh*(cos($phih) - cos($phih+$fp*$harmonicRatio))/$harmonicRatio]
+    set W3 [expr $U1*$fp]
+    set W [expr $W1+$W2-$W3]
+    if [expr $W>=0] {
+        set rfAcceptance 0
+    } else {
+	set rfAcceptance [expr sqrt(-$W/($pi*$harmonic*$alphac*$energy))*100]
+    }
+    
 }
 
 proc computeBunchShape {args} {
