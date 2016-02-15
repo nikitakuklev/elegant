@@ -75,7 +75,7 @@ foreach rho [lindex $data(Column.rho) 0] angle [lindex $data(Column.AngleContrib
     if [expr $height==0] {
         # formula from Handbook of Accelerator Physics and Engineering.
         # the sign of the imaginary part is changed to match elegant's convention
-        exec sddssequence -pipe=out -define=f,units=Hz,type=double -sequence=begin=0,end=$fmax,number=16384 \
+        exec sddssequence -pipe=out -define=f,units=Hz,type=double -sequence=begin=0,end=$fmax,number=16385 \
           | sddsprocess -pipe=in $output.$index \
           "-define=parameter,Coef,120 pi * 2 3 / lngam exp * 2 / pi / 3 c_mks * $rho sqr * 3 rec pow / $rho $angle * *" \
           "-define=col,ZReal,Coef pi 6 / cos * f 2 * pi * 3 rec pow *,units=Ohms" \
