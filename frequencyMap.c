@@ -38,7 +38,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"delta", "&column name=delta, type=double &end"},
     {"nux", "&column name=nux, symbol=$gn$r$bx$n, type=double &end"},
     {"nuy", "&column name=nuy, symbol=$gn$r$by$n, type=double &end"},
-    {"s", "&column name=s, units=m, type=double &end"},
+    {"s", "&column name=s, units=m/pass, type=double &end"},
     {"dnux", "&column name=dnux, symbol=$gDn$r$bx$n, type=double &end"},
     {"dnuy", "&column name=dnuy, symbol=$gDn$r$by$n, type=double &end"},
     {"dnu", "&column name=dnu, symbol=$gDn$r, type=double &end"},
