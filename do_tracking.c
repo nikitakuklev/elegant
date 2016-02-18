@@ -3420,6 +3420,8 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
     } else {
       /* momentum-dependent pathlength --- note that other path-length terms are ignored ! */
       M1->C[4] = eptr->matrix->C[4]*(1 + deltaPoP*(alphac[0] + deltaPoP*(alphac[1] + deltaPoP*alphac[2])));
+      if (ilmat) 
+	M1->C[4] += ilmat->dsdA[0]*A[0] + ilmat->dsdA[1]*A[1];
       track_particles(&coord, M1, &coord, 1);
       /* add back the dispersive orbit to the particle coordinates */
       coord[5] += deltaPoP;
