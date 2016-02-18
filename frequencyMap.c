@@ -22,21 +22,23 @@
 #define IC_DELTA 2
 #define IC_NUX 3
 #define IC_NUY 4
-#define N_NOCHANGE_COLUMNS 5
-#define IC_DNUX 5
-#define IC_DNUY 6
-#define IC_DNU 7
-#define IC_DX 8
-#define IC_DY 9
-#define IC_DIFFUSION 10
-#define IC_DIFFUSION_RATE 11
-#define N_COLUMNS 12
+#define IC_S 5
+#define N_NOCHANGE_COLUMNS 6
+#define IC_DNUX N_NOCHANGE_COLUMNS
+#define IC_DNUY N_NOCHANGE_COLUMNS+1
+#define IC_DNU N_NOCHANGE_COLUMNS+2
+#define IC_DX N_NOCHANGE_COLUMNS+3
+#define IC_DY N_NOCHANGE_COLUMNS+4
+#define IC_DIFFUSION N_NOCHANGE_COLUMNS+5
+#define IC_DIFFUSION_RATE N_NOCHANGE_COLUMNS+6
+#define N_COLUMNS N_NOCHANGE_COLUMNS+7
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
     {"delta", "&column name=delta, type=double &end"},
     {"nux", "&column name=nux, symbol=$gn$r$bx$n, type=double &end"},
     {"nuy", "&column name=nuy, symbol=$gn$r$by$n, type=double &end"},
+    {"s", "&column name=s, units=m, type=double &end"},
     {"dnux", "&column name=dnux, symbol=$gDn$r$bx$n, type=double &end"},
     {"dnuy", "&column name=dnuy, symbol=$gDn$r$by$n, type=double &end"},
     {"dnu", "&column name=dnu, symbol=$gDn$r, type=double &end"},
@@ -250,6 +252,7 @@ long doFrequencyMap(
 				   IC_X, x, IC_Y, y, IC_DELTA, delta,
 				   IC_NUX, firstTune[0], 
 				   IC_NUY, firstTune[1], 
+                                   IC_S, endingCoord[4]/turns, 
 				   -1)) {
 	      SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
 	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
