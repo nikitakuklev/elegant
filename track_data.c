@@ -2441,8 +2441,11 @@ PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
     {"ALPHAC", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[0]), NULL, 0.0, 0, "First-order momentum compaction factor"},
     {"ALPHAC2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[1]), NULL, 0.0, 0, "Second-order momentum compaction factor"},
     {"ALPHAC3", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[2]), NULL, 0.0, 0, "Third-order momentum compaction factor"},
-    {"DS1AX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA[0]), NULL, 0.0, 0, "First amplitude derivative of the horizontal tune wrt Ax"},
-    {"DS1AY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA[1]), NULL, 0.0, 0, "First amplitude derivative of the vertical tune wrt Ax"},
+    {"DS1AX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA[0]), NULL, 0.0, 0, "First amplitude derivative of the path length wrt Ax"},
+    {"DS1AY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA[1]), NULL, 0.0, 0, "First amplitude derivative of the path length wrt Ay"},
+    {"DS2AX", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA2[0]), NULL, 0.0, 0, "Second amplitude derivative of the path length wrt Ax"},
+    {"DS2AY", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdA2[1]), NULL, 0.0, 0, "Second amplitude derivative of the path length wrt Ay"},
+    {"DS1AX1AY", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.dsdAxAy), NULL, 0.0, 0, "Amplitude derivative of the path length wrt Ax and Ay"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tilt), NULL, 0.0, 0, "Rotation angle about the longitudinal axis."},
     {"CROSS_RESONANCE", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.allowResonanceCrossing), NULL, 0.0, 0, "If zero, then particles that cross an integer or half-integer resonance are considered lost."},
     {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.verbosity), NULL, 0.0, 0, "If nonzero, then information about particle losses is printed out."}
