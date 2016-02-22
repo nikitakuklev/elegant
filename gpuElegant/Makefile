@@ -6,10 +6,13 @@ NVCC = /usr/local/cuda/bin/nvcc
 
 MPI_INCLUDE = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/include /usr/lib64/mvapich2/1.2-gcc/include /soft/libraries/mpi/mvapich2/gcc/include /usr/lib64/mpich/include /clhome/asd_tools/mvapich2-2.0/include /Users/soliday/mpich-3.1.1/include )
 
-
+ifeq ($(MPI),1)
 all: madto_gpu.o elegant_gpu.o Pelegant_gpu.o
+else
+all: madto_gpu.o elegant_gpu.o
+endif
 
-clean::
+clean:
 	rm -f *.o
 
 OBJNAMES = gpu_base.o \
@@ -92,7 +95,7 @@ HNAMES = gpu_base.h \
 	 gpu_wake.h \
 	 printCudaDeviceProp.h
 
-CFLAGS = -O3 --gpu-architecture=sm_30 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE)
+CFLAGS = -O3 --gpu-architecture=sm_30 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 #CFLAGS += --use_fast_math
 #CFLAGS += --fmad=true
 #CFLAGS += --fmad=false
