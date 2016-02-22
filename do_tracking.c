@@ -946,7 +946,10 @@ long do_tracking(
            */
           if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) {
             /* Only the slave CPUs will work on this part */ 
-            if (flags&LINEAR_CHROMATIC_MATRIX) 
+            if (flags&LINEAR_CHROMATIC_MATRIX) {
+#ifdef HAVE_GPU
+              coord = forceParticlesToCpu("trackWithIndividualizedLinearMatrix");
+#endif
               nLeft
 	        = trackWithIndividualizedLinearMatrix(coord, nToTrack, accepted,
 		       			         *P_central, z, eptrCLMatrix,
@@ -955,10 +958,14 @@ long do_tracking(
 					         beamline->chrom2, beamline->chrom3,
 					         beamline->dbeta_dPoP, beamline->dalpha_dPoP,
 					         beamline->alpha, beamline->eta2, NULL);
-            else 
+            } else {
+#ifdef HAVE_GPU
+              coord = forceParticlesToCpu("trackLongitudinalOnlyRing");
+#endif
               trackLongitudinalOnlyRing(coord, nToTrack, 
                                         eptrCLMatrix->matrix,
                                         beamline->alpha);
+            }
           }
 	}
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
