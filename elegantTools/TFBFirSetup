@@ -32,6 +32,13 @@ if {[APSStrictParseArguments {twiss pickup driver plane output terms}] || ![stri
 if [file exists $output] {
     return -code error "in use: $output"
 }
+set plane [string tolower $plane]
+if [lsearch -exact [list x y] $plane]==-1 {
+    return -code error "invalid plane: use x or y"
+}
+if {[expr $terms<1] || [expr $terms>15]} {
+    return -code error "terms:[1, 15] not satisfied"
+}
 
 set tmpRoot /tmp/[APSTmpString]
 
