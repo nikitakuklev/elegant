@@ -40,8 +40,8 @@ Computes the bunching factor vs angular frequency using time coordinates of part
 -pipe         The standard SDDS pipe option.\n\
 -omegaRange   Lower and upper limits of angular frequency.\n\
 -points       Number of values of omega.\n\
--mode         Linear or logarithmic spacing of omega points?\n\n\
--combinePages Combine data from all pages.\n\
+-mode         Linear or logarithmic spacing of omega points?\n\
+-combinePages Combine input data from all pages.\n\
 -column       Name of column for which to compute bunching factor. Default is \"t\".\n\n\
 Program by Michael Borland.  (This is version 1, March 30, 2015)\n";
 
