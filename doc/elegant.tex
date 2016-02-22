@@ -50,7 +50,8 @@ Here is a summary of what's changed since release 29.0:
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added logging of photon coordinates and angles to the \verb|CSBEND| element. Works in serial mode only.
-\item The \verb|ILMATRIX| element now supports second-order tune shift with amplitude.
+\item The \verb|ILMATRIX| element now supports second-order tune shift with amplitude as well as path-length dependence
+  on amplitude.
 \item The \verb|TFBPICKUP| element now supports horizontal and vertical offsets.
 \end{itemize}
 
@@ -68,10 +69,12 @@ Here is a summary of what's changed since release 29.0:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The script \verb|prepareForTAPAs| was added, which allows processing files from \verb|twiss_output| into a form
+\item The script \verb|prepareTAPAs| was added, which allows processing files from \verb|twiss_output| into a form
   that is accepted by the Android App TAPAs \cite{TAPAs}.
 \item The script \verb|makeSummedCsrWake| was added, which allows making a CSR wake that sums up contributions from
   dipoles with various lengths and bending radii. 
+\item The script \verb|TFBFirSetup| was added, which allows generating FIR filters for turn-by-turn feedback using 
+  \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -4913,15 +4916,19 @@ elegant}. Most are SDDS-compliant, so they will also work with any
 program that reads or writes appropriate SDDS data.  The following is
 a brief description of each program.  Full descriptions for many programs are available
 on subsequent pages.  Most programs will return a help message if the program name is
-given with no arguments, which should be sufficient documentation.
+given with no arguments, which should be sufficient documentation and may be more
+up-to-date than these manual pages.
 \begin{itemize}
 \item {\tt analyzeMagnets} --- Generates SDDS and latex files giving magnet parameters.
+  (Program by M. Borland.)
 \item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA \cite{ASTRA} to a binary
   SDDS file suitable for use with {\tt elegant}.  This program is recommended over
   the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
   files that are quite slow to read and does not perform the correct computations
   for low-energy beams.
+  (Program by M. Borland.)
 \item {\tt bremsstrahlungLifetime} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
+  (Program by M. Borland.)
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
   (Program by X. Dong.)
@@ -4933,10 +4940,14 @@ given with no arguments, which should be sufficient documentation.
  successively doubling the number.  Intended to be used to increase the number of particles
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
  See also {\tt smoothDist6}.
+  (Program by M. Borland.)
 \item {\tt elasticScatteringLifetime} --- Computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
+  (Program by M. Borland.)
 \item {\tt elegant2astra} --- This program translates {\tt elegant} phase space files into ASTRA \cite{ASTRA} format.
+  (Program by M. Borland.)
 \item {\tt elegant2track} --- This program translates {\tt elegant} phase space files into TRACK \cite{TRACK} format.
   The ASCII version of TRACK is assumed.
+  (Program by M. Borland.)
 \item {\tt elegant2genesis} --- This program performs
         slice analysis of particle output files, which are suitable for use with
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
@@ -4957,10 +4968,13 @@ given with no arguments, which should be sufficient documentation.
         Twiss parameters, such as that provided by the \verb|twiss_output| command.
         (Program by L. Emery, M. Borland, and A. Xiao)
 \item {\tt impact2elegant} --- Tranlates IMPACT-T \cite{IMPACT} output into {\tt elegant} conventions.
+  (Program by M. Borland.)
 \item {\tt impact2sdds} --- Translates IMPACT-T output files into SDDS for easier postprocessing.
+  (Program by M. Borland.)
 \item {\tt longitCalcs} --- Performs calculations of longitudinal dynamics parameters in storage rings,
   using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
   bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
+  (Program by M. Borland.)
 \item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
@@ -4968,15 +4982,19 @@ given with no arguments, which should be sufficient documentation.
 \item {\tt makeSummedCsrZ} --- Computes the shielded or free-space steady-state CSR impedance for a ring
   composed of one or more types of dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
+  (Program by M. Borland.)
 \item {\tt plotTwiss} -- Plots the twiss parameters using data from the \verb|twiss_output| command.
+  (Program by L. Emery and M. Borland.)
 \item {\tt plotTwissBeamsize} -- Plots the beam sizes using data from the \verb|twiss_output| command.
-\item {\tt prepareForTAPAs} --- Allows processing files from \verb|twiss_output| into a form
+\item {\tt prepareTAPAs} --- Allows processing files from \verb|twiss_output| into a form
   that is accepted by the Android App TAPAs \cite{TAPAs}. The resultant files can be copied to, e.g., 
   the downloads area on the Android device, from which they can be read by TAPAs for configuration of
   the Storage Ring Scaling activity.
+  (Program by M. Borland.)
 \item {\tt radiationEnvelope} --- A tool for use with the output of {\tt sddsbrightness} and {\tt sddsfluxcurve}.
   It analyzes data for many harmonics and produces a single curve that shows the envelope of maximum
   brightness or flux over all harmonics.
+  (Program by M. Borland.)
 \item {\tt sddsanalyzebeam} --- Analyzes a beam of macro-particles and produces an SDDS file
         containing beam moments, emittances, equivalent beta functions, etc.  The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
@@ -4984,7 +5002,9 @@ given with no arguments, which should be sufficient documentation.
 \item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator brightness curves.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsbs} --- Computes bending magnet spectra.
+  (Program by H. Shang and M. Borland.)
 \item {\tt sddsbunchingfactor} --- Computes bunching factor vs frequency from phase space data.
+  (Program by M. Borland.)
 \item {\tt sddsemitproc} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
@@ -4999,6 +5019,7 @@ given with no arguments, which should be sufficient documentation.
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element. (Program by M. Borland.)
 \item {\tt sddsws} --- Computes wiggler spectra, using code from WS (by R. Dejus).
+  (Program by H. Shang.)
 \item {\tt sddsurgent} --- Uses algorithms from the programs US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
   radiation properties, including power density and intensity distributions.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
@@ -5012,18 +5033,27 @@ given with no arguments, which should be sufficient documentation.
  time, smooths the distribution and adds optional energy and density modulation.   Intended to be used to increase the number of particles
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.  Also useful in studying 
  the growth rate for energy and density modulations.  See also {\tt doubleDist6}.
+  (Program by M. Borland.)
 \item The script \verb|spiffe2elegant| allows converting the output of the PIC code \verb|spiffe| to the same form
   as output by \verb|elegant|.  Note that \verb|elegant| will read \verb|spiffe| output directly. This script just allows converting the
   data for use with related programs, such as \verb|sddsanalyzebeam|.
+  (Program by M. Borland.)
+\item {\tt TFBFirSetup} --- This script prepares data that can be used to configure turn-by-turn transverse feedback using
+  \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
+  (Program by M. Borland.)
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
-        Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
+        Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao and M. Borland.)
 \item {\tt track2sdds} --- Translates output files, including phase space files, from version 39 of TRACK (with ASCII output \cite{TRACK})
   into SDDS. 
+  (Program by M. Borland.)
 \item {\tt track2mag} --- Uses TRACK output files to create a file similar to the magnets outupt file from {\tt elegant}.
   This gives a profile of the beamline that can be plotted with other data.
+  (Program by M. Borland.)
 \item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
   matrices for skew quadrupoles and to perform coupling correction using those matrices.
+  (Program by M. Borland.)
 \item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
+  (Program by A. Petrenko and M. Borland.)
 \end{itemize}
 
 %\begin{latexonly}
@@ -6189,6 +6219,58 @@ the beam will vary step-wise from slice to slice.  This discontinuous variation 
 \item {\bf see also:} {\tt doubleDist6}
 \end{itemize}
 
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TFBFirSetup|}\end{center}
+%\end{latexonly}
+\subsection{TFBFirSetup}
+
+\begin{itemize}
+
+\item {\bf description:} \verb|TFBFirSetup| computes FIR (Finite Impulse Response) filter
+  coefficients for use with \verb|TFBDRIVER| elements to perform turn-by-turn transverse
+  feedback. The method uses time-domain least-squares fitting \cite{Nakamura2004}.
+  
+\item {\bf examples:}
+\begin{flushleft}{\tt
+TFBSetup -twiss Basic.twi -pickup XPICKUP -driver XDRIVER -plane x -output xfb.param -terms 6
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt 
+TFBFirSetup -twiss {\em twissFile} -pickup {\em elementName} -driver {\em elementName} -plane \{x|y\} 
+-output {\em filename} -terms {\em numberOfTerms}
+}\end{flushleft}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -twiss} --- A twiss parameter file from {\tt elegant}. 
+The beamline used for the computations must include a \verb|TFBDRIVER| and
+\verb|TFBFEEDBACK| element for the plane in question.
+\item {\tt -pickup} --- Specifies the name of the pickup element in the lattice.
+  One and only one occurrence of the element is required in the {\em twissFile}.
+  Note that generally the name of the pickup should be all uppercase.
+\item {\tt -driver} --- Specifies the name of the driver element in the lattice.
+  One and only one occurrence of the element is required in the {\em twissFile}.
+  Note that generally the name of the driver should be all uppercase.
+\item {\tt -plane} --- Specifies the plane of the feedback.
+\item {\tt -output} --- Specifies output filename to which FIR configuration is written.
+  The file should be loaded with \verb|load_parameters|, e.g.,
+\begin{verbatim}
+&load_parameters
+    filename = xfb.param,
+    change_defined_values = 1
+&end
+\end{verbatim}
+\item {\tt -terms } --- Number of terms in the filter, between 1 and 15, inclusive.
+\end{itemize}
+
+\item {\bf author:} M. Borland, ANL/APS.
+
+\item {\bf acknowledgments:} H. Shang, C.-Y. Yao.
+
+\end{itemize}
+
 
 %\begin{latexonly}
 \newpage
@@ -6659,6 +6741,9 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 
 \bibitem{TAPAs}
   M. Borland, ``Android application for accelerator physics and engineering calculations,'' Proc. of PAC 2013, 1364-1366.
+
+\bibitem{Nakamura2004}
+  T. Nakamura {\em et al.}, ``Transverse bunch-by-bunch feedback system for the SPRing-8 Storage Ring,'' Proc. of EPAC 2004, 2649.
 
 \end{thebibliography}
 
