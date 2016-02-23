@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: prepareForTAPAs -input <twissFilename> [-output <filename>] -nCells <number> -nCellsScaling {0|1} -name <string>\nThe twiss file should be from twiss_output for the full ring with matched=1 and radiation_integrals=1.}
+set usage {usage: prepareForTAPAs -input <twissFilename> [-output <filename>] -nCells <number> -nCellsScaling {0|1} -name <string>\nThe twiss file should be from twiss_output for the full ring with matched=1 and radiation_integrals=1. For best results, subdivide elements using the run_setup controls to get smooth lattice functions.}
 
 set input ""
 set output ""
