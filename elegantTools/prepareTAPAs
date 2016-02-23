@@ -31,11 +31,11 @@ if [file exists $output] {
 }
 
 exec sddsprocess $input -pipe=out \
-  -process=s,max,sMax \
+  -process=s,max,Circumference \
   -print=parameter,Name,$name \
   -define=parameter,nCells,$nCells,type=long \
   "-define=parameter,nCellsScaling,$nCellsScaling,type=short" \
-  "-define=parameter,cellLength,sMax nCells /,units=m" \
+  "-define=parameter,cellLength,Circumference nCells /,units=m" \
   "-test=column,s cellLength 1e-6 + > ! " \
   | sddsconvert -pipe=in $output \
   -retain=column,s,betax,betay,etax \
