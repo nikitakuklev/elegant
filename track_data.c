@@ -1678,7 +1678,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.tColumn), NULL, 0.0, 0, "column in INPUTFILE containing time data"},
     {"WCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.WColumn), NULL, 0.0, 0, "column in INPUTFILE containing Green function"},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
-    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.factor), NULL, 1.0, 0, "factor to multiply wake by"},
+    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.factor), NULL, 1.0, 0, "factor by which to multiply wake"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&wake_example.n_bins), NULL, 0.0, 128, "number of bins for current histogram"},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&wake_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&wake_example.smoothing), NULL, 0.0, 0, "Use Savitzky-Golay filter to smooth current histogram?"},
@@ -1715,13 +1715,17 @@ LRWAKE lrwake_example;
 PARAMETER lrwake_param[N_LRWAKE_PARAMS] = {
     {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&lrwake_example.inputFile), NULL, 0.0, 0, "name of file giving Green function"},
     {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[0]), NULL, 0.0, 0, "column in INPUTFILE containing time data"},
-    {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[1]), NULL, 0.0, 0, "column in INPUTFILE containing longitudinal Green function"},
-    {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[2]), NULL, 0.0, 0, "column in INPUTFILE containing horizontal Green function"},
-    {"WZCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[3]), NULL, 0.0, 0, "column in INPUTFILE containing vertical Green function"},
-    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.factor), NULL, 1.0, 0, "factor to multiply wakes by"},
-    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal"},
-    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal"},
-    {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical"},
+    {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[1]), NULL, 0.0, 0, "column in INPUTFILE containing horizontal dipole Green function"},
+    {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[2]), NULL, 0.0, 0, "column in INPUTFILE containing vertical dipole Green function"},
+    {"WZCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[3]), NULL, 0.0, 0, "column in INPUTFILE containing longitudinal Green function"},
+    {"QXCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[4]), NULL, 0.0, 0, "column in INPUTFILE containing horizontal quadrupole Green function"},
+    {"QYCOLUMN", "", IS_STRING, 0, (long)((char *)&lrwake_example.WColumn[5]), NULL, 0.0, 0, "column in INPUTFILE containing vertical quadrupole Green function"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.factor), NULL, 1.0, 0, "factor by which to multiply wakes"},
+    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.xFactor), NULL, 1.0, 0, "factor by which to multiply longitudinal wake"},
+    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.yFactor), NULL, 1.0, 0, "factor by which to multiply horizontal dipole wake"},
+    {"ZFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.zFactor), NULL, 1.0, 0, "factor by which to multiply vertical dipole wake"},
+    {"QXFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.qxFactor), NULL, 1.0, 0, "factor by which to multiply horizontal quadrupole wake"},
+    {"QYFACTOR", "", IS_DOUBLE, 0, (long)((char *)&lrwake_example.qyFactor), NULL, 1.0, 0, "factor by which to multiply vertical quadrupole wake"},
     {"TURNS_TO_KEEP", "", IS_LONG, 0, (long)((char *)&lrwake_example.turnsToKeep), NULL, 0.0, 128, "number of turns of data to retain"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&lrwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
 };
@@ -2536,7 +2540,7 @@ PARAMETER mRadIntegrals_param[N_MRADITEGRALS_PARAMS] = {
 MRFDF mrfdf_example;
 /* names for multipole rf deflector parameters */
 PARAMETER mrfdf_param[N_MRFDF_PARAMS] = {
-    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.factor), NULL, 1.0, 0, "A factor to multiple all components with."},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.factor), NULL, 1.0, 0, "A factor by which to multiply all components."},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"A1", "V/m", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[0]), NULL, 0.0, 0, "Vertically-deflecting dipole"},
     {"A2", "V/m$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mrfdf_example.a[1]), NULL, 0.0, 0, "Skew quadrupole"},

@@ -994,7 +994,7 @@ extern char *entity_text[N_TYPES];
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
-#define N_LRWAKE_PARAMS 11
+#define N_LRWAKE_PARAMS 15
 #define N_EHCOR_PARAMS 8
 #define N_EVCOR_PARAMS 8
 #define N_EHVCOR_PARAMS 10
@@ -2565,16 +2565,16 @@ extern PARAMETER lrwake_param[N_LRWAKE_PARAMS];
 
 typedef struct {
   char *inputFile;
-  char *WColumn[4]; /* t, Wx, Wy, Wz column names */
+  char *WColumn[6]; /* t, Wx, Wy, Wz, Qx, Qy column names */
   double factor;             /* factor to multiply by (e.g., number of cells) */
-  double xFactor, yFactor, zFactor;
+  double xFactor, yFactor, zFactor, qxFactor, qyFactor;
   long turnsToKeep, rampPasses;
   /* for internal use: */
   long initialized;          /* indicates that files are loaded */
   long nBuckets;
   /* variables for holding data from users input file */
   long wakePoints;
-  double *W[4];              /* t, Wx, Wy, Wz */
+  double *W[6];              /* t, Wx, Wy, Wz, Qx, Qy */
   double dt;
   /* bucket history data---centroids of prior buckets */
   long nHistory; /* number of historical buckets */

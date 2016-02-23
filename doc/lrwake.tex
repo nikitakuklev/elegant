@@ -31,13 +31,18 @@ Given a properly prepared beam, the algorithm works as follows.
     V_z(b) = \sum\limits_{i=b}^{N*B} q_i W_z(\langle t_b \rangle - \langle t_i \rangle).
   \end{equation}
 A positive value {\em decelerates} the particle.
-For the horizontal wake we have
+For the horizontal dipole wake we have
   \begin{equation}
     V_x(b) = \sum\limits_{i=b}^{N*B} q_i \langle x_i \rangle W_x(\langle t_b \rangle - \langle t_i \rangle),
   \end{equation}
 with the vertical wake being similar.
 In both cases, a positive value deflects the particle toward positive $x$ or $y$ for a positive offset of the
 driving particle.
+\item The quadrupole wakes may also be included. In this case, the contribution to the horizontal wake is 
+  \begin{equation}
+    V_x(b) = \sum\limits_{i=b}^{N*B} q_i x_p W_x(\langle t_b \rangle - \langle t_i \rangle),
+  \end{equation}
+where $x_p$ is the coordinate of the probe particle. The vertical wake is similar.
 \end{itemize}
 
 To use LRWAKE, the user provides the wakes (functions of t) in an SDDS file.
@@ -47,4 +52,8 @@ However, they should be zero within the region occupied by a single bunch, to av
 double-counting with the true short-range wake.
 (Note that the above sums include the self-wake.)
 Similarly, the short-range should be zero for times comparable to the bunch spacing.
+
+Note that the quadrupole wakes are related to the dipole wakes by constant numerical factors \cite{Chao-PRSTAB-111001}. Hence,
+one may name the same column for \verb|QXCOLUMN| (\verb|QYCOLUMN|) and \verb|WXCOLUMN| (\verb|WYCOLUMN|)
+and then specify \verb|QXFACTOR| (\verb|QYFACTOR|) appropriately.
 

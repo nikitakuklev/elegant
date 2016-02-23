@@ -203,6 +203,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   static long lastNBuckets = -1;
   
   double *VzBucket=NULL, *VxBucket=NULL, *VyBucket=NULL; /* arrays of voltage at each bucket */
+  double *QxBucket=NULL, *QyBucket=NULL; /* quadrupole wake divided by probe particle displacement */
   double *time = NULL;        /* array to record arrival time of each particle */
   long ib, ip, nBuckets;
   double factor, P0, rampFactor;
@@ -322,7 +323,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
       tBucket[ib] /= QBucket[ib]; 
       xBucket[ib] /= QBucket[ib];
       yBucket[ib] /= QBucket[ib];
-      /* multiply by macro-particle charge to QBucket means what it says */
+      /* multiply by macro-particle charge so QBucket means what it says */
       QBucket[ib] *= charge->macroParticleCharge; 
     }
   }
@@ -365,10 +366,12 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   /* Compute the wake function at each new bucket */
   VxBucket = tmalloc(sizeof(*VxBucket)*nBuckets);
   VyBucket = tmalloc(sizeof(*VyBucket)*nBuckets);
+  QxBucket = tmalloc(sizeof(*QxBucket)*nBuckets);
+  QyBucket = tmalloc(sizeof(*QyBucket)*nBuckets);
   VzBucket = tmalloc(sizeof(*VzBucket)*nBuckets);
   for (ib=0; ib<nBuckets; ib++) {
     long ibh;
-    VxBucket[ib] = VyBucket[ib] = VzBucket[ib ] = 0;
+    VxBucket[ib] = VyBucket[ib] = VzBucket[ib ] = QxBucket[ib] = QyBucket[ib] = 0;
 #ifdef DEBUG
     fprintf(stdout, "bin %ld: summing from %ld to %ld\n", ib, 0L, (wakeData->nHistory-nBuckets+ib)-1);
 #endif
@@ -384,15 +387,21 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
 	fprintf(stdout, "ib=%ld, ibh=%ld, dt=%le, it=%ld\n", ib, ibh, dt, it);
 #endif
 	*/
-	if (wakeData->W[1])
-	  VxBucket[ib] += wakeData->xFactor*wakeData->QHistory[ibh]*wakeData->xHistory[ibh]*
+	if (wakeData->W[1]) 
+	  VxBucket[ib] += wakeData->xHistory[ibh]*wakeData->xFactor*wakeData->QHistory[ibh]*
 	    linear_interpolation(wakeData->W[1], wakeData->W[0], wakeData->wakePoints, dt, it);
 	if (wakeData->W[2])
-	  VyBucket[ib] += wakeData->yFactor*wakeData->QHistory[ibh]*wakeData->yHistory[ibh]*
+	  VyBucket[ib] += wakeData->yHistory[ibh]*wakeData->yFactor*wakeData->QHistory[ibh]*
 	    linear_interpolation(wakeData->W[2], wakeData->W[0], wakeData->wakePoints, dt, it);
 	if (wakeData->W[3])
 	  VzBucket[ib] += wakeData->zFactor*wakeData->QHistory[ibh]*
 	    linear_interpolation(wakeData->W[3], wakeData->W[0], wakeData->wakePoints, dt, it);
+        if (wakeData->W[4]) 
+          QxBucket[ib] += wakeData->qxFactor*wakeData->QHistory[ibh]*
+	    linear_interpolation(wakeData->W[4], wakeData->W[0], wakeData->wakePoints, dt, it);
+        if (wakeData->W[5]) 
+          QyBucket[ib] += wakeData->qyFactor*wakeData->QHistory[ibh]*
+	    linear_interpolation(wakeData->W[5], wakeData->W[0], wakeData->wakePoints, dt, it);
       }
     }
   }
@@ -419,8 +428,8 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     dgam = VzBucket[ib]/(1e6*particleMassMV)*factor;
     add_to_particle_energy(part[ip], time[ip], P0, -dgam);
     pz = P0*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
-    part[ip][1] += VxBucket[ib]*factor/(1e6*particleMassMV)/pz;
-    part[ip][3] += VyBucket[ib]*factor/(1e6*particleMassMV)/pz;
+    part[ip][1] += (VxBucket[ib]+part[ip][0]*QxBucket[ib])*factor/(1e6*particleMassMV)/pz;
+    part[ip][3] += (VyBucket[ib]+part[ip][2]*QyBucket[ib])*factor/(1e6*particleMassMV)/pz;
   }
 
   /* Free memory */
@@ -442,6 +451,11 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     free(VyBucket);
   if (VzBucket)
     free(VzBucket);
+  if (QxBucket)
+    free(QxBucket);
+  if (QyBucket)
+    free(QyBucket);
+    
   }
 
 #if USE_MPI
@@ -460,7 +474,7 @@ typedef struct {
 
 static LRWAKE_DATA *storedWake = NULL;
 static long storedWakes = 0;
-static char *expectedUnits[4] = {"s", "V/C/m", "V/C/m", "V/C"};
+static char *expectedUnits[6] = {"s", "V/C/m", "V/C/m", "V/C", "V/C/m", "V/C/m"};
 
 void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge, long nBuckets)
 {
@@ -483,7 +497,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (!wakeData->inputFile || !strlen(wakeData->inputFile))
     bombElegant("supply inputFile for LRWAKE element", NULL);
 
-  for (icol=0; icol<4; icol++) 
+  for (icol=0; icol<6; icol++) 
     if (wakeData->WColumn[icol] && !strlen(wakeData->WColumn[icol]))
       wakeData->WColumn[icol] = NULL;
   if (!wakeData->WColumn[0])
@@ -491,7 +505,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (!wakeData->WColumn[1] && !wakeData->WColumn[2] && !wakeData->WColumn[3])
     bombElegant("supply at least one of WxColumn, WyColumn, or WzColumn for LRWAKE element", NULL);
     
-  for (icol=0; icol<4; icol++)
+  for (icol=0; icol<6; icol++)
     wakeData->W[icol] = NULL;
 
   for (iw=0; iw<storedWakes; iw++) {
@@ -559,7 +573,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 #endif
       /* Found the right file */
       wakeData->wakePoints = storedWake[iw].points;
-      for (icol=0; icol<4; icol++) {
+      for (icol=0; icol<6; icol++) {
 #ifdef DEBUG
 	fprintf(stdout, "Looking for column %ld \n", icol);
 #endif
@@ -606,7 +620,7 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   fprintf(stdout, "Completed seerch loop\n");
 #endif
 
-  for (icol=0; icol<4; icol++) {
+  for (icol=0; icol<6; icol++) {
     if (wakeData->WColumn[icol] && strlen(wakeData->WColumn[icol]) && !wakeData->W[icol]) {
       fprintf(stdout, "Data for %s not found in LRWAKE file %s\n", wakeData->WColumn[icol], wakeData->inputFile);
       exitElegant(1);
