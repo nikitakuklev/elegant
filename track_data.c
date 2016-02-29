@@ -1493,6 +1493,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"BETA", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.beta), NULL, 0.0, 0, "normalized load impedance"},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&trfmode_example.interpolate), NULL, 0.0, 0, "if non-zero, interpolate voltage within bins"},
     {"PLANE", "", IS_STRING, 0, (long)((char *)&trfmode_example.plane), "both", 0.0, 0, "x, y, or both"},
     {"SAMPLE_INTERVAL", "", IS_LONG, 0, (long)((char *)&trfmode_example.sample_interval), NULL, 0.0, 1, "passes between output to RECORD file"},
     {"PER_PARTICLE_OUTPUT", "", IS_LONG, 0, (long)((char *)&trfmode_example.perParticleOutput), NULL, 0.0, 0, "If non-zero, then in BINLESS mode, provides per-particle output of RECORD data."},

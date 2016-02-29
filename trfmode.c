@@ -108,6 +108,14 @@ void track_through_trfmode(
   }
 #endif
 
+  if (trfmode->fileInitialized && pass==0) {
+    long n = n_passes/trfmode->sample_interval;
+    if (!SDDS_StartPage(&(trfmode->SDDSrec), n)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem startingn page for TRFMODE record file");
+    }
+  }
+  
   omega = PIx2*trfmode->freq;
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
     fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
@@ -150,6 +158,10 @@ void track_through_trfmode(
     Vxbin = trealloc(Vxbin, sizeof(*Vxbin)*max_n_bins);
     Vybin = trealloc(Vybin, sizeof(*Vybin)*max_n_bins);
     Vzbin = trealloc(Vzbin, sizeof(*Vzbin)*max_n_bins);
+  }
+  for (ib=0; ib<trfmode->n_bins; ib++) {
+    Vxbin[ib] = Vybin[ib] = Vzbin[ib] = xsum[ib] = ysum[ib] = 0;
+    count[ib] = 0;
   }
   
   if (isSlave || !notSinglePart) {
@@ -327,7 +339,7 @@ void track_through_trfmode(
     if (isSlave) {
 #endif
       for (ib=firstBin; ib<=lastBin; ib++) {
-        if (count[ib]==0 || (xsum[ib]==0 && ysum[ib]==0))
+        if (!trfmode->interpolate && (count[ib]==0 || (xsum[ib]==0 && ysum[ib]==0)))
           continue;
         
         t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
@@ -365,10 +377,12 @@ void track_through_trfmode(
           if (trfmode->long_range_only) {
             double Vd = VxPrevious*exp(-(t-tPrevious)/tau);
             Vxbin[ib] = Vd*cos(xPhasePrevious + omega*(t-tPrevious));
-            Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*Vd*sin(xPhasePrevious + omega*(t-tPrevious));
+	    if (count[ib])
+	      Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*Vd*sin(xPhasePrevious + omega*(t-tPrevious));
           } else {
             Vxbin[ib] = trfmode->Vxr;
-            Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
+	    if (count[ib])
+	      Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
           }
           /* add beam-induced voltage to cavity voltage---it is imaginary as
            * the voltage is 90deg out of phase 
@@ -386,10 +400,12 @@ void track_through_trfmode(
           if (trfmode->long_range_only) {
             double Vd = VyPrevious*exp(-(t-tPrevious)/tau);
             Vybin[ib] = Vd*cos(yPhasePrevious + omega*(t-tPrevious));
-            Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*Vd*sin(yPhasePrevious + omega*(t-tPrevious));
+	    if (count[ib])
+	      Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*Vd*sin(yPhasePrevious + omega*(t-tPrevious));
           } else {
             Vybin[ib] = trfmode->Vyr;
-            Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
+	    if (count[ib])
+	      Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
           }
           /* add beam-induced voltage to cavity voltage---it is imaginary as
            * the voltage is 90deg out of phase 
@@ -418,12 +434,42 @@ void track_through_trfmode(
       if (pass>=trfmode->rigid_until_pass) {
         /* change particle slopes to reflect voltage in relevant bin */
         for (ip=0; ip<np; ip++) {
+	  double Vx, Vy, Vz;
           if (pbin[ip]>=0) {
             P = Po*(1+part[ip][5]);
-            Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + trfmode->n_cavities*Vzbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-            Px = part[ip][1]*Pz + trfmode->n_cavities*Vxbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-            Py = part[ip][3]*Pz + trfmode->n_cavities*Vybin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
-            P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+	    if (trfmode->interpolate) {
+              long ib1, ib2;
+	      double dt1;
+              ib = pbin[ip];
+              dt1 = time[ip] - (tmin + dt*(ib+0.5));
+              if (dt1<0) {
+                ib1 = ib-1;
+                ib2 = ib;
+              } else {
+                ib1 = ib;
+                ib2 = ib+1;
+              }
+              if (ib2>lastBin) {
+                ib2--;
+                ib1--;
+              }
+              if (ib1<firstBin) {
+                ib1++;
+                ib2++;
+              }
+              dt1 = time[ip] - (tmin + dt*(ib1+0.5));
+              Vx = Vxbin[ib1] + (Vxbin[ib2]-Vxbin[ib1])/dt*dt1; 
+              Vy = Vybin[ib1] + (Vybin[ib2]-Vybin[ib1])/dt*dt1; 
+              Vz = Vzbin[ib1] + (Vzbin[ib2]-Vzbin[ib1])/dt*dt1; 
+	    } else {
+	      Vx = Vxbin[pbin[ip]];
+	      Vy = Vybin[pbin[ip]];
+	      Vz = Vzbin[pbin[ip]];
+	    }
+	    Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + trfmode->n_cavities*Vz/(1e6*particleMassMV*particleRelSign);
+	    Px = part[ip][1]*Pz + trfmode->n_cavities*Vx/(1e6*particleMassMV*particleRelSign);
+	    Py = part[ip][3]*Pz + trfmode->n_cavities*Vy/(1e6*particleMassMV*particleRelSign);
+	    P  = sqrt(Pz*Pz+Px*Px+Py*Py);
             part[ip][1] = Px/Pz;
             part[ip][3] = Py/Pz;
             part[ip][5] = (P-Po)/Po;
@@ -432,7 +478,6 @@ void track_through_trfmode(
         }
       }
       
-
       if (nBuckets!=1) {
         for (ip=0; ip<np; ip++)
           memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
@@ -444,10 +489,11 @@ void track_through_trfmode(
 #endif
   }
   
-  if (trfmode->record && iBucket==(nBuckets-1)) {
+  if (trfmode->record) {
 #if USE_MPI
     if (myid == 1) {/* first slave will do output */
 #endif
+      printf("Setting TRFMODE record data for pass=%ld\n", pass);
       if ((pass%trfmode->sample_interval)==0 && 
           (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                               (pass/trfmode->sample_interval),
@@ -456,14 +502,16 @@ void track_through_trfmode(
                               (char*)"Vx", sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi)),
                               (char*)"Vy", sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi)),
                               NULL) ||
-           !SDDS_UpdatePage(&trfmode->SDDSrec, 0))) {
+           !SDDS_UpdatePage(&trfmode->SDDSrec, FLUSH_TABLE))) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem setting up data for TRFMODE record file");
       }
+      /*
       if (pass==n_passes-1 && !SDDS_Terminate(&trfmode->SDDSrec)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem writing data for TRFMODE record file");
       }
+      */
 #if USE_MPI
     }
 #endif
@@ -559,8 +607,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxRealMax", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyMax", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyRealMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec) ||
-	  !SDDS_StartPage(&trfmode->SDDSrec, n+1)) {
+	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       } 
@@ -570,8 +617,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec) ||
-	  !SDDS_StartPage(&trfmode->SDDSrec, n+1)) {
+	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       }

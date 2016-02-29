@@ -940,7 +940,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 60
 #define N_MATTER_PARAMS 16
 #define N_RFMODE_PARAMS 40
-#define N_TRFMODE_PARAMS 24
+#define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
 #define N_MODRF_PARAMS 15
@@ -2388,6 +2388,7 @@ typedef struct {
     double beta;               /* the cavity beta (default is 0) */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins */
+    long interpolate;          /* interpolate within bins */
     char *plane;               /* "x", "y", or "both" */
     long sample_interval;      /* sample interval for record file */
     long perParticleOutput;    /* asks for per-particle output in record file */
