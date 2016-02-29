@@ -87,7 +87,7 @@ void do_replace_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     delete_elem_flag = -1;
   } else {
     delete_elem_flag = 1;
-    str_toupper(element_def);
+    str_to_upper_quotes(element_def);
     delElem.elemDef = element_def;
     delete_spaces(delElem.elemDef);
   }
