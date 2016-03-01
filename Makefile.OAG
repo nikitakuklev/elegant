@@ -377,7 +377,11 @@ else
 gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}' | head -1)
 gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 ifeq ($(gcc-version),$(gfortran-version))
+ifneq (cori,$(findstring cori, $(HOSTNAME)))
+ifneq (edison,$(findstring edison, $(HOSTNAME)))
 SYS_PROD_LIBS_Linux += gfortran
+endif
+endif
 else
   ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
   ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
