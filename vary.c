@@ -265,7 +265,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     delete_phase_references();
   }
   /* printf("Reseting special elements in preparation for new step.\n"); */
-  reset_special_elements(beamline, _control->reset_rf_each_step?RESET_INCLUDE_ALL:0);
+  reset_special_elements(beamline, _control->reset_rf_each_step?RESET_INCLUDE_ALL:RESET_INCLUDE_RANDOM|RESET_INCLUDE_NIELEM);
 
   if (_control->reset_scattering_seed)
     seedElegantRandomNumbers(0, RESTART_RN_SCATTER);

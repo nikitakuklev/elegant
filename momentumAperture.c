@@ -335,6 +335,7 @@ long doMomentumApertureSearch(
   long code, outputRow, jobCounter;
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
+  unsigned long fiducial_flag_save;
 #if USE_MPI
 #if defined(DEBUG)
   FILE *fpdMpi = NULL;
@@ -467,6 +468,8 @@ long doMomentumApertureSearch(
   skipElements = skip_elements;
   
   /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
+  fiducial_flag_save = beamline->fiducial_flag;
+  
   beamline->fiducial_flag = 0;
   
   if (fiducialize || forbid_resonance_crossing) {
@@ -480,7 +483,7 @@ long doMomentumApertureSearch(
     if (verbosity>1) 
       fprintf(stdout, "Tracking fiducial particle\n");
     delete_phase_references();
-    reset_special_elements(beamline, RESET_INCLUDE_ALL);
+    reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
@@ -644,7 +647,7 @@ long doMomentumApertureSearch(
             lostParticles[0][7] = -1;
             if (!fiducialize) {
               delete_phase_references();
-              reset_special_elements(beamline, RESET_INCLUDE_ALL);
+              reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
@@ -849,6 +852,13 @@ long doMomentumApertureSearch(
   free(ElementName);
   free(ElementType);
   free(ElementOccurence);
+
+  beamline->fiducial_flag = fiducial_flag_save;
+  if (fiducialize) {
+    delete_phase_references();
+    reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
+  }  
+
   return 1;
 }
 

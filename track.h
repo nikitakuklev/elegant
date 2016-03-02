@@ -1847,6 +1847,7 @@ typedef struct {
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;      
+    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KSEXT;
 
@@ -1863,6 +1864,7 @@ typedef struct {
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;      
+    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KOCT;
 
@@ -1899,6 +1901,7 @@ typedef struct {
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;
+    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     MULTIPOLE_DATA steeringMultipoleData;
     } KQUAD;

@@ -1097,7 +1097,7 @@ char **argv;
         if (firstPass) {
           /* prevent fiducialization of RF etc. by correction etc. */
           delete_phase_references();
-          reset_special_elements(beamline, 1);
+          reset_special_elements(beamline, RESET_INCLUDE_RF);
           reset_driftCSR();
         }
         firstPass = 0;
@@ -1183,7 +1183,7 @@ char **argv;
         twiss_computed = 1;
         run_twiss_output(&run_conditions, beamline, NULL, -1);
         delete_phase_references();
-        reset_special_elements(beamline, 1);
+        reset_special_elements(beamline, RESET_INCLUDE_RF);
         reset_driftCSR();
         finish_twiss_output(beamline);
       }
@@ -1202,7 +1202,7 @@ char **argv;
         moments_computed = 1;
         runMomentsOutput(&run_conditions, beamline, NULL, -1, 1);
         delete_phase_references();
-        reset_special_elements(beamline, 1);
+        reset_special_elements(beamline, RESET_INCLUDE_RF);
         reset_driftCSR();
         finishMomentsOutput();
       }
@@ -1215,7 +1215,7 @@ char **argv;
       if (!do_coupled_twiss_output) {
         run_coupled_twiss_output(&run_conditions, beamline, NULL);
         delete_phase_references();
-        reset_special_elements(beamline, 1);
+        reset_special_elements(beamline, RESET_INCLUDE_RF);
         reset_driftCSR();
         finish_coupled_twiss_output();
       }
@@ -1583,7 +1583,7 @@ char **argv;
       if (!do_response_output) {
         run_response_output(&run_conditions, beamline, &correct, -1);
         delete_phase_references();
-        reset_special_elements(beamline, 1);
+        reset_special_elements(beamline, RESET_INCLUDE_RF);
         reset_driftCSR();
         finish_response_output();
       }

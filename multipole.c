@@ -715,11 +715,14 @@ long multipole_tracking2(
                              kquad->steering_multipoles, 1);
       kquad->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
-                                     &(kquad->systematicMultipoleData),
-                                     &(kquad->randomMultipoleData),
-                                     &(kquad->steeringMultipoleData),
-                                     KnL, 1);
+    if (!kquad->totalMultipolesComputed) {
+      computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
+                                       &(kquad->systematicMultipoleData),
+                                       &(kquad->randomMultipoleData),
+                                       &(kquad->steeringMultipoleData),
+                                       KnL, 1);
+      kquad->totalMultipolesComputed = 1;
+    }
     multData = &(kquad->totalMultipoleData);
     steeringMultData = &(kquad->steeringMultipoleData);
     break;
@@ -760,11 +763,14 @@ long multipole_tracking2(
                              ksext->random_multipoles, 0);
       ksext->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
-                                     &(ksext->systematicMultipoleData),
-                                     &(ksext->randomMultipoleData),
-                                     NULL,
-                                     KnL, 2);
+    if (!ksext->totalMultipolesComputed) {
+      computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
+                                       &(ksext->systematicMultipoleData),
+                                       &(ksext->randomMultipoleData),
+                                       NULL,
+                                       KnL, 2);
+      ksext->totalMultipolesComputed = 1;
+    }
     multData = &(ksext->totalMultipoleData);
     break;
   case T_KOCT:
@@ -804,11 +810,14 @@ long multipole_tracking2(
                              koct->random_multipoles, 0);
       koct->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
-                                     &(koct->systematicMultipoleData),
-                                     &(koct->randomMultipoleData),
-                                     NULL,
-                                     KnL, 3);
+    if (!koct->totalMultipolesComputed) {
+      computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
+                                       &(koct->systematicMultipoleData),
+                                       &(koct->randomMultipoleData),
+                                       NULL,
+                                       KnL, 3);
+      koct->totalMultipolesComputed = 1;
+    }
     multData = &(koct->totalMultipoleData);
     break;
   case T_KQUSE:
@@ -1482,7 +1491,6 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
 {
   long i;
   double nFactorial, rpow, rn1, rn2;
-
   if (!randomMult || randomMult->randomized)
     return;
   for (i=0; i<randomMult->orders; i++) {
@@ -1504,7 +1512,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 {
   long i;
   double sFactor=0.0, rFactor=0.0;
-
+  
   if (!totalMult->initialized) {
     totalMult->initialized = 1;
     if (steeringMult && steeringMult->orders) {
