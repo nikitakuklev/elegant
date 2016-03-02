@@ -39,27 +39,34 @@ Here is a summary of what's changed since release 29.0:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item Fixed bugs in \verb|RECORD| output from \verb|TRFMODE| element for multi-step, single-pass runs.
+  This was fixed by A. Xiao (APS).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The \verb|replace_elements| command now respects quoted sequences in the new element definition.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|LRWAKE| element now supports long-range quadrupole wakes. R. Lindberg (APS) provided helpful
+\item \verb|LRWAKE| now supports long-range quadrupole wakes. R. Lindberg (APS) provided helpful
   discussion in this implementation.
-\item The \verb|ILMATRIX| element now supports second-order tune shift with amplitude as well as path-length dependence
+\item \verb|ILMATRIX| now supports second-order tune shift with amplitude as well as path-length dependence
   on amplitude.
-\item The \verb|TFBPICKUP| element now supports horizontal and vertical offsets.
+\item \verb|TFBPICKUP| now supports horizontal and vertical offsets.
 \item Added logging of photon coordinates and angles to the \verb|CSBEND| element. Works in serial mode only.
+\item \verb|TRFMODE| now supports interpolation within bins, giving smoother results.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item \verb|alter_elements| now has a occurrence-skip parameter, which would allow for example changing every other
+  member of a group of elements.
+\item \verb|momentum_aperture| now allows specifying that \verb|WATCH| elements remain active during momentum aperture
+  determination.
+\item \verb|frequency_map| was modified to include the path-length in the output file, which can be used to determine
+  the dependence of the path length of the betatron amplitude.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -77,6 +84,10 @@ Here is a summary of what's changed since release 29.0:
   dipoles with various lengths and bending radii. 
 \item The script \verb|TFBFirSetup| was added, which allows generating FIR filters for turn-by-turn feedback using 
   \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
+\item \verb|ibsEmittance| can now perform intrabeam scattering calculations for non-gaussian longitudinal distributions.
+\item \verb|computeCoherentFraction| now uses $\lambda/4\pi$ for the radiation emittance to be consistent with 
+  \verb|sddsbrightness|.
+\item \verb|longitCalcs| now computes the bucket-half-height even when a harmonic cavity is powered.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
