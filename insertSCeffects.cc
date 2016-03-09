@@ -73,7 +73,7 @@ void clearSCSpecs()
   scSpec = NULL;
 }
 
-long insertSCMULT(char *name, long type, long *occurrence) 
+long insertSCMULT(char *name, long type, long elemOccurence, long *occurrence) 
 {
   long i;
   for (i=0; i<No_scSpec; i++) {
@@ -90,6 +90,8 @@ long insertSCMULT(char *name, long type, long *occurrence)
   if (*occurrence < sc->nskip || sc->nskip==0)
     return(0);
 
+  if (sc->verbosity>0) 
+    printf("Inserting SCMULT after %s#%ld\n", name, elemOccurence);
   *occurrence = 0;
   return(1);
 }
@@ -116,7 +118,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   }
   if (disable)
     return;
-  
+
   if (!name || !strlen(name))
     bombElegant((char*)"no name given", NULL);
   str_toupper(name);
