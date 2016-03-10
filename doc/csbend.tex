@@ -1,6 +1,6 @@
 This element provides a symplectic bending magnet with the exact
 Hamiltonian.  For example, it retains all orders in the momentum offset
-and curvature.  The field expansion is available to fourth order.
+and curvature.  The field expansion is available to eighth order.
 
 One pitfall of symplectic integration is the possibility of orbit and
 path-length errors for the reference orbit if too few kicks are used.
@@ -13,12 +13,10 @@ required kicks.
 As of version 28.0 and later, the \verb|REFERENCE_CORRECTION| feature is available
 to compensate for errors inherent in the numerical integration of the trajectories.
 In particular, depending on the number of kicks used, as well as the bending radius and angle,
-an on-axis particle may emerge from the element with a non-zero trajectory.
+an on-axis particle may emerge from the element with a non-zero trajectory and a path-length error.
 With \verb|REFERENCE_CORRECTION| set to a non-zero value, these errors are subtracted from the
 coordinates of all particles.
-This is desirable in eliminating spurious trajectory and orbit errors; it also reduces path-length
-errors.
-However, there are some pitfalls: first, one may not realize that the number of kicks is too small to
+There are some pitfalls to using this feature: first, one may not realize that the number of kicks is too small to
 provide good results, since the output trajectory of the central particle will always be
 (nearly) identically zero. Second, in a magnet with a gradient or other field nonuniformities, 
 a particle may emerge centered on the ideal trajectory yet still see the impact of the gradient, sextupole, etc.
@@ -28,11 +26,11 @@ large enough to cause problems.
 {\bf Higher-order field components}
 
 Normally, one specifies the higher-order components of the field with
-the {\tt K1}, {\tt K2}, {\tt K3}, and {\tt K4} parameters. The field
+the {\tt K{\em n}}, with $n=1$ through $8$. The field
 expansion in the midplane is $B_y(x) = B_o * (1 +
 \sum_{n=1}^8\frac{K_n\rho_o}{n!}x^n)$.  By setting the {\tt USE\_bN}
-flag to a nonzero value, one may instead specify the {\tt b1} through
-{\tt b4} parameters, which are defined by the expansion $B_y(x) = B_o
+flag to a nonzero value, one may instead specify the {\tt b{\em n}}
+parameters, which are defined by the expansion $B_y(x) = B_o
 * (1 + \sum_{n=1}^8\frac{b_n}{n!}x^n)$.  This is convenient if one is
 varying the dipole radius but wants to work in terms of constant field
 quality.  
@@ -57,7 +55,7 @@ settings of the \verb|EDGE_ORDER|, \verb|EDGE1_EFFECTS|, and \verb|EDGE2_EFFECTS
 \verb|EDGE1_EFFECTS| controls entrance edge effects while \verb|EDGE2_EFFECTS| controls exit edge effects,
 as follows:
 \begin{itemize}
-  \item 1: --- Edge effects using non-symplectic method.
+  \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders.
       \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders.
