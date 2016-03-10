@@ -213,7 +213,6 @@ proc findFixedPoints {} {
 		      "-define=param,phi1,$synchPhaseDeg pi * 180 /" "-define=param,phih,$harmonicPhaseDeg pi * 180 /" \
 		      "-define=param,U0,$U1" \
 		      "-define=column,error,U0 V1 phi1 dphi + sin * - Vh phih dphi h * + sin * -" \
-		      | tee ds1 \
 		      | sddszerofind -pipe -zeroesOf=error -columns=dphi \
 		      | sdds2stream -pipe -column=dphi]
     global fixedPoint
