@@ -2111,11 +2111,6 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 \item type: setup command.
 \item function: set up for transverse space charge calculation.  
 \item sequence: must precede \verb|run_setup|.
-\item {\bf This feature can not work with concatenation matrix tracking.}
-\item {\bf
-N.B.: This feature is not designed for space charge calculations in
-guns or linacs.  It is only intended for simulating space charge in
-rings. }
 \end{itemize}
 
 \begin{verbatim}
@@ -2152,11 +2147,17 @@ included in the plane in question.
   uniform in z but gaussian in x and y.
 \end{itemize}
 
-Note: Some users use \verb|matched_to_cell| or
-\verb|use_twiss_command_values| in the \verb|bunched_beam|
-command. Those options will erase SCMULT assignments along the
-beamline. In this case, user has to re-calculate twiss using
-\verb|twiss_output| just before tracking.
+{\bf Important notes:}
+\begin{itemize}
+\item By default \verb|skip=0|, which results in only one \verb|SCMULT| element at the end of the beamline,
+  regardless of whether values are given for the \verb|name| or \verb|type| fields.
+\item This element is not designed for space charge calculations in guns or linacs.  It is only intended for
+  simulating space charge in rings. 
+\item This command can not work with concatenation-based matrix tracking.  
+\item Some users use \verb|matched_to_cell| in the \verb|bunched_beam| command. 
+  This will erase SCMULT assignments along the beamline. In this case, issue another \verb|twiss_output|
+  command just before tracking.
+\end{itemize}
 
 %\begin{latexonly}
 \newpage
