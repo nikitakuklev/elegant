@@ -416,7 +416,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   			eptr = eptr->succ;
   			continue;
   		}
-  		if (insertSCMULT(eptr->name, eptr->type, eptr->occurence, &skip)) {
+  		if (insertSCMULT(eptr->name, eptr->type, &skip)) {
   			add_element(eptr, eptr_sc); 
   			eptr = eptr->succ;							/* move pointer to new added element */
   			nelem++;

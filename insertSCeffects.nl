@@ -17,5 +17,6 @@
         long horizontal = 0;
         long longitudinal = 0;
         long nonlinear = 0;
-	long uniform_distribution = 0;
+	long uniform_distribution = 0; 
+        long verbosity = 0;
 #end

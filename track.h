@@ -3937,7 +3937,7 @@ void addSCSpec(char *name, char *type, char *exclude);
 void clearSCSpecs();
 long getSCMULTSpecCount();
 char *getSCMULTName();
-long insertSCMULT(char *name, long type, long elemOccurence, long *occurrence);
+long insertSCMULT(char *name, long type, long *occurrence);
 void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass );
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
