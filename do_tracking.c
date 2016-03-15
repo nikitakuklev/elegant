@@ -4917,9 +4917,9 @@ void interpolateFTable(double *B, double *xyz, FTABLE *ftable)
   B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
   B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, ftable->verbose);
 */
-  B[0] = interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0, 1, 0);
-  B[1] = interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, 0);
-  B[2] = interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, 0);
+  B[0] = ftable->factor*interpolate_bookn(ftable->Bx, dummy, xyz, 0, 0, 0, 1, 0);
+  B[1] = ftable->factor*interpolate_bookn(ftable->By, dummy, xyz, 0, 0, 0, 1, 0);
+  B[2] = ftable->factor*interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, 0);
   
   return;
 }

@@ -2516,6 +2516,7 @@ PARAMETER ftable_param[N_FTABLE_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.factor), NULL, 1.0, 0, "Factor by which to multiply field data."},
     {"INPUT_FILE", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.inputFile), NULL, 0.0, 0, "Name of SDDS file which contains field data."},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ftable_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
     {"VERBOSE", "", IS_LONG, 0, (long)((char *)&ftable_example.verbose), NULL, 0.0, 0, "Used for debugging code. Not applicable to Pelegant"},
