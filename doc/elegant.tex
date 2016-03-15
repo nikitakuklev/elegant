@@ -29,6 +29,7 @@ Users are encouraged to join and participate.  At minimum, users should subscrib
 since this is where bug notifications are posted.  Contrary to previous practice, we will no longer announce
 bugs via email.
 
+A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Accelerator\_Systems\_Division/Operations\_Analysis/downloads/elegantExamples.zip} is available that demonstrates many features of {\tt elegant}.
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
@@ -2170,6 +2171,8 @@ included in the plane in question.
 \item function: define chromatic variation of beta functions, tunes, etc. for using in
  fast linear-chromatic tracking
 \item sequence: must follow \verb|run_setup|.
+\item N.B.: This command is deprecated and no longer maintained. Use a beamline containing one or
+  more \verb|ILMATRIX| elements instead. This provides much more functionality.
 \end{itemize}
 
 \begin{verbatim}
@@ -2200,21 +2203,6 @@ included in the plane in question.
 \item \verb|alphac| --- Provide the first and second-order momentum compaction.  N.B: if you are tracking
  with an rf cavity, be sure that your lattice length equal to the actual circumference.  See the example below.
 \end{itemize}
-
-An example of a good lattice for use with this feature is the following:
-\begin{verbatim}
-! Actual length of the ring
-d0: drift,l=30.6667
-! Actual rf voltage and frequency
-rf: rfca,l=0,volt=30e3,phase=180,freq="c_mks 30.6667 /"
-w1: watch,filename="%s.w1",mode="centroid"
-ring: line=(d0,rf,w1)
-\end{verbatim}
-Any additional elements (e.g,. wakes or impedances) should follow d0.  No other elements represented by a matrix
-should be present!
-
-An alternative for using this command is to use {\tt ILMATRIX} elements in the lattice definition.  This is more
-flexible, since one can include tune shifts with amplitude.
 
 %\begin{latexonly}
 \newpage
