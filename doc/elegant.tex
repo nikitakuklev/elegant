@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 29.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 29.2.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -33,41 +33,29 @@ A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Acceler
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 29.1}
+\section{Highlights of What's New in Version 29.2}
 
-Here is a summary of what's changed since release 29.0:
+Here is a summary of what's changed since release 29.1:
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed bugs in \verb|RECORD| output from \verb|TRFMODE| element for multi-step, single-pass runs.
-  This was fixed by A. Xiao (APS).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|replace_elements| command now respects quoted sequences in the new element definition.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item \verb|LRWAKE| now supports long-range quadrupole wakes. R. Lindberg (APS) provided helpful
-  discussion in this implementation.
-\item \verb|ILMATRIX| now supports second-order tune shift with amplitude as well as path-length dependence
-  on amplitude.
-\item \verb|TFBPICKUP| now supports horizontal and vertical offsets.
-\item Added logging of photon coordinates and angles to the \verb|CSBEND| element. Works in serial mode only.
-\item \verb|TRFMODE| now supports interpolation within bins, giving smoother results.
+\item Added the \verb|FACTOR| parameter for \verb|FTABLE|, to allow scaling fields by a numerical value.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item \verb|alter_elements| now has a occurrence-skip parameter, which would allow for example changing every other
-  member of a group of elements.
-\item \verb|momentum_aperture| now allows specifying that \verb|WATCH| elements remain active during momentum aperture
-  determination.
-\item \verb|frequency_map| was modified to include the path-length in the output file, which can be used to determine
-  the dependence of the path length of the betatron amplitude.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -79,16 +67,7 @@ Here is a summary of what's changed since release 29.0:
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The script \verb|prepareTAPAs| was added, which allows processing files from \verb|twiss_output| into a form
-  that is accepted by the Android App TAPAs \cite{TAPAs}.
-\item The script \verb|makeSummedCsrWake| was added, which allows making a CSR wake that sums up contributions from
-  dipoles with various lengths and bending radii. 
-\item The script \verb|TFBFirSetup| was added, which allows generating FIR filters for turn-by-turn feedback using 
-  \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
-\item \verb|ibsEmittance| can now perform intrabeam scattering calculations for non-gaussian longitudinal distributions.
-\item \verb|computeCoherentFraction| now uses $\lambda/4\pi$ for the radiation emittance to be consistent with 
-  \verb|sddsbrightness|.
-\item \verb|longitCalcs| now computes the bucket-half-height even when a harmonic cavity is powered.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
