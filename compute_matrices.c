@@ -934,7 +934,7 @@ VMATRIX *compute_matrix(
                                          quad->order?quad->order:run->default_order, quad->tilt, 
                                          quad->fse, quad->xkick, quad->ykick, 
                                          quad->edge1_effects, quad->edge2_effects,
-                                         quad->fringeType, quad->ffringe,
+                                         quad->fringeType, quad->ffringe, quad->lEffective,
                                          quad->fringeIntM, quad->fringeIntP, quad->radial); 
         if (quad->dx || quad->dy || quad->dz)
           misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
@@ -1083,7 +1083,7 @@ VMATRIX *compute_matrix(
                                          (run->default_order?run->default_order:1), kquad->tilt, 
                                          kquad->fse, kquad->xkick, kquad->ykick,
                                          kquad->edge1_effects, kquad->edge2_effects,
-                                         "integrals", 0.0,
+                                         "integrals", 0.0, kquad->lEffective,
                                          kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
@@ -2472,7 +2472,7 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
     M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, mult->tilt, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
     break;
   case 1: /* quadrupole */
-    M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, NULL, NULL, 0);
+    M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);
     break;
   case 2: /* sextupole */
     M = sextupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0);

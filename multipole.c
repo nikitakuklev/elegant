@@ -640,7 +640,9 @@ long multipole_tracking2(
   KQUSE *kquse;
   KOCT *koct;
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
-
+  double lEffective = -1, lEnd;
+  short doEndDrift = 0;
+  
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
   long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -678,12 +680,18 @@ long multipole_tracking2(
     kquad = ((KQUAD*)elem->p_elem);
     n_kicks = kquad->n_kicks;
     order = 1;
+    if ((lEffective = kquad->lEffective)<=0)
+      lEffective = kquad->length;
+    else {
+      lEnd = (kquad->length-lEffective)/2;
+      doEndDrift = 1;
+    }
     if (kquad->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-      KnL = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*Po))*kquad->length*(1+kquad->fse);
+      KnL = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*Po))*lEffective*(1+kquad->fse);
     else
-      KnL = kquad->k1*kquad->length*(1+kquad->fse);
-    drift = kquad->length;
+      KnL = kquad->k1*lEffective*(1+kquad->fse);
+    drift = lEffective;
     tilt = kquad->tilt;
     dx = kquad->dx;
     dy = kquad->dy;
@@ -936,8 +944,11 @@ long multipole_tracking2(
   default:
     break;
   }
+  if (doEndDrift) {
+    printf("Doing end drift of %le\n", lEnd);
+    exactDrift(particle, n_part, lEnd);
+  }
   
-
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -987,6 +998,10 @@ long multipole_tracking2(
     break;
   default:
     break;
+  }
+  if (doEndDrift) {
+    printf("Doing end drift of %le\n", lEnd);
+    exactDrift(particle, n_part, lEnd);
   }
   
   if (tilt)

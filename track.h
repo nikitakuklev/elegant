@@ -886,7 +886,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 29
+#define N_QUAD_PARAMS 30
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 9
@@ -926,7 +926,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 37
+#define N_KQUAD_PARAMS 38
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1093,7 +1093,7 @@ typedef struct {
     long xSteering, ySteering, order;
     long edge1_effects, edge2_effects;
     char *fringeType;
-    double ffringe;
+    double ffringe, lEffective;
     double fringeIntP[5], fringeIntM[5];
     long radial;
     } QUAD;
@@ -1895,6 +1895,7 @@ typedef struct {
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder, isr, isr1Particle;
     long edge1_effects, edge2_effects;
+    double lEffective;
     double fringeIntP[5], fringeIntM[5];
     long radial;
     /* for internal use */
@@ -3566,7 +3567,7 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
                            double tilt, double fse,
                            double xkick, double ykick,
                            double edge1_effects, double edge2_effects,
-                           char *fringeType, double ffringe,
+                           char *fringeType, double ffringe, double lEffective,
                            double *fringeIntM, double *fringeIntP,
 			   long radial
                            );

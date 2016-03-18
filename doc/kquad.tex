@@ -64,6 +64,13 @@ command will be imposed inside this element, with the following rules/limitation
  is set for \verb|MAXAMP|.
 \end{itemize}
 
+As of version 29.2, this element incorporates the ability to have different values for the insertion
+and effective lengths. This is invoked when \verb|LEFFECTIVE| is positive. In this case, the
+\verb|L| parameter is understood to be the physical insertion length. Using \verb|LEFFECTIVE| is
+a convenient way to incorporate the fact that the effective length may differ from the physical
+length and even vary with excitation, without having to modify the drift spaces on either side of
+the quadrupole element.
+
 Fringe field effects  are based on publications of D.  Zhuo {\em et al.} \cite{Zhou-IPAC10} and  J. Irwin {\em et
   al.} \cite{Irwin-PAC95}, as well as unpublished work of C. X. Wang (ANL).  The fringe field is characterized by 
 10 integrals given in equations 19, 20, and 21 of \cite{Zhou-IPAC10}.  However, the values input into {\tt elegant}

@@ -73,31 +73,26 @@ char *madcom_name[N_MADCOMS] = {
 
 char *entity_text[N_TYPES] = {
     NULL, 
-    "A quadrupole implemented as a matrix, up to 3rd order.",
-    "A sector dipole implemented as a matrix, up to 2nd order.",
-    "A rectangular dipole, implemented as a SBEND with edge angles, up to 2nd order.",
-    "A drift space implemented as a matrix, up to 2nd order",
-    "A sextupole implemented as a matrix, up to 3rd order",
-    "An octupole implemented as a third-order matrix",
+    "A quadrupole implemented as a matrix, up to 3rd order. Use KQUAD for symplectic tracking.",
+    "A sector dipole implemented as a matrix, up to 2nd order. Use CSBEND for symplectic tracking.",
+    "A rectangular dipole, implemented as a SBEND with edge angles, up to 2nd order. Use CSBEND for symplectic tracking.",
+    "A drift space implemented as a matrix, up to 2nd order. Use EDRIFT for symplectic tracking.",
+    "A sextupole implemented as a matrix, up to 3rd order. Use KSEXT for symplectic tracking.",
+    "An octupole implemented as a third-order matrix. Use KOCT for symplectic tracking.",
     "A canonical kick multipole.",
     "A solenoid implemented as a matrix, up to 2nd order.",
-    "A horizontal steering dipole implemented as a matrix, up to 2nd order.",
-    "A vertical steering dipole implemented as a matrix, up to 2nd order.",
+    "A horizontal steering dipole implemented as a matrix, up to 2nd order. Use EHKICK for symplectic tracking.",
+    "A vertical steering dipole implemented as a matrix, up to 2nd order. Use EVKICK for symplectic tracking.",
     "A first-order matrix RF cavity with exact phase dependence.",
     "Not implemented.",
-    "A horizontal position monitor, accepting a rpn equation for the readout as a\n\
-function of the actual position (x).",
-    "A vertical position monitor, accepting a rpn equation for the readout as a\n\
-function of the actual position (y).",
-    "A two-plane position monitor, accepting two rpn equations for the readouts\n\
-as a function of the actual positions (x and y).",
+    "A horizontal position monitor, accepting a rpn equation for the readout as a function of the actual position (x).",
+    "A vertical position monitor, accepting a rpn equation for the readout as a function of the actual position (y).",
+    "A two-plane position monitor, accepting two rpn equations for the readouts as a function of the actual positions (x and y).",
     "A rectangular collimator.",
     "An elliptical collimator.",
     "A marker, equivalent to a zero-length drift space.",
-    "Explicit matrix input from a text file, in the format written by the print_matrix\n\
-command.",
-    "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
-the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoint.",
+    "Explicit matrix input from a text file, in the format written by the print_matrix command.",
+    "An alpha magnet implemented as a matrix, up to 3rd order.",
     "A simple traveling or standing wave deflecting RF cavity.",
     "A TM-mode RF cavity specified by the on-axis Ez field.",
     "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
@@ -108,53 +103,36 @@ the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoi
     "A misalignment of the beam, implemented as a zero-order matrix.",
     "A numerically-integrated first-space-harmonic traveling-wave linear accelerator.",
     "A pepper-pot plate.",
-    "An element that matches the central momentum to the beam momentum, or changes\n\
-the central momentum or energy to a specified value.",
-    "A collimating element that sets the maximum transmitted particle amplitudes for\n\
-all following elements, until the next MAXAMP.",
+    "An element that matches the central momentum to the beam momentum, or changes the central momentum or energy to a specified value.",
+    "A collimating element that sets the maximum transmitted particle amplitudes for all following elements, until the next MAXAMP.",
     "An element that rotates the beam about the longitudinal axis.",
     "An element that defines the point from which transmission calculations are made.",
-    "An element that defines the point to which particles recirculate in multi-pass\n\
-tracking",
+    "An element that defines the point to which particles recirculate in multi-pass tracking",
     "An element consisting of a linearly increasing or decreasing quadrupole field.",
-    "A collimating element that sticks into the beam from one side only.  The\n\
-directions 0, 1, 2, and 3 are from +x, +y, -x, and -y, respectively.",
+    "A collimating element that sticks into the beam from one side only.  The directions 0, 1, 2, and 3 are from +x, +y, -x, and -y, respectively.",
     "An element that centers the beam transversely on the ideal trajectory.",
-    "A time-dependent kicker magnet with optional spatial dependence of the kick and no fringe effects.\n\
-The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.\n\
-The optional spatial dependence is also specified as an SDDS file.",
-    "A canonical kick sextupole, which differs from the MULT element with ORDER=2 in\n\
-that it can be used for chromaticity correction.",
-    "A kick bending magnet which is NOT canonical, but is better than a 2nd order\n\
-matrix implementation.  Recommend using CSBEND instead.",
-    "A canonical kick quadrupole, which differs from the MULT element with ORDER=1 in\n\
-that it can be used for tune correction.",
-    "An element that allows multiplication of phase-space coordinates of all particles\n\
-by constants.",
-    "An element that reduces the number of particles in the beam by interval-based or\n\
-random sampling.",
-    "A combined horizontal-vertical steering magnet implemented as a matrix, up to\n\
-2nd order. For time-dependent kickers, see BUMPER.",
+    "A time-dependent kicker magnet with optional spatial dependence of the kick and no fringe effects. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1. The optional spatial dependence is also specified as an SDDS file.",
+    "A canonical kick sextupole, which differs from the MULT element with ORDER=2 in that it can be used for chromaticity correction.",
+    "A kick bending magnet which is NOT canonical, but is better than a 2nd order matrix implementation.  Use CSBEND instead.",
+    "A canonical kick quadrupole."
+    "An element that allows multiplication of phase-space coordinates of all particles by constants.",
+    "An element that reduces the number of particles in the beam by interval-based or random sampling.",
+    "A combined horizontal-vertical steering magnet implemented as a matrix, up to 2nd order. For time-dependent kickers, see BUMPER.",
     "A scattering element to add gaussian random numbers to particle coordinates.",
     "A numerically-integrated dipole magnet with various extended-fringe-field models.",
     "A thin kick element with polynomial dependence on the coordinates in one plane.",
     "A numerically-integrated dipole magnet with a Cartesian gradient.",
     "A voltage-, phase-, and/or frequency-ramped RF cavity, implemented like RFCA.",
-    "A momentum-ramping element that changes the central momentum according to an SDDS-\n\
-format file of the momentum factor vs time in seconds.",
-    "A stray field element with local and global components.  Global components are\n\
-defined relative to the initial beamline direction.",
+    "A momentum-ramping element that changes the central momentum according to an SDDS-format file of the momentum factor vs time in seconds.",
+    "A stray field element with local and global components.  Global components are defined relative to the initial beamline direction.",
     "A canonical kick sector dipole magnet.",
     "A numerically-integrated traveling-wave muffin-tin accelerator.",
-    "A Coulomb-scattering and energy-absorbing element simulating material in the\n\
-beam path.",
+    "A Coulomb-scattering and energy-absorbing element simulating material in the beam path.",
     "A simulation of a beam-driven TM monopole mode of an RF cavity.",
     "A simulation of a beam-driven TM dipole mode of an RF cavity.",
-    "A simulation of a single-pass broad-band or functionally specified longitudinal\n\
-impedance.",
+    "A simulation of a single-pass broad-band or functionally specified longitudinal impedance.",
     "Lumped simulation of synchrotron radiation effects (damping and quantum excitation) for rings.",
-    "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude\n\
-and phase modulation.",
+    "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude and phase modulation.",
     "A map of Bx and By vs x and y.",
     "A simulation of a single-pass broad-band or functionally-specified transverse impedance.",
     "A simulation of intra-beam scattering.",
@@ -230,7 +208,8 @@ PARAMETER quad_param[N_QUAD_PARAMS]={
     {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.edge1_effects), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
     {"FRINGE_TYPE", "", IS_STRING, 0, (long)((char *)&quad_example.fringeType), "fixed-strength", 0.0, 0, "type of fringe: \"inset\", \"fixed-strength\", or \"integrals\""},
-    {"FFRINGE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.ffringe), NULL, 0.0, 0, "For non-integrals mode, fraction of length occupied by linear fringe region"},
+    {"FFRINGE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.ffringe), NULL, 0.0, 0, "For non-integrals mode, fraction of length occupied by linear fringe region."},
+    {"LEFFECTIVE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&quad_example.lEffective), NULL, -1.0, 0, "Effective length. Ignored if non-positive. Cannot be used with non-zero FFRINGE."},
     {"I0P", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fringeIntP[0]), NULL, 0.0, 0, "i0+ fringe integral"},
     {"I1P", "M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fringeIntP[1]), NULL, 0.0, 0, "i1+ fringe integral"},
     {"I2P", "M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fringeIntP[2]), NULL, 0.0, 0, "i2+ fringe integral"},
@@ -1054,6 +1033,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1_effects), NULL, 0.0, 0, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2_effects), NULL, 0.0, 0, "include exit edge effects?"},
+    {"LEFFECTIVE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.lEffective), NULL, 0.0, 0, "Effective length. Ignored if non-positive."},
     {"I0P", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntP[0]), NULL, 0.0, 0, "i0+ fringe integral"},
     {"I1P", "M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntP[1]), NULL, 0.0, 0, "i1+ fringe integral"},
     {"I2P", "M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntP[2]), NULL, 0.0, 0, "i2+ fringe integral"},
