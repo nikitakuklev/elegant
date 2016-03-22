@@ -4695,14 +4695,26 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   double rho, theta0, theta1, theta2, theta, tm_a, tm_b, tm_c;
   double step, eomc, s_location;
   char *rootname;
-
+  
   static SDDS_TABLE test_output;
   static long first_time = 1;
+  static FILE *fpdebug = NULL;
   
   if (first_time && debug) {
     rootname = compose_filename("%s.phase", run->rootname);
     SDDS_PhaseSpaceSetup(&test_output, rootname, SDDS_BINARY, 1, "output phase space", run->runfile,
                          run->lattice, "setup_output");
+    if (debug>1) {
+      fpdebug = fopen("ftable.sdds", "w");
+      fprintf(fpdebug, "SDDS1\n&column name=ik type=long &end\n");
+      fprintf(fpdebug, "&column name=x type=double &end\n");
+      fprintf(fpdebug, "&column name=y type=double &end\n");
+      fprintf(fpdebug, "&column name=z type=double &end\n");
+      fprintf(fpdebug, "&column name=Bx type=double &end\n");
+      fprintf(fpdebug, "&column name=By type=double &end\n");
+      fprintf(fpdebug, "&column name=Bz type=double &end\n");
+      fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
+    }
     first_time =0 ;
   }
   
@@ -4730,8 +4742,6 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   s_location =step/2.;
   eomc = -particleCharge/particleMass/c_mks;
   A = (double**)czarray_2d(sizeof(double), 3, 3);
-  if (debug) 
-        fprintf(stdout, "ik         x       y         z   Bx  By Bz \n");
   for (ik=0; ik<nKicks; ik++) {
     for (ip=0; ip<np; ip++) {
       /* 1. get particle's coordinates */
@@ -4747,9 +4757,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       xyz[1] = coord[2] + coord[3]*step/2.0;
       xyz[2] = s_location; 
       interpolateFTable(B, xyz, ftable);
-/*      if (debug) 
-        fprintf(stdout, "%5d \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
-*/      
+      if (fpdebug) 
+        fprintf(fpdebug, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
       /* 3. calculate the rotation matrix */
       A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
@@ -4796,8 +4805,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
           theta0 = step/rho/tm_a;
         }
         theta=choose_theta(rho, theta0, theta1, theta2);
-       if (debug) 
-        fprintf(stdout, "%5ld \t %5f \t %5f \t %5f \t %10f \t %10f \t %10f \t %20f \t %10f \t %10f \n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2], p[2], rho, theta);
+        if (fpdebug) 
+          fprintf(fpdebug, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
 
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
@@ -4820,8 +4829,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       }
     }
     s_location += step;
-  if (debug) 
-    dump_phase_space(&test_output, particle, np, ik+1, Po, 0, 0);
+    if (debug) 
+      dump_phase_space(&test_output, particle, np, ik+1, Po, 0, 0);
   }
 
   free_czarray_2d((void**)A,3,3);
