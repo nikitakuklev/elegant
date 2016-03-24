@@ -29,6 +29,9 @@ field data in Tesla, and following parameters:
 N.B.: Particles are injected into the field region with z=0. Hence, one would normally want
 \verb|Variable02Min|=0. If \verb|Variable02Min|<0, data ahead of the injection point.
 
+The \verb|THRESHOLD| parameter sets the magnitude of magnetic field below which the
+field is considered zero. If this is too small, there may be numerical problems.
+
 \begin{figure}[htbp] 
   \begin{center}
   \includegraphics[width=3in,height=2.5in]{ftable-fig1.eps}

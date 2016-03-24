@@ -40,7 +40,7 @@ Here is a summary of what's changed since release 29.1:
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item Fixed a memory leak in the \verb|FTABLE| element.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -53,6 +53,9 @@ Here is a summary of what's changed since release 29.1:
 \item Added the \verb|FACTOR| parameter for \verb|FTABLE|, to allow scaling fields by a numerical value.
 \item Added the \verb|LEFFECTIVE| parameter for \verb|QUAD| and \verb|KQUAD|, which provides a convenient way
   to change the effective length without changing the adjacent drift spaces.
+\item Added the \verb|FACTOR| and \verb|THRESHOLD| options to \verb|FTABLE|. The former allows multiplying the fields
+  by a user-defined factor. The latter allows specifying the magnitude of the field below which it is considered
+  zero, which can help ensure numerical stability.
 \end{itemize}
 
 \subsection{New and Modified Commands}
