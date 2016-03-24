@@ -988,7 +988,7 @@ extern char *entity_text[N_TYPES];
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
-#define N_FTABLE_PARAMS 14
+#define N_FTABLE_PARAMS 15
 #define N_KOCT_PARAMS 17
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
@@ -2930,7 +2930,7 @@ extern PARAMETER ftable_param[N_FTABLE_PARAMS];
 
 typedef struct {
   double l0, angle, l1, l2, e1, e2;
-  double tilt, dx, dy, dz, factor;
+  double tilt, dx, dy, dz, factor, threshold;
   char *inputFile;
   long nKicks, verbose;
   /* for internal use only */

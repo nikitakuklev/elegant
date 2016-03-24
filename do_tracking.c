@@ -4707,6 +4707,8 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
     if (debug>1) {
       fpdebug = fopen("ftable.sdds", "w");
       fprintf(fpdebug, "SDDS1\n&column name=ik type=long &end\n");
+      fprintf(fpdebug, "&column name=after type=short &end\n");
+      fprintf(fpdebug, "&column name=ip type=long &end\n");
       fprintf(fpdebug, "&column name=x type=double &end\n");
       fprintf(fpdebug, "&column name=y type=double &end\n");
       fprintf(fpdebug, "&column name=z type=double &end\n");
@@ -4758,7 +4760,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       xyz[2] = s_location; 
       interpolateFTable(B, xyz, ftable);
       if (fpdebug) 
-        fprintf(fpdebug, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+        fprintf(fpdebug, "%ld 0 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
       /* 3. calculate the rotation matrix */
       A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
@@ -4766,7 +4768,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
       A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
       pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
       /* When field not equal to zero or not parallel to the particles motion */
-      if (BA && pA) {
+      if (BA>ftable->threshold && pA) {
         A[0][0] /= pA;
         A[0][1] /= pA;
         A[0][2] /= pA;
@@ -4806,7 +4808,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         }
         theta=choose_theta(rho, theta0, theta1, theta2);
         if (fpdebug) 
-          fprintf(fpdebug, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+          fprintf(fpdebug, "%ld 1 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
 
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
