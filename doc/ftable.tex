@@ -26,6 +26,9 @@ field data in Tesla, and following parameters:
       =(Variable00Max-Variable00Min)/Variable00Interval + 1.
 \end{itemize}
 
+N.B.: Particles are injected into the field region with z=0. Hence, one would normally want
+\verb|Variable02Min|=0. If \verb|Variable02Min|<0, data ahead of the injection point.
+
 \begin{figure}[htbp] 
   \begin{center}
   \includegraphics[width=3in,height=2.5in]{ftable-fig1.eps}

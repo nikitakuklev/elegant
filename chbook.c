@@ -183,7 +183,7 @@ ntuple *readbookn(char *inputfile, long i_page)
 
   if (!SDDS_InitializeInput(&mhist, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  while(1) {
+  while (1) {
     if ((iPage=SDDS_ReadPage(&mhist))<=0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (iPage==i_page)
@@ -242,7 +242,7 @@ ntuple *readbookn(char *inputfile, long i_page)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  book->value = (double*) calloc(sizeof(*book->value), book->length);
+  /* book->value = (double*) calloc(sizeof(*book->value), book->length); */
   if (!(book->value = SDDS_GetColumnInDoubles(&mhist, "Frequency")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (book->total=0, i=0; i<book->length; i++)
@@ -258,14 +258,32 @@ ntuple *readbookn(char *inputfile, long i_page)
 double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, 
                          long normalize, long normalInput, long zero_Edge, long verbose)
 {
-  double **Coef, value, result;
-  long **grid, *Bit;
+  static double **Coef = NULL;
+  static long **grid = NULL, *Bit = NULL;
+  static max_nD = 0;
+  double value, result;
   long i, j, np, vIndex, temp, flag=0;
 
   np = (long)ipow(2, bName->nD); 
-  Coef = (double**)czarray_2d(sizeof(double), bName->nD, 2);
-  grid = (long**)czarray_2d(sizeof(long), bName->nD, 2);
-  Bit = calloc(sizeof(long), bName->nD);
+  if (max_nD<bName->nD) {
+    if (Coef)
+      free_czarray_2d((void**)Coef, max_nD, 2); 
+    Coef = NULL;
+    if (grid)
+      free_czarray_2d((void**)grid, max_nD, 2); 
+    grid = NULL;
+    if (Bit)
+      free(Bit);
+    Bit = NULL;
+  }
+  if (!Coef)
+    Coef = (double**)czarray_2d(sizeof(double), bName->nD, 2);
+  if (!grid)
+    grid = (long**)czarray_2d(sizeof(long), bName->nD, 2);
+  if (!Bit)
+    Bit = calloc(sizeof(long), bName->nD);
+  if (max_nD<bName->nD)
+    max_nD = bName->nD;
 
   for (i=0; i<bName->nD; i++) {
     if (normalInput) {
@@ -331,9 +349,6 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
     result += value * bName->value[vIndex];
   }
 
-  free_czarray_2d((void**)Coef, bName->nD, 2); 
-  free_czarray_2d((void**)grid, bName->nD, 2); 
-  free(Bit);
   if (normalize) {
     for (i=0; i<bName->nD; i++)
       result /= bName->dx[i];
