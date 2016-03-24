@@ -282,6 +282,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
     grid = (long**)czarray_2d(sizeof(long), bName->nD, 2);
   if (!Bit)
     Bit = calloc(sizeof(long), bName->nD);
+  memset(Bit, 0, bName->nD*sizeof(*Bit));
   if (max_nD<bName->nD)
     max_nD = bName->nD;
 
