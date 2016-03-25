@@ -927,7 +927,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 38
+#define N_KQUAD_PARAMS 42
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1899,6 +1899,8 @@ typedef struct {
     long edge1_effects, edge2_effects;
     double lEffective;
     double fringeIntP[5], fringeIntM[5];
+    long edge1Linear, edge2Linear;
+    double edge1NonlinearFactor, edge2NonlinearFactor;
     long radial;
     /* for internal use */
     long multipolesInitialized;
@@ -3593,7 +3595,8 @@ extern VMATRIX *qfringe_matrix(double K1, double l, double tilt, long direction,
 extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
 
 /* prototypes for fringe.c */
-void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, int inFringe, int higherOrder);
+void quadFringe(double **coord, long np, double K1, double *fringeIntM, double *fringeIntP, int inFringe, int higherOrder,
+                int linearFlag, double nonlinearFactor);
 void dipoleFringe(double *vec, double h, long inFringe, long higherOrder, double K1);
 VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeIntM, double *fringeIntP);
 VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *fringeInt, long part);

@@ -24,7 +24,9 @@ void quadFringe(double **coord, long np, double K1,
                 double *fringeIntM0,  /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
                 double *fringeIntP0,  /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
                 int inFringe,        /* -1 = entrance, +1 = exit */
-                int higherOrder)
+                int higherOrder, 
+                int linearFlag,
+                double nonlinearFactor)
 {
   /* vec = {x, qx, y, qy, s, delta}
      */
@@ -50,14 +52,20 @@ void quadFringe(double **coord, long np, double K1,
     vec = coord[ip];
     delta = vec[5];
 
-    /* determine first linear matrix for this delta */
-    quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntM, 1);
-    
-    x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
-    px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
-    y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
-    py = M->R[3][2]*vec[2] + M->R[3][3]*vec[3];
-    
+    if (linearFlag) {
+      /* determine first linear matrix for this delta */
+      quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntM, 1);
+      x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
+      px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
+      y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
+      py = M->R[3][2]*vec[2] + M->R[3][3]*vec[3];
+    } else {
+      x  = vec[0];
+      px = vec[1];
+      y  = vec[2];
+      py = vec[3];
+    }
+
     a = -inFringe*K1/(12*(1 + delta));
 
     dx = dpx = dy = dpy = ds = 0;
@@ -112,19 +120,26 @@ void quadFringe(double **coord, long np, double K1,
     }
     
 
-    x  += dx;
-    px += dpx;
-    y  += dy;
-    py += dpy;
+    x  += nonlinearFactor*dx;
+    px += nonlinearFactor*dpx;
+    y  += nonlinearFactor*dy;
+    py += nonlinearFactor*dpy;
 
-    /* determine and apply second linear matrix */
-    quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntP, 2);
+    if (linearFlag) {
+      /* determine and apply second linear matrix */
+      quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntP, 2);
     
-    vec[0] = M->R[0][0]*x + M->R[0][1]*px;
-    vec[1] = M->R[1][0]*x + M->R[1][1]*px;
-    vec[2] = M->R[2][2]*y + M->R[2][3]*py;
-    vec[3] = M->R[3][2]*y + M->R[3][3]*py;
-    vec[4] -= ds;
+      vec[0] = M->R[0][0]*x + M->R[0][1]*px;
+      vec[1] = M->R[1][0]*x + M->R[1][1]*px;
+      vec[2] = M->R[2][2]*y + M->R[2][3]*py;
+      vec[3] = M->R[3][2]*y + M->R[3][3]*py;
+    } else {
+      vec[0] = x;
+      vec[1] = px;
+      vec[2] = y;
+      vec[3] = py;
+    }
+    vec[4] -= nonlinearFactor*ds;
   }
   free_matrices(M);
   free(M);

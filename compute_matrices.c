@@ -1082,7 +1082,8 @@ VMATRIX *compute_matrix(
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
                                          (run->default_order?run->default_order:1), kquad->tilt, 
                                          kquad->fse, kquad->xkick, kquad->ykick,
-                                         kquad->edge1_effects, kquad->edge2_effects,
+                                         kquad->edge1Linear?kquad->edge1_effects:0, 
+                                         kquad->edge2Linear?kquad->edge2_effects:0,
                                          "integrals", 0.0, kquad->lEffective,
                                          kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
         if (kquad->dx || kquad->dy || kquad->dz)
