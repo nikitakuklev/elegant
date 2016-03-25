@@ -194,6 +194,12 @@ double bmapxy_exit_function(double *qp, double *q, double s);
 void bmapxy_deriv_function(double *qp, double *q, double s);
 void bmapxy_field_setup(BMAPXY *bmapxy);
 
+/* prototypes for BMAPXYZ element */
+double bmapxyz_exit_function(double *qp, double *q, double s);
+void bmapxyz_deriv_function(double *qp, double *q, double s);
+void bmapxyz_coord_transform(double *q, double *coord, BMAPXYZ *bmapxyz, long which_end);
+void bmapxyz_field_setup(BMAPXYZ *bmapxyz);
+long interpolate_bmapxyz(double *F0, double *F1, double *F2, BMAPXYZ *bmapxyz, double x, double y, double z);
 
 long method_code = 0;
 #define RUNGE_KUTTA 0
@@ -211,6 +217,7 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 
 /* minimum number of steps to take */
 #define N_INTERIOR_STEPS 100
+
 
 #ifdef DEBUG
 static FILE *fp_field = NULL;
@@ -421,6 +428,7 @@ void lorentz_setup(
     NIBEND *nibend;
     NISEPT *nisept;
     BMAPXY *bmapxy;
+    BMAPXYZ *bmapxyz;
     double alpha, Kg;
     static long warning_given = 0;
     static double last_fse=0;
@@ -760,6 +768,18 @@ void lorentz_setup(
 	      bmapxy->rpnMem[0] = rpn_create_mem("x", 0);
 	      bmapxy->rpnMem[1] = rpn_create_mem("y", 0);
 	    }
+            break;
+          case T_BMAPXYZ:
+            bmapxyz = (BMAPXYZ*)field;
+            exit_function = bmapxyz_exit_function;
+            deriv_function = bmapxyz_deriv_function;
+            coord_transform = bmapxyz_coord_transform;
+            central_length = bmapxyz->length;
+            select_lorentz_integrator(bmapxyz->method);
+            tolerance = bmapxyz->accuracy;
+	    if (!bmapxyz->filename)
+	      bombElegant("Specify filename for BMXYZ", NULL);
+            bmapxyz_field_setup(bmapxyz);
             break;
           default:
             bombElegant("invalid field type (lortenz_setup)", NULL);
@@ -1448,7 +1468,7 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 	wp[2] = w[0]*F1 - w[1]*F0;
 	if (bmapxy->BGiven) {
 	  for (ix=0; ix<3; ix++) 
-	    wp[ix] *= particleCharge/(particleMass*c_mks*P0);
+	    wp[ix] *= -particleCharge*particleRelSign/(particleMass*c_mks*P0);
 	}
       }
     } else {
@@ -1699,5 +1719,268 @@ void writeEngeFunctionToFile(char *filename)
     z += dz;
   }
   fclose(fp);
+}
+
+
+double bmapxyz_exit_function(double *qp, double *q, double s)
+{
+  static BMAPXYZ *bmapxyz;
+  bmapxyz = (BMAPXYZ*)field_global;
+  
+  /* returns positive if inside or before, negative if after */
+  return(central_length-q[0]);
+}
+
+void bmapxyz_deriv_function(double *qp, double *q, double s)
+{
+    double *w, *wp;
+    double F0, F1, F2; /* z, x, y */
+    double x, y, z;
+    BMAPXYZ *bmapxyz;
+    long ix;
+    
+    bmapxyz = (BMAPXYZ*)field_global;
+    n_deriv_calls++;
+
+    z = q[0];
+    x = q[1];
+    y = q[2];
+    if (isnan(x) || isnan(y) || isinf(x) || isinf(y)) {
+      for (ix=0; ix<7; ix++)
+        qp[ix] = 0;
+      qp[6] = 1;
+      q[0]  = central_length;
+      n_invalid_particles++;
+      return;
+    }
+    
+    /* w is the velocity */
+    w  = q+3;
+    wp = qp+3;
+    qp[0] = w[0];
+    qp[1] = w[1];
+    qp[2] = w[2];
+    qp[6] = 1;
+    qp[7] = 0;
+
+    /* find field components */
+    if (!interpolate_bmapxyz(&F0, &F1, &F2, bmapxyz, x, y, z)) {
+      wp[0] = wp[1] = wp[2] = 0;
+    } else {
+      /* compute lorentz force */
+      wp[0] = w[1]*F2 - w[2]*F1;
+      wp[1] = w[2]*F0 - w[0]*F2;
+      wp[2] = w[0]*F1 - w[1]*F0;
+      if (bmapxyz->BGiven) {
+        for (ix=0; ix<3; ix++) 
+          wp[ix] *= -particleCharge*particleRelSign/(particleMass*c_mks*P0);
+      }
+    }
+
+#ifdef DEBUG
+    fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
+    fflush(fp_field);
+#endif
+}
+
+ 
+void bmapxyz_coord_transform(double *q, double *coord, BMAPXYZ *bmapxyz, long which_end)
+{
+  double dzds, *dqds;
+  
+  dqds = q+3;
+  if (which_end==-1) {
+    /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
+    /* convert slopes to normalized velocities */
+    dqds[0] = dzds = 1/sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    dqds[1] = coord[1]*dzds;
+    dqds[2] = coord[3]*dzds;
+    /* find q coordinates of particle at reference plane */
+    q[0] = 0;
+    q[1] = coord[0];
+    q[2] = coord[2];
+    q[6] = coord[4];
+    q[7] = coord[5];
+  } else {
+    /* transform q into coord at exit refence plane */
+    coord[0] = q[1];
+    coord[1] = dqds[1]/dqds[0];
+    coord[2] = q[2];
+    coord[3] = dqds[2]/dqds[0];
+    coord[4] = q[6];
+    coord[5] = q[7];
+  }
+   
+}
+
+void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
+{
+  SDDS_DATASET SDDSin;
+  double *x=NULL, *y=NULL, *z=NULL, *Fx=NULL, *Fy=NULL, *Fz=NULL;
+  long nx, ny;
+
+  if (!fexists(bmapxyz->filename)) {
+    fprintf(stdout, "file %s not found for BMAPXYZ element\n", bmapxyz->filename);
+    fflush(stdout);
+    exitElegant(1);
+  }
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
+      SDDS_ReadPage(&SDDSin)<=0 ||
+      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
+      !(z=SDDS_GetColumnInDoubles(&SDDSin, "z")) ) {
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!check_sdds_column(&SDDSin, "x", "m") ||
+      !check_sdds_column(&SDDSin, "y", "m") ||
+      !check_sdds_column(&SDDSin, "z", "m")) {
+    fprintf(stderr, "BMAPXYZ input file must have x, y, and z in m (meters)\n");
+    exitElegant(1);
+  }
+  bmapxyz->BGiven = 0;
+  if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy")) ||
+      !(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Fz"))) {
+    if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By")) ||
+        !(Fz=SDDS_GetColumnInDoubles(&SDDSin, "Bz"))) {
+      fprintf(stderr, "BMAPXYZ input file must have (Fx, Fy, Fz) (dimensionless) or (Bx, By, Bz) (in T)\n");
+      exitElegant(1);
+    }
+    bmapxyz->BGiven = 1;
+    if (!check_sdds_column(&SDDSin, "Bx", "T") ||
+        !check_sdds_column(&SDDSin, "By", "T") ||
+        !check_sdds_column(&SDDSin, "Bz", "T")) {
+      fprintf(stderr, "BMAPXYZ input file must have Bx, By, and Bz in T (Tesla)\n");
+      exitElegant(1);
+    }
+  } else {
+    if (!check_sdds_column(&SDDSin, "Fx", "") ||
+        !check_sdds_column(&SDDSin, "Fy", "") ||
+        !check_sdds_column(&SDDSin, "Fz", "")) {
+      fprintf(stderr, "BMAPXYZ input file must have Fx, Fy, and Fz with no units\n");
+      exitElegant(1);
+    }
+  }
+  
+  if (!(bmapxyz->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxyz->points<2) {
+    fprintf(stdout, "file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+    fflush(stdout);
+    exitElegant(1);
+  }
+  SDDS_Terminate(&SDDSin);
+  
+  /* It is assumed that the data is ordered so that x changes fastest.
+   * This can be accomplished with sddssort -column=z,incr -column=y,incr -column=x,incr
+   * The points are assumed to be equipspaced.
+   */
+  nx = 1;
+  bmapxyz->xmin = x[0];
+  while (nx<bmapxyz->points) {
+    if (x[nx-1]>x[nx])
+      break;
+    nx ++;
+  }
+  if (nx==bmapxyz->points) {
+    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (x)\n",
+            bmapxyz->filename);
+    printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+    exitElegant(1);
+  }  
+  bmapxyz->xmax = x[nx-1];
+  bmapxyz->dx = (bmapxyz->xmax-bmapxyz->xmin)/(nx-1);
+
+  ny = 1;
+  bmapxyz->ymin = y[0];
+  while (ny<(bmapxyz->points/nx)) {
+    if (y[(ny-1)*nx]>y[ny*nx])
+      break;
+    ny++;
+  }
+  if (ny==bmapxyz->points) {
+    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
+            bmapxyz->filename);
+    printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
+    exitElegant(1);
+  }
+  bmapxyz->ymax = y[(ny-1)*nx];
+  bmapxyz->dy = (bmapxyz->ymax-bmapxyz->ymin)/(ny-1);
+
+  if ((bmapxyz->nx=nx)<=1 || (bmapxyz->ny=ny)<=1 || (bmapxyz->nz = bmapxyz->points/(nx*ny))<=1) {
+    printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
+            bmapxyz->filename);
+    printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", bmapxyz->nx, bmapxyz->ny, bmapxyz->nz, bmapxyz->points);
+    exitElegant(1);
+  }
+  bmapxyz->zmin = z[0];
+  bmapxyz->zmax = z[bmapxyz->points-1];
+  bmapxyz->dz = (bmapxyz->zmax-bmapxyz->zmin)/(bmapxyz->nz-1);
+  fprintf(stdout, "BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+          bmapxyz->filename, 
+          bmapxyz->nx, bmapxyz->ny, bmapxyz->nz,
+          bmapxyz->dx, bmapxyz->dy, bmapxyz->dz,
+          bmapxyz->xmin, bmapxyz->xmax,
+          bmapxyz->ymin, bmapxyz->ymax,
+          bmapxyz->zmin, bmapxyz->zmax
+          );
+  free(x);
+  free(y);
+  free(z);
+  bmapxyz->Fx = Fx;
+  bmapxyz->Fy = Fy;
+  bmapxyz->Fz = Fz;
+}
+
+long interpolate_bmapxyz(double *F0, double *F1, double *F2,
+                         BMAPXYZ *bmapxyz, 
+                         double x, double y, double z)
+{
+  long ix, iy, iz, iq;
+  double fx, fy, fz;  
+  double Finterp1[2][2], Finterp2[2];
+  double *Fq[3], Freturn[3];
+  
+  ix = (x-bmapxyz->xmin)/bmapxyz->dx;
+  iy = (y-bmapxyz->ymin)/bmapxyz->dy;
+  iz = (z-bmapxyz->zmin)/bmapxyz->dz;
+  if (ix<0 || iy<0 || iz<0 || ix>=(bmapxyz->nx-1) || iy>=(bmapxyz->ny-1) || iz>=(bmapxyz->nz-1)) {
+    *F0 = *F1 = *F2 = 0;
+    n_invalid_particles++;
+    return 0;
+  } else {
+    fx = (x-(ix*bmapxyz->dx+bmapxyz->xmin))/bmapxyz->dx;
+    fy = (y-(iy*bmapxyz->dy+bmapxyz->ymin))/bmapxyz->dy;
+    fz = (z-(iz*bmapxyz->dz+bmapxyz->zmin))/bmapxyz->dz;
+    Fq[0] = bmapxyz->Fz;
+    Fq[1] = bmapxyz->Fx;
+    Fq[2] = bmapxyz->Fy;
+
+    for (iq=0; iq<3; iq++) {
+      /* interpolate vs z to get four points in a x-y grid */
+      /* (ix, iy) */
+      Finterp1[0][0] = (1-fz)*(*(Fq[iq]+(ix+0)+iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny)) +
+        fz*(*(Fq[iq]+(ix+0)+iy*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny));
+      /* (ix+1, iy) */        
+      Finterp1[1][0] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny)) +
+        fz*(*(Fq[iq]+(ix+1)+(iy+0)*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny));
+      /* (ix, iy+1) */
+      Finterp1[0][1] = (1-fz)*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny)) +
+        fz*(*(Fq[iq]+(ix+0)+(iy+1)*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny));
+      /* (ix+1, iy+1) */
+      Finterp1[1][1] = (1-fz)*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny)) +
+        fz*(*(Fq[iq]+(ix+1)+(iy+1)*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny));
+      
+      /* interpolate vs y to get two points spaced by dx */
+      /* ix */
+      Finterp2[0] = (1-fy)*Finterp1[0][0] + fy*Finterp1[0][1];
+      /* ix+1 */
+      Finterp2[1] = (1-fy)*Finterp1[1][0] + fy*Finterp1[1][1];
+    
+      /* interpolate vs x to get 1 value */
+      Freturn[iq] = (1-fx)*Finterp2[0] + fx*Finterp2[1];
+    }
+
+    *F0 = bmapxyz->strength*Freturn[0];
+    *F1 = bmapxyz->strength*Freturn[1];
+    *F2 = bmapxyz->strength*Freturn[2];
+  }
+  return 1;
 }
 

@@ -1580,6 +1580,9 @@ long do_tracking(
 	    case T_BMAPXY:
 	      nLeft = lorentz(coord, nToTrack, (BMAPXY*)eptr->p_elem, T_BMAPXY, *P_central, accepted);
 	      break;
+	    case T_BMAPXYZ:
+	      nLeft = lorentz(coord, nToTrack, (BMAPXYZ*)eptr->p_elem, T_BMAPXYZ, *P_central, accepted);
+	      break;
 	    case T_KPOLY:
 	      nLeft = polynomial_kicks(coord, nToTrack, (KPOLY*)eptr->p_elem, 0.0,
 				       *P_central, accepted, z);

@@ -64,7 +64,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
-    "EHKICK", "EVKICK", "EKICKER",
+    "EHKICK", "EVKICK", "EKICKER", "BMXYZ",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -186,6 +186,7 @@ char *entity_text[N_TYPES] = {
     "A horizontal steering dipole implemented using an exact hard-edge model",
     "A vertical steering dipole implemented using an exact hard-edge model",
     "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
+    "A map of (Bx, By, Bz) vs (x, y, z)",
     } ;
 
 QUAD quad_example;
@@ -2589,6 +2590,16 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
+BMAPXYZ bmapxyz_example;
+PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "length"},
+    {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
+    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
+    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
+};  
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2724,6 +2735,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_EHCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHCOR),    ehcor_param     }, 
     {    N_EVCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EVCOR),    evcor_param     }, 
     {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
+    { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
 } ;
 
 void compute_offsets()

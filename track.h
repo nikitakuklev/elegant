@@ -877,7 +877,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EHCOR  111
 #define T_EVCOR  112
 #define T_EHVCOR  113
-#define N_TYPES   114
+#define T_BMAPXYZ 114
+#define N_TYPES   115
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -998,6 +999,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 8
 #define N_EVCOR_PARAMS 8
 #define N_EHVCOR_PARAMS 10
+#define N_BMAPXYZ_PARAMS 5
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2684,7 +2686,6 @@ typedef struct {
     long flag;
 } SCMULT;          
 
-/* names and storage structure for SR effects */
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
 
 typedef struct {
@@ -2698,6 +2699,19 @@ typedef struct {
   double ymin, ymax, dy;
   long rpnMem[2];
 } BMAPXY;
+
+extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
+
+typedef struct {
+  double length, strength, accuracy;
+  char *method, *filename;
+  /* these are set by the program when the file is read */
+  long points, nx, ny, nz, BGiven;
+  double *Fx, *Fy, *Fz;
+  double xmin, xmax, dx;
+  double ymin, ymax, dy;
+  double zmin, zmax, dz;
+} BMAPXYZ;
 
 /* names and storage structure for CHARGE element */
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
