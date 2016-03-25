@@ -50,11 +50,10 @@ Here is a summary of what's changed since release 29.1:
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|BMXYZ| element for integration through 3D field maps. At present, it is restricted to
-  straight elements as no coordinate transformations are performed.
-\item Added the \verb|FACTOR| parameter for \verb|FTABLE|, to allow scaling fields by a numerical value.
 \item Added the \verb|LEFFECTIVE| parameter for \verb|QUAD| and \verb|KQUAD|, which provides a convenient way
   to change the effective length without changing the adjacent drift spaces.
+\item Added the \verb|BMXYZ| element for straightforward integration through 3D field maps. At present, it is restricted to
+  straight elements, as no coordinate transformations are performed.
 \item Added the \verb|FACTOR| and \verb|THRESHOLD| options to \verb|FTABLE|. The former allows multiplying the fields
   by a user-defined factor. The latter allows specifying the magnitude of the field below which it is considered
   zero, which can help ensure numerical stability.
