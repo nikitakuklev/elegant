@@ -260,7 +260,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
 {
   static double **Coef = NULL;
   static long **grid = NULL, *Bit = NULL;
-  static max_nD = 0;
+  static long max_nD = 0;
   double value, result;
   long i, j, np, vIndex, temp, flag=0;
 
