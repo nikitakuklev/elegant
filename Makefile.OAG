@@ -387,7 +387,7 @@ else
   ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
   ifneq (mira,$(findstring mira, $(HOSTNAME)))
   ifneq (blogin,$(findstring blogin, $(HOSTNAME)))
-    #SYS_PROD_LIBS_Linux += g2c
+    SYS_PROD_LIBS_Linux += g2c
   endif
   endif
   endif
