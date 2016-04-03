@@ -38,7 +38,7 @@ exec sddsprocess $input -pipe=out \
   "-define=parameter,cellLength,Circumference nCells /,units=m" \
   "-test=column,s cellLength 1e-6 + > ! " \
   | sddsconvert -pipe=in $output \
-  -retain=column,s,betax,betay,etax \
+  -retain=column,s,betax,betay,etax,etaxp,etay,etayp,alphax,alphay \
   -delete=parameter,dnu*,*Upper,*Lower,coupling*,emittanceRatio,waists*,deltaHalfRange,dbeta*dp,dalpha*dp,etax?,etay?,Step,enx0,alphac2,Stage
 
 
