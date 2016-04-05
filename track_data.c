@@ -1047,8 +1047,8 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"LAMBDA2M", "M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fringeIntM[4]), NULL, 0.0, 0, "lambda2- fringe integral"},
     {"EDGE1_LINEAR", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1Linear), NULL, 0.0, 1, "Use to selectively turn off linear part if EDGE1_EFFECTS nonzero."},
     {"EDGE2_LINEAR", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2Linear), NULL, 0.0, 1, "Use to selectively turn off linear part if EDGE2_EFFECTS nonzero."},
-    {"EDGE1_NONLINEAR_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1NonlinearFactor), NULL, 1.0, 0, "Use to selectively scale nonlinear entrance edge effectsif EDGE1_EFFECTS>1"},
-    {"EDGE2_NONLINEAR_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2NonlinearFactor), NULL, 1.0, 0, "Use to selectively scale nonlinear exit edge effectsif EDGE2_EFFECTS>1"},
+    {"EDGE1_NONLINEAR_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1NonlinearFactor), NULL, 1.0, 0, "Use to selectively scale nonlinear entrance edge effects if EDGE1_EFFECTS>1"},
+    {"EDGE2_NONLINEAR_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2NonlinearFactor), NULL, 1.0, 0, "Use to selectively scale nonlinear exit edge effects if EDGE2_EFFECTS>1"},
     {"RADIAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.radial), NULL, 0.0, 0, "If non-zero, converts the quadrupole into a radially-focusing lens"},
     };
 
