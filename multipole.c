@@ -946,7 +946,6 @@ long multipole_tracking2(
     break;
   }
   if (doEndDrift) {
-    printf("Doing end drift of %le\n", lEnd);
     exactDrift(particle, n_part, lEnd);
   }
   
@@ -1002,7 +1001,6 @@ long multipole_tracking2(
     break;
   }
   if (doEndDrift) {
-    printf("Doing end drift of %le\n", lEnd);
     exactDrift(particle, n_part, lEnd);
   }
   
