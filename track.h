@@ -938,7 +938,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 60
+#define N_CSBEND_PARAMS 61
 #define N_MATTER_PARAMS 16
 #define N_RFMODE_PARAMS 40
 #define N_TRFMODE_PARAMS 25
@@ -2148,7 +2148,7 @@ typedef struct {
     long distributionBasedRadiation, includeOpeningAngle;
     char *photonOutputFile;
     double photonLowEnergyCutoff;
-    long referenceCorrection;
+    long referenceCorrection, trackingMatrix;
     /* for internal use only: */
     unsigned long edgeFlags;
     double b[8];
@@ -3153,6 +3153,7 @@ extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void startMatrixComputationTiming();
 extern void reportMatrixComputationTiming();
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
+VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
 extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);

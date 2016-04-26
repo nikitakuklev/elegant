@@ -605,6 +605,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   /* particle n_track-1 is the reference particle (coordinates set above) */
 
   switch (eptr->type) {
+  case T_CSBEND:
+    ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
+    ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
+    track_through_csbend(coord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
+                         NULL, NULL);
+    ((CSBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
+   break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
     ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
@@ -709,6 +718,108 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 #if USE_MPI
   notSinglePart = notSinglePart_saved;
 #endif
+  return M;
+}
+
+VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order)
+{
+  double **initialCoord, **finalCoord, **coordError, **finalCoordCopy;
+  long n_track, n_left, i, j, k;
+  VMATRIX *M;
+  double defaultStep[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+  double maximumValue[6];
+  long ltmp1, ltmp2;
+  double dgamma, dtmp1, dP[3];
+  long nPoints1 = 5;
+  long maxFitOrder = 4;
+
+  if (stepSize==NULL)
+    stepSize = defaultStep;
+
+  n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
+  
+  switch (eptr->type) {
+  case T_CSBEND:
+    ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
+    ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
+    track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
+                         NULL, NULL);
+    ((CSBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
+   break;
+  case T_CWIGGLER:
+    ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
+    ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
+    ((CWIGGLER*)eptr->p_elem)->isr = ((CWIGGLER*)eptr->p_elem)->sr = 0;
+    GWigSymplecticPass(finalCoord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
+    ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
+    ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
+    break;
+  case T_APPLE:
+    ltmp1 = ((APPLE*)eptr->p_elem)->isr;
+    ltmp2 = ((APPLE*)eptr->p_elem)->sr;
+    ((APPLE*)eptr->p_elem)->isr = ((APPLE*)eptr->p_elem)->sr = 0;
+    APPLE_Track(finalCoord, n_track, run->p_central, (APPLE*)eptr->p_elem);
+    ((APPLE*)eptr->p_elem)->isr = ltmp1;
+    ((APPLE*)eptr->p_elem)->sr = ltmp2;
+    break;
+  case T_UKICKMAP:
+    ltmp1 = ((UKICKMAP*)eptr->p_elem)->isr;
+    ltmp2 = ((UKICKMAP*)eptr->p_elem)->synchRad;
+    ((UKICKMAP*)eptr->p_elem)->isr = ((UKICKMAP*)eptr->p_elem)->synchRad = 0;
+    if (trackUndulatorKickMap(finalCoord, NULL, n_track, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=n_track) {
+      printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
+      exitElegant(1);
+    }
+    ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
+    ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
+    break;
+  case T_TWMTA:
+  case T_MAPSOLENOID:
+  case T_TWLA:
+    motion(finalCoord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+    break;
+  case T_RFDF:
+    /* Don't actually use this */
+    track_through_rf_deflector(finalCoord, (RFDF*)eptr->p_elem,
+			       finalCoord, n_track, run->p_central, 0, eptr->end_pos, 0);
+    break;
+  case T_LSRMDLTR:
+    ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
+    ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
+    dtmp1 = ((LSRMDLTR*)eptr->p_elem)->laserPeakPower;
+    ((LSRMDLTR*)eptr->p_elem)->isr = ((LSRMDLTR*)eptr->p_elem)->synchRad = 0;
+    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = 0;
+    motion(finalCoord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+    ((LSRMDLTR*)eptr->p_elem)->isr = ltmp1;
+    ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
+    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = dtmp1;
+    break;
+  case T_FTABLE:
+    field_table_tracking(finalCoord, n_track, (FTABLE*)eptr->p_elem, run->p_central, run);
+    break;
+  default:
+    printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
+    printf("***        Seek professional help!\n");
+    exitElegant(1);
+    break;
+  }
+  
+  for (i=0; i<6; i++) {
+    maximumValue[i] = -DBL_MAX;
+    for (j=0; j<n_track; j++) {
+      if (maximumValue[i]<initialCoord[j][i])
+        maximumValue[i] = initialCoord[j][i];
+    }
+  }
+  
+  M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
+                                  maximumValue, nPoints1, n_track, maxFitOrder, 0);
+
+  free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
+
   return M;
 }
 

@@ -120,7 +120,7 @@ VMATRIX *computeMatricesFromTracking(
 	saved_fit[i][j].order_of_fit = 0;
       continue;
     }
-    if (verbose)
+    if (verbose>1)
       fprintf(fpo_ma, "%ld pairs selected for R[i][%ld]\n",
 	      n_pairs1, j+1);
 #if DEBUG1
@@ -142,7 +142,7 @@ VMATRIX *computeMatricesFromTracking(
       C[i]      += best_fit.coefficient[0];
       n_fits[i] += 1;
       R[i][j]    = best_fit.coefficient[1];
-      if (verbose) {
+      if (verbose>1) {
 	fprintf(fpo_ma, "order of fit for R[%ld][%ld], T[%ld][%ld][%ld], Q[%ld][%ld][%ld][%ld] = %d\n", 
 		i+1, j+1, 
 		i+1, j+1, j+1,
@@ -164,26 +164,27 @@ VMATRIX *computeMatricesFromTracking(
 #endif
       if (best_fit.order_of_fit>=2) {
 	T[i][j][j] = best_fit.coefficient[2];
-	if (verbose)
+	if (verbose>1)
 	  fprintf(fpo_ma, "    T[%ld][%ld][%ld] = %.16le +/- %.16le\n",
 		  i+1, j+1, j+1, T[i][j][j],
 		  best_fit.coefficient_error[2]);
       }
       if (best_fit.order_of_fit>=3) {
 	Q[i][j][j][j] = best_fit.coefficient[3];
-	if (verbose)
+	if (verbose>1)
 	  fprintf(fpo_ma, "    Q[%ld][%ld][%ld][%ld] = %.16le +/- %.16le\n",
 		  i+1, j+1, j+1, j+1, Q[i][j][j][j],
 		  best_fit.coefficient_error[3]);
       }
-      if (best_fit.order_of_fit>=4 && verbose) {
+      if (best_fit.order_of_fit>=4 && verbose>1) {
 	fprintf(fpo_ma, "higher-order terms:\n");
 	for (k=4; k<=best_fit.order_of_fit; k++)
 	  fprintf(fpo_ma, "        %.16le +/-  %.16le\n", 
 		  best_fit.coefficient[k],
 		  best_fit.coefficient_error[k]);
       }
-      fflush(fpo_ma);
+      if (verbose>1)
+        fflush(fpo_ma);
     }
   }
   for (i=0; i<6; i++)
@@ -258,7 +259,7 @@ VMATRIX *computeMatricesFromTracking(
 		j+1, k+1, j+1, k+1, k+1);
 	continue;
       }
-      if (verbose)
+      if (verbose>1)
 	fprintf(fpo_ma, "%ld pairs selected for T[i][%ld][%ld] and Q[i][%ld][%ld][%ld]\n",
 		n_pairs1, j+1, k+1, j+1, k+1, k+1);
 #if DEBUG2
@@ -278,7 +279,7 @@ VMATRIX *computeMatricesFromTracking(
 		j+1, k+1, j+1, k+1, k+1);
 	continue;
       }
-      if (verbose)
+      if (verbose>1)
 	fprintf(fpo_ma, "%ld additional pairs selected for T[i][%ld][%ld] and Q[i][%ld][%ld][%ld]\n",
 		n_pairs2, j+1, k+1, j+1, k+1, k+1);
 #if DEBUG2
@@ -294,8 +295,8 @@ VMATRIX *computeMatricesFromTracking(
 	  fprintf(fpo_ma, "unable to find fit1 for R[%ld][%ld], T[%ld][%ld][%ld], and Q[%ld][%ld][%ld][%ld]\n",
 		  i+1, j+1,   i+1, j+1, j+1, 
 		  i+1, j+1, j+1, j+1);
-	  continue;
 	  fflush(fpo_ma);
+	  continue;
 	}
 
 #if DEBUG2
@@ -340,7 +341,7 @@ VMATRIX *computeMatricesFromTracking(
 	  (best_fit1.coefficient[1]-best_fit2.coefficient[1])/maximum_value[j]/2.0;
 	Q[i][j][j][k] = 
 	  (best_fit1.coefficient[1]+best_fit2.coefficient[1])/sqr(maximum_value[j])/2.0;
-	if (verbose) {
+	if (verbose>1) {
 	  fprintf(fpo_ma, "    T[%ld][%ld][%ld] = %.16le +/- %.16le\n",
 		  i+1, j+1, k+1, T[i][j][k],
 		  best_fit1.coefficient_error[1]/maximum_value[j]/sqrt(2.0));
@@ -406,6 +407,7 @@ VMATRIX *computeMatricesFromTracking(
 	fprintf(fpo_ma, 
 		"too few pairs for computing T[i][%ld][%ld] and Q[i][%ld][%ld][%ld]\n", 
 		j+1, k+1, j+1, k+1, k+1);
+        fflush(fpo_ma);
 	continue;
       }
       if (verbose)
@@ -423,8 +425,8 @@ VMATRIX *computeMatricesFromTracking(
 	  fprintf(fpo_ma, "unable to find fit1 for R[%ld][%ld], T[%ld][%ld][%ld], and Q[%ld][%ld][%ld][%ld]\n",
 		  i+1, j+1,   i+1, j+1, j+1, 
 		  i+1, j+1, j+1, j+1);
-	  continue;
 	  fflush(fpo_ma);
+	  continue;
 	}
 
 #if DEBUG2
@@ -457,7 +459,7 @@ VMATRIX *computeMatricesFromTracking(
 	fflush(fpo_ma);
 	checkAssignedErrors(fpo_ma, initial, final, error, n_points_total);
 #endif
-	if (verbose)
+	if (verbose>1)
 	  fprintf(fpo_ma, "order of fits for for computing T[%ld][%ld][%ld] and Q[%ld][%ld][%ld][%ld] = %d, %d\n",
 		  i+1, j+1, k+1, i+1, j+1, k+1, k+1, best_fit1.order_of_fit, best_fit2.order_of_fit);
 	/* compute second value of T[i][j][k] */
@@ -465,12 +467,12 @@ VMATRIX *computeMatricesFromTracking(
 	/* compute correction to stored value */
 	T[i][j][k] -= sqr(maximum_value[j])*(T[i][j][k]-Tijk)/
 	  ((2*maximum_value[j]-step_size[j])*step_size[j]);
-	if (verbose) {
+	if (verbose>1) {
 	  fprintf(fpo_ma, "T[%ld][%ld][%ld] = %.16le    <-- second approx\n",  i+1, j+1, k+1, Tijk);
 	  fprintf(fpo_ma, "T[%ld][%ld][%ld] = %.16le    <-- corrected\n",
 		  i+1, j+1, k+1, T[i][j][k]);
+          fflush(fpo_ma);
 	}
-	fflush(fpo_ma);
       }
     }
   }
@@ -591,7 +593,7 @@ VMATRIX *computeMatricesFromTracking(
 #endif
 	for (i=5; i>=0; i--) {
 	  Q[i][j][k][l] = (set1_f[0][i] - set2_f[0][i])/(2*set1_i[0][j]*set1_i[0][k]*set1_i[0][l]);
-	  if (verbose)
+	  if (verbose>1)
 	    fprintf(fpo_ma, "Q[%ld][%ld][%ld][%ld] = %le\n",
 		    i+1, j+1, k+1, l+1, Q[i][j][k][l]);
 	}
@@ -613,8 +615,9 @@ VMATRIX *computeMatricesFromTracking(
       }
       sum += fabs(term);
     }
-    fprintf(fpo_ma, "average absolute residual of fit for %ldth coordinate: %le\n",
-	    i, sum/n_points_total);
+    if (verbose>1)
+        fprintf(fpo_ma, "average absolute residual of fit for %ldth coordinate: %le\n",
+                i, sum/n_points_total);
   }
 
   free(resolution);
