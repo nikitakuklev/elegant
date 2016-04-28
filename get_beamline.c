@@ -555,6 +555,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       while (eptr1) {
         if (eptr1->type==T_FTABLE && eptr1->occurence>1 && strcmp(eptr->name, eptr1->name)==0) {
           ((FTABLE*)eptr1->p_elem)->initialized=1;
+          ((FTABLE*)eptr1->p_elem)->dataIsCopy=1;
           ((FTABLE*)eptr1->p_elem)->length=ftable_length;
           ((FTABLE*)eptr1->p_elem)->Bx = nBx;
           ((FTABLE*)eptr1->p_elem)->By = nBy;
@@ -749,7 +750,19 @@ void free_elements(ELEMENT_LIST *elemlist)
 	      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	    }
 	  }
-	}
+	} else if (eptr->type==T_FTABLE) {
+          FTABLE *ftable;
+          ftable = (FTABLE*)eptr->p_elem;
+          if (!ftable->dataIsCopy) {
+            free_hbookn(ftable->Bx);
+            free_hbookn(ftable->By);
+            free_hbookn(ftable->Bz);
+          }
+        } else if (eptr->type==T_BMAPXYZ) {
+          free(((BMAPXYZ*)eptr->p_elem)->Fx);
+          free(((BMAPXYZ*)eptr->p_elem)->Fy);
+          free(((BMAPXYZ*)eptr->p_elem)->Fz);
+        }
 #ifdef DEBUG
         fprintf(stdout, "pointers: p_elem = %x   name = %x   matrix = %x\n",
             eptr->p_elem, eptr->name, eptr->matrix);
@@ -1392,17 +1405,31 @@ ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
 void initializeFTable(FTABLE *ftable)
 {
   long i;
-  
-  ftable->Bx = readbookn(ftable->inputFile, 1);
-  ftable->By = readbookn(ftable->inputFile, 2);
-  ftable->Bz = readbookn(ftable->inputFile, 3);
 
+  if (ftable->simpleInput) {
+    readSimpleFtable(ftable);
+  } else {
+    ftable->Bx = readbookn(ftable->inputFile, 1);
+    ftable->By = readbookn(ftable->inputFile, 2);
+    ftable->Bz = readbookn(ftable->inputFile, 3);
+  }
+  
   if ((ftable->Bx->nD !=3)||(ftable->By->nD !=3)||(ftable->Bz->nD !=3))
     bombElegant("ND must be 3 for field table %s.", ftable->inputFile);
   ftable->length = ftable->Bz->xmax[2] - ftable->Bz->xmin[2];
   if (fabs((ftable->l0 + ftable->l1 + ftable->l2)-ftable->length)>1e-12)
     bombElegant("L+L1+L2 != field length in file %s.", ftable->inputFile);
 
+  if (1) {
+    double Bmin, Bmax;
+    find_min_max(&Bmin, &Bmax, ftable->Bx->value, ftable->Bx->length);
+    printf("Bx: [%le, %le]\n", Bmin, Bmax);
+    find_min_max(&Bmin, &Bmax, ftable->By->value, ftable->By->length);
+    printf("By: [%le, %le]\n", Bmin, Bmax);
+    find_min_max(&Bmin, &Bmax, ftable->Bz->value, ftable->Bz->length);
+    printf("Bz: [%le, %le]\n", Bmin, Bmax);
+  }
+  
   for (i=0; i<ftable->Bz->nD; i++) {
     ftable->Bx->xmin[i] -= ftable->Bx->dx[i]/2;
     ftable->By->xmin[i] -= ftable->By->dx[i]/2;
@@ -1412,6 +1439,7 @@ void initializeFTable(FTABLE *ftable)
     ftable->Bz->xmax[i] += ftable->Bz->dx[i]/2;
   }
   ftable->initialized = 1;
+  ftable->dataIsCopy = 0;
   return;
 }
 

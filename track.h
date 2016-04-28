@@ -989,7 +989,7 @@ extern char *entity_text[N_TYPES];
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
-#define N_FTABLE_PARAMS 15
+#define N_FTABLE_PARAMS 16
 #define N_KOCT_PARAMS 17
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
@@ -2949,8 +2949,10 @@ typedef struct {
   double tilt, dx, dy, dz, factor, threshold;
   char *inputFile;
   long nKicks, verbose;
+  long simpleInput;
   /* for internal use only */
   long initialized;
+  long dataIsCopy;
   double length;
   ntuple *Bx, *By, *Bz;
 } FTABLE;  
@@ -3239,6 +3241,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
 void initializeFTable(FTABLE *ftable);
+void readSimpleFtable(FTABLE *ftable);
 void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
 void track_through_mkicker(double **part, long np, MKICKER *kicker, double p_central, long pass, long default_order);
 
