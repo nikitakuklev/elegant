@@ -816,11 +816,10 @@ void shell_distribution(
 
   log_entry("shell_distribution");
 
+  dangle = 0;
 #if !USE_MPI
-  if (n_particles<=1) 
-    dangle = 0;
-  else
-    dangle = PIx2/(n_particles-1);
+  if (n_particles>0)
+    dangle = PIx2/n_particles;
   angle = -dangle;
 #else
   if (notSinglePart) {
@@ -835,19 +834,14 @@ void shell_distribution(
     n_particles_total = particle_array[n_processors-1];
     tfree(particle_array);
     
-    if (n_particles_total<=1) {
-      dangle = angle = 0;
-    } 
-    else {
-      dangle = PIx2/(n_particles_total-1);
+    if (n_particles_total>0) {
+      dangle = PIx2/n_particles_total;
       angle = -dangle + dangle*start_particle;  
     }
   }
   else {
-    if (n_particles<=1) 
-      dangle = 0;
-    else
-      dangle = PIx2/(n_particles-1);
+    if (n_particles>0) 
+      dangle = PIx2/n_particles;
     angle = -dangle;
   } 
 #endif
