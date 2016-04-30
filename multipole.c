@@ -414,6 +414,13 @@ long multipole_tracking(
     else
       KnL = multipole->KnL*multipole->factor/n_kicks;
 
+    if (KnL==0) {
+      if (multipole->length==0)
+        return;
+      exactDrift(particle, n_part, multipole->length);
+      return;
+    }
+    
     if (multipole->synch_rad)
         rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     else
