@@ -416,9 +416,9 @@ long multipole_tracking(
 
     if (KnL==0) {
       if (multipole->length==0)
-        return;
+        return n_part;
       exactDrift(particle, n_part, multipole->length);
-      return;
+      return n_part;
     }
     
     if (multipole->synch_rad)
