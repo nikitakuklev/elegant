@@ -6323,18 +6323,19 @@ yield incorrect results.
   longitudinally distributed bunch.
 \item {\tt -charge}, {\tt -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
+\item {\tt -emitInput} --- Give the initial total emittance in meters (if {\tt -coupling} is used) or
+  the initial x emittance in meters (if {\tt -emityInput} is used)..  If not specified,
+the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.  This is
  used to compute the horizontal and vertical emittance from the natural emittance.
 \item {\tt -emityInput} --- Give the vertical emittance in meters.
+\item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
+specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
 \item {\tt -RF=Voltage={\em MV},harmonic={\em value}[,limit]} --- Specify rf voltage and harmonic number.
  The {\tt limit} qualifier, if given means that the momentum acceptance is limited by the bucket
  half-height.
  N.B.: If the data files cover only a portion of the ring, using this option will give incorrect results!
 \item {\tt -length={\em mm}} --- Specify the rms bunch length.  This is an alternative to giving rf parameters.
-\item {\tt -emitInput} --- Give the initial total emittance in meters.  If not specified,
-the value from the parameter \verb|ex0| in {\em twissFile} is used.
-\item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
-specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
 \item {\tt -verbosity} --- If nonzero, program execution information is printed to the standard output.
 \item {\tt -ignoreMismatch} --- If given, then mismatch of element names between the twiss and momentum
   aperture files is ignored.  May be useful if there are zero-length elements.
