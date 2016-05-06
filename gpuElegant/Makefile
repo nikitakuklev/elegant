@@ -2,9 +2,9 @@ TOP=../../..
 include $(TOP)/configure/CONFIG
 include $(TOP)/configure/RULES
 
-NVCC = /usr/local/cuda/bin/nvcc
+NVCC = /usr/local/cuda-7.5/bin/nvcc
 
-MPI_INCLUDE = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/include /usr/lib64/mvapich2/1.2-gcc/include /soft/libraries/mpi/mvapich2/gcc/include /usr/lib64/mpich/include /clhome/asd_tools/mvapich2-2.0/include /Users/soliday/mpich-3.1.1/include )
+MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
 
 ifeq ($(MPI),1)
 all: madto_gpu.o elegant_gpu.o Pelegant_gpu.o
@@ -95,7 +95,7 @@ HNAMES = gpu_base.h \
 	 gpu_wake.h \
 	 printCudaDeviceProp.h
 
-CFLAGS = -O3 --gpu-architecture=sm_30 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS = -O3 --gpu-architecture=sm_52 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 #CFLAGS += --use_fast_math
 #CFLAGS += --fmad=true
 #CFLAGS += --fmad=false
@@ -182,15 +182,15 @@ mpi_gpu_verify.o: gpu_verify.cu $(HCUNAMES) $(HNAMES)
 
 
 madto_gpu.o: gpu_base.o gpu_matrix.o gpu_memory_management.o
-	$(NVCC) --gpu-architecture=sm_35 --device-link \
+	$(NVCC) --gpu-architecture=sm_52 --device-link \
 	        gpu_base.o gpu_matrix.o gpu_memory_management.o \
 	        --output-file madto_gpu.o -lcudadevrt -lcudart
 
 elegant_gpu.o: $(OBJNAMES)
-	$(NVCC) --gpu-architecture=sm_35 --device-link \
+	$(NVCC) --gpu-architecture=sm_52 --device-link \
 	        $(OBJNAMES) --output-file elegant_gpu.o -lcudadevrt -lcudart
 
 Pelegant_gpu.o: $(MPIOBJNAMES)
-	$(NVCC) --gpu-architecture=sm_35 --device-link \
+	$(NVCC) --gpu-architecture=sm_52 --device-link \
 	        $(MPIOBJNAMES) --output-file Pelegant_gpu.o -lcudadevrt -lcudart
 
