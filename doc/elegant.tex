@@ -858,6 +858,15 @@ Recommended value: ``\%s.kaf''.
     long center_on_orbit = 0;
     long verbosity = 0;
     long printout_order = 2;
+    long periodic = 1;
+    double beta_x = 1;
+    double alpha_x = 0;
+    double eta_x = 0;
+    double etap_x = 0;
+    double beta_y = 1;
+    double alpha_y = 0;
+    double eta_y = 0;
+    double etap_y = 0;
 &end
 \end{verbatim}
 
@@ -874,6 +883,9 @@ Recommended value: ``\%s.kaf''.
 \item \verb|center_on_orbit| --- A flag directing the expansion to be made about the closed orbit instead of the design orbit.
 \item \verb|verbosity| --- The larger this value, the more output is printed during computations.
 \item \verb|printout_order| --- Order of the matrix to be printed to the \verb|printout| file.
+\item \verb|periodic| --- If non-zero, system is assumed to be periodic and lattice functions, tunes, chromaticities, etc are computed.
+\item \verb|beta_x|, \verb|alpha_x|, \verb|eta_x|, \verb|etap_x|, \verb|beta_y|, \verb|alpha_y|, \verb|eta_y|, \verb|etap_y| ---
+  If \verb|periodic=0|, these are the starting values for the lattice functions.
 \end{itemize}
 
 %\begin{latexonly}
