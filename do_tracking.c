@@ -1732,7 +1732,7 @@ long do_tracking(
 	      if (beam && lostParticles!=beam->lost)
 		lostParticles = beam->lost;
 
-	      if (nMaximum<beam->n_to_track)
+	      if (beam && nMaximum<beam->n_to_track)
 		nMaximum = beam->n_to_track;
 #if !USE_MPI
 	      if (((SCRIPT*)eptr->p_elem)->verbosity>3)
