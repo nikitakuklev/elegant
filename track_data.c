@@ -2609,7 +2609,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
 BRAT brat_example;
 PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.length), NULL, 0.0, 0, "length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.angle), NULL, 1.0, 0, "bending angle"},
+    {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.angle), NULL, 0.0, 0, "Nominal bending angle. Will be refined to match geometry specified by input/output and vertex coordinates"},
     {"FSE", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, 0, (long)((char*)&brat_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
