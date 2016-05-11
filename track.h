@@ -878,7 +878,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EVCOR  112
 #define T_EHVCOR  113
 #define T_BMAPXYZ 114
-#define N_TYPES   115
+#define T_BRAT 115
+#define N_TYPES   116
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1000,6 +1001,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 8
 #define N_EHVCOR_PARAMS 10
 #define N_BMAPXYZ_PARAMS 5
+#define N_BRAT_PARAMS 16
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2714,6 +2716,20 @@ typedef struct {
   double ymin, ymax, dy;
   double zmin, zmax, dz;
 } BMAPXYZ;
+
+extern PARAMETER brat_param[N_BRAT_PARAMS];
+typedef struct {
+  double length, angle, fse, accuracy;
+  char *method, *filename;
+  double xVertex, zVertex;
+  double xEntry, zEntry;
+  double xExit, zExit;
+  double dxMap, dzMap;
+  double yawMap;
+  double fieldFactor;
+  /* these are set by the program when the file is read */
+  long initialized, dataIndex;
+} BRAT;
 
 /* names and storage structure for CHARGE element */
 extern PARAMETER charge_param[N_CHARGE_PARAMS];

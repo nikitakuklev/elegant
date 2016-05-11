@@ -762,7 +762,7 @@ void free_elements(ELEMENT_LIST *elemlist)
           free(((BMAPXYZ*)eptr->p_elem)->Fx);
           free(((BMAPXYZ*)eptr->p_elem)->Fy);
           free(((BMAPXYZ*)eptr->p_elem)->Fz);
-        }
+        } 
 #ifdef DEBUG
         fprintf(stdout, "pointers: p_elem = %x   name = %x   matrix = %x\n",
             eptr->p_elem, eptr->name, eptr->matrix);

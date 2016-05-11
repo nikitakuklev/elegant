@@ -64,7 +64,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
-    "EHKICK", "EVKICK", "EKICKER", "BMXYZ",
+    "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -186,7 +186,8 @@ char *entity_text[N_TYPES] = {
     "A horizontal steering dipole implemented using an exact hard-edge model",
     "A vertical steering dipole implemented using an exact hard-edge model",
     "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
-    "A map of (Bx, By, Bz) vs (x, y, z)",
+    "A map of (Bx, By, Bz) vs (x, y, z), for straight elements only",
+    "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z)."
     } ;
 
 QUAD quad_example;
@@ -2605,6 +2606,26 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
 };  
 
+BRAT brat_example;
+PARAMETER brat_param[N_BRAT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.length), NULL, 0.0, 0, "length"},
+    {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.angle), NULL, 1.0, 0, "bending angle"},
+    {"FSE", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&brat_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
+    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
+    {"XVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
+    {"ZVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
+    {"XENTRY", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
+    {"ZENTRY", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zEntry), NULL, 0.0, 0, "z coordinate of nominal entry point"},
+    {"XEXIT", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
+    {"ZEXIT", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
+    {"DXMAP", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.dxMap), NULL, 0.0, 0, "x displacement of map"},
+    {"DZMAP", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.dzMap), NULL, 0.0, 0, "z displacement of map"},
+    {"YAWMAP", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
+};  
+
 
 /* array of parameter structures */
 
@@ -2742,6 +2763,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_EVCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EVCOR),    evcor_param     }, 
     {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
     { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
+    { N_BRAT_PARAMS,     HAS_LENGTH,   sizeof(BRAT),  brat_param      },
 } ;
 
 void compute_offsets()
