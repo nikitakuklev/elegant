@@ -123,6 +123,8 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     long i, rows, idata;
     SDDS_DATASET SDDS_table;
     
+    xd = yd = zd = Bxd = Byd = Bzd = NULL;
+    
     /* See if we've read this file already---should use a hash table */
     for (i=0; i<nBrat3dData; i++) {
       if (strcmp(brat->filename, brat3dData[i].filename)==0)

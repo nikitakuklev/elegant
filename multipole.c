@@ -647,7 +647,7 @@ long multipole_tracking2(
   KQUSE *kquse;
   KOCT *koct;
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
-  double lEffective = -1, lEnd;
+  double lEffective = -1, lEnd = 0;
   short doEndDrift = 0;
   
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;

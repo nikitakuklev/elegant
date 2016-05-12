@@ -816,7 +816,7 @@ void shell_distribution(
 
   log_entry("shell_distribution");
 
-  dangle = 0;
+  dangle = angle = 0;
 #if !USE_MPI
   if (n_particles>0)
     dangle = PIx2/n_particles;
