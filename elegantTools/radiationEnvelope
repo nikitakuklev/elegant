@@ -28,13 +28,21 @@ set inputType(Brightness) $brightness
 set inputType(FluxDensity) $fluxDensity
 set inputType(TotalFlux) $totalFlux
 set inputType(PinholeFlux) $pinholeFlux
-set inputType(CentralConeFlux) $fluxDensity
 foreach name {Brightness FluxDensity TotalFlux PinholeFlux} {
     set input $inputType($name)
     if {[string length $input]} {
 	if {![file exists $input]} {
 	    return -code error "not found: $input"
 	}
+    }
+}
+set inputType(CentralConeFlux) ""
+if [string length $fluxDensity] {
+    exec sddsquery $fluxDensity -column -sddsOutput=$output.tmp1 -readAll
+    catch {exec sdds2stream -column=Name $output.tmp1} nameList
+    file delete -force $output.tmp1
+    if [string match *CentralConeFlux* [join $nameList ,]] {
+        set inputType(CentralConeFlux) $fluxDensity
     }
 }
 
