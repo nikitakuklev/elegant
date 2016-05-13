@@ -285,7 +285,7 @@ void track_through_frfmode(
       if (isSlave || !notSinglePart) { 
         double *buffer;
         buffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
-        MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
+        MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_LONG, MPI_SUM, workers);
         memcpy(Ihist+firstBin, buffer, sizeof(double)*(lastBin-firstBin+1));
         free(buffer);
       }

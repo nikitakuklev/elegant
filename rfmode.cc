@@ -198,8 +198,14 @@ void track_through_rfmode(
       rfmode->RaInternal = 2*rfmode->Rs;
 
     if (rfmode->n_bins>max_n_bins) {
+#ifdef DEBUG
+      printf("Allocating Ihist and Vbin to %ld bins, Ihist=%x, Vbin=%x\n", rfmode->n_bins, Ihist, Vbin);
+#endif
       Ihist = (long*)trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
       Vbin = (double*)trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
+#ifdef DEBUG
+      printf("Allocated Ihist and Vbin to %ld bins, Ihist=%x, Vbin=%x\n", max_n_bins, Ihist, Vbin);
+#endif
     }
 
     if (isSlave || !notSinglePart) {
@@ -511,6 +517,13 @@ void track_through_rfmode(
               firstBin = ib;
             n_binned++;
           }
+#if USE_MPI && MPI_DEBUG
+	  printf("Histogram Ihist has %ld  particles, %ld binned particles, firstBin=%ld, lastBin=%ld\n",
+		 np, n_binned, firstBin, lastBin);
+	  for (ib=firstBin; ib<=lastBin; ib++) 
+	    printf("Ihist[%ld] = %ld\n", ib, Ihist[ib]);
+#endif
+
           if (n_binned!=np) {
 #if USE_MPI
             dup2(fd,fileno(stdout)); 
@@ -612,22 +625,24 @@ void track_through_rfmode(
           if (isSlave || !notSinglePart) { 
             double *buffer;
             buffer = (double*)calloc(lastBin-firstBin+1, sizeof(double));
-            MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_DOUBLE, MPI_SUM, workers);
+            MPI_Allreduce(&Ihist[firstBin], buffer, lastBin-firstBin+1, MPI_LONG, MPI_SUM, workers);
             memcpy(Ihist+firstBin, buffer, sizeof(double)*(lastBin-firstBin+1));
             free(buffer);
           }
 #ifdef DEBUG
           printf("Summed histogram across processors\n");
           fflush(stdout);
+	  printf("%ld particles binned\n", n_binned);
+	  for (ib=firstBin; ib<=lastBin; ib++) 
+	    printf("%ld %ld\n", ib, Ihist[ib]);
+	  fflush(stdout);
 #endif
         }
 #else 
 #ifdef DEBUG
         printf("%ld particles binned\n", n_binned);
-        /*
         for (ib=firstBin; ib<=lastBin; ib++) 
           printf("%ld %ld\n", ib, Ihist[ib]);
-        */
         fflush(stdout);
 #endif
 #endif
@@ -639,6 +654,10 @@ void track_through_rfmode(
         VPrevious = rfmode->V;
         tPrevious = rfmode->last_t;
         phasePrevious = rfmode->last_phase;
+#ifdef DEBUG
+	printf("VPrevious = %le, tPrevious = %le, phasePrevious = %le, firstBin = %ld, lastBin = %ld\n",
+	       VPrevious, tPrevious, phasePrevious, firstBin, lastBin);
+#endif
 
         if (rfmode->driveFrequency>0) {
           /* compute generator voltage I and Q envelopes at bunch center */
