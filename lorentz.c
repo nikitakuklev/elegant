@@ -218,7 +218,6 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 /* minimum number of steps to take */
 #define N_INTERIOR_STEPS 100
 
-
 #ifdef DEBUG
 static FILE *fp_field = NULL;
 static long field_output_on = 1;
@@ -779,7 +778,8 @@ void lorentz_setup(
             tolerance = bmapxyz->accuracy;
 	    if (!bmapxyz->filename)
 	      bombElegant("Specify filename for BMXYZ", NULL);
-            bmapxyz_field_setup(bmapxyz);
+            if (!bmapxyz->points)
+              bmapxyz_field_setup(bmapxyz);
             break;
           default:
             bombElegant("invalid field type (lortenz_setup)", NULL);

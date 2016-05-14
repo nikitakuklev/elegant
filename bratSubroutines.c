@@ -92,6 +92,7 @@ static double xCenter, zCenter;
 #define OPTIMIZE_YAW       0x0040
 
 static long quiet=1;
+static long useFTABLE = 0;
 
 static short idealMode = 0, fieldMapDimension=2;
 static double idealB, idealChord, idealEdgeAngle;
@@ -317,6 +318,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
   
   integ_tol = brat->accuracy;
   zero_tol = integ_tol*10;
+  useFTABLE = brat->useFTABLE;
 
   for (ip=0; ip<np; ip++) {
     double accelCoord[6], q[10];
@@ -491,45 +493,147 @@ void BRAT_lorentz_integration(
   if (qptest[3]!=0 || qptest[4]!=0 || qptest[5]!=0)
     bomb("particle started inside the magnet!", NULL);
 
-  fill_long_array(accmode, n_eq, 2);
-  fill_double_array(tiny, n_eq, TOLERANCE_FACTOR);
-  fill_double_array(accuracy, n_eq, integ_tol);
-  fill_long_array(misses, n_eq, 0);
-
-  /* use adaptive integration */
-  s_start = 0;
-  s_end   = central_length*2;
-  hmax    = fabs(rhoMax*theta)/MIN_N_STEPS;
-  hrec    = hmax/10;
-  if (idealMode)
-    zEnd = 2*idealChord;
-  else
-    zEnd = zf + (zf-zi);
-  if ((exit_toler = sqr(integ_tol)*s_end)<central_length*TOLERANCE_FACTOR)
-    exit_toler = central_length*TOLERANCE_FACTOR;
-  switch (int_return = bs_odeint(q, BRAT_deriv_function, n_eq, accuracy,
-                                 accmode, tiny, misses,
-                                 &s_start, s_end, exit_toler, hrec, hmax, &hrec, BRAT_exit_function,
-                                 exit_toler, 0, doStoreData?BRAT_store_data:NULL)) {
-  case DIFFEQ_ZERO_STEPSIZE:
-  case DIFFEQ_CANT_TAKE_STEP:
-  case DIFFEQ_OUTSIDE_INTERVAL:
-  case DIFFEQ_XI_GT_XF:
-    printf("Integration failure---may be program bug\n");
-    exit(1);
-    break;
-  case DIFFEQ_END_OF_INTERVAL:
-    break;
-  default:
-    if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
-      bomb("warning: exit value of exceeds tolerance", NULL);
-    break;
-  }
+  if (!useFTABLE) {
+    fill_long_array(accmode, n_eq, 2);
+    fill_double_array(tiny, n_eq, TOLERANCE_FACTOR);
+    fill_double_array(accuracy, n_eq, integ_tol);
+    fill_long_array(misses, n_eq, 0);
+    
+    /* use adaptive integration */
+    s_start = 0;
+    s_end   = central_length*2;
+    hmax    = fabs(rhoMax*theta)/MIN_N_STEPS;
+    hrec    = hmax/10;
+    if (idealMode)
+      zEnd = 2*idealChord;
+    else
+      zEnd = zf + (zf-zi);
+    if ((exit_toler = sqr(integ_tol)*s_end)<central_length*TOLERANCE_FACTOR)
+      exit_toler = central_length*TOLERANCE_FACTOR;
+    switch (int_return = bs_odeint(q, BRAT_deriv_function, n_eq, accuracy,
+                                   accmode, tiny, misses,
+                                   &s_start, s_end, exit_toler, hrec, hmax, &hrec, BRAT_exit_function,
+                                   exit_toler, 0, doStoreData?BRAT_store_data:NULL)) {
+    case DIFFEQ_ZERO_STEPSIZE:
+    case DIFFEQ_CANT_TAKE_STEP:
+    case DIFFEQ_OUTSIDE_INTERVAL:
+    case DIFFEQ_XI_GT_XF:
+      printf("Integration failure---may be program bug\n");
+      exit(1);
+      break;
+    case DIFFEQ_END_OF_INTERVAL:
+      break;
+    default:
+      if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
+        bomb("warning: exit value of exceeds tolerance", NULL);
+      break;
+    }
 #ifdef DEBUG
-  fprintf(stderr, "final: q[0] = %e, q[1] = %e, q[2] = %e\n",
-          q[0], q[1], q[2]);
+    fprintf(stderr, "final: q[0] = %e, q[1] = %e, q[2] = %e\n",
+            q[0], q[1], q[2]);
 #endif
+  } else {
+    /* FTABLE mode */
+    double eomc, p0, factor;
+    double **A, xyz[3], step;
+    long ik, np, nKicks;
+    eomc = -particleCharge/particleMass/c_mks;
+    nKicks = useFTABLE;
+    step = (zf-zi)/nKicks;
+    A = (double**)czarray_2d(sizeof(double), 3, 3);
 
+#ifdef FTABLE_WORKING
+    for (ik=0; ik<nKicks; ik++) {
+      /* 1. get particle's coordinates */
+      coord = particle[ip];
+      factor = sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      p0 = (1.+coord[5])*Po;
+      p[2] = p0/factor;
+      p[0] = coord[1]*p[2];
+      p[1] = coord[3]*p[2];
+      
+      /* 2. get field at the middle point */
+      xyz[0] = coord[0] + p[0]/p[2]*step/2.0;
+      xyz[1] = coord[2] + p[1]/p[2]*step/2.0;
+      xyz[2] = s_location; 
+      interpolateFTable(B, xyz, ftable);
+      if (fpdebug) 
+        fprintf(fpdebug, "%ld 0 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+      BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
+      /* 3. calculate the rotation matrix */
+      A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
+      A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
+      A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
+      pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
+      /* When field not equal to zero or not parallel to the particles motion */
+      if (BA>ftable->threshold && pA) {
+        A[0][0] /= pA;
+        A[0][1] /= pA;
+        A[0][2] /= pA;
+        A[1][0] = B[0]/BA;
+        A[1][1] = B[1]/BA;
+        A[1][2] = B[2]/BA;
+        A[2][0] = A[0][1]*A[1][2]-A[0][2]*A[1][1];
+        A[2][1] = A[0][2]*A[1][0]-A[0][0]*A[1][2];
+        A[2][2] = A[0][0]*A[1][1]-A[0][1]*A[1][0];
+        
+        /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
+        pz0 = p[2];
+        rotate_coordinate(A, p, 0);
+        if (p[2] < 0)
+          bombElegant("Table function doesn't support particle going backward", NULL);
+        rotate_coordinate(A, B, 0);
+        
+        /* 5. apply kick */
+        rho = p[2]/(eomc*B[1]);
+        theta0=theta1=theta2=0.;
+        if (A[2][2]) {
+          tm_a =  3.0*A[0][2]/A[2][2];
+          tm_b = -6.0*A[1][2]*p[1]/p[2]/A[2][2]-6.0;
+          tm_c =  6.0*step/rho/A[2][2];
+#ifdef USE_GSL
+          gsl_poly_solve_cubic (tm_a, tm_b, tm_c, &theta0, &theta1, &theta2);
+#else
+          bombElegant("gsl_poly_solve_cubic function is not available becuase this version of elegant was not built against the gsl library", NULL);
+#endif
+        } else if (A[0][2]) {
+          tm_a = A[1][2]*p[1]/p[2]+A[2][2];
+          theta0 = (tm_a-sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
+          theta1 = (tm_a+sqrt(sqr(tm_a)-2.*A[0][2]*step/rho))/A[0][2];
+        } else {
+          tm_a = A[1][2]*p[1]/p[2]+A[2][2];          
+          theta0 = step/rho/tm_a;
+        }
+        theta=choose_theta(rho, theta0, theta1, theta2);
+        if (fpdebug) 
+          fprintf(fpdebug, "%ld 1 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+        
+        p[0] = -p[2]*sin(theta);
+        p[2] *= cos(theta);
+        xyz[0] = rho*(cos(theta)-1);
+        xyz[1] = (p[1]/p[2])*rho*theta;
+        xyz[2] = rho*sin(theta);
+        
+        /* 6. rotate back to (x,y,z) */
+        rotate_coordinate(A, xyz, 1);
+        rotate_coordinate(A, p, 1);
+        coord[0] += xyz[0];
+        coord[2] += xyz[1];
+        coord[4] += sqrt(sqr(rho*theta)+sqr(xyz[1]));
+        coord[1] = p[0]/p[2];
+        coord[3] = p[1]/p[2];
+      } else {
+        coord[0] += coord[1]*step;
+        coord[2] += coord[3]*step;
+        coord[4] += step*factor;         
+      }
+      s_location += step;
+    }
+#endif
+    /* convert back to (Z, X, Y, WZ, WX, WY) */
+  }
+  
+  
   /* convert back to accelerator coordinates */
   slope = (xVertex-xNomExit)/(zVertex-zNomExit);
   phi = -atan(slope);

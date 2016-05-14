@@ -1001,7 +1001,7 @@ extern char *entity_text[N_TYPES];
 #define N_EVCOR_PARAMS 8
 #define N_EHVCOR_PARAMS 10
 #define N_BMAPXYZ_PARAMS 5
-#define N_BRAT_PARAMS 16
+#define N_BRAT_PARAMS 17
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2727,6 +2727,7 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
+  long useFTABLE;
   /* these are set by the program when the file is read */
   long initialized, dataIndex;
 } BRAT;

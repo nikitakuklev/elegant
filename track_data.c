@@ -2612,7 +2612,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.angle), NULL, 0.0, 0, "Nominal bending angle. Will be refined to match geometry specified by input/output and vertex coordinates"},
     {"FSE", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&brat_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&brat_example.method), NULL, 0.0, 0, "Ignored. Method defaults to Bulirsch-Stoer."},
     {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
     {"XVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
     {"ZVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
@@ -2624,6 +2624,7 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
     {"DZMAP", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.dzMap), NULL, 0.0, 0, "z displacement of map"},
     {"YAWMAP", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
+    {"USE_FTABLE", "", IS_LONG, 0, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
 };  
 
 
