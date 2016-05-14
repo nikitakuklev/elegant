@@ -16,7 +16,7 @@
     double delta_dp = 5e-5;
     long center_on_orbit = 0;
     long verbosity = 0;
-    long n_points = 2;  /* backward compatibility. ignored */
+    long n_points = 3;  /* backward compatibility. ignored */
     long printout_order = 2;
     long periodic = 1;
     double beta_x = 1;
