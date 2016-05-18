@@ -48,6 +48,7 @@
         filename = <rootname>-correction.twi
 	matched = 1
 	radiation_integrals = 1
+        output_at_each_step = 1
 &end
 
 &moments_output
@@ -55,6 +56,7 @@
         equilibrium = 1,
         radiation = 1,
         filename = <rootname>-correction.mom
+        output_at_each_step = 1
 &end
 
 &steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
