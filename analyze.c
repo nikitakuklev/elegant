@@ -885,6 +885,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     switch (eptr->type) {
     case T_CSBEND:
       memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
+      if (sbend->etilt) {
+        nSlices = 1;
+      }
       csbend.isr = 0;
       csbend.angle /= nSlices;
       length = csbend.length /= nSlices;
@@ -912,6 +915,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       memset(&csbend, 0, sizeof(csbend));
       csbend.isr = 0;
       csbend.synch_rad = 1;
+      if (sbend->etilt) {
+        nSlices = 1;
+      }
       length = csbend.length = sbend->length/nSlices;
       csbend.angle = sbend->angle/nSlices;
       csbend.k1 = sbend->k1;
@@ -946,6 +952,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.integration_order = 4;
       break;
     case T_CSRCSBEND:
+      if (sbend->etilt) {
+        nSlices = 1;
+      }
       if (slice!=0)
         csbend.edge1_effects = 0;
       if (slice!=nSlices-1)
