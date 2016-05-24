@@ -46,6 +46,7 @@
         matched = 1,
         equilibrium = 1,
         radiation = 1,
+        output_at_each_step = 1
 &end
 
 &twiss_output
@@ -53,6 +54,7 @@
         filename = %s.twi
         concat_order = <order>
         radiation_integrals = 1
+        output_at_each_step = 1
 &end
 
 &steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
@@ -69,6 +71,7 @@
         closed_orbit_accuracy = 1e-9,
         fixed_length = 1
         prezero_correctors = 0
+        trajectory_output = <rootname>.orb
 &end
 
 &correction_matrix_output
