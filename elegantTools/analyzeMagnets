@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-beamCurrent <mA>] [-angleOffset <radians>] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
+set usage {usage: analyzeMagnets -rootname <string> [-H <T-m>] [-beamCurrent <mA>] [-angleOffset <radians>] [-latex 0] [-xls 0] [-caption <string>] [-useGroupData 1 | -groups <filename>]}
 set H 0
 set rootname ""
 set caption ""
@@ -15,8 +15,10 @@ set groups ""
 set beamCurrent 200.0
 set useGroupData 0
 set angleOffset 0.0
+set latex 1
+set xls 1
 set args $argv
-if {[APSStrictParseArguments {rootname H angleOffset caption useGroupData groups beamCurrent angleOffset}] || ![string length $rootname]} {
+if {[APSStrictParseArguments {rootname H xls latex angleOffset caption useGroupData groups beamCurrent angleOffset}] || ![string length $rootname]} {
     return -code error "$usage"
 }
 if {$useGroupData && [string length $groups]} {
@@ -73,6 +75,7 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
                 | sddscollapse -pipe \
                 | sddsxref -pipe $rootname.twi -match=ElementName -take=s \
                 | sddssort -pipe=in -column=s $paramFile.1} result] {
+        file delete $paramFile.nz $paramFile.1
         puts stderr "No results for $wc"
         continue
     }
@@ -99,14 +102,18 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
 	} else {
 	    set caption1 "$typeName data $caption"
 	}
-	exec sddsprintout -format=double=%10.3f $rootname-$type.sdds $rootname-$type.tex \
-             "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
-	    "-column=ElementName,label=Element Name" -column=Length -column=$parameter  -column=$grad -col=IdenticalCount,label=Count
-	# Don't insist on the XLS output, since -xls option isn't available on all systems
-	catch {file delete -force $rootname-$type.xls}
-        catch {exec sddsconvert $rootname-$type.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,$parameter,$grad,IdenticalCount \
-            -delete=param,* "-description=contents=$typeName magnet parameters,text=[pwd]/$rootname"  \
-            | sdds2spreadsheet -pipe=in -excel $rootname-$type.xls}
+        if $latex {
+            exec sddsprintout -format=double=%10.3f $rootname-$type.sdds $rootname-$type.tex \
+              "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
+              "-column=ElementName,label=Element Name" -column=Length -column=$parameter  -column=$grad -col=IdenticalCount,label=Count
+        }
+        if $xls {
+            # Don't insist on the XLS output, since -xls option isn't available on all systems
+            catch {file delete -force $rootname-$type.xls}
+            catch {exec sddsconvert $rootname-$type.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,$parameter,$grad,IdenticalCount \
+                     -delete=param,* "-description=contents=$typeName magnet parameters,text=[pwd]/$rootname"  \
+                     | sdds2spreadsheet -pipe=in -excel $rootname-$type.xls}
+        }
     }
     file delete $paramFile.nz $paramFile.1
 }
@@ -159,11 +166,13 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
   -process=Ide*,sum,%sTotal \
   -process=B,largest,BLargest -process=Length,min,%sMin -process=Length,max,%sMax \
 
-# Don't insist on the XLS output, since -xls option isn't available on all systems
-catch {file delete -force $rootname-B.xls}
-catch {exec sddsconvert $rootname-B.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,AngleDeg,rho,B,B1,B2,IdenticalCount \
-    -delete=param,* "-description=contents=Bend magnet parameters,text=[pwd]/$rootname"  \
-    | sdds2spreadsheet -pipe=in -excel $rootname-B.xls}
+if $xls {
+    # Don't insist on the XLS output, since -xls option isn't available on all systems
+    catch {file delete -force $rootname-B.xls}
+    catch {exec sddsconvert $rootname-B.sdds -pipe=out -retain=col,ElementName,PartOfElement,Length,AngleDeg,rho,B,B1,B2,IdenticalCount \
+             -delete=param,* "-description=contents=Bend magnet parameters,text=[pwd]/$rootname"  \
+             | sdds2spreadsheet -pipe=in -excel $rootname-B.xls}
+}
 
 set typeName Bend
 if ![string length $caption] {
@@ -171,10 +180,12 @@ if ![string length $caption] {
 } else {
     set caption1 "$typeName data $caption"
 }
-exec sddsprintout -format=double=%10.3f $rootname-B.sdds $rootname-B.tex \
-    "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
-    "-column=ElementName,label=Element Name" -column=Length "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 \
-    "-column=Ec,label=Critical energy" -column=IntegratedPowerDensity -column=PowerDensity -col=IdenticalCount,label=Count
+if $latex {
+    exec sddsprintout -format=double=%10.3f $rootname-B.sdds $rootname-B.tex \
+      "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
+      "-column=ElementName,label=Element Name" -column=Length "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 \
+      "-column=Ec,label=Critical energy" -column=IntegratedPowerDensity -column=PowerDensity -col=IdenticalCount,label=Count
+}
 
 file delete -force $paramFile.1 $rootname-B1 $rootname-B-K1 $rootname-B-K2
 
