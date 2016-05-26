@@ -25,7 +25,7 @@ ifeq ($(GPU),1)
 OP_SYS_CFLAGS+= -DHAVE_GPU -I../gpuElegant
 STATIC_BUILD=NO
 ifeq ($(VERIFY),1)
-P_SYS_CFLAGS+= -DGPU_VERIFY
+OP_SYS_CFLAGS+= -DGPU_VERIFY
 endif
 endif
 
