@@ -2,6 +2,11 @@ TOP=../../..
 include $(TOP)/configure/CONFIG
 include $(TOP)/configure/RULES
 
+SVN_VERSION=$(shell svnversion ..)
+ifeq ($(SVN_VERSION),)
+SVN_VERSION=unknown
+endif
+
 NVCC = /usr/local/cuda-7.5/bin/nvcc
 
 MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
@@ -61,6 +66,8 @@ MPIOBJNAMES = mpi_gpu_base.o \
 	mpi_gpu_wake.o \
 	mpi_printCudaDeviceProp.o
 
+MADTOOBJNAMES = gpu_base.o gpu_matrix.o gpu_memory_management.o
+
 HCUNAMES = gpu_fringe.hcu \
 	   gpu_interp.hcu \
 	   gpu_kahan.hcu \
@@ -95,16 +102,20 @@ HNAMES = gpu_base.h \
 	 gpu_wake.h \
 	 printCudaDeviceProp.h
 
-CFLAGS = -O3 --gpu-architecture=sm_52 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS = -O3 --gpu-architecture=sm_52 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -DSVN_VERSION=\"$(SVN_VERSION)\"
 #CFLAGS += --use_fast_math
 #CFLAGS += --fmad=true
 #CFLAGS += --fmad=false
 #CFLAGS += -DCUDA_DEVICE_COUNT=<count>
-#CFLAGS += -DGPU_VERIFY
-#OBJNAMES += gpu_verify.o
-#MPIOBJNAMES += mpi_gpu_verify.o
 #CFLAGS += -DDEBUG -DCUDA_DEBUG -DMPI_DEBUG -DDEBUG_APERTURE -DDEBUG_IGF
 #CFLAGS += -DDEBUG_FIDUCIALIZATION
+
+ifeq ($(VERIFY),1)
+CFLAGS += -DGPU_VERIFY
+OBJNAMES += gpu_verify.o
+MPIOBJNAMES += mpi_gpu_verify.o
+MADTOOBJNAMES += gpu_verify.o
+endif
 
 MPI_CFLAGS=-DUSE_MPI -DSDDS_MPI_IO -I$(MPI_INCLUDE)
 
@@ -181,10 +192,9 @@ mpi_gpu_verify.o: gpu_verify.cu $(HCUNAMES) $(HNAMES)
 	$(NVCC) $(CFLAGS) $(MPI_CFLAGS) --output-file mpi_gpu_verify.o gpu_verify.cu
 
 
-madto_gpu.o: gpu_base.o gpu_matrix.o gpu_memory_management.o
+madto_gpu.o: $(MADTOOBJNAMES)
 	$(NVCC) --gpu-architecture=sm_52 --device-link \
-	        gpu_base.o gpu_matrix.o gpu_memory_management.o \
-	        --output-file madto_gpu.o -lcudadevrt -lcudart
+	        $(MADTOOBJNAMES) --output-file madto_gpu.o -lcudadevrt -lcudart
 
 elegant_gpu.o: $(OBJNAMES)
 	$(NVCC) --gpu-architecture=sm_52 --device-link \
