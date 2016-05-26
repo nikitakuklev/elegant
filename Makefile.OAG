@@ -22,8 +22,11 @@ OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 
 ifeq ($(GPU),1)
-OP_SYS_CFLAGS+=-DHAVE_GPU -I../gpuElegant
+OP_SYS_CFLAGS+= -DHAVE_GPU -I../gpuElegant
 STATIC_BUILD=NO
+ifeq ($(VERIFY),1)
+P_SYS_CFLAGS+= -DGPU_VERIFY
+endif
 endif
 
 
@@ -589,6 +592,10 @@ Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.o \
 Pelegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
 endif
 
+ifeq ($(VERIFY),1)
+madto_OBJS += ../gpuElegant/gpu_verify.o
+elegant_OBJS += ../gpuElegant/gpu_verify.o
+endif
 
 
 madto_LIBS += $(GSLLIB)
