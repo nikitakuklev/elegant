@@ -78,7 +78,7 @@ endif
 
 ifneq ($(MPI),1)
 ifneq ($(NOMPI),1)
-PRODOAG = madto sddssasefel ibsEmittance
+PRODOAG = madto sddssasefel ibsEmittance abrat
 endif
 endif
 
@@ -524,6 +524,8 @@ madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_pat
                 insert_elements.c replace_elements.c bombElegant.c chbook.c sdds_support_common.c
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c bombElegant.c
+
+abrat_SRCS = abrat.c
 
 ibsEmittance_SRCS = ibsEmittance.c zibs.c bombElegant.c
 
