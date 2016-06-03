@@ -46,6 +46,7 @@ static double magnetYaw = 0;
 static double fieldFactor = 1;
 static long zDuplicate = 0;
 static double rhoMax = 0;
+static double fieldSign = 1;
 
 /* parameters for field calculation: */
 /* Bnorm is misnamed here, based on earlier versions of the program */
@@ -78,7 +79,6 @@ static double zStart, zEnd;            /* starting and ending point of integrati
 static double xNomEntry, zNomEntry;    /* coordinates of hard-edge entry */
 static double xNomExit, zNomExit;      /* coordinates of hard-edge exit */
 static double xVertex, zVertex;
-static double sfTarget;
 static double rigidity;
 static double xCenter, zCenter;
 
@@ -442,7 +442,7 @@ void BRAT_lorentz_integration(
   long misses[10], accmode[10];
   double accuracy[10], tiny[10];
   double hrec, hmax, dSds;
-  double s_start, s_end, exit_toler, ds, dx, dy, dz;
+  double s_start, s_end, exit_toler, ds, dx, dz;
   long int_return;
   double *w, *IF;
   double xStart, zStart, slope, phi;
@@ -534,9 +534,9 @@ void BRAT_lorentz_integration(
 #endif
   } else {
     /* FTABLE mode */
-    double eomc, p0, factor;
-    double **A, xyz[3], step;
-    long ik, np, nKicks;
+    double eomc;
+    double **A, step;
+    long  nKicks;
     eomc = -particleCharge/particleMass/c_mks;
     nKicks = useFTABLE;
     step = (zf-zi)/nKicks;
@@ -812,8 +812,8 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
   double x, z, B, xc, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck, yCheck;
   double *yd = NULL, *Bxd = NULL, *Byd = NULL, *Bzd = NULL;
   double Bmin, Bmax;
-  long ix0, ix1, iy0, iy1, iz0, iz1;
-  double dz0=0, dx0=0, dy0=0;
+  long ix0, ix1, iz0, iz1;
+  double dz0=0, dx0=0;
 
   if (!SDDS_InitializeInput(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
@@ -1141,7 +1141,7 @@ void BRAT_B_field(double *F, double *Qg)
       F[2] = 1;
     }
     for (j=0; j<3; j++)
-      F[j] *= 1+fse;
+      F[j] *= fieldSign*(1+fse);
     return;
   }
   if (arc_scan) {
@@ -1174,7 +1174,7 @@ void BRAT_B_field(double *F, double *Qg)
     fprintf(stderr, "s=%e, B=%e\n", s, F[2]);
 #endif
     for (j=0; j<3; j++)
-      F[j] *= 1+fse;
+      F[j] *= fieldSign*(1+fse);
     return ;
   }
 
@@ -1248,7 +1248,7 @@ void BRAT_B_field(double *F, double *Qg)
       F[1] = y*(dBnormdx[0][iz] + fz*(dBnormdx[0][iz+1]-dBnormdx[0][iz]));
     }
     for (j=0; j<3; j++)
-      F[j] *= 1+fse;
+      F[j] *= fieldSign*(1+fse);
     return;
   }
 
@@ -1335,7 +1335,7 @@ void BRAT_B_field(double *F, double *Qg)
   }
   
   for (j=0; j<3; j++)
-    F[j] *= 1+fse;
+    F[j] *= fieldSign*(1+fse);
 
 #ifdef DEBUG
   fprintf(stderr, "F[0] = %e, F[1] = %e, F[2] = %e, FSE = %e\n", F[0], F[1], F[2], fse);
