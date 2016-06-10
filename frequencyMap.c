@@ -138,7 +138,8 @@ long doFrequencyMap(
   long ix, iy, idelta, ip, turns;
   static double **one_part;
   double p;
-  long n_part;
+  long n_part, badPoint;
+  double diffusion, diffusionRate;
 #if USE_MPI
   double oldPercentage=0;
 #endif
@@ -239,6 +240,7 @@ long doFrequencyMap(
               fflush(fpd);
             }
 #endif
+            badPoint = 0;
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
 					  startingCoord, x, y, delta, turns, 0,
@@ -246,7 +248,11 @@ long doFrequencyMap(
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
 	      if (verbosity && !USE_MPI) 
 		fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
-	      continue;
+              badPoint = 1;
+              firstTune[0] = firstTune[1] = -1;
+              firstTune[1] = firstTune[1] = -1;
+              if (!full_grid_output)
+                continue;
 	    }
 	    if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
 				   IC_X, x, IC_Y, y, IC_DELTA, delta,
@@ -264,18 +270,27 @@ long doFrequencyMap(
                 fflush(fpd);
               }
 #endif
-	      memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
-	      if (!computeTunesFromTracking(secondTune, secondAmplitude,
-					    beamline->matrix, beamline, run,
-					    startingCoord, 0.0, 0.0, 0.0, turns, turns,
-					    0, endingCoord, NULL, NULL, 1, 1) || 
-		  secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
-		if (verbosity && !USE_MPI)
-		  fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
-		if (SDDS_fmap.n_rows) /* If the particle is lost, it will not show in the frequency map */ 
-		  SDDS_fmap.n_rows--;
-		continue;
-	      }
+              if (!badPoint) {
+                memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
+                if (!computeTunesFromTracking(secondTune, secondAmplitude,
+                                              beamline->matrix, beamline, run,
+                                              startingCoord, 0.0, 0.0, 0.0, turns, turns,
+                                              0, endingCoord, NULL, NULL, 1, 1) || 
+                    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
+                  if (verbosity && !USE_MPI)
+                    fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+                  secondTune[0] = secondTune[1] = -1;
+                  secondTune[1] = secondTune[1] = -1;
+                  diffusion = 0;
+                  if (!full_grid_output) {
+                    /* If the particle is lost, it will not show in the frequency map */ 
+                    if (SDDS_fmap.n_rows)
+                      SDDS_fmap.n_rows--;
+                    continue;
+                  }
+                } else
+                  diffusion = log10(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1]));
+              }
 	      if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
 				     IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
 				     IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
@@ -284,9 +299,9 @@ long doFrequencyMap(
 				     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
 				     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
 				     IC_DIFFUSION, 
-				     log10(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])),
+                                     diffusion,
 				     IC_DIFFUSION_RATE, 
-				     log10((sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1]))/turns),
+                                     diffusion/turns,
 				     -1)) {
 		SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

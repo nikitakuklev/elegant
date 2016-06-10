@@ -64,7 +64,7 @@ Here is a summary of what's changed since release 29.1:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Added the \verb|full_grid_output| parameter to the \verb|frequency_map| command.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -1969,6 +1969,8 @@ distance between the vertices.
     long ndelta = 1;
     long verbosity = 1;
     long include_changes = 0;
+    long quadratic_spacing = 0;
+    long full_grid_output = 0;
 &end
 \end{verbatim}
 
@@ -1994,6 +1996,11 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
   d = \log \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)
 \end{equation}
 Use of this feature results in a doubling of the number of turns tracked.
+\item \verb|quadratic_spacing| --- If non-zero, the spacing of points is quadratic rather than linear, thus emphasizing
+  the higher amplitude regions.
+\item \verb|full_grid_output| --- If non-zero, all grid points are represented in the output file, even if tracking or
+  tune determination failed. This makes it possible to plot with programs (e.g., \verb|sddscontour|) that require
+  a strictly uniform grid.
 \end{itemize}
 
 %\begin{latexonly}

@@ -19,5 +19,6 @@
     long verbosity = 1;
     long include_changes = 0;
     long quadratic_spacing = 0;
+    long full_grid_output = 0;
 #end
 
