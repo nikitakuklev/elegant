@@ -319,7 +319,7 @@ void accumulate_beam_sums(
   if (exactNormalizedEmittance) {
     pz = malloc(sizeof(double)*n_part);
     for (i=0; i<n_part; i++) 
-      pz[i] = p_central*(1+coord[i][5])*sqrt(1 + sqr(coord[i][1]) + sqr(coord[i][3]));
+      pz[i] = p_central*(1+coord[i][5])/sqrt(1 + sqr(coord[i][1]) + sqr(coord[i][3]));
   }
 
   if (!sums->n_part)
