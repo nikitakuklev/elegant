@@ -4957,6 +4957,9 @@ on subsequent pages.  Most programs will return a help message if the program na
 given with no arguments, which should be sufficient documentation and may be more
 up-to-date than these manual pages.
 \begin{itemize}
+\item {\tt abrat} --- A program to integrate particles through a 3D magnetic field map. The name 
+ stands for Asymmetric Bend RAy trace. This program uses the same method as the \verb|BRAT|
+ element in {\tt elegant}.
 \item {\tt analyzeMagnets} --- Generates SDDS and latex files giving magnet parameters.
   (Program by M. Borland.)
 \item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA \cite{ASTRA} to a binary
@@ -5009,6 +5012,8 @@ up-to-date than these manual pages.
   (Program by M. Borland.)
 \item {\tt impact2sdds} --- Translates IMPACT-T output files into SDDS for easier postprocessing.
   (Program by M. Borland.)
+\item {\tt ionTrapping} --- Uses lattice function data from {\tt elegant} to compute ion trapping condition in
+  a ring. (Program by M. Borland.)
 \item {\tt longitCalcs} --- Performs calculations of longitudinal dynamics parameters in storage rings,
   using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
   bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
@@ -5090,7 +5095,7 @@ up-to-date than these manual pages.
 \item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
   matrices for skew quadrupoles and to perform coupling correction using those matrices.
   (Program by M. Borland.)
-\item {tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
+\item {\tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
   (Program by A. Petrenko and M. Borland.)
 \end{itemize}
 
