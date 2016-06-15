@@ -7,9 +7,9 @@ signals from the pickup.
 A 15-term FIR filter can be defined using the {\tt A0} through {\tt
 A14} parameters.  The input to the filter is the turn-by-turn beam
 centroid at the pickup location.  The output of the filter is simply
-$\sum_{i=0}^{14} a_i C_i$, where $C_i$ is the position from $i*U$ turns
+$\sum_{i=0}^{14} a_i C_i$, where $C_i$ is the centroid from $i*U$ turns
 ago, where $U$ is the value specified by the \verb|UPDATE_INTERVAL| parameter.
-Note that $\sum_{i=0}^{14} a_i$ must be zero. Otherwise, the
+Note that $\sum_{i=0}^{14} a_i$ should generally be zero. Otherwise, the
 system will attempt to correct the DC orbit.  The output of the filter
 is the input to the driver element(s).
 
