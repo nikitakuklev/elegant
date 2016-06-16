@@ -3132,6 +3132,7 @@ extern void compute_sigmas(double *emit, double *sigma, double *centroid, double
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 #define BEAM_SUMS_SPARSE   0x0001UL
 #define BEAM_SUMS_NOMINMAX 0x0002UL
+#define BEAM_SUMS_EXACTEMIT 0x0004UL
 extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, double mp_charge,
 				 long startPID, long endPID, unsigned long flags);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);

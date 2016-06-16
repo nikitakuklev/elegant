@@ -483,6 +483,22 @@ void accumulate_beam_sums(
                           unsigned long flags
                           )
 {
+  /* The order of these calls must not be changed, since the second call uses results from the first */
+  accumulate_beam_sums1(sums, coord, n_part, p_central, startPID, endPID, flags);
+  if (exactNormalizedEmittance)
+    accumulate_beam_sums1(sums, coord, n_part, p_central, startPID, endPID, flags|BEAM_SUMS_EXACTEMIT|BEAM_SUMS_NOMINMAX);
+}
+
+void accumulate_beam_sums1(
+                          BEAM_SUMS *sums,
+                          double **coord,
+                          long n_part,
+                          double p_central, 
+			  double mp_charge,
+                          long startPID, long endPID,
+                          unsigned long flags
+                          )
+{
   long i_part, i, j;
   double centroid[7], *timeCoord;
   double value;
@@ -519,7 +535,7 @@ void accumulate_beam_sums(
   }
 #endif /* HAVE_GPU */
 
-  double buffer[7], Sij_p[28], Sij_total[28];
+  double buffer[7], Sij_p[28], Sij_total[28], *pz = NULL;
   long offset=0, index;  
 #ifdef USE_KAHAN
   double error_sum=0.0, error_total=0.0,
@@ -546,6 +562,12 @@ void accumulate_beam_sums(
   chosen = malloc(sizeof(short)*n_part);
   computeTimeCoordinatesOnly(timeCoord, p_central, coord, n_part);
 
+  if (flags&BEAM_SUMS_EXACTEMIT) {
+    pz = malloc(sizeof(double)*n_part);
+    for (i=0; i<n_part; i++)
+      pz[i] = p_central*(1+coord[i][5])/sqrt(1 + sqr(coord[i][1]) + sqr(coord[i][3]));
+  }
+
   if (!sums->n_part) 
     sums->p0 = p_central;
   for (i_part=npCount=0; i_part<n_part; i_part++) {
@@ -556,7 +578,7 @@ void accumulate_beam_sums(
       chosen[i_part] = 0;
   }
   if (active) {
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
       /* maximum amplitudes */
       for (i=0; i<6; i++) {
         if (i==4)
@@ -581,21 +603,29 @@ void accumulate_beam_sums(
       for (centroid[i]=i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
 #ifndef USE_KAHAN
-          centroid[i] += i<6 ? coord[i_part][i] : timeCoord[i_part];
+          if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3)) 
+            centroid[i] += coord[i_part][i]*pz[i];
+          else
+            centroid[i] += i<6 ? coord[i_part][i] : timeCoord[i_part];
 #else
-          centroid[i] = KahanPlus(centroid[i], i<6 ? coord[i_part][i] : timeCoord[i_part], &errorCen[i]); 
+          if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3)) 
+            centroid[i] = KahanPlus(centroid[i],  coord[i_part][i] * pz[i], &errorCen[i]); 
+          else
+            centroid[i] = KahanPlus(centroid[i], i<6 ? coord[i_part][i] : timeCoord[i_part], &errorCen[i]); 
 #endif
         }
       }
       if (!notSinglePart && npCount) {	
         /* single-particle mode and this process has a particle */
-        sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
+        if (!(flags&BEAM_SUMS_EXACTEMIT))
+          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
         centroid[i] /= npCount;
       } 
       if (notSinglePart && (parallelStatus!=trueParallel) && isMaster) {
         /* multi-particle mode and, but not true parallel mode, so master has the particles */
         if (npCount) {
-          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
+          if (!(flags&BEAM_SUMS_EXACTEMIT))
+            sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
           centroid[i] /= npCount;
         }
       }
@@ -631,7 +661,8 @@ void accumulate_beam_sums(
       MPI_Allreduce(&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if (npCount_total)
         for (i=0; i<7; i++) {
-          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount_total);
+          if (!(flags&BEAM_SUMS_EXACTEMIT))
+            sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount_total);
           centroid[i] /= npCount_total;
         }     
     }
@@ -645,7 +676,7 @@ void accumulate_beam_sums(
   if (active) {	        
     for (i_part=0; i_part<n_part; i_part++)
       timeCoord[i_part] -= centroid[6];
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
       i = 4;
       for (i_part=0; i_part<n_part; i_part++) {
         if (chosen[i_part]) {
@@ -671,7 +702,7 @@ void accumulate_beam_sums(
     }
   }
   
-  if (!(flags&BEAM_SUMS_NOMINMAX)) {
+  if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
     if (notSinglePart) {
       if (parallelStatus==trueParallel) {
         /* compute sums->maxabs over processors*/
@@ -702,7 +733,10 @@ void accumulate_beam_sums(
 #endif
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
           /* Only compute the diagonal blocks and dispersive correlations */
-          sums->sigma[j][i] = sums->sigma[i][j] = 0;
+          if (flags&BEAM_SUMS_EXACTEMIT)
+            sums->sigman[j][i] = sums->sigman[i][j] = 0;
+          else
+            sums->sigma[j][i] = sums->sigma[i][j] = 0;
           continue;
         }
 
@@ -715,7 +749,8 @@ void accumulate_beam_sums(
 #endif
             for (i_part=0; i_part<n_part; i_part++) {
               if (chosen[i_part]) {
-                b = ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part]));
+                b = ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
 #ifndef USE_KAHAN
                 Sij_p[index] += b;
 #else
@@ -732,28 +767,44 @@ void accumulate_beam_sums(
             for (Sij=i_part=0; i_part<n_part; i_part++) {
               if (chosen[i_part]) {
 #ifndef USE_KAHAN
-                Sij += ((i<6?coord[i_part][i]:timeCoord[i_part])-centroid[i])*((j<6?coord[i_part][j]:timeCoord[i_part])-centroid[j]);
+                Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]:timeCoord[i_part])-centroid[i])*
+                  ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]:timeCoord[i_part])-centroid[j]);
 #else
-                Sij = KahanPlus(Sij, ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
+                Sij = KahanPlus(Sij, 
+                                ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                                ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
 #endif
               }
             }
-            if (npCount) 
-              sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+            if (npCount) {
+              if (flags&BEAM_SUMS_EXACTEMIT)
+                /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
+                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
+              else
+                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+            }
           }
         }
         else { /* Single particle case */
           for (Sij=i_part=0; i_part<n_part; i_part++) {
             if (chosen[i_part]) {
 #ifndef USE_KAHAN
-              Sij += ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]:-centroid[j]timeCoord[i_part]));
+              Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]:-centroid[j]timeCoord[i_part]));
 #else
-              Sij = KahanPlus(Sij, ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
+              Sij = KahanPlus(Sij, 
+                              ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
+                              ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part])), &errorSig[j]); 
 #endif
             }
           }
-          if (n_part)
-            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+          if (n_part) {
+              if (flags&BEAM_SUMS_EXACTEMIT)
+                /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
+                sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount)+Sij)/sums->n_part);
+              else
+                sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+npCount));
+          }
         }
       }
     }
@@ -806,34 +857,43 @@ void accumulate_beam_sums(
           for (j=i; j<7; j++) {
             if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
               /* Only compute the diagonal blocks and dispersive correlations */
-              sums->sigma[j][i] = sums->sigma[i][j] = 0;
+              if (flags&BEAM_SUMS_EXACTEMIT)
+                sums->sigman[j][i] = sums->sigman[i][j] = 0;
+              else
+                sums->sigma[j][i] = sums->sigma[i][j] = 0;
               continue;
             }
             index = 6*i+j-offset;
-            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
+            if (flags&BEAM_SUMS_EXACTEMIT)
+                /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
+              sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount_total)+Sij_total[index])/sums->n_part);
+            else
+              sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
           }
         }
       }
     }
   }
 
-  sums->charge = mp_charge*npCount_total;
+  if (!(flags&BEAM_SUMS_EXACTEMIT)) {
+    sums->charge = mp_charge*npCount_total;
   
-  if (!notSinglePart)
-    sums->n_part += npCount; 
-  else if (!SDDS_MPI_IO) {
-    if (parallelStatus==trueParallel) 
-      sums->n_part += npCount_total;
-    else if (isMaster)
-      sums->n_part += npCount;
-  } else {
-    if (isMaster)
-      sums->n_part += npCount_total;
-    else
-      sums->n_part += npCount;
-    
+    if (!notSinglePart)
+      sums->n_part += npCount; 
+    else if (!SDDS_MPI_IO) {
+      if (parallelStatus==trueParallel) 
+        sums->n_part += npCount_total;
+      else if (isMaster)
+        sums->n_part += npCount;
+    } else {
+      if (isMaster)
+        sums->n_part += npCount_total;
+      else
+        sums->n_part += npCount;
+      
+    }
   }
-   
+  
 
 #ifdef USE_KAHAN
   free_czarray_2d((void**)sumMatrixCen, n_processors, 7); 
@@ -845,6 +905,8 @@ void accumulate_beam_sums(
 #endif
   free(timeCoord);
   free(chosen);
+  if (pz)
+    free(pz);
 }
 #endif
 
