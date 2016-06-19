@@ -45,7 +45,10 @@ Here is a summary of what's changed since release 29.1:
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item Fixed calculations of exact normalized emittance (error in equations) and implemented in parallel version.
+  This bug impacted results in the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
+  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version and
+  provided an example run that helped discover the problem with the serial version. 
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -64,13 +67,16 @@ Here is a summary of what's changed since release 29.1:
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|full_grid_output| parameter to the \verb|frequency_map| command.
+\item Added the \verb|full_grid_output| parameter to the \verb|frequency_map| command, making it possible to display 
+  frequency maps using \verb|sddscontour|.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
-\item None.
+\item Implemented exact normalized emittance calculations for the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
+  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version.
+\item Fixed bug in assignment of particle ID values when using Halton sequences in the \verb|bunched_beam| command.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -78,7 +84,8 @@ Here is a summary of what's changed since release 29.1:
 \begin{itemize}
 \item The program \verb|abrat| (``Asymmetric Bend RAy tracing'') was added. It allows tracking electrons through 2- and 3-D magnetic field maps.
   It is a commandline version of the \verb|BRAT| element.
-\item The script \verb|ionTrapping| was added, providing simple ion trapping calculations for uniform bunch trains.
+\item The script \verb|ionTrapping| was added, providing simple ion trapping calculations for uniform bunch trains. J. Calvey (APS) helped with
+  debugging.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
