@@ -318,7 +318,7 @@ void accumulate_beam_sums(
   
   if (exactNormalizedEmittance) {
     pz = malloc(sizeof(double)*n_part);
-    for (i=0; i<n_part; i++) 
+    for (i=0; i<n_part; i++)
       pz[i] = p_central*(1+coord[i][5])/sqrt(1 + sqr(coord[i][1]) + sqr(coord[i][3]));
   }
 
@@ -604,12 +604,12 @@ void accumulate_beam_sums1(
         if (chosen[i_part]) {
 #ifndef USE_KAHAN
           if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3)) 
-            centroid[i] += coord[i_part][i]*pz[i];
+            centroid[i] += coord[i_part][i]*pz[i_part];
           else
             centroid[i] += i<6 ? coord[i_part][i] : timeCoord[i_part];
 #else
           if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3)) 
-            centroid[i] = KahanPlus(centroid[i],  coord[i_part][i] * pz[i], &errorCen[i]); 
+            centroid[i] = KahanPlus(centroid[i],  coord[i_part][i] * pz[i_part], &errorCen[i]); 
           else
             centroid[i] = KahanPlus(centroid[i], i<6 ? coord[i_part][i] : timeCoord[i_part], &errorCen[i]); 
 #endif
