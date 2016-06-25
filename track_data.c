@@ -114,7 +114,7 @@ char *entity_text[N_TYPES] = {
     "A time-dependent kicker magnet with optional spatial dependence of the kick and no fringe effects. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1. The optional spatial dependence is also specified as an SDDS file.",
     "A canonical kick sextupole, which differs from the MULT element with ORDER=2 in that it can be used for chromaticity correction.",
     "A kick bending magnet which is NOT canonical, but is better than a 2nd order matrix implementation.  Use CSBEND instead.",
-    "A canonical kick quadrupole."
+    "A canonical kick quadrupole.",
     "An element that allows multiplication of phase-space coordinates of all particles by constants.",
     "An element that reduces the number of particles in the beam by interval-based or random sampling.",
     "A combined horizontal-vertical steering magnet implemented as a matrix, up to 2nd order. For time-dependent kickers, see BUMPER.",
