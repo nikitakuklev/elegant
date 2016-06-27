@@ -698,9 +698,11 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     /* Compute R[i][j] */
     for (j=0; j<6; j++) {
       /* j indexes the initial coordinate value */
+      /*
       if (n_points==2) 
         R[i][j] = (coord[2*j][i]-coord[2*j+1][i])/(2*stepSize[j]);
       else
+      */
         R[i][j] = 
           (27*(coord[2*j][i]-coord[2*j+1][i])-(coord[2*j+12][i]-coord[2*j+13][i]))/(48*stepSize[j]);
     }
