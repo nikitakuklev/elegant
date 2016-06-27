@@ -484,9 +484,9 @@ void accumulate_beam_sums(
                           )
 {
   /* The order of these calls must not be changed, since the second call uses results from the first */
-  accumulate_beam_sums1(sums, coord, n_part, p_central, startPID, endPID, flags);
+  accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
   if (exactNormalizedEmittance)
-    accumulate_beam_sums1(sums, coord, n_part, p_central, startPID, endPID, flags|BEAM_SUMS_EXACTEMIT|BEAM_SUMS_NOMINMAX);
+    accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags|BEAM_SUMS_EXACTEMIT|BEAM_SUMS_NOMINMAX);
 }
 
 void accumulate_beam_sums1(
@@ -876,22 +876,30 @@ void accumulate_beam_sums1(
   }
 
   if (!(flags&BEAM_SUMS_EXACTEMIT)) {
-    sums->charge = mp_charge*npCount_total;
   
-    if (!notSinglePart)
+    if (!notSinglePart) {
       sums->n_part += npCount; 
-    else if (!SDDS_MPI_IO) {
-      if (parallelStatus==trueParallel) 
-        sums->n_part += npCount_total;
-      else if (isMaster)
-        sums->n_part += npCount;
-    } else {
-      if (isMaster)
-        sums->n_part += npCount_total;
-      else
-        sums->n_part += npCount;
-      
+      sums->charge = mp_charge*npCount;
     }
+    else if (!SDDS_MPI_IO) {
+      if (parallelStatus==trueParallel) {
+        sums->n_part += npCount_total;
+        sums->charge = mp_charge*npCount_total;
+      }
+      else if (isMaster) {
+        sums->n_part += npCount;
+        sums->charge = mp_charge*npCount;
+      }
+    } else {
+      if (isMaster) {
+        sums->n_part += npCount_total;
+        sums->charge = mp_charge*npCount_total;
+      } else {
+        sums->n_part += npCount;
+        sums->charge = mp_charge*npCount;
+      }
+    }
+
   }
   
 
