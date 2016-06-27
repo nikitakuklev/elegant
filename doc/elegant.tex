@@ -63,6 +63,8 @@ Here is a summary of what's changed since release 29.1:
   zero, which can help ensure numerical stability.
 \item The \verb|FTABLE| element can accept the simple-to-create input files used by the \verb|BMXYZ| element in addition
   to the original input format.
+\item Results that depend on the transport matrix will show small changes for elements for which the matrix is determined by tracking.
+  The tracking-based method was modified to use a larger number of sample points, increasing the accuracy.
 \end{itemize}
 
 \subsection{New and Modified Commands}
