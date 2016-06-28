@@ -1438,7 +1438,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 #endif
   {
     if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-			    "Step", step, "Pass", pass, "Particles", particles, "pCentral", Po,
+			    "Step", step, "Pass", pass, "Particles", nChosen, "pCentral", Po,
 			    "PassLength", length, "Charge", charge,
 			    "PassCentralTime", t0, "s", z,
 			    NULL)) {
