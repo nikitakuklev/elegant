@@ -92,7 +92,7 @@ static char *option[N_OPTIONS] = {
     "3dfieldfile",
     } ;
 
-static char *USAGE = "brat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>} \n"
+static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>} \n"
 " [-3dFieldFile] [-zDuplicate] [-extendData[=edge-angle]] [-fieldSign={+|-}]\n"
 " [{-scan={x | xp | y | yp | delta},lower,upper,number | \n"
 " -beamFiles=<input>,<output> }]\n"
