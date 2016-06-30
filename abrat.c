@@ -105,7 +105,7 @@ static char *USAGE = "brat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<
 " [-fieldmapOutput=filename,zmin,zmax,nz,xmin,xmax,nx]\n"
 " [-tolerance=integration-tolerance]\n"
 " [-gap=<meters>] [-quiet]\n"
-" Integrates particle trajectories through a symmetric bending magnet.\n\n"
+" Integrates particle trajectories through a symmetric or asymmetric bending magnet.\n\n"
 " The data is in a SDDS-format file of (x, z, B), where x is parallel to\n"
 " the line through the center of the magnet and the center of curvature,\n"
 " and z is perpedicular to x.  The integration takes place in the (x, z) coordinate\n"
