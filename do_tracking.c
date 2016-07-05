@@ -4976,9 +4976,11 @@ double choose_theta(double rho, double x0, double x1, double x2)
     if (x0>0 && x0<temp) temp = x0;
     if (x1>0 && x1<temp) temp = x1;
     if (x2>0 && x2<temp) temp = x2;
-  } else 
+  } else {
+    fprintf(stderr, "choose_theta: rho = %21.15e, x0 = %21.15e,  x1 = %21.15e, x2 = %21.15e\n", rho, x0, x1, x2);
     bombElegant("rho = 0 in choose_theta (FTABLE). Seek expert help.", NULL);
-  
+  }
+
   return temp;
 }
 
