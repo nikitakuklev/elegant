@@ -49,6 +49,8 @@ Here is a summary of what's changed since release 29.1:
   This bug impacted results in the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
   output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version and
   provided an example run that helped discover the problem with the serial version. 
+\item The \verb|diffusionRate| output from the \verb|frequency_map| command is now computed as 
+$\log_{10} ((\Delta\nu_x^2+\Delta\nu_y^2)/n)$ instead of $(\log_{10} (\Delta\nu_x^2+\Delta\nu_y^2))/n$.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -5110,6 +5112,69 @@ up-to-date than these manual pages.
 
 %\begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|abrat|}\end{center}
+%\end{latexonly}
+\subsection{abrat}
+
+\begin{itemize}
+\item {\bf description:}  Integrates particle trajectories through an symmetric or asymmetric bending magnet.
+The name stands for "Asymmetric Bend RAy Tracing."
+Features include the ability to optimize the magnet strength and position to ensure, if possible, that the
+magnet joins two user-defined trajectories.
+The results of these optimizations can be used in {\tt elegant} with the \verb|BRAT| element.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+abrat {\em field-file} [-3dFieldFile] 
+ [{-scan={x | xp | y | yp | delta},lower,upper,number | -beamFiles={\em input},{\em output} }]
+ -vertex={\em x-in-meters},{\em z-in-meters} -nominalEntrance={\em x},{\em y} -nominalExit={\em x},{\em y}
+ -theta={\em targetInDegrees} -rigidity={\em Tesla-meters}
+ [-output=filename] [-fsc={\em value}] [-dxDipole={\em m}] [-dzDipole={\em m}] [-yawDipole={\em value}]
+ {[-optimize[=verbose][{fse,dx,dz,yaw}]]
+  -fseLimit={\em min},{\em max} -dxLimit={\em min},{\em max} -dzLimit={\em min},{\em max} -yawLimit={\em min},{\em max}}
+ [-fieldmapOutput={\em filename},{\em zmin},{\em zmax},{\em nz},{\em xmin},{\em xmax},{\em nx}]
+ [-tolerance=integration-tolerance]
+ [-quiet]
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\em field-file} --- Field map file. Normally, needs to contain columns \verb|x|, \verb|z|, and \verb|B|, giving the 
+field in the midplane. In 3D mode, when the \verb|-3dFieldFile| option is given, then the file should contain
+\verb|x|, \verb|y|, \verb|z|, \verb|Bx|, \verb|By|, and \verb|Bz|. 
+In all cases, the beam is assumed to move from left ($z<0$) to right ($z>0$) with the field bending counter clockwise.
+Positive \verb|x| is away from the center of curvature.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -3dFieldFile} --- If given, then {\em field-file} is expected to contain a 3D field map. See above for details.
+\item {\tt -scan} --- If given, then the value of the named accelerator coordinate is scanned to create a bundle of incoming rays. Output is provided for each  ray.
+\item {\tt -beamFiles } --- If given, then an {\tt elegant}-style beam is read and the particles therein are tracked through the dipole.
+A simular file is created for the output coordinates. Coordinates are defined at the nominal entrance and exit planes. Back-drifts are used to ensure that
+integration begins and ends outside the magnetic field region (i.e., all of the defined field is included).
+\item {\tt -output} --- If given, particle trajectories are written to the named file.
+\item {\tt -fsc} --- If given, the fractional strength change to apply to the field. Typically taken from a previous optimization run.
+\item {\tt -dxDipole} --- If given, the x positional change to apply to the field. A positive value moves the field away from the center of curvature.
+  Typically taken from a previous optimization run.
+\item {\tt -dzDipole} --- If given, the z positional change to apply to the field. A positive value moves the field further from the incoming beam.
+Typically taken from a previous optimization run.
+\item {\tt -yawDipole} --- If given, the yaw to apply to the field. A positive value rotates the magnet in the direction of bending.
+Typically taken from a previous optimization run.
+\item {\tt -optimize}, {\tt -fseLimit}, {\tt dxLimit}, {\tt dzLimit}, {\tt yawLimit} --- Invokes optimization of the various strength and alignment
+parameters and specifies the allow range of variation.
+\item {\tt -fieldMapOutput} --- Requests output of a field map, allowing confirmation of the input data.
+\item {\tt -tolerance} --- Integration tolerance.
+\item N.B.: The usage message describes additional switches that have had limited testing. Use with caution.
+\end{itemize}
+
+\item {\bf authors:} M. Borland (ANL/APS).
+
+\end{itemize}
+
+
+%\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|astra2elegant|}\end{center}
 %\end{latexonly}
 \subsection{astra2elegant}
@@ -5415,6 +5480,55 @@ would normally contain columns of growth rate contributions at equilibrium.
 \end{itemize}
 
 \item {\bf author:} A. Xiao, L. Emery, M. Borland, ANL/APS.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ionTrapping|}\end{center}
+%\end{latexonly}
+\subsection{ionTrapping}
+
+\begin{itemize}
+\item {\bf description:}   Computes ion trapping conditions using {\tt elegant} twiss parameter
+output as input.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+ionTrapping -twiss {\em filename} -superPeriods {\em number} -kappa {\em ratio} 
+-output {\em filename} -current {\em mA} -bunches {\em number}
+}\end{flushleft}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt twiss} --- Give the name of a Twiss output file from {\tt elegant}. It is advisable to subdivide the
+elements finely enough to get smooth representations of the lattice functions. The file should be computed the
+radiation integrals turned on, since the natural emittance and energy spread are needed.
+\item {\tt superPeriods} --- Give the number of superperiods of the basic cell described by the Twiss output file.
+\item {\tt kappa} --- Give the ratio $\epsilon_y/\epsilon_x$. The emittances are computed from $\epsilon_0$ using
+$\epsilon_x = \frac{\epsilon_0}{1 + \frac{J_y}{J_x}\kappa}$ and $\epsilon_y = \kappa \epsilon_x$. 
+\item {\tt output} --- Give the name of the output file. The file contains the information in the input file, with
+the following added elements, among others:
+\begin{itemize}
+\item Column {\tt Acrit} --- $A_{crit}(s)$ is defined as\cite{Bacconier-SPS80-2}
+\begin{equation}
+A_{crit}(s) = \frac{N_e r_p S_b}{2 \min (\sigma_x(s), \sigma_y(s)) (\sigma_x(s) + \sigma_y(s))},
+\end{equation}
+where $N_e$ number of electrons per bunch, $r_p$ is the classical proton radius, $S_b$ is the bunch separation in meters, 
+$\sigma_x(s)$ is the local horizontal rms beam size, and $\sigma_y(s)$ is the local vertical rms beam size.
+Any singly-ionized species with atomic mass greater than $A_{crit}$ will be trapped.
+\item Parameters {\tt ex}, {\tt ey} --- The horizontal and vertical emittances.
+\item Parameter {\tt AcritMin} --- Minimum value of $A_{crit}(s)$.
+\item Parameters {\em species}\verb|TrappedFraction|, where {\em species} is \verb|H2|,
+\verb|H2O|, \verb|CH4|, \verb|CO|, and \verb|CO2|. These give
+the fraction of the circumference over which ${\rm H_2}$, ${\rm H_2 O}$, ${\rm CH_4}$, ${\rm CO}$, and ${\rm CO_2}$, respectively, are
+trapped. 
+\end{itemize}
+\item {\tt current} --- Give the total beam current milliAmps.
+\item {\tt bunches} --- Give the number of bunches.
+\end{itemize}
+
+\item {\bf authors:} M. Borland (ANL/APS).
+
 \end{itemize}
 
 %\begin{latexonly}
@@ -6802,6 +6916,9 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 \bibitem{Chao-PRSTAB-111001}
   A. Chao {\em et al.}, ``Tune shifts of bunch trains due to resistive vacuum chambers without circular symmetry,''
   Phys. Rev. ST Accel. Beams, {\bf 5}, 111001 (2002).
+
+\bibitem{Bacconier-SPS80-2}
+Y. Bacconier and G. Brianti, CERN/SPS/80-2 (1980).
 
 \end{thebibliography}
 
