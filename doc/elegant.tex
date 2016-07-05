@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 29.2.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 30.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -33,7 +33,7 @@ A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Acceler
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 29.2}
+\section{Highlights of What's New in Version 30.0}
 
 Here is a summary of what's changed since release 29.1:
 
@@ -51,12 +51,19 @@ Here is a summary of what's changed since release 29.1:
   provided an example run that helped discover the problem with the serial version. 
 \item The \verb|diffusionRate| output from the \verb|frequency_map| command is now computed as 
 $\log_{10} ((\Delta\nu_x^2+\Delta\nu_y^2)/n)$ instead of $(\log_{10} (\Delta\nu_x^2+\Delta\nu_y^2))/n$.
+\item Fixed a bug in \verb|bunched_beam| whereby the centroids for a shell-type beam were offset from zero.
+  Reported by L. Emery (ANL).
+\item Fixed bug in \verb|moments_output| when bending magnts with non-zero \verb|ETILT| are present. When this occurs,
+the number of slices for moments calculation is set to 1 for those elements, to avoid numerical problems with the
+vertical orbit.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added the \verb|LEFFECTIVE| parameter for \verb|QUAD| and \verb|KQUAD|, which provides a convenient way
-  to change the effective length without changing the adjacent drift spaces.
+  to change the effective length without changing the adjacent drift spaces. Also added the ability to turn off
+  the linear fringe field effects while keeping the nonlinear part, and to multiply the nonlinear effects by
+  a numerical factor.
 \item Added the \verb|BMXYZ| element for straightforward integration through 3D field maps for straight elements.
 \item Added the \verb|BRAT| element, which is similar to \verb|BMXYZ| but accommodates curved elements. Elements may
   be asymmetric, e.g., longitudinal gradient dipoles.
@@ -90,6 +97,8 @@ $\log_{10} ((\Delta\nu_x^2+\Delta\nu_y^2)/n)$ instead of $(\log_{10} (\Delta\nu_
   It is a commandline version of the \verb|BRAT| element.
 \item The script \verb|ionTrapping| was added, providing simple ion trapping calculations for uniform bunch trains. J. Calvey (APS) helped with
   debugging.
+\item The script \verb|computeSCTuneSpread| was added to allow computation of space-charge tune spread.
+\item The script \verb|radiationEnvelope| now computes envelopes for central cone flux.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -2147,6 +2156,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
         long horizontal = 0;
         long nonlinear = 0;
 	long uniform_distribution = 0;
+        long verbosity = 0;
 &end
 \end{verbatim}
 
@@ -2166,6 +2176,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 included in the plane in question.
 \item \verb|uniform_distribution| --- Used for bi-Gaussian distributed beam (coasting beam), i.e., beam that is
   uniform in z but gaussian in x and y.
+\item \verb|verbosity| --- Larger non-zero values request greater amounts of detail in printouts.
 \end{itemize}
 
 {\bf Important notes:}
@@ -4984,6 +4995,7 @@ up-to-date than these manual pages.
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
   (Program by X. Dong.)
+\item {\tt computeSCTuneSpread} --- Compute space charge tune spread.
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
  (Program by Y. Wang, H. Shang, and M. Borland.)
