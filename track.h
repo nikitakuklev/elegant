@@ -3135,6 +3135,13 @@ extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 #define BEAM_SUMS_EXACTEMIT 0x0004UL
 extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, double mp_charge,
 				 long startPID, long endPID, unsigned long flags);
+extern void accumulate_beam_sums1(BEAM_SUMS *sums,
+                                  double **coord,
+                                  long n_part,
+                                  double p_central, 
+                                  double mp_charge,
+                                  long startPID, long endPID,
+                                  unsigned long flags);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 extern long computeSliceMoments(double C[6], double S[6][6], 
 			 double **part, long np, 
