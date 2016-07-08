@@ -1073,7 +1073,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   qx = (1+dp)*xp/denom;
   qy = (1+dp)*yp/denom;
 
-  if (steeringMultData) {
+  if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1166,7 +1166,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     return 0;
   }
 
-  if (steeringMultData) {
+  if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1267,7 +1267,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
   qy = (1+dp)*yp/denom;
 
-  if (steeringMultData) {
+  if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
       if (steeringMultData->KnL[imult])
@@ -1365,7 +1365,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     return 0;
   }
   
-  if (steeringMultData) {
+  if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
       if (steeringMultData->KnL[imult]) 
