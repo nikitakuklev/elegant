@@ -809,7 +809,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
 {
   SDDS_TABLE SDDS_table;
   long idata, ix, iz, rows;
-  double x, z, B, xc, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck, yCheck;
+  double x, z, B, xc, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck;
   double *yd = NULL, *Bxd = NULL, *Byd = NULL, *Bzd = NULL;
   double Bmin, Bmax;
   long ix0, ix1, iz0, iz1;
