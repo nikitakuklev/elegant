@@ -18,6 +18,7 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
 
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
+                                      MULTIPOLE_DATA *edgeMult,
                                       MULTIPOLE_DATA *randomMult,
                                       MULTIPOLE_DATA *steeringMult,
                                       double KmL, long rootOrder);

@@ -319,7 +319,7 @@ long fmultipole_tracking(
     }
 
     if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL,
+                                       1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL, NULL,
                                        &dummy, NULL, 0)) {
       is_lost = 1;
       break;
@@ -650,7 +650,7 @@ long multipole_tracking2(
   double lEffective = -1, lEnd = 0;
   short doEndDrift = 0;
   
-  MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
+  MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double K2L;
@@ -724,6 +724,8 @@ long multipole_tracking2(
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(kquad->systematicMultipoleData),
                              kquad->systematic_multipoles, 0);
+      readErrorMultipoleData(&(kquad->edgeMultipoleData),
+                             kquad->edge_multipoles, 0);
       readErrorMultipoleData(&(kquad->randomMultipoleData),
                              kquad->random_multipoles, 0);
       readErrorMultipoleData(&(kquad->steeringMultipoleData), 
@@ -733,12 +735,14 @@ long multipole_tracking2(
     if (!kquad->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
                                        &(kquad->systematicMultipoleData),
+                                       &(kquad->edgeMultipoleData),
                                        &(kquad->randomMultipoleData),
                                        &(kquad->steeringMultipoleData),
                                        KnL, 1);
       kquad->totalMultipolesComputed = 1;
     }
     multData = &(kquad->totalMultipoleData);
+    edgeMultData = &(kquad->edgeMultipoleData);
     steeringMultData = &(kquad->steeringMultipoleData);
     break;
   case T_KSEXT:
@@ -781,6 +785,7 @@ long multipole_tracking2(
     if (!ksext->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
                                        &(ksext->systematicMultipoleData),
+                                       NULL,
                                        &(ksext->randomMultipoleData),
                                        NULL,
                                        KnL, 2);
@@ -828,6 +833,7 @@ long multipole_tracking2(
     if (!koct->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
                                        &(koct->systematicMultipoleData),
+                                       NULL,
                                        &(koct->randomMultipoleData),
                                        NULL,
                                        KnL, 3);
@@ -945,7 +951,7 @@ long multipole_tracking2(
   if (doEndDrift) {
     exactDrift(particle, n_part, lEnd);
   }
-  
+
   /* Fringe treatment, if any */
   switch (elem->type) {
   case T_KQUAD:
@@ -956,7 +962,7 @@ long multipole_tracking2(
   default:
     break;
   }
-
+  
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -975,14 +981,14 @@ long multipole_tracking2(
          !integrate_kick_multipole_ord4(coord, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL,
                                         n_parts, drift, 
-                                        multData, steeringMultData,
+                                        multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
 					elem->type==T_KQUAD?kquad->radial:0)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL, 
                                         n_parts, drift,
-                                        multData, steeringMultData,
+                                        multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
 					elem->type==T_KQUAD?kquad->radial:0))) {
       swapParticles(particle[i_part], particle[i_top]);
@@ -1008,6 +1014,7 @@ long multipole_tracking2(
   default:
     break;
   }
+
   if (doEndDrift) {
     exactDrift(particle, n_part, lEnd);
   }
@@ -1033,6 +1040,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, 
+                                  MULTIPOLE_DATA *edgeMultData, 
                                   MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial) 
@@ -1091,6 +1099,23 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     yp = qy/denom;
   }
 
+  if (edgeMultData && edgeMultData->orders) {
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
+    yp = qy/denom;
+  }
+  
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_kicks; i_kick++) {
     if (drift) {
@@ -1166,6 +1191,23 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     return 0;
   }
 
+  if (edgeMultData && edgeMultData->orders) {
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
+    yp = qy/denom;
+  }
+
   if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
@@ -1222,7 +1264,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_parts, double drift,
-                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial) 
 {
@@ -1283,6 +1325,23 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
       return 0;
     }
     xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+    yp = qy/denom;
+  }
+
+  if (edgeMultData && edgeMultData->orders) {
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
     yp = qy/denom;
   }
 
@@ -1365,6 +1424,23 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     return 0;
   }
   
+  if (edgeMultData && edgeMultData->orders) {
+    for (imult=0; imult<edgeMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->KnL[imult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      edgeMultData->order[imult], 
+                                      edgeMultData->JnL[imult], 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
+    yp = qy/denom;
+  }
+
   if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
@@ -1529,6 +1605,7 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
 
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
+                                      MULTIPOLE_DATA *edgeMult,
                                       MULTIPOLE_DATA *randomMult,
                                       MULTIPOLE_DATA *steeringMult,
                                       double KmL, long rootOrder)
@@ -1566,6 +1643,12 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
            !(randomMult->KnL=SDDS_Malloc(sizeof(*randomMult->KnL)*randomMult->orders)) ||
            !(randomMult->JnL=SDDS_Malloc(sizeof(*randomMult->JnL)*randomMult->orders))))
         bombTracking("memory allocation failure (computeTotalMultipoleFields");
+      if (edgeMult && edgeMult->orders && 
+          (!(edgeMult->anMod=SDDS_Malloc(sizeof(*edgeMult->anMod)*edgeMult->orders)) ||
+           !(edgeMult->bnMod=SDDS_Malloc(sizeof(*edgeMult->bnMod)*edgeMult->orders)) ||
+           !(edgeMult->KnL=SDDS_Malloc(sizeof(*edgeMult->KnL)*edgeMult->orders)) ||
+           !(edgeMult->JnL=SDDS_Malloc(sizeof(*edgeMult->JnL)*edgeMult->orders))))
+        bombTracking("memory allocation failure (computeTotalMultipoleFields");
       if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
           !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
         bombTracking("memory allocation failure (computeTotalMultipoleFields)");
@@ -1573,6 +1656,12 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
         if (systematicMult->orders && randomMult->orders &&
             systematicMult->order[i]!=randomMult->order[i])
           bombTracking("multipole orders in systematic and random lists must match up for any given element.");
+        if (edgeMult && edgeMult->orders && randomMult->orders &&
+            edgeMult->order[i]!=randomMult->order[i])
+          bombTracking("multipole orders in edge and random lists must match up for any given element.");
+        if (edgeMult && edgeMult->orders && systematicMult->orders &&
+            edgeMult->order[i]!=systematicMult->order[i])
+          bombTracking("multipole orders in edge and systematic lists must match up for any given element.");
         if (systematicMult->orders) {
           totalMult->order[i] = systematicMult->order[i] ;
           systematicMult->anMod[i] = systematicMult->an[i]*dfactorial(systematicMult->order[i])/
@@ -1583,6 +1672,12 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
           totalMult->order[i] = randomMult->order[i];
           /* anMod and bnMod will be computed later for randomized multipoles */
         }
+        if (edgeMult && edgeMult->orders) {
+          edgeMult->anMod[i] = edgeMult->an[i]*dfactorial(edgeMult->order[i])/
+            ipow(edgeMult->referenceRadius, edgeMult->order[i]);
+          edgeMult->bnMod[i] = edgeMult->bn[i]*dfactorial(edgeMult->order[i])/
+            ipow(edgeMult->referenceRadius, edgeMult->order[i]);
+        }
       }
     }
   }
@@ -1590,7 +1685,8 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   if (randomMult->orders)
     randomizeErrorMultipoleFields(randomMult);
   
-  /* compute normal (KnL) and skew (JnL) from an and bn
+  /* body multipoles:
+   * compute normal (KnL) and skew (JnL) from an and bn
    * KnL = an*n!/r^n*(KmL*r^m/m!), 
    * JnL = bn*n!/r^n*(KmL*r^m/m!), where m is the root order 
    * of the magnet with strength KmL
@@ -1610,6 +1706,21 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       totalMult->JnL[i] += rFactor*randomMult->bnMod[i];
     }
   }
+
+  if (edgeMult && edgeMult->orders) {
+    /* edge multipoles: 
+     * compute normal (KnL) and skew (JnL) from an and bn
+     * KnL = an*n!/r^n*(KmL*r^m/m!), 
+     * JnL = bn*n!/r^n*(KmL*r^m/m!), where m is the root order 
+     * of the magnet with strength KmL
+     */
+    sFactor = KmL/dfactorial(rootOrder)*ipow(edgeMult->referenceRadius, rootOrder);
+    for (i=0; i<totalMult->orders; i++) {
+      edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
+      edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];
+    }
+  }
+  
   if (steeringMult) {
     /* same for steering multipoles, but compute KnL/theta and JnL/theta (in this case m=0) */
     for (i=0; i<steeringMult->orders; i++) {

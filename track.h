@@ -928,7 +928,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 42
+#define N_KQUAD_PARAMS 43
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1896,7 +1896,7 @@ typedef struct {
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
-    char *systematic_multipoles, *random_multipoles, *steering_multipoles;
+    char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder, isr, isr1Particle;
     long edge1_effects, edge2_effects;
     double lEffective;
@@ -1907,6 +1907,7 @@ typedef struct {
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA edgeMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;
     long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
@@ -3570,13 +3571,13 @@ extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipol
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);
 
