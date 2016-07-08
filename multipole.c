@@ -942,6 +942,10 @@ long multipole_tracking2(
   if (tilt)
     rotateBeamCoordinates(particle, n_part, tilt);
 
+  if (doEndDrift) {
+    exactDrift(particle, n_part, lEnd);
+  }
+  
   /* Fringe treatment, if any */
   switch (elem->type) {
   case T_KQUAD:
@@ -952,10 +956,7 @@ long multipole_tracking2(
   default:
     break;
   }
-  if (doEndDrift) {
-    exactDrift(particle, n_part, lEnd);
-  }
-  
+
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
