@@ -180,7 +180,7 @@ void track_through_rfmode(
       }
     }
     
-    if (rfmode->mp_charge==0) {
+    if (rfmode->mp_charge==0 && rfmode->voltageSetpoint==0) {
 #ifdef DEBUG
       printf("RFMODE: mp_charge=0, returning\n");
 #endif
@@ -359,8 +359,9 @@ void track_through_rfmode(
           }
           while (tmean>rfmode->fbNextTickTime) {
             /* Need to advance the generator phasors to the next sample time before handling this bunch */
-            double IgAmp, IgPhase, Vrl, Vil, omegaDrive, omegaRes, dt, Vgr, Vgi, Vbr, Vbi;
-            
+            double Vrl, Vil, omegaDrive, omegaRes, dt, Vgr, Vgi, Vbr, Vbi;
+            double IgAmp, IgPhase;
+
 #ifdef DEBUG
             printf("Advancing feedback ticks\n");
             fflush(stdout);
@@ -402,30 +403,68 @@ void track_through_rfmode(
             /* - Compute total voltage amplitude and phase */
             V = sqrt(Vrl*Vrl+Vil*Vil);
             phase = atan2(Vil, Vrl);
-            
-            /* Calculate updated generator amplitude and phase
-               - Compute errors for voltage amplitude and phase
-               - Run these through the IIR filters
-               - Add to nominal generator amplitude and phase
-            */
-            
-            IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
-              + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
-            IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
-              + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, rfmode->phaseg - phase);
-            if (rfmode->muteGenerator>=0) {
-              if (rfmode->muteGenerator==pass) {
-                printf("Generator muted for RFMODE %s on pass %ld\n", element_name, pass);
-                fflush(stdout);
+
+            if (rfmode->nAmplitudeFilters) {
+              /* amplitude/phase feedback */
+
+              /* Calculate updated generator amplitude and phase
+                 - Compute errors for voltage amplitude and phase
+                 - Run these through the IIR filters
+                 - Add to nominal generator amplitude and phase
+              */
+              
+              IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
+                + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
+              IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
+                + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, PI/180*rfmode->phaseSetpoint - 3*PI/2 - phase);
+
+              if (rfmode->muteGenerator>=0 && rfmode->muteGenerator<=pass) {
+                if (rfmode->muteGenerator==pass) {
+                  printf("Generator muted for RFMODE %s on pass %ld\n", element_name, pass);
+                  fflush(stdout);
+                }
                 IgAmp = 0;
-              } else if (rfmode->muteGenerator<pass) 
-                IgAmp = 0;
+              }
+              
+              /* Calculate updated I/Q components for generator current */
+              rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
+              rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+            } else {
+              /* I/Q feedback */
+              double VISetpoint, VQSetpoint; /* equivalent in-phase and quadrature setpoints */
+              double VI, VQ;
+              double phaseg;
+              double dII, dIQ;
+              
+              /* convert from V*sin(phi) to V*cos(phi) convention and account for fact that the
+               * feedback is performed in the nominally empty part of each bucket (i.e., 180 degrees before 
+               * the nominal beam phase)
+               */
+              phaseg = PI/180*rfmode->phaseSetpoint - 3*PI/2;
+              VISetpoint = rfmode->voltageSetpoint*cos(phaseg) + rfmode->V0*cos(rfmode->last_phase0);
+              VQSetpoint = rfmode->voltageSetpoint*sin(phaseg) + rfmode->V0*sin(rfmode->last_phase0);
+              
+              VI =  cos(omegaDrive*dt)*Vrl + sin(omegaDrive*dt)*Vil;
+              VQ = -sin(omegaDrive*dt)*Vrl + cos(omegaDrive*dt)*Vil;
+              rfmode->Iiq->a[0][0] = rfmode->Ig0->a[0][0] + (dII=applyIIRFilter(rfmode->IFilter, rfmode->nIFilters, rfmode->lambdaA*(VISetpoint-VI)));
+              rfmode->Iiq->a[1][0] = rfmode->Ig0->a[1][0] + (dIQ=applyIIRFilter(rfmode->QFilter, rfmode->nQFilters, rfmode->lambdaA*(VQSetpoint-VQ)));
+
+              if (rfmode->muteGenerator>=0 && rfmode->muteGenerator<=pass) {
+                if (rfmode->muteGenerator==pass) {
+                  printf("Generator muted for RFMODE %s on pass %ld\n", element_name, pass);
+                  fflush(stdout);
+                }
+                rfmode->Iiq->a[0][0] = rfmode->Iiq->a[1][0] = 0;
+              }
+              
+#ifdef DEBUG
+              printf("dII = %le, dIQ = %le\n", dII, dIQ);
+#endif
+              IgAmp = sqrt(sqr(rfmode->Iiq->a[0][0])+sqr(rfmode->Iiq->a[1][0]));
+              IgPhase = atan2(rfmode->Iiq->a[1][0], rfmode->Iiq->a[1][0]);
             }
             
-            /* Calculate updated I/Q components for generator current */
-            rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
-            rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
-
+            
             if (rfmode->feedbackRecordFile) {
 #if USE_MPI
               if (myid==1) {
@@ -1165,6 +1204,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->phaseg = PI/180*rfmode->phaseSetpoint - PI/2 - PI;
     rfmode->Viq->a[0][0] = rfmode->voltageSetpoint*cos(rfmode->phaseg) + rfmode->V*cos(rfmode->last_phase);
     rfmode->Viq->a[1][0] = rfmode->voltageSetpoint*sin(rfmode->phaseg) + rfmode->V*sin(rfmode->last_phase);
+    /* We'll need these later in I/Q mode feedback */
+    rfmode->V0 = rfmode->V;
+    rfmode->last_phase0 = rfmode->last_phase;
     
     /* Compute nominal generator current */
     QL = rfmode->Q/(1+rfmode->beta);
@@ -1185,11 +1227,25 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->fbLastTickTime = 0;
     
     /* Read FB filters */
-    rfmode->nAmplitudeFilters = rfmode->nPhaseFilters = 0;
+    rfmode->nAmplitudeFilters = rfmode->nPhaseFilters = rfmode->nIFilters = rfmode->nQFilters = 0;
     if (rfmode->amplitudeFilterFile && !(rfmode->nAmplitudeFilters=readIIRFilter(rfmode->amplitudeFilter, 4, rfmode->amplitudeFilterFile)))
       bombElegantVA((char*)"Error: problem reading amplitude filter file for RFMODE %s\n", element_name);
     if (rfmode->phaseFilterFile && !(rfmode->nPhaseFilters=readIIRFilter(rfmode->phaseFilter, 4, rfmode->phaseFilterFile))) 
       bombElegantVA((char*)"Error: problem reading phase filter file for RFMODE %s\n", element_name);
+    if (rfmode->IFilterFile && !(rfmode->nIFilters=readIIRFilter(rfmode->IFilter, 4, rfmode->IFilterFile)))
+      bombElegantVA((char*)"Error: problem reading I filter file for RFMODE %s\n", element_name);
+    if (rfmode->QFilterFile && !(rfmode->nQFilters=readIIRFilter(rfmode->QFilter, 4, rfmode->QFilterFile)))
+      bombElegantVA((char*)"Error: problem reading Q filter file for RFMODE %s\n", element_name);
+    if (rfmode->nAmplitudeFilters && !rfmode->nPhaseFilters)
+      bombElegantVA((char*)"Error: amplitude filters specified without phase filters for RFMODE %s\n", element_name);
+    if (!rfmode->nAmplitudeFilters && rfmode->nPhaseFilters)
+      bombElegantVA((char*)"Error: phase filters specified without amplitude filters for RFMODE %s\n", element_name);
+    if (rfmode->nIFilters && !rfmode->nQFilters)
+      bombElegantVA((char*)"Error: I filters specified without Q filters for RFMODE %s\n", element_name);
+    if (!rfmode->nIFilters && rfmode->nQFilters)
+      bombElegantVA((char*)"Error: Q filters specified without I filters for RFMODE %s\n", element_name);
+    if ((rfmode->nAmplitudeFilters+rfmode->nPhaseFilters)!=0 && (rfmode->nIFilters+rfmode->nQFilters)!=0)
+      bombElegantVA((char*)"Error: can't specify both amplitude/phase and I/Q feedback! RFMODE %s\n", element_name);
   }
    
 }

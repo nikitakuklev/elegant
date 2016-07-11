@@ -941,7 +941,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 61
 #define N_MATTER_PARAMS 16
-#define N_RFMODE_PARAMS 40
+#define N_RFMODE_PARAMS 42
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2312,6 +2312,7 @@ typedef struct {
     double phaseSetpoint;      /* desired total cavity phase, to be achieved by feedback */
     long updateInterval;       /* feedback update interval in buckets */
     char *amplitudeFilterFile, *phaseFilterFile;
+    char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;
     long muteGenerator;        /* if non-zero, generator output is muted */
     /* for internal use: */
@@ -2325,7 +2326,7 @@ typedef struct {
     double last_phase;         /* phase at t=last_t */
     double last_omega;         /* omega at t=last_t */
     double last_Q;             /* loaded Q at t=last_t */
-    /* generator-related data, see T. Berenc RF-TN-2015-001 */
+    /* generator- and feedback-related data, see T. Berenc RF-TN-2015-001 */
     double lambdaA;          /* 2/((Ra/Q)*Qloaded) */
     double Vg, phaseg, tg;   /* Used to determine the voltage and phase seen during the bunch passage according to Vg*cos(omega*(t-tg) + phaseg) */
     MATRIX *Viq;             /* (2x1) matrix giving I and Q components of generator voltage */
@@ -2334,9 +2335,12 @@ typedef struct {
     MATRIX *A, *B;           /* Berenc's matrices for evolution of the voltage, used between ticks*/
     MATRIX *At, *Bt;         /* Berenc's matrices for evolution of the voltage, used for particle bins */
     MATRIX *Mt1, *Mt2, *Mt3; /* temporary matrices for carrying out computations */
-    long nAmplitudeFilters, nPhaseFilters;
+    long nAmplitudeFilters, nPhaseFilters, nIFilters, nQFilters;
     IIRFILTER amplitudeFilter[4]; /* output of filters is summed */
     IIRFILTER phaseFilter[4];     /* output of filters is summed */
+    IIRFILTER IFilter[4]; /* output of filters is summed */
+    IIRFILTER QFilter[4];     /* output of filters is summed */
+    double V0, last_phase0;  /* needed for I/Q feedback */
     double fbLastTickTime;   /* time at which last FB tick occurred, adjusted when first bunch is seen */
     double fbNextTickTime;   /* time at which next FB tick will occur */
     double fbNextTickTimeError; /* Used with Kahan sum rule to reduce error */
