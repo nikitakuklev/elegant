@@ -1121,7 +1121,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       fref = ((int)(rfmode->freq*To+0.5))/To;
     psi = atan(2*(rfmode->freq-fref)/fref*(rfmode->Q/(1+rfmode->beta)));
     I = charge/To;
-    rfmode->V = I*rfmode->RaInternal/(1+rfmode->beta)*cos(psi);
+    rfmode->V = I*rfmode->RaInternal/(1+rfmode->beta)*cos(psi)*rfmode->preload_factor;
     rfmode->last_phase = psi-PI;
     fprintf(stdout, (char*)"RFMODE %s at z=%fm preloaded:  %eV at %fdeg \n",
             element_name, element_z, rfmode->V, rfmode->last_phase*180/PI);
