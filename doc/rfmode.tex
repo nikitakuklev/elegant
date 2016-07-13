@@ -14,3 +14,7 @@ Two output files are available: the \verb|RECORD| file includes bunch-by-bunch d
 The \verb|FEEDBACK_RECORD| file includes tick-by-tick data from the feedback system simulation; writing this file this can significantly impact performance.
 
 
+NB: when \verb|BUNCHED_BEAM_MODE| is set to a value other than 1, in order to obtain the effect of several bunches while tracking
+only one bunch, the total charge set with the \verb|TOTAL| parameter of the \verb|CHARGE| element should equal the charge in
+a single bunch, not the entire beam. However, when \verb|BUNCHED_BEAM_MODE|=1 (allowing an indeterminant number of bunches to be
+actually present), then \verb|TOTAL| should be the total for all bunches together.
