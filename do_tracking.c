@@ -1002,11 +1002,15 @@ long do_tracking(
               }
             }
             /* Only the slave CPUs will track */ 
-            if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) 
+            if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) {
+#ifdef HAVE_GPU
+	      coord = forceParticlesToCpu("track_particles");
+#endif
               track_particles(coord, eptr->matrix, coord, nToTrack);
-          }
-        }
-        else {
+	    }
+	  }
+	}
+	else {
           long type;
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             fprintf(stdout, "Tracking element: ");
@@ -1478,6 +1482,10 @@ long do_tracking(
 		saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
 		((CSRCSBEND*)eptr->p_elem)->isr = 0;
 	      }
+#ifdef HAVE_GPU
+	      //Using the GPU causes: Error: The beam is longer than the longitudinal wake function.
+	      coord = forceParticlesToCpu("track_through_csbendCSR");
+#endif
 	      nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND*)eptr->p_elem, 0.0,
 					      *P_central, accepted, last_z, z, charge, run->rootname);
 	      if (flags&TEST_PARTICLES)
@@ -1543,6 +1551,9 @@ long do_tracking(
               if (((KQUSE*)eptr->p_elem)->matrixTracking) {
                 if (!eptr->matrix)
                   eptr->matrix = compute_matrix(eptr, run, NULL);
+#ifdef HAVE_GPU
+		coord = forceParticlesToCpu("track_particles");
+#endif
                 track_particles(coord, eptr->matrix, coord, nToTrack);
               } else {
                 if (flags&TEST_PARTICLES) {
@@ -1618,6 +1629,9 @@ long do_tracking(
 		if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
 		  bombElegant("no matrix for element that must have matrix", NULL);
 	      }
+#ifdef HAVE_GPU
+	      coord = forceParticlesToCpu("track_particles");
+#endif
 	      track_particles(coord, eptr->matrix, coord, nToTrack);
 	      break;
 	    case T_MATTER:
@@ -1760,6 +1774,9 @@ long do_tracking(
 						eptr->end_theta, stray->order?stray->order:run->default_order,
 						*P_central, 
 						stray->Wi);
+#ifdef HAVE_GPU
+	      coord = forceParticlesToCpu("track_particles");
+#endif
 	      track_particles(coord, eptr->matrix, coord, nToTrack);
 	      break;
 	    case T_TFBDRIVER:
@@ -1865,6 +1882,9 @@ long do_tracking(
                          beamTwiss.betay, beamTwiss.alphay, beamTwiss.etay, beamTwiss.etapy);
                   fflush(stdout);
                 }
+#ifdef HAVE_GPU
+		coord = forceParticlesToCpu("track_particles");
+#endif
                 track_particles(coord, eptr->matrix, coord, nToTrack);
                 if (((TWISSELEMENT*)eptr->p_elem)->verbose) {
                   TWISS beamTwiss;
@@ -1893,8 +1913,12 @@ long do_tracking(
 		  bombElegant("no matrix for element that must have matrix", NULL);
 	      }
 	      /* Only the slave CPUs will track */ 
-	      if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) 
+	      if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0))) {
+#ifdef HAVE_GPU
+		coord = forceParticlesToCpu("track_particles");
+#endif
 		track_particles(coord, eptr->matrix, coord, nToTrack);
+	      }
 	      switch (type) {
 	      case T_HCOR:
 		if (((HCOR*)(eptr->p_elem))->synchRad)
@@ -1940,14 +1964,15 @@ long do_tracking(
 	if ((!USE_MPI || !notSinglePart ) || (USE_MPI && active)) {
 	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
             if (x_max || y_max) {
-              if (!elliptical) 
+              if (!elliptical) {
                 nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
                                          eptr->type==T_DRIF || eptr->type==T_STRAY,
                                          maxampOpenCode);
-              else
+              } else {
                 nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
                                           eptr->type==T_DRIF || eptr->type==T_STRAY,
                                           maxampOpenCode, maxampExponent, maxampYExponent);
+	      }
             }
             if (run->apertureData.initialized) 
               nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 
@@ -3058,6 +3083,9 @@ void drift_beam(double **part, long np, double length, long order)
   
   if (length) {
     M = drift_matrix(length, order);
+#ifdef HAVE_GPU
+    part = forceParticlesToCpu("track_particles");
+#endif
     track_particles(part, M, part, np);
     free_matrices(M);
     tfree(M);
@@ -3522,6 +3550,9 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
     return;
 #endif
   if (!matr) {
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, M, coord, np);
   } else {
     if (!matr->fiducialSeen) {
@@ -3547,6 +3578,9 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
     }
     for (i=0; i<np; i++)
       coord[i][4] -= matr->sReference;
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, M, coord, np);
     for (i=0; i<np; i++)
       coord[i][4] += matr->sReference;
@@ -3581,6 +3615,9 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
   if (!matr) {
     fprintf(stderr, "ematrix_element_tracking: matr=NULL, tracking with M (%ld order)\n",
             M->order);
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, M, coord, np);
   } else {
     if (!matr->fiducialSeen) {
@@ -3606,6 +3643,9 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
     }
     for (i=0; i<np; i++)
       coord[i][4] -= matr->sReference;
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, M, coord, np);
     for (i=0; i<np; i++)
       coord[i][4] += matr->sReference;
