@@ -455,6 +455,9 @@ void do_transport_analysis(
 
     /* check accuracy of matrix in reproducing coordinates */
     /* all processors do this for all particles, which shouldn't take much time */
+#ifdef HAVE_GPU
+    initialCoord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(initialCoord, M, initialCoord, n_track);
     for (k=0; k<6; k++) {
       sum2Difference = maxAbsDifference = 0;
@@ -1294,6 +1297,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname);
     break;
   case T_SBEN:
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, elem->matrix, coord, n_track);
     break;
   case T_KQUAD:
@@ -1317,6 +1323,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_VCOR:
   case T_HVCOR:
     matrix = compute_matrix(elem, run, NULL);
+#ifdef HAVE_GPU
+    coord = forceParticlesToCpu("track_particles");
+#endif
     track_particles(coord, matrix, coord, n_track);
     addCorrectorRadiationKick(coord, n_track, elem, elem->type, run->p_central, &sigmaDelta2, 1);
     free_matrices(matrix); free(matrix); matrix = NULL;
