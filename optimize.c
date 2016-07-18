@@ -1612,16 +1612,18 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, 
     };
 
-static char *radint_name[13] = {
+static char *radint_name[14] = {
     "ex0", "Sdelta0",
     "Jx", "Jy", "Jdelta",
     "taux", "tauy", "taudelta",
+    "U0",
     "I1", "I2", "I3", "I4", "I5",
   } ;
-static long radint_mem[13] = {
+static long radint_mem[14] = {
   -1, -1, 
   -1, -1, -1,
   -1, -1, -1,
+  -1,
   -1, -1, -1, -1, -1,
 } ;
 static char *floorCoord_name[7] = {
@@ -2031,7 +2033,7 @@ double optimization_function(double *value, long *invalid)
       fflush(optimization_data->fp_log);
     }
     if (radint_mem[0]==-1) {
-      for (i=0; i<13; i++)
+      for (i=0; i<14; i++)
         radint_mem[i] = rpn_create_mem(radint_name[i], 0);
     }
     /* radiation integrals already updated by update_twiss_parameters above
@@ -2046,8 +2048,9 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->radIntegrals.taux, NULL, radint_mem[5]);
     rpn_store(beamline->radIntegrals.tauy, NULL, radint_mem[6]);
     rpn_store(beamline->radIntegrals.taudelta, NULL, radint_mem[7]);
+    rpn_store(beamline->radIntegrals.Uo, NULL, radint_mem[8]);
     for (i=0; i<5; i++)
-      rpn_store(beamline->radIntegrals.RI[i], NULL, radint_mem[i+8]);
+      rpn_store(beamline->radIntegrals.RI[i], NULL, radint_mem[i+9]);
 #if DEBUG
     fprintf(stdout, "Radiation integrals stored.\n");
     fflush(stdout);
