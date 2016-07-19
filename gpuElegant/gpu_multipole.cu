@@ -29,6 +29,9 @@ __device__ __constant__ double multDataJnL[expansionOrderMax];
 __device__ __constant__ int32_t steeringMultDataOrder[expansionOrderMax];
 __device__ __constant__ double steeringMultDataKnL[expansionOrderMax];
 __device__ __constant__ double steeringMultDataJnL[expansionOrderMax];
+__device__ __constant__ int32_t edgeMultDataOrder[expansionOrderMax];
+__device__ __constant__ double edgeMultDataKnL[expansionOrderMax];
+__device__ __constant__ double edgeMultDataJnL[expansionOrderMax];
 __device__ __constant__ double d_coef[expansionOrderMax*expansionOrderMax];
 
 // Defined below
@@ -52,6 +55,8 @@ public:
   int multDataOrders; // set to -1 if no multData
   // From MULTIPOLE_DATA (*steeringMultData) 
   int steeringMultDataOrders; // set to -1 if no steeringMultData
+  // From MULTIPOLE_DATA (*edgeMultData) 
+  int edgeMultDataOrders; // set to -1 if no edgeMultData
   // From MULT_APERTURE_DATA (*apData)
   int present; 
   double xMax, xCen, yMax, yCen, srGaussianLimit;
@@ -62,14 +67,14 @@ public:
       double xkick, double ykick, double Po, double rad_coef, double isr_coef,
       double KnL, double drift, double z_start, int order, int sqrtOrder,
       int n_parts, int integ_order, int multDataOrders,
-      int steeringMultDataOrders, int present, double xMax, double xCen,
+      int steeringMultDataOrders, int edgeMultDataOrders, int present, double xMax, double xCen,
       double yMax, double yCen, int radial, double srGaussianLimit) :
     d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
     rad_coef(rad_coef), isr_coef(isr_coef), KnL(KnL), drift(drift),
     z_start(z_start), order(order), sqrtOrder(sqrtOrder), n_parts(n_parts), 
     integ_order(integ_order), multDataOrders(multDataOrders),
-    steeringMultDataOrders(steeringMultDataOrders), present(present),
+    steeringMultDataOrders(steeringMultDataOrders), edgeMultDataOrders(edgeMultDataOrders), present(present),
     xMax(xMax), xCen(xCen), yMax(yMax), yCen(yCen), radial(radial),
     srGaussianLimit(srGaussianLimit) {};
 
@@ -164,6 +169,25 @@ public:
       xp = qx/denom;
       yp = qy/denom;
     }
+    if (edgeMultDataOrders>=0) {
+      for (imult=0; imult<edgeMultDataOrders; imult++) {
+        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        edgeMultDataOrder[imult], 
+                                        edgeMultDataKnL[imult], 0);
+        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        edgeMultDataOrder[imult], 
+                                        edgeMultDataJnL[imult], 1);
+      }
+      // for numerical accuracy
+      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+      if (denom <= 0) return 0;
+      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      //  return 0;
+      //}
+      denom = EXSQRT(denom, sqrtOrder);
+      xp = qx/denom;
+      yp = qy/denom;
+    }
  
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -242,6 +266,26 @@ public:
         ((xMax && fabs(x + dx - xCen)>xMax) ||
          (yMax && fabs(y + dy - yCen)>yMax) )) {
       return 0;
+    }
+
+    if (edgeMultDataOrders>=0) {
+      for (imult=0; imult<edgeMultDataOrders; imult++) {
+        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        edgeMultDataOrder[imult], 
+                                        edgeMultDataKnL[imult], 0);
+        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        edgeMultDataOrder[imult], 
+                                        edgeMultDataJnL[imult], 1);
+      }
+      // for numerical accuracy
+      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+      if (denom <= 0) return 0;
+      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      //  return 0;
+      //}
+      denom = EXSQRT(denom, sqrtOrder);
+      xp = qx/denom;
+      yp = qy/denom;
     }
   
     /* apply steering corrector multipoles */
@@ -361,6 +405,27 @@ public:
       xp = qx/(denom=EXSQRT(denom, sqrtOrder));
       yp = qy/denom;
     }
+
+    if (edgeMultDataOrders>=0) {
+      for (imult=0; imult<edgeMultDataOrders; imult++) {
+        if (edgeMultDataKnL[imult])
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                          edgeMultDataOrder[imult], 
+                                          edgeMultDataKnL[imult], 0);
+        if (edgeMultDataJnL[imult]) 
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                          edgeMultDataOrder[imult], 
+                                          edgeMultDataJnL[imult], 1);
+      }
+      // for numerical accuracy
+      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+      if (denom <= 0) return 0;
+      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      //  return 0;
+      //}
+      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+      yp = qy/denom;
+    }
   
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -445,6 +510,28 @@ public:
       return 0;
     }
     
+
+    if (edgeMultDataOrders>=0) {
+      for (imult=0; imult<edgeMultDataOrders; imult++) {
+        if (edgeMultDataKnL[imult])
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                          edgeMultDataOrder[imult], 
+                                          edgeMultDataKnL[imult], 0);
+        if (edgeMultDataJnL[imult]) 
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                          edgeMultDataOrder[imult], 
+                                          edgeMultDataJnL[imult], 1);
+      }
+      // for numerical accuracy
+      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+      if (denom <= 0) return 0;
+      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      //  return 0;
+      //}
+      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+      yp = qy/denom;
+    }
+
     /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
@@ -524,8 +611,10 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   KQUSE *kquse = NULL;
   KOCT *koct = NULL;
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
+  double lEffective = -1, lEnd;
+  short doEndDrift = 0;
 
-  MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
+  MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double K2L;
@@ -545,12 +634,18 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     kquad = ((KQUAD*)elem->p_elem);
     n_kicks = kquad->n_kicks;
     order = 1;
+    if ((lEffective = kquad->lEffective)<=0)
+      lEffective = kquad->length;
+    else {
+      lEnd = (kquad->length-lEffective)/2;
+      doEndDrift = 1;
+    }
     if (kquad->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-      KnL = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*Po))*kquad->length*(1+kquad->fse);
+      KnL = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*Po))*lEffective*(1+kquad->fse);
     else
-      KnL = kquad->k1*kquad->length*(1+kquad->fse);
-    drift = kquad->length;
+      KnL = kquad->k1*lEffective*(1+kquad->fse);
+    drift = lEffective;
     tilt = kquad->tilt;
     dx = kquad->dx;
     dy = kquad->dy;
@@ -576,18 +671,25 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(kquad->systematicMultipoleData),
                              kquad->systematic_multipoles, 0);
+      readErrorMultipoleData(&(kquad->edgeMultipoleData),
+                             kquad->edge_multipoles, 0);
       readErrorMultipoleData(&(kquad->randomMultipoleData),
                              kquad->random_multipoles, 0);
       readErrorMultipoleData(&(kquad->steeringMultipoleData), 
                              kquad->steering_multipoles, 1);
       kquad->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
-                                     &(kquad->systematicMultipoleData),
-                                     &(kquad->randomMultipoleData),
-                                     &(kquad->steeringMultipoleData),
-                                     KnL, 1);
+    if (!kquad->totalMultipolesComputed) {
+	computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
+					 &(kquad->systematicMultipoleData),
+					 &(kquad->edgeMultipoleData),
+					 &(kquad->randomMultipoleData),
+					 &(kquad->steeringMultipoleData),
+					 KnL, 1);
+	kquad->totalMultipolesComputed = 1;
+    }
     multData = &(kquad->totalMultipoleData);
+    edgeMultData = &(kquad->edgeMultipoleData);
     steeringMultData = &(kquad->steeringMultipoleData);
     break;
   case T_KSEXT:
@@ -627,11 +729,15 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
                              ksext->random_multipoles, 0);
       ksext->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
-                                     &(ksext->systematicMultipoleData),
-                                     &(ksext->randomMultipoleData),
-                                     NULL,
-                                     KnL, 2);
+    if (!ksext->totalMultipolesComputed) {
+	computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
+					 &(ksext->systematicMultipoleData),
+					 NULL,
+					 &(ksext->randomMultipoleData),
+					 NULL,
+					 KnL, 2);
+	ksext->totalMultipolesComputed = 1;
+    }
     multData = &(ksext->totalMultipoleData);
     break;
   case T_KOCT:
@@ -671,11 +777,15 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
                              koct->random_multipoles, 0);
       koct->multipolesInitialized = 1;
     }
-    computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
-                                     &(koct->systematicMultipoleData),
-                                     &(koct->randomMultipoleData),
-                                     NULL,
-                                     KnL, 3);
+    if (!koct->totalMultipolesComputed) {
+	computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
+					 &(koct->systematicMultipoleData),
+					 NULL,
+					 &(koct->randomMultipoleData),
+					 NULL,
+					 KnL, 3);
+	koct->totalMultipolesComputed = 1;
+    }
     multData = &(koct->totalMultipoleData);
     break;
   case T_KQUSE:
@@ -795,10 +905,15 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (kquad->edge1_effects>0)
       //TODO quadFringe
       std::cout << "Implement gpu_quadFringe" << std::endl;
-      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects-1);
+      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects-1,kquad->edge1Linear, kquad->edge1NonlinearFactor);
     break;
   default:
     break;
+  }
+
+  if (doEndDrift) {
+    std::cout << "Implement gpu_exactDrift" << std::endl;
+    //exactDrift(particle, n_part, lEnd);
   }
 
   // Copy multData and steeringMultData to device
@@ -821,6 +936,17 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
         sizeof(steeringMultDataJnL)*steeringMultData->orders, 0,
         cudaMemcpyHostToDevice);
   }
+  if (edgeMultData) {
+    cudaMemcpyToSymbol(edgeMultDataOrder, edgeMultData->order, 
+        sizeof(edgeMultDataOrder)*edgeMultData->orders, 0,
+        cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(edgeMultDataKnL, edgeMultData->KnL, 
+        sizeof(edgeMultDataKnL)*edgeMultData->orders, 0,
+        cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(edgeMultDataJnL, edgeMultData->JnL, 
+        sizeof(edgeMultDataJnL)*edgeMultData->orders, 0,
+        cudaMemcpyHostToDevice);
+  }
 
   // Ensure expansionOrderMax is sufficiently large
   int maxorder = order;
@@ -831,6 +957,9 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (steeringMultData && steeringMultData->orders > iorder &&
         steeringMultData->order[iorder] > maxorder) 
       maxorder = steeringMultData->order[iorder];
+    if (edgeMultData && edgeMultData->orders > iorder &&
+        edgeMultData->order[iorder] > maxorder) 
+      maxorder = edgeMultData->order[iorder];
   }
   if (maxorder > expansionOrderMax-1) 
     bombTracking("gpu_multipole_tracking2: Error: increase expansionOrderMax");
@@ -873,7 +1002,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     gpu_multipole_tracking2_kernel(d_sortIndex, d_sigmaDelta2, state,
     dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL, drift, z_start, order,
     sqrtOrder, n_parts, integ_order, multData?multData->orders:-1, 
-    steeringMultData?steeringMultData->orders:-1, apertureData.present,
+    steeringMultData?steeringMultData->orders:-1, 
+    edgeMultData?edgeMultData->orders:-1, apertureData.present,
     apertureData.xMax, apertureData.xCen, apertureData.yMax,
     apertureData.yCen, elem->type==T_KQUAD?kquad->radial:0, srGaussianLimit));
   gpuErrorHandler("gpu_multipole_tracking2::gpu_multipole_tracking2_kernel");
@@ -889,12 +1019,17 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (kquad->edge2_effects>0)
       bombTracking("gpu_multipole_tracking2: quadFringe not implemented");
       //TODO quadFringe
-      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects-1);
+      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects-1,kquad->edge2Linear, kquad->edge2NonlinearFactor);
     break;
   default:
     break;
   }
   
+  if (doEndDrift) {
+    std::cout << "Implement gpu_exactDrift" << std::endl;
+    //exactDrift(particle, n_part, lEnd);
+  }
+
   if (tilt)
     gpu_rotateBeamCoordinates(n_part, -tilt);
   if (dx || dy || dz)
