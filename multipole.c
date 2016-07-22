@@ -1091,14 +1091,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       steeringMultData->order[imult], 
                                       steeringMultData->JnL[imult]*ykick/2, 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
-
   if (edgeMultData && edgeMultData->orders) {
     for (imult=0; imult<edgeMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1108,13 +1101,19 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
+  /* We must do this in case steering or edge multipoles were run. We do it even if not in order
+   * to avoid numerical precision issues that may subtly change the results
+   */
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    return 0;
+  }
+  denom = EXSQRT(denom, sqrtOrder);
+  xp = qx/denom;
+  yp = qy/denom;
+
   
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_kicks; i_kick++) {
@@ -1200,14 +1199,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
-
   if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
@@ -1218,15 +1210,15 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       steeringMultData->order[imult], 
                                       steeringMultData->JnL[imult]*ykick/2, 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      coord[0] = x;
-      coord[2] = y;
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    return 0;
+  }
+  denom = EXSQRT(denom, sqrtOrder);
+  xp = qx/denom;
+  yp = qy/denom;
 
   /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;
@@ -1321,13 +1313,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                         steeringMultData->order[imult], 
                                         steeringMultData->JnL[imult]*ykick/2, 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-    yp = qy/denom;
   }
-
   if (edgeMultData && edgeMultData->orders) {
     for (imult=0; imult<edgeMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1337,13 +1323,18 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
+  /* We must do this in case steering or edge multipoles were run. We do it even if not in order
+   * to avoid numerical precision issues that may subtly change the results
+   */
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    return 0;
+  }
+  denom = EXSQRT(denom, sqrtOrder);
+  xp = qx/denom;
+  yp = qy/denom;
 
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -1391,6 +1382,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         }
       }
       if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+        coord[0] = x;
+        coord[2] = y;
         return 0;
       }
       xp = qx/(denom=EXSQRT(denom, sqrtOrder));
@@ -1433,14 +1426,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      return 0;
-    }
-    denom = EXSQRT(denom, sqrtOrder);
-    xp = qx/denom;
-    yp = qy/denom;
   }
-
   if (steeringMultData && steeringMultData->orders) {
     /* apply steering corrector multipoles */
     for (imult=0; imult<steeringMultData->orders; imult++) {
@@ -1453,14 +1439,15 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                         steeringMultData->order[imult], 
                                         steeringMultData->JnL[imult]*ykick/2, 1);
     }
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      coord[0] = x;
-      coord[2] = y;
-      return 0;
-    }
-    xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-    yp = qy/denom;
   }
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    return 0;
+  }
+  denom = EXSQRT(denom, sqrtOrder);
+  xp = qx/denom;
+  yp = qy/denom;
 
   /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;

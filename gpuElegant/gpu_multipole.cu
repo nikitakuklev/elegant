@@ -149,7 +149,7 @@ public:
     qx = (1+dp)*xp/denom;
     qy = (1+dp)*yp/denom;
   
-    /* apply steering corrector multipoles */
+    /* apply steering and edge corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -159,15 +159,6 @@ public:
                                         steeringMultDataOrder[imult], 
                                         steeringMultDataJnL[imult]*ykick/2, 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      denom = EXSQRT(denom, sqrtOrder);
-      xp = qx/denom;
-      yp = qy/denom;
     }
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
@@ -178,16 +169,14 @@ public:
                                         edgeMultDataOrder[imult], 
                                         edgeMultDataJnL[imult], 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      denom = EXSQRT(denom, sqrtOrder);
-      xp = qx/denom;
-      yp = qy/denom;
     }
+    // Must do this if steering or edge multipoles applied. Do it anyways in order
+    // to avoid numerical discrepancies.
+    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+    if (denom <= 0) return 0;
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
+    yp = qy/denom;
  
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -268,6 +257,7 @@ public:
       return 0;
     }
 
+    /* apply edge and steering corrector multipoles */
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -277,18 +267,7 @@ public:
                                         edgeMultDataOrder[imult], 
                                         edgeMultDataJnL[imult], 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      denom = EXSQRT(denom, sqrtOrder);
-      xp = qx/denom;
-      yp = qy/denom;
     }
-  
-    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -298,16 +277,12 @@ public:
                                         steeringMultDataOrder[imult], 
                                         steeringMultDataJnL[imult]*ykick/2, 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      denom = EXSQRT(denom, sqrtOrder);
-      xp = qx/denom;
-      yp = qy/denom;
     }
+    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+    if (denom <= 0) return 0;
+    denom = EXSQRT(denom, sqrtOrder);
+    xp = qx/denom;
+    yp = qy/denom;
   
     /* apply steering corrector kick */
     xp += xkick/(1+dp)/2;
@@ -384,7 +359,7 @@ public:
     qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
     qy = (1+dp)*yp/denom;
   
-    /* apply steering corrector multipoles */
+    /* apply steering and edge corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         if (steeringMultDataKnL[imult])
@@ -396,16 +371,7 @@ public:
                                           steeringMultDataOrder[imult], 
                                           steeringMultDataJnL[imult]*ykick/2, 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-      yp = qy/denom;
     }
-
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         if (edgeMultDataKnL[imult])
@@ -417,15 +383,13 @@ public:
                                           edgeMultDataOrder[imult], 
                                           edgeMultDataJnL[imult], 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-      yp = qy/denom;
     }
+    // Must do this if steering or edge multipoles applied. Do it anyways in order
+    // to avoid numerical discrepancies.
+    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+    if (denom <= 0) return 0;
+    xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+    yp = qy/denom;
   
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -511,6 +475,7 @@ public:
     }
     
 
+    /* apply edge and steering corrector multipoles */
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         if (edgeMultDataKnL[imult])
@@ -522,17 +487,7 @@ public:
                                           edgeMultDataOrder[imult], 
                                           edgeMultDataJnL[imult], 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-      yp = qy/denom;
     }
-
-    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         if (steeringMultDataKnL[imult]) 
@@ -544,15 +499,11 @@ public:
                                           steeringMultDataOrder[imult], 
                                           steeringMultDataJnL[imult]*ykick/2, 1);
       }
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
-      yp = qy/denom;
     }
+    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
+    if (denom <= 0) return 0;
+    xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+    yp = qy/denom;
   
     /* apply steering corrector kick */
     xp += xkick/(1+dp)/2;
