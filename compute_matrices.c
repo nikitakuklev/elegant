@@ -164,7 +164,7 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
   return accumulate_matrices(elem, run, M0, order, 1);
 }
 
-VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices)
+VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices, long sliceEtilted)
 {
   VMATRIX *M1, *M2, *Ml1, *Ml2, *tmp;
   ELEMENT_LIST *member;
@@ -236,7 +236,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
        */
       if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA || member->type==T_TWLA)) {
         /* Must include radiation, so do tracking */
-        determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, order);
+        determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, sliceEtilted, order);
         memcpy(member->accumD, member->D, 21*sizeof(*(member->D)));
       } else if (member->type==T_SREFFECTS) {
         /* Must not use the matrix for these elements, as it may double-count radiation losses */

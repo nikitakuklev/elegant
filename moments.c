@@ -346,7 +346,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
 	     startingCoord[3], 
 	     startingCoord[4], 
 	     startingCoord[5]);
-    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, M1, 1, radiation, n_slices);
+    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, M1, 1, radiation, n_slices, slice_etilted);
     free_matrices(M1);
     free(M1);
     M1 = NULL;
@@ -354,7 +354,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   else {
     if (verbosity>1) 
       printf("Computing matrix without starting coordinates\n");
-    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, NULL, 1, radiation, n_slices);
+    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, NULL, 1, radiation, n_slices, slice_etilted);
   }
 
   if (verbosity>0) {

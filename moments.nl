@@ -15,6 +15,7 @@
     long equilibrium = 1;
     long radiation = 1;
     long n_slices = 10;
+    long slice_etilted = 1;
     double emit_x = 0;
     double beta_x = 0;
     double alpha_x = 0;
