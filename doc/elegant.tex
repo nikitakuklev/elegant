@@ -2602,6 +2602,7 @@ is modulated.
     long equilibrium = 1;
     long radiation = 1;
     long n_slices = 10;
+    long slice_etilted = 1;
     double emit_x = 0;
     double beta_x = 0;
     double alpha_x = 0;
@@ -2670,8 +2671,9 @@ on  \verb|CSBEND| at a miminum. If a closed orbit is present, making the same se
 the  \verb|KQUAD| and \verb|KSEXT| is also suggested. It is essential to do this if there is
 an rf frequency offset.
 \item When bending magnets are tilted, \verb|elegant| has problems computing the moments and
-closed orbit self-consistently. To address this, the \verb|n_slices| parameter is set to 1 for
-tilted bending magnets, which reduces the accuracy of the calculations.
+closed orbit self-consistently when the bending radius is small.  To address this, the \verb|n_slices| parameter is set to 1 for
+tilted bending magnets when \verb|slice_etilted=0|. This reduces the accuracy of the calculations.
+{\bf Users are strongly advised to check that this is acceptable.} 
 \end{itemize}
 
 %\begin{latexonly}
