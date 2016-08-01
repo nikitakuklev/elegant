@@ -3042,6 +3042,8 @@ where \verb|<statistic>| is \verb|min|, \verb|max|, \verb|ave|, \verb|p99|, \ver
 \verb|p96|.  \verb|p99| is the 99$^{th}$ pencentile value, a similarly for \verb|p98| and \verb|p96|.
 \item Tunes and chromaticities via symbols \verb|nux|, \verb|dnux/dp|, (and corresponding
 symbols for y).
+\item Chromatic derivatives of beta and alpha functions, via symbols
+\verb|dbetax/dp|, \verb|dbetay/dp|, \verb|dalphax/dp|, and \verb|dalphay/dp|.
 \item First- and second-order momentum compaction factors via symbols \verb|alphac| and \verb|alphac2|.  
 \item If radiation integral computation is requested,  one may use \verb|ex0| and \verb|Sdelta0| for
 the equilibrium emittance and momentum spread, plus \verb|J<plane>|
@@ -4677,6 +4679,8 @@ lattice as a whole.
   defined as $d^3\nu/d\delta^3$.  Will be zero if \verb|higher_order_chromaticity| is zero.
 \item {\tt dbetax/dp} and {\tt dbetay/dp} --- Chromatic derivatives of the horizontal and vertical beta functions,
 defined as $\frac{d\beta}{d\delta}$.
+\item {\tt dalphax/dp} and {\tt dalphay/dp} --- Chromatic derivatives of the horizontal and vertical alpha functions,
+defined as $\frac{d\alpha}{d\delta}$.
 \item {\tt etax2}, {\tt etax3}, {\tt etay2}, {\tt etay3} --- Higher order dispersion in the horizontal and
   vertical planes.  For example, for the horizontal plane, the closed orbit at the end of the lattice 
   depends on $\delta$ according to
