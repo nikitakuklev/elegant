@@ -1587,6 +1587,9 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
     randomMult->anMod[i] = randomMult->an[i]*nFactorial*rn1/rpow;
     randomMult->bnMod[i] = randomMult->bn[i]*nFactorial*rn2/rpow;
   }
+#ifdef DEBUG_RANDOMIZE
+  printf("randomized multipoles\n");
+#endif
   randomMult->randomized = 1;
 }
 

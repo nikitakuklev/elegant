@@ -852,7 +852,7 @@ char **argv;
       correction_setuped = 1;
       correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
       delete_phase_references();
-      reset_special_elements(beamline, RESET_INCLUDE_ALL);
+      reset_special_elements(beamline, RESET_INCLUDE_RF);
       reset_driftCSR();
       break;
     case SET_AWE_BEAM: 
@@ -1368,7 +1368,7 @@ char **argv;
           for (i=failed=0; i<correction_iterations; i++) {
             if (run_control.reset_rf_each_step)
               delete_phase_references();
-            reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_ALL:0);
+            reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
             runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0, 0);
             if (correction_iterations>1) {
               fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);

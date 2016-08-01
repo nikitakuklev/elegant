@@ -1712,7 +1712,7 @@ double optimization_function(double *value, long *invalid)
 
   /* assert variable values and store in rpn memories */
   delete_phase_references();
-  reset_special_elements(beamline, RESET_INCLUDE_ALL);
+  reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
 
   if (beamline->links && beamline->links->n_links)
     reset_element_links(beamline->links, run, beamline);

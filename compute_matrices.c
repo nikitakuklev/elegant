@@ -1461,7 +1461,6 @@ VMATRIX *magnification_matrix(MAGNIFY *magnif)
     return(M);
     }
 
-
 void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
 {
     ELEMENT_LIST *eptr;
@@ -1471,11 +1470,15 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
     log_entry("reset_special_elements");
     
     if (flags&RESET_INCLUDE_RF) {
-      /* printf("Resetting special rf elements\n"); */
+#ifdef DEBUG_RESET
+      printf("Resetting special rf elements\n");
+#endif
       includeRF = 1;
     }
     if (flags&RESET_INCLUDE_RANDOM) {
-      /* printf("Resetting special random elements\n"); */
+#ifdef DEBUG_RESET
+      printf("Resetting special random elements\n");
+#endif
       includeRandom = 1;
     }
     if (flags&RESET_INCLUDE_NIELEM)
@@ -1594,9 +1597,10 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
             }
         eptr = eptr->succ;
         }
-    /* printf("Special elements have been reset.\n");
-       fflush(stdout);
-    */
+#ifdef DEBUG_RESET
+    printf("Special elements have been reset.\n");
+    fflush(stdout);
+#endif
     log_exit("reset_special_elements");
     }
 

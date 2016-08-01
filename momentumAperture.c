@@ -950,7 +950,7 @@ long multiparticleLocalMomentumAcceptance(
     fflush(stdout);
   }
   delete_phase_references();
-  reset_special_elements(beamline, RESET_INCLUDE_ALL);
+  reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
   code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                      NULL, NULL, NULL, NULL, run, control->i_step, 
                      FIRST_BEAM_IS_FIDUCIAL+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
