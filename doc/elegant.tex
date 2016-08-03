@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 30.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 30.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -33,53 +33,35 @@ A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Acceler
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 30.0}
+\section{Highlights of What's New in Version 30.1}
 
-Here is a summary of what's changed since release 29.1:
+Here is a summary of what's changed since release 30.0
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed a memory leak in the \verb|FTABLE| element.
+\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
+  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed calculations of exact normalized emittance (error in equations) and implemented in parallel version.
-  This bug impacted results in the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
-  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version and
-  provided an example run that helped discover the problem with the serial version. 
-\item The \verb|diffusionRate| output from the \verb|frequency_map| command is now computed as 
-$\log_{10} ((\Delta\nu_x^2+\Delta\nu_y^2)/n)$ instead of $(\log_{10} (\Delta\nu_x^2+\Delta\nu_y^2))/n$.
-\item Fixed a bug in \verb|bunched_beam| whereby the centroids for a shell-type beam were offset from zero.
-  Reported by L. Emery (ANL).
-\item Fixed bug in \verb|moments_output| when bending magnts with non-zero \verb|ETILT| are present. When this occurs,
-the number of slices for moments calculation is set to 1 for those elements, to avoid numerical problems with the
-vertical orbit.
+\item Fixed a bug introduced in \verb|moments_output| computations when \verb|CSBEND| elements were present 
+  with non-zero values of \verb|ETILT|. Reported by V. Sajaev (ANL).
+\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
+  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|LEFFECTIVE| parameter for \verb|QUAD| and \verb|KQUAD|, which provides a convenient way
-  to change the effective length without changing the adjacent drift spaces. Also added the ability to turn off
-  the linear fringe field effects while keeping the nonlinear part, and to multiply the nonlinear effects by
-  a numerical factor.
-\item Added the \verb|BMXYZ| element for straightforward integration through 3D field maps for straight elements.
-\item Added the \verb|BRAT| element, which is similar to \verb|BMXYZ| but accommodates curved elements. Elements may
-  be asymmetric, e.g., longitudinal gradient dipoles.
-\item Added the \verb|FACTOR| and \verb|THRESHOLD| options to \verb|FTABLE|. The former allows multiplying the fields
-  by a user-defined factor. The latter allows specifying the magnitude of the field below which it is considered
-  zero, which can help ensure numerical stability.
-\item The \verb|FTABLE| element can accept the simple-to-create input files used by the \verb|BMXYZ| element in addition
-  to the original input format.
-\item Results that depend on the transport matrix will show small changes for elements for which the matrix is determined by tracking.
-  The tracking-based method was modified to use a larger number of sample points, increasing the accuracy.
+\item Added edge multipoles to \verb|KQUAD| element. This necessitated some rearrangement of the code, so results might be
+  slightly different even if this feature is not invoked.
+\item Added I/Q mode feedback to the \verb|RFMODE| element.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|full_grid_output| parameter to the \verb|frequency_map| command, making it possible to display 
-  frequency maps using \verb|sddscontour|.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
