@@ -154,7 +154,7 @@ void track_through_rfmode(
       }
       if (myid==1) {
 #endif
-      if (rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, rfmode->flush_interval)) {
+      if (rfmode->driveFrequency>0 && rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, rfmode->flush_interval)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE feedback record file");
       }
@@ -465,7 +465,7 @@ void track_through_rfmode(
             }
             
             
-            if (rfmode->feedbackRecordFile) {
+            if (rfmode->driveFrequency && rfmode->feedbackRecordFile) {
 #if USE_MPI
               if (myid==1) {
 #endif
@@ -1080,7 +1080,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
           SDDS_Bomb((char*)"problem setting up RFMODE record file");
         }
     }
-    if (rfmode->feedbackRecordFile) {
+    if (rfmode->driveFrequency>0 && rfmode->feedbackRecordFile) {
       rfmode->feedbackRecordFile = compose_filename(rfmode->feedbackRecordFile, run->rootname);
 #if (USE_MPI)
       if (myid == 1) 
