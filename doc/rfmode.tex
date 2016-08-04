@@ -1,9 +1,10 @@
 This element simulates a beam-driven monopole mode cavity using the fundamental theorem of beam loading and phasor rotation.
 In addition, a generator-driven field may be included using a feedback system \cite{Berenc-IPAC15-MOPMA006}.
 
-The feedback implementation uses amplitude and phase feedback.
-It is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when
-both \verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| are given. 
+The feedback implementation uses either amplitude and phase feedback or else in-phase and quadrature feedback.
+It is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
+\verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| or else
+\verb|IN_PHASE_FILTER| and \verb|QUADRATURE_FILTER| are given.
 More information is available in \cite{Berenc-IPAC15-MOPMA006}.
 
 Normally, the field dumped in the cavity by one particle affects trailing particles in the same turn.
@@ -11,8 +12,7 @@ However, if one is also using a \verb|WAKE| or \verb|ZLONGIT| element to simulat
 In that case, one can use \verb|LONG_RANGE_ONLY=1| to suppress the same-turn effects of the \verb|RFMODE| element.
 
 Two output files are available: the \verb|RECORD| file includes bunch-by-bunch data on the beam-induced fields and the total cavity fields.
-The \verb|FEEDBACK_RECORD| file includes tick-by-tick data from the feedback system simulation; writing this file this can significantly impact performance.
-
+The \verb|FEEDBACK_RECORD| file includes tick-by-tick data from the feedback system simulation; {\em writing this file this can significantly impact performance.}
 
 NB: when \verb|BUNCHED_BEAM_MODE| is set to a value other than 1, in order to obtain the effect of several bunches while tracking
 only one bunch, the total charge set with the \verb|TOTAL| parameter of the \verb|CHARGE| element should equal the charge in
