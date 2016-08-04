@@ -564,17 +564,19 @@ void track_through_rfmode(
 #endif
 
           if (n_binned!=np) {
+	    TRACKING_CONTEXT tcontext;
+	    getTrackingContext(&tcontext);
 #if USE_MPI
             dup2(fd,fileno(stdout)); 
-            printf("%ld of %ld particles outside of binning region in RFMODE. Consider increasing number of bins.\n", 
-                   np-n_binned, np);
+            printf("%ld of %ld particles outside of binning region in RFMODE %s #%ld. Consider increasing number of bins.\n", 
+                   np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
             printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
             fflush(stdout);
             close(fd);
             mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_RFMODE;
             MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
 #else 
-            bombElegant("some particles  outside of binning region in RFMODE. Consider increasing number of bins. Also, particleID assignments should be checked.", NULL);
+            bombElegantVA("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 #endif
           }
           V_sum = Vr_sum = phase_sum = Q_sum = Vg_sum = Vc_sum = phase_g_sum = 0;
