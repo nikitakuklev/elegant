@@ -1,0 +1,130 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)] || [string length $env(OAG_TOP_DIR)]==0} {
+    set env(OAG_TOP_DIR) /usr/local
+}
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
+
+set usage {usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number>\nHarmonic 2 is quadrupole, 3 is octupole, etc.}
+set args $argv
+set input ""
+set output ""
+set mainHarmonic -1
+set nHarmonics 3
+if {[APSStrictParseArguments {input output mainHarmonic nHarmonics}] || ![string length $input] || ![string length $output] || \
+    [expr $mainHarmonic<1] || [expr $nHarmonics<1]} {
+    return -code error "$usage"
+}
+
+set m0 $mainHarmonic
+set root $output 
+
+set pageList ""
+for {set n 0} {$n<$nHarmonics} {incr n} {
+    lappend pageList [expr 2*$m0*($n+1)-1]
+}
+
+# Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
+# each z value. 
+# Regroup so that each page is a different harmonic.
+exec sddssort $input -pipe=out -column=phi,incr \
+  | sddsprocess -pipe "-define=col,arc,i_row n_rows /" \
+  | sddsfft -pipe -fullOutput -nowarning -column=arc,Br \
+  | sddsregroup -pipe=in $root.fft -newparameter=f -newcolumn=z 
+
+set R [exec sddsconvert $input -topage=1 -pipe=out | sdds2stream -pipe -parameter=R]
+
+# Find normalized gradients for listed pages (harmonics):
+# Take FFT of BmR(z)
+# Reorganize so that the FFT is expressed over [-fMax, fMax]
+# Compute the fourier transform integrands for 9 generalized derivatives and their z derivatives
+# Take FFT (really an IFFT)
+# Reorganize so that the IFFT is expressed over [-zMax, zMax]
+# Perform some test sums to compute Br(z,R) and Bz(z,R) at R=0.01m
+exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
+    | sddsprocess -pipe \
+    "-define=col,BmRz,ImagFFTBr chs" \
+    "-define=parameter,m,i_page 2 * 1 - 2 *,type=short" \
+    | sddsfft -pipe -col=z,BmRz -full=unfolded \
+    | sddsprocess -pipe \
+    -process=f,max,fMax \
+    "-define=parameter,df,fMax n_rows 1 - /" \
+    "-redefine=column,f,i_row n_rows 2 / < ? i_row : i_row n_rows - $ df *" \
+    | sddssort -pipe -column=f \
+    | sddsprocess -pipe \
+    "-define=parameter,R,$R,units=m" \
+    "-define=column,k,f 2 * pi *" \
+    "-define=col,kR,k R *" \
+    "-define=col,ImpkR,kR abs 1e-16 + m 1 - BesIn kR abs 1e-16 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 : 1  $ * " \
+    "-define=col,dCms0,RealFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms2,RealFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms4,RealFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms6,RealFFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms8,RealFFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms10,RealFFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms12,RealFFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms14,RealFFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms16,RealFFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms0p,RealFFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms2p,RealFFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms4p,RealFFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms6p,RealFFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms8p,RealFFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms10p,RealFFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms12p,RealFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms14p,RealFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms16p,RealFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    | sddsfft -pipe -column=f,dC* -full=unfolded \
+    | sddsprocess -pipe \
+    -process=f,max,zMax \
+    "-define=parameter,dz,zMax n_rows 1 - /" \
+    "-define=column,z,i_row n_rows 2 / < ? i_row : i_row n_rows - $ dz *,units=m" \
+    | sddssort -pipe -column=z \
+    | sddsconvert -pipe -edit=column,*FFT*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
+    | sddsprocess -pipe=in $root.ggrad.full \
+    -rpndef=$env(RPN_DEFNS),alpha.rpn \
+    "-process=Cnm*,last,%sLast" \
+    "-redefine=col,%s,%s %sLast -,select=Cnm*" \
+    "-define=col,Br0,Cnm0 0  m alphalm * R m 1 - pow *" \
+    "-define=col,Br2,Cnm2 1  m alphalm * R m 1 + pow * Br0 +" \
+    "-define=col,Br4,Cnm4 2  m alphalm * R m 3 + pow * Br2 +" \
+    "-define=col,Br6,Cnm6 3  m alphalm * R m 5 + pow * Br4 +" \
+    "-define=col,Br8,Cnm8 4  m alphalm * R m 7 + pow * Br6 +" \
+    "-define=col,Br10,Cnm10 5  m alphalm * R m 9 + pow * Br8 +" \
+    "-define=col,Br12,Cnm12 6  m alphalm * R m 11 + pow * Br10 +" \
+    "-define=col,Br14,Cnm14 7  m alphalm * R m 13 + pow * Br12 +" \
+    "-define=col,Br16,Cnm16 8  m alphalm * R m 15 + pow * Br14 +" \
+    "-define=col,Br,Br16 chs pi 4 / m * sin *" \
+    "-define=col,Bz0,dCnm0/dz 0 m betalm * R m 0 + pow *" \
+    "-define=col,Bz2,dCnm2/dz 1 m betalm * R m 2 + pow * Bz0 +" \
+    "-define=col,Bz4,dCnm4/dz 2 m betalm * R m 4 + pow * Bz2 +" \
+    "-define=col,Bz6,dCnm6/dz 3 m betalm * R m 6 + pow * Bz4 +" \
+    "-define=col,Bz8,dCnm8/dz 4 m betalm * R m 8 + pow * Bz6 +" \
+    "-define=col,Bz10,dCnm10/dz 5 m betalm * R m 10 + pow * Bz8 +" \
+    "-define=col,Bz12,dCnm12/dz 6 m betalm * R m 12 + pow * Bz10 +" \
+    "-define=col,Bz14,dCnm14/dz 7 m betalm * R m 14 + pow * Bz12 +" \
+    "-define=col,Bz16,dCnm16/dz 8 m betalm * R m 16 + pow * Bz14 +" \
+    "-define=col,Bz,Bz16 chs pi 4 / m * sin *"
+
+
+# Extract only the data needed for use with elegant's BGGEXP element
+exec sddsconvert $root.ggrad.full $root.ggrad \
+    -retain=column,z,dCnm*/dz,Cnm* -retain=parameter,m
+
+# Sum over all harmonics
+exec sddsenvelope $root.ggrad.full $root.ggrad.env -copy=z -sum=1,Br,Bz 
+
+# Extract some data from the cylinder file
+set pi [expr 4*atan(1)]
+exec sddsprocess $input -pipe=out -filter=col,phi,[expr $pi/4.1],[expr $pi/3.9] \
+    | sddsexpand -pipe | sddscollapse -pipe=in $root.ref
+
+# Compare original data and reconstructed data
+exec sddsplot -graph=line,vary -col=z,Br $root.ref -col=z,BrSum -factor=ym=-1 $root.ggrad.env -end \
+    -col=z,Bz $root.ref -col=z,BzSum -factor=ym=-1 $root.ggrad.env &
+
+
