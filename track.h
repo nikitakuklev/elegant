@@ -1001,9 +1001,9 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 8
 #define N_EVCOR_PARAMS 8
 #define N_EHVCOR_PARAMS 10
-#define N_BMAPXYZ_PARAMS 5
+#define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 7
+#define N_BGGEXP_PARAMS 8
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2700,7 +2700,7 @@ typedef struct {
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
 
 typedef struct {
-  double length, strength, accuracy;
+  double length, fieldLength, strength, accuracy;
   char *method, *filename;
   char *FxRpn, *FyRpn;
   /* these are set by the program when the file is read */
@@ -2714,7 +2714,7 @@ typedef struct {
 extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
 
 typedef struct {
-  double length, strength, accuracy;
+  double length, fieldLength, strength, accuracy;
   char *method, *filename;
   /* these are set by the program when the file is read */
   long points, nx, ny, nz, BGiven;
@@ -2743,11 +2743,12 @@ typedef struct {
 extern PARAMETER bggexp_param[N_BGGEXP_PARAMS];
 
 typedef struct {
-  double length;       /* for floor coorindates, s coordinate, etc */
-  char *filename;      /* filename for generalized gradients vs z */
-  double strength;     /* multiply fields by a factor */
-  double tilt;         /* roll angle */
-  double dx, dy, dz;   /* misalignments */
+  double length;          /* for floor coorindates, s coordinate, etc */
+  double fieldLength;     /* expected length of the field map */
+  char *filename;         /* filename for generalized gradients vs z */
+  double strength;        /* multiply fields by a factor */
+  double tilt;            /* roll angle */
+  double dx, dy, dz;      /* misalignments */
   /* these are set by the program when the file is read */
   long initialized;
   long dataIndex;

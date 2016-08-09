@@ -154,7 +154,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   long ip, ig, im, iz, m;
   STORED_BGGEXP_DATA *bggData;
   double ds, x, y, xp, yp, delta, s, r, phi, denom;
-  double B[3], p[3], dp[3], Bphi, Br, gamma, length;
+  double B[3], p[3], dp[3], Bphi, Br, gamma, step,  length, fieldLength;
 #ifdef DEBUG
   static FILE *fpdebug = NULL;
   if (!fpdebug) {
@@ -190,15 +190,24 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   }
   bggData = storedBGGExpData+bgg->dataIndex;
 
+  length = bgg->length; 
+  fieldLength = bgg->fieldLength;
+  if (fieldLength<0)
+    fieldLength = length;
+  
+  step = bgg->fieldLength/(bggData->nz-1);
+  if (fabs(step/bggData->dz-1)>1e-6) 
+    bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\n", tcontext.elementName, tcontext.elementOccurrence, step, bggData->dz);
+
+  /* adjust for insertion length differing from field length */
+  if (length!=fieldLength)
+    exactDrift(part, np, (length-fieldLength)/2);
+  
   /* Do misalignments */
   if (bgg->dx || bgg->dy || bgg->dz)
     offsetBeamCoordinates(part, np, bgg->dx, bgg->dy, bgg->dz);
   if (bgg->tilt)
     rotateBeamCoordinates(part, np, bgg->tilt);
-
-  length = bgg->length/(bggData->nz-1);
-  if (fabs(length/bggData->dz-1)>1e-6) 
-    bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\n", tcontext.elementName, tcontext.elementOccurrence, length, bggData->dz);
 
   /* Element body */
   for (ip=0; ip<np; ip++) {
@@ -242,7 +251,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       B[2] *= bgg->strength;
 
       /* Apply kicks */
-      ds = length*sqrt(1 + sqr(p[0]/p[2]) + sqr(p[1]/p[2]));
+      ds = step*sqrt(1 + sqr(p[0]/p[2]) + sqr(p[1]/p[2]));
       dp[0] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
       dp[1] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
       dp[2] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
@@ -277,6 +286,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     rotateBeamCoordinates(part, np, -bgg->tilt);
   if (bgg->dx || bgg->dy || bgg->dz)
     offsetBeamCoordinates(part, np, -bgg->dx, -bgg->dy, -bgg->dz);
+
+  /* adjust for insertion length differing from field length */
+  length = bgg->length; 
+  fieldLength = bgg->fieldLength;
+  if (length!=fieldLength)
+    exactDrift(part, np, (length-fieldLength)/2);
 
 #ifdef DEBUG  
   fflush(fpdebug);

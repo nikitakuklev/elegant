@@ -2603,7 +2603,8 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
 
 BMAPXYZ bmapxyz_example;
 PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "insertion length"},
+    {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
     {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
@@ -2634,7 +2635,8 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
 
 BGGEXP bggexp_example;
 PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bggexp_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bggexp_example.length), NULL, 0.0, 0, "insertion length"},
+    {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bggexp_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
     {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file generalized gradient data"},
     {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bggexp_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},

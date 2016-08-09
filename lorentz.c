@@ -285,6 +285,13 @@ long lorentz(
 
     lorentz_setup(field, field_type, part, n_part, P_central);
 
+    if (field_type==T_BMAPXYZ) {
+      BMAPXYZ *bmxyz;
+      bmxyz = (BMAPXYZ*)field;
+      if (bmxyz->length!=bmxyz->fieldLength)
+        exactDrift(part, n_part, (bmxyz->length-bmxyz->fieldLength)/2);
+    }
+    
 #ifdef DEBUG
     field_output_on = 1;
 #endif
@@ -303,6 +310,13 @@ long lorentz(
 
     lorentz_terminate(field, field_type, part, n_part, P_central);
     
+    if (field_type==T_BMAPXYZ) {
+      BMAPXYZ *bmxyz;
+      bmxyz = (BMAPXYZ*)field;
+      if (bmxyz->length!=bmxyz->fieldLength)
+        exactDrift(part, n_part, (bmxyz->length-bmxyz->fieldLength)/2);
+    }
+
     log_exit("lorentz");
     return(i_top+1);
     }
@@ -773,7 +787,7 @@ void lorentz_setup(
             exit_function = bmapxyz_exit_function;
             deriv_function = bmapxyz_deriv_function;
             coord_transform = bmapxyz_coord_transform;
-            central_length = bmapxyz->length;
+            central_length = bmapxyz->fieldLength;
             select_lorentz_integrator(bmapxyz->method);
             tolerance = bmapxyz->accuracy;
 	    if (!bmapxyz->filename)
