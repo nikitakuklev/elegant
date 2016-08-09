@@ -1,0 +1,38 @@
+This element simulates transport through a 3D magnetic field
+specified in terms of a generalized gradient expansion \cite{Venturini-NIMA427-387}.
+After reconstructing the field, it simply integrates the equations of motion
+based on the Lorentz force equation in cartesian coordinates.  It does not
+incorporate changes in the design trajectory resulting from the
+fields, so dipoles cannot be simulated with this element.
+
+The generalized gradients are provided in an SDDS file with the following floating-point columns:
+\begin{itemize}
+\item {\bf z} --- Longitudinal coordinate. Units should be ``m''.
+\item {\bf Cnm{\em n}} --- The $n^{th}$ generalized gradient of the $m^{th}$ harmonic, where $n=0,2,4,...$.
+  There is no preset limit to the number of generalized gradients. Units are ignored,
+  but should be SI.
+\item {\bf dCnm{\em n}/dz} --- The longitudial derivative of the $n^{th}$ generalized gradient, 
+  for the $m^{th}$ harmonic, where $n=0,2,4,...$.
+  The number of derivatives must match the number of generalized gradients {\bf Cnm{\em n}}.
+\end{itemize}
+In addition, the file must contain a parameter:
+\begin{itemize}
+\item {\bf m} --- The multipole index, using the convention where $m=1$ is dipole, $m=2$ is quadrupole,
+  etc. N.B.: this convention conforms with \cite{Venturini-NIMA427-387} but is not the usual one used by
+  {\tt elegant}. This should be stored as a short integer.
+\end{itemize}
+
+The generalized gradient file can be prepared using the script {\tt computeGeneralizedGradients}, which is
+provided with {\tt elegant}. The input file for that script must be organized into many pages, with
+each page giving $B_r(\phi)$ on radius $r=R$ for a single $z$ location. The file must contain two floating-point columns:
+\begin{itemize}
+\item {\bf phi} --- The angle, in radians. $\phi=0$ corresponds to $x=R$ and $y=0$, while $\phi=\pi/2$ corresponds
+  to $x=0$ and $y=R$. It is assumed that $\phi$ runs from $0$ to $2\pi - \Delta \phi$ in steps of $\Delta \phi$.
+\item {\bf Br} --- The radial field at the reference radius R, Tesla.
+\end{itemize}
+In addition, the file must contain two floating-point parameters:
+\begin{itemize}
+\item {\bf R} --- The radius, in meters. 
+\item {\bf z} --- The longitudinal coordinate, in meters. $z$ should extend from the zero-field region upstream of the magnet to 
+  the zero-field region downstream of the magnet.
+\end{itemize}
