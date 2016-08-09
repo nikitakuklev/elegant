@@ -879,7 +879,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EHVCOR  113
 #define T_BMAPXYZ 114
 #define T_BRAT 115
-#define N_TYPES   116
+#define T_BGGEXP 116
+#define N_TYPES   117
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1002,6 +1003,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 10
 #define N_BMAPXYZ_PARAMS 5
 #define N_BRAT_PARAMS 17
+#define N_BGGEXP_PARAMS 7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2737,6 +2739,20 @@ typedef struct {
   long initialized, dataIndex;
 } BRAT;
 
+/* magnetic field generalized gradient expansion */
+extern PARAMETER bggexp_param[N_BGGEXP_PARAMS];
+
+typedef struct {
+  double length;       /* for floor coorindates, s coordinate, etc */
+  char *filename;      /* filename for generalized gradients vs z */
+  double strength;     /* multiply fields by a factor */
+  double tilt;         /* roll angle */
+  double dx, dy, dz;   /* misalignments */
+  /* these are set by the program when the file is read */
+  long initialized;
+  long dataIndex;
+} BGGEXP;
+
 /* names and storage structure for CHARGE element */
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
@@ -3833,6 +3849,7 @@ long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, do
 long binTimeDistribution(double *Itime, long *pbin, double tmin,
                          double dt, long nb, double *time, double **part, double Po, long np);
 
+long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted);
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
                      TWISS *twiss, RADIATION_INTEGRALS *radIntegrals,

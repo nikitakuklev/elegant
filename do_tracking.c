@@ -1354,6 +1354,9 @@ long do_tracking(
               ftable = (FTABLE*)eptr->p_elem;
               field_table_tracking(coord, nToTrack, ftable, *P_central, run);
               break;       
+            case T_BGGEXP:
+              trackBGGExpansion(coord, nToTrack, (BGGEXP*)eptr->p_elem, *P_central, accepted);
+              break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
 	      if (malign->on_pass==-1 || malign->on_pass==i_pass)

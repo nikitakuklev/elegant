@@ -64,7 +64,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
-    "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT",
+    "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -187,7 +187,8 @@ char *entity_text[N_TYPES] = {
     "A vertical steering dipole implemented using an exact hard-edge model",
     "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
     "A map of (Bx, By, Bz) vs (x, y, z), for straight elements only",
-    "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z)."
+    "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z).",
+    "A straight magnetic field element using generalized gradient expansion."
     } ;
 
 QUAD quad_example;
@@ -2631,6 +2632,17 @@ PARAMETER brat_param[N_BRAT_PARAMS] = {
 };  
 
 
+BGGEXP bggexp_example;
+PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bggexp_example.length), NULL, 0.0, 0, "length"},
+    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file generalized gradient data"},
+    {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bggexp_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dz), NULL, 0.0, 0, "misalignment"},
+};  
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2768,6 +2780,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
     { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
     { N_BRAT_PARAMS,     HAS_LENGTH,   sizeof(BRAT),  brat_param      },
+    { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
 } ;
 
 void compute_offsets()
