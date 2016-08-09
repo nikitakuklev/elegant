@@ -2700,7 +2700,7 @@ typedef struct {
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
 
 typedef struct {
-  double length, fieldLength, strength, accuracy;
+  double length, strength, accuracy;
   char *method, *filename;
   char *FxRpn, *FyRpn;
   /* these are set by the program when the file is read */
