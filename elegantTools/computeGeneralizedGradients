@@ -89,27 +89,26 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     -rpndef=$env(RPN_DEFNS),alpha.rpn \
     "-process=Cnm*,last,%sLast" \
     "-redefine=col,%s,%s %sLast -,select=Cnm*" \
-    "-define=col,Br0,Cnm0 0  m alphalm * R m 1 - pow *" \
-    "-define=col,Br2,Cnm2 1  m alphalm * R m 1 + pow * Br0 +" \
-    "-define=col,Br4,Cnm4 2  m alphalm * R m 3 + pow * Br2 +" \
-    "-define=col,Br6,Cnm6 3  m alphalm * R m 5 + pow * Br4 +" \
-    "-define=col,Br8,Cnm8 4  m alphalm * R m 7 + pow * Br6 +" \
-    "-define=col,Br10,Cnm10 5  m alphalm * R m 9 + pow * Br8 +" \
-    "-define=col,Br12,Cnm12 6  m alphalm * R m 11 + pow * Br10 +" \
-    "-define=col,Br14,Cnm14 7  m alphalm * R m 13 + pow * Br12 +" \
-    "-define=col,Br16,Cnm16 8  m alphalm * R m 15 + pow * Br14 +" \
-    "-define=col,Br,Br16 chs pi 4 / m * sin *" \
-    "-define=col,Bz0,dCnm0/dz 0 m betalm * R m 0 + pow *" \
-    "-define=col,Bz2,dCnm2/dz 1 m betalm * R m 2 + pow * Bz0 +" \
-    "-define=col,Bz4,dCnm4/dz 2 m betalm * R m 4 + pow * Bz2 +" \
-    "-define=col,Bz6,dCnm6/dz 3 m betalm * R m 6 + pow * Bz4 +" \
-    "-define=col,Bz8,dCnm8/dz 4 m betalm * R m 8 + pow * Bz6 +" \
-    "-define=col,Bz10,dCnm10/dz 5 m betalm * R m 10 + pow * Bz8 +" \
-    "-define=col,Bz12,dCnm12/dz 6 m betalm * R m 12 + pow * Bz10 +" \
-    "-define=col,Bz14,dCnm14/dz 7 m betalm * R m 14 + pow * Bz12 +" \
-    "-define=col,Bz16,dCnm16/dz 8 m betalm * R m 16 + pow * Bz14 +" \
-    "-define=col,Bz,Bz16 chs pi 4 / m * sin *"
-
+    "-define=col,Br0,Cnm0 0  m alphalm * R m 1 - pow * pi 4 / m * sin *" \
+    "-define=col,Br2,Cnm2 1  m alphalm * R m 1 + pow * pi 4 / m * sin * Br0 +" \
+    "-define=col,Br4,Cnm4 2  m alphalm * R m 3 + pow * pi 4 / m * sin * Br2 +" \
+    "-define=col,Br6,Cnm6 3  m alphalm * R m 5 + pow * pi 4 / m * sin * Br4 +" \
+    "-define=col,Br8,Cnm8 4  m alphalm * R m 7 + pow * pi 4 / m * sin * Br6 +" \
+    "-define=col,Br10,Cnm10 5  m alphalm * R m 9 + pow * pi 4 / m * sin * Br8 +" \
+    "-define=col,Br12,Cnm12 6  m alphalm * R m 11 + pow * pi 4 / m * sin * Br10 +" \
+    "-define=col,Br14,Cnm14 7  m alphalm * R m 13 + pow * pi 4 / m * sin * Br12 +" \
+    "-define=col,Br16,Cnm16 8  m alphalm * R m 15 + pow * pi 4 / m * sin * Br14 +" \
+    "-define=col,Br,Br16 chs" \
+    "-define=col,Bz0,dCnm0/dz 0 m betalm * R m 0 + pow * pi 4 / m * sin *" \
+    "-define=col,Bz2,dCnm2/dz 1 m betalm * R m 2 + pow * pi 4 / m * sin * Bz0 +" \
+    "-define=col,Bz4,dCnm4/dz 2 m betalm * R m 4 + pow * pi 4 / m * sin * Bz2 +" \
+    "-define=col,Bz6,dCnm6/dz 3 m betalm * R m 6 + pow * pi 4 / m * sin * Bz4 +" \
+    "-define=col,Bz8,dCnm8/dz 4 m betalm * R m 8 + pow * pi 4 / m * sin * Bz6 +" \
+    "-define=col,Bz10,dCnm10/dz 5 m betalm * R m 10 + pow * pi 4 / m * sin * Bz8 +" \
+    "-define=col,Bz12,dCnm12/dz 6 m betalm * R m 12 + pow * pi 4 / m * sin * Bz10 +" \
+    "-define=col,Bz14,dCnm14/dz 7 m betalm * R m 14 + pow * pi 4 / m * sin * Bz12 +" \
+    "-define=col,Bz16,dCnm16/dz 8 m betalm * R m 16 + pow * pi 4 / m * sin * Bz14 +" \
+    "-define=col,Bz,Bz16 chs"
 
 # Extract only the data needed for use with elegant's BGGEXP element
 exec sddsconvert $root.ggrad.full $root.ggrad \
