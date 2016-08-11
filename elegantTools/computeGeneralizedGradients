@@ -84,7 +84,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     "-define=parameter,dz,zMax n_rows 1 - /" \
     "-define=column,z,i_row n_rows 2 / < ? i_row : i_row n_rows - $ dz *,units=m" \
     | sddssort -pipe -column=z \
-    | sddsconvert -pipe -edit=column,*FFT*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
+    | sddsconvert -pipe -edit=column,*FFTdCms*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
     | sddsprocess -pipe=in $root.ggrad.full \
     -rpndef=$env(RPN_DEFNS),alpha.rpn \
     "-process=Cnm*,last,%sLast" \
