@@ -151,7 +151,7 @@ long addBGGExpData(char *filename)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted)
 {
-  long ip, ig, im, iz, m, igLimit, mMax;
+  long ip, ig, im, iz, m, igLimit, mMax, izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, x, y, xp, yp, delta, s, r, phi, denom;
   double B[3], p[3], dp[3], Bphi, Br, gamma, step,  length, fieldLength;
@@ -210,12 +210,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     rotateBeamCoordinates(part, np, bgg->tilt);
 
   igLimit = bggData->nGradients;
-  if (bgg->nMaximum>0) {
-    igLimit = bgg->nMaximum/2+1;
+  if (bgg->maximum2n>=0) {
+    igLimit = bgg->maximum2n/2+1;
     if (igLimit>bggData->nGradients)
       igLimit = bggData->nGradients;
   }
-    
+  
+  if (bgg->zInterval<=0) 
+    bombElegantVA("zInterval %ld is invalid for BGGEXP %s #%ld\n", bgg->zInterval, tcontext.elementName, tcontext.elementOccurrence);
+  izLast = bggData->nz-bgg->zInterval;
+  
   /* Element body */
   for (ip=0; ip<np; ip++) {
     x = part[ip][0];
@@ -233,7 +237,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
     
     /* Integrate through the magnet */
-    for (iz=0; iz<bggData->nz; iz++) {
+    for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
       r = sqrt(sqr(x)+sqr(y));
       phi = atan2(y, x);
 
@@ -260,7 +264,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       B[2] *= bgg->strength;
 
       /* Apply kicks */
-      ds = step*sqrt(1 + sqr(p[0]/p[2]) + sqr(p[1]/p[2]));
+      ds = step*bgg->zInterval*sqrt(1 + sqr(p[0]/p[2]) + sqr(p[1]/p[2]));
       dp[0] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
       dp[1] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
       dp[2] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
@@ -276,13 +280,20 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       p[1] += dp[1];
       p[2] += dp[2];
 
-      if (iz!=(bggData->nz-1)) {
+      if (iz<izLast) {
         /* Drift forward */
-        x += p[0]/p[2]*ds;
-        y += p[1]/p[2]*ds;
+        x += p[0]/p[2]*bggData->dz*bgg->zInterval;
+        y += p[1]/p[2]*bggData->dz*bgg->zInterval;
         s += ds;
       }
     }
+    if (iz<bggData->nz) {
+      /* Drift forward */
+      x += p[0]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
+      y += p[1]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
+      s += bggData->dz*(bggData->nz-1-iz)*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
+    }
+    
     part[ip][0] = x;
     part[ip][1] = p[0]/p[2];
     part[ip][2] = y;
