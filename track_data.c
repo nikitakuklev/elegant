@@ -2643,6 +2643,8 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"MAXIMUM_M", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.mMaximum), NULL, 0.0, -1, "data with m greater than this is ignored"},
+    {"MAXIMUM_N", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.nMaximum), NULL, 0.0, -1, "data with m greater than this is ignored"},
 };  
 
 /* array of parameter structures */

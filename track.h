@@ -1003,7 +1003,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 10
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 8
+#define N_BGGEXP_PARAMS 10
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2749,6 +2749,8 @@ typedef struct {
   double strength;        /* multiply fields by a factor */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
+  long mMaximum;          /* maximum value of m that is included */
+  long nMaximum;          /* maximum value of n that is included */
   /* these are set by the program when the file is read */
   long initialized;
   long dataIndex;

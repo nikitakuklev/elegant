@@ -69,7 +69,7 @@ long addBGGExpData(char *filename)
     bombElegantVA("Unable to find any floating-point columns Cnm* in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
   nc = ic;
   printf("Found %ld Cnm* columns\n", nc);
-  
+
   /* Check for presence of matching dCnmXXX/dz columns */
   for (ic=0; ic<nc; ic++) {
     snprintf(buffer, BUFSIZE, "dCnm%ld/dz", 2*ic);
@@ -151,7 +151,7 @@ long addBGGExpData(char *filename)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted)
 {
-  long ip, ig, im, iz, m;
+  long ip, ig, im, iz, m, igLimit, mMax;
   STORED_BGGEXP_DATA *bggData;
   double ds, x, y, xp, yp, delta, s, r, phi, denom;
   double B[3], p[3], dp[3], Bphi, Br, gamma, step,  length, fieldLength;
@@ -209,6 +209,13 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   if (bgg->tilt)
     rotateBeamCoordinates(part, np, bgg->tilt);
 
+  igLimit = bggData->nGradients;
+  if (bgg->nMaximum>0) {
+    igLimit = bgg->nMaximum/2+1;
+    if (igLimit>bggData->nGradients)
+      igLimit = bggData->nGradients;
+  }
+    
   /* Element body */
   for (ip=0; ip<np; ip++) {
     x = part[ip][0];
@@ -235,10 +242,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       for (im=0; im<bggData->nm; im++) {
         double mfact, term, sin_mphi, cos_mphi;
         m = bggData->m[im];
+        if (bgg->mMaximum>0 && m>bgg->mMaximum)
+          continue;
         mfact = dfactorial(m);
         sin_mphi = sin(m*phi);
         cos_mphi = cos(m*phi);
-        for (ig=0; ig<bggData->nGradients; ig++) {
+        for (ig=0; ig<igLimit; ig++) {
           term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
           B[2] += term*bggData->dCmns_dz[im][ig][iz]*r*sin_mphi;
           term *= bggData->Cmns[im][ig][iz];
