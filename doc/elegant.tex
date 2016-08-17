@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 30.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 30.2.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -33,35 +33,31 @@ A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Acceler
 A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 30.1}
+\section{Highlights of What's New in Version 30.2}
 
-Here is a summary of what's changed since release 30.0
+Here is a summary of what's changed since release 30.1.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
-  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
+\item None
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug introduced in \verb|moments_output| computations when \verb|CSBEND| elements were present 
-  with non-zero values of \verb|ETILT|. Reported by V. Sajaev (ANL).
-\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
-  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added edge multipoles to \verb|KQUAD| element. This necessitated some rearrangement of the code, so results might be
-  slightly different even if this feature is not invoked.
-\item Added I/Q mode feedback to the \verb|RFMODE| element.
+\item Added the \verb|BGGEXP| element, which performs tracking through magnetic fields constructed from a generalized
+  gradient expansion. Although the integration is not symplectic, the fields satisfy Maxwell's equations exactly.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|modulate_elements| command now offers more control over verbose printouts, to help reduce the volume of
+  uninformative printouts.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -2506,6 +2502,7 @@ number of the occurrence of the named element from which to start.
     STRING before = NULL;
     STRING after = NULL;
     long verbose = 0;
+    double verbose_threshold = 0;
     STRING record = NULL;
 &end
 \end{verbatim}
@@ -2557,6 +2554,8 @@ is modulated.
  that precede the named element in the beamline. 
 \item \verb|verbose| --- If nonzero, information is printed to the standard output as changes are
         made.  Use for debugging only, since otherwise it may slow the simulation.
+\item \verb|verbose_threshold| --- If nonzero, verbose information is printed only when the fractional change
+   exceeds the given value.
 \item \verb|record| --- Gives a possibly incomplete filename to which will be written a record of the values of
   the modulation.
 \end{itemize}
