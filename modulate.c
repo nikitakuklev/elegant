@@ -268,7 +268,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       lastValue = modData->lastVerboseValue[iMod];
       *((double*)(p_elem+entity_description[type].parameter[param].offset)) = value;
       if (modData->flags[iMod]&VERBOSE_MOD && fabs(value-lastValue)>modData->verboseThreshold[iMod]*(fabs(value)+fabs(lastValue))/2) {
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %le at t = %le (originally %le)\n",
+        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %21.15le at t = %21.15le (originally %21.15le)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, value, t, modData->unperturbedValue[iMod]);
 	modData->lastVerboseValue[iMod] = value;
@@ -279,7 +279,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       value = (long)(value+0.5);
       *((long*)(p_elem+entity_description[type].parameter[param].offset)) = value;
       if (modData->flags[iMod]&VERBOSE_MOD && value!=lastValue) {
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %ld at t = %le (originally %ld)\n",
+        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %ld at t = %21.15le (originally %ld)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, (long)(value+0.5), t, (long)(modData->unperturbedValue[iMod]));
 	modData->lastVerboseValue[iMod] = value;
@@ -294,7 +294,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
         && myid==0
 #endif
         ) {
-      fprintf(modData->fpRecord[iMod], "%le %ld %le %le %le\n",
+      fprintf(modData->fpRecord[iMod], "%21.15le %ld %21.15le %21.15le %21.15le\n",
               t, iPass, modulation, modData->unperturbedValue[iMod], value);
       fflush(modData->fpRecord[iMod]);
     }
