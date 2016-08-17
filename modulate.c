@@ -110,17 +110,20 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->expression       = SDDS_Realloc(modData->expression, sizeof(*modData->expression)*(n_items+1));
     modData->parameterNumber  = SDDS_Realloc(modData->parameterNumber, sizeof(*modData->parameterNumber)*(n_items+1));
     modData->flags            = SDDS_Realloc(modData->flags, sizeof(*modData->flags)*(n_items+1));
+    modData->verboseThreshold = SDDS_Realloc(modData->verboseThreshold, sizeof(*modData->verboseThreshold)*(n_items+1));
+    modData->lastVerboseValue = SDDS_Realloc(modData->lastVerboseValue, sizeof(*modData->lastVerboseValue)*(n_items+1));
     modData->unperturbedValue = SDDS_Realloc(modData->unperturbedValue, sizeof(*modData->unperturbedValue)*(n_items+1));
     modData->nData            = SDDS_Realloc(modData->nData, sizeof(*modData->nData)*(n_items+1));
     modData->dataIndex        = SDDS_Realloc(modData->dataIndex, sizeof(*modData->dataIndex)*(n_items+1));
     modData->timeData         = SDDS_Realloc(modData->timeData, sizeof(*modData->timeData)*(n_items+1));
     modData->modulationData   = SDDS_Realloc(modData->modulationData, sizeof(*modData->modulationData)*(n_items+1));
     modData->record           = SDDS_Realloc(modData->record, sizeof(*modData->record)*(n_items+1));
-    modData->fpRecord          = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
+    modData->fpRecord         = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
 
     modData->element[n_items] = context;
     modData->flags[n_items] = (multiplicative?MULTIPLICATIVE_MOD:0) + (differential?DIFFERENTIAL_MOD:0) 
       + (verbose?VERBOSE_MOD:0) + (refresh_matrix?REFRESH_MATRIX_MOD:0);
+    modData->verboseThreshold[n_items] = verbose_threshold;
     modData->timeData[n_items] = modData->modulationData[n_items] = NULL;
     modData->expression[n_items] = NULL;
     modData->fpRecord[n_items] = NULL;
@@ -141,7 +144,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       exitElegant(1);
     }
 
-    modData->unperturbedValue[n_items] 
+    modData->lastVerboseValue[n_items] = modData->unperturbedValue[n_items] 
       = parameter_value(context->name, context->type, modData->parameterNumber[n_items], beamline);
 
     if (modData->unperturbedValue[n_items]==0 && modData->flags[n_items]&MULTIPLICATIVE_MOD) {
@@ -207,7 +210,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 {
   long iMod, code, matricesUpdated, jMod;
   short modulationValid = 0;
-  double modulation, value, t;
+  double modulation, value, t, lastValue;
   long type, param;
   char *p_elem;
  
@@ -262,18 +265,25 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 
     switch (entity_description[type].parameter[param].type)  {
     case IS_DOUBLE:
+      lastValue = modData->lastVerboseValue[iMod];
       *((double*)(p_elem+entity_description[type].parameter[param].offset)) = value;
-      if (modData->flags[iMod]&VERBOSE_MOD) 
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s is %le at t = %le (originally %le)\n",
+      if (modData->flags[iMod]&VERBOSE_MOD && fabs(value-lastValue)>modData->verboseThreshold[iMod]*(fabs(value)+fabs(lastValue))/2) {
+        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %le at t = %le (originally %le)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, value, t, modData->unperturbedValue[iMod]);
+	modData->lastVerboseValue[iMod] = value;
+      }
       break;
     case IS_LONG:
-      *((long*)(p_elem+entity_description[type].parameter[param].offset)) = value + 0.5;
-      if (modData->flags[iMod]&VERBOSE_MOD) 
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s is %ld at t = %le (originally %ld)\n",
+      lastValue = modData->lastVerboseValue[iMod];
+      value = (long)(value+0.5);
+      *((long*)(p_elem+entity_description[type].parameter[param].offset)) = value;
+      if (modData->flags[iMod]&VERBOSE_MOD && value!=lastValue) {
+        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %ld at t = %le (originally %ld)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, (long)(value+0.5), t, (long)(modData->unperturbedValue[iMod]));
+	modData->lastVerboseValue[iMod] = value;
+      }
       break;
     default:
       break;
