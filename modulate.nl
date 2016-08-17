@@ -23,7 +23,7 @@
     STRING before = NULL;
     STRING after = NULL;
     long verbose = 0;
-    double verbose_threshold = 1e-16;
+    double verbose_threshold = 0;
     STRING record = NULL;
 #end
 
