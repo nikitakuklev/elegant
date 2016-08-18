@@ -25,5 +25,6 @@
     long verbose = 0;
     double verbose_threshold = 0;
     STRING record = NULL;
+    long flush_record = 1;
 #end
 

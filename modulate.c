@@ -118,6 +118,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->timeData         = SDDS_Realloc(modData->timeData, sizeof(*modData->timeData)*(n_items+1));
     modData->modulationData   = SDDS_Realloc(modData->modulationData, sizeof(*modData->modulationData)*(n_items+1));
     modData->record           = SDDS_Realloc(modData->record, sizeof(*modData->record)*(n_items+1));
+    modData->flushRecord      = SDDS_Realloc(modData->flushRecord, sizeof(*modData->flushRecord)*(n_items+1));
     modData->fpRecord         = SDDS_Realloc(modData->fpRecord, sizeof(*modData->fpRecord)*(n_items+1));
 
     modData->element[n_items] = context;
@@ -128,6 +129,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
     modData->expression[n_items] = NULL;
     modData->fpRecord[n_items] = NULL;
     modData->nData[n_items] = 0;
+    modData->flushRecord[n_items] = flush_record;
 
     if (filename) {
       if ((modData->dataIndex[n_items] = firstIndexInGroup)==-1) {
@@ -296,7 +298,8 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
         ) {
       fprintf(modData->fpRecord[iMod], "%21.15le %ld %21.15le %21.15le %21.15le\n",
               t, iPass, modulation, modData->unperturbedValue[iMod], value);
-      fflush(modData->fpRecord[iMod]);
+      if (modData->flushRecord[iMod]>0 && (iPass%modData->flushRecord[iMod])==0)
+	fflush(modData->fpRecord[iMod]);
     }
     
     if (entity_description[type].flags&HAS_MATRIX && 
