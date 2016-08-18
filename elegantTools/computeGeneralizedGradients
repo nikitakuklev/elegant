@@ -59,7 +59,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     "-define=parameter,R,$R,units=m" \
     "-define=column,k,f 2 * pi *" \
     "-define=col,kR,k R *" \
-    "-define=col,ImpkR,kR abs 1e-16 + m 1 - BesIn kR abs 1e-16 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 : 1  $ * " \
+    "-define=col,ImpkR,kR abs 1e-8 + m 1 - BesIn kR abs 1e-16 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 : 1  $ * " \
     "-define=col,dCms0,RealFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms2,RealFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms4,RealFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
