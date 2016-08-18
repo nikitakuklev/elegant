@@ -461,7 +461,7 @@ void track_through_rfmode(
               printf("dII = %le, dIQ = %le\n", dII, dIQ);
 #endif
               IgAmp = sqrt(sqr(rfmode->Iiq->a[0][0])+sqr(rfmode->Iiq->a[1][0]));
-              IgPhase = atan2(rfmode->Iiq->a[1][0], rfmode->Iiq->a[1][0]);
+              IgPhase = atan2(rfmode->Iiq->a[1][0], rfmode->Iiq->a[0][0]);
             }
             
             
