@@ -413,6 +413,7 @@ typedef struct {
     double **timeData;           /* time values */
     double **modulationData;     /* amplitude values */
     char **record;               /* output filenames */
+    long *flushRecord;           /* passes between flushing the record file */
     FILE **fpRecord;             /* output file structures */
   } MODULATION_DATA;
 
