@@ -460,33 +460,37 @@ void BRAT_lorentz_integration(
     dz = zf-zi;
     dx = slope*dz;
   }
-  ds = -sqrt(dx*dx + dz*dz);
   xStart = xNomEntry - dx;
   zStart = zNomEntry - dz;
+
+  /* Compute drift-back distance and apply to path length */
+  ds = (zStart-(zNomEntry+accelCoord[0]*sin(phi)))/(cos(phi+atan(accelCoord[1]))*cos(atan(accelCoord[3])));
+  accelCoord[4] += ds;
 
 #ifdef DEBUG
   fprintf(stderr, "drift-back: %e\n", ds);
 #endif
-  accelCoord[0] += ds*accelCoord[1];
-  accelCoord[2] += ds*accelCoord[3];
-  accelCoord[4] += ds*sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]));
 
   /* transform from accel coords to cartesian coords */
-  q[0] = zStart - accelCoord[0]*sin(phi);
-  q[1] = xStart + accelCoord[0]*cos(phi);
-  q[2] = accelCoord[2];
+
+  /* note that w0^2+w1^2+w2^2 = 1 */
+  /* dS/ds is the rate of change of distance traveled w.r.t. distance of the fiducial particle */
+  dSds = sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]));
+  w = q+3;
+  w[0] = (-accelCoord[1]*sin(phi)+cos(phi))/dSds;
+  w[1] = ( accelCoord[1]*cos(phi)+sin(phi))/dSds;
+  w[2] = accelCoord[3]/dSds;
+
+  q[0] = zNomEntry - accelCoord[0]*sin(phi) + ds*w[0];
+  q[1] = xNomEntry + accelCoord[0]*cos(phi) + ds*w[1];
+  q[2] = accelCoord[2] + ds*w[2];
+
 #ifdef DEBUG
   fprintf(stderr, "initial: q[0] = %e, q[1] = %e, q[2] = %e\n",
           q[0], q[1], q[2]);
 #endif
-  w = q+3;
-  /* note that w0^2+w1^2+w2^2 = 1 */
-  /* dS/ds is the rate of change of distance traveled w.r.t. distance of the fiducial particle */
-  dSds = sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]));
-  w[0] = (-accelCoord[1]*sin(phi)+cos(phi))/dSds;
-  w[1] = ( accelCoord[1]*cos(phi)+sin(phi))/dSds;
-  w[2] = accelCoord[3]/dSds;
-  /*  accelCoord[4] -= ds*dSds; */
+
+
   IF = q+6;
   IF[0] = IF[1] = IF[2] = IF[3] = 0;
   BRAT_deriv_function(qptest, q, 0.0L);
@@ -633,26 +637,30 @@ void BRAT_lorentz_integration(
     /* convert back to (Z, X, Y, WZ, WX, WY) */
   }
   
-  
-  /* convert back to accelerator coordinates */
+  /* drift back to reference plane */
   slope = (xVertex-xNomExit)/(zVertex-zNomExit);
   phi = -atan(slope);
+  ds = ((zNomExit-q[0])*cos(phi) - (xNomExit-q[1])*sin(phi))/(w[0]*cos(phi) - w[1]*sin(phi));
+#ifdef DEBUG
+  printf("exit: phi = %le, ds = %le\n", phi, ds);
+#endif
+  q[0] += ds*w[0];
+  q[1] += ds*w[1];
+  q[2] += ds*w[2];
+  
+  /* convert back to accelerator coordinates */
   dSds = 1./(-w[1]*sin(phi)+w[0]*cos(phi));
   
   accelCoord[1] = (w[1]*cos(phi)+w[0]*sin(phi))*dSds;
   accelCoord[3] = w[2]*dSds;
-  accelCoord[0] = (q[1]-xVertex)*cos(phi) + (q[0]-zVertex)*sin(phi);
+  accelCoord[0] = (q[0]-zNomExit)/sin(phi);
   accelCoord[2] = q[2];
+  accelCoord[4] += s_start+ds;
 #ifdef DEBUG
   fprintf(stderr, "final: x=%e, xp=%e, y=%e, yp=%e\n",
           accelCoord[0], accelCoord[1], accelCoord[2], accelCoord[3]);
 #endif
 
-  /* drift back to reference plane */
-  ds = -(q[0]-zNomExit)*sqrt(1 + sqr(slope));
-  accelCoord[0] += ds*accelCoord[1];
-  accelCoord[2] += ds*accelCoord[3];
-  accelCoord[4] += s_start+ds*sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]));
 #ifdef DEBUG
   fprintf(stderr, "path length: %e\n", s_start);
   fprintf(stderr, "drift back exit: %e\n", ds);
@@ -660,6 +668,8 @@ void BRAT_lorentz_integration(
           accelCoord[0], accelCoord[1], accelCoord[2], accelCoord[3], accelCoord[4]);
 #endif
 }
+
+#undef DEBUG
 
 double BRAT_exit_function(double *qp, double *q, double s)
 {
