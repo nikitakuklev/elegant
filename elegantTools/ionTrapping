@@ -9,15 +9,17 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: ionTrapping -twiss <filename> -superPeriods <number> -kappa <ratio> -output <filename> -current <mA> -bunches <number> }
+set usage {usage: ionTrapping -twiss <filename> -superPeriods <number> -kappa <ratio> -output <filename> -current <mA> -bunches <number> -emittanceFactor <value>(1) -SdeltaFactor <value>(1)}
 set twiss ""
 set superPeriods 0
 set kappa -1
 set bunches 0
 set current 0
+set emittanceFactor 1
+set SdeltaFactor 1
 set output ""
 set args $argv
-if {[APSStrictParseArguments {twiss superPeriods output bunches current kappa}] || ![string length $twiss] || ![string length $output] || \
+if {[APSStrictParseArguments {twiss superPeriods output bunches current kappa emittanceFactor SdeltaFactor}] || ![string length $twiss] || ![string length $output] || \
    [expr $bunches<=0] || [expr $current<=0] || [expr $kappa<=0] || [expr $superPeriods<=0]} {
     return -code error "$usage"
 }
@@ -31,11 +33,13 @@ if [file exists $output] {
 
 exec sddssort $twiss -pipe=out -column=s -unique \
     | sddsprocess -pipe \
+    "-define=parameter,emittanceFactor,$emittanceFactor" \
+    "-define=parameter,SdeltaFactor,$SdeltaFactor" \
     "-define=parameter,kappa,$kappa" \
-    "-define=parameter,ex,ex0 1 kappa Jy * Jx / + /,units=m" \
-    "-define=parameter,ey,ex kappa *,units=m" \
-    "-define=column,Sx,ex betax * Sdelta0 etax * sqr + sqrt,units=m" \
-    "-define=column,Sy,ey betay * Sdelta0 etay * sqr + sqrt,units=m" \
+    "-define=parameter,ex,ex0 1 kappa Jy * Jx / + / emittanceFactor *,units=m" \
+    "-define=parameter,ey,ex kappa * emittanceFactor *,units=m" \
+    "-define=column,Sx,ex betax * Sdelta0 SdeltaFactor * etax * sqr + sqrt,units=m" \
+    "-define=column,Sy,ey betay * Sdelta0 SdeltaFactor * etay * sqr + sqrt,units=m" \
      "-define=parameter,current,$current,type=double,units=mA" \
      "-define=parameter,bunches,$bunches,type=long" \
      -process=s,max,sMax \
