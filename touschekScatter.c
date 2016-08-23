@@ -811,7 +811,7 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
 */
             chfill1(lossDis, (beam->lost+n_left)[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
           }
-          chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s", "particles/s", NULL,
+          chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/sbin_step(m) for particles scattered between i-1 and i TSCATTER elements", "particles/s/sbin_step(m)", NULL,
                    NULL, 0, 0, verbosity, noOccurenceSeen && iProcessing!=1);
           free_hbook1(lossDis);
         }
