@@ -454,7 +454,7 @@ void free_hbook1m(book1m *x){
   return;
 }
 
-void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
+void chprint1(book1 *bName, char *filename, char *description, char *frequencyUnits, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append)
 {
   SDDS_DATASET outPage;
@@ -487,13 +487,13 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
       last_index = index;
     }
 
-    if (0>SDDS_DefineParameter(&outPage, "VariableName", NULL, bName->units, 
+    if (0>SDDS_DefineParameter(&outPage, "VariableName", NULL, NULL,
                                NULL, NULL, SDDS_STRING, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "VariableInterval", NULL, NULL, 
+        0>SDDS_DefineParameter(&outPage, "VariableInterval", NULL, bName->units, 
                                NULL, NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "VariableMinimum", NULL, NULL, 
+        0>SDDS_DefineParameter(&outPage, "VariableMinimum", NULL, bName->units, 
                                NULL, NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&outPage, "VariableMaximum", NULL, NULL, 
+        0>SDDS_DefineParameter(&outPage, "VariableMaximum", NULL, bName->units, 
                                NULL, NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&outPage, "VariableDimension", NULL, NULL, 
                                NULL, NULL, SDDS_LONG, NULL) ||
@@ -505,7 +505,7 @@ void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *
     sprintf(buffer, "%sFrequency", bName->vname);
     if (0>SDDS_DefineColumn(&outPage, bName->vname, NULL, bName->units,
                             NULL, NULL, SDDS_DOUBLE, 0) ||
-        0>SDDS_DefineColumn(&outPage, buffer, NULL, NULL, 
+        0>SDDS_DefineColumn(&outPage, buffer, NULL, frequencyUnits, 
                             NULL, NULL, SDDS_DOUBLE, 0))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 

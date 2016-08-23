@@ -65,7 +65,7 @@ book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, int32_t
 void chfill1m(book1m *bName, double *x, double Frequency, int32_t *xbins, long column_number);
 void free_hbook1m(book1m *x);
 
-void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
+void chprint1(book1 *bName, char *filename, char *description, char *frequencyUnits, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append);
 void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append);
