@@ -29,7 +29,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement);
 long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pIndex, long flag);
 
 /* Calculate local and integrated Touschek scattering rate */
-int TouschekRate(LINE_LIST *beamline);
+int TouschekRate(LINE_LIST *beamline, long nElement);
 void FIntegral(double tm, double b1, double b2, double *F);
 double Fvalue (double t, double tm, double b1, double b2);
 
@@ -58,16 +58,26 @@ void TouschekEffect(RUN *run,
 {
   ELEMENT_LIST *eptr;
   long nElement;
+  double TSCATTER_Start, TSCATTER_End, sEndLine;
 
   /* Check if there is TScatter element along beamline. */
   eptr = &(beamline->elem);
   nElement = 0;
+  TSCATTER_Start = eptr->end_pos;
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       nElement++;
+      TSCATTER_End = eptr->end_pos; 
+      if (nElement==1) {
+	if (TSCATTER_End != TSCATTER_Start) 
+	  bombElegant("You should have the first TSCATTER element at the beginning of beamline", NULL);        
+      }
     }
+    sEndLine = eptr->end_pos;
     eptr = eptr->succ; 
   }
+  if (sEndLine != TSCATTER_End)
+    bombElegant("You should have the last TSCATTER element at the end of beamline", NULL);        
   if(!nElement) 
     bombElegant("No TSCATTER element along beamline", NULL);                
 
@@ -109,7 +119,7 @@ void TouschekEffect(RUN *run,
   init_TSPEC(run, beamline, nElement);
 
   /* Calculate Piwinski's scattering rate. */
-  if (TouschekRate(beamline))
+  if (TouschekRate(beamline, nElement))
     bombElegant("Touschek scattering rate calculation error", NULL);
   /* Generate scattered particles at TScatter. 
      And track the scattered particles down to beamline. */
@@ -118,10 +128,12 @@ void TouschekEffect(RUN *run,
   return;
 }
 
-int TouschekRate(LINE_LIST *beamline)
+int TouschekRate(LINE_LIST *beamline, long nElement)
 {
   double NP;
-  double tmP=0, tmN=0, B1, B2, F, rate, rateP, rateN, IntR, IntLength;
+  double tmP, tmN, B1, B2, F, rateP, rateN, IntR, IntLength;
+  double rate0, rate;
+  double *tmPList, *tmNList, *posList;
   ELEMENT_LIST *eptr;
 
   double betagamma, gamma; 
@@ -131,38 +143,61 @@ int TouschekRate(LINE_LIST *beamline)
   double a0, c0, c1, c2, c3;
   TWISS *twiss0;
 
+  long i=0;
+
   NP = tsSpec->charge/e_mks;
   a0 = sqr(re_mks)*c_mks*NP*NP/(8*sqrt(PI)*sigma_s);
 
+  tmPList = (double*)malloc(sizeof(double)*nElement);
+  tmNList = (double*)malloc(sizeof(double)*nElement);
+  posList = (double*)malloc(sizeof(double)*nElement);
+  i = 0;
   eptr = &(beamline->elem);
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      tmP = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
-      tmN = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaN);
-      break;
+      tmPList[i] = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
+      tmNList[i] = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaN);
+      posList[i] = eptr->end_pos;
+      i++;
     }
     eptr = eptr->succ;
   }
 
   IntR = 0.;
   IntLength = 0.;
-  rate = 0.;
+  rate0 = rate = 0.;
+  i=0;
   eptr = &(beamline->elem);
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      ((TSCATTER*)eptr->p_elem)->AveR = IntR/IntLength;
+      if (IntLength !=0) {
+	((TSCATTER*)eptr->p_elem)->AveR = IntR/IntLength;
+      } else {
+	((TSCATTER*)eptr->p_elem)->AveR = 0;
+      }
       ((TSCATTER*)eptr->p_elem)->p_rate = rate;
       ((TSCATTER*)eptr->p_elem)->total_scatter = IntR / c_mks * tsSpec->frequency;
       IntR = 0.;
       IntLength = 0.;
-      tmP = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaP);
-      tmN = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->deltaN);
+      i++;
     }
-    if(!(entity_description[eptr->type].flags&HAS_LENGTH) ||
-       !(((DRIFT*)eptr->p_elem)->length)) {
-      eptr = eptr->succ;
-      continue;
+    /* calculate scattering rate for the first element, which should always have zero length */ 
+    if (rate0==0) {
+      tmP=tmPList[0];
+      tmN=tmNList[0];
+    } else {
+      if(!(entity_description[eptr->type].flags&HAS_LENGTH) ||
+	 !(((DRIFT*)eptr->p_elem)->length)) {
+	eptr = eptr->succ;
+	continue;
+      }
+      if (i==0 || i==nElement)
+	bombElegant("Something wrong, ask expert for help", NULL);
+
+      tmP = ((eptr->end_pos-posList[i-1])*tmPList[i] + (posList[i]-eptr->end_pos)*tmPList[i-1])/(posList[i]-posList[i-1]); 
+      tmN = ((eptr->end_pos-posList[i-1])*tmNList[i] + (posList[i]-eptr->end_pos)*tmNList[i-1])/(posList[i]-posList[i-1]); 
     }
+
     betagamma = eptr->Pref_output;
     gamma = sqrt(sqr(betagamma)+1.);
     beta2 = sqr(betagamma)/sqr(gamma);
@@ -202,13 +237,16 @@ int TouschekRate(LINE_LIST *beamline)
     rateP = a0*sqrt(c0)*F/gamma/gamma/2.;
     FIntegral(tmN, B1, B2, &F);
     rateN = a0*sqrt(c0)*F/gamma/gamma/2.;
-
+    /* first element has length=0, this only set rate0 to a non zero value */
     rate = rateP+rateN;
-    IntR += rate * ((DRIFT*)eptr->p_elem)->length;
+    IntR += (rate0+rate) * ((DRIFT*)eptr->p_elem)->length/2;
     IntLength +=  ((DRIFT*)eptr->p_elem)->length;
+    rate0 = rate;
     eptr = eptr->succ; 
   }
-
+  free(tmPList);
+  free(tmNList);
+  free(posList);
   return(0);
 }
 
