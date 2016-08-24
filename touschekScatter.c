@@ -131,7 +131,7 @@ void TouschekEffect(RUN *run,
 int TouschekRate(LINE_LIST *beamline, long nElement)
 {
   double NP;
-  double tmP, tmN, B1, B2, F, rateP, rateN, IntR, IntLength;
+  double tmP, tmN, B1, B2, F, rateP, rateN, IntR, IntLength, length;
   double rate0, rate;
   double *tmPList, *tmNList, *posList;
   ELEMENT_LIST *eptr;
@@ -185,9 +185,10 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
     if (rate0==0) {
       tmP=tmPList[0];
       tmN=tmNList[0];
+      length = 0;
     } else {
       if(!(entity_description[eptr->type].flags&HAS_LENGTH) ||
-	 !(((DRIFT*)eptr->p_elem)->length)) {
+	 (length=((DRIFT*)eptr->p_elem)->length)<=0) {
 	eptr = eptr->succ;
 	continue;
       }
@@ -239,8 +240,8 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
     rateN = a0*sqrt(c0)*F/gamma/gamma/2.;
     /* first element has length=0, this only set rate0 to a non zero value */
     rate = rateP+rateN;
-    IntR += (rate0+rate) * ((DRIFT*)eptr->p_elem)->length/2;
-    IntLength +=  ((DRIFT*)eptr->p_elem)->length;
+    IntR += (rate0+rate) * length/2;
+    IntLength +=  length;
     rate0 = rate;
     eptr = eptr->succ; 
   }
