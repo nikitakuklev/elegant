@@ -14,15 +14,28 @@ for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
 
-set usage {usage: elasticScatteringLifetime -aperture <daFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(2)]}
+set knownGasMixList [list APS N2]
+
+set usage {usage: elasticScatteringLifetime -aperture <daFile> -name <string>(10Percentile) -twiss <twissFile> -output <filename> [-sPeriodic <value>27.61] [-pressure nTorr(2)] {-gasMix {APS|N2} | -customGas <gas>:<frac>,...}}
+append usage "\nKnown gases for custom gas list are H2 H2O CH4 CO CO2 N2"
 set aperture ""
 set twiss ""
 set name 10Percentile
 set output ""
-set sPeriodic 27.61
-set pressure 2
+set sPeriodic -1
+set pressure -1
+set gasMix ""
+set customGas ""
 set args $argv
-if {[APSStrictParseArguments {aperture name twiss output sPeriodic pressure}] || ![string length $aperture] || ![string length $twiss] || ![string length $output]} {
+if {[APSStrictParseArguments {aperture name twiss output sPeriodic pressure gasMix customGas}] || ![string length $aperture] || ![string length $twiss] || ![string length $output] || [expr $sPeriodic<=0]} {
+    return -code error "$usage"
+}
+
+if [string length $gasMix] {
+    if [lsearch -exact $knownGasMixList $gasMix]==-1 {
+        return -code error "Unknown gas mix \"$gasMix\". Use one of [join $knownGasMixList ,]"
+    }
+} elseif ![string length $customGas] {
     return -code error "$usage"
 }
 
@@ -59,14 +72,45 @@ if $nAp>1 {
     set twissFile $tmpRoot.1
 }
 
-
 # Gas fractional pressures
-set fGas(H2) 0.65
-set fGas(H2O) 0.02
-set fGas(CH4) 0.07
-set fGas(CO) 0.22
-set fGas(CO2) 0.04
-set fGas(N2) 0.0
+if [string length $gasMix] {
+    switch $gasMix {
+        N2 {
+            set fGas(H2) 0.
+            set fGas(H2O) 0.
+            set fGas(CH4) 0.
+            set fGas(CO) 0.
+            set fGas(CO2) 0.
+            set fGas(N2) 1.0
+        }
+        default {
+            set fGas(H2) 0.65
+            set fGas(H2O) 0.02
+            set fGas(CH4) 0.07
+            set fGas(CO) 0.22
+            set fGas(CO2) 0.04
+            set fGas(N2) 0.0
+        }
+    }
+} else {
+    set knownGasList [list H2 H2O CH4 CO CO2 N2]
+    set fracSum 0
+    foreach pair [split $customGas " ,"] {
+        set gas [lindex [split $pair :] 0]
+        set frac [lindex [split $pair :] 1]
+        if [lsearch -exact $knownGasList $gas]==-1 {
+            puts stderr "Unknown gas: $gas\nKnown gases are [join $knownGasList ,]"
+            exit 1
+        }
+        set fGas($gas) $frac
+        set fracSum [expr $fracSum+$frac]
+    }
+    if [expr $fracSum!=1] {
+        puts stderr "Gas fractions don't sum to 1"
+        exit 1
+    }
+}
+
 
 # Gas constituents (nAtomTypes=# of types of atoms, Z=nuclear charge, atomCount=# atoms of each type)
 set nAtomTypes(H2) 1
@@ -119,7 +163,7 @@ set P [expr 133.3224*1e-9*$pressure]
 eval exec sddscombine [APSReplicateItem -number $nTw -item $aperture] -pipe=out -retain=col,*$name \
     | sddsxref -pipe $twissFile -leave=* -transfer=param,* \
     | sddsprocess -pipe \
-    "{-define=col,phi,x$name y$name atan2}" \
+    "{-define=col,phi,x$name betax betax0 * sqrt /  y$name betay betay0 * sqrt / atan2}" \
     "{-define=col,theta,x$name sqr betax / betax0 / y$name sqr betay / betay0 / + sqrt}" \
     "{-define=col,CS,1 theta 2 / tan sqr /}" \
     | sddssort -pipe -column=phi,incr -unique \
