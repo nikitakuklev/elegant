@@ -14,13 +14,26 @@ for {set p 5} {$p<=100} {incr p 5} {
     lappend allowedNameList ${p}Percentile
 }
 
-set usage {usage: bremsstrahlungLifetime -aperture <mmapEnvFile> -name <string>(10Percentile) -output <filename> [-pressure nTorr(2)]}
+set knownGasMixList [list APS N2]
+
+set usage {usage: bremsstrahlungLifetime -aperture <mmapEnvFile> -name <string>(10Percentile) -output <filename> [-pressure nTorr(2)] {-gasMix {APS|N2} | -customGas <gas>:<frac>,...}}
+append usage "\nKnown gases for custom gas list are H2 H2O CH4 CO CO2 N2"
 set aperture ""
 set name 10Percentile
 set output ""
-set pressure 2
+set pressure -1
+set gasMix ""
+set customGas ""
 set args $argv
-if {[APSStrictParseArguments {aperture name output pressure}] || ![string length $aperture] || ![string length $output]} {
+if {[APSStrictParseArguments {aperture name output pressure gasMix customGas}] || ![string length $aperture] || ![string length $output]} {
+    return -code error "$usage"
+}
+
+if [string length $gasMix] {
+    if [lsearch -exact $knownGasMixList $gasMix]==-1 {
+        return -code error "Unknown gas mix \"$gasMix\". Use one of [join $knownGasMixList ,]"
+    }
+} elseif ![string length $customGas] {
     return -code error "$usage"
 }
 
@@ -38,12 +51,43 @@ if [lsearch -exact $allowedNameList $name]==-1 {
 set tmpRoot [APSTmpString]
 
 # Gas fractional pressures
-set fGas(H2) 0.65
-set fGas(H2O) 0.02
-set fGas(CH4) 0.07
-set fGas(CO) 0.22
-set fGas(CO2) 0.04
-set fGas(N2) 0.0
+if [string length $gasMix] {
+    switch $gasMix {
+        N2 {
+            set fGas(H2) 0.
+            set fGas(H2O) 0.
+            set fGas(CH4) 0.
+            set fGas(CO) 0.
+            set fGas(CO2) 0.
+            set fGas(N2) 1.0
+        }
+        default {
+            set fGas(H2) 0.65
+            set fGas(H2O) 0.02
+            set fGas(CH4) 0.07
+            set fGas(CO) 0.22
+            set fGas(CO2) 0.04
+            set fGas(N2) 0.0
+        }
+    }
+} else {
+    set knownGasList [list H2 H2O CH4 CO CO2 N2]
+    set fracSum 0
+    foreach pair [split $customGas " ,"] {
+        set gas [lindex [split $pair :] 0]
+        set frac [lindex [split $pair :] 1]
+        if [lsearch -exact $knownGasList $gas]==-1 {
+            puts stderr "Unknown gas: $gas\nKnown gases are [join $knownGasList ,]"
+            exit 1
+        }
+        set fGas($gas) $frac
+        set fracSum [expr $fracSum+$frac]
+    }
+    if [expr $fracSum!=1] {
+        puts stderr "Gas fractions don't sum to 1"
+        exit 1
+    }
+}
 
 # Gas constituents (nAtomTypes=# of types of atoms, Z=nuclear charge, atomCount=# atoms of each type)
 set nAtomTypes(H2) 1
