@@ -34,7 +34,7 @@ double BRAT_exit_function(double *qp, double *q, double s);
 void BRAT_deriv_function(double *qp, double *q, double s);
 void BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData);
 void BRAT_store_data(double *qp, double *q, double s, double exval);
-void BRAT_optimize_magnet();
+void BRAT_optimize_magnet(unsigned long flags);
 double refineAngle(double theta, double z0, double x0, double zv, double xv, 
                    double z1, double x1);
 static long verbose_optimize = 0;

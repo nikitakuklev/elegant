@@ -137,7 +137,7 @@ VMATRIX *compute_periodic_twiss(
   if ((i = fill_in_matrices(elem, run))) {
     if (noticeCounter < 100) {
       fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
-      report_stats(stdout, "statistics: ");
+      report_stats(stdout, (char*)"statistics: ");
       fflush(stdout);
       if (++noticeCounter==100) {
         fputs("(Further notices discontinued)\n", stdout);
@@ -2104,10 +2104,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->acceptance[1] = find_acceptance(beamline->elem_twiss, 1, run, &y_acc_name, &y_acc_z);
 
   if (Ax_mem==-1)
-    Ax_mem = rpn_create_mem("Ax", 0);
+    Ax_mem = rpn_create_mem((char*)"Ax", 0);
   rpn_store(beamline->acceptance[0], NULL, Ax_mem);
   if (Ay_mem==-1)
-    Ay_mem = rpn_create_mem("Ay", 0);
+    Ay_mem = rpn_create_mem((char*)"Ay", 0);
   rpn_store(beamline->acceptance[1], NULL, Ay_mem);
   
   beamline->acceptance[2] = x_acc_z;
@@ -5029,9 +5029,9 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   else
     harmonic = rf_setup_struct.near_frequency*T0+0.5;
 
-  iFreq = confirm_parameter("FREQ", T_RFCA);
-  iVolt = confirm_parameter("VOLT", T_RFCA);
-  iPhase = confirm_parameter("PHASE", T_RFCA);
+  iFreq = confirm_parameter((char*)"FREQ", T_RFCA);
+  iVolt = confirm_parameter((char*)"VOLT", T_RFCA);
+  iPhase = confirm_parameter((char*)"PHASE", T_RFCA);
   frf = harmonic/T0;
   printf("\nRf setup: frequency is %21.15e Hz (h=%ld)\n", frf, harmonic);
   for (i=0; i<nRfca; i++) {
@@ -5089,9 +5089,9 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     q = rfAcceptance = nus = St0 = Sz0 = -1;
   }
 
-  rpn_store(Sz0, NULL, rpn_create_mem("Sz0", 0));
-  rpn_store(St0, NULL, rpn_create_mem("St0", 0));
-  rpn_store(beamline->radIntegrals.sigmadelta, NULL, rpn_create_mem("Sdelta0", 0));
+  rpn_store(Sz0, NULL, rpn_create_mem((char*)"Sz0", 0));
+  rpn_store(St0, NULL, rpn_create_mem((char*)"St0", 0));
+  rpn_store(beamline->radIntegrals.sigmadelta, NULL, rpn_create_mem((char*)"Sdelta0", 0));
   
   if (writeToFile && fpRf) {
     fprintf(fpRf, "%le\n%le\n%le\n%le\n%le\n%le\n%le\n%ld\n",

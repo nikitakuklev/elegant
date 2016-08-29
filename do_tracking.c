@@ -1577,7 +1577,7 @@ long do_tracking(
 	      break;
 	    case T_SCATTER:
 	      if (!(flags&TEST_PARTICLES))
-		scatter(coord, nToTrack, *P_central, (SCATTER*)eptr->p_elem, i_pass);
+		scatter_ele(coord, nToTrack, *P_central, (SCATTER*)eptr->p_elem, i_pass);
 	      break;
 	    case T_DSCATTER:
 	      if (!(flags&TEST_PARTICLES))
@@ -3097,7 +3097,7 @@ void drift_beam(double **part, long np, double length, long order)
   log_exit("drift_beam");
 }
 
-void scatter(double **part, long np, double Po, SCATTER *scat, long iPass)
+void scatter_ele(double **part, long np, double Po, SCATTER *scat, long iPass)
 {
   long i, ip;
   double t, P, beta;
