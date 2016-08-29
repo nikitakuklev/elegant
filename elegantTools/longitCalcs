@@ -278,6 +278,7 @@ proc computeBunchShape {args} {
         "-define=col,Phi3,phis sin  phih sin k * + phi *" \
         "-define=col,Phi,Phi1 Phi2 + Phi3 - C1 *" \
         "-define=col,rhoArg,Phi alphac sqr / Sdelta0 sqr / chs" \
+        -filter=col,rhoArg,0,1e300 \
         -process=rhoArg,min,%sMin \
         "-define=col,rho,rhoArg chs exp" \
         -process=rho,integ,rhoInteg,functionOf=t \
