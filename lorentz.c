@@ -1477,9 +1477,9 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 	F1 *= bmapxy->strength;
 	F2 *= bmapxy->strength;
 	/* compute lorentz force */
-	wp[0] = w[1]*F2 - w[2]*F1;
-	wp[1] = w[2]*F0 - w[0]*F2;
-	wp[2] = w[0]*F1 - w[1]*F0;
+	wp[0] = (w[1]*F2 - w[2]*F1)/(1+q[7]);
+	wp[1] = (w[2]*F0 - w[0]*F2)/(1+q[7]);
+	wp[2] = (w[0]*F1 - w[1]*F0)/(1+q[7]);
 	if (bmapxy->BGiven) {
 	  for (ix=0; ix<3; ix++) 
 	    wp[ix] *= -particleCharge*particleRelSign/(particleMass*c_mks*P0);
@@ -1782,9 +1782,9 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
       wp[0] = wp[1] = wp[2] = 0;
     } else {
       /* compute lorentz force */
-      wp[0] = w[1]*F2 - w[2]*F1;
-      wp[1] = w[2]*F0 - w[0]*F2;
-      wp[2] = w[0]*F1 - w[1]*F0;
+      wp[0] = (w[1]*F2 - w[2]*F1)/(1+q[7]);
+      wp[1] = (w[2]*F0 - w[0]*F2)/(1+q[7]);
+      wp[2] = (w[0]*F1 - w[1]*F0)/(1+q[7]);
       if (bmapxyz->BGiven) {
         for (ix=0; ix<3; ix++) 
           wp[ix] *= -particleCharge*particleRelSign/(particleMass*c_mks*P0);
