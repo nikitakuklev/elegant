@@ -239,9 +239,21 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       jMod = iMod;
       if (modData->dataIndex[iMod]!=-1)
         jMod = modData->dataIndex[iMod];
-      modulation = interp(modData->modulationData[jMod], modData->timeData[jMod], modData->nData[jMod], t, 0, 1, &code);
+      code = 1;
+      if (t<=modData->timeData[jMod][0]) {
+        modulation = modData->modulationData[jMod][0];
+        fprintf(stderr, "Warning: interpolation at t=%21.15le below modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+                t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
+                entity_description[type].parameter[param].name);
+      } else if (t>=modData->timeData[jMod][modData->nData[jMod]-1]) {
+        modulation = modData->modulationData[jMod][modData->nData[jMod]-1];
+        fprintf(stderr, "Warning: interpolation at t=%21.15le above modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+                t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
+                entity_description[type].parameter[param].name);
+      } else
+        modulation = interp(modData->modulationData[jMod], modData->timeData[jMod], modData->nData[jMod], t, 0, 1, &code);
       if (code==0) {
-        fprintf(stderr, "Error: interpolation at %21.15le outside of modulation table range [%21.15le, %21.15le] for element %s, parameter %s\n",
+        fprintf(stderr, "Error: interpolation failed for t=%21.15le for element %s, parameter %s\n",
                 t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
                 entity_description[type].parameter[param].name);
         exitElegant(1);
