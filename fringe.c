@@ -31,7 +31,7 @@ void quadFringe(double **coord, long np, double K1,
   /* vec = {x, qx, y, qy, s, delta}
      */
   long ip;
-  double x, px, y, py, delta;
+  double x, px, y, py, delta, xp, yp, denom;
   double *vec;
   double a, dx, dpx, dy, dpy, ds;
   double *fringeIntM, *fringeIntP;
@@ -52,9 +52,16 @@ void quadFringe(double **coord, long np, double K1,
     vec = coord[ip];
     delta = vec[5];
 
+    /* convert from (xp, yp) to (px, py) */
+    xp = vec[1];
+    yp = vec[3];
+    denom = sqrt(1+sqr(xp)+sqr(yp));
+    vec[1] = (1+delta)*xp/denom;
+   vec[3] = (1+delta)*yp/denom;
+    
     if (linearFlag) {
       /* determine first linear matrix for this delta */
-      quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntM, 1);
+      quadPartialFringeMatrix(M, K1, inFringe, fringeIntM, 1);
       x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
       px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
       y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
@@ -127,7 +134,7 @@ void quadFringe(double **coord, long np, double K1,
 
     if (linearFlag) {
       /* determine and apply second linear matrix */
-      quadPartialFringeMatrix(M, K1/(1+delta), inFringe, fringeIntP, 2);
+      quadPartialFringeMatrix(M, K1, inFringe, fringeIntP, 2);
     
       vec[0] = M->R[0][0]*x + M->R[0][1]*px;
       vec[1] = M->R[1][0]*x + M->R[1][1]*px;
@@ -140,7 +147,18 @@ void quadFringe(double **coord, long np, double K1,
       vec[3] = py;
     }
     vec[4] -= nonlinearFactor*ds;
+
+    /* convert from (px, py) to (xp, yp) */
+    px = vec[1];
+    py = vec[3];
+    if ((denom=sqr(1+delta)-sqr(px)-sqr(py))>0) {
+      denom = sqrt(denom);
+      vec[1] = px/denom;
+      vec[3] = py/denom;
+    } else 
+      vec[1] = vec[3] = DBL_MAX;
   }
+  
   free_matrices(M);
   free(M);
 }
