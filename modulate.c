@@ -254,8 +254,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
         modulation = interp(modData->modulationData[jMod], modData->timeData[jMod], modData->nData[jMod], t, 0, 1, &code);
       if (code==0) {
         fprintf(stderr, "Error: interpolation failed for t=%21.15le for element %s, parameter %s\n",
-                t, modData->timeData[jMod][0], modData->timeData[jMod][modData->nData[jMod]-1], modData->element[jMod]->name,
-                entity_description[type].parameter[param].name);
+                t, modData->element[jMod]->name, entity_description[type].parameter[param].name);
         exitElegant(1);
       }
       modulationValid = 1;
