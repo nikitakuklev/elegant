@@ -3290,6 +3290,8 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, 
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
                              long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
 #endif
+void convertToCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
+void convertFromCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);

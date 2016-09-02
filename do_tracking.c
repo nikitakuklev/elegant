@@ -5054,3 +5054,38 @@ short determineP0ChangeBlocking(ELEMENT_LIST *eptr)
   return 0;
 }
 
+void convertToCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate)
+{
+  long ip;
+  double factor, p, beta;
+  for (ip=0; ip<np; ip++) {
+    factor = (1+coord[ip][5])/sqrt(1 + sqr(coord[ip][1]) +sqr(coord[ip][3]));
+    coord[ip][1] *= factor;
+    coord[ip][3] *= factor;
+    if (includeTimeCoordinate) {
+      p = (1+coord[ip][5])*p0;
+      beta = p/sqrt(p*p+1);
+      coord[ip][4] /= -beta;
+    }
+  }
+}
+
+void convertFromCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate)
+{
+  long ip;
+  double px, py, factor, p, beta, delta;
+  for (ip=0; ip<np; ip++) {
+    px = coord[ip][1];
+    py = coord[ip][3];
+    delta = coord[ip][5];
+    factor = 1/sqrt(sqr(1+delta) - sqr(px) - sqr(py));
+    coord[ip][1] *= factor;
+    coord[ip][3] *= factor;
+    if (includeTimeCoordinate) {
+      p = (1+delta)*p0;
+      beta = p/sqrt(p*p+1);
+      coord[ip][4] *= -beta;
+    }
+  }
+}
+

@@ -236,7 +236,12 @@ void do_transport_analysis(
 				  (orbit && center_on_orbit? orbit: NULL),
 				  &finalCoord, &coordError,
 				  7, stepSize);
-    
+    if (canonical_variables)
+      /* Assume particles are generated in canonical variables (x, px, y, py, -s/beta, delta) and
+       * convert to (x, x', y, y', s, delta) coordinates for tracking.
+       */
+      convertFromCanonicalCoordinates(finalCoord, n_track, run->p_central, 1);
+
     /* Track the reference particle for fiducialization. In MPI mode, all cores do this */
     beamline->fiducial_flag = 0;
     p_central = run->p_central;
@@ -246,6 +251,7 @@ void do_transport_analysis(
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
 		       1, 0, NULL, NULL, NULL, NULL, NULL);
+
     if (!code) {
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
@@ -321,6 +327,10 @@ void do_transport_analysis(
       /* In MPI mode, only master does analysis and output */
 #endif
     
+    if (canonical_variables)
+      /* convert back to (x, px, y, py, -s/beta, delta) for analysis */
+      convertToCanonicalCoordinates(finalCoord, n_track, run->p_central, 1);
+    
     copyParticles(&finalCoordCopy, finalCoord, n_track);
     if (p_central!=run->p_central && verbosity>0)
       fprintf(stdout, "Central momentum changed from %e to %e\n", run->p_central, p_central);
@@ -341,11 +351,13 @@ void do_transport_analysis(
         fflush(stdout);
         if (verbosity>1) {
           for (i=0; i<n_track-1; i++) {
-            fprintf(stdout, "Particle %ld start/end coordinates:\n", i);
+            fprintf(stdout, "Particle %ld start/end/delta coordinates:\n", i);
             for (j=0; j<6; j++)
-              fprintf(stdout, "%16.8e%c", initialCoord[i][j], j==5?'\n':' ');
+              fprintf(stdout, "%21.15e%c", initialCoord[i][j], j==5?'\n':' ');
             for (j=0; j<6; j++)
-              fprintf(stdout, "%16.8e%c", finalCoord[i][j], j==5?'\n':' ');
+              fprintf(stdout, "%21.15e%c", finalCoord[i][j], j==5?'\n':' ');
+            for (j=0; j<6; j++)
+              fprintf(stdout, "%21.15e%c", finalCoord[i][j]-finalCoord[0][j], j==5?'\n':' ');
           }
           fflush(stdout);
         }

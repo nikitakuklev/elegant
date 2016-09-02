@@ -17,6 +17,7 @@
     long center_on_orbit = 0;
     long verbosity = 0;
     long n_points = 3;  /* backward compatibility. ignored */
+    long canonical_variables = 0;
     long printout_order = 2;
     long periodic = 1;
     double beta_x = 1;
