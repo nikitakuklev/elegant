@@ -446,9 +446,10 @@ VMATRIX *wiggler_matrix(double length, double radius, long poles,
     return(M);
     }
 
-VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe)
+VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe)
 {
     VMATRIX *M, *Medge1, *Medge2;
+    VMATRIX *Mfringe, *Mtot;
     double *C, **R, ***T, ****U;
     double temp, lf = 0;
     
@@ -590,6 +591,17 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
       free_matrices(Medge2); tfree(Medge2); Medge2 = NULL;
     }
     
+    if (xkick || ykick) {
+      /* put identical kicks at the entrance and exit */
+      Mtot = tmalloc(sizeof(*Mtot));
+      initialize_matrices(Mtot, M->order);
+      Mfringe = hvcorrector_matrix(0, xkick/2, ykick/2, 0.0, 0.0, 1.0, 1.0, 0, M->order);
+      concat_matrices(Mtot, Mfringe, M, 0);
+      concat_matrices(M, Mtot, Mfringe, 0);
+      free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
+      free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
+    }
+
     tilt_matrices(M, tilt);
 
     return(M);
@@ -943,7 +955,7 @@ VMATRIX *compute_matrix(
         sext = (SEXT*)elem->p_elem;
         elem->matrix = sextupole_matrix(sext->k2, sext->length, 
                                         sext->order?sext->order:run->default_order, sext->tilt,
-                                        sext->fse, sext->ffringe);
+                                        sext->fse, 0.0, 0.0, sext->ffringe);
         if (sext->dx || sext->dy || sext->dz)
             misalign_matrix(elem->matrix, sext->dx, sext->dy, sext->dz, 0.0);
         break;
@@ -1081,7 +1093,7 @@ VMATRIX *compute_matrix(
             bombElegant("n_kicks must by > 0 for KQUAD element", NULL);
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
                                          (run->default_order?run->default_order:1), kquad->tilt, 
-                                         kquad->fse, kquad->xkick, kquad->ykick,
+                                         kquad->fse, kquad->xkick*kquad->xKickCalibration, kquad->ykick*kquad->yKickCalibration,
                                          kquad->edge1Linear?kquad->edge1_effects:0, 
                                          kquad->edge2Linear?kquad->edge2_effects:0,
                                          "integrals", 0.0, kquad->lEffective,
@@ -1103,7 +1115,9 @@ VMATRIX *compute_matrix(
             bombElegant("n_kicks must by > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->length, 
                                         (run->default_order?run->default_order:2), ksext->tilt,
-                                        ksext->fse, 0.0);
+                                        ksext->fse, 
+                                        ksext->xkick*ksext->xKickCalibration, ksext->ykick*ksext->yKickCalibration,
+                                        0.0);
         if (ksext->dx || ksext->dy || ksext->dz)
             misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 0.0);
         readErrorMultipoleData(&(ksext->systematicMultipoleData),
@@ -2483,7 +2497,7 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
     M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);
     break;
   case 2: /* sextupole */
-    M = sextupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0);
+    M = sextupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0);
     break;
   case 3: /* octupole */
     M = octupole_matrix(KnL/length, length, order, mult->tilt, 0.0);

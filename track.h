@@ -930,7 +930,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 17
+#define N_KSEXT_PARAMS 25
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 43
 #define N_MAGNIFY_PARAMS 6
@@ -1848,16 +1848,19 @@ extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
     double length, k2, tilt, bore, B;
-    double dx, dy, dz, fse;
-    long n_kicks, synch_rad;
-    char *systematic_multipoles, *random_multipoles;
+    double dx, dy, dz, fse, xkick, ykick;
+    double xKickCalibration, yKickCalibration;
+    long xSteering, ySteering, n_kicks, synch_rad;
+    char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder, isr, isr1Particle;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA edgeMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;      
     long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
+    MULTIPOLE_DATA steeringMultipoleData;
     } KSEXT;
 
 /* names and storage structure for kick octupole physical parameters */
@@ -3202,7 +3205,7 @@ extern void GWigSymplecticPass(double **coord, long num_particles, double pCentr
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
-extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double ffringe);
+extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void startMatrixComputationTiming();

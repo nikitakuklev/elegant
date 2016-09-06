@@ -237,7 +237,7 @@ void do_transport_analysis(
 				  &finalCoord, &coordError,
 				  7, stepSize);
     if (canonical_variables)
-      /* Assume particles are generated in canonical variables (x, px, y, py, -s/beta, delta) and
+      /* Assume particles are generated in canonical variables (x, px, y, py, -s, delta) and
        * convert to (x, x', y, y', s, delta) coordinates for tracking.
        */
       convertFromCanonicalCoordinates(finalCoord, n_track, run->p_central, 1);
@@ -328,7 +328,7 @@ void do_transport_analysis(
 #endif
     
     if (canonical_variables)
-      /* convert back to (x, px, y, py, -s/beta, delta) for analysis */
+      /* convert back to (x, px, y, py, -s, delta) for analysis */
       convertToCanonicalCoordinates(finalCoord, n_track, run->p_central, 1);
     
     copyParticles(&finalCoordCopy, finalCoord, n_track);

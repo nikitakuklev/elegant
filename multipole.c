@@ -703,8 +703,8 @@ long multipole_tracking2(
     dx = kquad->dx;
     dy = kquad->dy;
     dz = kquad->dz;
-    xkick = kquad->xkick;
-    ykick = kquad->ykick;
+    xkick = kquad->xkick*kquad->xKickCalibration;
+    ykick = kquad->ykick*kquad->yKickCalibration;
     integ_order = kquad->integration_order;
     sqrtOrder = kquad->sqrtOrder?1:0;
     if (kquad->synch_rad)
@@ -759,6 +759,8 @@ long multipole_tracking2(
     dx = ksext->dx;
     dy = ksext->dy;
     dz = ksext->dz;
+    xkick = ksext->xkick*ksext->xKickCalibration;
+    ykick = ksext->ykick*ksext->yKickCalibration;
     integ_order = ksext->integration_order;
     sqrtOrder = ksext->sqrtOrder?1:0;
     if (ksext->synch_rad)
@@ -778,20 +780,26 @@ long multipole_tracking2(
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(ksext->systematicMultipoleData),
                              ksext->systematic_multipoles, 0);
+      readErrorMultipoleData(&(ksext->edgeMultipoleData),
+                             ksext->edge_multipoles, 0);
       readErrorMultipoleData(&(ksext->randomMultipoleData),
                              ksext->random_multipoles, 0);
+      readErrorMultipoleData(&(ksext->steeringMultipoleData), 
+                             ksext->steering_multipoles, 1);
       ksext->multipolesInitialized = 1;
     }
     if (!ksext->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
                                        &(ksext->systematicMultipoleData),
-                                       NULL,
+                                       &(ksext->edgeMultipoleData),
                                        &(ksext->randomMultipoleData),
-                                       NULL,
+                                       &(ksext->steeringMultipoleData),
                                        KnL, 2);
       ksext->totalMultipolesComputed = 1;
     }
     multData = &(ksext->totalMultipoleData);
+    edgeMultData = &(ksext->edgeMultipoleData);
+    steeringMultData = &(ksext->steeringMultipoleData);
     break;
   case T_KOCT:
     koct = ((KOCT*)elem->p_elem);
