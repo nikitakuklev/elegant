@@ -236,6 +236,27 @@ void do_transport_analysis(
 				  (orbit && center_on_orbit? orbit: NULL),
 				  &finalCoord, &coordError,
 				  7, stepSize);
+#if DEBUG
+    if (1) {
+      long i, j;
+      FILE *fp;
+      fp = fopen("analyzeMap.in", "w");
+      fprintf(fp, "SDDS1\n");
+      fprintf(fp, "&column name=x0 type=double units=m &end\n");
+      fprintf(fp, "&column name=xp0 type=double &end\n");
+      fprintf(fp, "&column name=y0 type=double units=m &end\n");
+      fprintf(fp, "&column name=yp0 type=double &end\n");
+      fprintf(fp, "&column name=s0 type=double units=m &end\n");
+      fprintf(fp, "&column name=delta0 type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (i=0; i<n_track; i++) {
+        for (j=0; j<6; j++)
+          fprintf(fp, "%21.15e ", initialCoord[i][j]);
+        fprintf(fp, "\n");
+      }
+    }    
+#endif
+
     if (canonical_variables)
       /* Assume particles are generated in canonical variables (x, px, y, py, -s, delta) and
        * convert to (x, x', y, y', s, delta) coordinates for tracking.
@@ -327,6 +348,26 @@ void do_transport_analysis(
       /* In MPI mode, only master does analysis and output */
 #endif
     
+#if DEBUG
+    if (1) {
+      long i, j;
+      FILE *fp;
+      fp = fopen("analyzeMap.out", "w");
+      fprintf(fp, "SDDS1\n");
+      fprintf(fp, "&column name=x type=double units=m &end\n");
+      fprintf(fp, "&column name=xp type=double &end\n");
+      fprintf(fp, "&column name=y type=double units=m &end\n");
+      fprintf(fp, "&column name=yp type=double &end\n");
+      fprintf(fp, "&column name=s type=double units=m &end\n");
+      fprintf(fp, "&column name=delta type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (i=0; i<n_track; i++) {
+        for (j=0; j<6; j++)
+          fprintf(fp, "%21.15e ", finalCoord[i][j]);
+        fprintf(fp, "\n");
+      }
+    }
+#endif
     if (canonical_variables)
       /* convert back to (x, px, y, py, -s, delta) for analysis */
       convertToCanonicalCoordinates(finalCoord, n_track, run->p_central, 1);
@@ -370,6 +411,23 @@ void do_transport_analysis(
 	if (maximumValue[i]<initialCoord[j][i])
 	  maximumValue[i] = initialCoord[j][i];
       }
+    }
+
+    /* Set errors as fraction of the absolute maximum coordinate */
+    for (i=0; i<6; i++) {
+      double min, max;
+      max = -(min = DBL_MAX);
+      for (j=0; j<n_track; j++) {
+        if (max<finalCoord[j][i])
+          max = finalCoord[j][i];
+        if (min>finalCoord[j][i])
+          min = finalCoord[j][i];
+      }
+      max = fabs(max);
+      min = fabs(min);
+      max = max>min ? max : min;
+      for (j=0; j<n_track; j++)
+        coordError[j][i] = max*accuracy_factor;
     }
     
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,

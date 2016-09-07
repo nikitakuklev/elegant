@@ -124,6 +124,9 @@ VMATRIX *computeMatricesFromTracking(
       fprintf(fpo_ma, "%ld pairs selected for R[i][%ld]\n",
 	      n_pairs1, j+1);
 #if DEBUG1
+    if (verbose<=1)
+      fprintf(fpo_ma, "%ld pairs selected for R[i][%ld]\n",
+              n_pairs1, j+1);
     showSelectedPairs(fpo_ma, set1_i, set1_f, set1_error, n_pairs1);
 #endif
 
@@ -153,8 +156,16 @@ VMATRIX *computeMatricesFromTracking(
 		best_fit.coefficient_error[1]);
       }
 #if DEBUG1
-      fprintf(fpo_ma, "order of best fit = %ld\n", 
-	      best_fit.order_of_fit);
+      if (verbose<=1) {
+	fprintf(fpo_ma, "order of fit for R[%ld][%ld], T[%ld][%ld][%ld], Q[%ld][%ld][%ld][%ld] = %d\n", 
+		i+1, j+1, 
+		i+1, j+1, j+1,
+		i+1, j+1, j+1, j+1, 
+		best_fit.order_of_fit);
+	fprintf(fpo_ma, "    R[%ld][%ld]      = %.16le +/- %.16le\n",
+		i+1, j+1, R[i][j],
+		best_fit.coefficient_error[1]);
+      }
       fprintf(fpo_ma, "chi-squared = %le \n", best_fit.chi_squared);
       fprintf(fpo_ma, "coefficients of fit:\n");
       for (k=0; k<best_fit.order_of_fit+1; k++) 
@@ -206,12 +217,11 @@ VMATRIX *computeMatricesFromTracking(
 	  saved_fit[i][j].coefficient[0] = 0;
 	  if ((term = initial[k][j]))
 	    final[k][i] -= poly(saved_fit[i][j].coefficient, 
-				saved_fit[i][j].order_of_fit+1, term);
+                                saved_fit[i][j].order_of_fit+1, term);
 	}
 	else {
 	  if ((term = initial[k][j]))
-	    final[k][i] -= R[i][j]*term + T[i][j][j]*sqr(term) +
-	      Q[i][j][j][j]*pow3(term);
+            final[k][i] -= term*(R[i][j] + term*(T[i][j][j] + term*Q[i][j][j][j]));
 	}
       }
     }
@@ -694,7 +704,7 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
   
   if (n_pairs<3)
     return 0;
-  lowest_order_of_fit  = 4;
+  lowest_order_of_fit  = 2;
   highest_order_of_fit = (max_order>n_pairs-2?n_pairs-2:max_order);
   xdata  = tmalloc(sizeof(*xdata)*n_pairs);
   ydata  = tmalloc(sizeof(*ydata)*n_pairs);
@@ -761,6 +771,11 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
     }
   } while (++order_of_fit<=highest_order_of_fit);
 
+  for (k=0; k<=best_fit->order_of_fit; k++) {
+    if (fabs(best_fit->coefficient[k])<best_fit->coefficient_error[k])
+      best_fit->coefficient[k] = 0;
+  }
+  
   free(xdata);
   free(ydata);
   free(sigmay);

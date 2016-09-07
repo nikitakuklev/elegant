@@ -14,6 +14,7 @@
     double delta_yp = 5e-5;
     double delta_s  = 5e-5;
     double delta_dp = 5e-5;
+    double accuracy_factor = 1e-12;
     long center_on_orbit = 0;
     long verbosity = 0;
     long n_points = 3;  /* backward compatibility. ignored */
