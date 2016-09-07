@@ -1146,8 +1146,8 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 
     /* do kicks for spurious multipoles */
     if (multData) {
-      for (imult=0; imult<multData->orders; multData++) {
-        if (multData->KnL && multData->KnL[imult]) 
+      for (imult=0; imult<multData->orders; imult++) {
+        if (multData->KnL && multData->KnL[imult])
           apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                           multData->order[imult], 
                                           multData->KnL[imult]/n_kicks, 0);
@@ -1499,9 +1499,8 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   if (sum_Fy_return)
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
-
   /* sum up the terms for the multipole expansion */
-  for (sum_Fx=sum_Fy=0; i<=order; i++) {
+  for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
       sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
     else
