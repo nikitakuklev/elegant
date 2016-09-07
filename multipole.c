@@ -1625,12 +1625,6 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
            !(randomMult->KnL=SDDS_Malloc(sizeof(*randomMult->KnL)*randomMult->orders)) ||
            !(randomMult->JnL=SDDS_Malloc(sizeof(*randomMult->JnL)*randomMult->orders))))
         bombTracking("memory allocation failure (computeTotalMultipoleFields");
-      if (edgeMult && edgeMult->orders && 
-          (!(edgeMult->anMod=SDDS_Malloc(sizeof(*edgeMult->anMod)*edgeMult->orders)) ||
-           !(edgeMult->bnMod=SDDS_Malloc(sizeof(*edgeMult->bnMod)*edgeMult->orders)) ||
-           !(edgeMult->KnL=SDDS_Malloc(sizeof(*edgeMult->KnL)*edgeMult->orders)) ||
-           !(edgeMult->JnL=SDDS_Malloc(sizeof(*edgeMult->JnL)*edgeMult->orders))))
-        bombTracking("memory allocation failure (computeTotalMultipoleFields");
       if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
           !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
         bombTracking("memory allocation failure (computeTotalMultipoleFields)");
@@ -1638,12 +1632,6 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
         if (systematicMult->orders && randomMult->orders &&
             systematicMult->order[i]!=randomMult->order[i])
           bombTracking("multipole orders in systematic and random lists must match up for any given element.");
-        if (edgeMult && edgeMult->orders && randomMult->orders &&
-            edgeMult->order[i]!=randomMult->order[i])
-          bombTracking("multipole orders in edge and random lists must match up for any given element.");
-        if (edgeMult && edgeMult->orders && systematicMult->orders &&
-            edgeMult->order[i]!=systematicMult->order[i])
-          bombTracking("multipole orders in edge and systematic lists must match up for any given element.");
         if (systematicMult->orders) {
           totalMult->order[i] = systematicMult->order[i] ;
           systematicMult->anMod[i] = systematicMult->an[i]*dfactorial(systematicMult->order[i])/
@@ -1654,12 +1642,19 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
           totalMult->order[i] = randomMult->order[i];
           /* anMod and bnMod will be computed later for randomized multipoles */
         }
-        if (edgeMult && edgeMult->orders) {
-          edgeMult->anMod[i] = edgeMult->an[i]*dfactorial(edgeMult->order[i])/
-            ipow(edgeMult->referenceRadius, edgeMult->order[i]);
-          edgeMult->bnMod[i] = edgeMult->bn[i]*dfactorial(edgeMult->order[i])/
-            ipow(edgeMult->referenceRadius, edgeMult->order[i]);
-        }
+      }
+    }
+    if (edgeMult && edgeMult->orders) {
+      if (!(edgeMult->anMod=SDDS_Malloc(sizeof(*edgeMult->anMod)*edgeMult->orders)) ||
+          !(edgeMult->bnMod=SDDS_Malloc(sizeof(*edgeMult->bnMod)*edgeMult->orders)) ||
+          !(edgeMult->KnL=SDDS_Malloc(sizeof(*edgeMult->KnL)*edgeMult->orders)) ||
+          !(edgeMult->JnL=SDDS_Malloc(sizeof(*edgeMult->JnL)*edgeMult->orders)))
+        bombTracking("memory allocation failure (computeTotalMultipoleFields");
+      for (i=0; i<edgeMult->orders; i++) {
+        edgeMult->anMod[i] = edgeMult->an[i]*dfactorial(edgeMult->order[i])/
+          ipow(edgeMult->referenceRadius, edgeMult->order[i]);
+        edgeMult->bnMod[i] = edgeMult->bn[i]*dfactorial(edgeMult->order[i])/
+          ipow(edgeMult->referenceRadius, edgeMult->order[i]);
       }
     }
   }
@@ -1697,7 +1692,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
      * of the magnet with strength KmL
      */
     sFactor = KmL/dfactorial(rootOrder)*ipow(edgeMult->referenceRadius, rootOrder);
-    for (i=0; i<totalMult->orders; i++) {
+    for (i=0; i<edgeMult->orders; i++) {
       edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
       edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];
     }
