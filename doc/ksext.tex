@@ -7,9 +7,12 @@ integration order become irrelevant.
 
 \begin{raggedright}
 Specification of systematic and random multipole errors is supported
-through the \verb|SYSTEMATIC_MULTIPOLES| and 
+through the \verb|SYSTEMATIC_MULTIPOLES|, \verb|EDGE_MULTIPOLES|, and 
 \verb|RANDOM_MULTIPOLES|
-fields.  These fields give the names of SDDS files that supply the
+fields.  These specify, respectively, fixed multipole strengths for the
+body of the element, fixed multipole strengths for the edges of the element,
+and random multipole strengths for the body of the element.
+These fields give the names of SDDS files that supply the
 multipole data.  The files are expected to contain a single page of
 data with the following elements:
 \end{raggedright}
