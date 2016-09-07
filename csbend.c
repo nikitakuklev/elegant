@@ -37,8 +37,8 @@ double **Fx_xy = NULL, **Fy_xy = NULL;
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 void convolveArrays1(double *output, long n, double *a1, double *a2);
-void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
-                     double *dp, double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
+void dipoleFringeSym(double *Qf, double *Qi,
+                     double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
 
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
@@ -601,7 +601,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
       } else if (csbend->edge1_effects==2) {
         rho = (1+dp)*rho_actual;
-        dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+	  /* load input coordinates into arrays */
+    Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+	  /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+	  x  = Qf[0];  
+	  xp = Qf[1];  
+	  y  = Qf[2];  
+	  yp = Qf[3];  
+	  dp = Qf[5];
       }
     }
 
@@ -697,7 +707,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
       } else if (csbend->edge2_effects==2) {
         rho = (1+dp)*rho_actual;
-        dipoleFringeSym(&x, &xp, &y, &yp, &dp, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+	  /* load input coordinates into arrays */
+    Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+	  /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+	  x  = Qf[0];  
+	  xp = Qf[1];  
+	  y  = Qf[2];  
+	  yp = Qf[3];  
+	  dp = Qf[5];
       }
     }
     
@@ -1660,7 +1680,22 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
         else if (csbend->edge1_effects>=2) {
           rho = (1+DP)*rho_actual;
-          dipoleFringeSym(&X, &XP, &Y, &YP, &DP, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+	  /* load input coordinates into arrays */
+	  Qi[0] = X;
+	  Qi[1] = XP;
+	  Qi[2] = Y;
+	  Qi[3] = YP;
+	  Qi[4] = 0;  
+	  Qi[5] = DP;
+          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+	  /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+	  X  = Qf[0];  
+	  XP = Qf[1];  
+	  Y  = Qf[2];  
+	  YP = Qf[3];  
+	  DP = Qf[5];
         }
       }
     }
@@ -2187,7 +2222,22 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
           else if (csbend->edge2_effects>=2) {
             rho = (1+DP)*rho_actual;
-            dipoleFringeSym(&X, &XP, &Y, &YP, &DP, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+	  /* load input coordinates into arrays */
+	  Qi[0] = X;
+	  Qi[1] = XP;
+	  Qi[2] = Y;
+	  Qi[3] = YP;
+	  Qi[4] = 0;  
+	  Qi[5] = DP;
+          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+	  /* retrieve coordinates from arrays */
+          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+	  X  = Qf[0];  
+	  XP = Qf[1];  
+	  Y  = Qf[2];  
+	  YP = Qf[3];  
+	  DP = Qf[5];
 	  }
 	}
       }
@@ -3593,8 +3643,8 @@ void apply_edge_effects(
 
 /* dipole fringe effects symplectic tracking, based on work of Kilean Hwang */
 
-void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
-                     double *dp, double rho, double inFringe, long edgeOrder, double K1, double edge, double gap, double fint, double Rhe)
+void dipoleFringeSym(double *Qf, double *Qi,
+                     double rho, double inFringe, long edgeOrder, double K1, double edge, double gap, double fint, double Rhe)
 {
   double dx, dpx, dy, dpy;
   double tan_edge, sin_edge, sec_edge, cos_edge;
@@ -3610,7 +3660,11 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
   k5 = 0.0;
   k6 = -1.0;
 
-  x0 = *x;  xp0 = *xp;  y0 = *y;  yp0 = *yp; dp0 = *dp;
+	  x0  = Qi[0];  
+	  xp0 = Qi[1];  
+	  y0  = Qi[2];  
+	  yp0 = Qi[3];  
+	  dp0 = Qi[5];
   dx = dpx = dy = dpy = 0;
   psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
 
@@ -3632,14 +3686,14 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
         +tan_edge*x0/rho
           +ipow(y0,2)/2*(2*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
             +ipow(y0,2)/2*(ipow(tan_edge,1))/ipow(rho,2)/(1+dp0)
-              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho/(1+dp0)
 		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
                   -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
                     +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
       dpy  =  -1.*tan_edge*y0/rho 
         +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-            +inFringe*y0*xp0/rho
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho/(1+dp0)
+            +inFringe*y0*xp0/rho/(1+dp0)
               +k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
 		+k6*x0*y0/ipow(cos_edge,3)/rho*Rhe;
     }
@@ -3652,14 +3706,14 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
       dpx  =  tan_edge*x0/rho
           -ipow(y0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
             -ipow(x0,2)/2*(1*ipow(tan_edge,3))/ipow(rho,2)/(1+dp0)
-              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho
+              -inFringe*(x0*xp0-y0*yp0)*ipow(tan_edge,2)/rho/(1+dp0)
 		+k4*ipow(sin_edge,2)*ipow(gap,2)/2/ipow(cos_edge,3)/rho*Rhe
                   -k5*x0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
                     +k6*(y0*y0-x0*x0)/2/ipow(cos_edge,3)/rho*Rhe;
       dpy  =  -1.*tan_edge*y0/rho 
         +k2*y0*(1+ipow(sin_edge,2))*gap/(1+dp0)/ipow(rho,2)/ipow(cos_edge,3)
-          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho
-            +inFringe*y0*xp0/rho
+          +inFringe*(x0*yp0+y0*xp0)*ipow(tan_edge,2)/rho/(1+dp0)
+            +inFringe*y0*xp0/rho/(1+dp0)
               +x0*y0*ipow(sec_edge,2)*tan_edge/ipow(rho,2)/(1+dp0)
 		+k3*ipow(y0,3)*(2./3./cos_edge-4./3./ipow(cos_edge,3))/(1+dp0)/rho/rho/gap
                   -k5*y0*ipow(sin_edge,1)*ipow(gap,1)/ipow(cos_edge,3)/rho*Rhe
@@ -3694,10 +3748,11 @@ void dipoleFringeSym(double *x, double *xp, double *y, double *yp,
     }
   }
   
-  *x  = x0  + dx;
-  *xp = xp0 + dpx/(1+dp0);
-  *y  = y0  + dy;
-  *yp = yp0 + dpy/(1+dp0);
+  Qf[0]  = x0  + dx;
+  Qf[1] = xp0 + dpx;
+  Qf[2]  = y0  + dy;
+  Qf[3] = yp0 + dpy;
+  Qf[5] = Qi[5];
   /*  printf("x %f y %f xp %f yp %f dp0 %f\n", *x, *y, *xp, *yp, dp0); */
 }
 
