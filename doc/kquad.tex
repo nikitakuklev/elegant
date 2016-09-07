@@ -24,9 +24,9 @@ normal and skew multipole strengths, respectively.
 (N.B.: previous versions used the names {\tt an} and {\tt bn}, respectively. This is still accepted but deprecated)
 These are defined as a fraction 
 of the main field strength measured at the reference radius, R: 
-$a_n  = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
+$f_n  = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
 $m=1$ is the order of the main field and $n$ is the order of the error multipole.
-A similar relationship holds for the skew multipoles.
+A similar relationship holds for the skew multipole fractional strengths.
 For random multipoles, the values are interpreted as rms values for the distribution.
 \end{enumerate}
 
@@ -43,11 +43,11 @@ because of the quadrupole symmetry.
 \item Floating point column {\tt normal} giving the values for the normal
 multipole strengths, which are driven by the horizontal steering field.
 (N.B.: previous versions used the name {\tt an} for this data. This is still accepted but deprecated)
-{\tt an} is specifies the multipole strength as a fraction of the steering field strength measured at the reference radius, R: 
-$a_n  = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
+{\tt normal} is specifies the multipole strength as a fraction $f_n$ of the steering field strength measured at the reference radius, R: 
+$f_n = \frac{K_n R^n / n!}{K_m R^m / m!}$, where 
 $m=0$ is the order of the steering field and $n$ is the order of the error multipole.
-The {\tt bn} values (for vertical steering) are deduced from the {\tt an} values, specifically,
-$b_n = a_n*(-1)^{n/2}$.
+The skew values (for vertical steering) are deduced from the {\tt normal} values, specifically,
+$g_n = f_n*(-1)^{n/2}$.
 \end{enumerate}
 
 The dominant systematic multipole term in the steering field is a
