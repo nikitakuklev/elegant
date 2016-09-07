@@ -1492,35 +1492,20 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
                                      long order, double KnL, long skew)
 {
   long i;
-  double sum_Fx, sum_Fy, xypow, ratio;
+  double sum_Fx, sum_Fy;
   double *coef;
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
-  if (x==0) {
-    if (y==0) {
-      if (order!=0) 
-        return;
-      xypow = 1;
-    } else
-      xypow = ipow(y, order);
-    i = order;
-    ratio = 0;
-  }
-  else {
-    xypow = ipow(x, order);
-    ratio = y/x;
-    i = 0;
-  }
-  /* now sum up the terms for the multipole expansion */
+
+  /* sum up the terms for the multipole expansion */
   for (sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
-      sum_Fx += coef[i]*xypow;
+      sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
     else
-      sum_Fy += coef[i]*xypow;
-    xypow *= ratio;
+      sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
