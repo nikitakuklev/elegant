@@ -301,7 +301,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       n_elems++;  	
     }
     
-/* since the lists were being extended before it was known that
+    /* since the lists were being extended before it was known that
        the was another object to put in them, must eliminate references
        to the most recently added nodes. 
        */
@@ -435,6 +435,19 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     long skip = 0;
     long nelem = 0;
     eptr = &(lptr->elem);
+    if (getAddStartFlag()) {
+      ELEMENT_LIST *eptr2, *next;
+      next = eptr->succ;
+      eptr2 = tmalloc(sizeof(*eptr2));
+      copy_element(eptr2, eptr, 0, 0, 0);
+      copy_element(eptr, eptr_add, 0, 0, 0);
+      eptr->pred = NULL;
+      eptr->succ = eptr2;
+      eptr2->pred = eptr;
+      eptr2->succ = next;
+      eptr = eptr2;
+      nelem++;
+    }
     while (eptr) {
       /* The end position will have been set in a previous call to get_beamline(), prior to 
          definition of insertions */
@@ -445,7 +458,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       }
       if (eptr->succ==NULL && getAddEndFlag()) {	/* add element to the end of line if request */
         add_element(eptr, eptr_add);
-        eptr = eptr->succ;				/* this is very impotant to get off the loop */
+        eptr = eptr->succ;				/* this is very important to get off the loop */
         nelem++;
       }   			
       eptr = eptr->succ; 
@@ -1366,6 +1379,7 @@ long nearestInteger(double value)
 void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1) 
 {
   ELEMENT_LIST *eptr;
+  printf("Adding %s after %s\n", elem1->name, elem0->name);
   eptr = tmalloc(sizeof(*eptr));
   copy_element(eptr, elem1, 0, 0, 0);
 

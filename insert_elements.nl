@@ -11,6 +11,7 @@
         STRING exclude = NULL;
         long skip = 1;
         long disable = 0;
+        long add_at_start = 0;
         long add_at_end = 0;
         double s_start = -1;
         double s_end = -1;

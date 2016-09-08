@@ -14,7 +14,7 @@
 
 typedef struct {
   char **name, *type, *exclude, *elemDef;
-  long nNames, nskip, add_end, total, occur[100];
+  long nNames, nskip, add_end, add_start, total, occur[100];
   double sStart, sEnd;
 } ADD_ELEM;
 
@@ -40,6 +40,11 @@ long getAddEndFlag()
   return (addElem.add_end);
 } 
 
+long getAddStartFlag()
+{
+  return (addElem.add_start);
+} 
+
 void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
 {
   long i, nNames;
@@ -54,8 +59,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   if (disable)
     return;
-  if (!skip && !add_at_end && !total_occurrences)
-    bombElegant("skip, add_at_end and total_occurrences can not be zero at the same time", NULL);
+  if (!skip && !add_at_end && !add_at_start && !total_occurrences)
+    bombElegant("skip, add_at_end, add_at_start, and total_occurrences can not be zero at the same time", NULL);
 
   if (total_occurrences) {
     if (skip)
@@ -108,9 +113,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   add_elem_flag = 1;
   addElem.nskip = skip;
-  addElem.add_end =0;
-  if (add_at_end)
-    addElem.add_end = add_at_end;
+  addElem.add_end = add_at_end;
+  addElem.add_start = add_at_start;
   addElem.name = nameList;
   addElem.nNames = nNames;
   addElem.type = type;
