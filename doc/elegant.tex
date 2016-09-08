@@ -49,7 +49,7 @@ Here is a summary of what's changed since release 30.1.
 \item The \verb|touschek_scatter| command had a bug when random multipoles where used on \verb|KQUAD| and \verb|KSEXT| elements. In particular,
   these multipoles components were re-randomized for each \verb|TSCATTER| element. This was discovered and fixed by A. Xiao (ANL).
 \item The \verb|BMXYZ| and \verb|BMAPXY| elements lacked dependence on the momentum deviation $\delta$. This issue was reported by R. Lindberg (ANL).
-\item Path-length issues were fixed for the \verb|BRAT| element. This issue was reported by R. Lindberg (ANL).
+\item Higher-order path-length issues were fixed for the \verb|BRAT| element. This issue was reported by R. Lindberg (ANL).
 \item The steering kick calibration factors are no longer ignored on the \verb|KQUAD| element.
 \end{itemize}
 
@@ -75,9 +75,12 @@ Here is a summary of what's changed since release 30.1.
   parameter that can be used to eliminate spurious matrix elements. R. Lindberg (ANL) helped with the development and testing.
 \item The  \verb|touschek_scatter| command  now uses averaging of the loss rate over the interval between two \verb|TSCATTER| elements
   instead of the local value at the element, which gives more accurate estimates of the distribution of scattered particles.
+  This change requires that \verb|TSCATTER| elements be inserted at the beginning and end of the beamline, which can be
+  done using \verb|add_at_end=1| and \verb|add_at_start=1| in the \verb|insert_elements| command.
   This was implemented by A. Xiao (ANL).
 \item The \verb|modulate_elements| command now offers more control over verbose printouts, to help reduce the volume of
-  uninformative printouts.
+  uninformative printouts. It also provides user control of the buffer flushing interval for the \verb|record| output file.
+\item The \verb|insert_elements| command now has the option to insert an element at the beginning of the beamline.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -871,8 +874,10 @@ Recommended value: ``\%s.kaf''.
     double delta_yp = 1e-6;
     double delta_s  = 1e-6;
     double delta_dp = 1e-6;
+    double accuracy_factor = 1e-12;
     long center_on_orbit = 0;
     long verbosity = 0;
+    long canonical_variables = 0;
     long printout_order = 2;
     long periodic = 1;
     double beta_x = 1;
@@ -896,6 +901,10 @@ Recommended value: ``\%s.kaf''.
     \end{itemize}
 \item \verb|printout| --- The (incomplete) name of a file for text output of the matrix.
 \item \verb|delta_X| --- The amount by which to change the quantity X in computing the derivatives that give the matrix elements.
+\item \verb|accuracy_factor| --- The fraction of the maximum absolute value of the final coordinate that is considered meaningful.
+  Used to estimate errors and eliminate spurious matrix elements.
+\item \verb|canonical_variables| --- If non-zero, the matrix is expressed in terms of canonical variables $(x, q_x, y, q_y, -s, \delta)$
+  instead of the default $(x, x^\prime, y, y^\prime, s, \delta)$.
 \item \verb|center_on_orbit| --- A flag directing the expansion to be made about the closed orbit instead of the design orbit.
 \item \verb|verbosity| --- The larger this value, the more output is printed during computations.
 \item \verb|printout_order| --- Order of the matrix to be printed to the \verb|printout| file.
@@ -2095,6 +2104,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
         long skip = 1;
         long disable = 0;
         long add_at_end = 0;
+        long add_at_start = 0;
         STRING element_def = NULL;
         long total_occurrences = 0;
         long occurrence[100]={0};
@@ -2114,6 +2124,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   a single command.
 \item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|add_at_end| --- If nonzero, the element is also inserted to the end of the beamline.
+\item \verb|add_at_start| --- If nonzero, the element is also inserted to the start of the beamline, ahead of all other elements.
 \item \verb|element_def| --- The definition of the new element should be just as it would be entered in 
 the lattice file.
 \item \verb|total_occurrences|, \verb|occurrence| --- 
@@ -2519,6 +2530,7 @@ number of the occurrence of the named element from which to start.
     long verbose = 0;
     double verbose_threshold = 0;
     STRING record = NULL;
+    long flush_record = 1;
 &end
 \end{verbatim}
 
@@ -2573,6 +2585,8 @@ is modulated.
    exceeds the given value.
 \item \verb|record| --- Gives a possibly incomplete filename to which will be written a record of the values of
   the modulation.
+\item \verb|flush_record| --- Gives the interval in steps at which to flush the record file. Higher values result
+ in less frequent  updates to the record, but may improve performance.
 \end{itemize}
 
 %\begin{latexonly}
