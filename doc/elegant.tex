@@ -29,8 +29,10 @@ Users are encouraged to join and participate.  At minimum, users should subscrib
 since this is where bug notifications are posted.  Contrary to previous practice, we will no longer announce
 bugs via email.
 
-A set of \htmladdnormallink{examples and scripts}{http://www.aps.anl.gov/Accelerator\_Systems\_Division/Operations\_Analysis/downloads/elegantExamples.zip} is available that demonstrates many features of {\tt elegant}.
-A \htmladdnormallink{brief overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
+A set of \htmladdnormallink{examples and
+scripts}{http://www.aps.anl.gov/Accelerator\_Systems\_Division/Operations\_Analysis/downloads/elegantExamples.zip} is
+available that demonstrates many features of {\tt elegant}.  A \htmladdnormallink{brief
+overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
 \section{Highlights of What's New in Version 31.0}
@@ -40,17 +42,17 @@ Here is a summary of what's changed since release 30.1.
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
+\item The \verb|touschek_scatter| command had a bug when random multipoles where used on \verb|KQUAD| and \verb|KSEXT| elements. In particular,
+  these multipoles components were re-randomized for each \verb|TSCATTER| element. This was discovered and fixed by A. Xiao (ANL).
 \item The implementation of edge effects in the \verb|KQUAD| element was using $x^\prime$ and $y^\prime$ in place of $q_x$ and $q_y$, and so
   was not symplectic. It also did not have the correct dependence on $\delta$. 
   These issues were reported by R. Lindberg (ANL).  A similar error was fixed in the implementation of edge effects for \verb|CSBEND|;
-  this was fixed by Y.P. Sun (ANL).
+  this was fixed by Y.P. Sun (ANL). Practically speaking, we haven't noticed any significant change in results.
 \item There was a bug in the evaluation of systematic multipoles when using the second-order integrator for \verb|KQUAD| and \verb|KSEXT|.
   The default fourth-order integrator did not have this issue.
-\item The \verb|touschek_scatter| command had a bug when random multipoles where used on \verb|KQUAD| and \verb|KSEXT| elements. In particular,
-  these multipoles components were re-randomized for each \verb|TSCATTER| element. This was discovered and fixed by A. Xiao (ANL).
-\item The \verb|BMXYZ| and \verb|BMAPXY| elements lacked dependence on the momentum deviation $\delta$. This issue was reported by R. Lindberg (ANL).
 \item Higher-order path-length issues were fixed for the \verb|BRAT| element. This issue was reported by R. Lindberg (ANL).
 \item The steering kick calibration factors are no longer ignored on the \verb|KQUAD| element.
+\item The \verb|BMXYZ| and \verb|BMAPXY| elements lacked dependence on the momentum deviation $\delta$. This issue was reported by R. Lindberg (ANL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
