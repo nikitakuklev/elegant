@@ -55,7 +55,7 @@ settings of the \verb|EDGE_ORDER|, \verb|EDGE1_EFFECTS|, and \verb|EDGE2_EFFECTS
 \verb|EDGE1_EFFECTS| controls entrance edge effects while \verb|EDGE2_EFFECTS| controls exit edge effects,
 as follows:
 \begin{itemize}
-  \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}.
+  \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}. {\bf Not recommended.}
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders.
       \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders.
@@ -63,7 +63,8 @@ as follows:
   \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
-      \item \verb|EDGE_ORDER>=2| --- include all terms.
+      {\bf Not recommended.}
+      \item \verb|EDGE_ORDER>=2| --- include all terms. {\bf Recommended.}
     \end{itemize}              
   \item Other: --- No edge effects.
 \end{itemize}

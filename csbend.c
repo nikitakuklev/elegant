@@ -601,17 +601,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
       } else if (csbend->edge1_effects==2) {
         rho = (1+dp)*rho_actual;
-	  /* load input coordinates into arrays */
-    Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        /* load input coordinates into arrays */
+        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+        convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
         dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
-	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
-	  x  = Qf[0];  
-	  xp = Qf[1];  
-	  y  = Qf[2];  
-	  yp = Qf[3];  
-	  dp = Qf[5];
+        /* retrieve coordinates from arrays */
+        convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+        x  = Qf[0];  
+        xp = Qf[1];  
+        y  = Qf[2];  
+        yp = Qf[3];  
+        dp = Qf[5];
       }
     }
 
@@ -707,17 +707,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
       } else if (csbend->edge2_effects==2) {
         rho = (1+dp)*rho_actual;
-	  /* load input coordinates into arrays */
-    Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        /* load input coordinates into arrays */
+        Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
+        convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
         dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
-	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
-	  x  = Qf[0];  
-	  xp = Qf[1];  
-	  y  = Qf[2];  
-	  yp = Qf[3];  
-	  dp = Qf[5];
+        /* retrieve coordinates from arrays */
+        convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+        x  = Qf[0];  
+        xp = Qf[1];  
+        y  = Qf[2];  
+        yp = Qf[3];  
+        dp = Qf[5];
       }
     }
     
@@ -2222,22 +2222,22 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
           else if (csbend->edge2_effects>=2) {
             rho = (1+DP)*rho_actual;
-	  /* load input coordinates into arrays */
-	  Qi[0] = X;
-	  Qi[1] = XP;
-	  Qi[2] = Y;
-	  Qi[3] = YP;
-	  Qi[4] = 0;  
-	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+            /* load input coordinates into arrays */
+            Qi[0] = X;
+            Qi[1] = XP;
+            Qi[2] = Y;
+            Qi[3] = YP;
+            Qi[4] = 0;  
+            Qi[5] = DP;
+            convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
             dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
-	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
-	  X  = Qf[0];  
-	  XP = Qf[1];  
-	  Y  = Qf[2];  
-	  YP = Qf[3];  
-	  DP = Qf[5];
+            /* retrieve coordinates from arrays */
+            convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+            X  = Qf[0];  
+            XP = Qf[1];  
+            Y  = Qf[2];  
+            YP = Qf[3];  
+            DP = Qf[5];
 	  }
 	}
       }
@@ -3660,11 +3660,11 @@ void dipoleFringeSym(double *Qf, double *Qi,
   k5 = 0.0;
   k6 = -1.0;
 
-	  x0  = Qi[0];  
-	  px0 = Qi[1];  
-	  y0  = Qi[2];  
-	  py0 = Qi[3];  
-	  dp0 = Qi[5];
+  x0  = Qi[0];  
+  px0 = Qi[1];  
+  y0  = Qi[2];  
+  py0 = Qi[3];  
+  dp0 = Qi[5];
   dx = dpx = dy = dpy = 0;
   psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
 
