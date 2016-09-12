@@ -60,7 +60,11 @@ as follows:
       \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders.
       \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders.
     \end{itemize}              
-  \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}.
+  \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}. Note that there will be a
+  trajectory offset when using this method that is particularly evident for small bending radii. Adjustment of the length and FSE 
+  parameter can be used to suppress this offset, which results from the extension of the fringe fields beyond the nominal
+  boundaries of the magnet. One can also set \verb|REFERENCE_CORRECTION=1|, but this just sweeps the
+  effect under the rug and is not recommended.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
       {\bf Not recommended.}
