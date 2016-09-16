@@ -18,7 +18,7 @@ B_y = B_0 \cosh k_u y \cos k_u z,
 \end{equation}
 and
 \begin{equation}
-B_z = B_0 \sinh k_u y \cos k_u z ,
+B_z = -B_0 \sinh k_u y \sin k_u z ,
 \end{equation}
 where $k_u = 2\pi/\lambda_u$ and $\lambda_u$ is the undulator period.
 This is the most precise method, but also the slowest.  
@@ -29,7 +29,7 @@ B_y = B_0 ( 1 + \frac{1}{2}(k_u y)^2 ) \cos k_u z,
 \end{equation}
 and
 \begin{equation}
-B_z = B_0 k_u y \cos k_u z.
+B_z = -B_0 k_u y \sin k_u z.
 \end{equation}
 In most cases, this gives results that are very close to the exact fields,
 at a savings of 10\% in computation time.
@@ -40,7 +40,7 @@ This is the default mode.
 B_y = B_0 \cos k_u z,
 \end{equation}
 \begin{equation}
-B_z = B_0 k_u y \cos k_u z.
+B_z = -B_0 k_u y \sin k_u z.
 \end{equation}
 This is about 10\% faster than the leading-order mode, but less
 precise.  Also, {\em it does not include vertical focusing}, so it is
