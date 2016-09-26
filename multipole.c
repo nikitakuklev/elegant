@@ -202,6 +202,15 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   addMultipoleDatasetToStore(multData, multFile);
 }
 
+void fillPowerArray(double x, double *xpow, long order)
+{
+  long i;
+  xpow[0] = 1;
+  for (i=1; i<=order; i++) {
+    xpow[i] = xpow[i-1]*x;
+  }
+}
+
 void initialize_fmultipole(FMULT *multipole)
 {
   SDDS_DATASET SDDSin;
@@ -381,14 +390,16 @@ long multipole_tracking(
     long order;         /* order (n) */
     long n_kicks;       /* number of kicks to split multipole into */
     long i_part, i_kick, i, i_top, is_lost;
-    double sum_Fx, sum_Fy, xypow, denom, qx, qy;
+    double sum_Fx, sum_Fy, denom, qx, qy;
     double *coord;
     double drift;
     double *coef;
     double x, xp, y, yp, s, dp;
     double ratio, rad_coef;
     double beta0, beta1, p;
-
+    static long maxOrder = -1;
+    static double *xpow = NULL, *ypow = NULL;
+    
     log_entry("multipole_tracking");
 
     if (!particle)
@@ -402,6 +413,11 @@ long multipole_tracking(
 
     if ((order=multipole->order)<0)
       bombTracking("order < 0 in multipole_tracking()");
+    if (order>maxOrder || maxOrder==-1) {
+      xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
+      ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
+      maxOrder = order;
+    }
 
     if (!(coef = expansion_coefficients(order)))
       bombTracking("expansion_coefficients() returned null pointer (multipole_tracking)");
@@ -494,23 +510,14 @@ long multipole_tracking(
                 y += yp*drift*(i_kick?2:1);
                 s += (i_kick?2:1)*drift*sqrt(1+sqr(xp)+sqr(yp));
                 }
-            if (x==0) {
-                xypow = ipow(y, order);
-                ratio = 0;
-                i = order;
-                }
-            else {
-                xypow = ipow(x, order);
-                ratio = y/x;
-                i = 0;
-                }
+            fillPowerArray(x, xpow, order);
+            fillPowerArray(y, ypow, order);
             /* now sum up the terms for the multipole expansion */
-            for (sum_Fx=sum_Fy=0; i<=order; i++) {
+            for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
                 if (ODD(i))
-                    sum_Fx += coef[i]*xypow;
+                    sum_Fx += coef[i]*xpow[order-i]*ypow[i];
                 else
-                    sum_Fy += coef[i]*xypow;
-                xypow *= ratio;
+                    sum_Fy += coef[i]*xpow[order-i]*ypow[i];
                 }
             /* apply kicks canonically */
             qx -= KnL*sum_Fy;
@@ -1494,17 +1501,34 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   long i;
   double sum_Fx, sum_Fy;
   double *coef;
+  static long maxOrder = -1;
+  static double *xpow = NULL, *ypow = NULL;
+  if (order>maxOrder || maxOrder==-1) {
+    xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
+    ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
+    maxOrder = order;
+  }
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
+
+  fillPowerArray(x, xpow, order);
+  fillPowerArray(y, ypow, order);
+  
   /* sum up the terms for the multipole expansion */
   for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
+    /*
     if (ODD(i))
       sum_Fx += coef[i]*ipow(x, order-i)*ipow(y, i);
     else
       sum_Fy += coef[i]*ipow(x, order-i)*ipow(y, i);
+      */
+    if (ODD(i))
+      sum_Fx += coef[i]*xpow[order-i]*ypow[i];
+    else
+      sum_Fy += coef[i]*xpow[order-i]*ypow[i];
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
@@ -1525,32 +1549,31 @@ void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
 					long order, double KnL, long skew)
 {
   long i;
-  double sum_Fx, sum_Fy, xypow, ratio;
+  double sum_Fx, sum_Fy;
   double *coef;
+  static long maxOrder = -1;
+  static double *xpow = NULL, *ypow = NULL;
+
+  if (order>maxOrder || maxOrder==-1) {
+    xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
+    ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
+    maxOrder = order;
+  }
+  fillPowerArray(x, xpow, order);
+  fillPowerArray(y, ypow, order);
+  
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
-  if (x==0) {
-    if (y==0)
-      return;
-    xypow = ipow(y, order);
-    i = order;
-    ratio = 0;
-  }
-  else {
-    xypow = ipow(x, order);
-    ratio = y/x;
-    i = 0;
-  }
+  i = 0;
   /* now sum up the terms for the multipole expansion */
   for (sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
-      sum_Fx -= coef[i-1]*xypow;
+      sum_Fx -= coef[i-1]*xpow[order-i]*ypow[i];
     else
-      sum_Fy += coef[i]*xypow;
-    xypow *= ratio;
+      sum_Fy += coef[i]*xpow[order-i]*ypow[i];
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);

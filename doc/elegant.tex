@@ -69,6 +69,8 @@ Here is a summary of what's changed since release 30.1.
 \item Added separate specification of edge and body multipoles to the \verb|KQUAD| and \verb|KSEXT| elements.
 \item Added steering and steering multipoles to the \verb|KSEXT| element.
 \item The \verb|BMXYZ| element now allows independent specification of the insertion length and field map length.
+\item The code for the \verb|KQUAD|, \verb|KSEXT|, \verb|MULT|, and \verb|FMULT| was improved to prevent underflows that might occur in some
+  odd cases, which would negatively affect accuracy.
 \end{itemize}
 
 \subsection{New and Modified Commands}
