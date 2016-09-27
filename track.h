@@ -2927,7 +2927,6 @@ typedef struct {
 /* PLanar Undulator with optional laser heater */
 extern PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS];
 typedef struct {
-  long helical;
   double length, Bu;
   long periods;
   char *method, *fieldExpansion;
@@ -2940,6 +2939,7 @@ typedef struct {
   long synchRad, isr;
   char *timeProfileFile;
   double timeProfileOffset;
+  long helical;
   /* internal variables */
   double laserWavelength, Ef0Laser, omega, k;
   double Escale, Bscale;
