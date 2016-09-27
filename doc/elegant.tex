@@ -71,6 +71,14 @@ Here is a summary of what's changed since release 30.1.
 \item The \verb|BMXYZ| element now allows independent specification of the insertion length and field map length.
 \item The code for the \verb|KQUAD|, \verb|KSEXT|, \verb|MULT|, and \verb|FMULT| was improved to prevent underflows that might occur in some
   odd cases, which would negatively affect accuracy.
+\item The \verb|LSRMDLR| element now includes an option for a helical device. This was requested by forum user \verb|zzhang| and implemented by
+  Y.-P. Sun (ANL).
+\item Two additional parameters, \verb|SampledParticles| and \verb|SampledCharge| were added to \verb|WATCH| files in coordinate mode. 
+  These are identical to \verb|Particles| and \verb|Charge|, respectively, except when the \verb|FRACTION| parameter is $<1$.
+  In that case, the latter parameters give the values prior to sampling, while the new parameters give the parameters of the
+  sampled fraction of the bunch. Previously,  \verb|Particles| and \verb|Charge| changed as \verb|FRACTION| was changed. 
+  {\em Note that scripts that use the  \verb|Particles| and \verb|Charge| may need modification since the meaning has changed.}
+  Y. Ding (SLAC) pointed out this issue.
 \end{itemize}
 
 \subsection{New and Modified Commands}

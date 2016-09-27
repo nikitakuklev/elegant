@@ -141,14 +141,16 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"particleID", "&column name=particleID, type=long &end"},
     } ;
 
-#define PHASE_SPACE_PARAMETERS 6
+#define PHASE_SPACE_PARAMETERS 8
 static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
   {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
-  {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Beam charge\" &end"},
-  {"Particles", "&parameter name=Particles, type=long, description=\"Number of particles\" &end"},
+  {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Bunch charge before sampling\" &end"},
+  {"Particles", "&parameter name=Particles, type=long, description=\"Number of particles before sampling\" &end"},
   {"IDSlotsPerBunch", "&parameter name=IDSlotsPerBunch, type=long, description=\"Number of particle ID slots reserved to a bunch\" &end"},
   {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
+  {"SampledCharge", "&parameter name=SampledCharge, type=double, units=C, description=\"Sampled charge\" &end"},
+  {"SampledParticles", "&parameter name=SampledParticles, type=long, description=\"Sampled number of particles\" &end"},
 };
   
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -164,7 +166,7 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
     SDDS_MPI_Setup(SDDS_table, SDDS_table->parallel_io, n_processors, myid, MPI_COMM_WORLD, 0);  
 #endif
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            phase_space_parameter, PHASE_SPACE_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
+                            phase_space_parameter, PHASE_SPACE_PARAMETERS-2, phase_space_column, PHASE_SPACE_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_PhaseSpaceSetup");
     }
@@ -671,11 +673,11 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
                           double Po, double length, double mp_charge, double z, long slotsPerBunch)
 {
-  long i, row;
+  long i, row, count;
   double p, t0, t0Error, t;
   long memoryUsed;
 #if SDDS_MPI_IO
-  long total_row;
+  long total_row, total_count;
 #endif
   log_entry("dump_watch_particles");
 #if SDDS_MPI_IO
@@ -706,7 +708,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   row = 0;
-
+  count = 0;
   if (pass<watch->passLast)
     watch->t0Last = watch->t0LastError = 0;
   t0 = watch->t0Last;
@@ -728,8 +730,10 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
 #endif
   for (i=0; i<particles; i++) {
-    if (((watch->startPID<0 && watch->endPID<0) || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID))
-	&& (watch->fraction==1 || random_2(0)<watch->fraction)) {
+    if (!((watch->startPID<0 && watch->endPID<0) || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID)))
+      continue;
+    count++;
+    if (watch->fraction==1 || random_2(0)<watch->fraction) {
       if (watch->xData && 
           !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
                              watch->xIndex[0], particle[i][0], 
@@ -765,20 +769,25 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       }
     }
   }
+  
 #if SDDS_MPI_IO
   if (USE_MPI&&notSinglePart){
-
     MPI_Allreduce (&row, &total_row, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce (&count, &total_count, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (isMaster)
       row = total_row;
+    if (isMaster)
+      count = total_count;
   }
   /* if (total_row)  */
 #endif
   memoryUsed = memoryUsage();
   if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                          "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
+                          "Step", step, "Pass", pass, 
+                          "Particles", count, 
+                          "Charge", mp_charge*count,
+                          "pCentral", Po,
                           "PassLength", length, 
-                          "Charge", mp_charge*row,
                           "IDSlotsPerBunch", slotsPerBunch,
                           "PassCentralTime", t0, "s", z,
 		          "ElapsedTime", delapsed_time(),
@@ -788,10 +797,13 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 #else
 		          "ElapsedCoreTime", delapsed_time(),
 #endif
+                          "SampledParticles", row, 
+                          "SampledCharge", mp_charge*row,
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+
 #if SDDS_MPI_IO
   if ((watch->useDisconnect) && (!SDDS_ReconnectFile(&watch->SDDS_table)))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
