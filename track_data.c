@@ -2360,6 +2360,7 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
 
 LSRMDLTR lsrMdltr_example;
 PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
+    {"HELICAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.helical), NULL, 0.0, 0, "Switch for helical undulator."},
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
     {"BU", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
     {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},

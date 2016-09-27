@@ -2317,7 +2317,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   LSRMDLTR *lsrMdltr; 
   double gamma, *P, *Pp;
   double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
-  double x, y, z, factor_inner_scope, Bfactor, kuz, kuy;
+  double x, y, z, factor_inner_scope, Bfactor, kuz, kuy, kux;
   long i, poleNumber;
   
 #ifdef DEBUG
@@ -2372,6 +2372,8 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   Bfactor = factor_inner_scope*lsrMdltr->Bu*lsrMdltr->Bscale/gamma;
   kuz = lsrMdltr->ku*z;
   kuy = lsrMdltr->ku*y;
+  kux = lsrMdltr->ku*x;
+  if (lsrMdltr->helical==0) {
   if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
     BOverGamma[1] = Bfactor*cos(kuz);
     BOverGamma[2] = 0;
@@ -2382,6 +2384,24 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     /* leading terms only */
     BOverGamma[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
     BOverGamma[2] = -Bfactor*sin(kuz)*kuy;
+  }
+  }
+
+  if (lsrMdltr->helical==1) {
+  if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
+    BOverGamma[0] = -Bfactor*sin(kuz);
+    BOverGamma[1] = Bfactor*cos(kuz);
+    BOverGamma[2] = 0;
+  } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
+    BOverGamma[0] = -Bfactor*sin(kuz)*cosh(kux);
+    BOverGamma[1] = Bfactor*cos(kuz)*cosh(kuy);
+    BOverGamma[2] = -Bfactor*sin(kuz)*sinh(kuy) -Bfactor*cos(kuz)*sinh(kux);
+  } else {
+    /* leading terms only */
+    BOverGamma[0] = -Bfactor*sin(kuz)*(1+sqr(kux)/2);
+    BOverGamma[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
+    BOverGamma[2] = -Bfactor*sin(kuz)*kuy -Bfactor*cos(kuz)*kux;
+  }
   }
   
   if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
