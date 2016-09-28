@@ -41,11 +41,11 @@ set S(H2,1) 2
 set C(H2O) 2
 set Z(H2O,1) 1
 set S(H2O,1) 2
-set Z(H2O,2) 6
+set Z(H2O,2) 8
 set S(H2O,2) 1
 
 set C(CH4) 2
-set Z(CH4,1) 8
+set Z(CH4,1) 6
 set S(CH4,1) 1
 set Z(CH4,2) 1
 set S(CH4,2) 4
