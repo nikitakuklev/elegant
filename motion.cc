@@ -2303,7 +2303,7 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   }
 }
 
-void undulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz);
+void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz);
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *tValue, double *amplitudeValue, long profilePoints, double tForProfile,
@@ -2402,7 +2402,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     }
   }
   */
-  undulatorField( BOverGamma, Bfactor, kux, kuy, kuz);
+  laserModulatorUndulatorField(BOverGamma, Bfactor, kux, kuy, kuz);
   
   if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
     double Bscale;
@@ -2481,7 +2481,7 @@ void stochastic_laserModulator(double *q, double tau, double h)
     B[0] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
     B[1] = Bfactor*sin(kuz)*kuy;
   } */
-  undulatorField( B, Bfactor, kux, kuy, kuz);
+  laserModulatorUndulatorField(B, Bfactor, kux, kuy, kuz);
   
   B2 = sqr(B[0]) + sqr(B[1]) + sqr(B[2]);
   /* 1/rho^2 for central momentum */
@@ -2497,7 +2497,7 @@ void stochastic_laserModulator(double *q, double tau, double h)
   
   }
 
-void undulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz)
+void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz)
 {
   LSRMDLTR *lsrMdltr; 
 
