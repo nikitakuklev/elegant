@@ -2303,6 +2303,7 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   }
 }
 
+void undulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz);
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *tValue, double *amplitudeValue, long profilePoints, double tForProfile,
@@ -2373,6 +2374,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   kuz = lsrMdltr->ku*z;
   kuy = lsrMdltr->ku*y;
   kux = lsrMdltr->ku*x;
+  /*
   if (lsrMdltr->helical==0) {
     if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
       BOverGamma[1] = Bfactor*cos(kuz);
@@ -2381,7 +2383,6 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
       BOverGamma[1] = Bfactor*cos(kuz)*cosh(kuy);
       BOverGamma[2] = -Bfactor*sin(kuz)*sinh(kuy);
     } else {
-      /* leading terms only */
       BOverGamma[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
       BOverGamma[2] = -Bfactor*sin(kuz)*kuy;
     }
@@ -2395,12 +2396,13 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
       BOverGamma[1] = Bfactor*cos(kuz)*cosh(kuy);
       BOverGamma[2] = -Bfactor*sin(kuz)*sinh(kuy) -Bfactor*cos(kuz)*sinh(kux);
     } else {
-      /* leading terms only */
       BOverGamma[0] = -Bfactor*sin(kuz)*(1+sqr(kux)/2);
       BOverGamma[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
       BOverGamma[2] = -Bfactor*sin(kuz)*kuy -Bfactor*cos(kuz)*kux;
     }
   }
+  */
+  undulatorField( BOverGamma, Bfactor, kux, kuy, kuz);
   
   if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
     double Bscale;
@@ -2434,8 +2436,8 @@ void stochastic_laserModulator(double *q, double tau, double h)
 {
   LSRMDLTR *lsrMdltr; 
   double gamma, *P, p;
-  double B[2]={0,0};
-  double x, y, z, Bfactor, kuz, kuy;
+  double B[3]={0,0,0};
+  double x, y, z, Bfactor, kuz, kuy, kux;
   double B2, delta0, delta1, irho2;
   long i, poleNumber;
 
@@ -2467,6 +2469,8 @@ void stochastic_laserModulator(double *q, double tau, double h)
   Bfactor = factor*lsrMdltr->Bu;
   kuz = lsrMdltr->ku*z;
   kuy = lsrMdltr->ku*y;
+  kux = lsrMdltr->ku*x;
+  /*
   if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
     B[0] = Bfactor*cos(kuz);
     B[1] = 0;
@@ -2474,12 +2478,12 @@ void stochastic_laserModulator(double *q, double tau, double h)
     B[0] = Bfactor*cos(kuz)*cosh(kuy);
     B[1] = Bfactor*sin(kuz)*sinh(kuy);
   } else {
-    /* leading terms only */
     B[0] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
     B[1] = Bfactor*sin(kuz)*kuy;
-  }
+  } */
+  undulatorField( B, Bfactor, kux, kuy, kuz);
   
-  B2 = sqr(B[0]) + sqr(B[1]);
+  B2 = sqr(B[0]) + sqr(B[1]) + sqr(B[2]);
   /* 1/rho^2 for central momentum */
   irho2 = B2/sqr(gamma*me_mks*c_mks/e_mks);
   delta1 = delta0 = (p-P_central)/P_central;
@@ -2492,6 +2496,42 @@ void stochastic_laserModulator(double *q, double tau, double h)
     P[i] *= (1+delta1)/(1+delta0);
   
   }
+
+void undulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz)
+{
+  LSRMDLTR *lsrMdltr; 
+
+  lsrMdltr = (LSRMDLTR*)field_global;
+
+  if (lsrMdltr->helical==0) {
+    if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
+      FieldB[1] = Bfactor*cos(kuz);
+      FieldB[2] = 0;
+    } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
+      FieldB[1] = Bfactor*cos(kuz)*cosh(kuy);
+      FieldB[2] = -Bfactor*sin(kuz)*sinh(kuy);
+    } else {
+      /* leading terms only */
+      FieldB[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
+      FieldB[2] = -Bfactor*sin(kuz)*kuy;
+    }
+  } else {
+    if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
+      FieldB[0] = -Bfactor*sin(kuz);
+      FieldB[1] = Bfactor*cos(kuz);
+      FieldB[2] = 0;
+    } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
+      FieldB[0] = -Bfactor*sin(kuz)*cosh(kux);
+      FieldB[1] = Bfactor*cos(kuz)*cosh(kuy);
+      FieldB[2] = -Bfactor*sin(kuz)*sinh(kuy) -Bfactor*cos(kuz)*sinh(kux);
+    } else {
+      /* leading terms only */
+      FieldB[0] = -Bfactor*sin(kuz)*(1+sqr(kux)/2);
+      FieldB[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
+      FieldB[2] = -Bfactor*sin(kuz)*kuy -Bfactor*cos(kuz)*kux;
+    }
+  }
+}
 
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
