@@ -130,15 +130,15 @@ set Z(CH4,2) 1
 set atomCount(CH4,2) 4
 
 set nAtomTypes(CO) 2
-set Z(CO,1) 8
+set Z(CO,1) 6
 set atomCount(CO,1) 1
-set Z(CO,2) 6
+set Z(CO,2) 8
 set atomCount(CO,2) 1
 
 set nAtomTypes(CO2) 2
-set Z(CO2,1) 8
+set Z(CO2,1) 6
 set atomCount(CO2,1) 1
-set Z(CO2,2) 6
+set Z(CO2,2) 8
 set atomCount(CO2,2) 2
 
 set nAtomTypes(N2) 1
