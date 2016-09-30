@@ -5023,9 +5023,10 @@ up-to-date than these manual pages.
 \item {\tt bremsstrahlungLifetime} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
   (Program by M. Borland.)
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
+\item {\tt computeGeneralizedGradients} --- Computes generalized gradients for use with the \verb|BGGEXP| element.
+\item {\tt computeSCTuneSpread} --- Compute space charge tune spread.
 \item {\tt coreEmittance} --- Computes the slice emittance for the beam core (e.g., 80\% of the beam).
   (Program by X. Dong.)
-\item {\tt computeSCTuneSpread} --- Compute space charge tune spread.
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
  (Program by Y. Wang, H. Shang, and M. Borland.)
@@ -5035,6 +5036,7 @@ up-to-date than these manual pages.
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
  See also {\tt smoothDist6}.
   (Program by M. Borland.)
+
 \item {\tt elasticScatteringLifetime} --- Computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
   (Program by M. Borland.)
 \item {\tt elegant2astra} --- This program translates {\tt elegant} phase space files into ASTRA \cite{ASTRA} format.
@@ -5250,6 +5252,44 @@ astra2elegant [{\em inputFile}] [{\em outputFile}] [-centerReference] [-pipe=[in
 
 \item {\bf authors:} M. Borland (ANL/APS).
 
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|computeGeneralizedGradients|}\end{center}
+%\end{latexonly}
+\subsection{computeGeneralizedGradients}
+
+\begin{itemize}
+\item {\bf description:}  Converts data of the form $B_\rho(z, \phi)$ into a set of generalized gradients \cite{Venturini-NIMA427-387} 
+for use with {\tt elegant}'s \verb|BGGEXP| element.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+computeGeneralizedGradients -input {\em filename} -output {\em rootname} -mainHarmonic {\em integer} -nHarmonics {\em integer}
+}\end{flushleft}
+
+\item {\bf switches:}
+\begin{itemize}
+\item \verb|input| --- Give the name of the input file, which must be an SDDS file having two columns and two parameters.
+The columns are \verb|phi| and \verb|Br|, giving respectively the polar angle in radians and the radial magnetic field in
+Tesla. Each page should have the same number of rows $n$.
+The \verb|phi| values are assumed to be equispaced starting at 0 and ending at $2\pi (1-1/n)$.
+The pages are labeled by the parameter \verb|z|, which gives the longitudinal coordinate in meters for the data on that page.
+These \verb|z| values are assumed to be equispaced and to cover the entire length of the magnet.
+Finally, a parameter \verb|R| must exist that gives the radius in meters for the \verb|Br| values.
+
+\item \verb|output| --- Give the root name for the output files. The main output file, which has extension \verb|ggrad|
+ and is used directly with the \verb|BGGEXP| element, will contain the generalized gradients for the normal (non-skew)
+ components of the magnetic field. Each page corresponds to a different harmonic.
+
+\item \verb|mainHarmonic| --- The main harmonic of the field, where 2 is quadrupole, 3 is sextupole, etc.
+
+\item \verb|nHarmonics| --- The number of harmonics to include.
+
+\end{itemize}
+
+\item {\bf authors:} M. Borland (ANL/APS).
 \end{itemize}
 
 %\begin{latexonly}
