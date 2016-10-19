@@ -80,7 +80,7 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
    */
 
   if (savedRandomNumberSeed[0]==987654321)
-    randomInhibitPermuteSeed(1);
+    inhibitRandomSeedPermutation(1);
   
   if (!restart || restart&RESTART_RN_BEAMLINE) 
     random_1_elegant(-savedRandomNumberSeed[0]);

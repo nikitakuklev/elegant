@@ -2589,7 +2589,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   mpiRandomizationMode = mpi_randomization_mode;
   srGaussianLimit = SR_gaussian_limit;
   exactNormalizedEmittance = exact_normalized_emittance;
-  randomInhibitPermuteSeed(inhibit_seed_permutation);
+  inhibitRandomSeedPermutation(inhibit_seed_permutation);
   if (log_file)
     freopen(log_file, "w", stdout);
   if (error_log_file)
