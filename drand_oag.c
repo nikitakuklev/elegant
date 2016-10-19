@@ -99,7 +99,9 @@ double random_1_elegant(long iseed)
         if (iseed<0)
           iseed = -iseed;
 	/* random_1_elegant() is used for beamline errors, same on all processors */
-        seed[3] = ((iseed & 4095)/2)*2+1;
+        iseed = permuteSeedBitOrder(iseed);
+        iseed = (iseed/2)*2 + 1;
+        seed[3] = (iseed & 4095);
         seed[2] = (iseed >>= 12) & 4095;
         seed[1] = (iseed >>= 12) & 4095;
         seed[0] = (iseed >>= 12) & 4095;
