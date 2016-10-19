@@ -11,6 +11,7 @@
      long mpi_randomization_mode = 3;
      long exact_normalized_emittance = 0;
      double SR_gaussian_limit = 3.0;
+     long inhibit_seed_permutation = 0;
      STRING log_file = NULL;
      STRING error_log_file = NULL;
 #end
