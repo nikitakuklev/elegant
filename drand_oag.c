@@ -79,6 +79,9 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
    * random_4 is used for beam generation 
    */
 
+  if (savedRandomNumberSeed[0]==987654321)
+    randomInhibitPermuteSeed(1);
+  
   if (!restart || restart&RESTART_RN_BEAMLINE) 
     random_1_elegant(-savedRandomNumberSeed[0]);
   if (!restart || restart&RESTART_RN_SCATTER)
@@ -99,7 +102,8 @@ double random_1_elegant(long iseed)
         if (iseed<0)
           iseed = -iseed;
 	/* random_1_elegant() is used for beamline errors, same on all processors */
-        iseed = permuteSeedBitOrder(iseed);
+        if (iseed!=987654321)
+          iseed = permuteSeedBitOrder(iseed);
         iseed = (iseed/2)*2 + 1;
         seed[3] = (iseed & 4095);
         seed[2] = (iseed >>= 12) & 4095;
