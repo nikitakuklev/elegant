@@ -263,11 +263,13 @@ void compute_amplification_factors(
     fprintf(fpkf, "&data mode=ascii &end\n");
   }
 
+  /*
   fputs(name_header, stdout);
   fputc('\n', stdout);
   fputs(unit_header, stdout);
   fputc('\n', stdout);
   fflush(stdout);
+  */
 
   if (!name)
     eptr = &(beamline->elem);
@@ -400,6 +402,7 @@ void compute_amplification_factors(
           fprintf(fpcof, "0 0 0 ? 0\n");
     }
     if (correct->mode==-1 && emax) {
+      /*
       fprintf(stdout, printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
@@ -409,6 +412,7 @@ void compute_amplification_factors(
                 rms_pos/change, max_pos/change, emax->end_pos, actuatorPosition, eptr->name, eptr->occurence);
         fputc('\n', fpout);
       }
+      */
     }
     else {
       kick = CM->kick[correct->n_iterations];
@@ -426,11 +430,13 @@ void compute_amplification_factors(
       }
       if (n_kicks)
         rms_kick = sqrt(rms_kick/n_kicks);
+      /*
       fprintf(stdout, printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
               max_kick/change, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
       fputc('\n', stdout);
+      */
       if (fpout) {
         fprintf(fpout, printf_string,
                 rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
@@ -480,16 +486,19 @@ void compute_amplification_factors(
         emaxu = traj[i].elem;
       }
     }
+    /*
     fputc('\n', stdout);
-    if (emaxc && correct->mode!=-1)
+    if (emaxc && correct->mode!=-1) {
       fprintf(stdout, "maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
               max_Ac, Ai_unit, emaxc->name, emaxc->end_pos);
       fflush(stdout);
-    if (emaxu)
-      fprintf(stdout, "maximum orbit amplification function is %e %s at %s at z=%em\n",
-              max_Au, Ai_unit, emax->name, emax->end_pos);
-      fflush(stdout);
-  }
+      if (emaxu) {
+        fprintf(stdout, "maximum orbit amplification function is %e %s at %s at z=%em\n",
+                max_Au, Ai_unit, emax->name, emax->end_pos);
+        fflush(stdout);
+      }
+      */
+    }
   if (fpcof)
     fclose(fpcof);
   if (fpuof)
@@ -511,11 +520,14 @@ void compute_amplification_factors(
               CM->ucorr[i]->name, CM->ucorr[i]->occurence);
     }
     fclose(fpkf);
-    if (max_kick)
+    /*
+      if (max_kick) {
       fprintf(stdout, "maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
               max_kick, Cij_unit, CM->ucorr[j]->name, CM->ucorr[j]->occurence,
               SL->corr_param[CM->sl_index[j]], CM->ucorr[j]->end_pos);
       fflush(stdout);
+      }
+      */
   }
   if (CijRMS)
     tfree(CijRMS);
