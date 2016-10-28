@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 31.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 32.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -37,62 +37,28 @@ at a high level.
 
 \section{Highlights of What's New in Version 31.0}
 
-Here is a summary of what's changed since release 30.1.
+Here is a summary of what's changed since release 31.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|touschek_scatter| command had a bug when random multipoles where used on \verb|KQUAD| and \verb|KSEXT| elements. In particular,
-  these multipoles components were re-randomized for each \verb|TSCATTER| element. This was discovered and fixed by A. Xiao (ANL).
-\item The implementation of edge effects in the \verb|KQUAD| element was using $x^\prime$ and $y^\prime$ in place of $q_x$ and $q_y$, and so
-  was not symplectic. It also did not have the correct dependence on $\delta$. 
-  These issues were reported by R. Lindberg (ANL).  A similar error was fixed in the implementation of edge effects for \verb|CSBEND|;
-  this was fixed by Y.P. Sun (ANL). Practically speaking, we haven't noticed any significant change in results.
-\item There was a bug in the evaluation of systematic multipoles when using the second-order integrator for \verb|KQUAD| and \verb|KSEXT|.
-  The default fourth-order integrator did not have this issue.
-\item Higher-order path-length issues were fixed for the \verb|BRAT| element. This issue was reported by R. Lindberg (ANL).
-\item The steering kick calibration factors are no longer ignored on the \verb|KQUAD| element.
-\item The \verb|BMXYZ| and \verb|BMAPXY| elements lacked dependence on the momentum deviation $\delta$. This issue was reported by R. Lindberg (ANL).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None
+\item A bug was fixed in the \verb|amplification_factors| command that resulted in a crash when the corrected amplification
+  factors were requested. This was reported by S. DiMitri (ELETTRA).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|BGGEXP| element, which performs tracking through magnetic fields constructed from a generalized
-  gradient expansion \cite{Venturini-NIMA427-387}. Although the integration is not symplectic, the fields satisfy Maxwell's equations exactly.
-  A script, \verb|computeGeneralizedGradients|, is provided to assist in preparing input for this element.
-  Advice from M. Venturini (LBNL) was helpful in performing this work.
-\item Added separate specification of edge and body multipoles to the \verb|KQUAD| and \verb|KSEXT| elements.
-\item Added steering and steering multipoles to the \verb|KSEXT| element.
-\item The \verb|BMXYZ| element now allows independent specification of the insertion length and field map length.
-\item The code for the \verb|KQUAD|, \verb|KSEXT|, \verb|MULT|, and \verb|FMULT| was improved to prevent underflows that might occur in some
-  odd cases, which would negatively affect accuracy.
-\item The \verb|LSRMDLR| element now includes an option for a helical device. This was requested by forum user \verb|zzhang| and implemented by
-  Y.-P. Sun (ANL).
-\item Two additional parameters, \verb|SampledParticles| and \verb|SampledCharge| were added to \verb|WATCH| files in coordinate mode. 
-  These are identical to \verb|Particles| and \verb|Charge|, respectively, except when the \verb|FRACTION| parameter is $<1$.
-  In that case, the latter parameters give the values prior to sampling, while the new parameters give the parameters of the
-  sampled fraction of the bunch. Previously,  \verb|Particles| and \verb|Charge| changed as \verb|FRACTION| was changed. 
-  {\em Note that scripts that use the  \verb|Particles| and \verb|Charge| may need modification since the meaning has changed.}
-  Y. Ding (SLAC) pointed out this issue.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|analyze_map| command can now report the map using canonical variables. It also has a user-controlled accuracy
-  parameter that can be used to eliminate spurious matrix elements. R. Lindberg (ANL) helped with the development and testing.
-\item The  \verb|touschek_scatter| command  now uses averaging of the loss rate over the interval between two \verb|TSCATTER| elements
-  instead of the local value at the element, which gives more accurate estimates of the distribution of scattered particles.
-  This change requires that \verb|TSCATTER| elements be inserted at the beginning and end of the beamline, which can be
-  done using \verb|add_at_end=1| and \verb|add_at_start=1| in the \verb|insert_elements| command.
-  This was implemented by A. Xiao (ANL).
-\item The \verb|modulate_elements| command now offers more control over verbose printouts, to help reduce the volume of
-  uninformative printouts. It also provides user control of the buffer flushing interval for the \verb|record| output file.
-\item The \verb|insert_elements| command now has the option to insert an element at the beginning of the beamline.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -104,11 +70,7 @@ Here is a summary of what's changed since release 30.1.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The script \verb|computeGeneralizedGradients| was added to assist in preparing input for the \verb|BGGEXP| element.
-\item The scripts \verb|elasticScatteringLifetime| and \verb|bremsstrahlungLifetime| now support user-specified gas composition.
-The Z values for carbon and oxygen were mixed up in some places in these and related scripts, as pointed out by S. Tian (IHEP);
-this was fixed.
-\item The \verb|ionTrapping| script now supports user-provided factors for inflating the emittance and energy spread.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
