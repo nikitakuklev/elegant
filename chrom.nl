@@ -7,6 +7,7 @@
 
 #namelist chromaticity
     STRING sextupoles = NULL;
+    STRING exclude = NULL;
     double dnux_dp = 0;
     double dnuy_dp = 0;
     double sextupole_tweek = 1e-3;

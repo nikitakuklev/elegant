@@ -18,6 +18,8 @@ typedef struct {
     double strengthLimit;     /* maximum absolute value of strength */
     char **name;              /* names of sextupole families */
     long n_families;          /* number of families */
+    char **exclude;
+    long n_exclude;
     long n_iterations;        /* number of times to repeat correction */
     double correction_fraction;  /* to prevent unstable correction */
     long use_perturbed_matrix;

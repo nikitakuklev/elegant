@@ -64,6 +64,14 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         chrom->name = trealloc(chrom->name, sizeof(*chrom->name)*(chrom->n_families+=1));
     if ((--chrom->n_families)<1)
         bombElegant("too few sextupoles given for chromaticity correction", NULL);
+    chrom->exclude = NULL;
+    chrom->n_exclude = 0;
+    if (exclude) {
+      chrom->exclude = tmalloc(sizeof(*chrom->exclude)*(chrom->n_exclude=1));
+      while ((chrom->exclude[chrom->n_exclude-1] = get_token(exclude))) 
+        chrom->exclude = trealloc(chrom->exclude, sizeof(*chrom->exclude)*(chrom->n_exclude+=1));
+      chrom->n_exclude --;
+    }
     chrom->chromx = dnux_dp;
     chrom->chromy = dnuy_dp;
     chrom->n_iterations = n_iterations;
@@ -77,7 +85,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->exit_on_failure = exit_on_failure;
     if ((chrom->dK2_weight = dK2_weight)<0)
       chrom->dK2_weight = 0;
-    
+
     if (!use_perturbed_matrix) {
       if (!beamline->twiss0 || !beamline->matrix) {
         double beta_x, alpha_x, eta_x, etap_x;
@@ -189,6 +197,16 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         count = 0;
         context = NULL;
         while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
+          if (chrom->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<chrom->n_exclude; j++) 
+              if (wild_match(context->name, chrom->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
             if (!(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -237,6 +255,16 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         count = 0;
         context = NULL;
         while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
+          if (chrom->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<chrom->n_exclude; j++) 
+              if (wild_match(context->name, chrom->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
             if (!(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -421,6 +449,16 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             count = 0;
             has_wc = has_wildcards(chrom->name[i]);
             while ((context=wfind_element(chrom->name[i], &context, beamline->elem_twiss))) {
+          if (chrom->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<chrom->n_exclude; j++) 
+              if (wild_match(context->name, chrom->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
                 if ((K2_param = confirm_parameter("K2", context->type))<0) {
                     fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
                             context->name);
