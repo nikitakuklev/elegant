@@ -58,7 +58,8 @@ Here is a summary of what's changed since release 31.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Added \verb|exclude| parameter to \verb|chromaticity| command, allowing exclusion of some sextupoles that may 
+  match the list in the \verb|sextupole| parameter.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -1176,6 +1177,7 @@ particles.
 \begin{verbatim}
 &chromaticity
     STRING sextupoles = NULL;
+    STRING exclude = NULL;
     double dnux_dp = 0;
     double dnuy_dp = 0;
     double sextupole_tweek = 1e-3;
@@ -1197,6 +1199,8 @@ particles.
   wildcards. If so, then sextupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the sextupoles are nominally identical (though perhaps differing in strength because of
   introduced errors). If that's not the case, the iteration may fail to converge.
+\item \verb|exclude| --- List of names of elements to exclude. This may be used to exclude some sextupoles that are matched by wildcards in
+  the \verb|sextupole| list.
 \item \verb|dK2_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_2$ values in the
   event that there are more than two families.
 \item \verb|dnux_dp|, \verb|dnuy_dp| --- Desired chromaticity values.
