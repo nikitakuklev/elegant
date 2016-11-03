@@ -1197,7 +1197,7 @@ PARAMETER ramprf_param[N_RAMPRF_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&ramprf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"VOLT_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.vwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
     {"PHASE_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.pwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving phase offset vs time (requires FREQ_WAVEFORM)"},
-    {"FREQ_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency vs time (requires PHASE_WAVEFORM)"},
+    {"FREQ_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequencyfactor vs time (requires PHASE_WAVEFORM)"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&ramprf_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
     };
 
