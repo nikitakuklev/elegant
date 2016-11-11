@@ -3992,7 +3992,8 @@ double FELScalingFunction
    double *etaEnergySpread, double L1D, double beta, double emittance,
    double lightWavelength, double undulatorPeriod, double sigmaDelta);
 
-void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_parameters, short per_step);
 
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted, TWISS *twissInput);
 VMATRIX *twissTransformMatrix1(TWISS *twissWanted, TWISS *twissInput);

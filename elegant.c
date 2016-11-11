@@ -1637,7 +1637,7 @@ char **argv;
     case ALTER_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede alter_element namelist", NULL);
-      do_alter_element(&namelist_text, &run_conditions, beamline);
+      setup_alter_element(&namelist_text, &run_conditions, beamline);
       break;
     case SLICE_ANALYSIS:
 #if USE_MPI

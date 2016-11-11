@@ -14,6 +14,8 @@
         STRING string_value = NULL;
         long differential = 0;
         long multiplicative = 0;
+        long alter_at_each_step = 0;
+        long alter_before_load_parameters = 0;
         long verbose = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
