@@ -633,6 +633,7 @@ char **argv;
       
       initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
                             &optimize, &chrom_corr_data, &tune_corr_data, &links);
+      reset_alter_specifications();
       clearSliceAnalysis();
       finish_load_parameters();
       run_setuped = run_controled = error_controled = correction_setuped = 0;
