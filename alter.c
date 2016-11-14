@@ -23,6 +23,7 @@ typedef struct {
   long start_occurence, end_occurence, occurence_step;
   double s_start, s_end;
   char *after, *before;
+  long done;
 } ALTER_SPEC;
 
 static ALTER_SPEC *alterSpec = NULL;
@@ -179,6 +180,7 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     alterSpec[alterSpecs].occurence_step = occurence_step;
     alterSpec[alterSpecs].s_start = s_start;
     alterSpec[alterSpecs].s_end = s_end;
+    alterSpec[alterSpecs].done = 0;
     alterSpecs++;
     
     do_alter_elements(run, beamline, 0, 0);
@@ -200,6 +202,9 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
         continue;
       if (alterSpec[i].alter_at_each_step && alterSpec[i].alter_before_load_parameters!=before_load_parameters)
         continue;
+      if (per_step==0 && alterSpec[i].done)
+        continue;
+      alterSpec[i].done = 1;
       context = NULL;
       lastType = -1;
       nMatches = 0;
