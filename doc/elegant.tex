@@ -60,6 +60,8 @@ Here is a summary of what's changed since release 31.
 \begin{itemize}
 \item Added \verb|exclude| parameter to \verb|chromaticity| command, allowing exclusion of some sextupoles that may 
   match the list in the \verb|sextupole| parameter.
+\item Added \verb|alter_at_each_step| and \verb|alter_before_load_parameters| parameters to the \verb|alter_elements| command,
+  allowing better control of potential conflicts with \verb|load_parameters|.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -735,6 +737,8 @@ Command name & Type & Description \\\hline
         STRING string_value = NULL;
         long differential = 0;
         long multiplicative = 0;
+        long alter_at_each_step = 0;
+        long alter_before_load_parameters = 0;
         long verbose = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
@@ -761,6 +765,13 @@ Command name & Type & Description \\\hline
         the predefined value of the parameter plus the quantity given with \verb|value|.
 \item \verb|multiplicative| --- If nonozero, the new given value is the predefined
         value of the parameter times the quantity given with \verb|value|.
+\item \verb|alter_at_each_step| --- If nonzero, the changes requested by the command are
+  performed at each simulation step. Note that if \verb|differential| or \verb|multiplicative|
+  are non-zero, then changes will accumulate. (A more conventional way to perform such variation
+  is with \verb|vary_elements|.)
+\item \verb|alter_before_load_parameters| --- If \verb|alter_at_each_step|, by default the
+  alteration takes place after any \verb|load_parameters| commands are processed. If this control is
+  non-zero, the alteration takes place before any \verb|load_parameters| commands are processed.
 \item \verb|verbose| --- If nonzero, information is printed to the standard output describing
         what elements are changed.
 \item \verb|allow_missing_elements| --- If nonzero, then it is not an error if an
