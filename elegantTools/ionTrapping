@@ -54,11 +54,26 @@ exec sddssort $twiss -pipe=out -column=s -unique \
      "-define=column,Acrit,AxIon AyIon 2 maxn" \
     -process=Acrit,min,%sMin \
     "-define=column,sizeRatio,Sy abs Sx abs 1e-16 + /" \
-    "-define=column,H2Trapped,Acrit 2 1.00794 * > ? 0 : 1 $ " \
-    "-define=column,CH4Trapped,Acrit 12.0107 1.00794 4 * + > ? 0 : 1 $ " \
-    "-define=column,H2OTrapped,Acrit 1.00794 2 * 15.9994 +  > ? 0 : 1 $ " \
-    "-define=column,COTrapped,Acrit 12.0107 15.9994 + > ? 0 : 1 $ " \
-    "-define=column,CO2Trapped,Acrit 12.0107 2 * 15.9994 +  > ? 0 : 1 $ " \
+    "-define=parameter,AH2,2 1.00794 *" \
+    "-define=parameter,ACH4,12.0107 1.00794 4 * +" \
+    "-define=parameter,AH2O,1.00794 2 * 15.9994 +" \
+    "-define=parameter,ACO,12.0107 15.9994 +" \
+    "-define=parameter,ACO2,12.0107 2 * 15.9994 +" \
+    "-define=column,H2Trapped,Acrit AH2 > ? 0 : 1 $ " \
+    "-define=column,CH4Trapped,Acrit ACH4 > ? 0 : 1 $ " \
+    "-define=column,H2OTrapped,Acrit AH2O > ? 0 : 1 $ " \
+    "-define=column,COTrapped,Acrit ACO > ? 0 : 1 $ " \
+    "-define=column,CO2Trapped,Acrit ACO2 > ? 0 : 1 $ " \
+    "-define=column,H2FrequencyX,2 Ne * rp * AH2 / Sb / Sx / Sx Sy + / sqrt c_mks * pi / 2 / H2Trapped *,units=Hz" \
+    "-define=column,H2FrequencyY,2 Ne * rp * AH2 / Sb / Sy / Sx Sy + / sqrt c_mks * pi / 2 / H2Trapped *,units=Hz" \
+    "-define=column,CH4FrequencyX,2 Ne * rp * ACH4 / Sb / Sx / Sx Sy + / sqrt c_mks * pi / 2 / CH4Trapped *,units=Hz" \
+    "-define=column,CH4FrequencyY,2 Ne * rp * ACH4 / Sb / Sy / Sx Sy + / sqrt c_mks * pi / 2 / CH4Trapped *,units=Hz" \
+    "-define=column,H2OFrequencyX,2 Ne * rp * AH2O / Sb / Sx / Sx Sy + / sqrt c_mks * pi / 2 / H2OTrapped *,units=Hz" \
+    "-define=column,H2OFrequencyY,2 Ne * rp * AH2O / Sb / Sy / Sx Sy + / sqrt c_mks * pi / 2 / H2OTrapped *,units=Hz" \
+    "-define=column,COFrequencyX,2 Ne * rp * ACO / Sb / Sx / Sx Sy + / sqrt c_mks * pi / 2 / COTrapped *,units=Hz" \
+    "-define=column,COFrequencyY,2 Ne * rp * ACO / Sb / Sy / Sx Sy + / sqrt c_mks * pi / 2 / COTrapped *,units=Hz" \
+    "-define=column,CO2FrequencyX,2 Ne * rp * ACO2 / Sb / Sx / Sx Sy + / sqrt c_mks * pi / 2 / CO2Trapped *,units=Hz" \
+    "-define=column,CO2FrequencyY,2 Ne * rp * ACO2 / Sb / Sy / Sx Sy + / sqrt c_mks * pi / 2 / CO2Trapped *,units=Hz" \
     | sddsprocess -pipe -process=*Trapped,integ,%sInteg,functionOf=s -process=sizeRatio,integ,%sInteg,functionOf=s \
     | sddsprocess -pipe "-define=parameter,%sFraction,%sInteg sMax /,select=*TrappedInteg,edit=%/Integ//" \
     "-define=parameter,sizeRatioAve,sizeRatioInteg sMax /" \
