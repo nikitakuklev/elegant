@@ -64,7 +64,7 @@ char *entity_name[N_TYPES] = {
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
-    "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP",
+    "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -188,7 +188,8 @@ char *entity_text[N_TYPES] = {
     "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
     "A map of (Bx, By, Bz) vs (x, y, z), for straight elements only",
     "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z).",
-    "A straight magnetic field element using generalized gradient expansion."
+    "A straight magnetic field element using generalized gradient expansion.",
+    "Conditional branch instruction to jump to another part of the beamline",
     } ;
 
 QUAD quad_example;
@@ -844,6 +845,13 @@ PARAMETER reflect_param[N_REFLECT_PARAMS] = {
 /* names for recirculation point */
 PARAMETER recirc_param[N_RECIRC_PARAMS] = {
     {"I_RECIRC_ELEMENT", "", IS_LONG, 0, 0, NULL, 0.0, 0, ""},
+    } ;
+
+BRANCH branch_example;
+/* names for branch instruction */
+PARAMETER branch_param[N_BRANCH_PARAMS] = {
+    {"COUNTER", "", IS_LONG, 0, (long)((char *)&branch_example.counter), NULL, 0.0, 0, "Counter, which is decremented by 1 for each pass."},
+    {"BRANCH_TO", "", IS_STRING, 0, (long)((char *)&branch_example.branchTo), NULL, 0.0, 0, "Name of element to which to jump when counter is non-positive."},
     } ;
 
 QFRING qfring_example;
@@ -2795,6 +2803,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
     { N_BRAT_PARAMS,     HAS_LENGTH,   sizeof(BRAT),  brat_param      },
     { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
+    { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
 } ;
 
 void compute_offsets()

@@ -203,6 +203,9 @@ long do_tracking(
   long nParticlesStartPass = 0;
   int myid = 0, active = 1;
   long memoryBefore=0, memoryAfter=0;
+  short branchInProgress = 0;
+  char *branchToName = NULL;
+  BRANCH *branch;
 #if USE_MPI 
 #ifdef SORT
   int nToTrackAtLastSort;
@@ -705,6 +708,13 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+      if (branchInProgress) {
+        if (strcmp(eptr->name, branchToName)!=0) {
+          eptr = eptr->succ;
+          continue;
+        } else
+          branchInProgress = 0;
+      }
       if (run->showElementTiming)
         tStart = getTimeInSecs();
       if (run->monitorMemoryUsage)
@@ -1045,6 +1055,17 @@ long do_tracking(
 	    switch (type) {
 	    case -1:
 	      break;
+            case T_BRANCH:
+              branch = (BRANCH*)(eptr->p_elem);
+              if (i_pass==0) 
+                branch->privateCounter = branch->counter;
+              if (branch->privateCounter<=0) {
+                branchInProgress = 1;
+                branchToName = branch->branchTo;
+                /* printf("Starting branch from %s to %s\n", eptr->name, branchToName); */
+              } else 
+                branch->privateCounter--;
+              break;
 	    case T_CHARGE:
 	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {

@@ -883,7 +883,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BMAPXYZ 114
 #define T_BRAT 115
 #define T_BGGEXP 116
-#define N_TYPES   117
+#define T_BRANCH 117
+#define N_TYPES  118
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1007,6 +1008,7 @@ extern char *entity_text[N_TYPES];
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 11
+#define N_BRANCH_PARAMS 2
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1751,6 +1753,17 @@ extern PARAMETER recirc_param[N_RECIRC_PARAMS];
 typedef struct {
     long i_recirc_element;
     } RECIRC;
+
+/* storage structure for conditional branch instruction */
+extern PARAMETER branch_param[N_BRANCH_PARAMS];
+
+typedef struct {
+  long counter;
+  char *branchTo;
+  /* internal variables */
+  ELEMENT_LIST *beptr;
+  long privateCounter;
+} BRANCH;
 
 /* names and storage structure for quadrupole fringe field parameters */
 extern PARAMETER qfring_param[N_QFRING_PARAMS];
