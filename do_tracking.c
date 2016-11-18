@@ -977,14 +977,22 @@ long do_tracking(
 	}
         else if (!branchInProgress && eptr->type==T_BRANCH) {
           branch = (BRANCH*)(eptr->p_elem);
-          if (i_pass==0) 
+          if (i_pass==0)  {
             branch->privateCounter = branch->counter;
+            branch->beptr = NULL;
+            branch->z = 0;
+          }
           if (branch->privateCounter<=0) {
             branchInProgress = 1;
             branchToName = branch->branchTo;
             if (branch->verbosity) {
               printf("Branching to %s\n", branchToName);
               fflush(stdout);
+            }
+            if (branch->beptr) {
+              eptr = branch->beptr;
+              z = branch->z;
+              branchInProgress = 0;
             }
           } else 
             branch->privateCounter--;
@@ -995,6 +1003,8 @@ long do_tracking(
               printf("Branch to %s suceeded\n", branchToName);
               fflush(stdout);
             }
+            branch->beptr = eptr;
+            branch->z = z;
             branchInProgress = 0;
           } else {
             if (branch->verbosity>1) {

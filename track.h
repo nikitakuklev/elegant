@@ -1762,6 +1762,7 @@ typedef struct {
   char *branchTo;
   /* internal variables */
   ELEMENT_LIST *beptr;
+  double z;
   long privateCounter;
 } BRANCH;
 
