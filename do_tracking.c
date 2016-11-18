@@ -203,9 +203,6 @@ long do_tracking(
   long nParticlesStartPass = 0;
   int myid = 0, active = 1;
   long memoryBefore=0, memoryAfter=0;
-  short branchInProgress = 0;
-  char *branchToName = NULL;
-  BRANCH *branch;
 #if USE_MPI 
 #ifdef SORT
   int nToTrackAtLastSort;
@@ -901,15 +898,13 @@ long do_tracking(
 
       name = eptr->name;
       last_z = z;
-      if (!branchInProgress) {
-        if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
-          z += ((DRIFT*)eptr->p_elem)->length;
-        else {
-          if (eptr->pred)
-            z += eptr->end_pos - eptr->pred->end_pos;
-          else
-            z += eptr->end_pos;
-        }
+      if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
+        z += ((DRIFT*)eptr->p_elem)->length;
+      else {
+        if (eptr->pred)
+          z += eptr->end_pos - eptr->pred->end_pos;
+        else
+          z += eptr->end_pos;
       }
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
@@ -933,17 +928,15 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          if (!branchInProgress) {
-            fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
+          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                    myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
+                  myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else
-                    nToTrack,
+                  nToTrack,
 #endif
-                    memoryUsage()
-                    );
+                  memoryUsage()
+                  );
           fflush(stdout);
-          }
 	}
         show_dE = 0;
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
@@ -975,46 +968,22 @@ long do_tracking(
             }
           }
 	}
-        else if (!branchInProgress && eptr->type==T_BRANCH) {
+        else if (eptr->type==T_BRANCH) {
+          BRANCH *branch;
           branch = (BRANCH*)(eptr->p_elem);
-          if (i_pass==0)  {
+          if (i_pass==0) 
             branch->privateCounter = branch->counter;
-            branch->beptr = NULL;
-            branch->z = 0;
-          }
           if (branch->privateCounter<=0) {
-            branchInProgress = 1;
-            branchToName = branch->branchTo;
-            if (branch->beptr) {
-              eptr = branch->beptr;
-              z = branch->z;
-              branchInProgress = 0;
-	      if (branch->verbosity) {
-		printf("Fast branch to %s\n", branchToName);
-		fflush(stdout);
-	      }
-            } else if (branch->verbosity) {
-              printf("Branching to %s\n", branchToName);
+            if (!branch->beptr)
+              bombElegant("No element pointer defined for BRANCH---seek expert help!", NULL);
+            if (branch->verbosity) {
+              printf("Branching to %s\n", branch->branchTo);
               fflush(stdout);
             }
+            eptr = branch->beptr;
+            z = branch->z;
           } else 
             branch->privateCounter--;
-        }
-        else if (branchInProgress) {
-          if (strcmp(eptr->name, branchToName)==0) {
-            if (branch->verbosity) {
-              printf("Branch to %s suceeded\n", branchToName);
-              fflush(stdout);
-            }
-            branch->beptr = eptr;
-            branch->z = z;
-            branchInProgress = 0;
-          } else {
-            if (branch->verbosity>1) {
-              printf("Skipping %s during branch to %s\n", eptr->name, branchToName);
-              fflush(stdout);
-            }
-          }
         }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {

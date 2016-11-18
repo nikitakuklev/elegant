@@ -25,6 +25,7 @@
 void show_elem(ELEMENT_LIST *eptr, long type);
 void process_rename_request(char *s, char **name, long n_names);
 long find_parameter_offset(char *param_name, long elem_type);
+void resolveBranchPoints(LINE_LIST *lptr);
 
 /* elem: root of linked-list of ELEM structures 
  * This list contains the definitions of all elements as supplied in the
@@ -679,6 +680,44 @@ double compute_end_positions(LINE_LIST *lptr)
         z = eptr->end_pos;
         i_elem++;
         } while ((eptr=eptr->succ));
+
+    resolveBranchPoints(lptr);
+    
+    /* Compute revolution length, respecting BRANCH elements */
+    eptr = &(lptr->elem);
+    z = z_recirc = 0;
+    theta = 0;
+    i_elem = 0;
+    recircPresent = 0;
+    do {
+      if (eptr->type==T_BRANCH) {
+        BRANCH *branch;
+        branch = (BRANCH*)eptr->p_elem;
+        branch->z = z;
+        if (branch->counter) {
+          eptr = branch->beptr;
+          continue;
+        }
+      }
+      if (!(entity_description[eptr->type].flags&HAS_LENGTH))
+        l = 0;
+      else
+        l = (*((double*)eptr->p_elem));
+      if (eptr->type==T_FTABLE && ((FTABLE*)eptr->p_elem)->angle) {
+        theta += ((FTABLE*)eptr->p_elem)->angle;
+        l = ((FTABLE*)eptr->p_elem)->l0/2./sin(((FTABLE*)eptr->p_elem)->angle/2.)*((FTABLE*)eptr->p_elem)->angle;
+      } 
+      else if (eptr->type==T_RECIRC) {
+        if (recircPresent)
+          bombElegant("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
+        lptr->elem_recirc = eptr;
+        lptr->i_recirc = i_elem;
+        z_recirc = z;
+        recircPresent = 1;
+      }
+      z += l;
+      i_elem++;
+    } while ((eptr=eptr->succ));
 
     lptr->revolution_length = z - z_recirc;
     return lptr->revolution_length;
@@ -1463,5 +1502,33 @@ long find_parameter_offset(char *param_name, long elem_type)
   if ((param=confirm_parameter(param_name, elem_type))<0)
     return(-1);
   return(entity_description[elem_type].parameter[param].offset);
+}
+
+void resolveBranchPoints(LINE_LIST *lptr) 
+{
+    static ELEMENT_LIST *eptr;
+    BRANCH *branch;
+    ELEMENT_LIST *eptr2;
+
+    eptr = &(lptr->elem);
+    do {
+      if (eptr->type==T_BRANCH) {
+        branch = (BRANCH*)eptr->p_elem;
+        if (branch->branchTo==NULL)
+          bombElegantVA("No branch target named for BRANCH %s", eptr->name);
+        eptr2 = eptr->succ;
+        while (eptr2) {
+          if (strcmp(eptr2->name, branch->branchTo)==0)
+            break;
+          eptr2 = eptr2->succ;
+        }
+        if (!eptr2)
+          bombElegantVA("Failed to find target %s for BRANCH %s", branch->branchTo, eptr->name);
+        if (eptr2->type!=T_MARK)
+          bombElegantVA("Branch target %s is not a MARK element", branch->branchTo);
+        printf("Found branch point %s for BRANCH %s\n", branch->branchTo, eptr->name);
+        branch->beptr = eptr2;
+      }
+    } while ((eptr=eptr->succ));
 }
 
