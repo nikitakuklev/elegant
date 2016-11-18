@@ -985,14 +985,17 @@ long do_tracking(
           if (branch->privateCounter<=0) {
             branchInProgress = 1;
             branchToName = branch->branchTo;
-            if (branch->verbosity) {
-              printf("Branching to %s\n", branchToName);
-              fflush(stdout);
-            }
             if (branch->beptr) {
               eptr = branch->beptr;
               z = branch->z;
               branchInProgress = 0;
+	      if (branch->verbosity) {
+		printf("Fast branch to %s\n", branchToName);
+		fflush(stdout);
+	      }
+            } else if (branch->verbosity) {
+              printf("Branching to %s\n", branchToName);
+              fflush(stdout);
             }
           } else 
             branch->privateCounter--;
