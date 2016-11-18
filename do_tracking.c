@@ -708,13 +708,6 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
-      if (branchInProgress) {
-        if (strcmp(eptr->name, branchToName)!=0) {
-          eptr = eptr->succ;
-          continue;
-        } else
-          branchInProgress = 0;
-      }
       if (run->showElementTiming)
         tStart = getTimeInSecs();
       if (run->monitorMemoryUsage)
@@ -908,13 +901,15 @@ long do_tracking(
 
       name = eptr->name;
       last_z = z;
-      if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
-        z += ((DRIFT*)eptr->p_elem)->length;
-      else {
-        if (eptr->pred)
-          z += eptr->end_pos - eptr->pred->end_pos;
-        else
-          z += eptr->end_pos;
+      if (!branchInProgress) {
+        if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
+          z += ((DRIFT*)eptr->p_elem)->length;
+        else {
+          if (eptr->pred)
+            z += eptr->end_pos - eptr->pred->end_pos;
+          else
+            z += eptr->end_pos;
+        }
       }
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
@@ -938,15 +933,17 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
+          if (!branchInProgress) {
+            fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
-                  myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
+                    myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else
-                  nToTrack,
+                    nToTrack,
 #endif
-                  memoryUsage()
-                  );
-	fflush(stdout);
+                    memoryUsage()
+                    );
+          fflush(stdout);
+          }
 	}
         show_dE = 0;
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
@@ -978,6 +975,34 @@ long do_tracking(
             }
           }
 	}
+        else if (!branchInProgress && eptr->type==T_BRANCH) {
+          branch = (BRANCH*)(eptr->p_elem);
+          if (i_pass==0) 
+            branch->privateCounter = branch->counter;
+          if (branch->privateCounter<=0) {
+            branchInProgress = 1;
+            branchToName = branch->branchTo;
+            if (branch->verbosity) {
+              printf("Branching to %s\n", branchToName);
+              fflush(stdout);
+            }
+          } else 
+            branch->privateCounter--;
+        }
+        else if (branchInProgress) {
+          if (strcmp(eptr->name, branchToName)==0) {
+            if (branch->verbosity) {
+              printf("Branch to %s suceeded\n", branchToName);
+              fflush(stdout);
+            }
+            branchInProgress = 0;
+          } else {
+            if (branch->verbosity>1) {
+              printf("Skipping %s during branch to %s\n", eptr->name, branchToName);
+              fflush(stdout);
+            }
+          }
+        }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {
           if (!(entity_description[eptr->type].flags&HAS_MATRIX))
@@ -1020,7 +1045,7 @@ long do_tracking(
 	    }
 	  }
 	}
-	else {
+	else { /* normal tracking ends up here */
           long type;
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             fprintf(stdout, "Tracking element: ");
@@ -1055,17 +1080,6 @@ long do_tracking(
 	    switch (type) {
 	    case -1:
 	      break;
-            case T_BRANCH:
-              branch = (BRANCH*)(eptr->p_elem);
-              if (i_pass==0) 
-                branch->privateCounter = branch->counter;
-              if (branch->privateCounter<=0) {
-                branchInProgress = 1;
-                branchToName = branch->branchTo;
-                /* printf("Starting branch from %s to %s\n", eptr->name, branchToName); */
-              } else 
-                branch->privateCounter--;
-              break;
 	    case T_CHARGE:
 	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
@@ -1129,7 +1143,7 @@ long do_tracking(
 	      if (!(flags&TIME_DEPENDENCE_OFF) || (flags&CLOSED_ORBIT_TRACKING))
 		track_through_rf_deflector(coord, (RFDF*)eptr->p_elem,
                                            coord, nToTrack, *P_central,
-                                           beamline->revolution_length, eptr->end_pos,
+                                           beamline->revolution_length, z, 
                                            i_pass);
 	      else
 		exactDrift(coord, nToTrack, ((RFDF*)eptr->p_elem)->length);
@@ -1143,7 +1157,7 @@ long do_tracking(
 	      if (!(flags&TIME_DEPENDENCE_OFF))
 		track_through_rftm110_deflector(coord, (RFTM110*)eptr->p_elem,
 						coord, nToTrack, *P_central,
-						beamline->revolution_length, eptr->end_pos,
+						beamline->revolution_length, z,
 						i_pass);
 	      break;
 	    case T_RMDF:
@@ -1627,7 +1641,7 @@ long do_tracking(
 	      break;
 	    case T_RAMPRF:
 	      ramped_rf_cavity(coord, nToTrack, (RAMPRF*)eptr->p_elem, *P_central, beamline->revolution_length,
-			       eptr->end_pos, i_pass);
+			       z, i_pass);
 	      break;
 	    case T_RAMPP:
 	      ramp_momentum(coord, nToTrack, (RAMPP*)eptr->p_elem, P_central, i_pass);
@@ -1664,39 +1678,39 @@ long do_tracking(
 	    case T_RFMODE:
 	      rfmode = (RFMODE*)eptr->p_elem;
 	      if (!rfmode->initialized)
-		set_up_rfmode(rfmode, eptr->name, eptr->end_pos, n_passes, run, 
+		set_up_rfmode(rfmode, eptr->name, z, n_passes, run, 
 			      nOriginal, *P_central,
 			      beamline->revolution_length);
 	      track_through_rfmode(coord, nToTrack, (RFMODE*)eptr->p_elem, *P_central,
-				   eptr->name, eptr->end_pos, i_pass, n_passes,
+				   eptr->name, z, i_pass, n_passes,
 				   charge);
 	      break;
 	    case T_FRFMODE:
 	      frfmode = (FRFMODE*)eptr->p_elem;
 	      if (!frfmode->initialized)
-		set_up_frfmode(frfmode, eptr->name, eptr->end_pos, n_passes, run, 
+		set_up_frfmode(frfmode, eptr->name, z, n_passes, run, 
 			       nOriginal, *P_central,
 			       beamline->revolution_length);
 	      track_through_frfmode(coord, nToTrack, frfmode, *P_central,
-				    eptr->name, eptr->end_pos, i_pass, n_passes,
+				    eptr->name, z, i_pass, n_passes,
 				    charge);
 	      break;
 	    case T_TRFMODE:
 	      trfmode = (TRFMODE*)eptr->p_elem;
 	      if (!trfmode->initialized)
-		set_up_trfmode(trfmode, eptr->name, eptr->end_pos, n_passes, run, nOriginal);
+		set_up_trfmode(trfmode, eptr->name, z, n_passes, run, nOriginal);
 	      track_through_trfmode(coord, nToTrack, (TRFMODE*)eptr->p_elem, *P_central,
-				    eptr->name, eptr->end_pos, i_pass, n_passes,
+				    eptr->name, z, i_pass, n_passes,
 				    charge);
 	      break;
 	    case T_FTRFMODE:
 	      ftrfmode = (FTRFMODE*)eptr->p_elem;
 	      if (!ftrfmode->initialized)
-		set_up_ftrfmode(ftrfmode, eptr->name, eptr->end_pos, n_passes, run, 
+		set_up_ftrfmode(ftrfmode, eptr->name, z, n_passes, run, 
 				nOriginal, *P_central,
 				beamline->revolution_length);
 	      track_through_ftrfmode(coord, nToTrack, ftrfmode, *P_central,
-				     eptr->name, eptr->end_pos, i_pass, n_passes,
+				     eptr->name, z, i_pass, n_passes,
 				     charge);
 	      break;
 	    case T_ZLONGIT:
@@ -1847,7 +1861,7 @@ long do_tracking(
                     TWISS beamTwiss;
                     if (((TWISSELEMENT*)eptr->p_elem)->verbose)
                       printf("* Computing beam-based twiss transformation matrix for %s at z=%e m\n",
-                             eptr->name, eptr->end_pos);
+                             eptr->name, z);
 #if SDDS_MPI_IO
                     if (!partOnMaster && notSinglePart) {
                       if (isMaster) nToTrack = 0;
@@ -1884,20 +1898,20 @@ long do_tracking(
 		    eptr->matrix = twissTransformMatrix1(&(((TWISSELEMENT*)eptr->p_elem)->twiss), &(((TWISSELEMENT*)eptr->p_elem)->twiss0));
 		  } else {
 		    printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
-			   eptr->name, eptr->end_pos);
+			   eptr->name, z);
 		    printf("This means you set FROM_BEAM=0 but didn't issue a twiss_output command.\n");
 		    exitElegant(1);
 		  }
                 }
                 if (eptr->matrix==NULL) {
                   printf("Error: twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
-                         eptr->name, eptr->end_pos);
+                         eptr->name, z);
                   printf("and this wasn't properly detected.  Please send your input files to borland@aps.anl.gov.\n");
                   exitElegant(1);
                 }
                 if (((TWISSELEMENT*)eptr->p_elem)->verbose) {
                   TWISS beamTwiss;
-                  printf("* Applying twiss parameter transformation matrix (%s at z=%e m) to beam.\n", eptr->name, eptr->end_pos);
+                  printf("* Applying twiss parameter transformation matrix (%s at z=%e m) to beam.\n", eptr->name, z);
                   computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
                   printf("  * Initial twiss parameters:\n");
                   printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
@@ -2102,7 +2116,7 @@ long do_tracking(
 				   !sliceAnDone, step, 
 				   *P_central, 
 				   charge?charge->macroParticleCharge*nToTrack:0.0, 
-				   eptr->name, eptr->end_pos, 0); 
+				   eptr->name, z, 0); 
 	sliceAnDone = 1;
       }
 #ifdef DEBUG_CRASH 

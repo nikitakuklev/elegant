@@ -1,0 +1,21 @@
+This element is experimental and should be used with care.
+It may not work well with other features, particularly things like Twiss parameter or orbit calculations.
+It should work well with tracking.
+
+The application that inspired creation of this element is to switch from tracking using lumped elements to tracking
+using element-by-element methods.
+More specifically, imagine we want to track for 10,000 turns to reach an equilibrium, then perform a beam dump.
+The equilibrium state can be accurately modeled using lumped elements, such as \verb|ILMATRIX| and \verb|SREFFECTS|,
+but the beam dump needs to be modeled using element-by-element tracking.
+\begin{verbatim}
+RING1: ILMATRIX,...
+SR1: SREFFECTS,...
+...
+RINGFULL: line=(SECTOR1, SECTOR2, ..., SECTOR40)
+M1: MARK
+M2: MARK
+RF: RFCA,...
+BR1: BRANCH,COUNTER=10000,BRANCH_TO="M1"
+BR2: BRANCH,COUNTER=-1,BRANCH_TO="M2"
+BL: line=(BR1,RING1,SR1,M1,RINGFULL,M2,RF)
+\end{verbatim}
