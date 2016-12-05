@@ -944,7 +944,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 61
+#define N_CSBEND_PARAMS 60
 #define N_MATTER_PARAMS 16
 #define N_RFMODE_PARAMS 42
 #define N_TRFMODE_PARAMS 25
@@ -2162,7 +2162,7 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects, edge_order, fringe;
+    long edge1_effects, edge2_effects, edge_order;
     long integration_order;
     double edge1_kick_limit, edge2_kick_limit;
     long kick_limit_scaling;
