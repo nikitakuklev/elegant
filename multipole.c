@@ -274,6 +274,7 @@ long fmultipole_tracking(
                          )
 {
   double dummy;
+  double dzLoss;
   long n_kicks;       /* number of kicks to split multipole into */
   long i_part, i_top, is_lost=0, i_order;
   double *coord;
@@ -327,42 +328,27 @@ long fmultipole_tracking(
       abort();
     }
 
+    is_lost = 0;
     if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
                                        1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL, NULL,
-                                       &dummy, NULL, 0)) {
+                                       &dzLoss, NULL, 0))
       is_lost = 1;
-      break;
-    }
     
-    if (!is_lost) {
-      x = coord[0];
-      y = coord[2];
-      xp = coord[1];
-      yp = coord[3];
-
-#if defined(IEEE_MATH)
-      if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-        swapParticles(particle[i_part], particle[i_top]);
-        if (accepted)
-          swapParticles(accepted[i_part], accepted[i_top]);
-        particle[i_top][4] = z_start;
-        particle[i_top][5] = Po*(1+particle[i_top][5]);
-        i_top--;
-        i_part--;
-        continue;
-      }
-#endif
-    }
-    if (is_lost || FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+    x = coord[0];
+    y = coord[2];
+    xp = coord[1];
+    yp = coord[3];
+    
+    if (is_lost || isnan(x) || isnan(y) || isnan(xp) || isnan(yp) ||
+	FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
         FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
-      particle[i_top][4] = z_start;
+      particle[i_top][4] = z_start + dzLoss;
       particle[i_top][5] = Po*(1+particle[i_top][5]);
       i_top--;
       i_part--;
-      continue;
     }
   }
 
@@ -1136,7 +1122,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       x += xp*drift*(i_kick?2:1);
       y += yp*drift*(i_kick?2:1);
       s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
-      *dzLoss += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+      *dzLoss += drift*(i_kick?2:1);
     }
     if (apData && apData->present &&
         ((apData->xMax && fabs(x + dx - apData->xCen)>apData->xMax) ||
@@ -1195,7 +1181,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     x += xp*drift;
     y += yp*drift;
     s += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
-    *dzLoss += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+    *dzLoss += drift;
   }
   if (apData && apData->present &&
       ((apData->xMax && fabs(x + dx - apData->xCen)>apData->xMax) ||
@@ -1359,7 +1345,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         x += xp*dsh;
         y += yp*dsh;
         s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
-        *dzLoss += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+        *dzLoss += dsh;
       }
       if (apData && apData->present &&
           ((apData->xMax>=0 && fabs(x + dx - apData->xCen)>apData->xMax) ||
