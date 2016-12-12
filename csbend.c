@@ -31,8 +31,6 @@ double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
 long distributionBasedRadiation, includeOpeningAngle;
 long photonCount = 0;
 double energyCount = 0, radiansTotal = 0;
-long particle_lost;
-double s_lost;
 double **Fx_xy = NULL, **Fy_xy = NULL;
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
@@ -49,8 +47,10 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0);
-void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0);
+long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+                           double *s_lost, MULT_APERTURE_DATA *apData);
+long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+                           double *s_lost, MULT_APERTURE_DATA *apData);
 void exactDrift(double **part, long np, double length);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
@@ -85,8 +85,10 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
   double xp[11], yp[11];
   double sumFx=0, sumFy=0;
   long i, j;
+  /*
   static short first = 1;
-  
+  */
+
   xp[0] = yp[0] = 1;
   for (i=1; i<expansionOrder1; i++) {
     xp[i] = xp[i-1]*x;
@@ -118,7 +120,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 
   *Fy = sumFy;
 
-  first = 0;
+  /* first = 0; */
 }
 
 void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long expansionOrder)
@@ -231,15 +233,15 @@ void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long ex
 
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start, double *sigmaDelta2, char *rootname)
+                          double z_start, double *sigmaDelta2, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
 {
   double h;
-  long i_part, i_top;
+  long i_part, i_top, particle_lost;
   double rho, s, Fx, Fy;
   double x, xp, y, yp, dp, dp0;
   double n, fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
-  double *coord;
+  double *coord, s_lost;
   double angle, e1, e2, Kg;
   double psi1, psi2, he1, he2;
   double Qi[6], Qf[6];
@@ -249,15 +251,16 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double delta_xp;
   double e1_kick_limit, e2_kick_limit;
   static long largeRhoWarning = 0;
+  MULT_APERTURE_DATA apertureData;
 
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
     i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted, 
-                                      z_start, sigmaDelta2, rootname);
+                                      z_start, sigmaDelta2, rootname, x_max, y_max, elliptical, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname);
+    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, x_max, y_max, elliptical, apFileData);
     compareGpuCpu(n_part, "track_through_csbend");
 #endif /* GPU_VERIFY */
     return i_part;
@@ -269,6 +272,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
   
+  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
+
   if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
@@ -303,7 +308,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none");
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, x_max, y_max, elliptical, apFileData);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refKicks = csbend->n_kicks;
@@ -440,7 +445,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       kquad.isr1Particle = csbend->isr1Particle;
       kquad.n_kicks = csbend->n_kicks;
       kquad.integration_order = csbend->integration_order;
-      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, 1, 1, 0, NULL, sigmaDelta2);
+      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
     } else {
       if (!largeRhoWarning) {
 #if USE_MPI
@@ -628,13 +633,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
     
-    particle_lost = 0;
-    if (!particle_lost) {
-      if (csbend->integration_order==4)
-        integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
-      else
-        integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
-    }
+    if (csbend->integration_order==4)
+      particle_lost = !integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po, &s_lost,
+                                             &apertureData);
+    else
+      particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po, &s_lost,
+                                             &apertureData);
 
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
@@ -645,6 +649,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         fflush(stdout);
         abort();
       }
+      memcpy(part[i_part], Qf, sizeof(**part)*6);
       swapParticles(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
@@ -770,7 +775,8 @@ void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrde
 }
 
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
+long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+                           double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
   double factor, f, phi, ds, dsh, dist;
@@ -819,28 +825,24 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   ds = s/n;
   dsh = ds/2;
   dist = 0;
-
   
   for (i=0; i<n; i++) {
     if (i==0) {
       /* do half-length drift */
       if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       phi = asin(sin_phi=QX/f);
       sine = sin(dsh/rho0+phi);
       if ((cosi = cos(dsh/rho0+phi))==0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       tang = sine/cosi;
       cos_phi = cos(phi);
@@ -849,6 +851,11 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
       dist += factor*(1+DPoP);
       f = cos_phi/cosi;
       X  = rho0*(f-1) + f*X;
+    }
+
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
     }
 
     /* calculate the scaled fields */
@@ -871,22 +878,19 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     if (i==n-1) {
       /* do half-length drift */
       if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       phi = asin(sin_phi=QX/f);
       sine = sin(dsh/rho0+phi);
       if ((cosi = cos(dsh/rho0+phi))==0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       tang = sine/cosi;
       cos_phi = cos(phi);
@@ -899,22 +903,19 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     else {
       /* do full-length drift */
       if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       phi = asin(sin_phi=QX/f);
       sine = sin(ds/rho0+phi);
       if ((cosi = cos(ds/rho0+phi))==0) {
-        particle_lost = 1;
-        s_lost = dist;
-        return;
+        *s_lost = dist;
+        return 0;
       }
       tang = sine/cosi;
       cos_phi = cos(phi);
@@ -941,6 +942,22 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
       dist -= refTrajectoryData[i][4];
     }
 
+#if defined(IEEE_MATH)
+    if (isnan(X) || isnan(QX) || isnan(Y) || isnan(QY)) {
+      *s_lost = dist;
+      return 0;
+    }
+#endif
+    if (FABS(X)>COORD_LIMIT || FABS(Y)>COORD_LIMIT ||
+        FABS(QX)>SLOPE_LIMIT || FABS(QY)>SLOPE_LIMIT) {
+      *s_lost = dist;
+      return 0;
+    }
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
+    }
+
   }
 
   /* convert back to slopes */
@@ -951,10 +968,12 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 */
 
   Qf[4] += dist;
+  return 1;
 }
 
 
-void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
+long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+                           double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
   double factor, f, phi, ds, dsh, dist;
@@ -1011,22 +1030,19 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* do first drift */
     dsh = s/2/(2-BETA);
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     phi = asin(sin_phi=QX/f);
     sine = sin(dsh/rho0+phi);
     if ((cosi = cos(dsh/rho0+phi))==0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     tang = sine/cosi;
     cos_phi = cos(phi);
@@ -1035,7 +1051,11 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
-    
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
+    }
+
     /* do first kick */
     ds = s/(2-BETA);
     /* -- calculate the scaled fields */
@@ -1058,22 +1078,19 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* do second drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     phi = asin(sin_phi=QX/f);
     sine = sin(dsh/rho0+phi);
     if ((cosi = cos(dsh/rho0+phi))==0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     tang = sine/cosi;
     cos_phi = cos(phi);
@@ -1082,6 +1099,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
+    }
     
     /* do second kick */
     ds = -s*BETA/(2-BETA);
@@ -1103,21 +1124,19 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* do third drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
-      particle_lost = 1;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     phi = asin(sin_phi=QX/f);
     sine = sin(dsh/rho0+phi);
     if ((cosi = cos(dsh/rho0+phi))==0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     tang = sine/cosi;
     cos_phi = cos(phi);
@@ -1126,6 +1145,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
+    }
     
     /* do third kick */
     ds = s/(2-BETA);
@@ -1147,22 +1170,19 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* do fourth drift */
     dsh = s/2/(2-BETA);
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     phi = asin(sin_phi=QX/f);
     sine = sin(dsh/rho0+phi);
     if ((cosi = cos(dsh/rho0+phi))==0) {
-      particle_lost = 1;
-      s_lost = dist;
-      return;
+      *s_lost = dist;
+      return 0;
     }
     tang = sine/cosi;
     cos_phi = cos(phi);
@@ -1171,6 +1191,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     dist += factor*(1+DPoP);
     f = cos_phi/cosi;
     X  = rho0*(f-1) + f*X;
+    if (apData && !checkMultAperture(X, Y, apData)) {
+      *s_lost = dist;
+      return 0;
+    }
 
     if (refTrajectoryMode==RECORD_TRAJECTORY) {
       refTrajectoryData[i][0] = X;
@@ -1197,6 +1221,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
 */
 
   Qf[4] += dist;
+  return 1;
 }
 
 
@@ -1211,15 +1236,15 @@ void readWakeFilterFile(long *values, double **freq, double **real, double **ima
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
-                             CHARGE *charge, char *rootname)
+                             CHARGE *charge, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
 {
   double h, n, he1, he2;
   static long csrWarning = 0;
   static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL, *chik=NULL, *grnk=NULL;
-  static long maxParticles = 0, maxBins = 0 ;
+  static long maxParticles = 0, maxBins = 0, particle_lost;
   static char *particleLost=NULL;
-  double x=0, xp, y=0, yp, p1, beta1, p0;
+  double x=0, xp, y=0, yp, p1, beta1, p0, s_lost;
   double ctLower, ctUpper, dct, slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
   long nBins, nBinned = 0;
@@ -1244,6 +1269,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
   short accumulatingAngle = 1;
+  MULT_APERTURE_DATA apertureData;
 #if USE_MPI
   double *buffer;  
 #endif
@@ -1262,7 +1288,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */
@@ -1271,7 +1297,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
     csrWake.StupakovFileActive = 0; /* Reset doesn't close */
 
-    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname);
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
     compareGpuCpu(n_part, "track_through_csbendCSR");
 
     /* compare CSR_LAST_WAKE structs */
@@ -1308,6 +1334,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   refTrajectoryMode = 0;
   if (isSlave || !notSinglePart) 
     reset_driftCSR();
+
+  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
 
   getTrackingContext(&tContext);
   
@@ -1736,9 +1764,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
         
 	  if (csbend->integration_order==4)
-	    integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	    particle_lost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
 	  else
-	    integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	    particle_lost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
 	  particleLost[i_part] = particle_lost;
       
 	  /* retrieve coordinates from arrays */

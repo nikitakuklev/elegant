@@ -683,7 +683,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(coord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL);
+                         NULL, NULL, 1, 1, 0, NULL);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -819,7 +819,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL);
+                         NULL, NULL, 1, 1, 0, NULL);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -1364,7 +1364,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   switch (elem->type) {
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
-    track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname);
+    track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname, 1, 1, 0, NULL);
     break;
   case T_SBEN:
 #ifdef HAVE_GPU

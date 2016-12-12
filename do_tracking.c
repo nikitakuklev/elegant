@@ -1491,13 +1491,14 @@ long do_tracking(
 		((CSBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
-					   *P_central, accepted, last_z, NULL, run->rootname);
+					   *P_central, accepted, last_z, NULL, run->rootname, x_max, y_max, elliptical,
+                                          &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
 	    case T_CSRCSBEND:
               ((CSRCSBEND*)eptr->p_elem)->edgeFlags = determine_bend_flags(eptr, ((CSRCSBEND*)eptr->p_elem)->edge1_effects,
-                                                                        ((CSRCSBEND*)eptr->p_elem)->edge2_effects);
+                                                                           ((CSRCSBEND*)eptr->p_elem)->edge2_effects);
 	      if (flags&TEST_PARTICLES) {
 		saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
 		((CSRCSBEND*)eptr->p_elem)->isr = 0;
@@ -1507,7 +1508,8 @@ long do_tracking(
 	      coord = forceParticlesToCpu("track_through_csbendCSR");
 #endif
 	      nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND*)eptr->p_elem, 0.0,
-					      *P_central, accepted, last_z, z, charge, run->rootname);
+					      *P_central, accepted, last_z, z, charge, run->rootname,
+                                              x_max, y_max, elliptical, &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSRCSBEND*)eptr->p_elem)->isr = saveISR;
 	      break;

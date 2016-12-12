@@ -915,34 +915,7 @@ long multipole_tracking2(
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
-  apertureData.xCen = apertureData.yCen = 0;
-  apertureData.xMax = x_max;
-  apertureData.yMax = y_max;
-  apertureData.elliptical = elliptical;
-  apertureData.present = x_max>0 || y_max>0;
-  if (apFileData && apFileData->initialized) {
-    /* If there is file-based aperture data, it may override MAXAMP data. */
-    double xCenF, yCenF, xMaxF, yMaxF;
-    apertureData.present = 1;
-    if (interpolateApertureData(z_start+drift/2, apFileData, 
-                                &xCenF, &yCenF, &xMaxF, &yMaxF)) {
-      if (x_max<=0 || (x_max>fabs(xCenF+xMaxF) && x_max>fabs(xCenF-xMaxF))) {
-        apertureData.xMax = xMaxF;
-        apertureData.xCen = xCenF;
-        apertureData.elliptical = 0;
-      }
-      if (y_max<=0 || (y_max>fabs(yCenF+yMaxF) && y_max>fabs(yCenF-yMaxF))) {
-        apertureData.yMax = yMaxF;
-        apertureData.yCen = yCenF;
-        apertureData.elliptical = 0;
-      }
-    }
-  }
-  if (fabs(tilt)>0.1) {
-    /* If rotation is greater than 100 mrad, disable aperture inside the element */
-    /* Prevents unexpected results with skew elements */
-    apertureData.present = 0;
-  }
+  setupMultApertureData(&apertureData, x_max, y_max, elliptical, tilt, apFileData, z_start+drift/2);
   
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
@@ -1124,9 +1097,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
       *dzLoss += drift*(i_kick?2:1);
     }
-    if (apData && apData->present &&
-        ((apData->xMax && fabs(x + dx - apData->xCen)>apData->xMax) ||
-         (apData->yMax && fabs(y + dy - apData->yCen)>apData->yMax) )) {
+    if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
       coord[0] = x;
       coord[2] = y;
       return 0;
@@ -1183,9 +1154,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     s += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
     *dzLoss += drift;
   }
-  if (apData && apData->present &&
-      ((apData->xMax && fabs(x + dx - apData->xCen)>apData->xMax) ||
-       (apData->yMax && fabs(y + dy - apData->yCen)>apData->yMax) )) {
+  if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
     coord[0] = x;
     coord[2] = y;
     return 0;
@@ -1347,9 +1316,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
         *dzLoss += dsh;
       }
-      if (apData && apData->present &&
-          ((apData->xMax>=0 && fabs(x + dx - apData->xCen)>apData->xMax) ||
-           (apData->yMax>=0 && fabs(y + dy - apData->yCen)>apData->yMax) )) {
+      if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
         coord[0] = x;
         coord[2] = y;
         return 0;
@@ -1410,9 +1377,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     }
   }
   
-  if (apData && apData->present &&
-      ((apData->xMax && fabs(x + dx - apData->xCen)>apData->xMax) ||
-       (apData->yMax && fabs(y + dy - apData->yCen)>apData->yMax) ))  {
+  if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
     coord[0] = x;
     coord[2] = y;
     return 0;
@@ -1718,3 +1683,46 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   }
 }
 
+void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double x_max, double y_max, long elliptical, double tilt, 
+     APERTURE_DATA *apFileData, double zPosition)
+{
+  /* zPosition=_start+drift/2 */
+  apertureData->xCen = apertureData->yCen = 0;
+  apertureData->xMax = x_max;
+  apertureData->yMax = y_max;
+  apertureData->elliptical = elliptical;
+  apertureData->present = x_max>0 || y_max>0;
+  if (apFileData && apFileData->initialized) {
+    /* If there is file-based aperture data, it may override MAXAMP data. */
+    double xCenF, yCenF, xMaxF, yMaxF;
+    apertureData->present = 1;
+    if (interpolateApertureData(zPosition,  apFileData, 
+                                &xCenF, &yCenF, &xMaxF, &yMaxF)) {
+      if (x_max<=0 || (x_max>fabs(xCenF+xMaxF) && x_max>fabs(xCenF-xMaxF))) {
+        apertureData->xMax = xMaxF;
+        apertureData->xCen = xCenF;
+        apertureData->elliptical = 0;
+      }
+      if (y_max<=0 || (y_max>fabs(yCenF+yMaxF) && y_max>fabs(yCenF-yMaxF))) {
+        apertureData->yMax = yMaxF;
+        apertureData->yCen = yCenF;
+        apertureData->elliptical = 0;
+      }
+    }
+  }
+  if (fabs(tilt)>0.1) {
+    /* If rotation is greater than 100 mrad, disable aperture inside the element */
+    /* Prevents unexpected results with skew elements */
+    apertureData->present = 0;
+  }
+}
+
+long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData) 
+{
+    if (apData && apData->present &&
+        ((apData->xMax && fabs(x - apData->xCen)>apData->xMax) ||
+         (apData->yMax && fabs(y - apData->yCen)>apData->yMax) )) {
+      return 0;
+    }
+    return 1;
+}
