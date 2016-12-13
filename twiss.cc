@@ -2132,6 +2132,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   chromx = chromy = 0;
   dbetax = dbetay = 0;
+  dalphax = dalphay = 0;
   chromx2 = chromy2 = 0;
 
   for (i=0; i<N_TSWA; i++)
