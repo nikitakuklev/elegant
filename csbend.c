@@ -649,7 +649,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         fflush(stdout);
         abort();
       }
-      memcpy(part[i_part], Qf, sizeof(**part)*6);
+      convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
       swapParticles(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
@@ -2218,6 +2218,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  fflush(stdout);
 	  abort();
 	}
+        convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
 	swapParticles(part[i_part], part[i_top]);
 	if (accepted) {
 	  if (!accepted[i_top]) {
