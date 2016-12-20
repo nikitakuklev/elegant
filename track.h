@@ -1007,7 +1007,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 10
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 11
+#define N_BGGEXP_PARAMS 12
 #define N_BRANCH_PARAMS 3
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2772,6 +2772,7 @@ typedef struct {
   long mMaximum;          /* maximum value of m that is included */
   long maximum2n;         /* maximum value of 2*n that is included */
   long zInterval;         /* interval between z points used */
+  long symplectic;        /* use symplectic integrator */
   /* these are set by the program when the file is read */
   long initialized;
   long dataIndex;

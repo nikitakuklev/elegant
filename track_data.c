@@ -2663,6 +2663,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"MAXIMUM_M", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.mMaximum), NULL, 0.0, -1, "data with m greater than this is ignored"},
     {"MAXIMUM_2N", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.maximum2n), NULL, 0.0, -1, "data with 2*n greater than this is ignored"},
     {"Z_INTERVAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},
+    {"SYMPLECTIC", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator"},
 };  
 
 /* array of parameter structures */
