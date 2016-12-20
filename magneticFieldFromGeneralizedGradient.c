@@ -361,7 +361,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         px = pxNext;
         py = pyNext;
         delta_s += step*bgg->zInterval*((1.0 + delta)*denom - 1.0);
-        s += step*bgg->zInterval;
+        if (iz!=(bggData->nz-1))
+          s += step*bgg->zInterval;
 
 #ifdef DEBUG
         fprintf(fpdebug, "%le %le %le %le %le %le %le %le %i\n", 
