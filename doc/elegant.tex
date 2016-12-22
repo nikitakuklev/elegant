@@ -54,6 +54,8 @@ Here is a summary of what's changed since release 31.
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added the \verb|BRANCH| element, which permits branching between parts of a beamline based on the number of passes executed.
+\item Apertures specified using \verb|MAXAMP| or an external aperture file (using the \verb|aperture_data| command) are now
+  enforced inside \verb|CSBEND| and \verb|CSRCSBEND| elements.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -62,6 +64,11 @@ Here is a summary of what's changed since release 31.
   match the list in the \verb|sextupole| parameter.
 \item Added \verb|alter_at_each_step| and \verb|alter_before_load_parameters| parameters to the \verb|alter_elements| command,
   allowing better control of potential conflicts with \verb|load_parameters|.
+\item The random number generator seed is now permuted bitwise in order to add a greater level of apparent randomness.
+  Thus, changing the seed by a small amount will now have a bigger effect on the sequences generated, making it easier to
+  deliberately perform several runs with very distinct random values.
+  This can be defeated using the \verb|global_settings| command by setting \verb|inhibit_seed_permutation=1|.
+  This issue was pointed out by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -2034,6 +2041,7 @@ Use of this feature results in a doubling of the number of turns tracked.
     long inhibit_fsync = 0;
     long echo_namelists = 1;
     double SR_gaussian_limit = 3.0;
+    long inhibit_seed_permutation = 0;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
     long mpi_randomization_mode = 1;
@@ -2050,6 +2058,9 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item \verb|SR_gaussian_limit| --- By default, \verb|elegant| uses a 3-$\sigma$ cutoff for the gaussian random numbers used
   in simulation of synchrotron radiation from \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, \verb|KSEXT, and \verb|SREFFECTS|.
   This parameter allows changing the cutoff.
+\item \verb|inhibit_seed_permutation| --- If nonzero, randomization of the user-supplied random number seed is {\em not} performed.
+  This feature is useful in that it provides a higher degree of apparent randomness, in that small changes in the seed result
+  in very different random sequences.
 \item \verb|log_file| --- By default, \verb|elegant| writes status information to the terminal.  If a filename is supplied
   for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
   the output being discarded.
