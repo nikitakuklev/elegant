@@ -49,6 +49,8 @@ Here is a summary of what's changed since release 31.
 \begin{itemize}
 \item A bug was fixed in the \verb|amplification_factors| command that resulted in a crash when the corrected amplification
   factors were requested. This was reported by S. DiMitri (ELETTRA).
+\item A bug was fixed for \verb|twiss_output|, which was incorrectly reporting the quantities \frac{\partial \alpha_{x,y}}{\partial \delta}} 
+ (parameters \verb|dalphax/dp| and \verb|dalphay/dp| in the output file) in some cases.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -56,6 +58,7 @@ Here is a summary of what's changed since release 31.
 \item Added the \verb|BRANCH| element, which permits branching between parts of a beamline based on the number of passes executed.
 \item Apertures specified using \verb|MAXAMP| or an external aperture file (using the \verb|aperture_data| command) are now
   enforced inside \verb|CSBEND| and \verb|CSRCSBEND| elements.
+  There may be small changes in, for example, momentum acceptance as a result of this, particularly when gradient dipoles are involved. 
 \end{itemize}
 
 \subsection{New and Modified Commands}
