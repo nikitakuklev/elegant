@@ -639,7 +639,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     else
       particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po, &s_lost,
                                              &apertureData);
-
     convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
 
     if (particle_lost) {
@@ -649,6 +648,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         fflush(stdout);
         abort();
       }
+      memcpy(part[i_part],  Qf, sizeof(part[i_part][0])*6);
       convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
       swapParticles(part[i_part], part[i_top]);
       if (accepted) {
@@ -663,6 +663,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       }
       part[i_top][4] = z_start + s_lost;
       part[i_top][5] = Po*(1+part[i_top][5]);
+
       i_top--;
       i_part--;
       continue;
