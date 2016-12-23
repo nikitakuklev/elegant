@@ -253,6 +253,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   static long largeRhoWarning = 0;
   MULT_APERTURE_DATA apertureData;
 
+  /*
+  static FILE *fpdeb = NULL;
+  if (!fpdeb) {
+    fpdeb = fopen("apdebug.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n&column name=x type=float &end\n&column name=y type=float &end\n&data mode=ascii no_row_counts=1 &end\n");
+  }
+  */
+
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -748,6 +756,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     */
     distributionBasedRadiation = 0;
   }
+
+  /*
+  for (i_part=i_top+1; i_part<n_part; i_part++) 
+      fprintf(fpdeb, "%le %le\n", part[i_part][0], part[i_part][2]);
+  */
 
   if (sigmaDelta2)
     /* Return average value for all particles */
@@ -1271,13 +1284,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   static double accumulatedAngle = 0;
   short accumulatingAngle = 1;
   MULT_APERTURE_DATA apertureData;
-  /*
-  static FILE *fpdeb = NULL;
-  if (!fpdeb) {
-    fpdeb = fopen("apdebug.sdds", "w");
-    fprintf(fpdeb, "SDDS1\n&column name=x type=float &end\n&column name=y type=float &end\n&data mode=ascii no_row_counts=1 &end\n");
-  }
-  */
+
 #if USE_MPI
   double *buffer;  
 #endif
@@ -2186,14 +2193,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.s0 = ctLower + dzf;
   }
   
+  i_top = n_part-1;
   if (isSlave || !notSinglePart) {
     /* remove lost particles */
-    i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
-      /* 
-         if (particleLost[i_part])
-        fprintf(fpdeb, "%le %le\n", part[i_part][0], part[i_part][2]);
-      */
 
       coord = part[i_part];
 
