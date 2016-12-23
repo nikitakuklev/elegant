@@ -1256,9 +1256,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   static long csrWarning = 0;
   static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL, *chik=NULL, *grnk=NULL;
-  static long maxParticles = 0, maxBins = 0, particle_lost;
+  static long maxParticles = 0, maxBins = 0 ;
   static char *particleLost=NULL;
-  double x=0, xp, y=0, yp, p1, beta1, p0, s_lost;
+  double x=0, xp, y=0, yp, p1, beta1, p0;
   double ctLower, ctUpper, dct, slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
   long nBins, nBinned = 0;
@@ -1283,16 +1283,26 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
   short accumulatingAngle = 1;
-  MULT_APERTURE_DATA apertureData;
-
+  double s_lost;
 #if USE_MPI
   double *buffer;  
+#endif
+#ifdef DEBUG_IGF
+  FILE *fpdeb;
+  fpdeb = fopen("csr.sdds","w");
+  fprintf(fpdeb, "SDDS1\n&parameter name = Slice, type=long &end\n");
+  fprintf(fpdeb, "&column name=s, type=double, units=m &end\n");
+  fprintf(fpdeb, "&column name=iBin, type=long &end\n");
+  fprintf(fpdeb, "&column name=Chi, type=double &end\n");
+  fprintf(fpdeb, "&column name=G, units=V/m, type=double &end\n");
+  fprintf(fpdeb, "&column name=dGamma, type=double &end\n");
+  fprintf(fpdeb, "&data mode=ascii &end\n");
 #endif
 
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */
@@ -1301,7 +1311,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
     csrWake.StupakovFileActive = 0; /* Reset doesn't close */
 
-    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname);
     compareGpuCpu(n_part, "track_through_csbendCSR");
 
     /* compare CSR_LAST_WAKE structs */
@@ -1338,8 +1348,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   refTrajectoryMode = 0;
   if (isSlave || !notSinglePart) 
     reset_driftCSR();
-
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
 
   getTrackingContext(&tContext);
   
@@ -1768,9 +1776,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
         
 	  if (csbend->integration_order==4)
-	    particleLost[i_part] = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
+	    particleLost[i_part] = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, NULL);
 	  else
-	    particleLost[i_part] = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
+	    particleLost[i_part] = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, NULL);
       
 	  /* retrieve coordinates from arrays */
           convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
@@ -1779,19 +1787,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Y  = Qf[2];  
 	  YP = Qf[3];  
 	  DP = Qf[5];
-          if (particleLost[i_part]) {
-            CT = z_start + s_lost;
-          } else {
-            if (rad_coef || isrConstant) {
-              /* convert additional distance traveled to ct using mean velocity */
-              p1 = Po*(1+DP);
-              beta1 = p1/sqrt(p1*p1+1);
-              CT += Qf[4]*2/(beta0[i_part]+beta1);
-              beta0[i_part] = beta1;
-            } else {
-              CT += Qf[4]/beta0[i_part];  
-            }
-          }
+
+	  if (rad_coef || isrConstant) {
+	    /* convert additional distance traveled to ct using mean velocity */
+	    p1 = Po*(1+DP);
+	    beta1 = p1/sqrt(p1*p1+1);
+	    CT += Qf[4]*2/(beta0[i_part]+beta1);
+	    beta0[i_part] = beta1;
+	  } else {
+	    CT += Qf[4]/beta0[i_part];  
+	  }
 	}
       }    
     }
@@ -2021,6 +2026,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           convolveArrays1(dGamma, nBins, ctHist, grnk);
           for (iBin=0; iBin<nBins; iBin++) 
             dGamma[iBin] *= -macroParticleCharge/(particleMass*sqr(c_mks))*csbend->length/csbend->n_kicks;
+#ifdef DEBUG_IGF
+	  fprintf(fpdeb, "%ld\n%ld\n", kick, nBins);
+	  for (iBin=0; iBin<nBins; iBin++)
+	    fprintf(fpdeb, "%le %ld %le %le %le\n", iBin*dct, iBin, chik[iBin], grnk[iBin], dGamma[iBin]);
+#endif
 	}
 
 	if (csbend->wffValues) 
@@ -2195,47 +2205,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   
   i_top = n_part-1;
   if (isSlave || !notSinglePart) {
-    /* remove lost particles */
+    /* remove lost particles, handle edge effects, and transform coordinates */    
     for (i_part=0; i_part<=i_top; i_part++) {
-
       coord = part[i_part];
-
-      p1 = Po*(1+DP);
-
-      if (particleLost[i_part] || p1<=0) {
-	if (!part[i_top]) {
-	  fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-		  i_part, i_top);
-	  fflush(stdout);
-	  abort();
-	}
-        convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
-	swapParticles(coord, part[i_top]);
-        SWAP_SHORT(particleLost[i_part], particleLost[i_top]);
-	if (accepted) {
-	  if (!accepted[i_top]) {
-	    fprintf(stdout, 
-		    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-		    i_part, i_top);
-	    fflush(stdout);
-	    abort();
-	  }
-	  swapParticles(accepted[i_part], accepted[i_top]);
-	}
-	part[i_top][5] = Po*(1+part[i_top][5]);
-	i_top--;
-	i_part--;
-	continue;
-      }
-    }
-    n_part = i_top+1;
-
-    for (i_part=0; i_part<n_part; i_part++) {
-      if (particleLost[i_part]) 
-        bombElegant("Problem with lost particle accounting in CSRCSBEND. Seek expert help.", NULL);
-
-      /* handle edge effects, and transform coordinates */    
-
       if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
 	/* post-adjust dp/p to correct error made by integrating over entire sector */
         computeCSBENDFields(&Fx, &Fy, X, Y);
@@ -2249,6 +2221,31 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       p1 = Po*(1+DP);
       beta1 = p1/sqrt(sqr(p1)+1);
       coord[4] = CT*beta1;
+
+      if (particleLost[i_part] || p1<=0) {
+	if (!part[i_top]) {
+	  fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+		  i_part, i_top);
+	  fflush(stdout);
+	  abort();
+	}
+	swapParticles(part[i_part], part[i_top]);
+	if (accepted) {
+	  if (!accepted[i_top]) {
+	    fprintf(stdout, 
+		    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+		    i_part, i_top);
+	    fflush(stdout);
+	    abort();
+	  }
+	  swapParticles(accepted[i_part], accepted[i_top]);
+	}
+	part[i_top][4] = z_start + s_lost;
+	part[i_top][5] = Po*(1+part[i_top][5]);
+	i_top--;
+	i_part--;
+	continue;
+      }
 
       if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
 	if (csbend->useMatrix)
@@ -2305,20 +2302,20 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     double S55;
 
 #if !USE_MPI    
-    rms_emittance(part, 0, 1, n_part, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    rms_emittance(part, 4, 5, n_part, &S55, NULL, NULL);
+    rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+    rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
 #else
     if (notSinglePart) {	
-    	rms_emittance_p(part, 0, 1, n_part, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    	rms_emittance_p(part, 4, 5, n_part, &S55, NULL, NULL);
+    	rms_emittance_p(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+    	rms_emittance_p(part, 4, 5, i_top+1, &S55, NULL, NULL);
     } else {
-     	rms_emittance(part, 0, 1, n_part, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    	rms_emittance(part, 4, 5, n_part, &S55, NULL, NULL);
+     	rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+    	rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
     }
 #endif
 
-    csrWake.perc68BunchLength = approximateBeamWidth(0.6826, part, n_part, 4)/2;
-    csrWake.perc90BunchLength = approximateBeamWidth(0.9, part, n_part, 4)/2;
+    csrWake.perc68BunchLength = approximateBeamWidth(0.6826, part, i_top+1, 4)/2;
+    csrWake.perc90BunchLength = approximateBeamWidth(0.9, part, i_top+1, 4)/2;
 	
     csrWake.rmsBunchLength = sqrt(S55);
 
@@ -2382,10 +2379,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #endif
 
 #if (!USE_MPI)
-  return(n_part);
+  return(i_top+1);
 #else
   if (isSlave || !notSinglePart)
-    return(n_part);
+    return(i_top+1);
   else
     return n_part; /* i_top is not defined for master */
 #endif 
