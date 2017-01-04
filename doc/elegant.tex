@@ -5432,8 +5432,8 @@ haissinski {\em twissFile} {\em resultsFile}
  {-charge={\em C} | -particles={\em value} | -bunchCurrent={\em A}}
  {-steps={\em numberOfChargeSteps}}
  {-outputLastStepOnly}
- {-RF=Voltage={\em V},harmonic={\em value} | -length={\em s}}
- {-harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}}
+ {-RF=Voltage={\em V},harmonic={\em value}[,phase={\em offsetInRadians}] | -length={\em s}}
+ {-harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}[,phase={\em radians}]}
  {-superPeriods={\em number}}
  {-energy={\em GeV}} 
  -integrationParameters=deltaTime={\em s},points={\em number},startTime={\em s},
@@ -5461,10 +5461,11 @@ iterations={\em number},fraction={\em value},tolerance={\em value}
  up to the value specified with on the just-described options.  Using more values can help
  convergence, as the result of each prior step is used as the starting point for the new step.
 \item {\tt -outputLastStepOnly}  --- Requests output for the last charge step (full charge) only.
-\item {\tt -RF=Voltage={\em V},harmonic={\em value} | -length={\em s}} --- Two ways to specify 
- the nominal bunch length.
-\item {\tt -harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}} --- Specifies a harmonic
- cavity voltage and the ratio of the harmonic cavity frequency to the main frequency.
+\item {\tt -RF=Voltage={\em V},harmonic={\em value}[,phase={\em offset}] | -length={\em s}} --- Two ways to specify 
+ the nominal bunch length. The phase value is an offset from the synchronous phase, in radians, and is
+ used only when a harmonic cavity is included.
+\item {\tt -harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}[,phase={\em radians}]} --- Specifies a harmonic
+ cavity voltage, phase, and the ratio of the harmonic cavity frequency to the main frequency.
 \item {\tt -superPeriods={\em number}} --- Number of superiods of the lattice specified in
  {\em twissfile} to simulate.  If one has an N cell ring but only gives 1 cell in the input,
  this value should be N.  If one gives the whole ring, this value should be 1.
