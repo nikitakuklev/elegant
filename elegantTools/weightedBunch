@@ -1,0 +1,74 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
+
+set usage "usage: weightedBunch -twiss <filename> -output <filename> -particles <number> -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -ndeltaHalfSpan <num-sigmas> -nt <num-sigmas>\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
+set twiss ""
+set output ""
+set particles 0
+set ex 0
+set ey 0
+set Sdelta 0
+set St 0
+set nx 0
+set ny 0
+set ndelta 0
+set nt 0
+set args $argv
+if {[APSStrictParseArguments {twiss particles output ex ey Sdelta St nx ny ndelta nt}] || ![string length $twiss] || ![string length $output]} {
+    return -code error "$usage"
+}
+if ![file exists $twiss] {
+    return -code error "Not found: $twiss"
+}
+if {[file exists $output]} {
+    return -code error "exists: $output"
+}
+foreach item {ex ey Sdelta St nx ny ndelta nt} {
+    if [expr [set $item]<=0] {
+        puts stderr "$item must be positive"
+        puts stderr "$usage"
+        exit 1
+    }
+}
+
+set tmpRoot [APSTmpString]
+APSAddToTempFileList $tmpRoot
+exec sddsprocess $twiss $tmpRoot.1 -process=beta?,first,%s0 -process=eta*,first,%s0 \
+  -process=alpha?,first,%s0 -clip=1,0,invert
+
+if [catch {exec sddssampledist -pipe=out -samples=$particles \
+             -uniform=columnName=a,minimumValue=-$nx,maximumValue=$nx \
+             -uniform=columnName=ap,minimumValue=-$nx,maximumValue=$nx \
+             -uniform=columnName=b,minimumValue=-$ny,maximumValue=$ny \
+             -uniform=columnName=bp,minimumValue=-$ny,maximumValue=$ny \
+             -uniform=columnName=c,minimumValue=-$ndelta,maximumValue=$ndelta \
+             -uniform=columnName=d,minimumValue=-$nt,maximumValue=$nt \
+             | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=parameter,*0,pCentral \
+             | sddsprocess -pipe \
+             "-define=parameter,ex,$ex,units=m" \
+             "-define=parameter,ey,$ey,units=m" \
+             "-define=parameter,St,$St,units=s" \
+             "-define=parameter,Sdelta,$Sdelta" \
+             "-define=column,delta,Sdelta c *" \
+             "-define=column,t,St d *" \
+             "-define=column,x,a ex betax0 * sqrt *,units=m" \
+             "-define=column,xp,ap a alphax0 * - ex betax0 / sqrt * delta etaxp0 * +,units=m" \
+             "-redefine=column,x,x delta etax0 * +,units=m" \
+             "-define=column,y,b ey betay0 * sqrt *,units=m" \
+             "-define=column,yp,bp b alphay0 * - ey betay0 / sqrt * delta etayp0 * +,units=m" \
+             "-redefine=column,y,y delta etay0 * +,units=m" \
+             "-define=column,p,delta 1 + pCentral *" \
+             "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
+             | sddsconvert -pipe=in $output \
+             -retain=column,x,xp,y,yp,t,p,particleID,a,ap,b,bp,c,d} result] {
+        puts stderr "$result"
+        exit 1
+}
+
+
