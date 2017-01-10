@@ -37,19 +37,26 @@ foreach item {ex ey Sdelta St nx ny nz} {
 }
 
 set tmpRoot [APSTmpString]
-APSAddToTempFileList $tmpRoot
+APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
 exec sddsprocess $twiss $tmpRoot.1 -process=beta?,first,%s0 -process=eta*,first,%s0 \
   -process=alpha?,first,%s0 -clip=1,0,invert
 
-if [catch {exec sddssampledist -pipe=out -samples=$particles \
-             -uniform=columnName=a,minimumValue=-$nx,maximumValue=$nx \
-             -uniform=columnName=ap,minimumValue=-$nx,maximumValue=$nx \
-             -uniform=columnName=b,minimumValue=-$ny,maximumValue=$ny \
-             -uniform=columnName=bp,minimumValue=-$ny,maximumValue=$ny \
-             -uniform=columnName=c,minimumValue=-$nz,maximumValue=$nz \
-             -uniform=columnName=d,minimumValue=-$nz,maximumValue=$nz \
+exec sddssequence -pipe=out -define=z -sequence=begin=-1,end=1,n=11 | sddsprocess -pipe=in $tmpRoot.2 -define=col,P,1
+
+if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=$particles \
+             -column=output=a,factor=$nx,haltonRadix=2,randomize,group=1,independentVariable=z,df=P \
+             -column=output=ap,factor=$nx,haltonRadix=3,randomize,group=1,independentVariable=z,df=P \
+             -column=output=b,factor=$ny,haltonRadix=2,randomize,group=2,independentVariable=z,df=P \
+             -column=output=bp,factor=$ny,haltonRadix=3,randomize,group=2,independentVariable=z,df=P \
+             -column=output=c,factor=$nz,haltonRadix=2,randomize,group=3,independentVariable=z,df=P \
+             -column=output=d,factor=$nz,haltonRadix=3,randomize,group=3,independentVariable=z,df=P \
              | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=parameter,*0,pCentral \
              | sddsprocess -pipe \
+             "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
+	       -process=\[abcd\]*,stand,%sStDev,weight=particleID \
+	       "-redefine=col,%s,%s %sStDev /,select=a*" \
+	       "-redefine=col,%s,%s %sStDev /,select=b*" \
+	       "-redefine=col,%s,%s %sStDev /,select=\[cd\]" \
              "-define=parameter,ex,$ex,units=m" \
              "-define=parameter,ey,$ey,units=m" \
              "-define=parameter,St,$St,units=s" \
@@ -63,8 +70,8 @@ if [catch {exec sddssampledist -pipe=out -samples=$particles \
              "-define=column,yp,bp b alphay0 * - ey betay0 / sqrt * delta etayp0 * +" \
              "-redefine=column,y,y delta etay0 * +,units=m" \
              "-define=column,p,delta 1 + pCentral *" \
-             "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
              | sddsconvert -pipe=in $output \
+             -retain=parameter,ex,ey,St,Sdelta \
              -retain=column,x,xp,y,yp,t,p,particleID,a,ap,b,bp,c,d} result] {
         puts stderr "$result"
         exit 1
