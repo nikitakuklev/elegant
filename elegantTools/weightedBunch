@@ -57,10 +57,10 @@ if [catch {exec sddssampledist -pipe=out -samples=$particles \
              "-define=column,delta,Sdelta c *" \
              "-define=column,t,St d *,units=s" \
              "-define=column,x,a ex betax0 * sqrt *,units=m" \
-             "-define=column,xp,ap a alphax0 * - ex betax0 / sqrt * delta etaxp0 * +,units=m" \
+             "-define=column,xp,ap a alphax0 * - ex betax0 / sqrt * delta etaxp0 * +" \
              "-redefine=column,x,x delta etax0 * +,units=m" \
              "-define=column,y,b ey betay0 * sqrt *,units=m" \
-             "-define=column,yp,bp b alphay0 * - ey betay0 / sqrt * delta etayp0 * +,units=m" \
+             "-define=column,yp,bp b alphay0 * - ey betay0 / sqrt * delta etayp0 * +" \
              "-redefine=column,y,y delta etay0 * +,units=m" \
              "-define=column,p,delta 1 + pCentral *" \
              "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
