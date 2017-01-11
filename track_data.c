@@ -728,6 +728,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"DISABLE", "", IS_LONG, 0, (long)((char *)&watch_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
     {"USE_DISCONNECT", "", IS_LONG, 0, (long)((char *)&watch_example.useDisconnect), NULL, 0.0, 0, "If nonzero, files are disconnected between each write operation. May be useful for parallel operation.  Ignored otherwise."},
     {"INDEX_OFFSET", "", IS_LONG, 0, (long)((char *)&watch_example.indexOffset), NULL, 0.0, 0, "Offset for file indices for sequential file naming."},
+    {"REFERENCE_FREQUENCY", "", IS_DOUBLE, 0, (long)((char *)&watch_example.referenceFrequency), NULL, -1.0, -1, "If non-zero, the indicated frequency is used to define the bucket center for purposes of computing time offsets."},
     } ;
 
 TW_PLATES twpl_example;

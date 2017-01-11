@@ -711,16 +711,22 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   count = 0;
   if (pass<watch->passLast)
     watch->t0Last = watch->t0LastError = 0;
+  if (pass==watch->start_pass)
+    watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
   t0 = watch->t0Last;
   t0Error = watch->t0LastError;
   /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
    * round-off error. Prevents dCt from walking off too much.
    */
   for (i=0; i<pass-watch->passLast; i++) {
+    double dt;
+    dt = length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+    if (watch->referenceFrequency>0)
+      dt = ((long)(dt*watch->referenceFrequency+0.5))/watch->referenceFrequency;
 #ifndef USE_KAHAN
-    t0 += length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+    t0 += dt;
 #else
-    t0 = KahanPlus(t0, length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)), &t0Error);
+    t0 = KahanPlus(t0, dt, &t0Error);
 #endif
   }
   watch->t0Last = t0;

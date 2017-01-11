@@ -918,7 +918,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 17
+#define N_WATCH_PARAMS 18
 #define N_MALIGN_PARAMS 12
 #define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
@@ -1599,6 +1599,7 @@ typedef struct {
     char *filename, *label, *mode;
     long xData, yData, longitData, excludeSlopes, flushInterval, disable;
     long useDisconnect, indexOffset;
+    double referenceFrequency;
     /* internal variables for SDDS output */
     long initialized, count, mode_code, window_code;
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
