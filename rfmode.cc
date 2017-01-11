@@ -64,7 +64,7 @@ void track_through_rfmode(
     double tmin=0, tmax, last_tmax, tmean, dt=0;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
-    double V_sum, Vr_sum, phase_sum, Vg_sum, phase_g_sum, Vc_sum;
+    double V_sum, Vr_sum, Vi_sum, Vg_sum, Vgr_sum, Vgi_sum, Vc_sum;
     double Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
@@ -77,7 +77,7 @@ void track_through_rfmode(
 #endif
 
     /* These are here just to quash apparently spurious compiler warnings about possibly using uninitialzed variables */
-    tOffset = last_tmax = k = tau = V_sum = Vr_sum = phase_sum = Vg_sum = Vc_sum = phase_g_sum = VbImagFactor = tmean = DBL_MAX;
+    tOffset = last_tmax = k = tau = V_sum = Vr_sum = Vi_sum = Vg_sum = Vgr_sum = Vgi_sum = Vc_sum = VbImagFactor = tmean = DBL_MAX;
     n_summed = n_occupied = LONG_MAX;
     
     /*
@@ -579,7 +579,7 @@ void track_through_rfmode(
             bombElegantVA("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 #endif
           }
-          V_sum = Vr_sum = phase_sum = Q_sum = Vg_sum = Vc_sum = phase_g_sum = 0;
+          V_sum = Vr_sum = Vi_sum = Q_sum = Vg_sum = Vgr_sum = Vgi_sum = Vc_sum = 0;
           n_summed = max_hist = n_occupied = 0;
     
           /* find frequency and Q at this time */
@@ -746,12 +746,13 @@ void track_through_rfmode(
           if (rfmode->driveFrequency>0) {
             /* add generator-induced voltage */
             double Vr, Vi, dt;
-            Vg_sum += Ihist[ib]*sqrt(sqr(rfmode->Mt3->a[0][0])+sqr(rfmode->Mt3->a[1][0]));
             dt = t - rfmode->tGenerator;
+            Vg_sum += Ihist[ib]*sqrt(sqr(rfmode->Mt3->a[0][0]) + sqr(rfmode->Mt3->a[1][0]));
             Vr = rfmode->Mt3->a[0][0]*cos(PIx2*rfmode->driveFrequency*dt) - rfmode->Mt3->a[1][0]*sin(PIx2*rfmode->driveFrequency*dt);
             Vi = rfmode->Mt3->a[0][0]*sin(PIx2*rfmode->driveFrequency*dt) + rfmode->Mt3->a[1][0]*cos(PIx2*rfmode->driveFrequency*dt);
-            phase_g_sum += Ihist[ib]*atan2(Vi, Vr);
             Vbin[ib] += Vr;
+            Vgi_sum += Ihist[ib]*Vi;
+            Vgr_sum += Ihist[ib]*Vr;
             Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-Vb/2)+sqr(Vi+rfmode->Vi));
             /* fprintf(fpdeb2, "%ld %21.15le %21.15le %le %le %le\n", pass, t, dt, sqrt(Vi*Vi+Vr*Vr), atan2(Vi, Vr), Vr); */
           }
@@ -768,7 +769,7 @@ void track_through_rfmode(
         
           V_sum  += Ihist[ib]*rfmode->V;
           Vr_sum += Ihist[ib]*rfmode->Vr;
-          phase_sum += Ihist[ib]*rfmode->last_phase;
+          Vi_sum += Ihist[ib]*rfmode->Vi;
           Q_sum += Ihist[ib]*rfmode->mp_charge*particleRelSign;
           n_summed  += Ihist[ib];
         }
@@ -831,7 +832,8 @@ void track_through_rfmode(
 
       if (rfmode->record) {
 #if USE_MPI
-        double sendBuffer[13], receiveBuffer[13];
+#define SR_BUFLEN 14
+        double sendBuffer[SR_BUFLEN], receiveBuffer[SR_BUFLEN];
 #endif
         if ((pass%rfmode->sample_interval)==0) {
 #ifdef DEBUG
@@ -857,7 +859,7 @@ void track_through_rfmode(
 #if (USE_MPI)
           /* Sum data across all cores */
           if (myid==0) {
-            memset(sendBuffer, 0, sizeof(sendBuffer[0])*13);
+            memset(sendBuffer, 0, sizeof(sendBuffer[0])*SR_BUFLEN);
           } else {
             sendBuffer[0]  = n_binned;
             sendBuffer[1]  = rfmode->V;
@@ -865,15 +867,16 @@ void track_through_rfmode(
             sendBuffer[3]  = rfmode->last_t;
             sendBuffer[4]  = V_sum;
             sendBuffer[5]  = Vr_sum;
-            sendBuffer[6]  = phase_sum;
+            sendBuffer[6]  = Vi_sum;
             sendBuffer[7]  = np;
-            sendBuffer[8]  = Vg_sum;
-            sendBuffer[9]  = phase_g_sum;
+            sendBuffer[8]  = Vgr_sum;
+            sendBuffer[9]  = Vgi_sum;
             sendBuffer[10] = Vc_sum;
             sendBuffer[11] = n_occupied;
             sendBuffer[12] = n_summed;
+            sendBuffer[13] = Vg_sum;
           }
-          MPI_Reduce(sendBuffer, receiveBuffer, 13, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+          MPI_Reduce(sendBuffer, receiveBuffer, SR_BUFLEN, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
           if (myid == 0) {
             n_binned = receiveBuffer[0];
             rfmode->V = receiveBuffer[1]/(n_processors-1);
@@ -881,13 +884,14 @@ void track_through_rfmode(
             rfmode->last_t = receiveBuffer[3]/(n_processors-1);
             V_sum = receiveBuffer[4];
             Vr_sum = receiveBuffer[5];
-            phase_sum = receiveBuffer[6];
+            Vi_sum = receiveBuffer[6];
             np_total = receiveBuffer[7];
-            Vg_sum = receiveBuffer[8];
-            phase_g_sum = receiveBuffer[9];
+            Vgr_sum = receiveBuffer[8];
+            Vgi_sum = receiveBuffer[9];
             Vc_sum = receiveBuffer[10];
             n_occupied = receiveBuffer[11];
             n_summed = receiveBuffer[12];
+            Vg_sum = receiveBuffer[13];
 #endif
 #ifdef DEBUG
             printf("Writing record file\n");
@@ -902,14 +906,14 @@ void track_through_rfmode(
                                    (char*)"tPostBeam", rfmode->last_t,
                                    (char*)"V", n_summed?V_sum/n_summed:0.0,
                                    (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
-                                   (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
+                                   (char*)"Phase", n_summed?atan2(Vi_sum/n_summed, Vr_sum/n_summed):0.0, 
                                    (char*)"Charge", rfmode->mp_charge*np_total, 
                                    NULL)
                 || (rfmode->driveFrequency>0 &&
                     !SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                        rfmode->sample_counter-1,                
                                        (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
-                                       (char*)"PhaseGenerator", n_summed?phase_g_sum/n_summed:0.0,
+                                       (char*)"PhaseGenerator", n_summed?atan2(Vgi_sum/n_summed, Vgr_sum/n_summed):0.0,
                                        (char*)"VCavity", n_summed?Vc_sum/n_summed:0.0,
                                        NULL))) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
