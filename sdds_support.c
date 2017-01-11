@@ -679,7 +679,39 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 #if SDDS_MPI_IO
   long total_row, total_count;
 #endif
+
   log_entry("dump_watch_particles");
+
+  if (pass<watch->passLast)
+    watch->t0Last = watch->t0LastError = 0;
+  if (pass==watch->start_pass)
+    watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+  t0 = watch->t0Last;
+  t0Error = watch->t0LastError;
+  /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
+   * round-off error. Prevents dCt from walking off too much.
+   */
+  for (i=0; i<pass-watch->passLast; i++) {
+    double dt;
+    dt = length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+    if (watch->referenceFrequency>0)
+      dt = ((long)(dt*watch->referenceFrequency+0.5))/watch->referenceFrequency;
+#ifndef USE_KAHAN
+    t0 += dt;
+#else
+    t0 = KahanPlus(t0, dt, &t0Error);
+#endif
+  }
+  watch->t0Last = t0;
+  watch->t0LastError = t0Error;
+  watch->passLast = pass;
+
+  if (!(pass>=watch->start_pass && (pass-watch->start_pass)%watch->interval==0 &&
+        (watch->end_pass<0 || pass<=watch->end_pass))) {
+    return;
+  }
+
+
 #if SDDS_MPI_IO
   if (isMaster && notSinglePart)   /* No particle will be dumped by master */
     particles = 0; 
@@ -707,31 +739,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  
   row = 0;
   count = 0;
-  if (pass<watch->passLast)
-    watch->t0Last = watch->t0LastError = 0;
-  if (pass==watch->start_pass)
-    watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
-  t0 = watch->t0Last;
-  t0Error = watch->t0LastError;
-  /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
-   * round-off error. Prevents dCt from walking off too much.
-   */
-  for (i=0; i<pass-watch->passLast; i++) {
-    double dt;
-    dt = length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
-    if (watch->referenceFrequency>0)
-      dt = ((long)(dt*watch->referenceFrequency+0.5))/watch->referenceFrequency;
-#ifndef USE_KAHAN
-    t0 += dt;
-#else
-    t0 = KahanPlus(t0, dt, &t0Error);
-#endif
-  }
-  watch->t0Last = t0;
-  watch->t0LastError = t0Error;
-  watch->passLast = pass;
 #if SDDS_MPI_IO
   if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
 #endif
@@ -852,6 +862,34 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     long memoryUsed;
 #if USE_MPI  
     long particles_total, npCount_total=0;
+
+    if (pass<watch->passLast)
+      watch->t0Last = watch->t0LastError = 0;
+    tc0 = watch->t0Last;
+    tc0Error = watch->t0LastError;
+    /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
+     * round-off error. Prevents dCt from walking off too much.
+     */
+    for (i=0; i<pass-watch->passLast; i++) {
+      double dt;
+      dt = revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+      if (watch->referenceFrequency>0)
+        dt = ((long)(dt*watch->referenceFrequency+0.5))/watch->referenceFrequency;
+#ifndef USE_KAHAN
+      tc0 += dt;
+#else
+      tc0 = KahanPlus(tc0, dt, &tc0Error);
+#endif
+    }
+    watch->t0Last = tc0;
+    watch->t0LastError = tc0Error;
+    watch->passLast = pass;
+    
+    if (!(pass>=watch->start_pass && (pass-watch->start_pass)%watch->interval==0 &&
+          (watch->end_pass<0 || pass<=watch->end_pass))) {
+      return;
+    }
+
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -899,6 +937,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     fflush(stdout);
 #endif
 
+    sample = (pass-watchStartPass)/watch->interval;
+
     if (isMaster) 
     if ((watchStartPass==pass) && !SDDS_StartTable(&watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_parameters)");
@@ -910,24 +950,6 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     fflush(stdout);
 #endif
 
-    sample = (pass-watchStartPass)/watch->interval;
-    if (pass<watch->passLast)
-      watch->t0Last = watch->t0LastError = 0;
-    tc0 = watch->t0Last;
-    tc0Error = watch->t0LastError;
-    /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
-     * round-off error. Prevents dCt from walking off too much.
-     */
-    for (i=0; i<pass-watch->passLast; i++) {
-#ifndef USE_KAHAN
-      tc0 += revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
-#else
-      tc0 = KahanPlus(tc0, revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)), &tc0Error);
-#endif
-    }
-    watch->t0Last = tc0;
-    watch->t0LastError = tc0Error;
-    watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
     accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
