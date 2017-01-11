@@ -44,12 +44,12 @@ exec sddsprocess $twiss $tmpRoot.1 -process=beta?,first,%s0 -process=eta*,first,
 exec sddssequence -pipe=out -define=z -sequence=begin=-1,end=1,n=11 | sddsprocess -pipe=in $tmpRoot.2 -define=col,P,1
 
 if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=$particles \
-             -column=output=a,factor=$nx,haltonRadix=2,randomize,group=1,independentVariable=z,df=P \
-             -column=output=ap,factor=$nx,haltonRadix=3,randomize,group=1,independentVariable=z,df=P \
-             -column=output=b,factor=$ny,haltonRadix=2,randomize,group=2,independentVariable=z,df=P \
-             -column=output=bp,factor=$ny,haltonRadix=3,randomize,group=2,independentVariable=z,df=P \
-             -column=output=c,factor=$nz,haltonRadix=2,randomize,group=3,independentVariable=z,df=P \
-             -column=output=d,factor=$nz,haltonRadix=3,randomize,group=3,independentVariable=z,df=P \
+             -column=output=a,factor=$nx,independentVariable=z,df=P \
+             -column=output=ap,factor=$nx,independentVariable=z,df=P \
+             -column=output=b,factor=$ny,independentVariable=z,df=P \
+             -column=output=bp,factor=$ny,independentVariable=z,df=P \
+             -column=output=c,factor=$nz,independentVariable=z,df=P \
+             -column=output=d,factor=$nz,independentVariable=z,df=P \
              | sddsxref -pipe $tmpRoot.1 -leave=* -transfer=parameter,*0,pCentral \
              | sddsprocess -pipe \
              "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
