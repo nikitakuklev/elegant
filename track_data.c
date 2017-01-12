@@ -1,4 +1,4 @@
-/*************************************************************************\
+/************************************************************************* \
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
 * Copyright (c) 2002 The Regents of the University of California, as
@@ -1469,6 +1469,14 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"QUADRATURE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.QFilterFile), NULL, 0.0, 0, "IIR filter specification for quadrature component feedback"},
     {"FEEDBACK_RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.feedbackRecordFile), NULL, 0.0, 0, "output file for feedback data"},
     {"MUTE_GENERATOR", "", IS_LONG, 0, (long)((char *)&rfmode_example.muteGenerator), NULL, 0.0, -1, "If nonnegative, gives the pass on which to mute the generator. This simulates an rf trip."},
+    {"NOISE_ALPHA_GEN", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_ALPHA_GEN]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying alpha(t) for generator noise."},
+    {"NOISE_PHI_GEN", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_PHI_GEN]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying dphi(t) for generator noise."},
+    {"NOISE_ALPHA_V", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_ALPHA_V]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying alpha(t) for voltage noise."},
+    {"NOISE_PHI_V", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_PHI_V]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying dphi(t) for voltage noise."},
+    {"NOISE_I_GEN", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_I_GEN]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying n(t) for in-phase generator noise."},
+    {"NOISE_Q_GEN", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_Q_GEN]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying n(t) for quadrature generator noise."},
+    {"NOISE_I_V", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_I_V]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying n(t) for in-phase voltage noise."},
+    {"NOISE_Q_V", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.noiseData[I_NOISE_Q_V]), NULL, 0.0, 0, "<filename>=<x>+<y> specifying n(t) for quadrature voltage noise."},
     };
 
 FRFMODE frfmode_example;

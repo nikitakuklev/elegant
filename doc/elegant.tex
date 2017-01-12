@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 32.0.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 32.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,9 +35,9 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 32.0}
+\section{Highlights of What's New in Version 32.1}
 
-Here is a summary of what's changed since release 31.
+Here is a summary of what's changed since release 32.0.
 
 \subsection{Bug Fixes for Elements}
 
@@ -47,36 +47,25 @@ Here is a summary of what's changed since release 31.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed in the \verb|amplification_factors| command that resulted in a crash when the corrected amplification
-  factors were requested. This was reported by S. DiMitri (ELETTRA).
-\item A bug was fixed for \verb|twiss_output|, which was incorrectly reporting the quantities $\frac{\partial \alpha_{x,y}}{\partial \delta}$
- (parameters \verb|dalphax/dp| and \verb|dalphay/dp| in the output file) in some cases.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|BRANCH| element, which permits branching between parts of a beamline based on the number of passes executed.
-\item Apertures specified using \verb|MAXAMP| or an external aperture file (using the \verb|aperture_data| command) are now
-  enforced inside \verb|CSBEND| and \verb|CSRCSBEND| elements.
-  There may be small changes in, for example, momentum acceptance as a result of this, particularly when gradient dipoles are involved. 
-\item The longitudinal location of losses inside \verb|KQUAD| and \verb|KSEXT| elements is now computed more accurately. Previously,
-  it was simply the start of the element.
-\item Removed the non-functional \verb|FRINGE| parameter of the \verb|CSBEND| element.
-\item The \verb|BGGEXP| (B-field Generalized Gradient Expansion) element now supports symplectic integration using an
-  implicit method, implemented by R. Lindberg (APS).
+\item The \verb|WATCH| element was improved so that the \verb|dt| column in coordinate-logging mode and the \verb|dCt| column in
+  parameter- and centroid-logging modes are more useful. In particular, in normal cases these will now more reliably be centered
+  on zero. One can also provide a reference frequency relative to which the reference time is defined. This improvement grew out of
+  discussions with J. Calvey and T. Berenc (APS).
+\item The reported phases of the beam- and generator-induced parts of the voltage for the \verb|RFMODE| element \verb|RECORD| file
+  are now computed using a method that should be more reliable. This improvement grew out of
+  discussions with J. Calvey and T. Berenc (APS).
+\item The \verb|RFMODE| element now supports injection of noise into the rf source and low-level rf system. This is based on discussions
+  with T. Berenc (APS).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added \verb|exclude| parameter to \verb|chromaticity| command, allowing exclusion of some sextupoles that may 
-  match the list in the \verb|sextupole| parameter.
-\item Added \verb|alter_at_each_step| and \verb|alter_before_load_parameters| parameters to the \verb|alter_elements| command,
-  allowing better control of potential conflicts with \verb|load_parameters|.
-\item The random number generator seed is now permuted bitwise in order to add a greater level of apparent randomness.
-  Thus, changing the seed by a small amount will now have a bigger effect on the sequences generated, making it easier to
-  deliberately perform several runs with very distinct random values.
-  This can be defeated using the \verb|global_settings| command by setting \verb|inhibit_seed_permutation=1|.
-  This issue was pointed out by V. Sajaev (APS).
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -88,7 +77,7 @@ Here is a summary of what's changed since release 31.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item \verb|ionTrapping| --- Added computation of the single-ion oscillation frequency.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}

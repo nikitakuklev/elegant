@@ -946,7 +946,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 60
 #define N_MATTER_PARAMS 16
-#define N_RFMODE_PARAMS 42
+#define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 27
@@ -2338,6 +2338,16 @@ typedef struct {
     char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;
     long muteGenerator;        /* if non-zero, generator output is muted */
+    char *noiseAlphaGen, *noisePhiGen;
+#define I_NOISE_ALPHA_GEN 0
+#define I_NOISE_PHI_GEN 1
+#define I_NOISE_ALPHA_V 2
+#define I_NOISE_PHI_V 3
+#define I_NOISE_I_GEN 4
+#define I_NOISE_Q_GEN 5
+#define I_NOISE_I_V 6
+#define I_NOISE_Q_V 7
+    char *noiseData[8];
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     double mp_charge;          /* charge per macroparticle */
@@ -2375,6 +2385,9 @@ typedef struct {
     /* Q table */
     double *tQ, *fQ;
     long nQ;
+    /* noise tables */
+    double *tNoise[8], *fNoise[8];
+    long nNoise[8];                /* If 0, no noise data */
     /* files for record output */
     SDDS_DATASET SDDSrec  ;    /* seen by beam */
     long sample_counter;       /* row in the output record */

@@ -370,10 +370,22 @@ void track_through_rfmode(
             m_mult(rfmode->Mt1, rfmode->A, rfmode->Viq);
             m_mult(rfmode->Mt2, rfmode->B, rfmode->Iiq);
             m_add(rfmode->Viq, rfmode->Mt1, rfmode->Mt2);
-            
+
             rfmode->fbLastTickTime = rfmode->fbNextTickTime;
             rfmode->fbNextTickTime = KahanPlus(rfmode->fbNextTickTime, rfmode->updateInterval/rfmode->driveFrequency, &rfmode->fbNextTickTimeError);
             
+            /* additive "receiver" noise */
+            if (rfmode->nNoise[I_NOISE_I_V]) { 
+              /* In-phase */
+              ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_I_V], rfmode->nNoise[I_NOISE_I_V], rfmode->fbLastTickTime);
+              rfmode->Viq->a[0][0] += linear_interpolation(rfmode->fNoise[I_NOISE_I_V], rfmode->tNoise[I_NOISE_I_V], rfmode->nNoise[I_NOISE_I_V], rfmode->fbLastTickTime, ib);
+            }
+            if (rfmode->nNoise[I_NOISE_Q_V]) { 
+              /* Quadrature */
+              ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_Q_V], rfmode->nNoise[I_NOISE_Q_V], rfmode->fbLastTickTime);
+              rfmode->Viq->a[1][0] += linear_interpolation(rfmode->fNoise[I_NOISE_Q_V], rfmode->tNoise[I_NOISE_Q_V], rfmode->nNoise[I_NOISE_Q_V], rfmode->fbLastTickTime, ib);
+            }
+
             /** Do feedback **/
             
             /* Calculate the net voltage and phase at this time */
@@ -404,6 +416,23 @@ void track_through_rfmode(
             V = sqrt(Vrl*Vrl+Vil*Vil);
             phase = atan2(Vil, Vrl);
 
+            /* parametric receiver noise */
+            if (rfmode->nNoise[I_NOISE_ALPHA_V]) {
+              /* amplitude */
+              ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_ALPHA_V], rfmode->nNoise[I_NOISE_ALPHA_V], rfmode->fbLastTickTime);
+              V *= 1+linear_interpolation(rfmode->fNoise[I_NOISE_ALPHA_V], rfmode->tNoise[I_NOISE_ALPHA_V], rfmode->nNoise[I_NOISE_ALPHA_V], rfmode->fbLastTickTime, ib);
+            }
+            if (rfmode->nNoise[I_NOISE_PHI_V]) {
+              /* phase */
+              ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_PHI_V], rfmode->nNoise[I_NOISE_PHI_V], rfmode->fbLastTickTime);
+              phase += linear_interpolation(rfmode->fNoise[I_NOISE_PHI_V], rfmode->tNoise[I_NOISE_PHI_V], rfmode->nNoise[I_NOISE_PHI_V], rfmode->fbLastTickTime, ib);
+            }
+            if (rfmode->nNoise[I_NOISE_ALPHA_V] || rfmode->nNoise[I_NOISE_PHI_V]) {
+              /* Update real and imaginary parts of voltage, which we'll need below if we are doing I/Q feedback */
+              Vrl = V*cos(phase);
+              Vil = V*sin(phase);
+            }
+
             if (rfmode->nAmplitudeFilters) {
               /* amplitude/phase feedback */
 
@@ -417,6 +446,18 @@ void track_through_rfmode(
                 + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
               IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
                 + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, PI/180*rfmode->phaseSetpoint - 3*PI/2 - phase);
+              
+              /* Parametric generator noise */
+              if (rfmode->nNoise[I_NOISE_ALPHA_GEN]) {
+                /* amplitude */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_ALPHA_GEN], rfmode->nNoise[I_NOISE_ALPHA_GEN], rfmode->fbLastTickTime);
+                IgAmp *= 1+linear_interpolation(rfmode->fNoise[I_NOISE_ALPHA_GEN], rfmode->tNoise[I_NOISE_ALPHA_GEN], rfmode->nNoise[I_NOISE_ALPHA_GEN], rfmode->fbLastTickTime, ib);
+              }
+              if (rfmode->nNoise[I_NOISE_PHI_GEN]) {
+                /* phase */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_PHI_GEN], rfmode->nNoise[I_NOISE_PHI_GEN], rfmode->fbLastTickTime);
+                IgPhase += linear_interpolation(rfmode->fNoise[I_NOISE_PHI_GEN], rfmode->tNoise[I_NOISE_PHI_GEN], rfmode->nNoise[I_NOISE_PHI_GEN], rfmode->fbLastTickTime, ib);
+              }
 
               if (rfmode->muteGenerator>=0 && rfmode->muteGenerator<=pass) {
                 if (rfmode->muteGenerator==pass) {
@@ -429,6 +470,17 @@ void track_through_rfmode(
               /* Calculate updated I/Q components for generator current */
               rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
               rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+              /* Additive generator noise */
+              if (rfmode->nNoise[I_NOISE_I_GEN]) { 
+                /* In-phase */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_I_GEN], rfmode->nNoise[I_NOISE_I_GEN], rfmode->fbLastTickTime);
+                rfmode->Iiq->a[0][0] += linear_interpolation(rfmode->fNoise[I_NOISE_I_GEN], rfmode->tNoise[I_NOISE_I_GEN], rfmode->nNoise[I_NOISE_I_GEN], rfmode->fbLastTickTime, ib);
+              }
+              if (rfmode->nNoise[I_NOISE_Q_GEN]) { 
+                /* Quadrature */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_Q_GEN], rfmode->nNoise[I_NOISE_Q_GEN], rfmode->fbLastTickTime);
+                rfmode->Iiq->a[1][0] += linear_interpolation(rfmode->fNoise[I_NOISE_Q_GEN], rfmode->tNoise[I_NOISE_Q_GEN], rfmode->nNoise[I_NOISE_Q_GEN], rfmode->fbLastTickTime, ib);
+              }
             } else {
               /* I/Q feedback */
               double VISetpoint, VQSetpoint; /* equivalent in-phase and quadrature setpoints */
@@ -448,6 +500,17 @@ void track_through_rfmode(
               VQ = -sin(omegaDrive*dt)*Vrl + cos(omegaDrive*dt)*Vil;
               rfmode->Iiq->a[0][0] = rfmode->Ig0->a[0][0] + (dII=applyIIRFilter(rfmode->IFilter, rfmode->nIFilters, rfmode->lambdaA*(VISetpoint-VI)));
               rfmode->Iiq->a[1][0] = rfmode->Ig0->a[1][0] + (dIQ=applyIIRFilter(rfmode->QFilter, rfmode->nQFilters, rfmode->lambdaA*(VQSetpoint-VQ)));
+              /* Additive generator noise */
+              if (rfmode->nNoise[I_NOISE_I_GEN]) { 
+                /* In-phase */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_I_GEN], rfmode->nNoise[I_NOISE_I_GEN], rfmode->fbLastTickTime);
+                rfmode->Iiq->a[0][0] += linear_interpolation(rfmode->fNoise[I_NOISE_I_GEN], rfmode->tNoise[I_NOISE_I_GEN], rfmode->nNoise[I_NOISE_I_GEN], rfmode->fbLastTickTime, ib);
+              }
+              if (rfmode->nNoise[I_NOISE_Q_GEN]) { 
+                /* Quadrature */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_Q_GEN], rfmode->nNoise[I_NOISE_Q_GEN], rfmode->fbLastTickTime);
+                rfmode->Iiq->a[1][0] += linear_interpolation(rfmode->fNoise[I_NOISE_Q_GEN], rfmode->tNoise[I_NOISE_Q_GEN], rfmode->nNoise[I_NOISE_Q_GEN], rfmode->fbLastTickTime, ib);
+              }
 
               if (rfmode->muteGenerator>=0 && rfmode->muteGenerator<=pass) {
                 if (rfmode->muteGenerator==pass) {
@@ -462,6 +525,22 @@ void track_through_rfmode(
 #endif
               IgAmp = sqrt(sqr(rfmode->Iiq->a[0][0])+sqr(rfmode->Iiq->a[1][0]));
               IgPhase = atan2(rfmode->Iiq->a[1][0], rfmode->Iiq->a[0][0]);
+              /* Parametric generator noise */
+              if (rfmode->nNoise[I_NOISE_ALPHA_GEN]) {
+                /* amplitude */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_ALPHA_GEN], rfmode->nNoise[I_NOISE_ALPHA_GEN], rfmode->fbLastTickTime);
+                IgAmp *= 1+linear_interpolation(rfmode->fNoise[I_NOISE_ALPHA_GEN], rfmode->tNoise[I_NOISE_ALPHA_GEN], rfmode->nNoise[I_NOISE_ALPHA_GEN], rfmode->fbLastTickTime, ib);
+              }
+              if (rfmode->nNoise[I_NOISE_PHI_GEN]) {
+                /* phase */
+                ib = find_nearby_array_entry(rfmode->tNoise[I_NOISE_PHI_GEN], rfmode->nNoise[I_NOISE_PHI_GEN], rfmode->fbLastTickTime);
+                IgPhase += linear_interpolation(rfmode->fNoise[I_NOISE_PHI_GEN], rfmode->tNoise[I_NOISE_PHI_GEN], rfmode->nNoise[I_NOISE_PHI_GEN], rfmode->fbLastTickTime, ib);
+              }
+              if (rfmode->nNoise[I_NOISE_ALPHA_GEN] || rfmode->nNoise[I_NOISE_PHI_GEN]) {
+                /* Update I, Q terms for generator current */
+                rfmode->Iiq->a[0][0] = IgAmp*cos(IgPhase);
+                rfmode->Iiq->a[1][0] = IgAmp*sin(IgPhase);
+              }
             }
             
             
@@ -1109,6 +1188,23 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         }
     }
     rfmode->fileInitialized = 1;
+  }
+  for (i=0; i<8; i++) {
+    rfmode->nNoise[i] = 0;
+    if (rfmode->noiseData[i] && strlen(rfmode->noiseData[i])!=0) {
+      if (!getTableFromSearchPath(&data, rfmode->noiseData[i], 1, 0)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          bombElegantVA("Problem reading RFMODE noise file %s\n", rfmode->noiseData[i]);
+      }
+      if (data.n_data<=1) 
+          bombElegantVA("RFMODE noise file %s has too little data\n", rfmode->noiseData[i]);
+      rfmode->tNoise[i] = data.c1;
+      rfmode->fNoise[i] = data.c2;
+      rfmode->nNoise[i] = data.n_data;
+      tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+      data.xlab = data.ylab = data.title = data.topline = NULL;
+      data.c1 = data.c2 = NULL;
+    }
   }
   if (rfmode->preload && (rfmode->charge || rfmode->preloadCharge)) {
     double To, fref, psi, I, charge;
