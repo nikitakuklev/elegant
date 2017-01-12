@@ -1255,38 +1255,38 @@ long do_tracking(
 		  }
 #endif
 		  fflush(stdout);
-		  if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
-                      (watch->end_pass<0 || i_pass<=watch->end_pass)) {
-	            switch (watch->mode_code) {
-	            case WATCH_COORDINATES:
-		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
-			        	   beamline->revolution_length, 
-					   charge?charge->macroParticleCharge:0.0, z, 
-                                           beam?beam->id_slots_per_bunch:0);
-		      break;
-		    case WATCH_PARAMETERS:
-		    case WATCH_CENTROIDS:
-		      dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, 
+                  switch (watch->mode_code) {
+                  case WATCH_COORDINATES:
+                    dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
+                                         beamline->revolution_length, 
+                                         charge?charge->macroParticleCharge:0.0, z, 
+                                         beam?beam->id_slots_per_bunch:0);
+                    break;
+                  case WATCH_PARAMETERS:
+                  case WATCH_CENTROIDS:
+                    dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, 
 #if SDDS_MPI_IO
-                                            total_nOriginal,
+                                          total_nOriginal,
 #else
-                                            nOriginal,
+                                          nOriginal,
 #endif
-                                            *P_central,
-					    beamline->revolution_length, z,
-					    charge ? charge->macroParticleCharge : 0.0);
-
-		      break;
-		    case WATCH_FFT:
+                                          *P_central,
+                                          beamline->revolution_length, z,
+                                          charge ? charge->macroParticleCharge : 0.0);
+                    
+                    break;
+                  case WATCH_FFT:
+                    if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
+                        (watch->end_pass<0 || i_pass<=watch->end_pass)) {
 #if SDDS_MPI_IO
 		      /* This part will be done in serial for now. A parallel version of FFT could be used here */
 		      if (!partOnMaster && notSinglePart) {
 			printf("Warning: %s (%s FFT) is a serial element. It is not recommended for the simulation with a large number of particles because of memory issue.\n", eptr->name, entity_name[eptr->type]);
 		      }
-			gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
+                      gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
 		      if (isMaster)
 #endif
-		      dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
+                        dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
 #if SDDS_MPI_IO
 		      if (!partOnMaster && notSinglePart) {
 			scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
