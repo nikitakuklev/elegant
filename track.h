@@ -978,8 +978,8 @@ extern char *entity_text[N_TYPES];
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
-#define N_TFBPICKUP_PARAMS 23
-#define N_TFBDRIVER_PARAMS 24
+#define N_TFBPICKUP_PARAMS 38
+#define N_TFBDRIVER_PARAMS 39
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 25
@@ -2904,7 +2904,7 @@ typedef struct {
 } LMIRROR;
 
 
-#define TFB_FILTER_LENGTH 15
+#define TFB_FILTER_LENGTH 30
 /* Transverse Feedback Pickup element */
 extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
 typedef struct {
