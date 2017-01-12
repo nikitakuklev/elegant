@@ -863,8 +863,31 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #if USE_MPI  
     long particles_total, npCount_total=0;
 
+#ifdef  USE_MPE /* use the MPE library */
+  int event1a, event1b;
+  event1a = MPE_Log_get_event_number();
+  event1b = MPE_Log_get_event_number();
+  if(isMaster) {
+    MPE_Describe_state(event1a, event1b, "End Watch", "pink");
+  }
+#endif
+
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid==0)
+      particles = 0;
+
+    MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+    printf("particles = %ld, particles_total = %ld\n", particles, particles_total);
+    fflush(stdout);
+#endif
+#endif
+
     if (pass<watch->passLast)
       watch->t0Last = watch->t0LastError = 0;
+    if (pass==watch->start_pass)
+      watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
     tc0 = watch->t0Last;
     tc0Error = watch->t0LastError;
     /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
@@ -889,27 +912,6 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
           (watch->end_pass<0 || pass<=watch->end_pass))) {
       return;
     }
-
-#ifdef  USE_MPE /* use the MPE library */
-  int event1a, event1b;
-  event1a = MPE_Log_get_event_number();
-  event1b = MPE_Log_get_event_number();
-  if(isMaster) {
-    MPE_Describe_state(event1a, event1b, "End Watch", "pink");
-  }
-#endif
-
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid==0)
-      particles = 0;
-
-    MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-#ifdef DEBUG
-    printf("particles = %ld, particles_total = %ld\n", particles, particles_total);
-    fflush(stdout);
-#endif
-#endif
 
     if (isMaster) {
       log_entry("dump_watch_parameters");
