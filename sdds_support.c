@@ -682,10 +682,10 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 
   log_entry("dump_watch_particles");
 
-  if (pass<watch->passLast)
-    watch->t0Last = watch->t0LastError = 0;
-  if (pass==watch->start_pass)
+  if (pass<=watch->passLast) {
     watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+    watch->t0LastError = 0;
+  }
   t0 = watch->t0Last;
   t0Error = watch->t0LastError;
   /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
@@ -710,7 +710,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         (watch->end_pass<0 || pass<=watch->end_pass))) {
     return;
   }
-
 
 #if SDDS_MPI_IO
   if (isMaster && notSinglePart)   /* No particle will be dumped by master */
@@ -884,10 +883,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif
 #endif
 
-    if (pass<watch->passLast)
-      watch->t0Last = watch->t0LastError = 0;
-    if (pass==watch->start_pass)
+    if (pass<=watch->passLast) {
       watch->t0Last = z*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+      watch->t0LastError = 0;
+    }
     tc0 = watch->t0Last;
     tc0Error = watch->t0LastError;
     /* This code mimics what happens to particles as they get ~T0 added on each turn with accumulating
