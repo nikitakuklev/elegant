@@ -2232,7 +2232,6 @@ void free_beamdata(BEAM *beam)
     free_czarray_2d((void**)beam->lost, beam->n_particle, 8);
 
   beam->particle = beam->accepted = beam->original = beam->lost = NULL;
-  beam->lostOnPass = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
 }  

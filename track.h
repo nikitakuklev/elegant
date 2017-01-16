@@ -638,7 +638,6 @@ typedef struct {
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
     double **lost;          /* coordinates of lost particles, with pass on which a particle is lost */	
-    long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
     } BEAM;
 void free_beamdata(BEAM *beam);
