@@ -2,11 +2,6 @@ TOP=../../..
 include $(TOP)/configure/CONFIG
 include $(TOP)/configure/RULES
 
-SVN_VERSION=$(shell svnversion ..)
-ifeq ($(SVN_VERSION),)
-SVN_VERSION=unknown
-endif
-
 NVCC = /usr/local/cuda-7.5/bin/nvcc
 
 MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
@@ -102,13 +97,13 @@ HNAMES = gpu_base.h \
 	 gpu_wake.h \
 	 printCudaDeviceProp.h
 
-CFLAGS = -O3 --gpu-architecture=sm_52 --device-c -D_POSIX_C_SOURCE=199506L -D_POSIX_THREADS -D_XOPEN_SOURCE=500 -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -D_GNU_SOURCE -DUNIX -DzLib -DWL=32 -DRPN_SUPPORT -D_BSD_SOURCE -Dlinux -D_REENTRANT -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -DSVN_VERSION=\"$(SVN_VERSION)\"
-#CFLAGS += --use_fast_math
-#CFLAGS += --fmad=true
-#CFLAGS += --fmad=false
+
+CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE)
+
 #CFLAGS += -DCUDA_DEVICE_COUNT=<count>
 #CFLAGS += -DDEBUG -DCUDA_DEBUG -DMPI_DEBUG -DDEBUG_APERTURE -DDEBUG_IGF
 #CFLAGS += -DDEBUG_FIDUCIALIZATION
+
 
 ifeq ($(VERIFY),1)
 CFLAGS += -DGPU_VERIFY
@@ -197,10 +192,11 @@ madto_gpu.o: $(MADTOOBJNAMES)
 	        $(MADTOOBJNAMES) --output-file madto_gpu.o -lcudadevrt -lcudart
 
 elegant_gpu.o: $(OBJNAMES)
-	$(NVCC) --gpu-architecture=sm_52 --device-link \
+	$(NVCC) --generate-code arch=compute_52,code=sm_52 --device-link \
 	        $(OBJNAMES) --output-file elegant_gpu.o -lcudadevrt -lcudart
 
 Pelegant_gpu.o: $(MPIOBJNAMES)
 	$(NVCC) --gpu-architecture=sm_52 --device-link \
 	        $(MPIOBJNAMES) --output-file Pelegant_gpu.o -lcudadevrt -lcudart
+
 

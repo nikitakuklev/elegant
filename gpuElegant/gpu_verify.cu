@@ -437,10 +437,10 @@ void compareGpuCpu(unsigned int n_part, char* name){
               << " for particle " << maxip << " component " << maxic
               << "\n  host max:";
     for(unsigned int ic=0; ic<n_comp; ic++)
-      fcout << std::fixed << std::setprecision(20) << " " << h_particles[maxip][ic];
+      fcout << " " << h_particles[maxip][ic];
     fcout << "\n  dev. max:";
     for(unsigned int ic=0; ic<n_comp; ic++)
-      fcout << std::fixed << std::setprecision(20) << " " << doh_particles[maxip][ic];
+      fcout << " " << doh_particles[maxip][ic];
     fcout << std::endl;
   }
   if (cpuNaN && gpuNaN) {

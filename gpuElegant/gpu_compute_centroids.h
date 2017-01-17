@@ -2,6 +2,7 @@
 #define GPU_COMPUTE_CENTROIDS_H
 
 #include <gpu_track.h>
+#include <gpu_base.h>
 
 #ifdef __cplusplus /* if it's C++ use C linkage */
 extern "C" {

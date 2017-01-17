@@ -9,11 +9,11 @@ extern "C" {
 
 long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       double p_error, double Po, double **accepted, double z_start,
-      double *sigmaDelta2, char *rootname);
+      double *sigmaDelta2, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData);
 
 long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
        double p_error, double Po, double **accepted, double z_start,
-       double z_end, CHARGE *charge, char *rootname);
+       double z_end, CHARGE *charge, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData);
 
 long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
        double **accepted, double zStart, double revolutionLength,

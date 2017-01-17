@@ -158,6 +158,8 @@ void gpu_track_through_trwake(long np0,
           tmin -= dt;
           tmax += dt;
         }
+        if (nb>np)
+          bombElegant("track_through_wake: gpuElegant requires nbins<nparticles", NULL);
 
         if (tmin>tmax || nb<=0) {
           fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);

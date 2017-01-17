@@ -1,6 +1,6 @@
+#include "constants.h" // c_mks
 #include "fftpackC.h"
 #include <gpu_track.h>
-#include "constants.h" // c_mks
 
 #include <gpu_base.h>
 #include <gpu_particle_template_function.hcu>
@@ -279,7 +279,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     fflush(stdout);
 
     if (!fpd) {
-      fpd = fopen_e((char*)"lscZ.sdds", (char*)"w", 0);
+      fpd = fopen_e("lscZ.sdds", "w", 0);
       fprintf(fpd, "SDDS1\n&column name=k type=double units=m &end\n");
       fprintf(fpd, "&column name=ZImag, type=double, units=Ohms &end\n");
       fprintf(fpd, "&data no_row_counts=1 mode=ascii &end\n");

@@ -303,8 +303,8 @@ void gpu_addCorrectorRadiationKick(long np, ELEMENT_LIST *elem, long type,
     return ;
   if (disableISR)
     isr = 0;
-  radCoef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
-  isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+  radCoef = sqr(particleCharge)*pow(Po,3)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+  isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow(Po,5)*137.0359895);
 
   F2 = sqr(kick/length);
 

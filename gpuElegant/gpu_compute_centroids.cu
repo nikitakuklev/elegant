@@ -130,7 +130,7 @@ public:
   __device__ void inline operator()(gpuParticleAccessor& particle){
     unsigned int ind = particle.getParticleIndex();
     d_pz[ind] = p_central*(1+particle[5])
-                *sqrt(1 + particle[1]*particle[1] + particle[3]*particle[3]);
+                /sqrt(1 + particle[1]*particle[1] + particle[3]*particle[3]);
   }
   double* d_pz;
   double p_central;
@@ -246,6 +246,7 @@ void gpu_accumulate_beam_sums(
   long i, j;
   double centroid[7], centroidn[7], pmin[7], pmax[7];
   double Sijarr[7][7], Sijnarr[7][7];
+  double Sij, Sijn;
   long npCount=0;
   short sparse[7][7] = {
     { 1, 1, 0, 0, 0, 1, 0 },
@@ -374,6 +375,7 @@ void gpu_accumulate_beam_sums(
 #ifdef USE_KAHAN
         errorSig=errorSign=0.0;
 #endif
+        Sij = Sijn = 0;
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
           /* Only compute the diagonal blocks and dispersive correlations */
           sums->sigma[j][i] = sums->sigma[i][j] = 0;
@@ -446,7 +448,7 @@ void gpu_accumulate_beam_sums(
 
 #else
 /* USE_MPI=1 */
-
+/*TODO: This procedure probably doesn't work because it was not tested */
 void gpu_accumulate_beam_sums(
                           BEAM_SUMS *sums,
                           long n_part,
@@ -458,7 +460,7 @@ void gpu_accumulate_beam_sums(
 {
   long i, j;
   double centroid[7], pmin[7], pmax[7];
-  double Sijarr[7][7];
+  double Sijarr[7][7], Sijnarr[7][7];
   long active = 1;
   long npCount=0, npCount_total = 0;
   short sparse[7][7] = {
@@ -474,7 +476,7 @@ void gpu_accumulate_beam_sums(
   double errorCen[7], errorSig[28];
 #endif
 
-  double buffer[7], Sij_p[28], Sij_total[28];
+  double buffer[7], Sij_p[28], Sijn_p[28], Sij_total[28];
   long offset=0, index;  
 #ifdef USE_KAHAN
   double error_sum=0.0, error_total=0.0,
@@ -515,6 +517,10 @@ void gpu_accumulate_beam_sums(
   if (!sums->n_part) 
     sums->p0 = p_central;
   
+  if (exactNormalizedEmittance) {
+    gpuDriver(n_part, gpuPZ(d_pz, p_central));
+  }
+
   if (startPID<endPID && n_part) {
     npCount =
       gpuParticleReduction(n_part, gpuChosen(startPID, endPID, d_center),
@@ -531,7 +537,7 @@ void gpu_accumulate_beam_sums(
     npCount = n_part;
   }
   if (active) {
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
       /* maximum amplitudes */
       for (i=0; i<6; i++) {
         if (i==4)
@@ -547,12 +553,18 @@ void gpu_accumulate_beam_sums(
 #endif
       centroid[i]=0;
 #ifndef USE_KAHAN
+      if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3))
+        gpuParticleReductionAsync(npCount, &centroid[i],
+                                  gpuPZmult(d_pz, i), Add<double>());
       if (i<6) gpuReduceAddAsync(d_particles+particlePitch*i, npCount,
                                  &centroid[i]);
-      else     gpuReduceAddAsync(d_timeCoord, npCount, &centroid[i]);  
+      else     gpuReduceAddAsync(d_timeCoord, npCount, &centroid[i]);
 #else
+      if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3))
+        gpuParticleKahanReductionAsync(npCount, &centroid[i], &errorCenn[i],
+                                       gpuPZmult(d_pz, i));
       if (i<6) gpuKahanAsync(d_particles+particlePitch*i, &centroid[i],
-                             &errorCen[i], npCount);
+                             &errorCenn[i], npCount);
       else     gpuKahanAsync(d_timeCoord, &centroid[i], &errorCen[i], npCount);
 #endif
     }
@@ -560,13 +572,15 @@ void gpu_accumulate_beam_sums(
     for (i=0; i<7; i++) {
       if (!notSinglePart && npCount) {	
         /* single-particle mode and this process has a particle */
-        sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
+        if (!(flags&BEAM_SUMS_EXACTEMIT))
+          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
         centroid[i] /= npCount;
       } 
       if (notSinglePart && (parallelStatus!=trueParallel) && isMaster) {
         /* multi-particle mode and, but not true parallel mode, so master has the particles */
         if (npCount) {
-          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
+          if (!(flags&BEAM_SUMS_EXACTEMIT))
+            sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount);
           centroid[i] /= npCount;
         }
       }
@@ -610,7 +624,8 @@ void gpu_accumulate_beam_sums(
       MPI_Allreduce(&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if (npCount_total)
         for (i=0; i<7; i++) {
-          sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount_total);
+          if (!(flags&BEAM_SUMS_EXACTEMIT))
+            sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+npCount_total);
           centroid[i] /= npCount_total;
         }     
     }
@@ -622,7 +637,7 @@ void gpu_accumulate_beam_sums(
   
 
   if (active) {	        
-    if (!(flags&BEAM_SUMS_NOMINMAX)) {
+    if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
       i = 4;
       gpuDriver(npCount, gpuCenter(d_center4, d_particles+particlePitch*i, centroid[i]));
       gpuReduceMinMaxAsync(d_center4, npCount, &pmin[i], &pmax[i]);
@@ -639,7 +654,7 @@ void gpu_accumulate_beam_sums(
     }
   }
   
-  if (!(flags&BEAM_SUMS_NOMINMAX)) {
+  if (!(flags&BEAM_SUMS_NOMINMAX) && !(flags&BEAM_SUMS_EXACTEMIT)) {
     if (notSinglePart) {
       if (parallelStatus==trueParallel) {
         /* compute sums->maxabs over processors*/
@@ -669,14 +684,17 @@ void gpu_accumulate_beam_sums(
 #endif
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
           /* Only compute the diagonal blocks and dispersive correlations */
-          sums->sigma[j][i] = sums->sigma[i][j] = 0;
+          if (flags&BEAM_SUMS_EXACTEMIT)
+            sums->sigman[j][i] = sums->sigman[i][j] = 0;
+          else
+            sums->sigma[j][i] = sums->sigma[i][j] = 0;
           continue;
         }
 
         if (notSinglePart) {
           if (parallelStatus==trueParallel) {
             index = 6*i+j-offset;
-            Sij_p[index] = 0;
+            Sij_p[index] = Sijn_p[index] = 0;
 #ifdef USE_KAHAN
             errorSig[index] = 0.0;
 #endif
@@ -698,6 +716,9 @@ void gpu_accumulate_beam_sums(
               gpuParticleReductionAsync(npCount,
                   &Sij_p[index], gpuSij(d_center, 0., d_center, 0.),
                   Add<double>());
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleReductionAsync(npCount, &Sijn_p[index],
+		  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #else
             if (i<6 && j<6)
               gpuParticleKahanReductionAsync(npCount,
@@ -717,6 +738,10 @@ void gpu_accumulate_beam_sums(
               gpuParticleKahanReductionAsync(npCount,
                   &Sij_p[index], &errorSig[j],
                   gpuSij(d_center, 0., d_center, 0.));
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleKahanReductionAsync(npCount,
+		  &Sijn_p[index], &errorSign,
+                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #endif
           }
           else if (isMaster) {
@@ -738,6 +763,9 @@ void gpu_accumulate_beam_sums(
               gpuParticleReductionAsync(npCount,
                   &Sijarr[i][j], gpuSij(d_center, 0., d_center, 0.),
                   Add<double>());
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleReductionAsync(npCount, &Sijnarr[i][j],
+		  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #else
             if (i<6 && j<6)
               gpuParticleKahanReductionAsync(npCount,
@@ -757,6 +785,10 @@ void gpu_accumulate_beam_sums(
               gpuParticleKahanReductionAsync(npCount,
                   &Sijarr[i][j], &errorSig[j],
                   gpuSij(d_center, 0., d_center, 0.));
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleKahanReductionAsync(npCount,
+		  &Sijnarr[i][j], &errorSign,
+                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #endif
             }
           }
@@ -779,6 +811,9 @@ void gpu_accumulate_beam_sums(
               gpuParticleReductionAsync(npCount,
                   &Sijarr[i][j], gpuSij(d_center, 0., d_center, 0.),
                   Add<double>());
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleReductionAsync(npCount, &Sijnarr[i][j],
+		  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #else
             if (i<6 && j<6)
               gpuParticleKahanReductionAsync(npCount,
@@ -798,6 +833,10 @@ void gpu_accumulate_beam_sums(
               gpuParticleKahanReductionAsync(npCount,
                   &Sijarr[i][j], &errorSig[j],
                   gpuSij(d_center, 0., d_center, 0.));
+	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
+	      gpuParticleKahanReductionAsync(npCount,
+		  &Sijnarr[i][j], &errorSign,
+                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #endif
         }
       }
@@ -810,13 +849,22 @@ void gpu_accumulate_beam_sums(
             /* nothing to do */
           }
           else if (isMaster) {
-            if (npCount) 
+            if (npCount) {
               sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sijarr[i][j])/(sums->n_part+npCount));
+              if (flags&BEAM_SUMS_EXACTEMIT) {
+		sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*sums->n_part+Sijnarr[i][j])/(sums->n_part+npCount));
+	      }
+	    }
           }
         }
         else { /* Single particle case */
-          if (n_part)
-            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sijarr[i][j])/(sums->n_part+npCount));
+          if (n_part) {
+	    if (flags&BEAM_SUMS_EXACTEMIT) {
+	      sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*sums->n_part-npCount+Sijnarr[i][j])/(sums->n_part));
+	    } else {
+	      sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sijarr[i][j])/(sums->n_part+npCount));
+	    }
+	  }
         }
       }
     }
@@ -869,34 +917,48 @@ void gpu_accumulate_beam_sums(
           for (j=i; j<7; j++) {
             if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
               /* Only compute the diagonal blocks and dispersive correlations */
-              sums->sigma[j][i] = sums->sigma[i][j] = 0;
+              if (flags&BEAM_SUMS_EXACTEMIT)
+                sums->sigman[j][i] = sums->sigman[i][j] = 0;
+              else
+		sums->sigma[j][i] = sums->sigma[i][j] = 0;
               continue;
             }
             index = 6*i+j-offset;
-            sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
+            if (flags&BEAM_SUMS_EXACTEMIT)
+                /* sums->n_part was updated already, so we need to *subtract* npCount, not add it */
+              sums->sigman[j][i] = (sums->sigman[i][j] = (sums->sigman[i][j]*(sums->n_part-npCount_total)+Sij_total[index])/sums->n_part);
+            else
+	      sums->sigma[j][i] = (sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+npCount_total));
           }
         }
       }
     }
   }
 
-  sums->charge = mp_charge*npCount_total;
+  //sums->charge = mp_charge*npCount_total;
   
-  if (!notSinglePart)
-    sums->n_part += npCount; 
-  else if (!SDDS_MPI_IO) {
-    if (parallelStatus==trueParallel) 
-      sums->n_part += npCount_total;
-    else if (isMaster)
-      sums->n_part += npCount;
-  } else {
-    if (isMaster)
-      sums->n_part += npCount_total;
-    else
-      sums->n_part += npCount;
-    
+  if (!(flags&BEAM_SUMS_EXACTEMIT)) {
+    if (!notSinglePart) {
+      sums->n_part += npCount; 
+      sums->charge = mp_charge*npCount;
+    } else if (!SDDS_MPI_IO) {
+      if (parallelStatus==trueParallel) {
+	sums->n_part += npCount_total;
+	sums->charge = mp_charge*npCount_total;
+      } else if (isMaster) {
+	sums->n_part += npCount;
+	sums->charge = mp_charge*npCount;
+      }
+    } else {
+      if (isMaster) {
+	sums->n_part += npCount_total;
+	sums->charge = mp_charge*npCount_total;
+      } else {
+	sums->n_part += npCount;
+	sums->charge = mp_charge*npCount;
+      }
+    }
   }
-   
 
 #ifdef USE_KAHAN
   free_czarray_2d((void**)sumMatrixCen, n_processors, 7); 

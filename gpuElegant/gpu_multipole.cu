@@ -11,6 +11,14 @@
 #include <multipole.h>
 #include <gpu_track.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void gpu_exactDrift(long np, double length);
+#ifdef __cplusplus
+}
+#endif
+
 #ifdef sqr
 #undef sqr
 #endif
@@ -53,10 +61,10 @@ public:
   // Associated MULTIPOLE_DATA is also in constant memory
   // From MULTIPOLE_DATA (*multData) 
   int multDataOrders; // set to -1 if no multData
-  // From MULTIPOLE_DATA (*steeringMultData) 
-  int steeringMultDataOrders; // set to -1 if no steeringMultData
   // From MULTIPOLE_DATA (*edgeMultData) 
   int edgeMultDataOrders; // set to -1 if no edgeMultData
+  // From MULTIPOLE_DATA (*steeringMultData) 
+  int steeringMultDataOrders; // set to -1 if no steeringMultData
   // From MULT_APERTURE_DATA (*apData)
   int present; 
   double xMax, xCen, yMax, yCen, srGaussianLimit;
@@ -66,15 +74,16 @@ public:
       double *d_sigmaDelta2, curandState_t *state, double dx, double dy,
       double xkick, double ykick, double Po, double rad_coef, double isr_coef,
       double KnL, double drift, double z_start, int order, int sqrtOrder,
-      int n_parts, int integ_order, int multDataOrders,
-      int steeringMultDataOrders, int edgeMultDataOrders, int present, double xMax, double xCen,
+      int n_parts, int integ_order, int multDataOrders, int edgeMultDataOrders,
+      int steeringMultDataOrders, int present, double xMax, double xCen,
       double yMax, double yCen, int radial, double srGaussianLimit) :
     d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
     rad_coef(rad_coef), isr_coef(isr_coef), KnL(KnL), drift(drift),
     z_start(z_start), order(order), sqrtOrder(sqrtOrder), n_parts(n_parts), 
     integ_order(integ_order), multDataOrders(multDataOrders),
-    steeringMultDataOrders(steeringMultDataOrders), edgeMultDataOrders(edgeMultDataOrders), present(present),
+    edgeMultDataOrders(edgeMultDataOrders),
+    steeringMultDataOrders(steeringMultDataOrders), present(present),
     xMax(xMax), xCen(xCen), yMax(yMax), yCen(yCen), radial(radial),
     srGaussianLimit(srGaussianLimit) {};
 
@@ -149,7 +158,7 @@ public:
     qx = (1+dp)*xp/denom;
     qy = (1+dp)*yp/denom;
   
-    /* apply steering and edge corrector multipoles */
+    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -170,10 +179,12 @@ public:
                                         edgeMultDataJnL[imult], 1);
       }
     }
-    // Must do this if steering or edge multipoles applied. Do it anyways in order
-    // to avoid numerical discrepancies.
+    // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
+    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    //  return 0;
+    //}
     denom = EXSQRT(denom, sqrtOrder);
     xp = qx/denom;
     yp = qy/denom;
@@ -184,7 +195,7 @@ public:
         x += xp*drift*(i_kick?2:1);
         y += yp*drift*(i_kick?2:1);
         s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
-        *dzLoss += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+        *dzLoss += drift*(i_kick?2:1);
       }
       if (present &&
           ((xMax && fabs(x + dx - xCen)>xMax) ||
@@ -249,15 +260,14 @@ public:
       x += xp*drift;
       y += yp*drift;
       s += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
-      *dzLoss += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+      *dzLoss += drift;
     }
     if (present &&
         ((xMax && fabs(x + dx - xCen)>xMax) ||
          (yMax && fabs(y + dy - yCen)>yMax) )) {
       return 0;
     }
-
-    /* apply edge and steering corrector multipoles */
+  
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -268,6 +278,8 @@ public:
                                         edgeMultDataJnL[imult], 1);
       }
     }
+
+    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -278,8 +290,12 @@ public:
                                         steeringMultDataJnL[imult]*ykick/2, 1);
       }
     }
+    // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
+    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    //  return 0;
+    //}
     denom = EXSQRT(denom, sqrtOrder);
     xp = qx/denom;
     yp = qy/denom;
@@ -359,7 +375,7 @@ public:
     qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
     qy = (1+dp)*yp/denom;
   
-    /* apply steering and edge corrector multipoles */
+    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         if (steeringMultDataKnL[imult])
@@ -372,6 +388,7 @@ public:
                                           steeringMultDataJnL[imult]*ykick/2, 1);
       }
     }
+
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         if (edgeMultDataKnL[imult])
@@ -384,13 +401,15 @@ public:
                                           edgeMultDataJnL[imult], 1);
       }
     }
-    // Must do this if steering or edge multipoles applied. Do it anyways in order
-    // to avoid numerical discrepancies.
+    // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
+    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    //  return 0;
+    //}
     xp = qx/(denom=EXSQRT(denom, sqrtOrder));
     yp = qy/denom;
-  
+
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
       for (step=0; step<4; step++) {
@@ -399,7 +418,7 @@ public:
           x += xp*dsh;
           y += yp*dsh;
           s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
-          *dzLoss += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+          *dzLoss += dsh;
         }
         if (present &&
             ((xMax && fabs(x + dx - xCen)>xMax) ||
@@ -474,11 +493,9 @@ public:
       return 0;
     }
     
-
-    /* apply edge and steering corrector multipoles */
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
-        if (edgeMultDataKnL[imult])
+        if (edgeMultDataKnL[imult]) 
           gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                           edgeMultDataOrder[imult], 
                                           edgeMultDataKnL[imult], 0);
@@ -488,6 +505,8 @@ public:
                                           edgeMultDataJnL[imult], 1);
       }
     }
+
+    /* apply steering corrector multipoles */
     if (steeringMultDataOrders>=0) {
       for (imult=0; imult<steeringMultDataOrders; imult++) {
         if (steeringMultDataKnL[imult]) 
@@ -500,8 +519,12 @@ public:
                                           steeringMultDataJnL[imult]*ykick/2, 1);
       }
     }
+    // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
+    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    //  return 0;
+    //}
     xp = qx/(denom=EXSQRT(denom, sqrtOrder));
     yp = qy/denom;
   
@@ -562,9 +585,9 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   KQUSE *kquse = NULL;
   KOCT *koct = NULL;
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
-  double lEffective = -1, lEnd;
+  double lEffective = -1, lEnd = 0;
   short doEndDrift = 0;
-
+  
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -601,13 +624,13 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     dx = kquad->dx;
     dy = kquad->dy;
     dz = kquad->dz;
-    xkick = kquad->xkick;
-    ykick = kquad->ykick;
+    xkick = kquad->xkick*kquad->xKickCalibration;
+    ykick = kquad->ykick*kquad->yKickCalibration;
     integ_order = kquad->integration_order;
     sqrtOrder = kquad->sqrtOrder?1:0;
     if (kquad->synch_rad)
-      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
-    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow(Po,3)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow(Po,5)*137.0359895);
     if (!kquad->isr || (kquad->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -631,13 +654,13 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
       kquad->multipolesInitialized = 1;
     }
     if (!kquad->totalMultipolesComputed) {
-	computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
-					 &(kquad->systematicMultipoleData),
-					 &(kquad->edgeMultipoleData),
-					 &(kquad->randomMultipoleData),
-					 &(kquad->steeringMultipoleData),
-					 KnL, 1);
-	kquad->totalMultipolesComputed = 1;
+      computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
+                                       &(kquad->systematicMultipoleData),
+                                       &(kquad->edgeMultipoleData),
+                                       &(kquad->randomMultipoleData),
+                                       &(kquad->steeringMultipoleData),
+                                       KnL, 1);
+      kquad->totalMultipolesComputed = 1;
     }
     multData = &(kquad->totalMultipoleData);
     edgeMultData = &(kquad->edgeMultipoleData);
@@ -657,11 +680,13 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     dx = ksext->dx;
     dy = ksext->dy;
     dz = ksext->dz;
+    xkick = ksext->xkick*ksext->xKickCalibration;
+    ykick = ksext->ykick*ksext->yKickCalibration;
     integ_order = ksext->integration_order;
     sqrtOrder = ksext->sqrtOrder?1:0;
     if (ksext->synch_rad)
-      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
-    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow(Po,3)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow(Po,5)*137.0359895);
     if (!ksext->isr || (ksext->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -676,20 +701,26 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(ksext->systematicMultipoleData),
                              ksext->systematic_multipoles, 0);
+      readErrorMultipoleData(&(ksext->edgeMultipoleData),
+                             ksext->edge_multipoles, 0);
       readErrorMultipoleData(&(ksext->randomMultipoleData),
                              ksext->random_multipoles, 0);
+      readErrorMultipoleData(&(ksext->steeringMultipoleData), 
+                             ksext->steering_multipoles, 1);
       ksext->multipolesInitialized = 1;
     }
     if (!ksext->totalMultipolesComputed) {
-	computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
-					 &(ksext->systematicMultipoleData),
-					 NULL,
-					 &(ksext->randomMultipoleData),
-					 NULL,
-					 KnL, 2);
-	ksext->totalMultipolesComputed = 1;
+      computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
+                                       &(ksext->systematicMultipoleData),
+                                       &(ksext->edgeMultipoleData),
+                                       &(ksext->randomMultipoleData),
+                                       &(ksext->steeringMultipoleData),
+                                       KnL, 2);
+      ksext->totalMultipolesComputed = 1;
     }
     multData = &(ksext->totalMultipoleData);
+    edgeMultData = &(ksext->edgeMultipoleData);
+    steeringMultData = &(ksext->steeringMultipoleData);
     break;
   case T_KOCT:
     koct = ((KOCT*)elem->p_elem);
@@ -708,8 +739,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     integ_order = koct->integration_order;
     sqrtOrder = koct->sqrtOrder?1:0;
     if (koct->synch_rad)
-      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
-    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow(Po,3)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow(Po,5)*137.0359895);
     if (!koct->isr || (koct->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -729,13 +760,13 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
       koct->multipolesInitialized = 1;
     }
     if (!koct->totalMultipolesComputed) {
-	computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
-					 &(koct->systematicMultipoleData),
-					 NULL,
-					 &(koct->randomMultipoleData),
-					 NULL,
-					 KnL, 3);
-	koct->totalMultipolesComputed = 1;
+      computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
+                                       &(koct->systematicMultipoleData),
+                                       NULL,
+                                       &(koct->randomMultipoleData),
+                                       NULL,
+                                       KnL, 3);
+      koct->totalMultipolesComputed = 1;
     }
     multData = &(koct->totalMultipoleData);
     break;
@@ -753,8 +784,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     integ_order = kquse->integration_order;
     sqrtOrder = 0;
     if (kquse->synch_rad)
-      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
-    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow(Po,3)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow(Po,5)*137.0359895);
     if (!kquse->isr || (kquse->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -812,34 +843,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
-  apertureData.xCen = apertureData.yCen = 0;
-  apertureData.xMax = x_max;
-  apertureData.yMax = y_max;
-  apertureData.elliptical = elliptical;
-  apertureData.present = x_max>0 || y_max>0;
-  if (apFileData && apFileData->initialized) {
-    /* If there is file-based aperture data, it may override MAXAMP data. */
-    double xCenF, yCenF, xMaxF, yMaxF;
-    apertureData.present = 1;
-    if (interpolateApertureData(z_start+drift/2, apFileData, 
-                                &xCenF, &yCenF, &xMaxF, &yMaxF)) {
-      if (x_max<=0 || (x_max>fabs(xCenF+xMaxF) && x_max>fabs(xCenF-xMaxF))) {
-        apertureData.xMax = xMaxF;
-        apertureData.xCen = xCenF;
-        apertureData.elliptical = 0;
-      }
-      if (y_max<=0 || (y_max>fabs(yCenF+yMaxF) && y_max>fabs(yCenF-yMaxF))) {
-        apertureData.yMax = yMaxF;
-        apertureData.yCen = yCenF;
-        apertureData.elliptical = 0;
-      }
-    }
-  }
-  if (fabs(tilt)>0.1) {
-    /* If rotation is greater than 100 mrad, disable aperture inside the element */
-    /* Prevents unexpected results with skew elements */
-    apertureData.present = 0;
-  }
+  setupMultApertureData(&apertureData, x_max, y_max, elliptical, tilt, apFileData, z_start+drift/2);
   
   struct GPUBASE* gpuBase = getGpuBase();
   unsigned int particlePitch = gpuBase->gpu_array_pitch;
@@ -850,21 +854,20 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   if (tilt)
     gpu_rotateBeamCoordinates(n_part, tilt);
 
+  if (doEndDrift) {
+    gpu_exactDrift(n_part, lEnd);
+  }
+
   /* Fringe treatment, if any */
   switch (elem->type) {
   case T_KQUAD:
     if (kquad->edge1_effects>0)
       //TODO quadFringe
       std::cout << "Implement gpu_quadFringe" << std::endl;
-      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects-1,kquad->edge1Linear, kquad->edge1NonlinearFactor);
+      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects-1, kquad->edge1Linear, kquad->edge1NonlinearFactor);
     break;
   default:
     break;
-  }
-
-  if (doEndDrift) {
-    std::cout << "Implement gpu_exactDrift" << std::endl;
-    //exactDrift(particle, n_part, lEnd);
   }
 
   // Copy multData and steeringMultData to device
@@ -889,15 +892,12 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   }
   if (edgeMultData) {
     cudaMemcpyToSymbol(edgeMultDataOrder, edgeMultData->order, 
-        sizeof(edgeMultDataOrder)*edgeMultData->orders, 0,
-        cudaMemcpyHostToDevice);
+        sizeof(edgeMultDataOrder)*edgeMultData->orders, 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol(edgeMultDataKnL, edgeMultData->KnL, 
-        sizeof(edgeMultDataKnL)*edgeMultData->orders, 0,
-        cudaMemcpyHostToDevice);
+        sizeof(edgeMultDataKnL)*edgeMultData->orders, 0, cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol(edgeMultDataJnL, edgeMultData->JnL, 
-        sizeof(edgeMultDataJnL)*edgeMultData->orders, 0,
-        cudaMemcpyHostToDevice);
-  }
+        sizeof(edgeMultDataJnL)*edgeMultData->orders, 0, cudaMemcpyHostToDevice);
+  } 
 
   // Ensure expansionOrderMax is sufficiently large
   int maxorder = order;
@@ -908,8 +908,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (steeringMultData && steeringMultData->orders > iorder &&
         steeringMultData->order[iorder] > maxorder) 
       maxorder = steeringMultData->order[iorder];
-    if (edgeMultData && edgeMultData->orders > iorder &&
-        edgeMultData->order[iorder] > maxorder) 
+    if (edgeMultData && edgeMultData->orders > iorder &&  
+        edgeMultData->order[iorder] > maxorder)
       maxorder = edgeMultData->order[iorder];
   }
   if (maxorder > expansionOrderMax-1) 
@@ -953,8 +953,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     gpu_multipole_tracking2_kernel(d_sortIndex, d_sigmaDelta2, state,
     dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL, drift, z_start, order,
     sqrtOrder, n_parts, integ_order, multData?multData->orders:-1, 
-    steeringMultData?steeringMultData->orders:-1, 
-    edgeMultData?edgeMultData->orders:-1, apertureData.present,
+    edgeMultData?edgeMultData->orders:-1,
+    steeringMultData?steeringMultData->orders:-1, apertureData.present,
     apertureData.xMax, apertureData.xCen, apertureData.yMax,
     apertureData.yCen, elem->type==T_KQUAD?kquad->radial:0, srGaussianLimit));
   gpuErrorHandler("gpu_multipole_tracking2::gpu_multipole_tracking2_kernel");
@@ -970,17 +970,15 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (kquad->edge2_effects>0)
       bombTracking("gpu_multipole_tracking2: quadFringe not implemented");
       //TODO quadFringe
-      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects-1,kquad->edge2Linear, kquad->edge2NonlinearFactor);
+      //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects-1, kquad->edge2Linear, kquad->edge2NonlinearFactor);
     break;
   default:
     break;
   }
-  
   if (doEndDrift) {
-    std::cout << "Implement gpu_exactDrift" << std::endl;
-    //exactDrift(particle, n_part, lEnd);
+    gpu_exactDrift(n_part, lEnd);
   }
-
+  
   if (tilt)
     gpu_rotateBeamCoordinates(n_part, -tilt);
   if (dx || dy || dz)
@@ -1000,37 +998,44 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
 
 } // extern "C"
 
+
+__device__ void gpu_fillPowerArray(double x, double *xpow, long order)
+{
+  long i;
+  xpow[0] = 1;
+  for (i=1; i<=order; i++) {
+    xpow[i] = xpow[i-1]*x;
+  }
+}
+
 __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
     double *sum_Fx_return, double *sum_Fy_return, double x, double y,
     int order, double KnL, int skew) {
   int i;
-  double sum_Fx, sum_Fy, xypow, ratio;
+  double sum_Fx, sum_Fy;
+  double *xpow = NULL, *ypow = NULL;
+  xpow = (double*)malloc(sizeof(*xpow)*(order+1));
+  ypow = (double*)malloc(sizeof(*ypow)*(order+1));
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
-  if (x==0) {
-    if (y==0) {
-      if (order!=0)
-        return;
-      xypow = 1;
-    } else
-      xypow = pow(y, order);
-    i = order;
-    ratio = 0;
-  }
-  else {
-    xypow = pow(x, order);
-    ratio = y/x;
-    i = 0;
-  }
-  /* now sum up the terms for the multipole expansion */
-  for (sum_Fx=sum_Fy=0; i<=order; i++) {
+
+  gpu_fillPowerArray(x, xpow, order);
+  gpu_fillPowerArray(y, ypow, order);
+  
+  /* sum up the terms for the multipole expansion */
+  for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
+  /*
     if (ODD(i))
-      sum_Fx += d_coef[expansionOrderMax*order+i]*xypow;
+      sum_Fx += d_coef[expansionOrderMax*order+i]*pow(x, order-i)*pow(y, i);
     else
-      sum_Fy += d_coef[expansionOrderMax*order+i]*xypow;
-    xypow *= ratio;
+      sum_Fy += d_coef[expansionOrderMax*order+i]*pow(x, order-i)*pow(y, i);
+  */
+    if (ODD(i))
+      sum_Fx += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
+    else
+      sum_Fy += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
@@ -1043,6 +1048,8 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
     *sum_Fx_return = sum_Fx;
   if (sum_Fy_return)
     *sum_Fy_return = sum_Fy;
+  free(xpow);
+  free(ypow);
 }
 
 __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
@@ -1050,30 +1057,25 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
      int order, double KnL, int skew)
 {
   int i;
-  double sum_Fx, sum_Fy, xypow, ratio;
+  double sum_Fx, sum_Fy;
+  double *xpow = NULL, *ypow = NULL;
+
+  xpow = (double*)malloc(sizeof(*xpow)*(order+1));
+  ypow = (double*)malloc(sizeof(*ypow)*(order+1));
+  gpu_fillPowerArray(x, xpow, order);
+  gpu_fillPowerArray(y, ypow, order);
+  
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
-  if (x==0) {
-    if (y==0)
-      return;
-    xypow = pow(y, order);
-    i = order;
-    ratio = 0;
-  }
-  else {
-    xypow = pow(x, order);
-    ratio = y/x;
-    i = 0;
-  }
+  i = 0;
   /* now sum up the terms for the multipole expansion */
   for (sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
-      sum_Fx -= d_coef[expansionOrderMax*order+i]*xypow;
+      sum_Fx -= d_coef[expansionOrderMax*order+i-1]*xpow[order-i]*ypow[i];
     else
-      sum_Fy += d_coef[expansionOrderMax*order+i]*xypow;
-    xypow *= ratio;
+      sum_Fy += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
@@ -1086,4 +1088,7 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
     *sum_Fx_return = sum_Fx;
   if (sum_Fy_return)
     *sum_Fy_return = sum_Fy;
+  free(xpow);
+  free(ypow);
 }
+
