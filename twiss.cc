@@ -33,9 +33,6 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
-#ifdef HAVE_GPU
-#include "gpu_base.h"
-#endif
 void computeSDrivingTerms(LINE_LIST *beamline);
 void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double position, const char *name, const char *type, long occurence, LINE_LIST *beamline);
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
@@ -3725,12 +3722,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   for (i=1; i<turns; i++) {
     if (useMatrix) {
       long j;
-      for (j=0; j<nPeriods; j++) {
-#ifdef HAVE_GPU
-	oneParticle = forceParticlesToCpu("track_particles");
-#endif
+      for (j=0; j<nPeriods; j++)
         track_particles(oneParticle, M, oneParticle, one);
-      }
     } else {
       if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, 
 		       (BEAM_SUMS**)NULL, (long*)NULL,

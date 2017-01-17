@@ -263,20 +263,14 @@ long alpha_magnet_tracking(
     log_entry("alpha_magnet_tracking");
 
     if (alpha->part==0) {
-#ifdef HAVE_GPU
-      particle = forceParticlesToCpu("track_particles");
-#endif
         track_particles(particle, M, particle, n_part);
         log_exit("alpha_magnet_tracking");
         return(n_part);
         }
 
-    if (alpha->part==1) {
-#ifdef HAVE_GPU
-      particle = forceParticlesToCpu("track_particles");
-#endif
+    if (alpha->part==1) 
         track_particles(particle, M, particle, n_part);
-    }
+
     if (alpha->xPuck>0) {
       /* do filtering of particles with a "puck" scraper of length widthPuck 
        * ending at position xPuck */
@@ -357,12 +351,9 @@ long alpha_magnet_tracking(
             }
         }
 
-    if (alpha->part==2) {
-#ifdef HAVE_GPU
-      particle = forceParticlesToCpu("track_particles");
-#endif
+    if (alpha->part==2) 
         track_particles(particle, M, particle, n_part);
-    }
+
     log_exit("alpha_magnet_tracking");
     return(n_part);
     }

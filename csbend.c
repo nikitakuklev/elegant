@@ -1303,7 +1303,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */
@@ -1312,7 +1312,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
     csrWake.StupakovFileActive = 0; /* Reset doesn't close */
 
-    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname);
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
     compareGpuCpu(n_part, "track_through_csbendCSR");
 
     /* compare CSR_LAST_WAKE structs */
