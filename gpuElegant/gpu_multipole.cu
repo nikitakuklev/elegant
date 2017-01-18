@@ -999,43 +999,21 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
 } // extern "C"
 
 
-__device__ void gpu_fillPowerArray(double x, double *xpow, long order)
-{
-  long i;
-  xpow[0] = 1;
-  for (i=1; i<=order; i++) {
-    xpow[i] = xpow[i-1]*x;
-  }
-}
-
 __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
     double *sum_Fx_return, double *sum_Fy_return, double x, double y,
     int order, double KnL, int skew) {
   int i;
   double sum_Fx, sum_Fy;
-  double *xpow = NULL, *ypow = NULL;
-  xpow = (double*)malloc(sizeof(*xpow)*(order+1));
-  ypow = (double*)malloc(sizeof(*ypow)*(order+1));
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
-
-  gpu_fillPowerArray(x, xpow, order);
-  gpu_fillPowerArray(y, ypow, order);
-  
   /* sum up the terms for the multipole expansion */
   for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
-  /*
     if (ODD(i))
       sum_Fx += d_coef[expansionOrderMax*order+i]*pow(x, order-i)*pow(y, i);
     else
       sum_Fy += d_coef[expansionOrderMax*order+i]*pow(x, order-i)*pow(y, i);
-  */
-    if (ODD(i))
-      sum_Fx += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
-    else
-      sum_Fy += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
@@ -1048,8 +1026,6 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
     *sum_Fx_return = sum_Fx;
   if (sum_Fy_return)
     *sum_Fy_return = sum_Fy;
-  free(xpow);
-  free(ypow);
 }
 
 __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
@@ -1057,25 +1033,30 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
      int order, double KnL, int skew)
 {
   int i;
-  double sum_Fx, sum_Fy;
-  double *xpow = NULL, *ypow = NULL;
-
-  xpow = (double*)malloc(sizeof(*xpow)*(order+1));
-  ypow = (double*)malloc(sizeof(*ypow)*(order+1));
-  gpu_fillPowerArray(x, xpow, order);
-  gpu_fillPowerArray(y, ypow, order);
-  
+  double sum_Fx, sum_Fy, xypow, ratio;
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
-  i = 0;
+  if (x==0) {
+    if (y==0)
+      return;
+    xypow = pow(y, order);
+    i = order;
+    ratio = 0;
+  }
+  else {
+    xypow = pow(x, order);
+    ratio = y/x;
+    i = 0;
+  }
   /* now sum up the terms for the multipole expansion */
   for (sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
-      sum_Fx -= d_coef[expansionOrderMax*order+i-1]*xpow[order-i]*ypow[i];
+      sum_Fx -= d_coef[expansionOrderMax*order+i]*xypow;
     else
-      sum_Fy += d_coef[expansionOrderMax*order+i]*xpow[order-i]*ypow[i];
+      sum_Fy += d_coef[expansionOrderMax*order+i]*xypow;
+    xypow *= ratio;
   }
   if (skew) {
     SWAP_DOUBLE(sum_Fx, sum_Fy);
@@ -1088,7 +1069,4 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
     *sum_Fx_return = sum_Fx;
   if (sum_Fy_return)
     *sum_Fy_return = sum_Fy;
-  free(xpow);
-  free(ypow);
 }
-
