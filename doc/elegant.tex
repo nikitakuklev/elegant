@@ -6822,6 +6822,538 @@ unit numbers, with units 0 and 1 being permanently assigned to the
 terminal input and terminal output, respectively.
 
 \newpage
+
+\section{Change Log}
+
+\subsection{Highlights of What's New in Version 32.0, 5 Jan. 2017}
+
+Here is a summary of what's changed since release 31.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed in the \verb|amplification_factors| command that resulted in a crash when the corrected amplification
+  factors were requested. This was reported by S. DiMitri (ELETTRA).
+\item A bug was fixed for \verb|twiss_output|, which was incorrectly reporting the quantities $\frac{\partial \alpha_{x,y}}{\partial \delta}$
+ (parameters \verb|dalphax/dp| and \verb|dalphay/dp| in the output file) in some cases.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added the \verb|BRANCH| element, which permits branching between parts of a beamline based on the number of passes executed.
+\item Apertures specified using \verb|MAXAMP| or an external aperture file (using the \verb|aperture_data| command) are now
+  enforced inside \verb|CSBEND| and \verb|CSRCSBEND| elements.
+  There may be small changes in, for example, momentum acceptance as a result of this, particularly when gradient dipoles are involved. 
+\item The longitudinal location of losses inside \verb|KQUAD| and \verb|KSEXT| elements is now computed more accurately. Previously,
+  it was simply the start of the element.
+\item Removed the non-functional \verb|FRINGE| parameter of the \verb|CSBEND| element.
+\item The \verb|BGGEXP| (B-field Generalized Gradient Expansion) element now supports symplectic integration using an
+  implicit method, implemented by R. Lindberg (APS).
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added \verb|exclude| parameter to \verb|chromaticity| command, allowing exclusion of some sextupoles that may 
+  match the list in the \verb|sextupole| parameter.
+\item Added \verb|alter_at_each_step| and \verb|alter_before_load_parameters| parameters to the \verb|alter_elements| command,
+  allowing better control of potential conflicts with \verb|load_parameters|.
+\item The random number generator seed is now permuted bitwise in order to add a greater level of apparent randomness.
+  Thus, changing the seed by a small amount will now have a bigger effect on the sequences generated, making it easier to
+  deliberately perform several runs with very distinct random values.
+  This can be defeated using the \verb|global_settings| command by setting \verb|inhibit_seed_permutation=1|.
+  This issue was pointed out by V. Sajaev (APS).
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item \verb|ionTrapping| --- Added computation of the single-ion oscillation frequency.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 31.0, 1 Oct. 2016}
+
+Here is a summary of what's changed since release 30.1.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|touschek_scatter| command had a bug when random multipoles where used on \verb|KQUAD| and \verb|KSEXT| elements. In particular,
+  these multipoles components were re-randomized for each \verb|TSCATTER| element. This was discovered and fixed by A. Xiao (ANL).
+\item The implementation of edge effects in the \verb|KQUAD| element was using $x^\prime$ and $y^\prime$ in place of $q_x$ and $q_y$, and so
+  was not symplectic. It also did not have the correct dependence on $\delta$. 
+  These issues were reported by R. Lindberg (ANL).  A similar error was fixed in the implementation of edge effects for \verb|CSBEND|;
+  this was fixed by Y.P. Sun (ANL). Practically speaking, we haven't noticed any significant change in results.
+\item There was a bug in the evaluation of systematic multipoles when using the second-order integrator for \verb|KQUAD| and \verb|KSEXT|.
+  The default fourth-order integrator did not have this issue.
+\item Higher-order path-length issues were fixed for the \verb|BRAT| element. This issue was reported by R. Lindberg (ANL).
+\item The steering kick calibration factors are no longer ignored on the \verb|KQUAD| element.
+\item The \verb|BMXYZ| and \verb|BMAPXY| elements lacked dependence on the momentum deviation $\delta$. This issue was reported by R. Lindberg (ANL).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added the \verb|BGGEXP| element, which performs tracking through magnetic fields constructed from a generalized
+  gradient expansion \cite{Venturini-NIMA427-387}. Although the integration is not symplectic, the fields satisfy Maxwell's equations exactly.
+  A script, \verb|computeGeneralizedGradients|, is provided to assist in preparing input for this element.
+  Advice from M. Venturini (LBNL) was helpful in performing this work.
+\item Added separate specification of edge and body multipoles to the \verb|KQUAD| and \verb|KSEXT| elements.
+\item Added steering and steering multipoles to the \verb|KSEXT| element.
+\item The \verb|BMXYZ| element now allows independent specification of the insertion length and field map length.
+\item The code for the \verb|KQUAD|, \verb|KSEXT|, \verb|MULT|, and \verb|FMULT| was improved to prevent underflows that might occur in some
+  odd cases, which would negatively affect accuracy.
+\item The \verb|LSRMDLR| element now includes an option for a helical device. This was requested by forum user \verb|zzhang| and implemented by
+  Y.-P. Sun (ANL).
+\item Two additional parameters, \verb|SampledParticles| and \verb|SampledCharge| were added to \verb|WATCH| files in coordinate mode. 
+  These are identical to \verb|Particles| and \verb|Charge|, respectively, except when the \verb|FRACTION| parameter is $<1$.
+  In that case, the latter parameters give the values prior to sampling, while the new parameters give the parameters of the
+  sampled fraction of the bunch. Previously,  \verb|Particles| and \verb|Charge| changed as \verb|FRACTION| was changed. 
+  {\em Note that scripts that use the  \verb|Particles| and \verb|Charge| may need modification since the meaning has changed.}
+  Y. Ding (SLAC) pointed out this issue.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|analyze_map| command can now report the map using canonical variables. It also has a user-controlled accuracy
+  parameter that can be used to eliminate spurious matrix elements. R. Lindberg (ANL) helped with the development and testing.
+\item The  \verb|touschek_scatter| command  now uses averaging of the loss rate over the interval between two \verb|TSCATTER| elements
+  instead of the local value at the element, which gives more accurate estimates of the distribution of scattered particles.
+  This change requires that \verb|TSCATTER| elements be inserted at the beginning and end of the beamline, which can be
+  done using \verb|add_at_end=1| and \verb|add_at_start=1| in the \verb|insert_elements| command.
+  This was implemented by A. Xiao (ANL).
+\item The \verb|modulate_elements| command now offers more control over verbose printouts, to help reduce the volume of
+  uninformative printouts. It also provides user control of the buffer flushing interval for the \verb|record| output file.
+\item The \verb|insert_elements| command now has the option to insert an element at the beginning of the beamline.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The script \verb|computeGeneralizedGradients| was added to assist in preparing input for the \verb|BGGEXP| element.
+\item The scripts \verb|elasticScatteringLifetime| and \verb|bremsstrahlungLifetime| now support user-specified gas composition.
+The Z values for carbon and oxygen were mixed up in some places in these and related scripts, as pointed out by S. Tian (IHEP);
+this was fixed.
+\item The \verb|ionTrapping| script now supports user-provided factors for inflating the emittance and energy spread.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 30.1, 3 Aug. 2016}
+
+Here is a summary of what's changed since release 30.0
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
+  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item Fixed a bug introduced in \verb|moments_output| computations when \verb|CSBEND| elements were present 
+  with non-zero values of \verb|ETILT|. Reported by V. Sajaev (ANL).
+\item Fixed a bug in Touschek scattering simulation (\verb|TSCATTER| element and \verb|touschek_scatter| command) that resulted
+  in the random multipole components of \verb|KQUAD| and \verb|KSEXT| elements being re-randomized for each \verb|TSCATTER| element.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added edge multipoles to \verb|KQUAD| element. This necessitated some rearrangement of the code, so results might be
+  slightly different even if this feature is not invoked.
+\item Added I/Q mode feedback to the \verb|RFMODE| element.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item Implemented exact normalized emittance calculations for the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
+  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version.
+\item Fixed bug in assignment of particle ID values when using Halton sequences in the \verb|bunched_beam| command.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|abrat| (``Asymmetric Bend RAy tracing'') was added. It allows tracking electrons through 2- and 3-D magnetic field maps.
+  It is a commandline version of the \verb|BRAT| element.
+\item The script \verb|ionTrapping| was added, providing simple ion trapping calculations for uniform bunch trains. J. Calvey (APS) helped with
+  debugging.
+\item The script \verb|computeSCTuneSpread| was added to allow computation of space-charge tune spread.
+\item The script \verb|radiationEnvelope| now computes envelopes for central cone flux.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 30.0, 5 July 2016}
+
+Here is a summary of what's changed since release 29.1:
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Fixed a memory leak in the \verb|FTABLE| element.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item Fixed calculations of exact normalized emittance (error in equations) and implemented in parallel version.
+  This bug impacted results in the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
+  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version and
+  provided an example run that helped discover the problem with the serial version. 
+\item The \verb|diffusionRate| output from the \verb|frequency_map| command is now computed as 
+$\log_{10} ((\Delta\nu_x^2+\Delta\nu_y^2)/n)$ instead of $(\log_{10} (\Delta\nu_x^2+\Delta\nu_y^2))/n$.
+\item Fixed a bug in \verb|bunched_beam| whereby the centroids for a shell-type beam were offset from zero.
+  Reported by L. Emery (ANL).
+\item Fixed bug in \verb|moments_output| when bending magnts with non-zero \verb|ETILT| are present. When this occurs,
+the number of slices for moments calculation is set to 1 for those elements, to avoid numerical problems with the
+vertical orbit.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added the \verb|LEFFECTIVE| parameter for \verb|QUAD| and \verb|KQUAD|, which provides a convenient way
+  to change the effective length without changing the adjacent drift spaces. Also added the ability to turn off
+  the linear fringe field effects while keeping the nonlinear part, and to multiply the nonlinear effects by
+  a numerical factor.
+\item Added the \verb|BMXYZ| element for straightforward integration through 3D field maps for straight elements.
+\item Added the \verb|BRAT| element, which is similar to \verb|BMXYZ| but accommodates curved elements. Elements may
+  be asymmetric, e.g., longitudinal gradient dipoles.
+\item Added the \verb|FACTOR| and \verb|THRESHOLD| options to \verb|FTABLE|. The former allows multiplying the fields
+  by a user-defined factor. The latter allows specifying the magnitude of the field below which it is considered
+  zero, which can help ensure numerical stability.
+\item The \verb|FTABLE| element can accept the simple-to-create input files used by the \verb|BMXYZ| element in addition
+  to the original input format.
+\item Results that depend on the transport matrix will show small changes for elements for which the matrix is determined by tracking.
+  The tracking-based method was modified to use a larger number of sample points, increasing the accuracy.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added the \verb|full_grid_output| parameter to the \verb|frequency_map| command, making it possible to display 
+  frequency maps using \verb|sddscontour|.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item Implemented exact normalized emittance calculations for the \verb|sigma| output file of the \verb|run_setup| command and in \verb|WATCH|
+  output in \verb|parameter| mode. J. Bjorklund pointed out the lack of calculations in the parallel version.
+\item Fixed bug in assignment of particle ID values when using Halton sequences in the \verb|bunched_beam| command.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|abrat| (``Asymmetric Bend RAy tracing'') was added. It allows tracking electrons through 2- and 3-D magnetic field maps.
+  It is a commandline version of the \verb|BRAT| element.
+\item The script \verb|ionTrapping| was added, providing simple ion trapping calculations for uniform bunch trains. J. Calvey (APS) helped with
+  debugging.
+\item The script \verb|computeSCTuneSpread| was added to allow computation of space-charge tune spread.
+\item The script \verb|radiationEnvelope| now computes envelopes for central cone flux.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 29.1, 3 March 2016}
+
+Here is a summary of what's changed since release 29.0:
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Fixed bugs in \verb|RECORD| output from \verb|TRFMODE| element for multi-step, single-pass runs.
+  This was fixed by A. Xiao (APS).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|replace_elements| command now respects quoted sequences in the new element definition.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item \verb|LRWAKE| now supports long-range quadrupole wakes. R. Lindberg (APS) provided helpful
+  discussion in this implementation.
+\item \verb|ILMATRIX| now supports second-order tune shift with amplitude as well as path-length dependence
+  on amplitude.
+\item \verb|TFBPICKUP| now supports horizontal and vertical offsets.
+\item Added logging of photon coordinates and angles to the \verb|CSBEND| element. Works in serial mode only.
+\item \verb|TRFMODE| now supports interpolation within bins, giving smoother results.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item \verb|alter_elements| now has a occurrence-skip parameter, which would allow for example changing every other
+  member of a group of elements.
+\item \verb|momentum_aperture| now allows specifying that \verb|WATCH| elements remain active during momentum aperture
+  determination.
+\item \verb|frequency_map| was modified to include the path-length in the output file, which can be used to determine
+  the dependence of the path length of the betatron amplitude.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The script \verb|prepareTAPAs| was added, which allows processing files from \verb|twiss_output| into a form
+  that is accepted by the Android App TAPAs \cite{TAPAs}.
+\item The script \verb|makeSummedCsrWake| was added, which allows making a CSR wake that sums up contributions from
+  dipoles with various lengths and bending radii. 
+\item The script \verb|TFBFirSetup| was added, which allows generating FIR filters for turn-by-turn feedback using 
+  \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
+\item \verb|ibsEmittance| can now perform intrabeam scattering calculations for non-gaussian longitudinal distributions.
+\item \verb|computeCoherentFraction| now uses $\lambda/4\pi$ for the radiation emittance to be consistent with 
+  \verb|sddsbrightness|.
+\item \verb|longitCalcs| now computes the bucket-half-height even when a harmonic cavity is powered.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 29.0, 15 Jan. 2016}
+
+Here is a summary of what's changed since release 28.1:
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Fixed a bug in the \verb|MATR| element that would crop up in multi-step runs, causing a crash or lock-up.
+  This was reported by P. Emma (SLAC).
+\item Fixed a bug in the \verb|RFMODE| element that resulted in a few percent error between the voltage seen by the beam and
+  the feedback-regulated voltage. T. Berenc (ANL) helped resolve this.
+\item The output file feature was restored for the \verb|FTRFMODE| element.
+\item The \verb|TFBDRIVER| and \verb|TFBPICKUP| feedback elements can now handle changes in the number of bunches.
+\item The drive limit for \verb|TFBDRIVER| is now imposed after application of the filter, rather than before.
+\item The \verb|KQUAD| element now has a valid associated transfer matrix for \verb|RADIAL=1|. This bug was reported
+  by forum user \verb|libov|.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|touschek_scatter| command now behaves as a regular major action command, meaning that error generation, scanning,
+  parameter loading, etc.  behave as expected.
+\item Fixed a bug in the \verb|correct_tunes| command that resulted in a crash when \verb|n_iterations=0| and would also have
+  resulted in invalid data in the log file for mixed element types. This was reported by V. Sajaev (ANL).
+\item Fixed a bug in the \verb|chromaticity| command that resulted in a crash when \verb|n_iterations=0| and would also have
+  resulted in invalid data in the log file for mixed element types.
+\item Fixed a bug related to optimization of the chromatic derivative of \verb|alpha_x|. The value provided was actually the
+  chromatic derivative of \verb|betax|. A related error gave incorrect results for the \verb|use_linear_chromatic_matrix| mode of 
+  the \verb|track| command.
+\item Previous versions of this manual indicated that the \verb|find_aperture| command provided a quantity \verb|Area| giving
+  the dynamic aperture area for optimization. The quantity is in fact called \verb|DaArea|. This was reported by S. Hilbrich (TU Dortmund).
+\item Fixed a bug in the optimization feature that resulted in the user's weighting factors being ignored. This was pointed out
+  by A. Zholents (ANL).
+\item Fixed a bug in the \verb|alter_elements| command that caused string values not to be reflected in the output file created
+  with \verb|save_lattice|. This was reported by T. Pulampong (SLRI/DLS).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added nonlinear symplectic fringe field model to CSBEND and CSRCSBEND, based on theoretical work of K. Hwang (IU) \cite{KHwang}. The implementation was
+  performed by Y. Sun (APS) with assistance from K. Hwang and M. Borland.
+\item Added \verb|EKICKER|, \verb|EHKICK|, and \verb|EVKICK|, which provide various flavors of steering correctors using an Exact 
+  model. These may be used in place of the existing \verb|KICKER|, \verb|HKICK|, and \verb|VKICK| elements.
+  The need for this was pointed out by L. Yang (BNL).
+\item The \verb|MATTER| element now supports arrays of slits. This can be used, for example, to model a double-slit spoiler for
+  producing two pulses in an FEL.
+\item The \verb|ECOL| and \verb|RCOL| collimator elements now support an \verb|INVERT| parameter to allow simulation of an
+  obstruction instead of an opening.
+\item The output files from the \verb|WATCH| element in centroid and parameter mode now contain the beam charge, provided that
+  a \verb|CHARGE| element is in the beamline.
+\item Elements that read multipole error files (e.g., \verb|KQUAD| and \verb|KSEXT|) now share data internally rather than each
+  reading the data files separately. This provides a significant speed improvement for massively parallel execution in particular.
+\item The \verb|MALIGN| element was improved to allow optionally applying misalignments to only part of the beam, based on 
+  the particle ID.
+\item The \verb|RFMODE| element now has a feature that allows ``muting'' the rf generator on a specified pass, to simulate
+  a trip of the rf source. 
+\item The voltage ``preloading'' feature of the \verb|RFMODE| element now works even when rf feedback is used.
+\item In order to eliminate problems with the parallel version, the \verb|IBSCATTER| element no longer has a separate \verb|CHARGE| parameter. 
+  Instead, the \verb|CHARGE| element should be used.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|analyze_map| command can now determine the nonlinear transport matrix up to third order based on tracking data,
+  using the method described in \cite{Borland_thesis}. Parallel tracking is used for this command in {\tt Pelegant}.
+  Previously, the analysis was limited to the linear matrix. Also, the terminal lattice functions and their chromatic derivatives
+  are determined from the map for both transport lines and rings. This was requested by Y. Hao (BNL) and L. Yang (BNL).
+\item The \verb|correct_tunes| and \verb|chromaticity| commands now include a weighting factor that results in minimization of
+  the strength changes in the event that more than two familes are provided for correction. (In the future this will be replaced
+  with an SVD-based implemenetation.)
+\item Added to \verb|closed_orbit| and \verb|correct| commands the ability to use multi-turn tracking to determine the approximate orbit.
+  This was suggested by V. Sajaev (ANL), and is helpful when the orbit convergence is poor.
+\item The output in the \verb|run_setup| \verb|centroid| file now contains the beam charge, provided that
+  a \verb|CHARGE| element is in the beamline.
+\item The \verb|run_control| command now includes a variable, \verb|n_passes_fiducial|, that allows specifying a different number of
+  tracking passes for fiducialization than for tracking. For ring fiducialization, this should probably always be 1.
+\item Most output files from {\tt elegant} now include a parameter giving the SVN revision number of
+  the version used to create the output.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item The \verb|analyze_map| command, which was improved as described above, can now use parallel resources.
+\item A bug was fixed in the \verb|center_on_orbit| feature of the \verb|track| command. The bug caused the
+  particles on each processor to be offset by different amounts related to the centroid of the local particles
+  only. This was reported by M. Furseman (DLS).
+\item Fixed a bug in \verb|FTABLE| introduced in version 26.0. The bug would cause the program to crash.
+\item Memory management was improved in the \verb|touschek_scatter| command, allowing a larger number of particles
+  to be utilized.
+\item The \verb|SCRIPT| element would cause a crash when \verb|twiss_output|, \verb|matrix_output|, or
+  similar commands were included but when tracking was required to determine the transfer matrix of the element.
+  This was fixed.
+\item Tracking instigated via the \verb|track| command is now more forgiving of uneven particle losses among 
+  cores. In particular, the program should no longer crash if one core has lost all of its particles or
+  all of the particles in a particular bunch.
+\item The \verb|stop_tracking_particle_limit| feature of the \verb|track| command now works in the parallel version.
+\item Instead of exiting, the parallel version now simply ignores the \verb|slice_anlysis| command.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The script \verb|reorganizeMmap| was added to convert momentum aperture data from \verb|Pelegant| in \verb|output_mode=1| 
+  into the same form as produced by \verb|elegant|. This was a result of correspondence with S. Tian (IHEP).
+\item A bug was fixed in \verb|elegant2astra| that resulting in slightly erroneous values for the longitudinal coordinate.
+\item The \verb|beamLifetimeCalc| can now perform approximate Touschek lifetime calculations for polarized beams.
+  This was added by A. Xiao (ANL) following an inquiry from forum user \verb|marlibgin|.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 28.1.0, 23 July 2015}
+
+Here is a summary of what's changed since release 28.0:
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The ROTATE element was not affecting the floor coordinates. This was found and fixed by A. Xiao (APS).
+\item The \verb|END_PASS| parameter on \verb|SCATTER| now works as expect, after removal of a one-pass offset.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed that caused a crash when a 1-line aperture search was performed. This was reported by Guohui Wei (JLab).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|TFBDRIVER| element now has the ability to measure the beam phase for use in longitudinal feedback.
+  Previously, only momentum-based input was available for longitudinal feedback.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|ramp_elements| and \verb|modulate_elements| commands now have the ability to write a record of their
+  output values.
+\item The \verb|run_setup| command now has options, intended primarily for developers, to turn on memory usage and executing time monitoring during tracking.
+\item The units given for loss rate the output files from \verb|touschek_scatter| were incorrect and were fixed. Results were not affected. (A. Xiao, ANL)
+\item The \verb|tune_footprint| command was improved in several ways. It is now possible to ignore half-integer resonances.
+  The upper and lower bounds of the chromatic tune footprints are now available for optimization.
+  It's now possible to turn off either chromatic or amplitude tune footprint deterimination.
+\item The \verb|optimization_setup| command allows suppressing particle tracking in order to improve performance in some unusual cases.
+\item The \verb|correct_tunes| command can now utilize any element that has the \verb|K1| parameter.
+\item The \verb|chromaticity| command can now utilize any element that has the \verb|K2| parameter.
+\end{itemize}
+
+\subsubsection{Changes for Parallel Version Only}
+
+\begin{itemize}
+\item Fixed a bug that affected tracking when orbit correction was used, \verb|start_from_centroid=1|, and particle distribution
+  was not random across processors.
+\item Warnings about $\rho>10^{6}$ m are now issued by the parallel version, as for the serial version.
+\item Memory usage logging to \verb|WATCH| output files now sums the memory across all cores, rather than just the master core.
+\item A memory leak was fixed in the \verb|ZTRANSVERSE| element that sometimes caused the program to crash. This was reported by
+  R. Lindberg (ANL).
+\item The output of the beam charge in the \verb|ZLONGIT| wake output file was corrected; previously, it only showed the charge on 
+  one core.
+\item The \verb|frequency_map| command now provides an estimate of the time needed to complete.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|sddsbunchingfactor| is now part of the distribution.
+\end{itemize}
+
+\subsection{Highlights of What's New in Version 28.0.0, 18 June 2015}
+
+Here is a summary of what's changed since release 27.1.0:
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|WATCH| element was improved so that the \verb|dCt| column (in parameter or coordinate mode) and \verb|dt| column (in coordinate mode)
+  no longer exhibit fictitious drift due to precision limitations in simulations of rings with many turns.
+\item For numerical reasons, any \verb|CSBEND| with $\rho>10^6$ m is replaced with another element. In the past, an \verb|EDRIFT| was used,
+  which would produce incorrect results if the element had non-zero $K_1$ or $K_2$. This was fixed. 
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, which provide a turn-by-turn feedback capability, now support multi-bunch feedback.
+  In addition, support was added for longitudinal feedback as well as sample/update intervals greater than one turn.
+\item The \verb|CSRDRIFT| element can now also include longitudinal space charge, using the algorithm from the \verb|LSCDRIFT| element.
+\item The \verb|CSBEND| element has a new feature that allows suppression of spurious trajectory offsets that result from limitations
+  of the symplectic integration routine. This feature is controlled using the \verb|REFERENCE_CORRECTION| parameter. 
+\item The input of multipole errors for \verb|KQUAD| and \verb|KSEXT| elements was modified so that the input columns have more transparent
+  names. Previously, the names caused some confusion. Files that worked with previous versions are still accepted.
+\item The \verb|MARK| element with \verb|FITPOINT=1| now stores the emittances of the three modes as \verb|e1m|, 
+  \verb|e2m|, and \verb|e3m| for optimization if \verb|moments_output| is invoked. This deficiency was pointed out
+  by forum user marlibgin.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|transmute_elements| command now does a better job of copying common parameters between the old and new element types.
+  In the past, only the length was preserved. A. Zholents (ANL) reported this issue.
+\item The \verb|floor_coordinates| command has a new parameter, \verb|store_vertices|, which allows requesting that dipole vertex points
+  be stored for use in optimization.
+\item The \verb|twiss_output| command now stores the acceptances \verb|Ax| and \verb|Ay| for use in optimization.
+\end{itemize}
+
+\subsubsection{Changes for Parallel Version Only}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\newpage
+
 \begin{thebibliography}{9}
 
 \bibitem{Kernighan}
