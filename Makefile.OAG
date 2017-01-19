@@ -1,6 +1,7 @@
+HDEPENDS_FILES =
 CMPLR = ANSI
 # turn off the -g option
-OP_SYS_CFLAGS =  
+OP_SYS_CFLAGS = 
 #OPT_CFLAGS_NO = -g
 #OPT_CFLAGS_YES = -O3
 #HOST_OPT = NO
