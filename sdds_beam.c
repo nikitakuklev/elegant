@@ -269,11 +269,6 @@ long new_sdds_beam(
 #endif
           beam->accepted = (double**)czarray_2d
             (sizeof(double), (long)(beam->n_particle*factor), 7);
-	if (run->losses)  
-#if USE_MPI
-        if (isSlave || !notSinglePart)
-#endif
-	  beam->lost = (double**)czarray_2d(sizeof(double),(long)(beam->n_particle*factor), 8);
         new_particle_data = 1;	
       }
       else
@@ -310,8 +305,6 @@ long new_sdds_beam(
 	  if (run->acceptance) 
 	    beam->accepted = (double**)czarray_2d
 	      (sizeof(double), (long)(beam->n_particle*factor), 7);
-	  if (run->losses)  
-	    beam->lost = (double**)czarray_2d(sizeof(double), (long)(beam->n_particle*factor), 8);
 	}
       }
       else { 
@@ -501,10 +494,6 @@ long new_sdds_beam(
         beam->particle = (double**)czarray_2d(sizeof(double), n_duplicates*n0, 7);
         memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*7);
       }
-#if USE_MPI
-      if (isSlave || !notSinglePart) 
-#endif
-        beam->lost = (double**)resize_czarray_2d((void**)beam->lost, sizeof(double), n0*n_duplicates, 8);
 #if USE_MPI
       printf("Arrays resized\n");
 #endif

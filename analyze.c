@@ -713,13 +713,38 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     break;
   case T_SCRIPT:
 #if USE_MPI
-    if (myid==0)
-      transformBeamWithScript_s((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
-                                NULL, 0, 2);
+    if (myid==0) {
+#if MPI_DEBUG
+      printf("Calling transformBeamWithScript with force serial=1 \n");
+      fflush(stdout);
+#endif
+      transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 
+                              NULL, 0, 2, -1.0, 1);
+    } else  {
+#if MPI_DEBUG
+      printf("myid=%d in determineMatrix for SCRIPT\n", myid);
+      fflush(stdout);
+#endif
+    }
+#if MPI_DEBUG
+    printf("Preparing MPI_Bcast coordinates from serial tracking\n");
+    fflush(stdout);
+#endif
     MPI_Bcast(&(coord[0][0]), n_track*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("Finished MPI_Bcast coordinates from serial tracking\n");
+    fflush(stdout);
+    if (1) {
+      for (i=0; i<n_track; i++) 
+        printf("%le %le %le %le %le %le\n",
+               coord[i][0], coord[i][1], coord[i][2], coord[i][3], coord[i][4], coord[i][5]);
+      fflush(stdout);
+    }
+#endif
 #else
-    transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
-                              NULL, 0, 2);
+    /* Serial version */
+    transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 
+                            NULL, 0, 2, -1, 0);
 #endif
     break;
   case T_TWMTA:

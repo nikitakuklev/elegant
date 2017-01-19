@@ -191,15 +191,10 @@ void setup_bunched_beam(
     save_initial_coordinates = save_original;
   if (isSlave || !notSinglePart) {
     beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
-    if (run->losses)  
-      beam->lost = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 8);			
-    else
-      beam->lost = NULL;	
   }	
 #if SDDS_MPI_IO
   else {	
     beam->particle = NULL;
-    beam->lost = NULL;
   } 	
 #endif
   if (isSlave) {
@@ -226,6 +221,8 @@ void setup_bunched_beam(
   beam->n_accepted = beam->n_saved = 0;
   firstIsFiducial = first_is_fiducial;
   beamCounter = 0;
+  beam->lostBeam.particle = NULL;	
+  beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
   
   if (one_random_bunch) {
     /* make a seed for reinitializing the beam RN generator */
@@ -319,8 +316,8 @@ long new_bunched_beam(
 	  beam->original=(double**)czarray_2d(sizeof(double),1,7);
 	if (run->acceptance)
 	  beam->accepted=(double**)czarray_2d(sizeof(double),1,7);
-	if (run->losses)
-	  beam->lost=(double**)czarray_2d(sizeof(double),1,8);
+        beam->lostBeam.particle = NULL;	
+        beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
       }	
 #endif
     }
@@ -341,8 +338,8 @@ long new_bunched_beam(
 	    beam->original=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
 	  if (run->acceptance)
 	    beam->accepted=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
-          if (run->losses)
-            beam->lost=(double**)czarray_2d(sizeof(double), n_particles_per_bunch, 8);
+          beam->lostBeam.particle = NULL;	
+          beam->lostBeam.nLost = beam->lostBeam.nLostMax = 0;
 	}
       }
 #endif
@@ -635,7 +632,7 @@ long track_beam(
 		       ALLOW_MPI_ABORT_TRACKING,
                        firstIsFiducial && control->i_step==1 ? 1 : control->n_passes, 
                        0, &(output->sasefel), &(output->sliceAnalysis),
-		       finalCharge, beam->lost, NULL); 
+		       finalCharge, NULL, NULL); 
 #ifdef DEBUG
   printMessageAndTime(stdout, "Returned from do_tracking\n");
 #endif
@@ -752,25 +749,30 @@ void do_track_beam_output(RUN *run, VARY *control,
       fprintf(stdout, "Dumping lost-particle data...\n"); fflush(stdout);
 #if SDDS_MPI_IO
       if (SDDS_MPI_IO) {
-	long total_left;
+	long total_lost, n_lost;
 	if (notSinglePart) {
-	  if (isMaster) n_left = 0;
-	  MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	  if (isMaster) 
+            n_lost = 0;
+          else
+            n_lost = beam->lostBeam.nLost;
+	  MPI_Reduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	} else 
-	  total_left = n_left;
-	fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
-		total_left, beam->n_original_total, beam->n_original_total-total_left);
+	  total_lost = beam->lostBeam.nLost;
+	fprintf(stdout, "n_lost = %ld\n", 
+		total_lost);
       }
 #else
-      fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
-	      n_left, beam->n_to_track, beam->n_to_track-n_left);
+      fprintf(stdout, "n_lost = %ld\n", beam->lostBeam.nLost);
 #endif
       fflush(stdout);
     }
 
-    dump_lost_particles(&output->SDDS_losses, beam->lost+n_left, NULL,
-			beam->n_to_track-n_left, control->i_step);
-
+    dump_lost_particles(&output->SDDS_losses, beam->lostBeam.particle, NULL,
+			beam->lostBeam.nLost, control->i_step);
+    if (beam->lostBeam.particle && beam->lostBeam.nLostMax)
+      free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, 7);
+    beam->lostBeam.particle = NULL;
+    beam->lostBeam.nLost =  beam->lostBeam.nLostMax = 0;
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
     fflush(stdout);

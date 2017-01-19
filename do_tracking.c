@@ -48,7 +48,6 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z, double *Pcentral);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
-void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long nLeft,long  nToTrack, long pass);
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np);
 void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, double **coord, long np, 
                 double Po, double length, double charge, double z);
@@ -165,10 +164,11 @@ long do_tracking(
                  SASEFEL_OUTPUT *sasefel,
 		 SLICE_OUTPUT *sliceAnalysis,
                  double *finalCharge,
-		 double **lostParticles,
+		 double **lostParticles,  /* If beam structure not provided, this will be used. Assumed to be same length as coord array */
 		 ELEMENT_LIST *startElem
                  )
 {
+  LOST_BEAM *lostBeam, lostBeam0;
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
@@ -348,6 +348,23 @@ long do_tracking(
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
   nToTrack = nLeft = nMaximum = nOriginal;
+
+  if (beam)
+    lostBeam = &(beam->lostBeam);
+  else {
+    lostBeam = &lostBeam0;
+    lostBeam->nLostMax = nOriginal;
+    /*
+    if (lostParticles)
+    */
+      lostBeam->particle = lostParticles;
+    /* 
+    else
+      lostBeam->particle = (double**)czarray_2d(sizeof(**(lostBeam->particle)), nOriginal, COORDINATES_PER_PARTICLE+1);
+    */
+  }
+  lostBeam->nLost = 0;
+
 #if USE_MPI
   if (!partOnMaster && notSinglePart) {
     if (isMaster) nToTrack = 0; 
@@ -373,7 +390,13 @@ long do_tracking(
   eptr = &(beamline->elem);
 
 #ifdef HAVE_GPU
-  gpuBaseInit(coord, nOriginal, accepted, lostParticles, isMaster);
+  if (beam) {
+    /* GPU needs old method of loss tracking for now */
+    if (beam->lostBeam->particle==NULL || beam->lostBeam->nLostMax<nOriginal) {
+      beam->lostBeam->particle = (double**)czarray_2d(sizeof(double), nOriginal, COORDINATES_PER_PARTICLE+1);
+      beam->lostBeam->nLostMax = nOriginal;
+    }
+    gpuBaseInit(coord, nOriginal, accepted, beam->lostBeam->particle, isMaster);
 #endif
 
   flags |= beamline->fiducial_flag;
@@ -426,13 +449,13 @@ long do_tracking(
       nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
 					  0);
       if (nLeft!=nToTrack)
-	recordLostParticles(lostParticles, coord, &nLost, nLeft, nToTrack, 0);
+	recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, 0);
       nToTrack = nLeft;
     }
     if (run->apertureData.initialized)  {
       nLeft = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
       if (nLeft!=nToTrack)
-	recordLostParticles(lostParticles, coord, &nLost, nLeft, nToTrack, 0);
+	recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, 0);
       nToTrack = nLeft;
     }
   }
@@ -457,7 +480,7 @@ long do_tracking(
 	}
 	nLeft = 0;
 	if (nLeft!=nToTrack)
-	  recordLostParticles(lostParticles, coord, &nLost, nLeft, nToTrack, i_pass);
+          recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, i_pass);
 	nToTrack = 0;
       }
     }
@@ -1730,40 +1753,29 @@ long do_tracking(
 		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
 			nLost, beam?beam->n_particle:-1, beam?beam->n_to_track:-1, nLeft, nToTrack, nMaximum);
 #endif
+#if USE_MPI && MPI_DEBUG
+              printf("Preparing to call transformBeamWithScript, nToTrack=%ld\n", nToTrack);
+              fflush(stdout);
+#endif
 	      nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
-					      beam, coord, nToTrack, &nLost, 
-					      run->rootname, i_pass, run->default_order);
+					      beam, coord, nToTrack, run->rootname, i_pass, run->default_order, z, 0);
+              nLost = nToTrack-nLeft;
 #if USE_MPI
 	      nToTrack = nLeft;
-	      /* As the particles could be redistributed across processors, we need adjust the beam->n_to_track to dump lost particle coordinate at the end */ 
-	      if (beam)
-	      beam->n_to_track = nLeft+nLost;
+              nLost = 0;
+#if MPI_DEBUG
+              printf("Returned from script: nToTrack = %ld\n", nToTrack);
+              if (beam) 
+                printf("beam->n_to_track_total = %ld\n", beam->n_to_track_total);
+              fflush(stdout);
 #endif
-	      if (((SCRIPT*)eptr->p_elem)->verbosity>2 && nLeft!=nToTrack)
-		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
-			nLost, beam->n_particle, beam->n_to_track, nLeft, nToTrack, nMaximum);
+#endif
 	      if (beam && coord!=beam->particle) {
 		/* particles were created and so the particle array was changed */
 		coord = beam->particle;
-#if !USE_MPI
-		if (nLost != (beam->n_to_track - nLeft)) {
-		  fprintf(stderr, "Particle accounting problem after return from script.\n");
-		  fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
-			  nLost, beam->n_particle, nLeft);
-		  exitElegant(1);         	                        
-		}
-#endif
 	      }
-	      if (beam && lostParticles!=beam->lost)
-		lostParticles = beam->lost;
-
 	      if (beam && nMaximum<beam->n_to_track)
 		nMaximum = beam->n_to_track;
-#if !USE_MPI
-	      if (((SCRIPT*)eptr->p_elem)->verbosity>3)
-		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nMaximum=%ld\n\n",
-			nLost, beam->n_particle, beam->n_to_track, nLeft, nMaximum);
-#endif
 	      break;
 	    case T_FLOORELEMENT:
 	      break;
@@ -2108,7 +2120,7 @@ long do_tracking(
 
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
-	    recordLostParticles(lostParticles, coord, &nLost, nLeft, nToTrack, i_pass);
+            recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, i_pass);
           }
 	}
 
@@ -3850,66 +3862,66 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
   */
 }
 
-void recordLostParticles(double **lossBuffer, double **coord, long *nLost, long nLeft,long  nToTrack, long pass)
+void recordLostParticles(
+                         double **coord,      /* particle coordinates, with lost particles swapped to the top of the array */
+                         long nLeft,          /* coord+nLeft is first lost particle */
+                         long nNewLost,       /* number of newly-lost particles */
+                         LOST_BEAM *lostBeam, 
+                         long pass            /* pass on which loss occurred */
+                         )
 {
   long ip, j;
+  long n;
+  double **lossBuffer;
 
-/* 
-  static FILE *fp = NULL;
-  long nLost0;
-  if (fp==NULL) {
-    char s[1024];
-    RUN run;
-    getRunSetupContext(&run);
-    sprintf(s, "%s.losdeb", run.rootname);
-    fp = fopen(s, "w");
-    fprintf(fp, "SDDS1\n&column name=s type=double units=m &end\n");
-    fprintf(fp, "&column name=x type=double units=m &end\n");
-    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+  if (!lostBeam || !coord || nNewLost==0)
+    return;
+
+#ifdef DEBUG_CRASH
+  fprintf(stdout, "Recording %ld additional lost particles (%ld already)\n",
+          nNewLost, lostBeam->nLost);
+  fflush(stdout);
+#endif
+
+  if ((n=lostBeam->nLost + nNewLost)>lostBeam->nLostMax || lostBeam->particle==NULL) {
+    /* resize array */
+    if (n<nLeft)
+      /* allocate somewhat more than needed to reduce repeated allocation and copying */
+      n = n + (nLeft-n)/2;
+    if (lostBeam->particle==NULL)
+      lostBeam->particle = (double**) czarray_2d(sizeof(double), n, COORDINATES_PER_PARTICLE+1);
+    else 
+      lostBeam->particle = (double**) resize_czarray_2d((void**)(lostBeam->particle), sizeof(double), n, COORDINATES_PER_PARTICLE+1);
+    lostBeam->nLostMax = n;
   }
-
-  nLost0 = *nLost;
-*/
-  *nLost += (nToTrack - nLeft);
-
-  if (!lossBuffer || !coord)
-    return;
-
-  if (nLeft==nToTrack) /* no additional losses occurred */
-    return;
-  
- /* printf("recording lost particles: nLost=%ld->%ld, nLeft=%ld, nToTrack=%ld\n", 
-	 nLost0, *nLost, nLeft, nToTrack);
- */ 
+  lossBuffer = lostBeam->particle;
 
 #ifdef HAVE_GPU
   if (getGpuBase()->particlesOnGpu) {
     syncWithGpuLossBuffer(nToTrack, nLeft);
-    for (ip=nLeft; ip<nToTrack; ip++) 
+    for (ip=nLeft; ip<(nLeft+nNewLost); ip++) 
       lossBuffer[ip][7] = (double) pass;
+    lostBeam->nLost += nNewLost;
     return; 
   }
 #endif
 
-  for (ip=nLeft; ip<nToTrack; ip++) {  /* copy the lost particle coordinates and pass information */
-/*    if (!lossBuffer) {
-      fprintf(stderr, "NULL loss buffer main pointer for ip=%ld\n");
-      bombElegant("Fatal error", NULL);
+  n = lostBeam->nLost;
+  for (ip=0; ip<nNewLost; ip++) {  
+    /* copy the lost particle coordinates */
+    for (j=0; j<COORDINATES_PER_PARTICLE; j++) {
+      lossBuffer[ip+n][j] = coord[ip+nLeft][j];
     }
-    if (!lossBuffer[ip]) {
-      fprintf(stderr, "NULL loss buffer individual pointer for ip=%ld\n");
-      bombElegant("Fatal error", NULL);
-    }
-    if (!coord[ip]) {
-      fprintf(stderr, "NULL coordinnate buffer for ip=%ld\n");
-      bombElegant("Fatal error", NULL);
-    }
-*/
-    for (j=0; j<7; j++) {
-      lossBuffer[ip][j] = coord[ip][j];
-    }
-    lossBuffer[ip][7] = (double) pass;
+    /* Record the loss pass */
+    lossBuffer[ip+n][COORDINATES_PER_PARTICLE] = (double) pass;
   }  
+
+  lostBeam->nLost += nNewLost;
+
+#ifdef DEBUG_CRASH
+  fprintf(stdout, "Now have %ld lost particles\n", lostBeam->nLost);
+  fflush(stdout);
+#endif
 }
 
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
@@ -4022,8 +4034,8 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   coord = forceParticlesToCpu("scatterParticles");
 #endif
   if (myid==0) {
-    printf("Distributing %ld particles to %ld worker processors\n", *nToTrack, n_processors-1);
 #if MPI_DEBUG
+    printf("Distributing %ld particles to %ld worker processors\n", *nToTrack, n_processors-1);
     printf("Distributing particles, %ld particles now on processor %d\n", *nToTrack, myid);
 #endif
     fflush(stdout);
@@ -4220,9 +4232,8 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 
 #if MPI_DEBUG
   printf("%ld particles now on processor %d\n", *nToTrack, myid);
-#endif
-
   report_stats(stdout, "Finished distributing particles: ");
+#endif
 
   free(nToTrackCounts);
   free(rateCounts);

@@ -28,6 +28,10 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     log_entry("SDDS_ElegantOutputSetup");
     last_index = -1;
 
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup 0 for filename = %s\n", filename);
+    fflush(stdout);
+#endif
 #if USE_MPI && !SDDS_MPI_IO 
     if (myid!=0)
       return;
@@ -56,6 +60,11 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 	}
     }
 
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup 1 for filename = %s\n", filename);
+    fflush(stdout);
+#endif
+
     /* define SDDS parameters */
     for (i=0; i<n_parameters; i++) {
         index = -1;
@@ -75,6 +84,11 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
             fflush(stdout);
         last_index = index;
         }
+
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup 2 for filename = %s\n", filename);
+    fflush(stdout);
+#endif
 
     last_index = -1;
     /* define SDDS columns */
@@ -97,6 +111,11 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
         last_index = index;
         }
 
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup 3 for filename = %s\n", filename);
+    fflush(stdout);
+#endif
+
 #if SDDS_MPI_IO 
   /* In the case of parallel IO, the WiteLayout will be called at the time it dumps data or setups the output,
      as the communicator information is required */
@@ -110,6 +129,12 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
             exitElegant(1);
             }
         }
+
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup 4 for filename = %s\n", filename);
+    fflush(stdout);
+#endif
+
 
     log_exit("SDDS_ElegantOutputSetup");
     }
@@ -164,10 +189,18 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
       SDDS_table->parallel_io = 0;
     /* set up parallel IO information */      
     SDDS_MPI_Setup(SDDS_table, SDDS_table->parallel_io, n_processors, myid, MPI_COMM_WORLD, 0);  
+#if MPI_DEBUG
+    printf("SDDS_PhaseSpaceSetup, filename = %s, SDDS_MPI_Setup done with parallel_io=%ld\n", filename, SDDS_table->parallel_io);
+    fflush(stdout);
+#endif
 #endif
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             phase_space_parameter, PHASE_SPACE_PARAMETERS-2, phase_space_column, PHASE_SPACE_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+#if MPI_DEBUG
+    printf("SDDS_ElegantOutputSetup done\n");
+    fflush(stdout);
+#endif
     log_exit("SDDS_PhaseSpaceSetup");
     }
 
@@ -922,7 +955,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
         bombElegant("logic error--fraction>1 in dump_watch_parameters", NULL);
     }
     if (isSlave) {
-      if (!particle)
+      if (!particle && particles)
         bombElegant("NULL coordinate pointer passed to dump_watch_parameters", NULL);
     }
 
@@ -1611,7 +1644,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 
     log_entry("dump_lost_particles");
     if (isSlave) {
-      if (!particle)
+      if (!particle && particles)
         bombElegant("NULL coordinate pointer passed to dump_lost_particles", NULL);
     }
 

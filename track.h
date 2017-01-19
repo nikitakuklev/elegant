@@ -619,6 +619,12 @@ typedef struct {
     long crossover_type;          /* For genetic optimization only */
     } OPTIMIZATION_DATA;
 
+typedef struct {
+  double **particle;      /* coordinates of lost particles, with pass on which a particle is lost */	
+  long nLost;             /* number of particles in the array */
+  long nLostMax;          /* size of the buffer */
+} LOST_BEAM;
+
 /* structure to store particle coordinates */
 typedef struct {
     double **original;      /* original particle data */
@@ -627,7 +633,6 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
-    long n_lost;            /* number of lost paricles */
     int32_t id_slots_per_bunch;       /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
@@ -637,7 +642,7 @@ typedef struct {
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
-    double **lost;          /* coordinates of lost particles, with pass on which a particle is lost */	
+    LOST_BEAM lostBeam;
     double bunchFrequency;
     } BEAM;
 void free_beamdata(BEAM *beam);
@@ -970,7 +975,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
 #define N_WIGGLER_PARAMS 10
-#define N_SCRIPT_PARAMS 36
+#define N_SCRIPT_PARAMS 37
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -2881,6 +2886,7 @@ typedef struct {
   long keepFiles, driftMatrix;
   long useParticleID; 
   long noNewParticles;
+  long determineLossesFromParticleID;
   double NP[10];
   char *SP[10];
 } SCRIPT;
@@ -3294,6 +3300,7 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge, double **lostParticles, ELEMENT_LIST *startElem);
+extern void recordLostParticles(double **coord, long nLeft, long nLostNew, LOST_BEAM *lostBeam, long pass);
 extern void resetElementTiming();
 extern void reportElementTiming();
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
@@ -3315,12 +3322,12 @@ void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pas
 void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral));
 void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+                             long np, char *mainRootname, long iPass, long driftOrder, double z, long forceSerial);
 long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+                              long np, char *mainRootname, long iPass, long driftOrder, double z);
 #ifdef USE_MPI
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, long *nLost, char *mainRootname, long iPass, long driftOrder);
+                               long np, char *mainRootname, long iPass, long driftOrder, double z);
 #endif
 void convertToCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
 void convertFromCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
