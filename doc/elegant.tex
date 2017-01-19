@@ -61,11 +61,18 @@ Here is a summary of what's changed since release 32.0.
   discussions with J. Calvey and T. Berenc (APS).
 \item The \verb|RFMODE| element now supports injection of noise into the rf source and low-level rf system. This is based on discussions
   with T. Berenc (APS).
+\item The \verb|SCRIPT| element can now import \verb|particleID| data from the script without attempting to use this information
+  for lost-particle accounting. This provides better functionality when the \verb|particleID| is used for other purposes, such as
+  bunch membership.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
+  \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
+\item Compared to previous versions, the lost-particle data file (\verb|losses| file requested by the \verb|run_setup|
+  command) will show changes in the order in which particles are recorded. This was a result of reworking the code for
+  lost particle management.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
