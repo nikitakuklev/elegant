@@ -48,7 +48,9 @@ Note that historical changes logs are appended to the end of this manual.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The \verb|correction_matrix_output| command command were ignoring the monitor calibrations
+  (\verb|MONI|, \verb|HMON|, and \verb|VMON|) values when \verb|use_response_from_computed_orbits = 1|.
+  This was reported by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
