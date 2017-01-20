@@ -1718,6 +1718,9 @@ long do_tracking(
 	      track_through_ztransverse(coord, nToTrack, (ZTRANSVERSE*)eptr->p_elem, *P_central, run, i_pass,
 					charge);
 	      break;
+            case T_IONEFFECTS:
+              trackWithIonEffects(coord, nToTrack, (IONEFFECTS*)eptr->p_elem, *P_central, i_pass, charge);
+              break;
 	    case T_CORGPIPE:
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 
                                         nToTrack, accepted, z-((CORGPIPE*)eptr->p_elem)->length, *P_central, 0, 0, 2, 2);

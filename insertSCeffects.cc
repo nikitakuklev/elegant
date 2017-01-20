@@ -239,8 +239,8 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
     }
   }
   else {
-    sigmax = computeRmsCoordinate(part, 0, np);
-    sigmay = computeRmsCoordinate(part, 2, np);
+    sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
+    sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
     for(i=0; i<np; i++) {
       coord = part[i];
       /* remove linear kick approximation.
@@ -395,9 +395,9 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
      when the function is called, all the processors will do the same */
   notSinglePart = 0;  
 #endif
-  sc->sigmax = computeRmsCoordinate(part, 0, np);
-  sc->sigmay = computeRmsCoordinate(part, 2, np);
-  sc->sigmaz = computeRmsCoordinate(part, 4, np);
+  sc->sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
+  sc->sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
+  sc->sigmaz = computeRmsCoordinate(part, 4, np, NULL, NULL);
 #ifdef DEBUG
   printf("initializeSCMULT 2\n"); fflush(stdout);
 #endif
@@ -432,8 +432,8 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   sc->sigmax = computeRmsCoordinate_p(part, 0, np, eptr);
   sc->sigmay = computeRmsCoordinate_p(part, 2, np, eptr);
 #else
-  sc->sigmax = computeRmsCoordinate(part, 0, np);
-  sc->sigmay = computeRmsCoordinate(part, 2, np);
+  sc->sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
+  sc->sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
 #endif
   twiss0 = eptr->twiss;
   temp = sc->sigmax + sc->sigmay;
@@ -445,7 +445,7 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   sc->dmuy += dmuy * length /2.0;
 }
 
-double computeRmsCoordinate(double **coord, long i1, long np)
+double computeRmsCoordinate(double **coord, long i1, long np, double *meanReturn, long *countReturn)
 {
   double vrms=0.0, xc=0.0;
   long i;
@@ -492,6 +492,16 @@ double computeRmsCoordinate(double **coord, long i1, long np)
     vrms = vrms_sum/np_total;
   }
 #endif 
+  if (meanReturn)
+    *meanReturn = xc;
+#if USE_MPI
+  if (countReturn)
+    *countReturn = np_total;
+#else
+  if (countReturn)
+    *countReturn = np;
+#endif
+
   return(sqrt(vrms));
 }
 

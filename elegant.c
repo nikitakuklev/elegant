@@ -165,7 +165,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define RF_SETUP 62
 #define CHAOS_MAP  63
 #define TUNE_FOOTPRINT 64
-#define N_COMMANDS      65
+#define ION_EFFECTS 65
+#define N_COMMANDS      66
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -180,7 +181,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint",
+    "tune_footprint", "ion_effects",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -249,6 +250,7 @@ char *description[N_COMMANDS] = {
     "rf_setup                         set rf cavity frequency, phase, and voltage for ring simulation",
     "chaos_map                        command to perform chaos map analysis",
     "tune_footprint                   command to perform tune footprint tracking",
+    "ion_effects                      command to set up modeling of ion effects"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -886,6 +888,11 @@ char **argv;
                       (correct.track_before_and_after || correct.start_from_centroid));
       setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
       beam_type = SET_SDDS_BEAM;
+      break;
+    case ION_EFFECTS:
+      if (!run_setuped)
+        bombElegant("run_setup must precede ion_effects namelist", NULL);
+      setupIonEffects(&namelist_text, &run_conditions);
       break;
     case TRACK:
     case ANALYZE_MAP:

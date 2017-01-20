@@ -65,6 +65,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
+    "IONEFFECTS"
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -190,6 +191,7 @@ char *entity_text[N_TYPES] = {
     "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z).",
     "A straight magnetic field element using generalized gradient expansion.",
     "Conditional branch instruction to jump to another part of the beamline",
+    "Simulates ionization of residual gas and interaction with the beam."
     } ;
 
 QUAD quad_example;
@@ -2706,6 +2708,18 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"SYMPLECTIC", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator"},
 };  
 
+IONEFFECTS ionEffects_example;
+PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS] = {
+    {"DISABLE", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.disable), NULL, 0.0, 0, "If non-zero, turn off ion effects in the region covered by this element."},
+    {"MACRO_IONS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.macroIons), NULL, 0.0, 0, "If non-zero, overrides the default value set in the ion_effects command, giving the number of macro ions generated per bunch passage."},
+    {"X_SPAN", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.xSpan), NULL, 0.0, 0, "If non-zero, gives the region over which ions are kept."},
+    {"Y_SPAN", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.ySpan), NULL, 0.0, 0, "If non-zero, gives the region over which ions are kept."},
+    {"STARTPASS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.startPass), NULL, 0.0, 0, "If positive, gives the pass on which ion effects start."},
+    {"ENDPASS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.endPass), NULL, 0.0, -1, "If positive, gives the pass on which ion effects end."},
+    {"PASSINTERVAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.passInterval), NULL, 0.0, 1, "Interval between ion effects modeling."},
+
+};  
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2845,6 +2859,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BRAT_PARAMS,     HAS_LENGTH,   sizeof(BRAT),  brat_param      },
     { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
+    { N_IONEFFECTS_PARAMS, 0,     sizeof(IONEFFECTS),  ionEffects_param    },
 } ;
 
 void compute_offsets()

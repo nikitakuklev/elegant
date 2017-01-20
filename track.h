@@ -888,7 +888,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BRAT 115
 #define T_BGGEXP 116
 #define T_BRANCH 117
-#define N_TYPES  118
+#define T_IONEFFECTS 118
+#define N_TYPES  119
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1013,6 +1014,7 @@ extern char *entity_text[N_TYPES];
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 12
 #define N_BRANCH_PARAMS 3
+#define N_IONEFFECTS_PARAMS 7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -3040,6 +3042,26 @@ typedef struct {
   ntuple *Bx, *By, *Bz;
 } FTABLE;  
 
+
+extern PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS];
+
+typedef struct {
+  long disable;
+  long macroIons;
+  double xSpan, ySpan;
+  long startPass, endPass, passInterval;
+  /* internal parameters */
+  double sStart, sEnd;            /* coordinate range over which this element is modeling ions */
+  double *pressure;               /* pressure for each species averaged over the effective length.
+                                   * Indices line up with those used in the pressure input file.
+                                   */
+#define COORDINATES_PER_ION 4
+  double t;                        /* time at which ion coordinates were last computed */
+  double ***coordinate;            /* coordinate[i][j][k] is the kth coordinate of the jth ion of species i */
+                                   /* coordinate order is (x, vx, y, vy) */
+  long *nIons;                     /* nIons[i] is the number of ions of species i */
+} IONEFFECTS ;
+
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 #define SAME_BEND_PRECEDES 1 
@@ -3385,7 +3407,7 @@ extern double approximateBeamWidth_p(double fraction, double **part, long nPart,
 extern double rms_emittance_p(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance_p(double **coord, long n, double Po, long startPID, long endPID);
-double computeAverage_p(double *data, long np, MPI_Comm mpiComm);
+extern double computeAverage_p(double *data, long np, MPI_Comm mpiComm);
 #endif
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
 void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles);
@@ -4062,7 +4084,7 @@ long insertSCMULT(char *name, long type, long *occurrence);
 void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass );
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
-double computeRmsCoordinate(double **coord, long i1, long np);
+double computeRmsCoordinate(double **coord, long i1, long np, double *mean, long *countReturn);
 #if USE_MPI
 double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr);
 #endif
@@ -4183,6 +4205,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
 void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
 #endif
 
+void setupIonEffects(NAMELIST_TEXT *nltext, RUN *run);
+void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline);
+void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, CHARGE *charge);
 
 extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, double **final, double **error, 
 				 double *step_size, double *maximum_value, int n_points1, int n_points_total,
