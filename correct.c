@@ -2285,7 +2285,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   char *matrixTypeName[2][2] = {{"H", "HV"}, {"VH", "V"}};
   char memName[1024];
   double conditionNumber, W0=0.0;
-  
+
   start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
                                  &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 
@@ -2377,8 +2377,10 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* compute coefficients of array C that are driven by this corrector */
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       i = CM->mon_index[i_moni];
-      Mij(CM->C, i_moni, i_corr) = (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/(2*corr_tweek);
-
+      Mij(CM->C, i_moni, i_corr) = 
+        (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/(2*corr_tweek)*
+        getMonitorCalibration(CM->umoni[i_moni], coord);
+      
       /* store result in rpn memory */
       sprintf(memName, "%sR_%s#%ld_%s#%ld.%s", 
               matrixTypeName[CM->bpmPlane][CM->corrPlane],
