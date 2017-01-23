@@ -1720,6 +1720,7 @@ long do_tracking(
 	      break;
             case T_IONEFFECTS:
               trackWithIonEffects(coord, nToTrack, (IONEFFECTS*)eptr->p_elem, *P_central, i_pass, charge);
+              nLeft = nToTrack;
               break;
 	    case T_CORGPIPE:
               nLeft = elimit_amplitudes(coord, ((CORGPIPE*)eptr->p_elem)->radius, ((CORGPIPE*)eptr->p_elem)->radius, 

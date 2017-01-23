@@ -85,13 +85,13 @@ void readGasPressureData(char *filename)
    * Parameters: Gasses --- SDDS_STRING giving comma- or space-separated list of gas species, e.g., "H2O H2 N2 O2 CO2 CO CH4"
    * Columns:
    * s         --- SDDS_FLOAT or SDDS_DOUBLE giving location in the lattice
-   * <gasName> --- SDDS_FLOAT or SDDS_DOUBLE giving pressure of <gasName> in Torr.
+   * <gasName> --- SDDS_FLOAT or SDDS_DOUBLE giving pressure of <gasName> in Torr or nT
    */
 
   SDDS_DATASET SDDSin;
   char *gasColumnList, *ptr;
   long i;
-  double dsMin, dsMax, ds;
+  double dsMin, dsMax, ds, pressureMultiplier;
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename)) {
     printf("Problem opening pressure data file %s\n", filename);
@@ -100,8 +100,8 @@ void readGasPressureData(char *filename)
 
   if (!check_sdds_column(&SDDSin, "s", "m"))
     bombElegantVA("Column 's' is missing or does not have units of 'm' in %s", filename);
-  if (!SDDS_CheckParameter(&SDDSin, "Gasses", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
-    bombElegantVA("Parameters 'Gasses' is missing or not string type in %s", filename);
+  if (SDDS_CheckParameter(&SDDSin, "Gasses", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
+    bombElegantVA("Parameters \"Gasses\" is missing or not string type in %s", filename);
   
   if (SDDS_ReadPage(&SDDSin)<=0) 
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -128,11 +128,21 @@ void readGasPressureData(char *filename)
 
   pressureData.pressure = (double**)czarray_2d(sizeof(double), pressureData.nLocations, pressureData.nGasses);
   for (i=0; i<pressureData.nGasses; i++) {
-    if (!check_sdds_column(&SDDSin, pressureData.gasName[i], "Torr")) 
-      bombElegantVA("Column \"%s\" is missing, not floating-poinnt type, or does not have units of \"Torr\" in %s", 
-                    pressureData.gasName[i], filename);
+    pressureMultiplier = 1;
+    if (!check_sdds_column(&SDDSin, pressureData.gasName[i], "Torr") && !check_sdds_column(&SDDSin, pressureData.gasName[i], "T")) {
+      pressureMultiplier = 1e-9;
+      if (!check_sdds_column(&SDDSin, pressureData.gasName[i], "nT") && !check_sdds_column(&SDDSin, pressureData.gasName[i], "nTorr"))
+        bombElegantVA("Column \"%s\" is missing, not floating-point type, or does not have units of \"Torr\" or \"nT\" in %s", 
+                      pressureData.gasName[i], filename);
+    }
     if (!(pressureData.pressure[i] = SDDS_GetColumnInDoubles(&SDDSin, pressureData.gasName[i]))) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (pressureMultiplier!=1) {
+      /* Convert to Torr */
+      long j;
+      for (j=0; j<pressureData.nLocations; j++)
+        pressureData.pressure[i][j] *= pressureMultiplier;
     }
   }
 
@@ -140,7 +150,7 @@ void readGasPressureData(char *filename)
   for (i=1; i<pressureData.nLocations; i++) {
     ds = pressureData.s[i] - pressureData.s[i-1];
     if (ds<=0)
-      bombElegantVA("s data is not monotonically increasing in pressure data file %s", filename);
+      bombElegantVA("s data is not monotonically increasing in pressure data file %s (%le, %le)", filename, pressureData.s[i-1], pressureData.s[i]);
     if (dsMin>ds)
       dsMin = ds;
     if (dsMax<ds)
@@ -161,7 +171,7 @@ void readIonProperties(char *filename)
    * Mass          --- SDDS_FLOAT or SDDS_DOUBLE, in AMU
    * ChargeState   --- SDDS_LONG or SDDS_SHORT, ion charge state (positive integer)
    * SourceName    --- SDDS_STRING, Name of the source molecule for this ion, e.g., "H2O", "CO+"
-   * CrossSection  --- SDDS_FLOAT or SDDS_DOUBLE, Cross section for producing ion from source
+   * CrossSection  --- SDDS_FLOAT or SDDS_DOUBLE, Cross section for producing ion from source, in m^2 (m$a2$n)
    */
 
   SDDS_DATASET SDDSin;
@@ -172,6 +182,13 @@ void readIonProperties(char *filename)
     printf("Problem opening ion properties data file %s\n", filename);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
+  if (!check_sdds_column(&SDDSin, "Mass", "AMU"))
+    bombElegantVA("Column \"Mass\" is missing, not floating-point type, or does not have units of \"AMU\" in %s\n",
+                  filename);
+  if (!check_sdds_column(&SDDSin, "CrossSection", "m$a2$n") &&
+      !check_sdds_column(&SDDSin, "CrossSection", "m^2"))
+    bombElegantVA("Column \"CrossSection\" is missing, not floating-point type, or does not have units of \"m$a2$n\" in %s\n",
+                  filename);
 
   if (SDDS_ReadPage(&SDDSin)<=0) 
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -217,24 +234,23 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   /* scan through the beamline, find IONEFFECTS elements, set parameters */
   ELEMENT_LIST *eptr, *eptrLast;
   IONEFFECTS *ionEffects;
+  short chargeSeen = 0;
 
   eptr = &(beamline->elem);
-  eptrLast = NULL;
-  if (eptr->type == T_IONEFFECTS) {
-    ionEffects = (IONEFFECTS*)eptr->p_elem;
-    ionEffects->sStart = 0;
-    eptrLast = eptr;
-    eptr = eptr->succ;
-  }
+  eptrLast = eptr;
+  if (eptr->type == T_IONEFFECTS) 
+    bombElegant("ION_EFFECTS element cannot be the first element in the beamline", NULL);
   while (eptr) {
+    if (eptr->type == T_CHARGE)
+      chargeSeen = 1;
     if (eptr->type == T_IONEFFECTS) {
+      if (!chargeSeen)
+        bombElegant("ION_EFFECTS element preceeds the CHARGE element", NULL);
       /* Set the start of the s range for this element */
       ionEffects = (IONEFFECTS*)eptr->p_elem;
       ionEffects->sStart = (eptrLast->end_pos + eptr->end_pos)/2;
-      if (eptr->succ == NULL) {
-        /* last element in the beamline, so s range ends here */
-        ionEffects->sEnd = eptr->end_pos;
-      }
+      /* in case this is the last element in the beamline, set s so the range ends here */
+      ionEffects->sEnd = eptr->end_pos;
       if (eptrLast && eptrLast->type == T_IONEFFECTS) {
         /* set the s range for the previous ion effects element */
         ionEffects = (IONEFFECTS*)eptrLast->p_elem;
@@ -261,6 +277,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
         printf("Average pressures over s:[%le, %le] m\n", ionEffects->sStart, ionEffects->sEnd);
         for (i=0; i<pressureData.nGasses; i++)
           printf("%s:%.2f nT  ", pressureData.gasName[i], ionEffects->pressure[i]*1e9);
+        printf("\n");
         fflush(stdout);
       }
 
@@ -319,6 +336,10 @@ void trackWithIonEffects
 #endif
 
     for (iBunch=0; iBunch<nBunches; iBunch++) {
+      if (verbosity>2) {
+        printf("Working on bunch %ld\n", iBunch);
+        fflush(stdout);
+      }
       /* Loop over all bunches */
       if (nBunches==1) {
         time = time0;
@@ -369,6 +390,11 @@ void trackWithIonEffects
 #endif
       /* total bunch charge */
       qBunch = npTotal*charge->macroParticleCharge;
+      if (verbosity>3) {
+        printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
+               npTotal, tNow, sigma[0], sigma[1], centroid[0], centroid[1], qBunch);
+        fflush(stdout);
+      }
 
       /*** Advance the ion positions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -453,9 +479,9 @@ void trackWithIonEffects
 
       /*** Determine and apply kicks to beam from the total ion field */
       for (ip=0; ip<np; ip++) {
-        /* Here, for illustration, just give a 1 mrad x kick and a -0.5 mrad y kick */
-        part[ip][1] += 1e-3;
-        part[ip][3] -= 0.5e-3;
+        /* Here, for illustration, just give a 1 urad x kick and a -0.5 urad y kick */
+        part[ip][1] += 1e-6;
+        part[ip][3] -= 0.5e-6;
       }
       
       if (nBunches!=1) {
@@ -489,8 +515,8 @@ void computeAverageGasPressures(double sStart, double sEnd, double *pressure)
   for (iLocation=0; iLocation<pressureData.nLocations; iLocation++) {
     if (pressureData.s[iLocation]>=sStart && iStart==-1)
       iStart = iLocation;
-    if (pressureData.s[iLocation]<sEnd)
-      iEnd = pressureData.s[iLocation];
+    if (pressureData.s[iLocation]<=sEnd)
+      iEnd = iLocation;
   }
   if (iStart==-1 || iEnd==-1 || iEnd<=iStart)
     bombElegantVA("Failed to find indices corresponding to pressure region s:[%le, %le] m\n",

@@ -332,7 +332,7 @@ char **argv;
   long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0, moments_computed = 0;
-  long correctionDone, linear_chromatic_tracking_setup_done = 0;
+  long correctionDone, linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
   unsigned long pipeFlags = 0;
@@ -602,7 +602,7 @@ char **argv;
   initialize_structures(&run_conditions, &run_control, &error_control, &correct, &beam, &output_data,
                         &optimize, &chrom_corr_data, &tune_corr_data, &links);
   
-  run_setuped = run_controled = error_controled = correction_setuped = 0;
+  run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
   
   starting_coord = tmalloc(sizeof(*starting_coord)*7);
   
@@ -638,7 +638,7 @@ char **argv;
       reset_alter_specifications();
       clearSliceAnalysis();
       finish_load_parameters();
-      run_setuped = run_controled = error_controled = correction_setuped = 0;
+      run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
@@ -893,6 +893,7 @@ char **argv;
       if (!run_setuped)
         bombElegant("run_setup must precede ion_effects namelist", NULL);
       setupIonEffects(&namelist_text, &run_conditions);
+      ionEffectsSeen = 1;
       break;
     case TRACK:
     case ANALYZE_MAP:
@@ -922,6 +923,8 @@ char **argv;
           bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
         if (beam_type==-1)
           bombElegant("beam must be defined prior to tracking", NULL);
+        if (ionEffectsSeen)
+          completeIonEffectsSetup(&run_conditions, beamline);
         break;
       case ANALYZE_MAP:
         if (!run_setuped || !run_controled)
@@ -1175,7 +1178,8 @@ char **argv;
       show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+        ionEffectsSeen = 0;
       break;
     case MATRIX_OUTPUT:
       if (!run_setuped)
@@ -1289,7 +1293,8 @@ char **argv;
       show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+        ionEffectsSeen = 0;
 #if USE_MPI
       runInSinglePartMode = 0; /* We should set the flag to the normal parallel tracking after parallel optimization */
 #endif
@@ -1543,7 +1548,8 @@ char **argv;
       show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+        ionEffectsSeen = 0;
       break;
     case LINK_CONTROL:
       if (!run_setuped || !run_controled)
@@ -1632,7 +1638,8 @@ char **argv;
       show_element_timing = monitor_memory_usage = 0;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 
+        ionEffectsSeed = 0;
 #endif
       break;
     case SASEFEL_AT_END:
