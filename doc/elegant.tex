@@ -67,6 +67,8 @@ Note that historical changes logs are appended to the end of this manual.
 \item The \verb|SCRIPT| element can now import \verb|particleID| data from the script without attempting to use this information
   for lost-particle accounting. This provides better functionality when the \verb|particleID| is used for other purposes, such as
   bunch membership.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, used for bunch-by-bunch feedback, now allow 30-term FIR filters, up from
+  15 turns in earlier versions.
 \end{itemize}
 
 \subsection{New and Modified Commands}

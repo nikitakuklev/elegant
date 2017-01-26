@@ -6,8 +6,8 @@ TFBPICKUP} element.  This is the pickup from which the driver gets its
 signal.  Each pickup may feed more than one driver, but a driver can
 use only one pickup.
 
-A 15-term FIR filter can be defined using the {\tt A0} through {\tt
-A14} parameters.  The output of the filter is simply $\sum_{i=0}^{14}
+A 30-term FIR filter can be defined using the {\tt A0} through {\tt
+A29} parameters.  The output of the filter is simply $\sum_{i=0}^{29}
 a_i P_i$, where $P_i$ is the pickup filter output from $i*U$ turns ago,
 where $U$ is the \verb|UPDATE_INTERVAL| value specified for the pickup.
 The output of the filter is optionally delayed by the number of update intervals
