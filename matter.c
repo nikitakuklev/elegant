@@ -92,7 +92,7 @@ long track_through_matter(
   prob = probBS = probER = 0;
   if (Nrad<1e-3 || matter->nuclearBremsstrahlung || matter->electronRecoil) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
-      bombElegant("MATTER element is too thin---provide Z, A, and rho for single-scattering calculation.", NULL);
+      bombElegant("MATTER element is too thin or requests special features---provide Z, A, and rho for single-scattering calculation.", NULL);
     K1 = 4*matter->Z*(matter->Z+1)*sqr(particleRadius/(beta*Po));
     K2 = sqr(pow(matter->Z, 1./3.)*ALPHA/Po);
     sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
