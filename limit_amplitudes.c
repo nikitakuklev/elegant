@@ -947,6 +947,8 @@ long remove_outlier_particles(
         exitElegant(1);
         break;
       }
+      if (isnan(ini[j]) || isinf(ini[j]))
+	is_out = 1;
       if (is_out)
         break;
     }
