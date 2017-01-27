@@ -954,10 +954,10 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 27
+#define N_ZLONGIT_PARAMS 28
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 15
-#define N_ZTRANSVERSE_PARAMS 36
+#define N_ZTRANSVERSE_PARAMS 37
 #define N_IBSCATTER_PARAMS 12
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
@@ -2541,6 +2541,7 @@ typedef struct {
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
     long bunchedBeamMode;
+    long allowLongBeam;       /* If nonozero, then long bunches don't cause abort */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
@@ -2578,6 +2579,7 @@ typedef struct {
     long xDriveExponent, yDriveExponent;
     long xProbeExponent, yProbeExponent;
     long bunchedBeamMode;
+    long allowLongBeam;       /* If nonozero, then long bunches don't cause abort */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;

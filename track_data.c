@@ -1582,6 +1582,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&zlongit_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+    {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&zlongit_example.allowLongBeam), NULL, 0.0, 0, "Allow beam longer than covered by impedance data?"},
     };
 
 SREFFECTS SReffects_example;
@@ -1672,6 +1673,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"X_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.xProbeExponent), NULL, 0.0, 0, "Exponent applied to x coordinates of probe particles"},
     {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&ztransverse_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+    {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&ztransverse_example.allowLongBeam), NULL, 0.0, 0, "Allow beam longer than covered by impedance data?"},
 };
 
 IBSCATTER ibs_example;

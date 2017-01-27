@@ -226,20 +226,22 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
                 tcontext.elementName, iBucket, tmin, tmax, tmax-tmin, nb*dt);
         fprintf(stdout, "If using broad-band impedance, you should increase the number of bins (or use auto-scaling) and rerun.\n");
         fprintf(stdout, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+	if (!zlongit->allowLongBeam) {
 #if USE_MPI
 #if MPI_DEBUG
-        for (ip=0; ip<np; ip++)
-          printf("particle %5ld: t=%21.15e, delta=%21.15e\n", ip, time[ip], part[ip][5]);
-        printf("Issuing MPI abort from ZLONGIT\n");
-        fflush(stdout);
+	  for (ip=0; ip<np; ip++)
+	    printf("particle %5ld: t=%21.15e, delta=%21.15e\n", ip, time[ip], part[ip][5]);
+	  printf("Issuing MPI abort from ZLONGIT\n");
+	  fflush(stdout);
 #endif
-        mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT;
-        return;
+	  mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT;
+	  return;
 #else
-        exitElegant(1);
+	  exitElegant(1);
 #endif
+	}
       }
-
+      
       if (zlongit->reverseTimeOrder) {
         for (ip=0; ip<np; ip++)
           time[ip] = 2*tmean-time[ip];

@@ -189,7 +189,20 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
                 iBucket, tmax-tmin, nb*dt);
         fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
         fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
-        exitElegant(1);
+	if (!ztransverse->allowLongBeam) {
+#if USE_MPI
+#if MPI_DEBUG
+	  for (ip=0; ip<np; ip++)
+	    printf("particle %5ld: t=%21.15e, delta=%21.15e\n", ip, time[ip], part[ip][5]);
+	  printf("Issuing MPI abort from ZLONGIT\n");
+	  fflush(stdout);
+#endif
+	  mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE;
+	  return;
+#else
+	  exitElegant(1);
+#endif
+	}
       }
 
       if (nb>max_n_bins) {
