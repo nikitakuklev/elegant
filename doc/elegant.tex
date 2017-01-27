@@ -69,6 +69,7 @@ Note that historical changes logs are appended to the end of this manual.
   bunch membership.
 \item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, used for bunch-by-bunch feedback, now allow 30-term FIR filters, up from
   15 turns in earlier versions.
+\item Added the \verb|ALLOW_LONG_BEAM| parameter to the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -76,7 +77,7 @@ Note that historical changes logs are appended to the end of this manual.
 \item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
   \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
 \item Compared to previous versions, the lost-particle data file (\verb|losses| file requested by the \verb|run_setup|
-  command) will show changes in the order in which particles are recorded. This was a result of reworking the code for
+  command) will exhibit changes in the order in which particles are recorded. This was a result of reworking the code for
   lost particle management.
 \end{itemize}
 
