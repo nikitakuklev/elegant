@@ -2004,10 +2004,9 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
       *kick_coef = trealloc(*kick_coef, sizeof(**kick_coef)*(*ncor+1));
       if (!((*kick_coef)[*ncor] = compute_kick_coefficient(corr, plane, corr->type, 
                                                            SL->corr_tweek[index], corr->name, SL->corr_param[index], run))) {
-        fprintf(stdout, "error: changing %s.%s does not kick the beam--can't use for steering.\n",
+        fprintf(stdout, "warning: changing %s.%s does not kick the beam--use for steering may result in a crash!\n",
                 corr->name, SL->corr_param[index]);
         fflush(stdout);
-        exitElegant(1);
       }
       
       if (!recircs) {
