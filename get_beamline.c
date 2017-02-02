@@ -26,6 +26,7 @@ void show_elem(ELEMENT_LIST *eptr, long type);
 void process_rename_request(char *s, char **name, long n_names);
 long find_parameter_offset(char *param_name, long elem_type);
 void resolveBranchPoints(LINE_LIST *lptr);
+void copyEdgeIndices(char *target, long targetType, char *source, long sourceType);
 
 /* elem: root of linked-list of ELEM structures 
  * This list contains the definitions of all elements as supplied in the
@@ -257,6 +258,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                   *((double*)(pNew+ip2)) = *((double*)(eptr->p_elem+ip1));
                 }
               }
+              if (IS_BEND(newType))
+                copyEdgeIndices(pNew, newType, eptr->p_elem, eptr->type);
               free(eptr->p_elem);
               eptr->p_elem = pNew;
               eptr->type = newType;
@@ -1532,3 +1535,59 @@ void resolveBranchPoints(LINE_LIST *lptr)
     } while ((eptr=eptr->succ));
 }
 
+void copyEdgeIndices(char *target, long targetType, char *source, long sourceType)
+{
+  long e1Index, e2Index;
+
+  e1Index = 0;
+  e2Index = 1;
+
+  switch (sourceType) {
+  case T_SBEN:
+  case T_RBEN:
+    e1Index = ((BEND*)source)->e1Index;
+    e2Index = ((BEND*)source)->e2Index;
+    break;
+  case T_KSBEND:
+    e1Index = ((KSBEND*)source)->e1Index;
+    e2Index = ((KSBEND*)source)->e2Index;
+    break;
+  case T_NIBEND:
+    e1Index = ((NIBEND*)source)->e1Index;
+    e2Index = ((NIBEND*)source)->e2Index;
+    break;
+  case T_CSBEND:
+    e1Index = ((CSBEND*)source)->e1Index;
+    e2Index = ((CSBEND*)source)->e2Index;
+    break;
+  case T_CSRCSBEND:
+    e1Index = ((CSRCSBEND*)source)->e1Index;
+    e2Index = ((CSRCSBEND*)source)->e2Index;
+    break;
+  }
+
+  switch (targetType) {
+  case T_SBEN:
+  case T_RBEN:
+    ((BEND*)target)->e1Index = e1Index;
+    ((BEND*)target)->e2Index = e2Index;
+    break;
+  case T_KSBEND:
+    ((KSBEND*)target)->e1Index = e1Index;
+    ((KSBEND*)target)->e2Index = e2Index;
+    break;
+  case T_NIBEND:
+    ((NIBEND*)target)->e1Index = e1Index;
+    ((NIBEND*)target)->e2Index = e2Index;
+    break;
+  case T_CSBEND:
+    ((CSBEND*)target)->e1Index = e1Index;
+    ((CSBEND*)target)->e2Index = e2Index;
+    break;
+  case T_CSRCSBEND:
+    ((CSRCSBEND*)target)->e1Index = e1Index;
+    ((CSRCSBEND*)target)->e2Index = e2Index;
+    break;
+  }
+
+}
