@@ -4,6 +4,7 @@ all:: elegant.ps elegant.pdf overview.ps overview.pdf Pelegant.ps Pelegant.pdf h
 elegant.ps:
 	rm -f elegant.aux elegant.dvi elegant.log elegant.toc dictionary.tex
 	elegant print_dict.ele
+	examples/collectDescriptions 
 	latex elegant
 	latex elegant
 	dvips elegant -o elegant.ps

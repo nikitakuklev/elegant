@@ -9,21 +9,10 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set fd [open "descriptions.tex" w]
+cd [file dirname $argv0]
 
-puts $fd "\\documentclass{article}"
-puts $fd "\\pagestyle{plain}"
-puts $fd "\\setlength{\\topmargin}{0.15 in}"
-puts $fd "\\setlength{\\oddsidemargin}{0 in}"
-puts $fd "\\setlength{\\textwidth}{6.0 in}"
-puts $fd "\\setlength{\\textheight}{9 in}"
-puts $fd "\\begin{document}"
-puts $fd "\\begin{center}"
-puts $fd "{\\LARGE Description of elegant examples}\\\\"
-puts $fd "{\\Large Michael Borland}\\\\"
-puts $fd "\\today"
-puts $fd "\\vspace*{10mm}"
-puts $fd "\\end{center}"
+set fd [open "../examples.tex" w]
+
 puts $fd "\\begin{itemize}"
 
 proc copyFile {filename} {
@@ -74,7 +63,4 @@ if $endNeeded {
 }
 
 puts $fd "\\end{itemize}"
-puts $fd "\\end{document}"
 close $fd
-catch {exec pdflatex descriptions.tex}
-file delete descriptions.tex descriptions.aux descriptions.log
