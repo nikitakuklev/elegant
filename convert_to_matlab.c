@@ -52,16 +52,16 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
       case T_SBEN:
         bend = (BEND*)eptr->p_elem;
         angle = bend->angle;
-        E1 = bend->e1;
-        E2 = bend->e2;
+        E1 = bend->e[bend->e1Index];
+        E2 = bend->e[bend->e2Index];
         length = bend->length;
         k1 = bend->k1;
         break;
       case T_CSBEND:
         csbend = (CSBEND*)eptr->p_elem;
         angle = csbend->angle;
-        E1 = csbend->e1;
-        E2 = csbend->e2;
+        E1 = csbend->e[csbend->e1Index];
+        E2 = csbend->e[csbend->e2Index];
         length = csbend->length;
         k1 = csbend->k1;
         slices = csbend->n_kicks;
@@ -69,8 +69,8 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
       case T_CSRCSBEND:
         csrbend = (CSRCSBEND*)eptr->p_elem;
         angle = csrbend->angle;
-        E1 = csrbend->e1;
-        E2 = csrbend->e2;
+        E1 = csrbend->e[csrbend->e1Index];
+        E2 = csrbend->e[csrbend->e2Index];
         length = csrbend->length;
         k1 = csrbend->k1;
         slices = csrbend->n_kicks;

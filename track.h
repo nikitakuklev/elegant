@@ -1119,18 +1119,19 @@ typedef struct {
 extern PARAMETER bend_param[N_BEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, e1, e2, tilt;
-    double k2, h1, h2, hgap, fint;
+    double length, angle, k1, e[2], tilt;
+    double k2, h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long edge1_effects, edge2_effects;
+    long edge_effects[2];
     long order, edge_order, TRANSPORT;
     long use_bn;
     double b1, b2;
     /* for internal use only: */
     unsigned long edgeFlags;
     double k1_internal, k2_internal;
+    long e1Index, e2Index;
     } BEND;
 
 /* names and storage structure for drift length physical parameters */
@@ -1905,16 +1906,17 @@ typedef struct {
 extern PARAMETER ksbend_param[N_KSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, e1, e2, tilt;
-    double h1, h2, hgap, fint;
+    double length, angle, k1, k2, k3, k4, e[2], tilt;
+    double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects, edge_order, paraxial, TRANSPORT;
+    long edge_effects[2], edge_order, paraxial, TRANSPORT;
     char *method; 
     /* for internal use only */
     long flags;
+    long e1Index, e2Index;
     } KSBEND;
 
 /* names and storage structure for kick quadrupole physical parameters */
@@ -2070,7 +2072,7 @@ typedef struct {
 extern PARAMETER nibend_param[N_NIBEND_PARAMS];
 
 typedef struct {
-    double length, angle, e1, e2, tilt;
+    double length, angle, e[2], tilt;
     double dx, dy, dz;
     double fint, hgap;          /* used to calculate flen */
     double fp1, fp2, fp3, fp4;  /* fringe-field parameters 1 and 2 */
@@ -2091,6 +2093,7 @@ typedef struct {
     double s_offset;        /* error in path length, which must be compensated with drifts before and after */
     long angleSign;         /* used internally to keep sign of angle separate from angle */
     unsigned long edgeFlags;
+    long e1Index, e2Index;
     } NIBEND;
 
 /* names and storage structure for numerically integrated septum magnet physical parameters */
@@ -2163,15 +2166,15 @@ typedef struct {
 extern PARAMETER csbend_param[N_CSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e1, e2, tilt;
-    double h1, h2, hgap, fint;
+    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e[2], tilt;
+    double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects, edge_order;
+    long edge_effects[2], edge_order;
     long integration_order;
-    double edge1_kick_limit, edge2_kick_limit;
+    double edge_kick_limit[2];
     long kick_limit_scaling;
     long use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
@@ -2189,19 +2192,20 @@ typedef struct {
     long refKicks;
     short photonFileActive;
     SDDS_DATASET SDDSphotons;
+    long e1Index, e2Index;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
 extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e1, e2, tilt;
-    double h1, h2, hgap, fint;
+    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e[2], tilt;
+    double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, useMatrix, synch_rad;
-    long edge1_effects, edge2_effects, edge_order;
+    long edge_effects[2],  edge_order;
     long integration_order, bins, binOnce;
     double binRangeFactor;
     long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
@@ -2224,6 +2228,7 @@ typedef struct {
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
     unsigned long edgeFlags;
+    long e1Index, e2Index;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */

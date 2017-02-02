@@ -76,7 +76,7 @@ void convert_to_parmela(char *outputfile, LINE_LIST *beamline, long flip_k, doub
                 fprintf(fp, "rotate 1e6 0 %e\n", bend->tilt*180/PI);
             fprintf(fp, "bend %e 1e6 0 %e %e %e %e\n",
                     100*bend->length, K_cen, bend->angle*180/PI,
-                    bend->e1*180/PI, bend->e2*180/PI);
+                    bend->e[bend->e1Index]*180/PI, bend->e[bend->e2Index]*180/PI);
             if (bend->tilt!=0)
                 fprintf(fp, "rotate 1e6 0 %e\n", -bend->tilt*180/PI);
             break;

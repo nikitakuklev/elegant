@@ -518,11 +518,11 @@ void lorentz_setup(
             nibend->angleSign = 1;
             if (nibend->angle<0) {
               nibend->angle *= -1;
-              nibend->e1    *= -1;
-              nibend->e2    *= -1;
+              nibend->e[nibend->e1Index]    *= -1;
+              nibend->e[nibend->e2Index]    *= -1;
               nibend->angleSign = -1;
             }
-            if (nibend->e1!=nibend->e2 && !warning_given) {
+            if (nibend->e[nibend->e1Index]!=nibend->e[nibend->e2Index] && !warning_given) {
                 fprintf(stdout, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
                 fflush(stdout);
                 warning_given = 1;
@@ -533,7 +533,7 @@ void lorentz_setup(
             tolerance = nibend->accuracy;
             
             /* calculate slope and intercept for entrance plane */ 
-            alpha = nibend->angle/2-nibend->e1;
+            alpha = nibend->angle/2-nibend->e[nibend->e1Index];
             rentr_intercept = -nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
             switch (nibend->fringePosition) {
             case -1: /* Fringe inside */
@@ -559,7 +559,7 @@ void lorentz_setup(
             sin_alpha1 = sin(alpha);
 
             /* calculate slope and intercept for exit plane */
-            alpha = nibend->angle/2-nibend->e2;
+            alpha = nibend->angle/2-nibend->e[nibend->e2Index];
             rexit_intercept = nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
             switch (nibend->fringePosition) {
             case -1: /* Fringe inside */
@@ -818,8 +818,8 @@ void lorentz_terminate(
         case T_NIBEND:
             nibend = (NIBEND*)field;
             nibend->angle *= nibend->angleSign;
-            nibend->e1    *= nibend->angleSign;
-            nibend->e2    *= nibend->angleSign;
+            nibend->e[nibend->e1Index]    *= nibend->angleSign;
+            nibend->e[nibend->e2Index]    *= nibend->angleSign;
             break;
           default:
             break;
@@ -972,7 +972,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         dqds[1] = dzds*sin_ah + dxds*cos_ah;
         dqds[2] = dyds;
         /* find q coordinates of particle at entrance plane */
-        alpha = nibend->angle/2 - nibend->e1;
+        alpha = nibend->angle/2 - nibend->e[nibend->e1Index];
         switch (nibend->fringePosition) {
         case -1 :
           q0I  = nibend->rho0*(cos_ah*tan(alpha) - sin_ah);

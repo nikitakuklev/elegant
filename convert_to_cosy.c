@@ -143,28 +143,28 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
       case T_SBEN:
         bend = (BEND*)eptr->p_elem;
         emitCosyDipole(fp, eptr->name, bend->length, bend->angle,
-                       bend->e1, bend->e2, bend->h1, bend->h2,
+                       bend->e[bend->e1Index], bend->e[bend->e2Index], bend->h[bend->e1Index], bend->h[bend->e2Index],
                        bend->k1, bend->k2, 0.0,
                        bend->hgap, bend->fint);
         break;
       case T_NIBEND:
         nibend = (NIBEND*)eptr->p_elem;
         emitCosyDipole(fp, eptr->name, nibend->length, nibend->angle,
-                       nibend->e1, nibend->e2, 0.0, 0.0,
+                       nibend->e[nibend->e1Index], nibend->e[nibend->e2Index], 0.0, 0.0,
                        0.0, 0.0, 0.0,
                        nibend->hgap, nibend->fint);
         break;
       case T_CSBEND:
         csbend = (CSBEND*)eptr->p_elem;
         emitCosyDipole(fp, eptr->name, csbend->length, csbend->angle,
-                       csbend->e1, csbend->e2, csbend->h1, csbend->h2,
+                       csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], csbend->h[csbend->e1Index], csbend->h[csbend->e2Index],
                        csbend->k1, csbend->k2, csbend->k3,
                        csbend->hgap, csbend->fint);
         break;
       case T_CSRCSBEND:
         csrbend = (CSRCSBEND*)eptr->p_elem;
         emitCosyDipole(fp, eptr->name, csrbend->length, csrbend->angle,
-                       csrbend->e1, csrbend->e2, csrbend->h1, csrbend->h2,
+                       csrbend->e[csrbend->e1Index], csrbend->e[csrbend->e2Index], csrbend->h[csrbend->e1Index], csrbend->h[csrbend->e2Index],
                        csrbend->k1, csrbend->k2, csrbend->k3,
                        csrbend->hgap, csrbend->fint);
         break;

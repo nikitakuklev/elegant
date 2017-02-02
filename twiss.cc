@@ -2945,29 +2945,29 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       bptr = (BEND*)(elem->p_elem);
       length = bptr->length;
       angle = bptr->angle;
-      E1 = bptr->e1*(bptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
-      E2 = bptr->e2*(bptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
+      E1 = bptr->e[bptr->e1Index]*(bptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = bptr->e[bptr->e2Index]*(bptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = bptr->k1;
     } else if (elem->type==T_KSBEND) {
       kbptr = (KSBEND*)(elem->p_elem);
       length = kbptr->length;
       angle = kbptr->angle;
-      E1 = kbptr->e1*(kbptr->flags&BEND_EDGE1_EFFECTS?1:0);
-      E2 = kbptr->e2*(kbptr->flags&BEND_EDGE2_EFFECTS?1:0);
+      E1 = kbptr->e[kbptr->e1Index]*(kbptr->flags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = kbptr->e[kbptr->e2Index]*(kbptr->flags&BEND_EDGE2_EFFECTS?1:0);
       K1 = kbptr->k1;
     } else if (elem->type==T_CSBEND) {
       cbptr = (CSBEND*)(elem->p_elem);
       length = cbptr->length;
       angle = cbptr->angle;
-      E1 = cbptr->e1*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
-      E2 = cbptr->e2*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
+      E1 = cbptr->e[cbptr->e1Index]*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = cbptr->e[cbptr->e2Index]*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = cbptr->k1;
     } else if (elem->type==T_CSRCSBEND) {
       csrbptr = (CSRCSBEND*)(elem->p_elem);
       length = csrbptr->length;
       angle = csrbptr->angle;
-      E1 = csrbptr->e1*(csrbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
-      E2 = csrbptr->e2*(csrbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
+      E1 = csrbptr->e[csrbptr->e1Index]*(csrbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = csrbptr->e[csrbptr->e2Index]*(csrbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = csrbptr->k1;
     } else {
       isBend = 0;

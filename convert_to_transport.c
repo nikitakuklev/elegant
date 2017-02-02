@@ -105,16 +105,16 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                         quoted_label(s), 16, 5, bend->hgap);
                     do_output_transport(fp, buffer);
                     }
-                if (bend->h1!=0) {
+                if (bend->h[bend->e1Index]!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
                     sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
-                        quoted_label(s), 16, 12, bend->h1);
+                        quoted_label(s), 16, 12, bend->h[bend->e1Index]);
                     do_output_transport(fp, buffer);
                     }
-                if (bend->h2!=0) {
+                if (bend->h[bend->e2Index]!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
                     sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
-                        quoted_label(s), 16, 13, bend->h2);
+                        quoted_label(s), 16, 13, bend->h[bend->e2Index]);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->k2!=0) {
@@ -139,7 +139,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                 /* print the pole faces and the magnet */
                 sprintf(s, "FA%02ld", n_bend_rotated_faces++);
                 sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
-                        quoted_label(s), 2, bend->e1*180/PI);
+                        quoted_label(s), 2, bend->e[bend->e1Index]*180/PI);
                 do_output_transport(fp, buffer);
                 sprintf(buffer, "%8.8s %-5d %21.16e %21.16e %21.16e;\n",
                         quoted_label(eptr->name), 4, bend->length, pc/rho, 
@@ -147,7 +147,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                 do_output_transport(fp, buffer);
                 sprintf(s, "FA%02ld", n_bend_rotated_faces++);
                 sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
-                        quoted_label(s), 2, bend->e2*180/PI);
+                        quoted_label(s), 2, bend->e[bend->e2Index]*180/PI);
                 do_output_transport(fp, buffer);
                 if (bend->tilt!=0) {
                     sprintf(s, "%%BT%02ld", n_bend_tilts++);
@@ -162,13 +162,13 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                         quoted_label(s), 16, 5, 0.);
                     do_output_transport(fp, buffer);
                     }
-                if (bend->h1!=0) {
+                if (bend->h[bend->e1Index]!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
                     sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 12, 0.);
                     do_output_transport(fp, buffer);
                     }
-                if (bend->h2!=0) {
+                if (bend->h[bend->e2Index]!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
                     sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 13, 0.);

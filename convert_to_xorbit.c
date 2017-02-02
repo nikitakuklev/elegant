@@ -70,7 +70,7 @@ void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k,
             fprintf(fp, "%-8s b %10.6f          %10.6f\n",
                     eptr->name, bend->angle/PI, bend->length);
             fprintf(fp, " &         %10.6f%10.6f%10.6f%10.6f\n",
-                    bend->e1/PI, bend->e2/PI, bend->fint, bend->hgap);
+                    bend->e[bend->e1Index]/PI, bend->e[bend->e2Index]/PI, bend->fint, bend->hgap);
             length += bend->length;
             break;
           case T_DRIF:

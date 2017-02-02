@@ -282,7 +282,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   
   setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
 
-  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+  if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
   if (csbend->referenceCorrection) {
@@ -390,13 +390,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }    
   }
   
-  he1 = csbend->h1;
-  he2 = csbend->h2;
+  he1 = csbend->h[csbend->e1Index];
+  he2 = csbend->h[csbend->e2Index];
   if (csbend->angle<0) {
     long i;
     angle = -csbend->angle;
-    e1    = -csbend->e1;
-    e2    = -csbend->e2;
+    e1    = -csbend->e[csbend->e1Index];
+    e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
     rho0  = csbend->length/angle;
@@ -405,8 +405,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   else {
     angle = csbend->angle;
-    e1    = csbend->e1;
-    e2    = csbend->e2;
+    e1    = csbend->e[csbend->e1Index];
+    e2    = csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
@@ -486,8 +486,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   else
     rho_actual = 1e16/h;
 
-  e1_kick_limit = csbend->edge1_kick_limit;
-  e2_kick_limit = csbend->edge2_kick_limit;
+  e1_kick_limit = csbend->edge_kick_limit[csbend->e1Index];
+  e2_kick_limit = csbend->edge_kick_limit[csbend->e2Index];
   if (csbend->kick_limit_scaling) {
     e1_kick_limit *= rho0/rho_actual;
     e2_kick_limit *= rho0/rho_actual;
@@ -603,21 +603,21 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<=1 && csbend->edge1_effects==1) {
+      if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
         /* apply edge focusing */
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
           delta_xp = SIGN(delta_xp)*e1_kick_limit;
         xp += delta_xp;
         yp -= tan(e1-psi1/(1+dp))/rho*y;
-      } else if (csbend->edge_order>=2 && csbend->edge1_effects==1) {
+      } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
-      } else if (csbend->edge1_effects==2) {
+      } else if (csbend->edge_effects[csbend->e1Index]==2) {
         rho = (1+dp)*rho_actual;
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
-        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
         convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
         x  = Qf[0];  
@@ -711,20 +711,20 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      if (csbend->edge_order<=1 && csbend->edge2_effects==1) {
+      if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e2Index]==1) {
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
-      } else if (csbend->edge_order>=2 && csbend->edge2_effects==1) {
+      } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1) {
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
-      } else if (csbend->edge2_effects==2) {
+      } else if (csbend->edge_effects[csbend->e2Index]==2) {
         rho = (1+dp)*rho_actual;
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
-        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
         convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
         x  = Qf[0];  
@@ -1358,7 +1358,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     bombElegant("null CSRCSBEND pointer (track_through_csbend)", NULL);
   if (csbend->integratedGreensFunction && !csbend->steadyState) 
     bombElegant("CSRCSBEND requires STEADYSTATE=1 if IGF=1.", NULL);
-  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+  if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSRCSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
 
   if (csbend->angle==0) {
@@ -1428,13 +1428,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->b[7] = csbend->k8*rho0;
   }
 
-  he1 = csbend->h1;
-  he2 = csbend->h2;
+  he1 = csbend->h[csbend->e1Index];
+  he2 = csbend->h[csbend->e2Index];
   if (csbend->angle<0) {
     long i;
     angle = -csbend->angle;
-    e1    = -csbend->e1;
-    e2    = -csbend->e2;
+    e1    = -csbend->e[csbend->e1Index];
+    e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
@@ -1443,8 +1443,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   else {
     angle = csbend->angle;
-    e1    = csbend->e1;
-    e2    = csbend->e2;
+    e1    = csbend->e[csbend->e1Index];
+    e2    = csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
@@ -1713,13 +1713,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         track_particles(&coord, Me1, &coord, 1);
       else {
         rho = (1+DP)*rho_actual;
-        if (csbend->edge_order<=1 && csbend->edge1_effects==1) {
+        if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
           delta_xp = tan(e1)/rho*X;
           XP += delta_xp;
           YP -= tan(e1-psi1/(1+DP))/rho*Y;
-        } else if (csbend->edge_order>=2 && csbend->edge1_effects==1) 
+        } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) 
           apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
-        else if (csbend->edge1_effects>=2) {
+        else if (csbend->edge_effects[csbend->e1Index]>=2) {
           rho = (1+DP)*rho_actual;
 	  /* load input coordinates into arrays */
 	  Qi[0] = X;
@@ -1729,7 +1729,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
           convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
-          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h1);
+          dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
 	  /* retrieve coordinates from arrays */
           convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
 	  X  = Qf[0];  
@@ -2279,13 +2279,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	else {
 	  /* apply edge focusing */
 	  rho = (1+DP)*rho_actual;
-          if (csbend->edge_order<=1 && csbend->edge2_effects==1) {
+          if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e2Index]==1) {
 	    delta_xp = tan(e2)/rho*X;
 	    XP += delta_xp;
 	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
-          } else if (csbend->edge_order>=2 && csbend->edge2_effects==1)
+          } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1)
             apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
-          else if (csbend->edge2_effects>=2) {
+          else if (csbend->edge_effects[csbend->e2Index]>=2) {
             rho = (1+DP)*rho_actual;
             /* load input coordinates into arrays */
             Qi[0] = X;
@@ -2295,7 +2295,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[4] = 0;  
             Qi[5] = DP;
             convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
-            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h2);
+            dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
             /* retrieve coordinates from arrays */
             convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
             X  = Qf[0];  

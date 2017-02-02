@@ -73,8 +73,8 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
 
     if (ksbend->angle<0) {
         angle = -ksbend->angle;
-        e1    = -ksbend->e1;
-        e2    = -ksbend->e2;
+        e1    = -ksbend->e[ksbend->e1Index];
+        e2    = -ksbend->e[ksbend->e2Index];
         etilt = ksbend->etilt;
         tilt  = ksbend->tilt + PI;
         rho0  = -ksbend->length/angle;
@@ -86,8 +86,8 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         }
     else {
         angle = ksbend->angle;
-        e1    = ksbend->e1;
-        e2    = ksbend->e2;
+        e1    = ksbend->e[ksbend->e1Index];
+        e2    = ksbend->e[ksbend->e2Index];
         etilt = ksbend->etilt;
         tilt  = ksbend->tilt;
         rho0  = ksbend->length/angle;
@@ -258,10 +258,10 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         dp = coord[5];
 
         rho = (1+dp)*rho0;
-        if (ksbend->edge1_effects) {
+        if (ksbend->edge_effects[ksbend->e1Index]) {
             /* apply edge focusing */
             if (ksbend->edge_order>1)
-                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, ksbend->h1, psi1/(1+dp), -1);
+                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, ksbend->h[ksbend->e1Index], psi1/(1+dp), -1);
             else {
                 xp += tan(e1)/rho*x;
                 yp -= tan(e1-psi1/(1+dp))/rho*y;
@@ -275,7 +275,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
-        if (ksbend->edge1_effects && e1!=0 && rad_coef) {
+        if (ksbend->edge_effects[ksbend->e1Index] && e1!=0 && rad_coef) {
             /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
             particle_lost = 0;
             kick_sbend_derivs(dQds, Qi, 0.0);
@@ -317,7 +317,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
             continue;
             }
 
-        if (ksbend->edge2_effects && e2!=0 && rad_coef) {
+        if (ksbend->edge_effects[ksbend->e2Index] && e2!=0 && rad_coef) {
             /* post-adjust dp/p to correct error made by integrating over entire sector */
             kick_sbend_derivs(dQds, Qf, 0.0);
             Qf[5] -= dQds[5]*Qf[0]*tan(e2);
@@ -346,10 +346,10 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         yp /= (1+x/rho0);
 
         rho = (1+dp)*rho0;
-        if (ksbend->edge2_effects) {
+        if (ksbend->edge_effects[ksbend->e2Index]) {
             /* apply edge focusing */
             if (ksbend->edge_order>1)
-                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, ksbend->h2, psi2/(1+dp), 1);
+                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, ksbend->h[ksbend->e2Index], psi2/(1+dp), 1);
             else {
                 xp += tan(e2)/rho*x;
                 yp -= tan(e2-psi2/(1+dp))/rho*y;

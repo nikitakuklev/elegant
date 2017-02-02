@@ -69,7 +69,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                 break;
             case T_RBEN:  case T_SBEN:
                 bend = (BEND*)eptr->p_elem;
-                if (!(bend->e1==0 && bend->e2==0)) {
+                if (!(bend->e[bend->e1Index]==0 && bend->e[bend->e2Index]==0)) {
                     /* deal with non-zero edge angles to the extent of
                      * allowing edge angles to change sector magnet into
                      * rectangular bend
@@ -78,14 +78,14 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                         printf("error: rectangular bends must have zero edge angles\n");
                         exitElegant(1);
                         }
-                    if (!nearly_equal(bend->e1, bend->e2, angle_tolerance)) {
+                    if (!nearly_equal(bend->e[bend->e1Index], bend->e[bend->e2Index], angle_tolerance)) {
                         printf("error: bend %s has unequal edge angles\n",
                             eptr->name);
                         exitElegant(1);
                         }
-                    if (!nearly_equal(bend->e1*2, bend->angle, angle_tolerance)) {
+                    if (!nearly_equal(bend->e[bend->e1Index]*2, bend->angle, angle_tolerance)) {
                         printf("error: sector bend %s has edge angles of %.4e and  bending angle %.4e.\n",
-                            eptr->name, bend->e1, bend->angle);
+                            eptr->name, bend->e[bend->e1Index], bend->angle);
                         puts("Sector bend may only have edge angles such that they are equivalent to");
                         printf("rectangular magnets (to within a tolerance of %e).\n", 
                                 angle_tolerance);
@@ -93,7 +93,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                         exitElegant(1);
                         }
                     else {
-                        bend->e1 = bend->e2 = 0;
+                        bend->e[bend->e1Index] = bend->e[bend->e2Index] = 0;
                         eptr->type = T_RBEN;
                         }
                     }

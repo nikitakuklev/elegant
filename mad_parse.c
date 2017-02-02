@@ -24,6 +24,8 @@
 
 long is_simple(char *s);
 void copy_p_elem(char *target, char *source, long type);
+void setEdgeIndices(ELEMENT_LIST *e1);
+void swapEdgeIndices(ELEMENT_LIST *e1);
 
 long max_name_length = 100;
 
@@ -270,11 +272,14 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
 
+    if (IS_BEND(type))
+      setEdgeIndices(eptr);
+
     switch (type) {
     case T_RBEN:
       bptr = (BEND*)(eptr->p_elem);
-      bptr->e1 += bptr->angle/2;
-      bptr->e2 += bptr->angle/2;
+      bptr->e[0] += bptr->angle/2;
+      bptr->e[1] += bptr->angle/2;
       type = eptr->type = T_SBEN;
       if (fabs(bptr->angle)>1e-14)
         bptr->length *= (bptr->angle/2)/sin(bptr->angle/2);
@@ -509,42 +514,10 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     e1->p_elem  = tmalloc(entity_description[e1->type].structure_size);
     e1->p_elem0 = tmalloc(entity_description[e1->type].structure_size);
     copy_p_elem(e1->p_elem, e2->p_elem, e1->type);
+    copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     e1->divisions = 1;
-    if (reverse) {
-      BEND *bptr;
-      KSBEND *ksbptr;
-      CSBEND *csbptr;
-      CSRCSBEND *csrbptr;
-      NIBEND *nibptr;
-      switch (e1->type) {
-      case T_SBEN:
-      case T_RBEN:
-        bptr = (BEND*)e1->p_elem;
-        SWAP_DOUBLE(bptr->e1, bptr->e2);
-        SWAP_LONG(bptr->edge1_effects, bptr->edge2_effects);
-        break;
-      case T_KSBEND:
-        ksbptr = (KSBEND*)e1->p_elem;
-        SWAP_DOUBLE(ksbptr->e1, ksbptr->e2);
-        break;
-      case T_NIBEND:
-        nibptr = (NIBEND*)e1->p_elem;
-        SWAP_DOUBLE(nibptr->e1, nibptr->e2);
-        break;
-      case T_CSBEND:
-        csbptr = (CSBEND*)e1->p_elem;
-        SWAP_DOUBLE(csbptr->e1, csbptr->e2);
-        SWAP_LONG(csbptr->edge1_effects, csbptr->edge2_effects);
-        break;
-      case T_CSRCSBEND:
-        csrbptr = (CSRCSBEND*)e1->p_elem;
-        SWAP_DOUBLE(csrbptr->e1, csrbptr->e2);
-        SWAP_LONG(csrbptr->edge1_effects, csrbptr->edge2_effects);
-        break;
-      default:
-        break;
-      }
-    }
+    if (reverse && IS_BEND(e1->type))
+      swapEdgeIndices(e1);
     e1->firstOfDivGroup = 0;
     if (divisions>1) {
       if (division==0)
@@ -577,7 +550,6 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       }
       e1->divisions = divisions;
     }
-    copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     log_exit("copy_element");
   }
 
@@ -1074,6 +1046,7 @@ void interpretScraperDirection(SCRAPER *scraper)
 void copy_p_elem(char *target, char *source, long type)
 {
   long i;
+  PEPPOT *pps, *ppt;
 
   for (i=0; i<entity_description[type].n_params; i++) {
     switch (entity_description[type].parameter[i].type) {
@@ -1095,15 +1068,37 @@ void copy_p_elem(char *target, char *source, long type)
     }
   }
 
-  if (type==T_PEPPOT)  {
+  switch (type) {
+  case T_SBEN:
+  case T_RBEN:
+    ((BEND*)target)->e1Index = ((BEND*)source)->e1Index;
+    ((BEND*)target)->e2Index = ((BEND*)source)->e2Index;
+    break;
+  case T_KSBEND:
+    ((KSBEND*)target)->e1Index = ((KSBEND*)source)->e1Index;
+    ((KSBEND*)target)->e2Index = ((KSBEND*)source)->e2Index;
+    break;
+  case T_NIBEND:
+    ((NIBEND*)target)->e1Index = ((NIBEND*)source)->e1Index;
+    ((NIBEND*)target)->e2Index = ((NIBEND*)source)->e2Index;
+    break;
+  case T_CSBEND:
+    ((CSBEND*)target)->e1Index = ((CSBEND*)source)->e1Index;
+    ((CSBEND*)target)->e2Index = ((CSBEND*)source)->e2Index;
+    break;
+  case T_CSRCSBEND:
+    ((CSRCSBEND*)target)->e1Index = ((CSRCSBEND*)source)->e1Index;
+    ((CSRCSBEND*)target)->e2Index = ((CSRCSBEND*)source)->e2Index;
+    break;
+  case  T_PEPPOT:
     /* Need to modernize pepper-pot element to read data from SDDS file */
-    PEPPOT *pps, *ppt;
     pps = (PEPPOT*)source;
     ppt = (PEPPOT*)target;
     ppt->x = array_1d(sizeof(double), 0, ppt->n_holes-1);
     ppt->y = array_1d(sizeof(double), 0, ppt->n_holes-1);
     memcpy(ppt->x, pps->x, sizeof(double)*ppt->n_holes);
     memcpy(ppt->y, pps->y, sizeof(double)*ppt->n_holes);
+    break;
   }
 
 }
@@ -1133,3 +1128,77 @@ void resetElementToDefaults(char *p_elem, long type)
   }
 }
 
+void setEdgeIndices(ELEMENT_LIST *e1) 
+{
+  BEND *bptr;
+  KSBEND *ksbptr;
+  CSBEND *csbptr;
+  CSRCSBEND *csrbptr;
+  NIBEND *nibptr;
+
+  switch (e1->type) {
+  case T_SBEN:
+  case T_RBEN:
+    bptr = (BEND*)e1->p_elem;
+    bptr->e1Index = 0;
+    bptr->e2Index = 1;
+    break;
+  case T_KSBEND:
+    ksbptr = (KSBEND*)e1->p_elem;
+    ksbptr->e1Index = 0;
+    ksbptr->e2Index = 1;
+    break;
+  case T_NIBEND:
+    nibptr = (NIBEND*)e1->p_elem;
+    nibptr->e1Index = 0;
+    nibptr->e2Index = 1;
+    break;
+  case T_CSBEND:
+    csbptr = (CSBEND*)e1->p_elem;
+    csbptr->e1Index = 0;
+    csbptr->e2Index = 1;
+    break;
+  case T_CSRCSBEND:
+    csrbptr = (CSRCSBEND*)e1->p_elem;
+    csrbptr->e1Index = 0;
+    csrbptr->e2Index = 1;
+    break;
+  default:
+    break;
+  }
+}
+
+void swapEdgeIndices(ELEMENT_LIST *e1) 
+{
+  BEND *bptr;
+  KSBEND *ksbptr;
+  CSBEND *csbptr;
+  CSRCSBEND *csrbptr;
+  NIBEND *nibptr;
+
+  switch (e1->type) {
+  case T_SBEN:
+  case T_RBEN:
+    bptr = (BEND*)e1->p_elem;
+    SWAP_LONG(bptr->e1Index, bptr->e2Index);
+    break;
+  case T_KSBEND:
+    ksbptr = (KSBEND*)e1->p_elem;
+    SWAP_LONG(ksbptr->e1Index, ksbptr->e2Index);
+    break;
+  case T_NIBEND:
+    nibptr = (NIBEND*)e1->p_elem;
+    SWAP_LONG(nibptr->e1Index, nibptr->e2Index);
+    break;
+  case T_CSBEND:
+    csbptr = (CSBEND*)e1->p_elem;
+    SWAP_LONG(csbptr->e1Index, csbptr->e2Index);
+    break;
+  case T_CSRCSBEND:
+    csrbptr = (CSRCSBEND*)e1->p_elem;
+    SWAP_LONG(csrbptr->e1Index, csrbptr->e2Index);
+    break;
+  default:
+    break;
+  }
+}

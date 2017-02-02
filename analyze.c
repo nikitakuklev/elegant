@@ -1003,9 +1003,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_SBEN:
       if (slice!=0)
-        csbend.edge1_effects = 0;
+        csbend.edge_effects[0] = 0;
       if (slice!=nSlices-1)
-        csbend.edge2_effects = 0;
+        csbend.edge_effects[0] = 0;
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
       sbend = (BEND*)eptr->p_elem;
@@ -1018,11 +1018,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       length = csbend.length = sbend->length/nSlices;
       csbend.angle = sbend->angle/nSlices;
       csbend.k1 = sbend->k1;
-      csbend.e1 = sbend->e1;
-      csbend.e2 = sbend->e2;
+      csbend.e[0] = sbend->e[0];
+      csbend.e[1] = sbend->e[1];
       csbend.k2 = sbend->k2;
-      csbend.h1 = sbend->h1;
-      csbend.h2 = sbend->h2;
+      csbend.h[0] = sbend->h[1];
+      csbend.h[1] = sbend->h[2];
       csbend.hgap = sbend->hgap;
       csbend.fint = sbend->fint;
       csbend.dx = sbend->dx;
@@ -1031,14 +1031,16 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.fse = sbend->fse;
       csbend.tilt = sbend->tilt;
       csbend.etilt = sbend->etilt;
-      csbend.edge1_effects = sbend->edge1_effects;
-      csbend.edge2_effects = sbend->edge2_effects;
+      csbend.edge_effects[0] = sbend->edge_effects[0];
+      csbend.edge_effects[1] = sbend->edge_effects[1];
       csbend.edge_order = sbend->edge_order;
       csbend.edgeFlags = sbend->edgeFlags;
       csbend.refTrajectoryChangeSet = 0;
       csbend.refLength = 0;
       csbend.refAngle = 0;
       csbend.refTrajectoryChange = NULL;
+      csbend.e1Index = sbend->e1Index;
+      csbend.e2Index = sbend->e2Index;
       if (slice!=0)
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1)
@@ -1050,9 +1052,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       break;
     case T_CSRCSBEND:
       if (slice!=0)
-        csbend.edge1_effects = 0;
+        csbend.edge_effects[0] = 0;
       if (slice!=nSlices-1)
-        csbend.edge2_effects = 0;
+        csbend.edge_effects[1] = 0;
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
       csrcsbend = (CSRCSBEND*)eptr->p_elem;
@@ -1065,11 +1067,11 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       length = csbend.length = csrcsbend->length/nSlices;
       csbend.angle = csrcsbend->angle/nSlices;
       csbend.k1 = csrcsbend->k1;
-      csbend.e1 = csrcsbend->e1;
-      csbend.e2 = csrcsbend->e2;
+      csbend.e[0] = csrcsbend->e[0];
+      csbend.e[1] = csrcsbend->e[1];
       csbend.k2 = csrcsbend->k2;
-      csbend.h1 = csrcsbend->h1;
-      csbend.h2 = csrcsbend->h2;
+      csbend.h[0] = csrcsbend->h[0];
+      csbend.h[1] = csrcsbend->h[1];
       csbend.hgap = csrcsbend->hgap;
       csbend.fint = csrcsbend->fint;
       csbend.dx = csrcsbend->dx;
@@ -1078,14 +1080,16 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.fse = csrcsbend->fse;
       csbend.tilt = csrcsbend->tilt;
       csbend.etilt = csrcsbend->etilt;
-      csbend.edge1_effects = csrcsbend->edge1_effects;
-      csbend.edge2_effects = csrcsbend->edge2_effects;
+      csbend.edge_effects[0] = csrcsbend->edge_effects[0];
+      csbend.edge_effects[1] = csrcsbend->edge_effects[1];
       csbend.edge_order = csrcsbend->edge_order;
       csbend.edgeFlags = csrcsbend->edgeFlags;
       csbend.refTrajectoryChangeSet = 0;
       csbend.refLength = 0;
       csbend.refAngle = 0;
       csbend.refTrajectoryChange = NULL;
+      csbend.e1Index = csrcsbend->e1Index;
+      csbend.e2Index = csrcsbend->e2Index;
       if (slice!=0)
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1)
