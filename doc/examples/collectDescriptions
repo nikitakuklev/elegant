@@ -1,0 +1,80 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)] || [string length $env(OAG_TOP_DIR)]==0} {
+    set env(OAG_TOP_DIR) /usr/local
+}
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
+
+set fd [open "descriptions.tex" w]
+
+puts $fd "\\documentclass{article}"
+puts $fd "\\pagestyle{plain}"
+puts $fd "\\setlength{\\topmargin}{0.15 in}"
+puts $fd "\\setlength{\\oddsidemargin}{0 in}"
+puts $fd "\\setlength{\\textwidth}{6.0 in}"
+puts $fd "\\setlength{\\textheight}{9 in}"
+puts $fd "\\begin{document}"
+puts $fd "\\begin{center}"
+puts $fd "{\\LARGE Description of elegant examples}\\\\"
+puts $fd "{\\Large Michael Borland}\\\\"
+puts $fd "\\today"
+puts $fd "\\vspace*{10mm}"
+puts $fd "\\end{center}"
+puts $fd "\\begin{itemize}"
+
+proc copyFile {filename} {
+    global fd
+    set fdi [open $filename r]
+    while {![eof $fdi]} {
+        gets $fdi s
+        set t ""
+        foreach token [split $s " "] {
+            eval set token [os editstring %/_/\\_/ $token]
+            lappend t $token
+        }
+        puts $fd [join $t " "]
+    }
+    close $fdi
+}
+
+set fdi [open "|find . -type d | sort -f" r]
+set endNeeded 0
+set beginNeeded 0
+while {![eof $fdi]} {
+    gets $fdi s
+    if [string length $s]==0 break
+    if ![file exists $s/description] continue
+    set s $s/description
+    set pathList [lrange [split $s /] 1 end]
+    if [llength $pathList]==2 {
+        if $endNeeded {
+            puts $fd "\\end{itemize}"
+            incr endNeeded -1
+        }
+        puts $fd "\\item \\verb|[lindex $pathList 0]| --- "
+        copyFile $s
+        set beginNeeded 1
+    }  else {
+        if $beginNeeded {
+            puts $fd "\\begin{itemize}"
+            incr endNeeded 1
+            set beginNeeded 0
+        }
+        puts $fd "\\item \\verb|[lindex $pathList 1]| --- "
+        copyFile $s
+    }
+}
+if $endNeeded {
+   puts $fd "\\end{itemize}"
+   incr endNeeded -1
+}
+
+puts $fd "\\end{itemize}"
+puts $fd "\\end{document}"
+close $fd
+catch {exec pdflatex descriptions.tex}
+file delete descriptions.tex descriptions.aux descriptions.log

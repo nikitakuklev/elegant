@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Take out the nonlinear terms temporarily to help understand what's happening
+
+sddsprocess Basic.twi -pipe=out -process=s,max,sMax -process=*eta*,first,%s0 \
+            | sddscollapse -pipe \
+            | sddsconvert -pipe -delete=col,Stage,SVN* \
+            | sddstranspose -pipe -oldColumnNames=ColumnName \
+            | sddsconvert -pipe -rename=col,Column=ParameterValue \
+            | sddsxref ILMatrix.xref -nowarning -pipe -match=ColumnName -take=* \
+            | tee ILMatrix.sdds \
+            | sddsprintout -pipe -col
