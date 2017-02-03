@@ -45,6 +45,8 @@ Historical change logs are appended to the end of this manual.
 \begin{itemize}
 \item The \verb|SREFFECTS| element now correctly computes the equilibrium horizontal and vertical emittances when
   $J_x \neq 1$. Previously, the computation assumed $J_x = 1$.
+\item The \verb|MALIGN| element could cause spurious integer changes in the reported tunes if the \verb|DZ| parameter
+  was negative. This problem, reported by V. Sajaev (APS), was fixed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
