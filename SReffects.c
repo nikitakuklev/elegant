@@ -52,10 +52,9 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
       /* take data from radiation integrals */
       SReffects.pRef = radIntegrals->Pref;
       SReffects.Jx = radIntegrals->Jx;
-      SReffects.Jx = radIntegrals->Jx;
       SReffects.Jy = radIntegrals->Jy;
       SReffects.Jdelta = radIntegrals->Jdelta;
-      SReffects.exRef = radIntegrals->ex0/(1+SReffects.coupling);
+      SReffects.exRef = radIntegrals->ex0/(1+SReffects.coupling*SReffects.Jy/SReffects.Jx);
       SReffects.eyRef = SReffects.exRef*SReffects.coupling;
       SReffects.SdeltaRef = radIntegrals->sigmadelta;
       SReffects.DdeltaRef = -radIntegrals->Uo/particleMassMV/Po;

@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 32.1.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 33.0.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,15 +35,16 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 32.1}
+\section{Highlights of What's New in Version 33.0}
 
 Here is a summary of what's changed since release 32.0.
-Note that historical changes logs are appended to the end of this manual.
+Historical change logs are appended to the end of this manual.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item The \verb|SREFFECTS| element now correctly computes the equilibrium horizontal and vertical emittances when
+  $J_x \neq 1$. Previously, the computation assumed $J_x = 1$.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -51,6 +52,12 @@ Note that historical changes logs are appended to the end of this manual.
 \item The \verb|correction_matrix_output| command command were ignoring the monitor calibrations
   (\verb|MONI|, \verb|HMON|, and \verb|VMON|) values when \verb|use_response_from_computed_orbits = 1|.
   This was reported by V. Sajaev (APS).
+\item The \verb|steering_element| command no longer aborts even if the declared steering corrector appears 
+  not to kick the beam. This allows using unusual controls such as path length to steer the beam. This
+  issue was pointed out by V. Sajaev (APS).
+\item The \verb|load_parameters| and \verb|save_lattice| commands incorrectedly saved the edge angles and other edge-related
+  quantities for bending magnets that were reflected. This issue was fixed. Previously-saved parameter files should be modified
+  (e.g., remove the edge parameters). This problem was reported by Y. Li (BNL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
