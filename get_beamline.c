@@ -1591,3 +1591,18 @@ void copyEdgeIndices(char *target, long targetType, char *source, long sourceTyp
   }
 
 }
+
+void print_beamlines(FILE *fp)
+{
+  LINE_LIST *lptr;
+  long j;
+  INPUT_OBJECT *object;
+  
+  object = &inputObject;
+  do {
+    if (object->isLine) {
+        lptr = (LINE_LIST*)(object->ptr);
+        print_with_continuation(fp, lptr->definition, 79);
+      }
+    } while ((object=object->next));
+}

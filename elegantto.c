@@ -7,12 +7,9 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-/* program: madto
- * purpose: convert mad lattice files to patpet format
+/* program: elegantto
+ * purpose: convert elegant lattice files to other formats
  * 
- * This program actually converts the 'elegant' dialect of MAD
- * input format.
- *
  * Michael Borland, 1993
  */
 #include "mdb.h"
@@ -21,10 +18,10 @@
 #include <ctype.h>
 #include "madto.h"
 
-char *USAGE = "madto inputfile outputfile \n\
+char *USAGE = "elegantto inputfile outputfile \n\
  { -EmmaMatlab | -patpet | -patricia | -parmela[=quad_ap(mm),sext_ap(mm),p(MeV/c)]\n\
   -transport[=quad_ap(mm),sext_ap(mm),p(GeV/c)] | -sdds=[p(GeV/c)] | [-xorbit] \n\
-  -cosy=quad_ap(mm),sext_ap(mm),p(MeV/c),order }\n\
+  -cosy=quad_ap(mm),sext_ap(mm),p(MeV/c),order | -mad8}\n\
  [-angle_tolerance=value] [-flip_k_signs] [-magnets=filename]\n\
  [-header=filename] [-ender=filename]\n\n\
 madto converts MAD accelerator lattice format to various other formats.\n\
@@ -45,11 +42,12 @@ Program by Michael Borland.  (This is Version 6, March 2003.)\n";
 #define SET_ENDER_FILE 10
 #define SET_CONVERT_TO_EMMAMATLAB 11
 #define SET_CONVERT_TO_COSY 12
-#define N_OPTIONS 13
+#define SET_CONVERT_TO_MAD8 13
+#define N_OPTIONS 14
 char *option[N_OPTIONS] = {
     "patricia", "transport", "parmela", "patpet", "sdds", "xorbit",
     "angle_tolerance", "flip_k_signs", "magnets", "header", "ender", 
-    "emmamatlab", "cosy",
+    "emmamatlab", "cosy", "mad8"
     } ;
 
 #define TRANSPORT_OUTPUT 1
@@ -60,6 +58,7 @@ char *option[N_OPTIONS] = {
 #define XORBIT_OUTPUT 6
 #define EMMAMATLAB_OUTPUT 7
 #define COSY_OUTPUT 8
+#define MAD8_OUTPUT 9
 
 int main(int argc, char **argv)
 {
@@ -183,6 +182,11 @@ int main(int argc, char **argv)
                      sscanf(scanned[i].list[4], "%ld", &order )!=1 || order<=0)
                     bomb("invalid values for -cosy option", USAGE);
                 break;
+              case SET_CONVERT_TO_MAD8:
+                if (output_mode)
+                    bomb("can only convert to one format at a time", USAGE); 
+                output_mode = MAD8_OUTPUT;
+                break;
               default:
                 bomb("unknown option given", USAGE);
                 break;
@@ -262,6 +266,12 @@ int main(int argc, char **argv)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_cosy(output, beamline, order, p_cent/particleMassMV, quad_ap/1e3, sext_ap/1e3); 
         break;
+    case MAD8_OUTPUT:
+      beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
+      if (magnets)
+        output_magnets(magnets, beamline->name, beamline);
+      convert_to_mad8(output, beamline, header_file, ender_file);
+      break;
       default:
         bomb("internal error--unknown output mode", NULL);
         break;
