@@ -99,7 +99,8 @@ Historical change logs are appended to the end of this manual.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The program \verb|madto| was renamed \verb|elegantto|, to more accurately reflect what it does.
+  It will not translate \verb|elegant| lattice files into MAD8 format.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5091,9 +5092,9 @@ up-to-date than these manual pages.
   using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
   bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
   (Program by M. Borland.)
-\item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
+\item {\tt elegantto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
-        PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
+        PATPET, PATRICIA, TRANSPORT, XORBIT, and MAD8.  Will also generate an SDDS file containing lattice
         data.  (Program by M. Borland.)
 \item {\tt makeSummedCsrZ} --- Computes the shielded or free-space steady-state CSR impedance for a ring
   composed of one or more types of dipole magnet.
@@ -5634,14 +5635,14 @@ trapped.
 
 %\begin{latexonly}
 \newpage
-\begin{center}{\Large\verb|madto|}\end{center}
+\begin{center}{\Large\verb|elegantto|}\end{center}
 %\end{latexonly}
-\subsection{madto}
-\label{madto}
+\subsection{elegantto}
+\label{elegantto}
 
 \begin{itemize}
 \item {\bf description:} 
-\verb|madto| translates an {\tt elegant}-style (or a MAD file, with
+\verb|elegantto| translates an {\tt elegant}-style (or a MAD file, with
 some restrictions) into formats accepted by other programs, such as COSY,
 PARMELA, PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate
 an SDDS file containing lattice data.
@@ -5651,17 +5652,17 @@ The following command would translate the {\tt elegant} lattice file
 \verb|lattice.lte| into a TRANSPORT lattice file with 10mm quadrupole
 aperture and 5mm sextupole aperture, at an energy of 1.5 GeV.
 \begin{flushleft}{\tt
-madto lattice.lte lattice.trin -transport=10,5,1.5
+elegantto lattice.lte lattice.trin -transport=10,5,1.5
 }\end{flushleft}
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-madto {\em inputfile} {\em outputfile}
+elegantto {\em inputfile} {\em outputfile}
  \{-patricia | -patpet | -transport[={\em quadAper(mm)},{\em sextAper(mm)},{\em p(GeV/c)}]
             | -parmela[={\em quadAper(mm)},{\em sextAper(mm)},{\em p(GeV/c)}]
             | -sdds[={\em p(GeV/c)}] \
             | -cosy={\em quadAper(mm)},{\em sextAper(mm)},{\em p(MeV/c)} \
-            | -xorbit\}
+            | -xorbit | -mad8 \}
  [-angle\_tolerance={\em value}] [-flip\_k\_signs] [-magnets={\em filename}]
  [-header={\em filename}] [-ender={\em filename}]
 }\end{flushleft}
@@ -5677,6 +5678,7 @@ madto {\em inputfile} {\em outputfile}
 \item {\bf -cosy} --- Provide data for the program COSY INFINITY.  This can take a little while
   as the program must figure out the Enge coefficients that correspond to the {\tt FINT} and
   {\tt HGAP} values for all the dipoles.  The user should test the output carefully.
+\item {\bf -mad8} --- Provide data for the program MAD8.
 \item {\bf -patricia} --- Provide data for the program PATRICIA.
 \item {\bf -patpet} --- Provide data for the program PATPET, a merging of the programs
         PATRICIA and PETROS.
