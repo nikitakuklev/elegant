@@ -79,7 +79,7 @@ endif
 
 ifneq ($(MPI),1)
 ifneq ($(NOMPI),1)
-PRODOAG = madto sddssasefel ibsEmittance abrat
+PRODOAG = elegantto sddssasefel ibsEmittance abrat
 endif
 endif
 
@@ -518,7 +518,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 
-madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
+elegantto_SRCS = 	elegantto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
 		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
 		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \
@@ -539,11 +539,11 @@ endif
 
 
 ifeq ($(GPU),1)
-madto_OBJS =    ../gpuElegant/gpu_base.o \
+elegantto_OBJS =    ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_matrix.o \
                 ../gpuElegant/gpu_memory_management.o \
-                ../gpuElegant/madto_gpu.o
-madto_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+                ../gpuElegant/elegantto_gpu.o
+elegantto_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
 
 elegant_OBJS =  ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_bin_time_distribution.o \
@@ -597,13 +597,13 @@ Pelegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcu
 endif
 
 ifeq ($(VERIFY),1)
-madto_OBJS += ../gpuElegant/gpu_verify.o
+elegantto_OBJS += ../gpuElegant/gpu_verify.o
 elegant_OBJS += ../gpuElegant/gpu_verify.o
 endif
 
 
-madto_LIBS += $(GSLLIB)
-madto_SYS_LIBS += $(SYS_GSLLIB)
+elegantto_LIBS += $(GSLLIB)
+elegantto_SYS_LIBS += $(SYS_GSLLIB)
 elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
 elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
 Pelegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
