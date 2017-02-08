@@ -392,11 +392,12 @@ long do_tracking(
 #ifdef HAVE_GPU
   if (beam) {
     /* GPU needs old method of loss tracking for now */
-    if (beam->lostBeam->particle==NULL || beam->lostBeam->nLostMax<nOriginal) {
-      beam->lostBeam->particle = (double**)czarray_2d(sizeof(double), nOriginal, COORDINATES_PER_PARTICLE+1);
-      beam->lostBeam->nLostMax = nOriginal;
+    if (beam->lostBeam.particle==NULL || beam->lostBeam.nLostMax<nOriginal) {
+      beam->lostBeam.particle = (double**)czarray_2d(sizeof(double), nOriginal, COORDINATES_PER_PARTICLE+1);
+      beam->lostBeam.nLostMax = nOriginal;
     }
-    gpuBaseInit(coord, nOriginal, accepted, beam->lostBeam->particle, isMaster);
+    gpuBaseInit(coord, nOriginal, accepted, beam->lostBeam.particle, isMaster);
+  }
 #endif
 
   flags |= beamline->fiducial_flag;
@@ -449,13 +450,13 @@ long do_tracking(
       nLeft = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
 					  0);
       if (nLeft!=nToTrack)
-	recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, 0);
+	recordLostParticles(coord, nLeft, nToTrack, lostBeam, 0);
       nToTrack = nLeft;
     }
     if (run->apertureData.initialized)  {
       nLeft = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
       if (nLeft!=nToTrack)
-	recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, 0);
+	recordLostParticles(coord, nLeft, nToTrack, lostBeam, 0);
       nToTrack = nLeft;
     }
   }
@@ -480,7 +481,7 @@ long do_tracking(
 	}
 	nLeft = 0;
 	if (nLeft!=nToTrack)
-          recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, i_pass);
+          recordLostParticles(coord, nLeft, nToTrack, lostBeam, i_pass);
 	nToTrack = 0;
       }
     }
@@ -1504,10 +1505,9 @@ long do_tracking(
 	      break;
 	    case T_CSBEND:
               ((CSBEND*)eptr->p_elem)->edgeFlags 
-                = determine_bend_flags(eptr, 
-                                       ((CSBEND*)eptr->p_elem)->edge_effects[((CSBEND*)eptr->p_elem)->e1Index],
-                                       ((CSBEND*)eptr->p_elem)->edge_effects[((CSBEND*)eptr->p_elem)->e2Index]);
-
+		= determine_bend_flags(eptr, 
+				       ((CSBEND*)eptr->p_elem)->edge_effects[((CSBEND*)eptr->p_elem)->e1Index],
+				       ((CSBEND*)eptr->p_elem)->edge_effects[((CSBEND*)eptr->p_elem)->e2Index]);
 	      if (flags&TEST_PARTICLES) {
 		saveISR = ((CSBEND*)eptr->p_elem)->isr;
 		((CSBEND*)eptr->p_elem)->isr = 0;
@@ -1520,9 +1520,9 @@ long do_tracking(
 	      break;
 	    case T_CSRCSBEND:
               ((CSRCSBEND*)eptr->p_elem)->edgeFlags 
-                = determine_bend_flags(eptr, 
-                                       ((CSRCSBEND*)eptr->p_elem)->edge_effects[((CSRCSBEND*)eptr->p_elem)->e1Index],
-                                       ((CSRCSBEND*)eptr->p_elem)->edge_effects[((CSRCSBEND*)eptr->p_elem)->e2Index]);
+		= determine_bend_flags(eptr, 
+				       ((CSRCSBEND*)eptr->p_elem)->edge_effects[((CSRCSBEND*)eptr->p_elem)->e1Index],
+				       ((CSRCSBEND*)eptr->p_elem)->edge_effects[((CSRCSBEND*)eptr->p_elem)->e2Index]);
 	      if (flags&TEST_PARTICLES) {
 		saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
 		((CSRCSBEND*)eptr->p_elem)->isr = 0;
@@ -2125,7 +2125,7 @@ long do_tracking(
 
 	if (eptr->type!=T_SCRIPT) { /* For the SCRIPT element, the lost particle coordinate will be recorded inside the element */
 	  if (nLeft!=nToTrack)
-            recordLostParticles(coord, nLeft, nToTrack-nLeft, lostBeam, i_pass);
+            recordLostParticles(coord, nLeft, nToTrack, lostBeam, i_pass);
           }
 	}
 
@@ -3870,7 +3870,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 void recordLostParticles(
                          double **coord,      /* particle coordinates, with lost particles swapped to the top of the array */
                          long nLeft,          /* coord+nLeft is first lost particle */
-                         long nNewLost,       /* number of newly-lost particles */
+			 long nToTrack,
                          LOST_BEAM *lostBeam, 
                          long pass            /* pass on which loss occurred */
                          )
@@ -3878,6 +3878,7 @@ void recordLostParticles(
   long ip, j;
   long n;
   double **lossBuffer;
+  long nNewLost = nToTrack - nLeft; /* number of newly-lost particles */
 
   if (!lostBeam || !coord || nNewLost==0)
     return;
