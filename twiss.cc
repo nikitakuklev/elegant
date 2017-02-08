@@ -672,8 +672,14 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
             if ((dphi=atan2(sin_dphi, cos_dphi))>0)
               dphi -= PIx2;
           }
+        } else if (elem->type==T_MALIGN) {
+          MALIGN *mal;
+          mal = (MALIGN*)elem->p_elem;
+          dphi = atan2(sin_dphi, cos_dphi);
+          if (dphi<0 && mal->dz>=0)
+            dphi+= PIx2;
         } else {
-          if (elem->type!=T_MALIGN && (dphi = atan2(sin_dphi, cos_dphi))<0)
+          if ((dphi = atan2(sin_dphi, cos_dphi))<0)
             dphi += PIx2;
         }
       }
