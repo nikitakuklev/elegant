@@ -182,8 +182,10 @@ public:
   double dcet0, dcet1, dcet2, dcet3;
   double e1_kick_limit, e2_kick_limit;
   // From CSBEND struct
-  double length, b0, hgap, fint, h1, h2;
-  int edge1_effects, edge2_effects, edge_order, n_kicks;
+  double length, b0, hgap, fint;
+  double h1, h2;
+  int edge1_effects, edge2_effects; 
+  int edge_order, n_kicks;
   int integration_order, d_expansionOrder, sqrtOrder;
   unsigned long edgeFlags;
   // From csbend.h globals
@@ -201,8 +203,8 @@ public:
       double he1, double he2, double psi1, double psi2, double n,
       double dcet0, double dcet1, double dcet2, double dcet3,
       double e1_kick_limit, double e2_kick_limit, double sqrtOrder,
-      double length, double b0, double hgap, double fint, double h1, 
-      double h2, int edge1_effects, int edge2_effects, 
+      double length, double b0, double hgap, double fint, double h1, double h2, 
+      int edge1_effects, int edge2_effects,
       int edge_order, int n_kicks, int integration_order, 
       unsigned long edgeFlags, double d_rho0, double d_rho_actual,
       double d_rad_coef, double d_isrConstant, int d_expansionOrder,
@@ -217,7 +219,7 @@ public:
     dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), e1_kick_limit(e1_kick_limit),
     e2_kick_limit(e2_kick_limit), sqrtOrder(sqrtOrder), length(length),
     b0(b0), hgap(hgap), fint(fint), h1(h1), h2(h2), 
-    edge1_effects(edge1_effects), edge2_effects(edge2_effects),
+    edge1_effects(edge1_effects), edge2_effects(edge2_effects), 
     edge_order(edge_order), n_kicks(n_kicks),
     integration_order(integration_order), edgeFlags(edgeFlags), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
@@ -408,7 +410,7 @@ extern "C" {
 
 long gpu_track_through_csbend(long n_part, CSBEND *csbend, 
        double p_error, double Po, double **accepted, double z_start, 
-       double *sigmaDelta2, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
+       double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
 {
   double h;
   double n, fse;
@@ -429,10 +431,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
 /*
   gpu_setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
  */ 
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
+  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
 
 
-  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+  if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
   
   if (csbend->referenceCorrection) {
@@ -442,6 +444,8 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       double **part0;
       TRACKING_CONTEXT tcontext;
 
+      bombElegant("THIS SECTION OF THE GPU CODE IS UNDER DEVELOPMENT.", NULL);
+      printf("GPU DEBUG1\n");
       getTrackingContext(&tcontext);
       if (tcontext.elementOccurrence>0) {
 	printf("Determining reference trajectory for CSBEND %s#%ld at s=%e\n", tcontext.elementName, tcontext.elementOccurrence, tcontext.zStart);
@@ -467,9 +471,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext((char*)"csbend0", 0, T_CSBEND, (char*)"none");
       // keep single particle csbend on CPU
-      gpuBase->elementOnGpu=0;
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, x_max, y_max, elliptical, apFileData);
-      gpuBase->elementOnGpu=1;
+      //gpuBase->elementOnGpu=0;
+      gpu_track_through_csbend(1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
+      //track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
+      //gpuBase->elementOnGpu=1;
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refKicks = csbend->n_kicks;
@@ -482,12 +487,14 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       refTrajectoryMode = SUBTRACT_TRAJECTORY;
     } else if (csbend->refTrajectoryChangeSet==1) {
       /* indicates reference trajectory is about to be determined */
+      printf("GPU DEBUG2\n");
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->n_kicks;
       refTrajectoryMode = RECORD_TRAJECTORY;
       csbend->refTrajectoryChangeSet = 2;
     } else {
       /* assume that reference trajectory already determined */
+      printf("GPU DEBUG3\n");
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->refKicks;
       refTrajectoryMode = SUBTRACT_TRAJECTORY;
@@ -543,13 +550,13 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     }
   }
   
-  he1 = csbend->h1;
-  he2 = csbend->h2;
+  he1 = csbend->h[csbend->e1Index];
+  he2 = csbend->h[csbend->e2Index];
   if (csbend->angle<0) {
     long i;
     angle = -csbend->angle;
-    e1    = -csbend->e1;
-    e2    = -csbend->e2;
+    e1    = -csbend->e[csbend->e1Index];
+    e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
     rho0  = csbend->length/angle;
@@ -558,8 +565,8 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
   }
   else {
     angle = csbend->angle;
-    e1    = csbend->e1;
-    e2    = csbend->e2;
+    e1    = csbend->e[csbend->e1Index];
+    e2    = csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
@@ -606,7 +613,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       kquad.isr1Particle = csbend->isr1Particle;
       kquad.n_kicks = csbend->n_kicks;
       kquad.integration_order = csbend->integration_order;
-      return gpu_multipole_tracking2(n_part, &elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+      return gpu_multipole_tracking2(n_part, &elem, p_error, Po, accepted, z_start, maxamp, apFileData, sigmaDelta2);
     } else {
       if (!largeRhoWarning) {
 #if USE_MPI
@@ -640,8 +647,8 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
   else
     rho_actual = 1e16/h;
 
-  e1_kick_limit = csbend->edge1_kick_limit;
-  e2_kick_limit = csbend->edge2_kick_limit;
+  e1_kick_limit = csbend->edge_kick_limit[csbend->e1Index];
+  e2_kick_limit = csbend->edge_kick_limit[csbend->e2Index];
   if (csbend->kick_limit_scaling) {
     e1_kick_limit *= rho0/rho_actual;
     e2_kick_limit *= rho0/rho_actual;
@@ -791,7 +798,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3], 
         e1_kick_limit, e2_kick_limit, csbend->sqrtOrder, 
         csbend->length, csbend->b[0], csbend->hgap, csbend->fint, 
-        csbend->h1, csbend->h2, csbend->edge1_effects, csbend->edge2_effects, 
+        csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
         csbend->edge_order, csbend->n_kicks, csbend->integration_order,
         csbend->edgeFlags, rho0, rho_actual, rad_coef, isrConstant,
         expansionOrder1, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
@@ -1350,8 +1357,10 @@ class gpu_track_through_csbendCSR_kernel3{
 public:
   double n, e1, psi1, he1;
   // From CSRCSBEND struct
-  int edge_order, edge1_effects;
-  double b0, hgap, fint, h1;
+  int edge_order;
+  int edge1_effects;
+  double b0, hgap, fint;
+  double h1;
   // From csbend.h globals
   double d_rho_actual, d_rho0;
 
@@ -1612,8 +1621,10 @@ class gpu_track_through_csbendCSR_kernel8{
 public:
   double e2, psi2, n, he2;
   // From CSRCSBEND struct
-  int edge_order, edge2_effects;
-  double b0, hgap, fint, h2;
+  int edge_order;
+  int edge2_effects;
+  double b0, hgap, fint;
+  double h2;
   // From csbend.h globals
   double d_rho_actual, d_rho0;
 
@@ -1699,7 +1710,7 @@ static char *derbenevCriterionOption[N_DERBENEV_CRITERION_OPTIONS]
 
 long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend, 
        double p_error, double Po, double **accepted, double z_start,
-       double z_end, CHARGE *charge, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
+       double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
 {
   double h, n, he1, he2;
   static long csrWarning = 0;
@@ -1762,7 +1773,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     allocGpuMem=true;
   }
 
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
+  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
 
   gamma2 = Po*Po+1;
   gamma3 = pow(gamma2, 3./2);
@@ -1791,7 +1802,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     bombElegant("null CSRCSBEND pointer (track_through_csbend)", NULL);
   if (csbend->integratedGreensFunction && !csbend->steadyState) 
     bombElegant("CSRCSBEND requires STEADYSTATE=1 if IGF=1.", NULL);
-  if (csbend->edge_order>1 && (csbend->edge1_effects==2 || csbend->edge2_effects==2) && csbend->hgap==0)
+  if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSRCSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
 
   if (csbend->angle==0) {
@@ -1852,13 +1863,13 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     csbend->b[7] = csbend->k8*rho0;
   }
 
-  he1 = csbend->h1;
-  he2 = csbend->h2;
+  he1 = csbend->h[csbend->e1Index];
+  he2 = csbend->h[csbend->e2Index];
   if (csbend->angle<0) {
     long i;
     angle = -csbend->angle;
-    e1    = -csbend->e1;
-    e2    = -csbend->e2;
+    e1    = -csbend->e[csbend->e1Index];
+    e2    = -csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
@@ -1867,8 +1878,8 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
   }
   else {
     angle = csbend->angle;
-    e1    = csbend->e1;
-    e2    = csbend->e2;
+    e1    = csbend->e[csbend->e1Index];
+    e2    = csbend->e[csbend->e2Index];
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
@@ -2092,8 +2103,8 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
         gpu_track_particles(Me1, n_part);
       else {
         gpuDriver(n_part, gpu_track_through_csbendCSR_kernel3(rho_actual, rho0, n, e1,
-                  psi1, he1, csbend->edge_order, csbend->edge1_effects, 
-                  csbend->b[0], csbend->hgap, csbend->fint, csbend->h1));
+                  psi1, he1, csbend->edge_order, csbend->edge_effects[csbend->e1Index],
+                  csbend->b[0], csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]));
         gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel3");
       }
     }
@@ -2577,8 +2588,8 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
         gpu_track_particles(Me2, n_part);
       else
         gpuDriver(n_part, gpu_track_through_csbendCSR_kernel8(rho_actual, rho0, n, e2,
-                  psi2, he2, csbend->edge_order, csbend->edge2_effects, 
-                  csbend->b[0], csbend->hgap, csbend->fint, csbend->h2));
+                  psi2, he2, csbend->edge_order, csbend->edge_effects[csbend->e2Index],
+                  csbend->b[0], csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]));
         gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel8");
     }
     gpuDriver(n_part,

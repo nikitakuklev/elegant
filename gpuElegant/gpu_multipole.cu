@@ -570,7 +570,7 @@ extern "C" {
 
 long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
        double p_error, double Po, double **accepted, double z_start, 
-       double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData,
+       MAXAMP *maxamp, APERTURE_DATA *apFileData,
        double *sigmaDelta2) {
   double KnL(0);      /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
   double dx(0), dy(0), dz(0);  /* offsets of the multipole center */
@@ -843,7 +843,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, tilt, apFileData, z_start+drift/2);
+  setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+drift/2);
   
   struct GPUBASE* gpuBase = getGpuBase();
   unsigned int particlePitch = gpuBase->gpu_array_pitch;

@@ -7,9 +7,9 @@ NVCC = /usr/local/cuda-7.5/bin/nvcc
 MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
 
 ifeq ($(MPI),1)
-all: madto_gpu.o elegant_gpu.o Pelegant_gpu.o
+all: elegantto_gpu.o elegant_gpu.o Pelegant_gpu.o
 else
-all: madto_gpu.o elegant_gpu.o
+all: elegantto_gpu.o elegant_gpu.o
 endif
 
 clean:
@@ -61,7 +61,7 @@ MPIOBJNAMES = mpi_gpu_base.o \
 	mpi_gpu_wake.o \
 	mpi_printCudaDeviceProp.o
 
-MADTOOBJNAMES = gpu_base.o gpu_matrix.o gpu_memory_management.o
+ELEGANTTOOBJNAMES = gpu_base.o gpu_matrix.o gpu_memory_management.o
 
 HCUNAMES = gpu_fringe.hcu \
 	   gpu_interp.hcu \
@@ -109,7 +109,7 @@ ifeq ($(VERIFY),1)
 CFLAGS += -DGPU_VERIFY
 OBJNAMES += gpu_verify.o
 MPIOBJNAMES += mpi_gpu_verify.o
-MADTOOBJNAMES += gpu_verify.o
+ELEGANTTOOBJNAMES += gpu_verify.o
 endif
 
 MPI_CFLAGS=-DUSE_MPI -DSDDS_MPI_IO -I$(MPI_INCLUDE)
@@ -187,9 +187,9 @@ mpi_gpu_verify.o: gpu_verify.cu $(HCUNAMES) $(HNAMES)
 	$(NVCC) $(CFLAGS) $(MPI_CFLAGS) --output-file mpi_gpu_verify.o gpu_verify.cu
 
 
-madto_gpu.o: $(MADTOOBJNAMES)
+elegantto_gpu.o: $(ELEGANTTOOBJNAMES)
 	$(NVCC) --gpu-architecture=sm_52 --device-link \
-	        $(MADTOOBJNAMES) --output-file madto_gpu.o -lcudadevrt -lcudart
+	        $(ELEGANTTOOBJNAMES) --output-file elegantto_gpu.o -lcudadevrt -lcudart
 
 elegant_gpu.o: $(OBJNAMES)
 	$(NVCC) --generate-code arch=compute_52,code=sm_52 --device-link \
