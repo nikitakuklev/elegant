@@ -1688,7 +1688,7 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, dou
   apertureData->xCen = apertureData->yCen = 0;
   x_max = y_max = apertureData->xMax = apertureData->yMax = 0;
   apertureData->elliptical = 0;
-  apertureData->present = 0;
+  apertureData->present = apertureData->openSide = 0;
   if (maxamp) {
     x_max = apertureData->xMax = maxamp->x_max;
     y_max = apertureData->yMax = maxamp->y_max;
@@ -1698,6 +1698,7 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, dou
       apertureData->yExponent = maxamp->exponent;
     if (maxamp->yExponent)
       apertureData->yExponent = maxamp->yExponent;
+    apertureData->openSide = determineOpenSideCode(maxamp->openSide);
   }
   if (apFileData && apFileData->initialized) {
     /* If there is file-based aperture data, it may override MAXAMP data. */
@@ -1709,11 +1710,13 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, dou
         apertureData->xMax = xMaxF;
         apertureData->xCen = xCenF;
         apertureData->elliptical = 0;
+        apertureData->openSide = 0;
       }
       if (y_max<=0 || (y_max>fabs(yCenF+yMaxF) && y_max>fabs(yCenF-yMaxF))) {
         apertureData->yMax = yMaxF;
         apertureData->yCen = yCenF;
         apertureData->elliptical = 0;
+        apertureData->openSide = 0;
       }
     }
   }
@@ -1729,17 +1732,28 @@ long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData)
   double xa, yb;
   if (!apData || !apData->present)
     return 1;
+
+  x -= apData->xCen;
+  y -= apData->yCen;
+
   if (apData->elliptical==0 || apData->xMax<=0 || apData->yMax<=0) {
     /* rectangular or one-dimensional */
-    if ((apData->xMax>0 && fabs(x - apData->xCen)>apData->xMax) ||
-        (apData->yMax>0 && fabs(y - apData->yCen)>apData->yMax))
-      return 0;
+    if ((apData->xMax>0 && fabs(x)>apData->xMax) ||
+        (apData->yMax>0 && fabs(y)>apData->yMax)) {
+      if (apData->openSide==0 ||
+          evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
+        return 0;
+    }
     return 1;
   }
+
   /* Elliptical or super-elliptical */
-  xa = (x-apData->xCen)/apData->xMax;
-  yb = (y-apData->yCen)/apData->yMax;
-  if ((ipow(xa, apData->xExponent) + ipow(yb, apData->yExponent))>=1)
-    return 0;
+  xa = x/apData->xMax;
+  yb = y/apData->yMax;
+  if ((ipow(xa, apData->xExponent) + ipow(yb, apData->yExponent))>=1) {
+    if (apData->openSide==0 ||
+        evaluateLostWithOpenSides(apData->openSide, x, y, apData->xMax, apData->yMax))
+      return 0;
+  }
   return 1;
 }

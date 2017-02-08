@@ -3658,6 +3658,7 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 typedef struct {
   double xCen, yCen, xMax, yMax;
   short elliptical, present, xExponent, yExponent;
+  short openSide;
 } MULT_APERTURE_DATA;
 extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
                                   APERTURE_DATA *apFileData, double zPosition);
