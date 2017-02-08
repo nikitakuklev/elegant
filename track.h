@@ -3657,15 +3657,14 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 /* prototypes for multipole.c: */
 typedef struct {
   double xCen, yCen, xMax, yMax;
-  short elliptical, present;
+  short elliptical, present, xExponent, yExponent;
 } MULT_APERTURE_DATA;
-extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double x_max, double y_max, long elliptical, double tilt, 
-     APERTURE_DATA *apFileData, double zPosition);
+extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
+                                  APERTURE_DATA *apFileData, double zPosition);
 extern long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start,
-                                double x_max, double y_max, long elliptical, 
-                                APERTURE_DATA *apData, double *sigmaDelta2);
+                                MAXAMP *maxamp, APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
@@ -3942,9 +3941,9 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 void addCorrectorRadiationKick(double **coord, long np, ELEMENT_LIST *elem, long type, double Po, double *sigmaDelta2, 
 			       long disableISR);
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
-    double z_start, double z_end, CHARGE *charge, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData);
+                             double z_start, double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-    double z_start, double *sigmaDelta2, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData);
+                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, CHARGE *charge, char *rootname);

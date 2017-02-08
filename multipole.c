@@ -617,10 +617,7 @@ long multipole_tracking2(
                          double Po,
                          double **accepted,
                          double z_start,
-                         /* from MAXAMP element */
-                         double x_max,
-                         double y_max,
-                         long elliptical,
+                         MAXAMP *maxamp,
                          /* from aperture_data command */
                          APERTURE_DATA *apFileData,
                          /* For return of accumulated change in sigmaDelta^2 */
@@ -651,10 +648,10 @@ long multipole_tracking2(
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_multipole_tracking2(n_part, elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+    i_part = gpu_multipole_tracking2(n_part, elem, p_error, Po, accepted, z_start, maxamp, apFileData, sigmaDelta2);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    multipole_tracking2(particle, n_part, elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+    multipole_tracking2(particle, n_part, elem, p_error, Po, accepted, z_start, maxamp, apFileData, sigmaDelta2);
     compareGpuCpu(n_part, "multipole_tracking2");
 #endif /* GPU_VERIFY */
     return i_part;
@@ -915,7 +912,7 @@ long multipole_tracking2(
   if (multData)
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
 
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, tilt, apFileData, z_start+drift/2);
+  setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+drift/2);
   
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
@@ -1683,15 +1680,25 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   }
 }
 
-void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double x_max, double y_max, long elliptical, double tilt, 
+void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
      APERTURE_DATA *apFileData, double zPosition)
 {
+  double x_max, y_max;
   /* zPosition=_start+drift/2 */
   apertureData->xCen = apertureData->yCen = 0;
-  apertureData->xMax = x_max;
-  apertureData->yMax = y_max;
-  apertureData->elliptical = elliptical;
-  apertureData->present = x_max>0 || y_max>0;
+  x_max = y_max = apertureData->xMax = apertureData->yMax = 0;
+  apertureData->elliptical = 0;
+  apertureData->present = 0;
+  if (maxamp) {
+    x_max = apertureData->xMax = maxamp->x_max;
+    y_max = apertureData->yMax = maxamp->y_max;
+    apertureData->elliptical = maxamp->elliptical;
+    apertureData->present = x_max>0 || y_max>0;
+    apertureData->xExponent = 
+      apertureData->yExponent = maxamp->exponent;
+    if (maxamp->yExponent)
+      apertureData->yExponent = maxamp->yExponent;
+  }
   if (apFileData && apFileData->initialized) {
     /* If there is file-based aperture data, it may override MAXAMP data. */
     double xCenF, yCenF, xMaxF, yMaxF;
@@ -1719,10 +1726,20 @@ void setupMultApertureData(MULT_APERTURE_DATA *apertureData, double x_max, doubl
 
 long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData) 
 {
-    if (apData && apData->present &&
-        ((apData->xMax && fabs(x - apData->xCen)>apData->xMax) ||
-         (apData->yMax && fabs(y - apData->yCen)>apData->yMax) )) {
-      return 0;
-    }
+  double xa, yb;
+  if (!apData || !apData->present)
     return 1;
+  if (apData->elliptical==0 || apData->xMax<=0 || apData->yMax<=0) {
+    /* rectangular or one-dimensional */
+    if ((apData->xMax>0 && fabs(x - apData->xCen)>apData->xMax) ||
+        (apData->yMax>0 && fabs(y - apData->yCen)>apData->yMax))
+      return 0;
+    return 1;
+  }
+  /* Elliptical or super-elliptical */
+  xa = (x-apData->xCen)/apData->xMax;
+  yb = (y-apData->yCen)/apData->yMax;
+  if ((ipow(xa, apData->xExponent) + ipow(yb, apData->yExponent))>=1)
+    return 0;
+  return 1;
 }

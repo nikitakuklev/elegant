@@ -233,7 +233,7 @@ void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long ex
 
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start, double *sigmaDelta2, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
+                          double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
 {
   double h;
   long i_part, i_top, particle_lost;
@@ -265,10 +265,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if(getElementOnGpu()){
     startGpuTimer();
     i_part = gpu_track_through_csbend(n_part, csbend, p_error, Po, accepted, 
-                                      z_start, sigmaDelta2, rootname, x_max, y_max, elliptical, apFileData);
+                                      z_start, sigmaDelta2, rootname, maxamp, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
-    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, x_max, y_max, elliptical, apFileData);
+    track_through_csbend(part, n_part, csbend, p_error, Po, accepted, z_start, sigmaDelta2, rootname, maxamp, apFileData);
     compareGpuCpu(n_part, "track_through_csbend");
 #endif /* GPU_VERIFY */
     return i_part;
@@ -280,7 +280,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   setUpCsbendPhotonOutputFile(csbend, rootname, n_part);
   
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
+  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
 
   if (csbend->edge_order>1 && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2) && csbend->hgap==0)
     bombElegant("CSBEND has EDGE_ORDER>1 and EDGE[12]_EFFECTS==2, but HGAP=0. This gives undefined results.", NULL);
@@ -316,7 +316,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
       setTrackingContext("csbend0", 0, T_CSBEND, "none");
-      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, x_max, y_max, elliptical, apFileData);
+      track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 
       csbend->refKicks = csbend->n_kicks;
@@ -453,7 +453,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       kquad.isr1Particle = csbend->isr1Particle;
       kquad.n_kicks = csbend->n_kicks;
       kquad.integration_order = csbend->integration_order;
-      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, x_max, y_max, elliptical, apFileData, sigmaDelta2);
+      return multipole_tracking2(part, n_part, &elem, p_error, Po, accepted, z_start, maxamp, apFileData, sigmaDelta2);
     } else {
       if (!largeRhoWarning) {
 #if USE_MPI
@@ -1250,7 +1250,7 @@ void readWakeFilterFile(long *values, double **freq, double **real, double **ima
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
-                             CHARGE *charge, char *rootname, double x_max, double y_max, long elliptical, APERTURE_DATA *apFileData)
+                             CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
 {
   double h, n, he1, he2;
   static long csrWarning = 0;
@@ -1303,7 +1303,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
-    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
+    i_part = gpu_track_through_csbendCSR(n_part, csbend, p_error, Po, accepted, z_start,  z_end, charge, rootname, maxamp, apFileData);
 #ifdef GPU_VERIFY     
     startCpuTimer();
     /* Copy the csrWake global struct (it is reset below) */
@@ -1312,7 +1312,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.FdNorm = NULL; /* Reset doesn't deallocate */
     csrWake.StupakovFileActive = 0; /* Reset doesn't close */
 
-    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, x_max, y_max, elliptical, apFileData);
+    track_through_csbendCSR(part, n_part, csbend, p_error, Po, accepted, z_start, z_end, charge, rootname, maxamp, apFileData);
     compareGpuCpu(n_part, "track_through_csbendCSR");
 
     /* compare CSR_LAST_WAKE structs */
@@ -1330,7 +1330,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
 #endif /* HAVE_GPU */
  
-  setupMultApertureData(&apertureData, x_max, y_max, elliptical, csbend->tilt, apFileData, z_start+csbend->length/2);
+  setupMultApertureData(&apertureData, maxamp, csbend->tilt, apFileData, z_start+csbend->length/2);
 
   gamma2 = Po*Po+1;
   gamma3 = pow(gamma2, 3./2);

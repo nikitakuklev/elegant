@@ -680,7 +680,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(coord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL, 1, 1, 0, NULL);
+                         NULL, NULL, NULL, NULL);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -841,7 +841,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL, 1, 1, 0, NULL);
+                         NULL, NULL, NULL, NULL);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -1390,7 +1390,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   switch (elem->type) {
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
-    track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname, 1, 1, 0, NULL);
+    track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname, NULL, NULL);
     break;
   case T_SBEN:
     track_particles(coord, elem->matrix, coord, n_track);
@@ -1398,12 +1398,12 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_KQUAD:
     kquad = (KQUAD*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-kquad->length,
-                       0.0, 0.0, 0, NULL, &sigmaDelta2);
+                        NULL, NULL, &sigmaDelta2);
     break;
   case T_KSEXT:
     ksext = (KSEXT*)elem->p_elem;
     multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-ksext->length,
-                       0.0, 0.0, 0, NULL, &sigmaDelta2);
+                        NULL, NULL, &sigmaDelta2);
     break;
   case T_RFCA:
     pCentral = run->p_central;

@@ -177,7 +177,7 @@ long do_tracking(
   MHISTOGRAM *mhist;
   FTABLE *ftable;
   ENERGY *energy;
-  MAXAMP *maxamp;
+  MAXAMP *maxamp = NULL;
   MALIGN *malign;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
   long nToTrack;  /* number of particles being tracked */
@@ -1513,7 +1513,7 @@ long do_tracking(
 		((CSBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
-					   *P_central, accepted, last_z, NULL, run->rootname, x_max, y_max, elliptical,
+					   *P_central, accepted, last_z, NULL, run->rootname, maxamp,
 					   &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
@@ -1529,7 +1529,7 @@ long do_tracking(
 	      }
 	      nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND*)eptr->p_elem, 0.0,
 					      *P_central, accepted, last_z, z, charge, run->rootname,
-					      x_max, y_max, elliptical, &(run->apertureData));
+					      maxamp, &(run->apertureData));
 	      if (flags&TEST_PARTICLES)
 		((CSRCSBEND*)eptr->p_elem)->isr = saveISR;
 	      break;
@@ -1559,8 +1559,7 @@ long do_tracking(
                 ((KQUAD*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z,
-                                          x_max, y_max, elliptical,
+                                          *P_central, accepted, last_z, maxamp,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KQUAD*)eptr->p_elem)->isr = saveISR;
@@ -1571,8 +1570,7 @@ long do_tracking(
                 ((KSEXT*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z,
-                                          x_max, y_max, elliptical,
+                                          *P_central, accepted, last_z, maxamp,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KSEXT*)eptr->p_elem)->isr = saveISR;
@@ -1583,8 +1581,7 @@ long do_tracking(
                 ((KOCT*)eptr->p_elem)->isr = 0;
               }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                          *P_central, accepted, last_z,
-                                          x_max, y_max, elliptical,
+                                          *P_central, accepted, last_z, maxamp,
                                           &(run->apertureData), NULL);
               if (flags&TEST_PARTICLES)
                 ((KOCT*)eptr->p_elem)->isr = saveISR;
@@ -1600,8 +1597,7 @@ long do_tracking(
                   ((KQUSE*)eptr->p_elem)->isr = 0;
                 }
                 nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-                                            *P_central, accepted, last_z,
-                                            x_max, y_max, elliptical,
+                                            *P_central, accepted, last_z, maxamp,
                                             &(run->apertureData), NULL);
                 if (flags&TEST_PARTICLES)
                   ((KQUSE*)eptr->p_elem)->isr = saveISR;
