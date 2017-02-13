@@ -44,7 +44,7 @@ Historical change logs are appended to the end of this manual.
 
 \begin{itemize}
 \item The \verb|SREFFECTS| element now correctly computes the equilibrium horizontal and vertical emittances when
-  $J_x \neq 1$. Previously, the computation assumed $J_x = 1$.
+  $J_x \neq 1$. Previously, the computation used an equation that implicitly assumes $J_x = 1$.
 \item The \verb|MALIGN| element could cause spurious integer changes in the reported tunes if the \verb|DZ| parameter
   was negative. This problem, reported by V. Sajaev (APS), was fixed.
 \end{itemize}
@@ -64,6 +64,8 @@ Historical change logs are appended to the end of this manual.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements now support inclusion of multipole errors linked to the
+  correction strength.
 \item The \verb|WATCH| element was improved so that the \verb|dt| column in coordinate-logging mode and the \verb|dCt| column in
   parameter- and centroid-logging modes are more useful. In particular, in normal cases these will now more reliably be centered
   on zero. One can also provide a reference frequency relative to which the reference time is defined. This improvement grew out of
