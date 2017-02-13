@@ -160,11 +160,11 @@ typedef struct {
   long randomized;         /* used for random multipoles */
   long orders;
   int32_t *order;
-  double referenceRadius;  /* for KQUAD, KSEXT, etc. */
+  double referenceRadius;  
   /* normal and skew terms */
-  double *an, *bn;         /* input for KQUAD, KSEXT, etc. */
-  double *anMod, *bnMod;   /* computed for KQUAD, KSEXT, etc.: anMod=an*n!/r^n */
-  double *KnL, *JnL;       /* input for FMULT, computed for KQUAD, KSEXT, etc. */
+  double *an, *bn;         /* input values for normal and skew terms, respectively, for KQUAD, KSEXT, others */
+  double *anMod, *bnMod;   /* computed values: anMod=an*n!/r^n, bnMod=bn*n!/r^n */
+  double *KnL, *JnL;       /* provided as input for FMULT, but computed for KQUAD, KSEXT, etc. */
   short copy;              /* if non-zero, pointers are copies of another structure and shouldn't be freed or reallocated */
 } MULTIPOLE_DATA ;
 
@@ -1007,9 +1007,9 @@ extern char *entity_text[N_TYPES];
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 15
-#define N_EHCOR_PARAMS 8
-#define N_EVCOR_PARAMS 8
-#define N_EHVCOR_PARAMS 10
+#define N_EHCOR_PARAMS 9
+#define N_EVCOR_PARAMS 9
+#define N_EHVCOR_PARAMS 11
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 12
@@ -1217,19 +1217,28 @@ typedef struct {
     double length, kick, tilt, calibration;
     long steering, synchRad, isr;
     double lEffRad;
+    char *steeringMultipoles;
+    /* for internal use */
+    MULTIPOLE_DATA steeringMultipoleData;
     } EHCOR;
 
 typedef struct {
     double length, kick, tilt, calibration;
     long steering, synchRad, isr; 
     double lEffRad;
+    char *steeringMultipoles;
+    /* for internal use */
+    MULTIPOLE_DATA steeringMultipoleData;
     } EVCOR;
 
 typedef struct {
     double length, xkick, ykick, tilt, xcalibration, ycalibration;
     long steering, synchRad, isr;
     double lEffRad;
-    } EHVCOR;
+    char *steeringMultipoles;
+    /* for internal use */
+    MULTIPOLE_DATA steeringMultipoleData;
+  } EHVCOR;
 
 /* names and storage structure for vertical corrector physical parameters */
 extern PARAMETER vcor_param[N_VCOR_PARAMS] ;

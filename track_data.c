@@ -2632,10 +2632,11 @@ PARAMETER ehcor_param[N_EHCOR_PARAMS] = {
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ehcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&ehcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
 EVCOR evcor_example;
-/* horizontal corrector physical parameters */
+/* vertical corrector physical parameters */
 PARAMETER evcor_param[N_EVCOR_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.length), NULL, 0.0, 0, "length"},
     {"KICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.kick), NULL, 0.0, 0, "kick angle"},
@@ -2645,6 +2646,7 @@ PARAMETER evcor_param[N_EVCOR_PARAMS] = {
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&evcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&evcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&evcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&evcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
 EHVCOR ehvcor_example;
@@ -2660,6 +2662,7 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ehvcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&ehvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
+    {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehvcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
 BMAPXYZ bmapxyz_example;

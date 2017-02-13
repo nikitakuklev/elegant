@@ -196,6 +196,21 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
               multData->an[i], multData->bn[i]);
 #endif
   }
+
+  if (steering) {
+    long i;
+    if (!(multData->KnL = SDDS_Malloc(sizeof(*multData->KnL)*multData->orders)) ||
+        !(multData->JnL = SDDS_Malloc(sizeof(*multData->JnL)*multData->orders)) )
+      bombTracking("memory allocation failure (readErrorMultipoleData)");
+    for (i=0; i<multData->orders; i++) {
+      multData->KnL[i] = 
+        -1*multData->an[i]*dfactorial(multData->order[i])/ipow(multData->referenceRadius, multData->order[i]);
+      multData->JnL[i] = 
+        -1*multData->bn[i]*dfactorial(multData->order[i])/ipow(multData->referenceRadius, multData->order[i]);
+    }
+  }
+
+
   multData->initialized = 1;
   multData->copy = 0;
 
@@ -1568,11 +1583,6 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   
   if (!totalMult->initialized) {
     totalMult->initialized = 1;
-    if (steeringMult && steeringMult->orders) {
-      if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
-          !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
-        bombTracking("memory allocation failure (computeTotalMultipoleFields)");
-    }
     /* make a list of unique orders for random and systematic multipoles */
     if (systematicMult->orders && randomMult->orders &&
         systematicMult->orders!=randomMult->orders)
@@ -1678,6 +1688,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
         -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i]);
     }
   }
+
 }
 
 void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
