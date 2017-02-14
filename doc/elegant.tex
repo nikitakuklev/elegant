@@ -90,7 +90,7 @@ Historical change logs are appended to the end of this manual.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added occurrence and positional filters for the \verb|alter_elements| command. This was requested by V. Sajaev (ANL).
+\item Added occurrence and positional filters for the \verb|steering_element| command. This was requested by V. Sajaev (ANL).
 \item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
   \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
 \item Compared to previous versions, the lost-particle data file (\verb|losses| file requested by the \verb|run_setup|
@@ -4231,6 +4231,13 @@ A literal ``\%s'' must be entered as ``\%\%s''.
     STRING plane = "h";
     double tweek = 1e-3;
     double limit = 0;
+    long start_occurence = 0;
+    long end_occurence = 0;
+    long occurence_step = 1;
+    double s_start = -1;
+    double s_end = -1;
+    STRING after = NULL;
+    STRING before = NULL;
 &end
 \end{verbatim}
 
@@ -4243,6 +4250,16 @@ A literal ``\%s'' must be entered as ``\%\%s''.
 \item \verb|plane| --- May be either ``h'' or ``v'', for horizontal or vertical correction.
 \item \verb|tweek| --- The amount by which to change the item to compute the steering strength.
 \item \verb|limit| --- The maximum allowed absolute value of the item.
+\item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
+ ending occurence numbers of elements that will be included. N.B.: if wildcards are used, occurence
+ number counting is for each set of identically-named elements separately, rather than for the sequence
+ of matched elements.
+\item \verb|s_start|, \verb|s_end| --- If non-negative, these give the gaving and ending position
+ limits for the end-of-element locations of elements to be included.
+\item \verb|after| --- The name of an element.  If given, only elements
+ that follow the named element in the beamline are included.  
+\item \verb|before| --- The name of an element. If given, only elements
+ that precede the named element in the beamline are included.  
 \end{itemize}
 
 %\begin{latexonly}
