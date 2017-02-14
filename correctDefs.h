@@ -20,6 +20,11 @@ typedef struct {
     long *param_index;                     /* index of correcting parameter in entity description */
     double *corr_tweek;                    /* tweek values--amount to change parameter by to get dkick/dparam */
     double *corr_limit;                    /* limiting absolute value of the parameter */
+    long *start_occurence;                 /* start, end, and step for occurence filter */
+    long *end_occurence;
+    long *occurence_step;
+    double *s_start;                       /* start and end for s-based filter */
+    double *s_end;
     long n_corr_types;
     } STEERING_LIST;
 

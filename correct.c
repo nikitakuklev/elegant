@@ -61,8 +61,8 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
 				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, short **pegged, double **weight,
 				     long plane, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, long recircs);
 ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
-ELEMENT_LIST *next_element_of_type2(ELEMENT_LIST *elem, long type1, long type2);
-ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index);
+ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, 
+                                    long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end);
 long find_parameter_offset(char *param_name, long elem_type);
 long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
@@ -80,9 +80,11 @@ void zero_closed_orbit(TRAJECTORY *clorb, long n);
 long find_index(long key, long *list, long n_listed);
 long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
                              char *element_type, double tweek, double limit,
+                             long start_occurence, long end_occurence, long occurence_step,
+                             double s_start, double s_end, 
                              LINE_LIST *beamline, RUN *run, long forceQuads);
 long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
-    LINE_LIST *beamline, RUN *run, long forceQuads);
+                             LINE_LIST *beamline, RUN *run, long forceQuads);
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run);
 double noise_value(double xamplitude, double xcutoff, long xerror_type);
 void do_response_matrix_output(char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, 
@@ -428,15 +430,64 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
   
   if (echoNamelists) print_namelist(stdout, &steering_element);
 
+  if ((((s_start>=0 && s_end>=0) ? 1 : 0) +
+       ((start_occurence!=0 && end_occurence!=0) ? 1 : 0 ) +
+       ((after || before) ? 1 : 0 ))>1)
+    bombElegant("can't combine start_occurence/end_occurence, s_start/s_end, and after/before---use one method only", NULL);
+  if (start_occurence>end_occurence) 
+    bombElegant("start_occurence > end_occurence", NULL);
+  if ((start_occurence!=0 && end_occurence!=0) && occurence_step<=0)
+    bombElegant("occurence_step<=0", NULL);
+
+  if (after || before) {
+    ELEMENT_LIST *context;
+    context = NULL;
+    s_start = -DBL_MAX;
+    s_end = DBL_MAX;
+    if (after && strlen(after)) {
+      if (!(context=find_element(after, &context, &(beamline->elem)))) {
+        fprintf(stdout, "Element %s not found in beamline.\n", after);
+        exitElegant(1);
+      }
+      s_start = context->end_pos;
+      if (find_element(after, &context, &(beamline->elem))) {
+        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+        exitElegant(1);
+      }
+      fprintf(stdout, "%s found at s = %le m\n", after, s_start);
+      fflush(stdout);
+    }
+    context = NULL;
+    if (before && strlen(before)) {
+      if (!(context=find_element(before, &context, &(beamline->elem)))) {
+        fprintf(stdout, "Element %s not found in beamline.\n", before);
+        exitElegant(1);
+      }
+      s_end = context->end_pos;
+      if (find_element(before, &context, &(beamline->elem))) {
+        fprintf(stdout, "Element %s found in beamline more than once.\n", before);
+        exitElegant(1);
+      }
+      fprintf(stdout, "%s found at s = %le m\n", before, s_end);
+      fflush(stdout);
+    }
+    if (s_start>s_end) 
+      bombElegant("'after' element follows 'before' element!", NULL);
+  }
+  
   if (limit && (limit<tweek || limit<0))
     bombElegant("invalid limit specified for steering element", NULL);
 
   if (plane[0]=='h' || plane[0]=='H')  {
-    if (!add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, beamline, run, 1))
+    if (!add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, 
+                                 start_occurence, end_occurence, occurence_step, s_start, s_end,
+                                 beamline, run, 1))
       bombElegant("no match to given element name or type", NULL);
   }
   else if (plane[0]=='v' || plane[0]=='V') {
-    if (!add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, beamline, run, 1))
+    if (!add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, 
+                                 start_occurence, end_occurence, occurence_step, s_start, s_end,
+                                 beamline, run, 1))
       bombElegant("no match to given element name or type", NULL);
   }
   else
@@ -450,7 +501,8 @@ long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *ite
   ELEMENT_LIST *context;
   context = &(beamline->elem);
   while (context && (context=next_element_of_type(context, type))) {
-    found += add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, beamline, run, forceQuads);
+    found += add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, 
+                                     0, 0, 1, -1, -1, beamline, run, forceQuads);
     context = context->succ;
   }
   return found;
@@ -458,6 +510,8 @@ long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *ite
 
 long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
                              char *element_type, double tweek, double limit, 
+                             long start_occurence, long end_occurence, long occurence_step, 
+                             double s_start, double s_end, 
                              LINE_LIST *beamline, RUN *run, long forceQuads)
 {
   ELEMENT_LIST *context;
@@ -478,6 +532,16 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     SL->param_offset = NULL;
     if (SL->param_index) tfree(SL->param_index);
     SL->param_index = NULL;
+    if (SL->start_occurence) tfree(SL->start_occurence);
+    SL->start_occurence = NULL;
+    if (SL->end_occurence) tfree(SL->end_occurence);
+    SL->end_occurence = NULL;
+    if (SL->occurence_step) tfree(SL->occurence_step);
+    SL->occurence_step = NULL;
+    if (SL->s_start) tfree(SL->s_start);
+    SL->s_start = NULL;
+    if (SL->s_end) tfree(SL->s_end);
+    SL->s_end = NULL;
   }
 
   if (!name && !element_type)
@@ -505,6 +569,13 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
   while ((context=wfind_element(name, &context, &(beamline->elem)))) {
     if (element_type &&
         !wild_match(entity_name[context->type], element_type))
+      continue;
+    if (start_occurence!=0 && end_occurence!=0) {
+      if (context->occurence<start_occurence || context->occurence>end_occurence ||
+          (context->occurence-start_occurence)%occurence_step!=0)
+        continue;
+    }
+    if (s_start>=0 && s_end>=0 && (context->end_pos<s_start || context->end_pos>s_end))
       continue;
 
     switch (context->type) {
@@ -550,14 +621,24 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     SL->corr_limit   = trealloc(SL->corr_limit, (SL->n_corr_types+1)*sizeof(*SL->corr_limit));
     SL->param_offset = trealloc(SL->param_offset, (SL->n_corr_types+1)*sizeof(*SL->param_offset));
     SL->param_index  = trealloc(SL->param_index , (SL->n_corr_types+1)*sizeof(*SL->param_index ));
-    
+    SL->start_occurence = trealloc(SL->start_occurence, (SL->n_corr_types+1)*sizeof(*SL->start_occurence));
+    SL->end_occurence = trealloc(SL->end_occurence, (SL->n_corr_types+1)*sizeof(*SL->end_occurence));
+    SL->occurence_step = trealloc(SL->occurence_step, (SL->n_corr_types+1)*sizeof(*SL->occurence_step));
+    SL->s_start = trealloc(SL->s_start, (SL->n_corr_types+1)*sizeof(*SL->s_start));
+    SL->s_end = trealloc(SL->s_end, (SL->n_corr_types+1)*sizeof(*SL->s_end));
+
     SL->corr_type[SL->n_corr_types] = context->type;
     cp_str(SL->corr_name+SL->n_corr_types, context->name);
 
     cp_str(SL->corr_param+SL->n_corr_types, item);
     SL->corr_tweek[SL->n_corr_types] = tweek;
     SL->corr_limit[SL->n_corr_types] = limit;
-    
+    SL->start_occurence[SL->n_corr_types] = start_occurence;
+    SL->end_occurence[SL->n_corr_types] = end_occurence;
+    SL->occurence_step[SL->n_corr_types] = occurence_step;
+    SL->s_start[SL->n_corr_types] = s_start;
+    SL->s_end[SL->n_corr_types] = s_end;
+
     if ((SL->param_index[SL->n_corr_types]=param_number=confirm_parameter(item, context->type))<0 ||
         entity_description[context->type].parameter[param_number].type!=IS_DOUBLE ||
         (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->corr_type[SL->n_corr_types]))<0) {
@@ -1994,9 +2075,13 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
   corr = start;
   do {
     /* advance to position of next corrector */
-    if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index)))
+    if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index,
+                                       SL->start_occurence, SL->end_occurence, SL->occurence_step,
+                                       SL->s_start, SL->s_end)))
       break;
     if (steering_corrector(corr, SL, plane) && (index=match_string(corr->name, SL->corr_name, SL->n_corr_types, WILDCARD_MATCH))>=0) {
+      printf("Adding %s#%ld at %e m to %c plane steering\n",
+             corr->name, corr->occurence, corr->end_pos, plane?'v':'h');
       *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
       (*ucorr)[*ncor] = corr;
       *sl_index = trealloc(*sl_index, sizeof(**sl_index)*(*ncor+1));
@@ -2737,22 +2822,20 @@ ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type)
   return(elem);
 }
 
-ELEMENT_LIST *next_element_of_type2(ELEMENT_LIST *elem, long type1, long type2)
-{
-  while (elem) {
-    if (elem->type==type1 || elem->type==type2)
-      return(elem);
-    elem = elem->succ;
-  }
-  return(elem);
-}
-
-ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index)
+ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, 
+                                    long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end)
 {
   register long i;
   while (elem) {
     for (i=0; i<n_types; i++) {
       if (elem->type==type[i]) {
+        if (start_occurence[i]!=0 && end_occurence[i]!=0 &&
+            (elem->occurence<start_occurence[i] || elem->occurence>end_occurence[i] ||
+             (elem->occurence-start_occurence[i])%occurence_step[i]))
+          continue;
+        if (s_start[i]>=0 && s_end[i]>=0 &&
+            (elem->end_pos<s_start[i] || elem->end_pos>s_end[i]))
+          continue;
         *index = i;
         return(elem);
       }
