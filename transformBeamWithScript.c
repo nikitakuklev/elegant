@@ -333,7 +333,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       if (script->verbosity>1)
         fprintf(stdout, "%ld particles of %ld lost based on particleID matching\n", lost, np);
       if (beam && lost)
-        recordLostParticles(part, itop+1, lost, &(beam->lostBeam), iPass);
+        recordLostParticles(part, itop+1, itop+1+lost, &(beam->lostBeam), iPass);
     }
   }
 
