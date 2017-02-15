@@ -13,9 +13,13 @@
 #if defined(SOLARIS) && !defined(__GNUC__)
 #include <sunmath.h>
 #endif
+
+//#include <complex>
 #include "mdb.h"
 #include "track.h"
 #include "ionEffects.h"
+
+
 
 #define ION_FIELD_GAUSSIAN 0
 #define N_ION_FIELD_METHODS 1
@@ -51,7 +55,10 @@ typedef struct {
 static ION_PROPERTIES ionProperties;
 void readIonProperties(char *filename);
 
-void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd);
+void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, double centroid[2], double sigma[2]);
+
+void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+		      double ionMass, double ionCharge);
 
 void setupIonEffects(NAMELIST_TEXT *nltext, RUN *run)
 {
@@ -285,6 +292,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       ionEffects->coordinate = calloc(ionProperties.nSpecies, sizeof(*(ionEffects->coordinate)));
       ionEffects->nIons = calloc(ionProperties.nSpecies, sizeof(*(ionEffects->nIons)));
       ionEffects->t = 0;
+      ionEffects->macroIons = macro_ions;
     }
     eptr = eptr->succ;
   }
@@ -427,6 +435,7 @@ void trackWithIonEffects
       /*** Generate ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
         long nToAdd = 0, index;
+	double qToAdd = 0;
         if ((index=ionProperties.sourceGasIndex[iSpecies])>=0) {
           /* this is a singly-ionized molecule, so use source gas 
              nToAdd =  someFunctionOfPressure(ionEffects->pressure[index], ...);
@@ -442,12 +451,24 @@ void trackWithIonEffects
              nToAdd = someFunctionOfExistingNumberOfIons(...); 
           */
         }
-        addIons(ionEffects, iSpecies, nToAdd);
+
+	nToAdd = ionEffects->macroIons;
+	qToAdd = 3.21 * qBunch * ionEffects->pressure[index] * \
+	  ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / nToAdd;
+
+        addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+
+
+
+
       }
 
       /*** Determine and apply kicks from beam to ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        double Ex = 0, Ey = 0;
+        double Ex = 0, Ey = 0, ionMass, ionCharge;
+	int flag;
+	double *coord;
+	double kick[2];
         /* Relevant quantities:
          * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
          * ionProperties.mass[iSpecies] --- Mass of the ion (AMUs)
@@ -457,14 +478,26 @@ void trackWithIonEffects
          * ionEffects->nIons[index] --- Number of ions of the source species
          * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
          */
+
+	ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
+	ionCharge = (double)ionProperties.chargeState[iSpecies];
+
         for (iIon=0; iIon<ionEffects->nIons[iIon]; iIon++) {
           /*
             Get effective fields in V/m
             BeamFieldFunction(qBunch, sigma, centroid, &(ionEffects->coordinate[iSpecies][iIon][0]), &Ex, &Ey);
           */
-          ionEffects->coordinate[iSpecies][iIon][1] += 
-            Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
-          ionEffects->coordinate[iSpecies][iIon][3] += Ey*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+	  coord = ionEffects->coordinate[iSpecies][iIon];
+
+	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+
+	  ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
+	  ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
+
+	  //          ionEffects->coordinate[iSpecies][iIon][1] += 
+          //  Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+          //ionEffects->coordinate[iSpecies][iIon][3] += Ey*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+	  
         }
       }
 
@@ -502,6 +535,42 @@ void trackWithIonEffects
       fflush(stdout);
 #endif
     } /* End of loop over bunches */
+
+
+    // add up total charge at this element
+    double qTotal = 0;
+    long mTotal = 0;
+    int jMacro = 0;
+    for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+      mTotal += ionEffects->nIons[iSpecies];
+      for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
+	qTotal += ionEffects->coordinate[iSpecies][jMacro][4];
+      }
+    }
+
+    FILE * fion;
+    fion = fopen("ion_info.dat", "a");
+    // turn, element s, total macros, total charge
+    fprintf(fion, "%d  %f  %d  %e \n", iPass, ionEffects->sStart, mTotal, qTotal);
+    fclose(fion);
+
+
+    // write out coordinates of each ion
+    if (iPass == 99) {
+      double xtemp, ytemp, qtemp; 
+      fion = fopen("ion_coord.dat", "a");
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
+	  xtemp = ionEffects->coordinate[iSpecies][jMacro][0];
+	  ytemp = ionEffects->coordinate[iSpecies][jMacro][2];
+	  qtemp = ionEffects->coordinate[iSpecies][jMacro][4];
+	  fprintf(fion, "%f  %f  %f  %e  \n",  ionEffects->sStart, xtemp, ytemp, qtemp);
+	}
+      }
+      fclose(fion);
+    }
+
+
   } /* End of branch restricting execution to worker nodes */
 }
 
@@ -530,7 +599,7 @@ void computeAverageGasPressures(double sStart, double sEnd, double *pressure)
   }
 }
 
-void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd)
+void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double centroid[2], double sigma[2])
 {
   long iNew;
   
@@ -547,10 +616,54 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd)
   iNew = ionEffects->nIons[iSpecies];
   ionEffects->nIons[iSpecies] += nToAdd;
   for ( ; iNew<ionEffects->nIons[iSpecies]; iNew++) {
-    ionEffects->coordinate[iSpecies][iNew][0] = 0 ; /* initial x position */
+    ionEffects->coordinate[iSpecies][iNew][0] = gauss_rn_lim(centroid[0], sigma[0], 3, random_4) ; /* initial x position */
     ionEffects->coordinate[iSpecies][iNew][1] = 0 ; /* initial x velocity */
-    ionEffects->coordinate[iSpecies][iNew][2] = 0 ; /* initial y position */
+    ionEffects->coordinate[iSpecies][iNew][2] =  gauss_rn_lim(centroid[1], sigma[1], 3, random_4) ; /* initial y position */
     ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
+    ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
+    
+    //ionEffects->qIon[iSpecies][iNew] = qToAdd;
   }
+
+
   
+}
+
+
+void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+		      double ionMass, double ionCharge) 
+{
+  // calculate beam kick on ion, assuming Gaussian beam
+  double sx, sy, x, y, sd, Fx, Fy, C1;
+  //  std::complex <double> Fc, w1, w2;
+  long flag, flag2;
+
+
+  kick[0] = 0;
+  kick[1] = 0;
+  return;
+
+  /*
+  sx = sigma[0];
+  sy = sigma[1];
+  x = coord[0] - center[0];
+  y = coord[2] - center[1];
+  sd = sqrt(2.0*(sqr(sx)-sqr(sy)));
+
+  w1 = std::complex <double> (x/sd, y/sd);
+  w2 = std::complex <double> (x/sd*sy/sx, y/sd*sx/sy);
+
+  C1 = c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
+
+  Fc = C1 * sqrt(2*PI / (sqr(sx)-sqr(sy))) *  (complexErf(w1, &flag) - 
+					  exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy))) * complexErf(w2, &flag2));
+  
+  Fx = Fc.real();
+  Fy = Fc.imag();
+
+  kick[0] = Fx / ionMass;
+  kick[1] = Fy / ionMass;
+  */
+
+
 }
