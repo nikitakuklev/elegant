@@ -3071,11 +3071,12 @@ typedef struct {
   double *pressure;               /* pressure for each species averaged over the effective length.
                                    * Indices line up with those used in the pressure input file.
                                    */
-#define COORDINATES_PER_ION 4
+#define COORDINATES_PER_ION 5
   double t;                        /* time at which ion coordinates were last computed */
   double ***coordinate;            /* coordinate[i][j][k] is the kth coordinate of the jth ion of species i */
-                                   /* coordinate order is (x, vx, y, vy) */
+                                   /* coordinate order is (x, vx, y, vy, charge) */
   long *nIons;                     /* nIons[i] is the number of ions of species i */
+
 } IONEFFECTS ;
 
 /* macros for bending magnets */ 
