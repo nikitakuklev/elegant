@@ -1021,8 +1021,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.e[0] = sbend->e[0];
       csbend.e[1] = sbend->e[1];
       csbend.k2 = sbend->k2;
-      csbend.h[0] = sbend->h[1];
-      csbend.h[1] = sbend->h[2];
+      csbend.h[0] = sbend->h[0];
+      csbend.h[1] = sbend->h[1];
       csbend.hgap = sbend->hgap;
       csbend.fint = sbend->fint;
       csbend.dx = sbend->dx;
