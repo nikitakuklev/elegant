@@ -49,7 +49,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     | sddsprocess -pipe \
     "-define=col,BmRz,ImagFFTBr chs" \
     "-define=parameter,m,i_page 2 * 1 - 2 *,type=short" \
-    | sddsfft -pipe -col=z,BmRz -full=unfolded \
+    | sddsfft -pipe -col=z,BmRz -full=unfolded -nowarning \
     | sddsprocess -pipe \
     -process=f,max,fMax \
     "-define=parameter,df,fMax n_rows 1 - /" \
@@ -78,7 +78,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     "-define=col,dCms12p,RealFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms14p,RealFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms16p,RealFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    | sddsfft -pipe -column=f,dC* -full=unfolded \
+    | sddsfft -pipe -column=f,dC* -full=unfolded -nowarning \
     | sddsprocess -pipe \
     -process=f,max,zMax \
     "-define=parameter,dz,zMax n_rows 1 - /" \
