@@ -510,7 +510,9 @@ long new_bunched_beam(
             n_actual_particles = 
               generateBunchForMoments(beam->original, beam->n_to_track, symmetrize, haltonID, haltonOpt, distribution_cutoff[0]);
           }
+#if !SDDS_MPI_IO
         }
+#endif
 #if USE_MPI
        if (firstIsFiducial && beamCounter==1) {
           /* copy values back */
