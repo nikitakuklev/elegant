@@ -3154,6 +3154,10 @@ long generate_bunch(double **particle, long n_particles, TRANSVERSE *x_plane,  T
                     long *haltonID, long haltonOpt, long *randomizeOrder, long elliptical_symmetry, double Po);
 void set_beam_centroids(double **particle, long offset, long n_particles, double cent_posi, 
     double cent_slope);
+void gaussian_distribution(double **particle, long n_particles, 
+                           long offset, double s1, double s2, long symmetrize, long *haltonID, long haltonOpt, double limit,
+                           double limit_invar, double beta, long halo);
+void enforce_sigma_values(double **coord, long n_part, long offset, double s1d, double s2d);
 
 /* prototypes for alpha_matrix.c: */
 extern VMATRIX *alpha_magnet_matrix(double gradient, double xgamma, long maximum_order,
@@ -4194,6 +4198,7 @@ void finishMomentsOutput(void);
 long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected, 
                       long writeToFile);
 void fillSigmaPropagationMatrix(double **Ms, double **R);
+long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation0);
 
 /* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 
  * corresponding to an element the array.  We have i<=j (upper triangular).  Values are filled in

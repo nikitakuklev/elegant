@@ -104,6 +104,8 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"e3", "&parameter name=e3, symbol=\"$ge$r$b3$n\", type=double, units=m,  description=\"Emittance of mode 3\" &end"},
 } ;
 
+static double savedFinalMoments[6][6];
+
 void dumpBeamMoments(
   LINE_LIST *beamline,
   long n_elem,
@@ -415,6 +417,12 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
 
   if (SDDSMomentsInitialized && writeToFile)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run, eNatural);
+
+  for (i=0; i<6; i++) {
+    long j;
+    for (j=0; j<6; j++)
+      savedFinalMoments[i][j] = elast->sigmaMatrix->sigma[sigmaIndex3[i][j]];
+  }
 
   return 1;
 }
@@ -852,3 +860,16 @@ void MatrixPrintout1(char *string, double *AA, int Nrow, int Ncol)
   printf("\n");
 }
 
+long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation0)
+{
+  long i, j;
+
+  if (!momentsInitialized || matched0!=matched || equilibrium0!=equilibrium || radiation0!=radiation)
+    return 0;
+
+  for (i=0; i<6; i++)
+    for (j=0; j<6; j++)
+      M[i][j] = savedFinalMoments[i][j];
+  
+  return 1;
+}

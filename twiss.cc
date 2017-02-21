@@ -1859,6 +1859,13 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
 #ifdef DEBUG
   report_stats(stdout, "now in run_twiss_output\n");
+  printf("tune_corrected = %ld\n", tune_corrected);
+  {
+    long i;
+    printf("Starting coordinates: ");
+    for (i=0; i<6; i++)
+      printf("%21.15e%c", starting_coord[i], i==5?'\n':' ');
+  }
 #endif
   if (tune_corrected==0 && !output_before_tune_correction) {
     log_exit((char*)"run_twiss_output");

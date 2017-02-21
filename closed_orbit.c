@@ -147,6 +147,8 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (!starting_coord)
         bombElegant("starting_coord array is NULL (run_closed_orbit)", NULL);
 
+    start_from_centroid = start_from_dp_centroid = 0;
+
     if ((start_from_centroid || start_from_dp_centroid) && !(flags&CLOSED_ORBIT_IGNORE_BEAM)) {
       double initial[6];
       if (!beam)
@@ -175,7 +177,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 
     bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, 
                                    run, dp, start_from_recirc, fixed_length, 
-                                   (start_from_centroid?starting_coord:NULL), iteration_fraction,
+                                   starting_coord, iteration_fraction,
                                    fraction_multiplier, multiplier_interval,
                                    deviation, tracking_turns);
     free_matrices(M); tfree(M); M = NULL;

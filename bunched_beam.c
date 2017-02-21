@@ -42,6 +42,8 @@ void fill_longitudinal_structure(LONGITUDINAL *xlongit, double xsigma_dp,
                                  double *xcentroid);
 void makeBucketAssignments(BEAM *beam, double Po, double frequency);
 int comp_BucketNumbers(const void *coord1, const void *coord2);
+long generateBunchForMoments(double **particle, long np, long symmetrize, 
+                             long *haltonID, long haltonOpt, double cutoff);
 
 void setup_bunched_beam(
     BEAM *beam,
@@ -66,6 +68,8 @@ void setup_bunched_beam(
     bombElegant(NULL, NULL);
   if (Po<=0)
     Po = run->p_central;
+  if (use_twiss_command_values && use_moments_output_values)
+    bombElegant("Only one of use_twiss_command_values and use_moments_output_values may be nonzero", NULL);
   if (use_twiss_command_values) {
     TWISS twiss;
     long mode;
@@ -82,7 +86,9 @@ void setup_bunched_beam(
     eta_y = twiss.etay;
     etap_y = twiss.etapy;
   }
-  
+  if (use_moments_output_values && save_original)
+    bombElegant("&correct settings are incompatible with using results of moments_output for generating the beam. Set start_from_centroid and track_before_and_after to 0.", NULL);
+
   if (echoNamelists) print_namelist(stdout, &bunched_beam);
 
   /* check for validity of namelist inputs */
@@ -111,27 +117,29 @@ void setup_bunched_beam(
     }
   }
 #endif
-  if (emit_x<0 || beta_x<=0)
-    bombElegant("emit_x<=0 or beta_x<=0", NULL);
-  if (emit_y<0 || beta_y<=0)
-    bombElegant("emit_y<=0 or beta_y<=0", NULL);
-  if (sigma_dp<0 || sigma_s<0) 
-    bombElegant("sigma_dp<0 or sigma_s<0", NULL);
-  if (fabs(dp_s_coupling)>1)
-    bombElegant("|dp_s_coupling| > 1", NULL);
-  if (emit_z<0)
-    bombElegant("emit_z < 0", NULL);
-  if (beta_z<0)
-    bombElegant("beta_z < 0", NULL);
-  if (emit_z && (sigma_dp || sigma_s)) 
-    bombElegant("give emit_z or both sigma_dp and sigma_s", NULL);
-  if (emit_z && beta_z<=0)
-    bombElegant("give beta_z with emit_z", NULL);
-  if ( ((alpha_z?1:0)+(dp_s_coupling?1:0)+(momentum_chirp?1:0))>1)
-    bombElegant("give only one of alpha_z, dp_s_coupling, or momentum_chirp", NULL);
-  if (emit_z && dp_s_coupling)
-    bombElegant("give alpha_z not dp_s_coupling with emit_z", NULL);
-  
+  if (!use_moments_output_values) {
+    if (emit_x<0 || beta_x<=0)
+      bombElegant("emit_x<=0 or beta_x<=0", NULL);
+    if (emit_y<0 || beta_y<=0)
+      bombElegant("emit_y<=0 or beta_y<=0", NULL);
+    if (sigma_dp<0 || sigma_s<0) 
+      bombElegant("sigma_dp<0 or sigma_s<0", NULL);
+    if (fabs(dp_s_coupling)>1)
+      bombElegant("|dp_s_coupling| > 1", NULL);
+    if (emit_z<0)
+      bombElegant("emit_z < 0", NULL);
+    if (beta_z<0)
+      bombElegant("beta_z < 0", NULL);
+    if (emit_z && (sigma_dp || sigma_s)) 
+      bombElegant("give emit_z or both sigma_dp and sigma_s", NULL);
+    if (emit_z && beta_z<=0)
+      bombElegant("give beta_z with emit_z", NULL);
+    if ( ((alpha_z?1:0)+(dp_s_coupling?1:0)+(momentum_chirp?1:0))>1)
+      bombElegant("give only one of alpha_z, dp_s_coupling, or momentum_chirp", NULL);
+    if (emit_z && dp_s_coupling)
+      bombElegant("give alpha_z not dp_s_coupling with emit_z", NULL);
+  }
+    
   if (!distribution_type[0] || 
       (x_beam_type=match_string(distribution_type[0], beam_type, 
                                 N_BEAM_TYPES, 0))<0)
@@ -144,16 +152,37 @@ void setup_bunched_beam(
       (longit_beam_type=match_string(distribution_type[2], beam_type,
                                      N_BEAM_TYPES, 0))<0)
     bombElegant("missing or unknown longitudinal distribution type", NULL);
+  if (use_moments_output_values) {
+    if (x_beam_type!=GAUSSIAN_BEAM || y_beam_type!=GAUSSIAN_BEAM || longit_beam_type!=GAUSSIAN_BEAM) 
+      printf("Warning: beam distributions to gaussian since use_moments_output_values is nonzero.\n");
+    x_beam_type = y_beam_type = longit_beam_type = GAUSSIAN_BEAM;
+  }
+
   if (distribution_cutoff[0]<0)
     bombElegant("x distribution cutoff < 0", NULL);
   if (distribution_cutoff[1]<0)
     bombElegant("y distribution cutoff < 0", NULL);
   if (distribution_cutoff[2]<0)
     bombElegant("longitudinal distribution cutoff < 0", NULL);
+  if (use_moments_output_values) {
+    long i, warned = 0;
+    double maxCutoff = 0;
+    for (i=0; i<3; i++)
+      if (distribution_cutoff[i]>maxCutoff)
+        maxCutoff = distribution_cutoff[i];
+    for (i=0; i<3; i++)
+      if (distribution_cutoff[i]<maxCutoff) {
+        distribution_cutoff[i] = maxCutoff;
+        if (!warned)
+          printf("Warning: all distribution cutoff values set to %le since use_moments_output_values is nonzero.\n", maxCutoff);
+        warned = 1;
+      }
+  }
+
   if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
     fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
 
-  if (matched_to_cell) {
+  if (!use_moments_output_values && matched_to_cell) {
     unsigned long flags;
     flags = beamline->flags;
     if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
@@ -173,16 +202,18 @@ void setup_bunched_beam(
   }
 
   /* set up structures for creating initial particle distributions */ 
-  if (!control->cell) {
-    fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
-                              x_beam_type, distribution_cutoff[0], centroid);
-    fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
-                              y_beam_type, distribution_cutoff[1], centroid+2);
+  if (!use_moments_output_values) {
+    if (!control->cell) {
+      fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
+                                x_beam_type, distribution_cutoff[0], centroid);
+      fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
+                                y_beam_type, distribution_cutoff[1], centroid+2);
+    }
+    fill_longitudinal_structure(&longit, 
+                                sigma_dp, sigma_s, dp_s_coupling,
+                                emit_z, beta_z, alpha_z, momentum_chirp,
+                                longit_beam_type, distribution_cutoff[2], centroid+4);
   }
-  fill_longitudinal_structure(&longit, 
-                              sigma_dp, sigma_s, dp_s_coupling,
-                              emit_z, beta_z, alpha_z, momentum_chirp,
-                              longit_beam_type, distribution_cutoff[2], centroid+4);
 
   save_initial_coordinates = save_original || save_initial_coordinates;
   if (n_particles_per_bunch==1)
@@ -397,29 +428,29 @@ long new_bunched_beam(
 	random_4(-beamRepeatSeed);
       }
 #endif
-        if (control->cell) {
-            VMATRIX *M;
-	    unsigned long savedFlags;
-	    savedFlags = control->cell->flags;
-            M = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
+      if (control->cell) {
+        VMATRIX *M;
+        unsigned long savedFlags;
+        savedFlags = control->cell->flags;
+        M = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
                                    &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
                                    (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
                                    NULL, run, &unstable, NULL, NULL);
-	    control->cell->flags = savedFlags;
-            free_matrices(M); free(M); M = NULL;
-	    fprintf(stdout, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
+        control->cell->flags = savedFlags;
+        free_matrices(M); free(M); M = NULL;
+        fprintf(stdout, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
                 beta_x, alpha_x, eta_x, etap_x);
-     fflush(stdout);
-            fprintf(stdout, "betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
-                beta_y, alpha_y, eta_y, etap_y);
-            fflush(stdout);
-            fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
-                    x_beam_type, distribution_cutoff[0], centroid);
-            fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
-                    y_beam_type, distribution_cutoff[1], centroid+2);
-            }
-        fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         fflush(stdout);
+        fprintf(stdout, "betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
+                beta_y, alpha_y, eta_y, etap_y);
+        fflush(stdout);
+        fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
+                                  x_beam_type, distribution_cutoff[0], centroid);
+        fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
+                                  y_beam_type, distribution_cutoff[1], centroid+2);
+      }
+      fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
+      fflush(stdout);
 #if USE_MPI
         if (firstIsFiducial && beamCounter==1) {
           /* Set emittances to zero temporarily. This will make sure the coordniates are same 
@@ -453,21 +484,33 @@ long new_bunched_beam(
 	      remaining_sequence_No = 1;
 	      my_nToTrack = beam->n_to_track;
 	    }
-	    my_n_actual_particles =
-	      generate_bunch(&beam->original[n_actual_particles], my_nToTrack, &x_plane,
-                        &y_plane, &longit, enforce_rms_values, limit_invariants, 
-                        symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
-	    n_actual_particles += my_n_actual_particles;
-	    if (x_plane.beam_type==DYNAP_BEAM)
-	      break;
+            if (!use_moments_output_values) {
+              my_n_actual_particles =
+                generate_bunch(&beam->original[n_actual_particles], my_nToTrack, &x_plane,
+                               &y_plane, &longit, enforce_rms_values, limit_invariants, 
+                               symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
+            } else {
+              my_n_actual_particles = 
+                generateBunchForMoments(&beam->original[n_actual_particles], my_nToTrack, symmetrize,
+                                        haltonID, haltonOpt, distribution_cutoff[0]);
+            }
+            n_actual_particles += my_n_actual_particles;
+            if (x_plane.beam_type==DYNAP_BEAM)
+              break;
 	  }
 	}
-	else
+	else {
 #endif
-	  n_actual_particles = 
-	    generate_bunch(beam->original, beam->n_to_track, &x_plane,
-                      &y_plane, &longit, enforce_rms_values, limit_invariants, 
-                      symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
+          if (!use_moments_output_values) {
+            n_actual_particles = 
+              generate_bunch(beam->original, beam->n_to_track, &x_plane,
+                             &y_plane, &longit, enforce_rms_values, limit_invariants, 
+                             symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
+          } else {
+            n_actual_particles = 
+              generateBunchForMoments(beam->original, beam->n_to_track, symmetrize, haltonID, haltonOpt, distribution_cutoff[0]);
+          }
+        }
 #if USE_MPI
        if (firstIsFiducial && beamCounter==1) {
           /* copy values back */
@@ -877,8 +920,6 @@ void setup_output(
     LINE_LIST *beamline
     )
 {
-    long n_elements;
-    n_elements = beamline->n_elems;
 #if USE_MPI
   if (runInSinglePartMode && (!enableOutput)) {
     if (run->acceptance || run->centroid || run->sigma || run->final || run->output || run->losses ) {
@@ -1271,3 +1312,50 @@ int comp_BucketNumbers(const void *coord1, const void *coord2)
     return 0;
 }
 
+#include "gsl/gsl_linalg.h"
+
+long generateBunchForMoments(double **particle, long np, long symmetrize, 
+                             long *haltonID, long haltonOpt, double cutoff)
+{
+  long ip, i, j;
+  double Mm[6][6], ptemp[6];
+  gsl_matrix *M;
+
+  /* Generate gaussian-distributed, uncoupled particle coordinates */
+  for (i=0; i<3; i++) {
+    gaussian_distribution(particle, np, 2*i, 1, 1, symmetrize, haltonID, haltonOpt,
+                          cutoff, 0, 1.0, 0);
+    zero_centroid(particle, np, 2*i  );
+    zero_centroid(particle, np, 2*i+1);
+    enforce_sigma_values(particle, np, 2*i, 1.0, 1.0);
+  }
+
+  /* Get moments matrix to which we want to match the distribution */
+  if (!getMoments(Mm, 1, 1, 1))
+    bombElegant("Error: use_moments_output_values is nonzero in bunched_beam command, but (appropriate) moments_output command was not given.\n", NULL);
+
+  /* Perform Cholesky decomposition */
+  if (!(M = gsl_matrix_alloc(6, 6)))
+    bombElegant("Error: gsl_matrix_alloc() failed when making bunch.", NULL);
+  for (i=0; i<6; i++) 
+    for (j=0; j<6; j++) 
+      gsl_matrix_set(M, i, j, Mm[i][j]);
+  if (gsl_linalg_cholesky_decomp(M))
+    bombElegant("Error: gsl_linalg_cholesky_decomp1() failed when making bunch. Does sigma matrix have blocks of zeros?", NULL);
+
+  for (i=0; i<6; i++)
+    for (j=0; j<6; j++) 
+      Mm[i][j] = gsl_matrix_get(M, i, j);
+
+  /* Transform coordinates */
+  for (ip=0; ip<np; ip++) {
+    memcpy(ptemp, particle[ip], sizeof(*ptemp)*6);
+    for (i=0; i<6; i++) {
+      particle[ip][i] = 0;
+      for (j=0; j<=i; j++)
+        particle[ip][i] += Mm[i][j]*ptemp[j];
+    }
+  }
+
+  return np;
+}

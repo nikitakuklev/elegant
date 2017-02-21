@@ -860,11 +860,9 @@ char **argv;
       break;
     case SET_AWE_BEAM: 
       fprintf(stdout, "This program no longer supports awe-format files.\n");
-      fflush(stdout);
       fprintf(stdout, "Use awe2sdds to convert your data files, and use\n");
-      fflush(stdout);
       fprintf(stdout, "the sdds_beam command instead of awe_beam.\n");
-      fflush(stdout);
+      exit(1);
       break;
     case SET_BUNCHED_BEAM:
       if (!run_setuped || !run_controled)
@@ -944,10 +942,7 @@ char **argv;
         correctionDone = 0;
         new_beam_flags = 0;
         if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
-          if (beam_type==SET_AWE_BEAM) {
-            bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-          }
-          else if (beam_type==SET_SDDS_BEAM) {
+          if (beam_type==SET_SDDS_BEAM) {
             if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
               break;
           }
@@ -972,17 +967,20 @@ char **argv;
         }
         
 
-        /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't do
-         * any output unless requested to do so "pre-correction"
+        /* If needed, find closed orbit, twiss parameters, moments, and response matrix, but don't write
+         * output unless requested to do so "pre-correction"
          */
+         /* If closed orbit is calculated, starting_coord will store the closed orbit at the start of
+          * the beamline 
+          */
         if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 
-                              new_beam_flags==TRACK_PREVIOUS_BUNCH?0:CLOSED_ORBIT_IGNORE_BEAM) &&
+            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) && 
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
+        /* Compute twiss parameters with starting_coord as the start of the orbit */
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
             !soft_failure) {
           fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
@@ -991,17 +989,16 @@ char **argv;
         }
         if (do_rf_setup)
           run_rf_setup(&run_conditions, beamline, 0);
+        /* compute moments with starting_coord as the start of the orbit/trajectory */
         if (do_moments_output)
           runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
 
         if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
-          if (correct.use_actual_beam) {
-            if (beam_type==SET_AWE_BEAM) {
-              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-            }
-            else if (beam_type==SET_SDDS_BEAM) {
+          /* Perform orbit, tune, and/or chromaticity correction */
+          if (correct.use_actual_beam && correct.mode==TRAJECTORY_CORRECTION) {
+            if (beam_type==SET_SDDS_BEAM) {
               if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
                 break;
             }
@@ -1014,6 +1011,7 @@ char **argv;
               fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
             }
+            /* Orbit/trajectory correction */
             if (correct.mode!=-1 && 
                 !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                run_control.i_step, 
@@ -1023,7 +1021,7 @@ char **argv;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
                 fprintf(stdout, "Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
@@ -1041,7 +1039,7 @@ char **argv;
             }
             if (do_chromatic_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
                 fprintf(stdout, "Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
@@ -1062,21 +1060,25 @@ char **argv;
           if (failed)
             continue;
         }
-        if (beam_type==SET_AWE_BEAM) {
-          bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
-        }
-        else if (beam_type==SET_SDDS_BEAM) {
-          if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
-            break;
-        }
-        else if (beam_type==SET_BUNCHED_BEAM)
-          new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
+
+        if (correct.mode!=-1 && (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION))) {
+          /* If we are performing orbit/trajectory correction and tracking before/after correction, we need to
+             generate a beam (will in fact just restore the beam generated above.
+             Also, if we need the beam to give the starting point for trajectory correction, we need to genrate a beam.
+          */ 
+          if (beam_type==SET_SDDS_BEAM) {
+            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
+              break;
+          }
+          else if (beam_type==SET_BUNCHED_BEAM)
+            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
+        } 
 
         /* Assert post-correction perturbations */
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
 
         /* Do post-correction output */
-        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
+        if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);
@@ -1100,9 +1102,20 @@ char **argv;
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
-        if (center_on_orbit) {
-          center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
+
+        if (!(correct.mode!=-1 &&
+              (correct.track_before_and_after || (correct.start_from_centroid && correct.mode==TRAJECTORY_CORRECTION)))) {
+          /* This is where we normally generate the beam, unless it was needed prior to trajectory correction */
+          if (beam_type==SET_SDDS_BEAM) {
+            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
+              break;
+          }
+          else if (beam_type==SET_BUNCHED_BEAM)
+            new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
         }
+
+        if (center_on_orbit)
+          center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
 	else if (offset_by_orbit)
           offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
         run_matrix_output(&run_conditions, beamline);
@@ -1396,7 +1409,7 @@ char **argv;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
                 fprintf(stdout, "Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
@@ -1414,7 +1427,7 @@ char **argv;
             }
             if (do_chromatic_correction) {
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
                 fprintf(stdout, "Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
@@ -1442,7 +1455,7 @@ char **argv;
         runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 1, 1);
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (do_closed_orbit && 
-            !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
+            !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
           fflush(stdout);

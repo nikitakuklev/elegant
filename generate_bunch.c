@@ -39,9 +39,6 @@ long dynap_distribution(double **particle, long n_particles, double sx, double s
 long dynap_distribution_p(double **particle, long n_particles, double sx, double sy,
             long nx, long ny);
 #endif
-void gaussian_distribution(double **particle, long n_particles, 
-    long offset, double s1, double s2, long symmetrize, long *haltonID, long haltonOpt, double limit,
-    double limit_invar, double beta, long halo);
 void hard_edge_distribution(double **particle, long n_particles, 
     long offset, double max1, double max2, long symmetrize, long *haltonID, long haltonOpt, double cutoff);
 void uniform_distribution(double **particle, long n_particles, long offset, 
@@ -51,7 +48,6 @@ void shell_distribution(double **particle, long n_particles, long offset,
 void line_distribution(double **particle, long n_particles, long offset, 
     double max1, double max2);
 void transform_from_normalized_coordinates(double **part, long n_part, long offset, double beta, double alpha);
-void enforce_sigma_values(double **coord, long n_part, long offset, double s1d, double s2d);
 void couple_coordinates(double **coord, long n_part, long offset, double angle);
 void gaussian_4d_distribution(double **particle, long n_particles, long offset, 
     double s1, double s2, double s3, double s4, double cutoff, long halo);

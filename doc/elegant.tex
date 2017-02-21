@@ -90,6 +90,9 @@ Historical change logs are appended to the end of this manual.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|bunched_beam| command can now be set to take desired, fully-coupled bunch parameters from the calculations of the
+  \verb|moments_output| command, provided the latter is used to compute equilibrium parameters.
+  This was requested by forum user \verb|duanz|.
 \item Added occurrence and positional filters for the \verb|steering_element| command. This was requested by V. Sajaev (ANL).
 \item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
   \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
@@ -1016,6 +1019,7 @@ Recommended value: ``\%s.kaf''.
     double eta_y   = 0.0;
     double etap_y  = 0.0;
     long use_twiss_command_values = 0;
+    long use_moments_output_values = 0;
     double Po = 0.0;
     double sigma_dp = 0.0;
     double sigma_s = 0.0;
@@ -1054,6 +1058,11 @@ are to be computed.
 \item \verb|use_twiss_command_values| --- If nonzero, then the values for $\beta$, $\alpha$, 
         $\eta$, and $\eta^\prime$ are taken from the \verb|twiss_output| command.  It is an error if
         no \verb|twiss_output| command has been given.
+\item \verb|use_moments_output_values| --- If nonzero, then the beam is generated to match the
+  6D matched, equilibrium beam moments computed by the \verb|moments_output| command.
+  The distribution type must be gaussian.
+  This mode is incompatible with using closed orbit correction with \verb|start_from_centroid=1|
+  (the default value).
 \item \verb|Po| --- Central momentum of the bunch.
 \item \verb|sigma_dp|, \verb|sigma_s| --- Fractional momentum spread, ${\rm \delta}$, and bunch length.
 Note that \verb|sigma_s| is actually the length in $\beta_z*c*t$, so that for $\beta_z<<1$ the length of
