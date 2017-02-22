@@ -2354,6 +2354,8 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.ID), NULL, 0.0, 0, "System identifier"},
    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.strength), NULL, 0.0, 0, "Strength factor"},
    {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
+   {"FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.frequency), NULL, 0.0, 0, "Frequency of the kicker cavity."},
+   {"PHASE", "Deg", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center."},
    {"DELAY", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.delay), NULL, 0.0, 0, "Delay (in turns)"},
    {"LONGITUDINAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.longitudinal), NULL, 0.0, 0, "If non-zero, kick is in the longituidinal plane. KICK_LIMIT is in fractional momentum deviation."},
    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.outputFile), NULL, 0.0, 0, "File for logging filter output and driver output"},

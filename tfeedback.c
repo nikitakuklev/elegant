@@ -241,6 +241,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long iBucket, nBuckets;
   long rpass, updateInterval;
+  double tAve, rfFactor, phase=0;
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -327,9 +328,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     fprintf(stdout, "TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
 #endif
-  
+    
     tfbd->driverSignal[iBucket][rpass%(tfbd->delay+tfbd->filterLength)] = kick;
-  
+    
     if (rpass<tfbd->delay+tfbd->filterLength) {
 #ifdef DEBUG
       fprintf(stdout, "TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
@@ -353,31 +354,70 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
       if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
         kick = SIGN(kick)*tfbd->kickLimit;
-
+      
       if (isSlave || !notSinglePart) {
+        tAve = 0;
+        rfFactor = 1;
+
+        if (tfbd->frequency>0) {
+          phase = tfbd->phase*PI/180;
+          /* Determine average arrival time of bunch */
+          if (nBuckets==1) {
+#if USE_MPI
+            tAve = computeAverage_p(time0, np0, workers);
+#else
+            compute_average(&tAve, time0, np0);
+#endif
+          } else {
+            long npTotal;
+            double tSum, error;
+            error = tSum = 0;
+            for (i=0; i<npBucket[iBucket]; i++)
+              tSum = KahanPlus(tSum, time0[ipBucket[iBucket][i]], &error);
+#if USE_MPI
+            MPI_Allreduce(&npBucket[iBucket], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+            if (npTotal)
+              tAve = KahanParallel(tSum, error, workers)/npTotal;
+#else
+            if (npBucket[iBucket]>0)
+              tAve = tSum/npBucket[iBucket];
+#endif
+          }
+        }
+        
         if (!tfbd->longitudinal) {
           j = tfbd->pickup->iPlane+1;
           if (nBuckets==1) {
-            for (i=0; i<np0; i++)
-              part0[i][j] += kick/(1+part0[i][5]);
+            for (i=0; i<np0; i++)  {
+               if (tfbd->frequency>0) 
+                 rfFactor = cos(PIx2*tfbd->frequency*(time0[i]-tAve)+phase);
+               part0[i][j] += kick/(1+part0[i][5]);
+            }
           } else {
             if (npBucket)
               for (i=0; i<npBucket[iBucket]; i++) {
-                part0[ipBucket[iBucket][i]][j] += kick/(1+part0[ipBucket[iBucket][i]][5]);
+                if (tfbd->frequency>0) 
+                  rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
+                part0[ipBucket[iBucket][i]][j] += kick*rfFactor/(1+part0[ipBucket[iBucket][i]][5]);
               }
           }
         } else {
           if (nBuckets==1) {
-            for (i=0; i<np0; i++)
-              part0[i][5] += kick;
+            for (i=0; i<np0; i++) {
+              if (tfbd->frequency>0) 
+                rfFactor = cos(PIx2*tfbd->frequency*(time0[i]-tAve)+phase);
+              part0[i][5] += kick*rfFactor;
+            }
           } else {
             if (npBucket)
-              for (i=0; i<npBucket[iBucket]; i++)
-                part0[ipBucket[iBucket][i]][5] += kick;
+              for (i=0; i<npBucket[iBucket]; i++) {
+                if (tfbd->frequency>0) 
+                  rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
+                part0[ipBucket[iBucket][i]][5] += kick*rfFactor;
+              }
           }
         }
       }
-      
     }
     
 #ifdef DEBUG
