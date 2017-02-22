@@ -1320,6 +1320,11 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
+    if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
+      coord[0] = x;
+      coord[2] = y;
+      return 0;
+    }
     for (step=0; step<4; step++) {
       if (drift) {
         dsh = drift*driftFrac[step];
@@ -1327,11 +1332,6 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         y += yp*dsh;
         s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
         *dzLoss += dsh;
-      }
-      if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
-        coord[0] = x;
-        coord[2] = y;
-        return 0;
       }
 
       if (!kickFrac[step])
