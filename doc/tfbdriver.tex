@@ -48,5 +48,10 @@ delta & 1 & $\delta$ & \\
 Note: The \verb|OUTPUT_FILE| will produce a file with missing data at the end of
 the buffer if the \verb|OUTPUT_INTERVAL| parameter is not a divisor of the number of passes.
 
+The \verb|FREQUENCY| and \verb|PHASE| parameters may be used to specify the resonant frequency of 
+the driving cavity and its phase relative to the center of the bunch.
+If the frequency is not specified, the kicker is assumed to kick all particles in a bunch by the
+same amount.
+
 See Section 7.2.14 of {\em Handbook of Accelerator Physics and Engineering}
 (Chao and Tigner, eds.) for a discussion of feedback systems.
