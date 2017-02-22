@@ -287,7 +287,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   pID = NULL;
-  if (script->useParticleID) {
+  if (npNew && script->useParticleID) {
     /* User wants us to use the particleID data from the script output file */
     if (!(pID = SDDS_GetColumnInDoubles(&SDDSin, "particleID"))) {
       SDDS_SetError("Unable to read particleID from script output file. Please set USE_PARTICLE_ID=0 if this is desired.\n");
@@ -349,15 +349,17 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   /* copy phase space coordinates */
-  for (i=0; i<6; i++) {
-    if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
-      SDDS_SetError("Unable to read script output file");
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  if (npNew) {
+    for (i=0; i<6; i++) {
+      if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
+	SDDS_SetError("Unable to read script output file");
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+      for (j=0; j<npNew; j++)
+	part[j][i] = data[j];
+      free(data);
+      data = NULL;
     }
-    for (j=0; j<npNew; j++)
-      part[j][i] = data[j];
-    free(data);
-    data = NULL;
   }
   /* copy or create particle ID */
   if (pID) {
@@ -372,9 +374,9 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       part[j][6] = j+1;
     fprintf(stdout, "Changing particle ID for new particles to make them sequential\n");
   }
-
+  
   /* Figure out the charge */
-  if (charge) {
+  if (charge && npNew) {
     double totalCharge, oldMacroParticleCharge;
     oldMacroParticleCharge = charge->macroParticleCharge;
     if (!SDDS_GetParameterAsDouble(&SDDSin, "Charge", &totalCharge)) {
@@ -387,10 +389,10 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       charge->macroParticleCharge = totalCharge/npNew;
     if (oldMacroParticleCharge!=0 && fabs((charge->macroParticleCharge-oldMacroParticleCharge)/oldMacroParticleCharge)>1e-8) {
       printf("*** Warning: macro-particle charge changed after SCRIPT element, from %le to %le. This may indicate a problem.\n",
-             oldMacroParticleCharge, charge->macroParticleCharge);
+	     oldMacroParticleCharge, charge->macroParticleCharge);
       printf("             Please ensure that the Charge parameter is set correctly in the output file from your script.\n");
     }
- }
+  }
 
   /* Close files */
   if (SDDS_ReadPage(&SDDSin)!=-1)
@@ -612,7 +614,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   
   pID = NULL;
   /* See if user wants us to use the particleID data from the script output file */
-  if (!isMaster && script->useParticleID) {
+  if (!isMaster && npNew>0 && script->useParticleID) {
     if (!(pID = SDDS_GetColumnInDoubles(&SDDSin, "particleID"))) {
       SDDS_SetError("Unable to read particleID from script output file. Please set USE_PARTICLE_ID=0 if this is desired.\n");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -636,7 +638,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
   }
 
-  if (!isMaster && notSinglePart) {
+  if (!isMaster && npNew>0 && notSinglePart) {
 #if MPI_DEBUG
     printf("Copying particle data\n");
     fflush(stdout);
