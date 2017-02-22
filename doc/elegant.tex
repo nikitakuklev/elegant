@@ -82,17 +82,17 @@ Historical change logs are appended to the end of this manual.
   bunch membership.
 \item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, used for bunch-by-bunch feedback, now allow 30-term FIR filters, up from
   15 turns in earlier versions.
-\item Added the \verb|ALLOW_LONG_BEAM| parameter to the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements.
-\item Aperture enforcement inside \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, \verb|CSBEND|, and \verb|CSRCSBEND| elements
-  has been improved. In particularly, the \verb|ELLIPTICAL|, \verb|EXPONENT|, \verb|YEXPONENT|, and \verb|OPEN_SIDE| parameters of
-  \verb|MAXAMP| are now implemented.
 \item The \verb|TFBDRIVER| element now accepts specification of the frequency and phase of the driver cavity.
+\item Aperture enforcement inside \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, \verb|CSBEND|, and \verb|CSRCSBEND| elements
+  has been improved. In particular, the \verb|ELLIPTICAL|, \verb|EXPONENT|, \verb|YEXPONENT|, and \verb|OPEN_SIDE| parameters of
+  \verb|MAXAMP| are now implemented.
+\item Added the \verb|ALLOW_LONG_BEAM| parameter to the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|bunched_beam| command can now be set to take desired, fully-coupled bunch parameters from the calculations of the
-  \verb|moments_output| command, provided the latter is used to compute equilibrium parameters.
+\item The \verb|bunched_beam| command can now be set to take the fully-coupled 6D bunch parameters from the calculations of the
+  \verb|moments_output| command, provided the latter is used to compute matched, equilibrium parameters.
   This was requested by forum user \verb|duanz|.
 \item Added occurrence and positional filters for the \verb|steering_element| command. This was requested by V. Sajaev (ANL).
 \item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
