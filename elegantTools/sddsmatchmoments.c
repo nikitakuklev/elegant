@@ -80,6 +80,8 @@ int main(int argc, char **argv)
           SDDS_Bomb("invalid -pipe syntax");
         break;
       case SET_EXCLUDE:
+        excludeFlags = 0;
+        s_arg[i_arg].n_items--;
         if (!scanItemList(&excludeFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0, 
                           "x", -1, NULL, 0, FL_EXCLUDE_X,
                           "y", -1, NULL, 0, FL_EXCLUDE_Y,
@@ -403,11 +405,15 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 
 #include "gsl/gsl_linalg.h"
 #include "gsl/gsl_blas.h"
+#include "gsl/gsl_eigen.h"
+#include "gsl/gsl_vector.h"
 
 void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], double M[4][4])
 {
   gsl_matrix *M1, *M2, *M3;
   long i, j;
+  gsl_eigen_symm_workspace *ws;
+  gsl_vector *vec;
 
   M1 = M2 = M3 = NULL;
   if (!(M1 = gsl_matrix_alloc(4, 4)) ||
@@ -415,9 +421,25 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
       !(M3 = gsl_matrix_alloc(4, 4)))
     SDDS_Bomb("gsl_matrix_alloc failed");
 
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "sigma[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", sigma[i][j]);
+    fprintf(stderr, "\n");
+  }
+
   for (i=0; i<4; i++)
     for (j=0; j<4; j++)
       gsl_matrix_set(M1, i, j, sigma[i][j]);
+  ws = gsl_eigen_symm_alloc(4);
+  vec = gsl_vector_alloc(4);
+  gsl_eigen_symm(M1, vec, ws);
+
+  for (i=0; i<4; i++)
+    for (j=0; j<4; j++)
+      gsl_matrix_set(M1, i, j, sigma[i][j]);
+  for (i=0; i<4; i++)
+    fprintf(stderr,"eval[%ld] = %le\n", i, gsl_vector_get(vec, i));
 
   if (gsl_linalg_cholesky_decomp(M1))
     SDDS_Bomb("gsl_linalg_cholesky_decomp failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
