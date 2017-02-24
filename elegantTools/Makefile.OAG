@@ -134,9 +134,11 @@ USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/S
 
 #Look for private version of GSL used here at APS
 GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
+
 ifeq ($(GSL), 1)
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
+sddsmatchmoments_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl -DUSE_GSL
 GSLLIB = gsl gslcblas
 SYS_GSLLIB = 
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
@@ -174,6 +176,7 @@ SYS_GSLLIB = gsl gslcblas
 STATIC_BUILD=NO
 PROD_HOST += csrImpedance
 csrImpedance_CFLAGS = -DUSE_GSL
+sddsmatchmoments_CFLAGS = -DUSE_GSL
 else
 
 #No GSL library found. Build without it.
@@ -232,7 +235,7 @@ recurseSetup_SRCS = recurseSetup.c
 haissinski_SRCS = haissinski.c
 
 sddsmatchmoments_SRCS = sddsmatchmoments.c
-sddsmatchmoments_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
+sddsmatchmoments_CFLAGS += -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 

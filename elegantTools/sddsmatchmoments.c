@@ -43,8 +43,8 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
                           unsigned long flags, double **desiredMoment, double *desiredCentroid);
 void findTransformationMatrix(long n, double **sigma, double **desiredSigma, double **M, unsigned long flags);
 
-#define USE_GSL       0
-#define USE_MESCHACH  1
+#define WANT_GSL      0
+#define WANT_MESCHACH 1
 #define LIB_OPTIONS   2
 char *libraryOption[LIB_OPTIONS] = {"gsl", "meschach"};
 
@@ -99,6 +99,10 @@ int main(int argc, char **argv)
             || (!(libFlags&FL_GSL) && !(libFlags&FL_MESCHACH))
             || (libFlags&FL_GSL && libFlags&FL_MESCHACH))
           SDDS_Bomb("Invalid -library syntax/values");
+#ifndef USE_GSL
+	if (libFlags&FL_GSL)
+	  SDDS_Bomb("Sorry, GSL not available in this build.");
+#endif
         break;
       case SET_EXCLUDE:
         excludeFlags = 0;
@@ -553,10 +557,12 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 }
 
 
+#ifdef USE_GSL
 #include "gsl/gsl_linalg.h"
 #include "gsl/gsl_blas.h"
 #include "gsl/gsl_eigen.h"
 #include "gsl/gsl_vector.h"
+#endif
 
 #include "matrix.h"
 #include "matrix2.h"
@@ -566,6 +572,7 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 void findTransformationMatrix(long n, double **sigma, double **desiredSigma, double **M, unsigned long flags)
 {
   if (flags&FL_GSL) {
+#if USE_GSL
     gsl_matrix *M1, *InvM1, *M2, *M3;
     long i, j;
     int signum;
@@ -664,6 +671,7 @@ void findTransformationMatrix(long n, double **sigma, double **desiredSigma, dou
     gsl_matrix_free(InvM1);
     gsl_matrix_free(M2);
     gsl_matrix_free(M3);
+#endif
   } else {
     long i, j;
     MAT *M1, *M1Inv, *M2, *M3;
