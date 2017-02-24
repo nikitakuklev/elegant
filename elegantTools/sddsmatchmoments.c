@@ -29,16 +29,17 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE1="sddsmatchmoments [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-momentsFile=<filename>] [-library={meschach|gsl}] [-exclude=[{x|y|z}][,centroids]]\n\n";
+  [-momentsFile=<filename>[,<page>]] [-library={meschach|gsl}] [-exclude=[{x|y|z}][,centroids]]\n\n";
 char *USAGE2="The input file must have columns x, xp, y, yp, and p; for example, an\n\
 elegant beam output file is acceptable. \n\n\
 -momentsFile    Provide the name of the elegant moments_output file.\n\
+                Optionally provide the page number to use.\n\
 -library        Specify the matrix library to use.\n\
 -exclude        Exclude one or more planes from the transformation.\n\
 Program by Michael Borland.  ("__DATE__")\n";
 
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
-void readMomentsFile(char *filename, double **Mm, double *Cm);
+void readMomentsFile(char *filename, long page, double **Mm, double *Cm);
 void transformCoordinates(double *x, double *xp, double *y, double *yp, double *t, double *p, long np,
                           unsigned long flags, double **desiredMoment, double *desiredCentroid);
 void findTransformationMatrix(long n, double **sigma, double **desiredSigma, double **M, unsigned long flags);
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile, *momentsFile;
-  long i_arg, rows, readCode;
+  long i_arg, rows, readCode, momentsPage;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags, excludeFlags, libFlags;
   double *x=NULL, *xp=NULL, *y=NULL, *yp=NULL, *p=NULL, *t=NULL;
@@ -81,7 +82,8 @@ int main(int argc, char **argv)
 
   inputfile = outputfile = momentsFile = NULL;
   pipeFlags = excludeFlags = libFlags = 0;
-  
+  momentsPage = 1;
+
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
       switch (match_string(s_arg[i_arg].list[0], option, N_OPTIONS, 0)) {
@@ -118,9 +120,18 @@ int main(int argc, char **argv)
           SDDS_Bomb("Exclude only one of x, y, or z");
         break;
       case SET_MOMENTS_FILE:
-        if (s_arg[i_arg].n_items!=2)
+        if (s_arg[i_arg].n_items!=2 && s_arg[i_arg].n_items!=3)
           SDDS_Bomb("Invalid -momentsFile syntax/values");
         momentsFile = s_arg[i_arg].list[1];
+	momentsPage = 1;
+	if (s_arg[i_arg].n_items==3) {
+	  unsigned long dummyFlags;
+	  s_arg[i_arg].n_items -= 2;
+	  if (!scanItemList(&dummyFlags, s_arg[i_arg].list+2, &s_arg[i_arg].n_items, 0,
+			    "page", SDDS_LONG, &momentsPage, 1, 0,
+			    NULL))
+	    SDDS_Bomb("Invalid -moments syntax/values");
+	}
         break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
@@ -144,7 +155,7 @@ int main(int argc, char **argv)
   moment = (double**)zarray_2d(sizeof(**moment), 6, 6);
   centroid = (double*)tmalloc(sizeof(*centroid)*6);
 
-  readMomentsFile(momentsFile, moment, centroid);
+  readMomentsFile(momentsFile, momentsPage, moment, centroid);
 #if DEBUG
   {
     long i, j;
@@ -246,19 +257,24 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
-void readMomentsFile(char *filename, double **moment, double *centroid)
+void readMomentsFile(char *filename, long momentsPage, double **moment, double *centroid)
 {
   SDDS_DATASET SDDSin;
-  long i, j, rows;
+  long i, j, rows, code;
   double *data;
   char s[100];
 
   rows = 0;
   if (!SDDS_InitializeInput(&SDDSin, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (SDDS_ReadPage(&SDDSin)<=0 || (rows=SDDS_RowCount(&SDDSin))<=0)
-    SDDS_Bomb("Problem reading moments file. Is it empty?");
-
+  while ((code=SDDS_ReadPage(&SDDSin))<momentsPage)
+    ;
+  if (code!=momentsPage)
+      SDDS_Bomb("Problem reading moments file. Does requested page exist?");
+    
+  if ((rows=SDDS_RowCount(&SDDSin))<=0)
+    SDDS_Bomb("Problem reading moments file. Is page empty?");
+  
   for (i=0; i<6; i++) {
     /* Get s[i] */
     sprintf(s, "s%ld", i+1);
