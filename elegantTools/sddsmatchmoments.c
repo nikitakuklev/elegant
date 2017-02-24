@@ -6,6 +6,7 @@
 * This file is distributed subject to a Software License Agreement found
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
+#define DEBUG 1
 
 /* program: sddsmatchmoments.c
  * purpose: transform particle coordinates to match 6D beam moments computed by
@@ -117,7 +118,19 @@ int main(int argc, char **argv)
   processFilenames("sddsmatchmoments", &inputfile, &outputfile, pipeFlags, 0, NULL);
 
   readMomentsFile(momentsFile, moment, centroid);
-
+#if DEBUG
+  {
+    long i, j;
+    fprintf(stderr, "moments from %s:\n", momentsFile);
+    for (i=0; i<6; i++) {
+      fprintf(stderr, "m[%ld]: ", i);
+      for (j=0; j<6; j++)
+	fprintf(stderr, "%le ", moment[i][j]);
+      fputc('\n', stderr);
+    }
+  }
+#endif
+  
   if (!SDDS_InitializeInput(&SDDSin, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -225,7 +238,10 @@ void readMomentsFile(char *filename, double moment[6][6], double centroid[6])
       fprintf(stderr, "Error: problem reading %s from moments file. Check existence and type.\n", s);
     moment[i][i] = sqr(data[rows-1]);
     free(data);
-
+#ifdef DEBUG
+    fprintf(stderr, "moment[%ld][%ld] = %le\n", i, i, moment[i][i]);
+#endif
+    
     /* Get c[i] */
     sprintf(s, "c%ld", i+1);
     if (!(data=SDDS_GetColumnInDoubles(&SDDSin, s))) 
@@ -240,6 +256,9 @@ void readMomentsFile(char *filename, double moment[6][6], double centroid[6])
         fprintf(stderr, "Error: problem reading %s from moments file. Check existence and type.\n", s);
       moment[i][j] = moment[j][i] = data[rows-1];
       free(data);
+#ifdef DEBUG
+    fprintf(stderr, "moment[%ld][%ld] = %le\n", i, j, moment[i][j]);
+#endif
     }
   }
 
@@ -307,6 +326,11 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
         coord[ip][1] = xp[ip];
         coord[ip][2] = y[ip];
         coord[ip][3] = yp[ip];
+      }
+      for (i=0; i<4; i++) {
+	dCentroid[i] = desiredCentroid[i];
+	for (j=0; j<4; j++) 
+	  dMoment[i][j] = desiredMoment[i][j];
       }
     }
 
@@ -403,13 +427,25 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 
 }
 
+#define USE_GSL 
+
+#ifdef USE_GSL
 #include "gsl/gsl_linalg.h"
 #include "gsl/gsl_blas.h"
 #include "gsl/gsl_eigen.h"
 #include "gsl/gsl_vector.h"
+#else
+/* Use the MESCHACH library. GSL incorrectly declares matrices to not be
+ * positive definite, even when the eigenvalues are all positive.
+ */
+#include "matrix.h"
+#include "matrix2.h"
+#include "err.h"
+#endif
 
 void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], double M[4][4])
 {
+#ifdef USE_GSL
   gsl_matrix *M1, *M2, *M3;
   long i, j;
   gsl_eigen_symm_workspace *ws;
@@ -421,41 +457,61 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
       !(M3 = gsl_matrix_alloc(4, 4)))
     SDDS_Bomb("gsl_matrix_alloc failed");
 
+#ifdef DEBUG
   for (i=0; i<4; i++) {
     fprintf(stderr, "sigma[%ld]: ", i);
     for (j=0; j<4; j++)
       fprintf(stderr, "%le  ", sigma[i][j]);
     fprintf(stderr, "\n");
   }
-
+  
   for (i=0; i<4; i++)
     for (j=0; j<4; j++)
       gsl_matrix_set(M1, i, j, sigma[i][j]);
   ws = gsl_eigen_symm_alloc(4);
   vec = gsl_vector_alloc(4);
   gsl_eigen_symm(M1, vec, ws);
+  for (i=0; i<4; i++)
+    fprintf(stderr,"eval[%ld] = %le\n", i, gsl_vector_get(vec, i));
+#endif
 
   for (i=0; i<4; i++)
     for (j=0; j<4; j++)
       gsl_matrix_set(M1, i, j, sigma[i][j]);
-  for (i=0; i<4; i++)
-    fprintf(stderr,"eval[%ld] = %le\n", i, gsl_vector_get(vec, i));
-
   if (gsl_linalg_cholesky_decomp(M1))
     SDDS_Bomb("gsl_linalg_cholesky_decomp failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
+#ifdef DEBUG
+  fprintf(stderr, "First CD succeeded\n");
+#endif
+
   /* Zero out the upper triangular part, which gsl_linalg_cholesky_decomp oddly doesn't touch */
   for (i=0; i<4; i++)
     for (j=i+1; j<4; j++)
       gsl_matrix_set(M1, i, j, 0.0);
   if (gsl_linalg_cholesky_invert(M1))
     SDDS_Bomb("gsl_linalg_cholesky_invert failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
-
+#ifdef DEBUG
+  fprintf(stderr, "Inversion of CD succeeded\n");
+#endif
+  
   for (i=0; i<4; i++)
     for (j=0; j<4; j++)
       gsl_matrix_set(M2, i, j, desiredSigma[i][j]);
 
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "dsigma[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", desiredSigma[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+  
   if (gsl_linalg_cholesky_decomp(M2))
     SDDS_Bomb("gsl_linalg_cholesky_decomp failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
+#ifdef DEBUG
+  fprintf(stderr, "Second CD succeeded\n");
+#endif
 
   /* Zero out the upper triangular part, which gsl_linalg_cholesky_decomp oddly doesn't touch */
   for (i=0; i<4; i++)
@@ -473,4 +529,75 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
   gsl_matrix_free(M1);
   gsl_matrix_free(M2);
   gsl_matrix_free(M3);
+#else
+  long i, j;
+  MAT *M1, *M1Inv, *M2, *M3;
+  
+  M1 = NULL;
+  M1Inv = NULL;
+  M2 = NULL;
+  M3 = NULL;
+
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "sigma[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", sigma[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+  
+  M1 = m_get(4, 4);
+  for (i=0; i<4; i++)
+    for (j=0; j<4; j++)
+      M1->me[i][j] = sigma[i][j];
+
+  M1 = CHfactor(M1);
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "CD[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", M1->me[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+  
+  M1Inv = m_inverse(M1, M2);
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "InvCD[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", M1Inv->me[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+  
+  M2 = m_get(4, 4);
+  for (i=0; i<4; i++)
+    for (j=0; j<4; j++)
+      M2->me[i][j] = desiredSigma[i][j];
+
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "M2[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", M2->me[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+
+  M2 = CHfactor(M2);
+
+  /* Compute the product M2*Inv(M1) */
+  M3 = m_mlt(M2, M1Inv, M3);
+
+  for (i=0; i<4; i++)
+    for (j=0; j<4; j++)
+      M[i][j] = M3->me[i][j];
+
+  m_free(M1);
+  m_free(M1Inv);
+  m_free(M2);
+  m_free(M3);
+#endif
 }
