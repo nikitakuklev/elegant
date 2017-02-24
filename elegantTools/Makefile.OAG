@@ -122,7 +122,7 @@ endif
 PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag \
-          sddsfindresonances touschekLifetime astra2elegant rfgun2elegant sddsbunchingfactor
+          sddsfindresonances touschekLifetime astra2elegant rfgun2elegant sddsbunchingfactor sddsmatchmoments
 
 SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry generateBunch radiationEnvelope computeCoherentFraction plotTwissBeamsize analyzeMagnets bremsstrahlungLifetime elasticScatteringLifetime makeWigglerFromBends elasticScatteringLifetimeDetailed bremsstrahlungLifetimeDetailed reorganizeMmap prepareTAPAs makeSummedCsrZ TFBFirSetup computeSCTuneSpread ionTrapping computeGeneralizedGradients weightedBunch
 
@@ -130,7 +130,7 @@ PROD_HOST = $(PRODOAG)
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE
-
+#USR_LDFLAGS += -g
 
 #Look for private version of GSL used here at APS
 GSL = $(words $(wildcard $(EPICS_EXTENSIONS)/src/SDDS/gsl))
@@ -230,6 +230,8 @@ sddsTouschekInteg_SRCS = sddsTouschekInteg.c
 recurseSetup_SRCS = recurseSetup.c
 
 haissinski_SRCS = haissinski.c
+
+sddsmatchmoments_SRCS = sddsmatchmoments.c
 
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 
