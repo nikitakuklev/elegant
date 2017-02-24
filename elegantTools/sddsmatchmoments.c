@@ -249,6 +249,7 @@ void readMomentsFile(char *filename, double **moment, double *centroid)
   double *data;
   char s[100];
 
+  rows = 0;
   if (!SDDS_InitializeInput(&SDDSin, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_ReadPage(&SDDSin)<=0 || (rows=SDDS_RowCount(&SDDSin))<=0)
@@ -568,11 +569,10 @@ void findTransformationMatrix(long n, double **sigma, double **desiredSigma, dou
     gsl_matrix *M1, *InvM1, *M2, *M3;
     long i, j;
     int signum;
-    gsl_eigen_symm_workspace *ws;
-    gsl_vector *vec;
     gsl_permutation *perm;
 
-    M1 = M2 = M3 = NULL;
+    M1 = M2 = M3 = InvM1 = NULL;
+    perm = NULL;
     if (!(M1 = gsl_matrix_alloc(n, n)) ||
         !(InvM1 = gsl_matrix_alloc(n, n)) ||
         !(M2 = gsl_matrix_alloc(n, n)) ||
