@@ -427,7 +427,7 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 
 }
 
-#define USE_GSL 
+#define GSL
 
 #ifdef USE_GSL
 #include "gsl/gsl_linalg.h"
@@ -435,9 +435,6 @@ void transformCoordinates(double *x, double *xp, double *y, double *yp, double *
 #include "gsl/gsl_eigen.h"
 #include "gsl/gsl_vector.h"
 #else
-/* Use the MESCHACH library. GSL incorrectly declares matrices to not be
- * positive definite, even when the eigenvalues are all positive.
- */
 #include "matrix.h"
 #include "matrix2.h"
 #include "err.h"
@@ -492,6 +489,12 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
     SDDS_Bomb("gsl_linalg_cholesky_invert failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
 #ifdef DEBUG
   fprintf(stderr, "Inversion of CD succeeded\n");
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "InvM1[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", gsl_matrix_get(M1, i, j));
+    fprintf(stderr, "\n");
+  }
 #endif
   
   for (i=0; i<4; i++)
@@ -509,14 +512,20 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
   
   if (gsl_linalg_cholesky_decomp(M2))
     SDDS_Bomb("gsl_linalg_cholesky_decomp failed (4x4 case). Does sigma matrix have diagonal blocks of zeros?");
-#ifdef DEBUG
-  fprintf(stderr, "Second CD succeeded\n");
-#endif
-
-  /* Zero out the upper triangular part, which gsl_linalg_cholesky_decomp oddly doesn't touch */
   for (i=0; i<4; i++)
     for (j=i+1; j<4; j++)
       gsl_matrix_set(M2, i, j, 0.0);
+  /* Zero out the upper triangular part, which gsl_linalg_cholesky_decomp oddly doesn't touch */
+#ifdef DEBUG
+  fprintf(stderr, "Second CD succeeded\n");
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "M2[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", gsl_matrix_get(M2, i, j));
+    fprintf(stderr, "\n");
+  }
+#endif
+
 
   /* Compute the product M2*M1 */
   if (gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, M2, M1, 0.0, M3))
@@ -553,6 +562,10 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
       M1->me[i][j] = sigma[i][j];
 
   M1 = CHfactor(M1);
+  for (i=0; i<4; i++)
+    for (j=i+1; j<4; j++)
+      M1->me[i][j] = 0;
+
 #ifdef DEBUG
   for (i=0; i<4; i++) {
     fprintf(stderr, "CD[%ld]: ", i);
@@ -562,7 +575,7 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
   }
 #endif
   
-  M1Inv = m_inverse(M1, M2);
+  M1Inv = m_inverse(M1, NULL);
 #ifdef DEBUG
   for (i=0; i<4; i++) {
     fprintf(stderr, "InvCD[%ld]: ", i);
@@ -587,10 +600,21 @@ void findTransformationMatrix4(double sigma[4][4], double desiredSigma[4][4], do
 #endif
 
   M2 = CHfactor(M2);
+  for (i=0; i<4; i++)
+    for (j=i+1; j<4; j++)
+      M2->me[i][j] = 0;
 
   /* Compute the product M2*Inv(M1) */
   M3 = m_mlt(M2, M1Inv, M3);
-
+#ifdef DEBUG
+  for (i=0; i<4; i++) {
+    fprintf(stderr, "M3[%ld]: ", i);
+    for (j=0; j<4; j++)
+      fprintf(stderr, "%le  ", M3->me[i][j]);
+    fprintf(stderr, "\n");
+  }
+#endif
+  
   for (i=0; i<4; i++)
     for (j=0; j<4; j++)
       M[i][j] = M3->me[i][j];
