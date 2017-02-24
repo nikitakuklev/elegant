@@ -232,6 +232,7 @@ recurseSetup_SRCS = recurseSetup.c
 haissinski_SRCS = haissinski.c
 
 sddsmatchmoments_SRCS = sddsmatchmoments.c
+sddsmatchmoments_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 
