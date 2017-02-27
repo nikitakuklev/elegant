@@ -834,7 +834,9 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   if (!SDDS_StartPage(SDDSout, maxRows=beamline->n_elems*10))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   row = 0;
-  
+  printf("Saving lattice parameters to %s...", filename);
+  fflush(stdout);
+
   eptr = &(beamline->elem);
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
     /*
@@ -900,6 +902,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!inhibitFileSync)
     SDDS_DoFSync(SDDSout);
+  printf("done.\n");
+  fflush(stdout);
 }
 
 void finishLatticeParametersFile() 
