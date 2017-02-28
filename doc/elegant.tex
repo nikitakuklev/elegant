@@ -47,6 +47,9 @@ Historical change logs are appended to the end of this manual.
   $J_x \neq 1$. Previously, the computation used an equation that implicitly assumes $J_x = 1$.
 \item The \verb|MALIGN| element could cause spurious integer changes in the reported tunes if the \verb|DZ| parameter
   was negative. This problem, reported by V. Sajaev (APS), was fixed.
+\item A memory management bug related to the systematic and random multipole data store was fixed. This in principle
+  affected \verb|KQUAD|, \verb|KSEXT|, and other elements using the \verb|SYSTEMATIC_MULTIPOLES| and \verb|RANDOM_MULTIPOLES|
+  features. In testing, no effect was in fact observed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -61,6 +64,9 @@ Historical change logs are appended to the end of this manual.
   quantities for bending magnets that were reflected. This issue was fixed. {\em Previously-saved parameter files should be modified
   (e.g., remove the edge parameters)} unless the magnets had the same parameters for the entrance and exit. 
   This problem was reported by Y. Li (BNL).
+\item The \verb|rf_setup| and \verb|moments_output| commands will now run in a loop with \verb|find_aperture|,
+  \verb|momentum_aperture|, and \verb|frequency_map| operations, if set for per-step execution. Previously,
+  this would only happen for the \verb|track|, \verb|analyze_map|, and \verb|touschek_scatter| commands.
 \end{itemize}
 
 \subsection{New and Modified Elements}
