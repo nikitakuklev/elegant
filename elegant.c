@@ -1474,6 +1474,8 @@ char **argv;
           printf("Coupled twiss parameters calculation failed.\n");
           fflush(stdout);
         }
+        if (do_rf_setup)
+          run_rf_setup(&run_conditions, beamline, 0);
         run_matrix_output(&run_conditions, beamline);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
