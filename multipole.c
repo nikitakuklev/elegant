@@ -50,10 +50,10 @@ void copyMultipoleDataset(MULTIPOLE_DATA *multData, long index)
  
 void addMultipoleDatasetToStore(MULTIPOLE_DATA *multData, char *filename)
 {
-  printf("Adding file %s to multipole data store\n", filename);
+  printf("Adding file %s to multipole data store\n", filename, multData->filename);
   fflush(stdout);
   storedMultipoleData = SDDS_Realloc(storedMultipoleData, sizeof(*storedMultipoleData)*(nMultipoleDataSets+1));
-  memcpy(&storedMultipoleData[nMultipoleDataSets].data, multData, sizeof(*storedMultipoleData));
+  memcpy(&storedMultipoleData[nMultipoleDataSets].data, multData, sizeof(*multData));
   storedMultipoleData[nMultipoleDataSets].filename = tmalloc(sizeof(*filename)*(strlen(filename)+1));
   storedMultipoleData[nMultipoleDataSets].data.copy = 1;
   strcpy(storedMultipoleData[nMultipoleDataSets].filename, filename);
@@ -79,6 +79,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     copyMultipoleDataset(multData, index);
     return;
   }
+  cp_str(&(multData->filename), multFile);
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
     printf("Problem opening file %s\n", multFile);
     fflush(stdout);
@@ -1585,8 +1586,11 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     totalMult->initialized = 1;
     /* make a list of unique orders for random and systematic multipoles */
     if (systematicMult->orders && randomMult->orders &&
-        systematicMult->orders!=randomMult->orders)
+        systematicMult->orders!=randomMult->orders) {
+      fprintf(stderr, "Issue with files %s and %s\n", 
+	      systematicMult->filename, randomMult->filename);
       bombTracking("The number of systematic and random multipole error orders must be the same for any given element");
+    }
     if (systematicMult->orders)
       totalMult->orders = systematicMult->orders;
     else

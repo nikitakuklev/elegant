@@ -161,6 +161,7 @@ typedef struct {
   long orders;
   int32_t *order;
   double referenceRadius;  
+  char *filename;
   /* normal and skew terms */
   double *an, *bn;         /* input values for normal and skew terms, respectively, for KQUAD, KSEXT, others */
   double *anMod, *bnMod;   /* computed values: anMod=an*n!/r^n, bnMod=bn*n!/r^n */
