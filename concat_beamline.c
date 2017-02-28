@@ -46,7 +46,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     ecat->pred = NULL;
 
 #if DEBUG
-    fprintf(stdout, "run->concat_order = %ld\n", run->concat_order);
+    printf("run->concat_order = %ld\n", run->concat_order);
     fflush(stdout);
 #endif
 
@@ -60,7 +60,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     beamline->ncat_elems = 0;
     do {
 #if DEBUG
-        fprintf(stdout, "working on %s\n", (elem->name?elem->name:"NULL"));
+        printf("working on %s\n", (elem->name?elem->name:"NULL"));
         fflush(stdout);
 #endif        
         if (entity_description[elem->type].flags&HAS_MATRIX && elem->matrix==NULL) {
@@ -72,13 +72,13 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         if (entity_description[elem->type].flags&HAS_MATRIX && elem->matrix->order<=run->concat_order &&
             !(entity_description[elem->type].flags&DONT_CONCAT) ) {
 #if DEBUG
-            fprintf(stdout, "element has matrix of order %ld\n", elem->matrix->order);
+            printf("element has matrix of order %ld\n", elem->matrix->order);
             fflush(stdout);
 #endif        
             if (new_seq) {
                 /* start concatenating new sequence of matrices */
 #if DEBUG
-                fprintf(stdout, "starting new sequence of concatenated matrices\n");
+                printf("starting new sequence of concatenated matrices\n");
                 fflush(stdout);
 #endif
                 copy_matrices1(M1, elem->matrix);
@@ -96,7 +96,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
             if (in_seq) {
                 /*  end of sequence--copy concatenated matrix into ecat list */
 #if DEBUG
-                fprintf(stdout, "ending sequence of concatenated matrices\n");
+                printf("ending sequence of concatenated matrices\n");
                 fflush(stdout);
 #endif
                 ecat->matrix = tmalloc(sizeof(*(ecat->matrix)));
@@ -108,7 +108,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 ecat->flags = 0;
                 ecat->p_elem = NULL;
 #if DEBUG
-                fprintf(stdout, "concatenated matrix %s has order %ld\n", ecat->name, ecat->matrix->order);
+                printf("concatenated matrix %s has order %ld\n", ecat->name, ecat->matrix->order);
                 fflush(stdout);
 #endif
                 extend_elem_list(&ecat);
@@ -118,7 +118,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 }
             /* non-matrix element--just copy everything and extend the list */
 #if DEBUG
-            fprintf(stdout, "copying non-matrix element %s\n", elem->name);
+            printf("copying non-matrix element %s\n", elem->name);
             fflush(stdout);
 #endif
             pred = ecat->pred;
@@ -180,7 +180,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
         ecat->pred->succ = NULL;
 
 #if DEBUG
-    fprintf(stdout, "concatenated element list:\n");
+    printf("concatenated element list:\n");
     fflush(stdout);
     print_elem_list(stdout, &(beamline->ecat));
 #endif

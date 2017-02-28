@@ -232,15 +232,15 @@ static long n_invalid_particles = 0;
 void lorentz_report(void)
 {
     if (n_lorentz_calls) {
-        fprintf(stdout, "\nStatistics for numerical integrations by lorentz() module:\n");
+        printf("\nStatistics for numerical integrations by lorentz() module:\n");
         fflush(stdout);
-        fprintf(stdout, "    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
+        printf("    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
             n_lorentz_calls, n_deriv_calls, n_particles_done);
         fflush(stdout);
         if (length_mult_sum && n_particles_done && !integrator) 
-            fprintf(stdout, "    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
+            printf("    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
             fflush(stdout);
-        fprintf(stdout, "    %ld calls to derivative module had invalid particles\n",
+        printf("    %ld calls to derivative module had invalid particles\n",
                n_invalid_particles);
         fflush(stdout);
         }
@@ -365,10 +365,10 @@ long do_lorentz_integration(double *coord, void *field)
             case DIFFEQ_CANT_TAKE_STEP:
             case DIFFEQ_OUTSIDE_INTERVAL:
             case DIFFEQ_XI_GT_XF:
-                fprintf(stdout, "Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
+                printf("Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
                 fflush(stdout);
                 for (i=0; i<6; i++) 
-                    fprintf(stdout, "%11.4e  ", coord[i]);
+                    printf("%11.4e  ", coord[i]);
                     fflush(stdout);
                 exitElegant(1);
                 break;
@@ -377,7 +377,7 @@ long do_lorentz_integration(double *coord, void *field)
                 return(0);
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
-                    fprintf(stdout, "warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
+                    printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
                     fflush(stdout);
                     log_exit("do_lorentz_integration");
                     return(0);
@@ -404,7 +404,7 @@ long do_lorentz_integration(double *coord, void *field)
                     lorentz_leap_frog(qout, q, s_end-s_start, n_steps, deriv_function);
                     break;
                 default:
-                    fprintf(stdout, "error: unknown non-adaptive integration method code: %ld\n", method_code);
+                    printf("error: unknown non-adaptive integration method code: %ld\n", method_code);
                     fflush(stdout);
                     exitElegant(1);
                     break;
@@ -523,7 +523,7 @@ void lorentz_setup(
               nibend->angleSign = -1;
             }
             if (nibend->e[nibend->e1Index]!=nibend->e[nibend->e2Index] && !warning_given) {
-                fprintf(stdout, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
+                printf("warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
                 fflush(stdout);
                 warning_given = 1;
                 }
@@ -646,25 +646,25 @@ void lorentz_setup(
                 }
                 if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
                     || fringe_code==ENGE5_MODEL)
-                  fprintf(stdout, "Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                  printf("Enge coefficients: D=%e, a=%e, %e, %e\n", 
                           engeD, engeCoef[0], engeCoef[1], engeCoef[2]);
                 if (nibend->adjustField) {
-                  fprintf(stdout, "NIBEND FSE adjusted by %e to obtain trajectory error of %e\n",
+                  printf("NIBEND FSE adjusted by %e to obtain trajectory error of %e\n",
                           fse_opt, nibend_trajectory_error_fse(fse_opt));
-                  fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
+                  printf("final coordinates: %e, %e, %e, %e, %e\n", 
                           traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                           traj_err_final_coord[3], traj_err_final_coord[4]);
                   fflush(stdout);
                 } else if (nibend->adjustBoundary) {
-                  fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
+                  printf("NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                           offset, nibend_trajectory_error_offset(offset));
-                  fprintf(stdout, "(Positive offset adjustment means a shorter magnet.)\n");
-                  fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
+                  printf("(Positive offset adjustment means a shorter magnet.)\n");
+                  printf("final coordinates: %e, %e, %e, %e, %e\n", 
                           traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                           traj_err_final_coord[3], traj_err_final_coord[4]);
                   if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
                       || fringe_code==ENGE5_MODEL) {
-                    fprintf(stdout, "Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                    printf("Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
                             engeD, 
                             engeCoef[0] + engeCoef[1]*offset/engeD + engeCoef[2]*sqr(offset/engeD), 
                             engeCoef[1] + 2*engeCoef[2]*offset/engeD, 
@@ -698,10 +698,10 @@ void lorentz_setup(
               rad_coef = 0;
 /*
 #ifdef DEBUG
-            fprintf(stdout, "entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            printf("entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 entr_intercept, fentr_intercept, entr_slope);
             fflush(stdout);
-            fprintf(stdout, "exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            printf("exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 exit_intercept, fexit_intercept, exit_slope);
             fflush(stdout);
 #endif
@@ -753,10 +753,10 @@ void lorentz_setup(
 #endif
                 if (fse_opt==0)
                     fse_opt = DBL_MIN;
-                fprintf(stdout, "NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
+                printf("NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
                     fse_opt, nisept_trajectory_error(fse_opt));
                 fflush(stdout);
-                fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
+                printf("final coordinates: %e, %e, %e, %e, %e\n", 
                     traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                     traj_err_final_coord[3], traj_err_final_coord[4]);
                 fflush(stdout);
@@ -852,12 +852,12 @@ void select_lorentz_integrator(char *desired_method)
             integrator = NULL;    /* use to indicate that non-adaptive integration will be used--pretty kludgey */
             break;
         default:
-            fprintf(stdout, "error: unknown integration method %s requested.\n", desired_method);
+            printf("error: unknown integration method %s requested.\n", desired_method);
             fflush(stdout);
-            fprintf(stdout, "Available methods are:\n");
+            printf("Available methods are:\n");
             fflush(stdout);
             for (i=0; i<N_METHODS; i++)
-                fprintf(stdout, "    %s\n", method[i]);
+                printf("    %s\n", method[i]);
                 fflush(stdout);
             exitElegant(1);
             break;
@@ -990,7 +990,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         }
         ds   = (-q0[1]*tan(alpha) + q0I - q0[0])/(dqds[0] + dqds[1]*tan(alpha));
 #ifdef DEBUG
-        fprintf(stdout, "Initial ds = %e\n", ds);
+        printf("Initial ds = %e\n", ds);
 #endif
         q[0] = q0[0] + dqds[0]*ds;
         q[1] = q0[1] + dqds[1]*ds;
@@ -1039,7 +1039,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         tan_ah = tan(nibend->angle/2);
         ds = -(q[0] - q[1]*tan_ah)/(dqds[0] - dqds[1]*tan_ah);
 #ifdef DEBUG
-        fprintf(stdout, "Final ds = %e\n", ds);
+        printf("Final ds = %e\n", ds);
 #endif
         q0[0] = q[0] + ds*dqds[0];
         q0[1] = q[1] + ds*dqds[1];
@@ -1461,7 +1461,7 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
       iy = (y-bmapxy->ymin)/bmapxy->dy;
       if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
 	F1 = F2 = 0;
-	fprintf(stdout, "invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
+	printf("invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
 		x, y, ix, iy);
 	n_invalid_particles++;
 	wp[0] = wp[1] = wp[2] = 0;
@@ -1535,7 +1535,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   long nx;
 
   if (!fexists(bmapxy->filename)) {
-    fprintf(stdout, "file %s not found for BMAPXY element\n", bmapxy->filename);
+    printf("file %s not found for BMAPXY element\n", bmapxy->filename);
     fflush(stdout);
     exitElegant(1);
   }
@@ -1570,7 +1570,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   }
   
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
-    fprintf(stdout, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
+    printf("file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
     fflush(stdout);
     exitElegant(1);
   }
@@ -1590,17 +1590,17 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   bmapxy->xmax = x[nx-1];
   bmapxy->dx = (bmapxy->xmax-bmapxy->xmin)/(nx-1);
   if ((bmapxy->nx=nx)<=1 || y[0]>y[nx] || (bmapxy->ny = bmapxy->points/nx)<=1) {
-    fprintf(stdout, "file %s for BMAPXY element doesn't have correct structure or amount of data\n",
+    printf("file %s for BMAPXY element doesn't have correct structure or amount of data\n",
             bmapxy->filename);
     fflush(stdout);
-    fprintf(stdout, "nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
+    printf("nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
     fflush(stdout);
     exitElegant(1);
   }
   bmapxy->ymin = y[0];
   bmapxy->ymax = y[bmapxy->points-1];
   bmapxy->dy = (bmapxy->ymax-bmapxy->ymin)/(bmapxy->ny-1);
-  fprintf(stdout, "BMAPXY element from file %s: nx=%ld, ny=%ld, dx=%e, dy=%e, x:[%e, %e], y:[%e, %e]\n",
+  printf("BMAPXY element from file %s: nx=%ld, ny=%ld, dx=%e, dy=%e, x:[%e, %e], y:[%e, %e]\n",
           bmapxy->filename, bmapxy->nx, bmapxy->ny, bmapxy->dx, bmapxy->dy, 
           bmapxy->xmin, bmapxy->xmax, 
           bmapxy->ymin, bmapxy->ymax);
@@ -1834,7 +1834,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   long nx, ny;
 
   if (!fexists(bmapxyz->filename)) {
-    fprintf(stdout, "file %s not found for BMAPXYZ element\n", bmapxyz->filename);
+    printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
     fflush(stdout);
     exitElegant(1);
   }
@@ -1875,7 +1875,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   }
   
   if (!(bmapxyz->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxyz->points<2) {
-    fprintf(stdout, "file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
+    printf("file %s for BMAPXYZ element has insufficient data\n", bmapxyz->filename);
     fflush(stdout);
     exitElegant(1);
   }
@@ -1926,7 +1926,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   bmapxyz->zmin = z[0];
   bmapxyz->zmax = z[bmapxyz->points-1];
   bmapxyz->dz = (bmapxyz->zmax-bmapxyz->zmin)/(bmapxyz->nz-1);
-  fprintf(stdout, "BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+  printf("BMAPXYZ element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
           bmapxyz->filename, 
           bmapxyz->nx, bmapxyz->ny, bmapxyz->nz,
           bmapxyz->dx, bmapxyz->dy, bmapxyz->dz,

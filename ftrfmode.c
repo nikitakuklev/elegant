@@ -381,7 +381,7 @@ void track_through_ftrfmode(
           t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
           if (t<trfmode->last_t) {
             trfmode->last_t = t;
-            /*  fprintf(stdout, "*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
+            /*  printf("*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
                 fflush(stdout); */
           }            
           omega = trfmode->omega[imode];
@@ -584,17 +584,17 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   /* check existence and properties of required columns  */
   if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
                        stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Frequency column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    printf("Error: problem with Frequency column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
                        stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Frequency column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    printf("Error: problem with Frequency column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
                        stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Q column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    printf("Error: problem with Q column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
     exitElegant(1);
   }
   if (rfmode->useSymmData) {
@@ -604,7 +604,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
                          NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohm/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with ShuntImpedanceSymm column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      printf("Error: problem with ShuntImpedanceSymm column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
       exitElegant(1);
     }
   }
@@ -615,7 +615,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
                          NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohm/m", SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with ShuntImpedance column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      printf("Error: problem with ShuntImpedance column for FTRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
       exitElegant(1);
     }
   }
@@ -623,14 +623,14 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   if (!SDDS_ReadPage(&SDDSin))
     SDDS_Bomb("unable to read page from file for FTRFMODE element");
   if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
-    fprintf(stdout, "Error: no data in FTRFMODE file %s\n", rfmode->filename);
+    printf("Error: no data in FTRFMODE file %s\n", rfmode->filename);
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
                        NULL)!=SDDS_CHECK_NONEXISTENT) {
     if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
+      printf("Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
       exitElegant(1);
     }
   }
@@ -638,7 +638,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
                        NULL)!=SDDS_CHECK_NONEXISTENT) {
     if (SDDS_CheckColumn(&SDDSin, "xMode", NULL, SDDS_ANY_INTEGER_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with \"doX\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
+      printf("Error: problem with \"doX\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
       exitElegant(1);
     }
   }
@@ -646,7 +646,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
                        NULL)!=SDDS_CHECK_NONEXISTENT) {
     if (SDDS_CheckColumn(&SDDSin, "yMode", NULL, SDDS_ANY_INTEGER_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with \"doY\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
+      printf("Error: problem with \"doY\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
       exitElegant(1);
     }
   }
@@ -700,7 +700,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       rfmode->bin_size = 0.1/(rfmode->omega[imode]/PIx2);
       rfmode->n_bins = T/rfmode->bin_size+1;
       rfmode->bin_size = T/rfmode->n_bins;
-      fprintf(stdout, "The FTRFMODE %s bin size is too large for mode %ld--setting to %e and increasing to %ld bins\n",
+      printf("The FTRFMODE %s bin size is too large for mode %ld--setting to %e and increasing to %ld bins\n",
               element_name, imode, rfmode->bin_size, rfmode->n_bins);
       fflush(stdout);
     }
@@ -708,7 +708,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
 
   for (imode=0; imode<rfmode->modes; imode++) {
     if (rfmode->bin_size*rfmode->omega[imode]/PIx2>0.1) {
-      fprintf(stdout, "Error: FTRFMODE bin size adjustment failed\n");
+      printf("Error: FTRFMODE bin size adjustment failed\n");
       exitElegant(1);
     }
   }

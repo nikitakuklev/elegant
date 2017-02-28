@@ -133,7 +133,7 @@ VMATRIX *compute_periodic_twiss(
 #endif
   if ((i = fill_in_matrices(elem, run))) {
     if (noticeCounter < 100) {
-      fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
+      printf((char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
       report_stats(stdout, (char*)"statistics: ");
       fflush(stdout);
       if (++noticeCounter==100) {
@@ -170,30 +170,30 @@ VMATRIX *compute_periodic_twiss(
     free(M1);
     M1 = NULL;
 /*
-    fprintf(stdout, "Computed revolution matrix on closed orbit to %ld order\n",
+    printf("Computed revolution matrix on closed orbit to %ld order\n",
             twissConcatOrder);
     fflush(stdout);
-    fprintf(stdout, "matrix concatenation for periodic Twiss computation:\n");
+    printf("matrix concatenation for periodic Twiss computation:\n");
     fflush(stdout);
-    fprintf(stdout, "closed orbit at input:\n  ");
-    fflush(stdout);
-    for (i=0; i<6; i++)
-      fprintf(stdout, "%14.6e ", clorb[i]);
-      fflush(stdout);
-    fprintf(stdout, "\nclosed orbit at output:\n  ");
+    printf("closed orbit at input:\n  ");
     fflush(stdout);
     for (i=0; i<6; i++)
-      fprintf(stdout, "%14.6e ", M->C[i]);
+      printf("%14.6e ", clorb[i]);
       fflush(stdout);
-    fprintf(stdout, "\nR matrix:\n");
+    printf("\nclosed orbit at output:\n  ");
+    fflush(stdout);
+    for (i=0; i<6; i++)
+      printf("%14.6e ", M->C[i]);
+      fflush(stdout);
+    printf("\nR matrix:\n");
     fflush(stdout);
     for (i=0; i<6; i++) {
-      fprintf(stdout, "  ");
+      printf("  ");
       fflush(stdout);
       for (j=0; j<6; j++)
-        fprintf(stdout, "%14.6e ", M->R[i][j]);
+        printf("%14.6e ", M->R[i][j]);
         fflush(stdout);
-      fprintf(stdout, "\n");
+      printf("\n");
       fflush(stdout);
     }
 */
@@ -201,7 +201,7 @@ VMATRIX *compute_periodic_twiss(
   else {
     M = full_matrix(elem, run, twissConcatOrder);
 /*
-    fprintf(stdout, "Computed revolution matrix to %ld order\n", twissConcatOrder);
+    printf("Computed revolution matrix to %ld order\n", twissConcatOrder);
     fflush(stdout);
 */
   }
@@ -232,7 +232,7 @@ VMATRIX *compute_periodic_twiss(
     dispR->a[i][0] = R[i][5];
   }
   if (m_det(dispM)==0) {
-    fprintf(stdout, (char*)"Unable to compute dispersion: unstable\n");
+    printf((char*)"Unable to compute dispersion: unstable\n");
     fflush(stdout);
     *unstable = 3; /* both planes */
   } else {
@@ -294,7 +294,7 @@ VMATRIX *compute_periodic_twiss(
   
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
-      fprintf(stdout, (char*)"warning: beamline unstable for %c plane--can't match beta functions.\n", (char)('x'+i/2));
+      printf((char*)"warning: beamline unstable for %c plane--can't match beta functions.\n", (char)('x'+i/2));
       fflush(stdout);
       *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
@@ -420,7 +420,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   n_mat_computed = 0;
 
 /*
-  fprintf(stdout, "Twiss parameter computation on path %e, %e, %e, %e, %e, %e\n",
+  printf("Twiss parameter computation on path %e, %e, %e, %e, %e, %e\n",
           path[0], path[1], path[2], path[3], path[4], path[5]);
 */
   
@@ -545,12 +545,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       }
       /* 
       if (!local_dispersion) {
-        fprintf(stdout, "\n%20s dispM1->C: ", elem->name);
+        printf("\n%20s dispM1->C: ", elem->name);
         for (i=0; i<6; i++)
-          fprintf(stdout, "%e,%c", dispM1->C[i], i==5?'\n':' ');
-        fprintf(stdout, "%20s dispM2->C: ", elem->name);
+          printf("%e,%c", dispM1->C[i], i==5?'\n':' ');
+        printf("%20s dispM2->C: ", elem->name);
         for (i=0; i<6; i++)
-          fprintf(stdout, "%e,%c", dispM2->C[i], i==5?'\n':' ');
+          printf("%e,%c", dispM2->C[i], i==5?'\n':' ');
       }
       */
 
@@ -639,12 +639,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
           if (asinWarning>0) {
             asinWarning--;
-            fprintf(stdout, (char*)"warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
-            fprintf(stdout, (char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
-            fprintf(stdout, (char*)"%c-plane matrix:  C = %e,  S = %e,  ",
+            printf((char*)"warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
+            printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
+            printf((char*)"%c-plane matrix:  C = %e,  S = %e,  ",
                     (plane==0?'x':'y'), C[plane], S[plane]);
-            fprintf(stdout, (char*)"C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
-            fprintf(stdout, (char*)"beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
+            printf((char*)"C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
+            printf((char*)"beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
             fflush(stdout);
           }
           sin_dphi = 1;
@@ -653,8 +653,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         else if (sin_dphi<-1) {
           if (asinWarning>0) {
             asinWarning--;
-            fprintf(stdout, (char*)"warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
-            fprintf(stdout, (char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
+            printf((char*)"warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
+            printf((char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             fflush(stdout);
           }
           sin_dphi = -1;
@@ -876,12 +876,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     radIntegrals->computed = 1;
   
 /*
-    fprintf(stdout, "beta, eta, alpha: %e, %e; %e, %e; %e, %e\n",
+    printf("beta, eta, alpha: %e, %e; %e, %e; %e, %e\n",
           beta[0], beta[1],
           eta[0], eta[1], 
           alpha[0], alpha[1]);
   if (radIntegrals)
-    fprintf(stdout, "Radiation integrals: %e, %e, %e, %e, %e\n",
+    printf("Radiation integrals: %e, %e, %e, %e, %e\n",
             radIntegrals->RI[0], 
             radIntegrals->RI[1], 
             radIntegrals->RI[2], 
@@ -1637,9 +1637,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
         etap_x = -etap_x;
         etap_y = -etap_y;
       }
-      fprintf(stdout, (char*)"Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
+      printf((char*)"Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
               beta_x, alpha_x, beta_y, alpha_y);
-      fprintf(stdout, (char*)"eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
+      printf((char*)"eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
               eta_x, etap_x, eta_y, etap_y);
       fflush(stdout);
     }
@@ -1664,7 +1664,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       for (i=0; i<N_DT_PARAMETERS; i++) {
         if (!SDDS_ProcessParameterString(&SDDS_twiss, driving_term_parameter_definition[i].text, 0) ||
             (SDDS_GetParameterIndex(&SDDS_twiss, driving_term_parameter_definition[i].name))<0) {
-            fprintf(stdout, "Unable to define SDDS parameter for driving terms--string was:\n%s\n", 
+            printf("Unable to define SDDS parameter for driving terms--string was:\n%s\n", 
                     driving_term_parameter_definition[i].text);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -1673,7 +1673,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       }
     }
     if (!SDDS_WriteLayout(&SDDS_twiss)) {
-      fprintf(stdout, "Unable to write SDDS layout for file %s\n", filename);
+      printf("Unable to write SDDS layout for file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -1892,72 +1892,72 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   elast = beamline->elast;
 
   if (twissConcatOrder>1) {
-    fprintf(stdout, (char*)"%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
+    printf((char*)"%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
             matched?(char*)"periodic":(char*)"final");
-    fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
-    fprintf(stdout, (char*)"          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
-    fprintf(stdout, (char*)"--------------------------------------------------------------------------------------------------------------------\n");
-    fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    printf((char*)"         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
+    printf((char*)"          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
+    printf((char*)"--------------------------------------------------------------------------------------------------------------------\n");
+    printf((char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             beamline->chromaticity[0], beamline->dbeta_dPoP[0], 1e6*beamline->acceptance[0]);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
-      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
-      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
     }
-    fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    printf((char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             beamline->chromaticity[1], beamline->dbeta_dPoP[1], 1e6*beamline->acceptance[1]);
     if (statistics) {
-      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
-      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
-      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
     }
     fflush(stdout);
   }
   else {
-    fprintf(stdout, (char*)"%s Twiss parameters:\n", matched?(char*)"periodic":(char*)"final");
-    fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'        accept.\n");
-    fprintf(stdout, (char*)"          m                          1/2pi           m                       mm-mrad\n");
-    fprintf(stdout, (char*)"---------------------------------------------------------------------------------------\n");
-    fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    printf((char*)"%s Twiss parameters:\n", matched?(char*)"periodic":(char*)"final");
+    printf((char*)"         beta          alpha           nu           eta          eta'        accept.\n");
+    printf((char*)"          m                          1/2pi           m                       mm-mrad\n");
+    printf((char*)"---------------------------------------------------------------------------------------\n");
+    printf((char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             1e6*beamline->acceptance[0]);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
-      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
-      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
     }
-    fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    printf((char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             1e6*beamline->acceptance[1]);
     if (statistics) {
-      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
-      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
-      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+      printf((char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
     }
     fflush(stdout);
   }
 
   if (beamline->acc_limit_name[0])
-    fprintf(stdout, (char*)"x acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[0], beamline->acc_limit_name[0], beamline->acceptance[2]);
+    printf((char*)"x acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[0], beamline->acc_limit_name[0], beamline->acceptance[2]);
     fflush(stdout);
   if (beamline->acc_limit_name[1])
-    fprintf(stdout, (char*)"y acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[1], beamline->acc_limit_name[1], beamline->acceptance[3]);
+    printf((char*)"y acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[1], beamline->acc_limit_name[1], beamline->acceptance[3]);
     fflush(stdout);
 
   if (SDDS_twiss_initialized) {
@@ -2042,11 +2042,11 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                               unstable, 
                                               beamline->eta2, beamline->eta3);
 #ifdef DEBUG
-    fprintf(stdout, (char*)"matched parameters computed--returned to compute_twiss_parameters\n");
+    printf((char*)"matched parameters computed--returned to compute_twiss_parameters\n");
     fflush(stdout);
-    fprintf(stdout, (char*)"beamline matrix has order %ld\n", beamline->matrix->order);
+    printf((char*)"beamline matrix has order %ld\n", beamline->matrix->order);
     fflush(stdout);
-    fprintf(stdout, (char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
+    printf((char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
             beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
     fflush(stdout);
 #endif
@@ -2089,9 +2089,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     bombElegant((char*)"logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"propagating parameters\n");
+  printf((char*)"propagating parameters\n");
   fflush(stdout);
-  fprintf(stdout, (char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
+  printf((char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
           beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
   fflush(stdout);
 #endif
@@ -2107,7 +2107,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     completeRadiationIntegralComputation(&(beamline->radIntegrals), beamline, run->p_central);
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"finding acceptance\n");
+  printf((char*)"finding acceptance\n");
   fflush(stdout);
 #endif
   beamline->acceptance[0] = find_acceptance(beamline->elem_twiss, 0, run, &x_acc_name, &x_acc_z);
@@ -2136,7 +2136,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->twiss0->apy = beamline->elem_twiss->twiss->apy;
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"computing chromaticities\n");
+  printf((char*)"computing chromaticities\n");
   fflush(stdout);
 #endif
 
@@ -2162,7 +2162,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
     if (twissConcatOrder>1) {
 #ifdef DEBUG
-      fprintf(stdout, (char*)"computing chromaticities\n");
+      printf((char*)"computing chromaticities\n");
       fflush(stdout);
 #endif
       if (!(M->T))
@@ -2239,7 +2239,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord, n_periods); 
 #ifdef DEBUG
-      fprintf(stdout, (char*)"chomaticities: %e, %e\n", chromx, chromy);
+      printf((char*)"chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
 #endif
     }
@@ -2585,17 +2585,17 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   long nElems;
   
   if (!twiss_ave) {
-    fprintf(stdout, (char*)"error: NULL twiss_ave pointer in compute_twiss_statistics\n");
+    printf((char*)"error: NULL twiss_ave pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_min) {
-    fprintf(stdout, (char*)"error: NULL twiss_min pointer in compute_twiss_statistics\n");
+    printf((char*)"error: NULL twiss_min pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_max) {
-    fprintf(stdout, (char*)"error: NULL twiss_max pointer in compute_twiss_statistics\n");
+    printf((char*)"error: NULL twiss_max pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
@@ -2664,17 +2664,17 @@ void compute_twiss_percentiles(LINE_LIST *beamline, TWISS *twiss_p99, TWISS *twi
   double value[3];
     
   if (!twiss_p99) {
-    fprintf(stdout, (char*)"error: NULL twiss_p99 pointer in compute_twiss_percentiles\n");
+    printf((char*)"error: NULL twiss_p99 pointer in compute_twiss_percentiles\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_p98) {
-    fprintf(stdout, (char*)"error: NULL twiss_min pointer in compute_twiss_percentiles\n");
+    printf((char*)"error: NULL twiss_min pointer in compute_twiss_percentiles\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_p96) {
-    fprintf(stdout, (char*)"error: NULL twiss_max pointer in compute_twiss_percentiles\n");
+    printf((char*)"error: NULL twiss_max pointer in compute_twiss_percentiles\n");
     fflush(stdout);
     abort();
   }
@@ -3213,7 +3213,7 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nux", NULL, SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuy", NULL, SDDS_DOUBLE) ||
 	!SDDS_WriteLayout(&SDDSTswaTunes)) {
-      fprintf(stdout, (char*)"Unable set up file %s\n", 
+      printf((char*)"Unable set up file %s\n", 
 	      tune_shift_with_amplitude_struct.tune_output);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -3269,13 +3269,13 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 
   if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
     gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
-    fprintf(stdout, (char*)"Error: grid_size for TSWA is limited to %ld\n", gridSize);
+    printf((char*)"Error: grid_size for TSWA is limited to %ld\n", gridSize);
     exitElegant(1);
   }
   
   if (tune_shift_with_amplitude_struct.tune_output &&
       !SDDS_StartPage(&SDDSTswaTunes, gridSize*gridSize)) {
-    fprintf(stdout, (char*)"Problem starting SDDS page for TSWA tune output\n");
+    printf((char*)"Problem starting SDDS page for TSWA tune output\n");
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
@@ -3333,17 +3333,17 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         xTune[ix][iy] = tune1[0];
         yTune[ix][iy] = tune1[1];
         if (tune_shift_with_amplitude_struct.verbose)
-          fprintf(stdout, (char*)"Tunes for TSWA: x=%e, y=%e, nux=%.15e, nuy=%.15e\n",
+          printf((char*)"Tunes for TSWA: x=%e, y=%e, nux=%.15e, nuy=%.15e\n",
                   x, y, tune1[0], tune1[1]);
       }
     }
     if (tune_shift_with_amplitude_struct.verbose)
-      fprintf(stdout, (char*)"All tunes computed for TSWA (%ld particles lost)\n", nLost);
+      printf((char*)"All tunes computed for TSWA (%ld particles lost)\n", nLost);
 
     maxResult = -DBL_MAX;
     if (!tune_shift_with_amplitude_struct.spread_only) {
       if (nLost) {
-	fprintf(stdout, (char*)"Amplitude too large for TSWA computation---particles lost\n");
+	printf((char*)"Amplitude too large for TSWA computation---particles lost\n");
       } else {
 	for (ix=0; ix<gridSize; ix++) {
 	  for (iy=0; iy<gridSize; iy++) {
@@ -3363,7 +3363,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  }
 	}
 	if (tune_shift_with_amplitude_struct.verbose) 
-	  fprintf(stdout, (char*)"maximum tune change: %e\n", maxResult);
+	  printf((char*)"maximum tune change: %e\n", maxResult);
       }
       if (nLost || maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
 	if (upperLimit[0]>tune_shift_with_amplitude_struct.x1)
@@ -3372,8 +3372,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  upperLimit[1] = tune_shift_with_amplitude_struct.y1;
 	tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
 	tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
-	fprintf(stdout, (char*)"Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
-	fprintf(stdout, (char*)"Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+	printf((char*)"Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
+	printf((char*)"Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
 		tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
 	if (tries==0) 
 	  tries = 1;   /* ensures we don't exit on amplitude too large */
@@ -3406,7 +3406,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 			       (char*)"y", y0[iy], (char*)"Ay", Ay[iy],
 			       (char*)"nuy", yTune[ix][iy],
 			       NULL)) {
-	  fprintf(stdout, (char*)"Problem filling SDDS page for TSWA tune output\n");
+	  printf((char*)"Problem filling SDDS page for TSWA tune output\n");
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
 	}
@@ -3414,7 +3414,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       }
     }
     if (!SDDS_WritePage(&SDDSTswaTunes)) {
-      fprintf(stdout, (char*)"Problem writing SDDS page for TSWA tune output\n");
+      printf((char*)"Problem writing SDDS page for TSWA tune output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
@@ -3444,16 +3444,16 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     }
   }
   if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
-    fprintf(stdout, (char*)"%ld particles in tune tracking: setting spreads to 1\n", nLost);
+    printf((char*)"%ld particles in tune tracking: setting spreads to 1\n", nLost);
     xTuneExtrema[0] = yTuneExtrema[0] = 0;
     xTuneExtrema[1] = yTuneExtrema[1] = 1.0;
   }
 
   if (tune_shift_with_amplitude_struct.verbose) {
-      fprintf(stdout, (char*)"xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+      printf((char*)"xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
 	      xTuneExtrema[0], xTuneExtrema[1], 
 	      fabs(xTuneExtrema[0]-xTuneExtrema[1]));
-      fprintf(stdout, (char*)"yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+      printf((char*)"yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
 	      yTuneExtrema[0], yTuneExtrema[1], 
 	      fabs(yTuneExtrema[0]-yTuneExtrema[1]));
   }
@@ -3499,21 +3499,21 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         dnuy_dA[0][iy] = coefData[iy]*factorial(iy);
 
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, (char*)"dnux/(dAx^i):  ");
+        printf((char*)"dnux/(dAx^i):  ");
         for (ix=0; ix<(order+1); ix++)
-          fprintf(stdout, (char*)"%10.3g ", dnux_dA[ix][0]);
+          printf((char*)"%10.3g ", dnux_dA[ix][0]);
         fputc('\n', stdout);
-        fprintf(stdout, (char*)"dnux/(dAy^i):  ");
+        printf((char*)"dnux/(dAy^i):  ");
         for (iy=0; iy<(order+1); iy++)
-          fprintf(stdout, (char*)"%10.3g ", dnux_dA[0][iy]);
+          printf((char*)"%10.3g ", dnux_dA[0][iy]);
         fputc('\n', stdout);
-        fprintf(stdout, (char*)"dnuy/(dAx^i):  ");
+        printf((char*)"dnuy/(dAx^i):  ");
         for (ix=0; ix<(order+1); ix++)
-          fprintf(stdout, (char*)"%10.3g ", dnuy_dA[ix][0]);
+          printf((char*)"%10.3g ", dnuy_dA[ix][0]);
         fputc('\n', stdout);
-        fprintf(stdout, (char*)"dnuy/(dAy^i):  ");
+        printf((char*)"dnuy/(dAy^i):  ");
         for (iy=0; iy<(order+1); iy++)
-          fprintf(stdout, (char*)"%10.3g ", dnuy_dA[0][iy]);
+          printf((char*)"%10.3g ", dnuy_dA[0][iy]);
         fputc('\n', stdout);
       }
       free(tuneData);
@@ -3591,10 +3591,10 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         for (iy=0; (ix+iy)<=order; iy++, i++)
           dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, (char*)"dnux/(dAx^i dAy^j):\n");
+        printf((char*)"dnux/(dAx^i dAy^j):\n");
         for (ix=0; ix<nTSWA; ix++) {
           for (iy=0; iy<nTSWA; iy++) {
-            fprintf(stdout, (char*)"%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+            printf((char*)"%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
           }
         }
       }
@@ -3617,10 +3617,10 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         for (iy=0; (ix+iy)<=order; iy++, i++)
           dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, (char*)"dnuy/(dAx^i dAy^j):\n");
+        printf((char*)"dnuy/(dAx^i dAy^j):\n");
         for (ix=0; ix<nTSWA; ix++) {
           for (iy=0; iy<nTSWA; iy++) {
-            fprintf(stdout, (char*)"%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+            printf((char*)"%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
           }
         }
       }
@@ -3668,7 +3668,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
+  printf((char*)"In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
           turns, xAmplitude, yAmplitude, useMatrix);
   fflush(stdout);
 #endif
@@ -3694,7 +3694,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   oneParticle[0][5] += deltaOffset;
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
+  printf((char*)"Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
@@ -3702,7 +3702,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Doing malloc: turns=%ld\n", turns);
+  printf((char*)"Doing malloc: turns=%ld\n", turns);
   fflush(stdout);
 #endif
 
@@ -3712,7 +3712,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     bombElegant((char*)"memory allocation failure (computeTunesFromTracking)", NULL);
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Did malloc\n");
+  printf((char*)"Did malloc\n");
   fflush(stdout);
 #endif
 
@@ -3724,7 +3724,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Starting to track\n");
+  printf((char*)"Starting to track\n");
   fflush(stdout);
 #endif
 #ifdef DEBUG1
@@ -3744,7 +3744,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
                        nPeriods, i-1+turnOffset, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses) {
-	  fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	  printf((char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	  fflush(stdout);
 	}
         return 0;
@@ -3754,7 +3754,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
         isnan(oneParticle[0][2]) || isnan(oneParticle[0][3]) ||
         isnan(oneParticle[0][4]) || isnan(oneParticle[0][5])) {
       if (!allowLosses) {
-	fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	printf((char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	fflush(stdout);
       }
       return 0;
@@ -3773,7 +3773,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
       endingCoord[i] = oneParticle[0][i];
   }
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Ending coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
+  printf((char*)"Ending coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
@@ -3782,7 +3782,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Performing NAFF (1)\n");
+  printf((char*)"Performing NAFF (1)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
@@ -3791,14 +3791,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
-    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (x).\n");
-    fprintf(stdout, (char*)"Limits: %e, %e\n",
+    printf((char*)"Warning: NAFF failed for tune analysis from tracking (x).\n");
+    printf((char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Performing NAFF (2)\n");
+  printf((char*)"Performing NAFF (2)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
@@ -3807,14 +3807,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
-    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (xp).\n");
-    fprintf(stdout, (char*)"Limits: %e, %e\n",
+    printf((char*)"Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    printf((char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Performing NAFF (3)\n");
+  printf((char*)"Performing NAFF (3)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
@@ -3823,14 +3823,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1) {
-    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (y).\n");
-    fprintf(stdout, (char*)"Limits: %e, %e\n",
+    printf((char*)"Warning: NAFF failed for tune analysis from tracking (y).\n");
+    printf((char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, (char*)"Performing NAFF (4)\n");
+  printf((char*)"Performing NAFF (4)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
@@ -3839,17 +3839,17 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ) {
-    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (yp).\n");
-    fprintf(stdout, (char*)"Limits: %e, %e\n",
+    printf((char*)"Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    printf((char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 
 #ifdef DEBUG
-  fprintf(stdout, (char*)"NAFF done\n");
+  printf((char*)"NAFF done\n");
   for (i=0; i<4; i++)
-    fprintf(stdout, (char*)"%ld: freq=%e, phase=%e, amp=%e\n",
+    printf((char*)"%ld: freq=%e, phase=%e, amp=%e\n",
 	    i, frequency[i], phase[i], amplitude[i]);
   fflush(stdout);
 #endif
@@ -3861,7 +3861,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     amp[1] = amplitude[2];
   }
 #ifdef DEBUG
-  fprintf(stdout, (char*)"xtune = %e, ytune = %e\n", tune[0], tune[1]);
+  printf((char*)"xtune = %e, ytune = %e\n", tune[0], tune[1]);
 #endif
 
   free(x);
@@ -4003,7 +4003,7 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
     }
   }
   if (!twiss) {
-    fprintf(stdout, (char*)"twiss parameter pointer unexpectedly NULL\n");
+    printf((char*)"twiss parameter pointer unexpectedly NULL\n");
     fflush(stdout);
     abort();
   }
@@ -4146,7 +4146,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
           start_pos = 0;
       }
       if (twiss_analysis_struct.verbosity>1 && firstTime) {
-        fprintf(stdout, (char*)"twiss analysis %s will include %s#%ld\n",
+        printf((char*)"twiss analysis %s will include %s#%ld\n",
                 twissAnalysisRequest[i].tag,
                 elem->name, elem->occurence);
       }
@@ -4176,7 +4176,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       elem = elem->succ;
     }
     if (!count) {
-      fprintf(stdout, (char*)"error: twiss analysis conditions never satisfied for request with tag %s\n",
+      printf((char*)"error: twiss analysis conditions never satisfied for request with tag %s\n",
               twissAnalysisRequest[i].tag);
       exitElegant(1);
     }
@@ -4187,20 +4187,20 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       }
     }
     if (twiss_analysis_struct.verbosity && firstTime) {
-      fprintf(stdout, (char*)"%ld elements included in computations for twiss analysis request with tag %s\n",
+      printf((char*)"%ld elements included in computations for twiss analysis request with tag %s\n",
               count, 
               twissAnalysisRequest[i].tag);
     }
     
 #if DEBUG
     if (twissAnalysisRequest[i].matchName) {
-      fprintf(stdout, (char*)"%ld matches for %s\n",
+      printf((char*)"%ld matches for %s\n",
               count, twissAnalysisRequest[i].tag
               );
       for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++) {
-        fprintf(stdout, (char*)"%s: ", twissAnalysisQuantityName[iq]);
+        printf((char*)"%s: ", twissAnalysisQuantityName[iq]);
         for (is=0; is<TWISS_ANALYSIS_STATS; is++) 
-          fprintf(stdout, (char*)"%s=%e%s",
+          printf((char*)"%s=%e%s",
                   twissAnalysisStatName[is],
                   twissData[is][iq],
                   (is==TWISS_ANALYSIS_STATS-1?(char*)"\n":(char*)", "));

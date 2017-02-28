@@ -313,7 +313,7 @@ long do_tracking(
 #endif
   
 #ifdef WATCH_MEMORY
-  fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
+  printf("start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
           cpu_time()/100.0, page_faults(), memoryUsage());
   fflush(stdout);
 #endif
@@ -542,9 +542,9 @@ long do_tracking(
     if (i_pass==0) {
       if (flags&LINEAR_CHROMATIC_MATRIX) {
         if (!isConcat) {
-          fprintf(stdout, "Error: in order to use the \"linear chromatic matrix\" for\n");
+          printf("Error: in order to use the \"linear chromatic matrix\" for\n");
           fflush(stdout);
-          fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
+          printf("tracking, you must ask for matrix concatenation in the run_setup.\n");
           fflush(stdout);
           exitElegant(1);
         }
@@ -552,9 +552,9 @@ long do_tracking(
       }
       if (flags&LONGITUDINAL_RING_ONLY) {
         if (!isConcat) {
-          fprintf(stdout, "Error: in order to use the \"longitudinal ring\" mode of\n");
+          printf("Error: in order to use the \"longitudinal ring\" mode of\n");
           fflush(stdout);
-          fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
+          printf("tracking, you must ask for matrix concatenation in the run_setup.\n");
           fflush(stdout);
           exitElegant(1);
         }
@@ -690,11 +690,11 @@ long do_tracking(
         if (eptr->type==T_CHARGE) {
           if (elementsTracked!=0 && !warnedAboutChargePosition) {
 	    warnedAboutChargePosition = 1;
-            fprintf(stdout, "Warning: the CHARGE element is not at the start of the beamline.\n");
+            printf("Warning: the CHARGE element is not at the start of the beamline.\n");
 	    fflush(stdout);
 	  }
 	  if (charge!=NULL) {
-	    fprintf(stdout, "Fatal error: multipole CHARGE elements in one beamline.\n");
+	    printf("Fatal error: multipole CHARGE elements in one beamline.\n");
 	    fflush(stdout);
 	    exitElegant(1);
 	  }
@@ -753,25 +753,25 @@ long do_tracking(
       elementsTracked++;
       log_entry("do_tracking.2.2.0");
       if (!eptr->name) {
-        fprintf(stdout, "error: element ending at %em has NULL name pointer\n", eptr->end_pos);
+        printf("error: element ending at %em has NULL name pointer\n", eptr->end_pos);
         fflush(stdout);
         if (eptr->pred && eptr->pred->name) {
-          fprintf(stdout, "previous element is %s\n", eptr->pred->name);
+          printf("previous element is %s\n", eptr->pred->name);
           fflush(stdout);
         }
         else if (eptr->succ && eptr->succ->name) {
-          fprintf(stdout, "next element is %s\n", eptr->succ->name);
+          printf("next element is %s\n", eptr->succ->name);
           fflush(stdout);
         }
         abort();
       }
       if (!eptr->p_elem && !run->concat_order) {
-        fprintf(stdout, "element %s has NULL p_elem pointer", eptr->name);
+        printf("element %s has NULL p_elem pointer", eptr->name);
         fflush(stdout);
         exitElegant(1);
       }
       if (eptr->type<=0 || eptr->type>=N_TYPES) {
-        fprintf(stdout, "element %s has type %ld--not recognized/not allowed\n", eptr->name, eptr->type);
+        printf("element %s has type %ld--not recognized/not allowed\n", eptr->name, eptr->type);
         fflush(stdout);
         exitElegant(1);
       }
@@ -794,7 +794,7 @@ long do_tracking(
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0)
-            fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+            printf("*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
           else {
 #ifdef HAVE_GPU
             if (getElementOnGpu())
@@ -824,7 +824,7 @@ long do_tracking(
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
         printMessageAndTime(stdout, "Done accumulating beam sums\n");
-        fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
+        printf("beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
                 i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
         fflush(stdout);
 #endif
@@ -952,7 +952,7 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          fprintf(stdout, "Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
+          printf("Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
 #if USE_MPI
                   myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else
@@ -1018,13 +1018,13 @@ long do_tracking(
               bombElegant("no matrix for element that must have matrix", NULL);
           }
           if (eptr->matrix->C[5]!=0) {
-            fprintf(stdout, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
-            fprintf(stdout, "Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
+            printf("Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
+            printf("Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
             fflush(stdout);
             nLeft = 0;
           } else {
             if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
-              fprintf(stdout, "Tracking matrix for %s\n", eptr->name);
+              printf("Tracking matrix for %s\n", eptr->name);
               fflush(stdout);
               if (run->print_statistics>2) {
               print_elem(stdout, eptr);
@@ -1050,7 +1050,7 @@ long do_tracking(
         else { /* normal tracking ends up here */
           long type;
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
-            fprintf(stdout, "Tracking element: ");
+            printf("Tracking element: ");
             fflush(stdout);
             if (run->print_statistics>2)
             print_elem(stdout, eptr);
@@ -1086,11 +1086,11 @@ long do_tracking(
 	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
 		  warnedAboutChargePosition = 1;
-		  fprintf(stdout, "Warning: the CHARGE element is not at the start of the beamline.\n");
+		  printf("Warning: the CHARGE element is not at the start of the beamline.\n");
 		  fflush(stdout);
 		}
 		if (charge!=NULL && !( ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning && charge==((CHARGE*)(eptr->p_elem)))) {
-		  fprintf(stdout, "Fatal error: multiple CHARGE elements in one beamline.\n");
+		  printf("Fatal error: multiple CHARGE elements in one beamline.\n");
 		  fflush(stdout);
 		  exitElegant(1);
 		}
@@ -1262,7 +1262,7 @@ long do_tracking(
 	          if (!watch->initialized) 
 	            set_up_watch_point(watch, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
 	          if (i_pass==0 && (n_passes/watch->interval)==0)
-	            fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
+	            printf("warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
 	     	     n_passes, watch->interval);
 #if SDDS_MPI_IO
 		  if(watch_not_allowed) {
@@ -1332,7 +1332,7 @@ long do_tracking(
 		  if (!histogram->initialized) 
 		    set_up_histogram(histogram, run, eptr->occurence);
 		  if (i_pass==0 && (n_passes/histogram->interval)==0)
-		    fprintf(stdout, "warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
+		    printf("warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
 			    n_passes, histogram->interval);
 		  fflush(stdout);
 		  if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
@@ -1358,7 +1358,7 @@ long do_tracking(
                 if (!mhist->disable) {
                   watch_pt_seen = 1;   /* yes, this should be here */
                   if (i_pass==0 && (n_passes/mhist->interval)==0)
-                    fprintf(stdout, "warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
+                    printf("warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
                             n_passes, mhist->interval);
                   fflush(stdout);
                   if (i_pass>=mhist->startPass && (i_pass-mhist->startPass)%mhist->interval==0) {
@@ -1755,7 +1755,7 @@ long do_tracking(
 	    case T_SCRIPT:
 #if !USE_MPI
               if (nLeft<nMaximum && ((SCRIPT*)eptr->p_elem)->verbosity>1)
-		fprintf(stdout, "nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
+		printf("nLost=%ld, beam->n_particle=%ld, beam->n_to_track=%ld, nLeft=%ld, nToTrack=%ld, nMaximum=%ld\n",
 			nLost, beam?beam->n_particle:-1, beam?beam->n_to_track:-1, nLeft, nToTrack, nMaximum);
 #endif
 #if USE_MPI && MPI_DEBUG
@@ -1805,6 +1805,10 @@ long do_tracking(
 	      if (!(flags&TEST_PARTICLES))
 		transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, nToTrack, beamline, i_pass, n_passes, run->rootname, *P_central, beam?beam->id_slots_per_bunch:0);
 	      feedbackDriverSeen = 1;
+#ifdef MPI_DEBUG
+              printf("Returned from TFBDRIVER\n");
+              fflush(stdout);
+#endif
 	      break;
 	    case T_LSRMDLTR:
 	      nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
@@ -1960,7 +1964,7 @@ long do_tracking(
                 trackThroughExactCorrector(coord, nToTrack, eptr, *P_central, accepted, last_z, NULL);
 	      break;
 	    default:
-	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
+	      printf("programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);
 	      fflush(stdout);
 	      exitElegant(1);
@@ -1999,16 +2003,16 @@ long do_tracking(
         if (run->print_statistics>0 && !(flags&TEST_PARTICLES)) {
 	  if (run->print_statistics>1) {
           report_stats(stdout, ": ");
-          fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
+          printf("central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
           fflush(stdout);
 	  }
           if (nLeft!=nToTrack)
-            fprintf(stdout, "%ld particles left\n", nLeft);
+            printf("%ld particles left\n", nLeft);
 	  fflush(stdout);
         }
       }
       else if (!(flags&TEST_PARTICLES)) {
-        fprintf(stdout, "element %s was ignored in tracking.\n",
+        printf("element %s was ignored in tracking.\n",
                 eptr->name);
         fflush(stdout);
       }
@@ -2047,7 +2051,7 @@ long do_tracking(
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {
-          fprintf(stdout, "error: the trajectory centroid array for %s is NULL (do_tracking)",
+          printf("error: the trajectory centroid array for %s is NULL (do_tracking)",
                   eptr->name);
           fflush(stdout);
           exitElegant(1);
@@ -2080,7 +2084,7 @@ long do_tracking(
       if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
 #if USE_MPI
 	if (!(classFlags&UNIPROCESSOR)) { /* This function will be parallelized in the future */
-	  fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+	  printf("performSliceAnalysisOutput is not supported in parallel mode currently.\n");
 	  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 	  MPI_Abort(MPI_COMM_WORLD, 1); 
 	}
@@ -2214,7 +2218,7 @@ long do_tracking(
 #if USE_MPI
       if (notSinglePart) {
 	if (!(classFlags&UNIPROCESSOR)) { /* This function will be parallelized in the future */
-	  fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+	  printf("performSliceAnalysisOutput is not supported in parallel mode currently.\n");
 	  MPI_Abort(MPI_COMM_WORLD, 1); 
 	}
       }
@@ -2246,7 +2250,7 @@ long do_tracking(
 
     log_exit("do_tracking.2.2");
 #ifdef WATCH_MEMORY
-    fprintf(stdout, "main tracking loop done: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
+    printf("main tracking loop done: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
             cpu_time()/100.0, page_faults(), memoryUsage());
     fflush(stdout);
 #endif
@@ -2327,7 +2331,7 @@ long do_tracking(
         if (i_pass==0 && traj_vs_z) {
           /* collect trajectory data--used mostly by trajectory correction routines */
           if (!traj_vs_z[i_traj].centroid) {
-            fprintf(stdout, "error: the trajectory centroid array for %s is NULL (do_tracking)",
+            printf("error: the trajectory centroid array for %s is NULL (do_tracking)",
                     eptr->name);
             fflush(stdout);
             exitElegant(1);
@@ -2359,7 +2363,7 @@ long do_tracking(
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
-      fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
+      printf("beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
               i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
@@ -2423,9 +2427,9 @@ long do_tracking(
 	    } 
 	  }
 #ifdef MPI_DEBUG  
-	  fprintf(stdout, "\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
+	  printf("\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
 		  myid, nParPerElements, my_wtime, nParPerElements/my_wtime);
-	  fprintf(stdout, "nParElements=%ld, nElements=%ld\n",nParElements, nElements);
+	  printf("nParElements=%ld, nElements=%ld\n",nParElements, nElements);
 #endif
 	}
       }
@@ -2451,7 +2455,7 @@ long do_tracking(
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack)  {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0)
-            fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+            printf("*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
           else { 
 #ifdef HAVE_GPU
             if (getElementOnGpu()) 
@@ -2510,7 +2514,7 @@ long do_tracking(
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
-      fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
+      printf("beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
@@ -2529,7 +2533,7 @@ long do_tracking(
 			   0, 0, 0);
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
-      fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
+      printf("beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
@@ -2541,7 +2545,7 @@ long do_tracking(
         bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       copy_beam_sums(*sums_vs_z+i_sums, *sums_vs_z+i_sums-1);
 #if defined(BEAM_SUMS_DEBUG)
-      fprintf(stdout, "beam sums copied to slot %ld from slot %ld for final sums at z=%em, sx=%e\n", 
+      printf("beam sums copied to slot %ld from slot %ld for final sums at z=%em, sx=%e\n", 
               i_sums, i_sums-1, z, (*sums_vs_z)[i_sums].sum2[0]);
       fflush(stdout);
 #endif
@@ -2559,7 +2563,7 @@ long do_tracking(
 
   if (sasefel && sasefel->active) {
     if (!charge) {
-      fprintf(stdout, "Can't compute SASE FEL---no CHARGE element seen");
+      printf("Can't compute SASE FEL---no CHARGE element seen");
       fflush(stdout);
       exitElegant(1);
     }
@@ -2583,7 +2587,7 @@ long do_tracking(
   log_entry("do_tracking.4");
   if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)) {
 #if !SDDS_MPI_IO
-    fprintf(stdout, "%ld particles present after pass %ld        \n", 
+    printf("%ld particles present after pass %ld        \n", 
             nToTrack, i_pass);
 #else
     if (!partOnMaster && notSinglePart) {
@@ -2591,13 +2595,13 @@ long do_tracking(
       if (isMaster) nToTrack = 0; 
       if (beam)
       MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-      fprintf(stdout, "%ld particles present after pass %ld        \n", 
+      printf("%ld particles present after pass %ld        \n", 
 	      beam?beam->n_to_track_total:-1, i_pass);
     }
     else {
       if (beam)
       beam->n_to_track_total = nToTrack;
-      fprintf(stdout, "%ld particles present after pass %ld        \n", 
+      printf("%ld particles present after pass %ld        \n", 
 	      nToTrack, i_pass);
     }
 #endif
@@ -2810,7 +2814,7 @@ void do_match_energy(
       P_average /= np;
 #endif 
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e in %s at %e to match beam\n",
+      printf("Changing reference momentum from %e to %e in %s at %e to match beam\n",
               *P_central, P_average, trackingContext.elementName, trackingContext.zEnd);
 #endif
     if (fabs(P_average-(*P_central))/(*P_central)>1e-14){ 
@@ -2871,13 +2875,13 @@ void do_match_energy(
 #if defined(IEEE_MATH)
 	if (isnan(coord[ip][4]) || isinf(coord[ip][4])) {
 	  long i;
-	  fprintf(stdout, "error: bad time coordinate for particle %ld\n", ip);
+	  printf("error: bad time coordinate for particle %ld\n", ip);
 	  fflush(stdout);
 	  for (i=0; i<6; i++)
-	    fprintf(stdout, "%15.8e ", coord[ip][i]);
+	    printf("%15.8e ", coord[ip][i]);
 	  fflush(stdout);
 	  fputc('\n', stdout);
-	  fprintf(stdout, "P_average = %e  P_central = %e  t = %e  dP_centroid = %e\n",
+	  printf("P_average = %e  P_central = %e  t = %e  dP_centroid = %e\n",
 		  P_average, *P_central, t, dP_centroid);
 	  fflush(stdout);
 #if (USE_MPI)
@@ -2949,7 +2953,7 @@ void set_central_momentum(
 
     if (*P_central != P_new) {
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e in %s at %e to match beam\n",
+      printf("Changing reference momentum from %e to %e in %s at %e to match beam\n",
               *P_central, P_new, trackingContext.elementName, trackingContext.zEnd);
 #endif
       if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster)) {
@@ -2966,7 +2970,7 @@ void set_central_momentum(
     }
     if (*P_central != P_new) {
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e in %s\n",
+      printf("Changing reference momentum from %e to %e in %s\n",
               *P_central, P_new, trackingContext.elementName);
 #endif
       for (ip=0; ip<np; ip++)
@@ -3417,18 +3421,18 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       offset = 2*plane;
       if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
 	if (ilmat->verbosity) {
-        fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
+        printf("nonpositive beta function for particle with delta=%le\n",
                 deltaPoP);
-        fprintf(stdout, "particle is lost\n");
+        printf("particle is lost\n");
 	}
         is_lost = 1;
         continue;
       }
       if (!allowResonanceCrossing && fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
 	if (ilmat->verbosity) {
-        fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
+        printf("particle with delta=%le crossed integer or half-integer resonance\n",
                 deltaPoP);
-        fprintf(stdout, "particle is lost\n");
+        printf("particle is lost\n");
 	}
         is_lost = 1;
         continue;
@@ -3453,8 +3457,8 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
       if (fabs(det-1)>1e-6) {
 	if (ilmat->verbosity) {
-        fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
-        fprintf(stdout, "particle is lost\n");
+        printf("Determinant is suspect for particle with delta=%e\n", deltaPoP);
+        printf("particle is lost\n");
 	}
         is_lost = 1;
         continue;
@@ -3884,7 +3888,7 @@ void recordLostParticles(
     return;
 
 #ifdef DEBUG_CRASH
-  fprintf(stdout, "Recording %ld additional lost particles (%ld already)\n",
+  printf("Recording %ld additional lost particles (%ld already)\n",
           nNewLost, lostBeam->nLost);
   fflush(stdout);
 #endif
@@ -3925,7 +3929,7 @@ void recordLostParticles(
   lostBeam->nLost += nNewLost;
 
 #ifdef DEBUG_CRASH
-  fprintf(stdout, "Now have %ld lost particles\n", lostBeam->nLost);
+  printf("Now have %ld lost particles\n", lostBeam->nLost);
   fflush(stdout);
 #endif
 }

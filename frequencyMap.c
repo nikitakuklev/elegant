@@ -247,7 +247,7 @@ long doFrequencyMap(
 					  0, endingCoord, NULL, NULL, 1, 1) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
 	      if (verbosity && !USE_MPI) 
-		fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+		printf("Problem with particle %ld tune determination\n", ip);
               badPoint = 1;
               firstTune[0] = firstTune[1] = -1;
               firstTune[1] = firstTune[1] = -1;
@@ -278,7 +278,7 @@ long doFrequencyMap(
                                               0, endingCoord, NULL, NULL, 1, 1) || 
                     secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                   if (verbosity && !USE_MPI)
-                    fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+                    printf("Problem with particle %ld tune determination\n", ip);
                   secondTune[0] = secondTune[1] = -1;
                   secondTune[1] = secondTune[1] = -1;
                   diffusion = 0;
@@ -318,14 +318,14 @@ long doFrequencyMap(
 		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
 		if ((newPercentage-oldPercentage)>=1) {
                   double dt = delapsed_time();
-		  fprintf(stdout, "About %.1f%% done after %lg s wall time, completion expected in about %lg s\n", newPercentage, dt,
+		  printf("About %.1f%% done after %lg s wall time, completion expected in about %lg s\n", newPercentage, dt,
                           dt/(0.01*newPercentage+1e-16)-dt);
 		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}
 	      }
 #else
-	      fprintf(stdout, "Done with particle %ld of %ld\n",
+	      printf("Done with particle %ld of %ld\n",
 		      ix*ny*ndelta+iy*ndelta+idelta+1, nx*ny*ndelta);
 	      fflush(stdout);
 #endif

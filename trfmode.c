@@ -60,8 +60,8 @@ void track_through_trfmode(
 
   if (trfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
-    fprintf(stdout, "binless in trfmode is not supported in the current parallel version.\n");
-    fprintf(stdout, "Please use serial version.\n");
+    printf("binless in trfmode is not supported in the current parallel version.\n");
+    printf("Please use serial version.\n");
     fflush(stdout);
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Abort(MPI_COMM_WORLD, 9);
@@ -118,7 +118,7 @@ void track_through_trfmode(
   
   omega = PIx2*trfmode->freq;
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
-    fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
+    printf("The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -135,12 +135,12 @@ void track_through_trfmode(
   
   if (!been_warned) {        
     if (trfmode->freq<1e3 && trfmode->freq)  {
-      fprintf(stdout, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+      printf("\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
       fflush(stdout);
       been_warned = 1;
     }
     if (been_warned) {
-      fprintf(stdout, "units of parameters for TRFMODE are as follows:\n");
+      printf("units of parameters for TRFMODE are as follows:\n");
       fflush(stdout);
       print_dictionary_entry(stdout, T_TRFMODE, 0, 0);
     }
@@ -292,7 +292,7 @@ void track_through_trfmode(
       n_binned=0;
     MPI_Allreduce(&n_binned, &binned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (binned_total!=np_total && myid==0) {
-      fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+      printf("Warning: only %ld of %ld particles binned (TRFMODE)\n",
               binned_total, np_total);
       fflush(stdout);
     }
@@ -314,7 +314,7 @@ void track_through_trfmode(
     }
 #else
     if (n_binned!=np) {
-      fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+      printf("Warning: only %ld of %ld particles binned (TRFMODE)\n",
               n_binned, np);
       fflush(stdout);
     }
@@ -347,7 +347,7 @@ void track_through_trfmode(
         /* advance cavity to this time */
         damping_factor = exp(-(t-trfmode->last_t)/tau);
         if (damping_factor>1) {
-          fprintf(stdout, "*** Warning: damping factor = %le (>1) for TRFMODE\n", damping_factor);
+          printf("*** Warning: damping factor = %le (>1) for TRFMODE\n", damping_factor);
           fflush(stdout);
         }
         if (trfmode->doX) {
@@ -576,7 +576,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     T = trfmode->bin_size*trfmode->n_bins;
     trfmode->bin_size = 0.1/trfmode->freq;
     trfmode->n_bins = T/trfmode->bin_size;
-    fprintf(stdout, "The TRFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+    printf("The TRFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, trfmode->bin_size, trfmode->n_bins);
     fflush(stdout);
   }
@@ -678,7 +678,7 @@ void runBinlessTrfMode(
 
   omega = PIx2*trfmode->freq;
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
-    fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
+    printf("The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -691,12 +691,12 @@ void runBinlessTrfMode(
   
   if (!been_warned) {        
     if (trfmode->freq<1e3 && trfmode->freq)  {
-      fprintf(stdout, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+      printf("\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
       fflush(stdout);
       been_warned = 1;
     }
     if (been_warned) {
-      fprintf(stdout, "units of parameters for TRFMODE are as follows:\n");
+      printf("units of parameters for TRFMODE are as follows:\n");
       fflush(stdout);
       print_dictionary_entry(stdout, T_TRFMODE, 0, 0);
     }

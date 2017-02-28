@@ -156,7 +156,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 
 #if USE_MPI
   /* This function will be parallelized in the future */
-  fprintf(stdout, "Slice analysis is not supported in this version of parallel elegant.\n");
+  printf("Slice analysis is not supported in this version of parallel elegant.\n");
   MPI_Barrier(MPI_COMM_WORLD); 
   return ;
 #endif
@@ -510,7 +510,7 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
 #endif 
 
  if (!particles) {
-    fprintf(stdout, "no particles left---can't compute slice analysis");
+    printf("no particles left---can't compute slice analysis");
     fflush(stdout);
     /* fill in some dummy values */
     for (slice=0; slice<sliceOutput->nSlices+1; slice++) {

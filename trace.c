@@ -96,9 +96,9 @@ void log_entry(const char *routine)
     }
       
     if (trace_level<0) {
-        fprintf(stdout, "error: trace level is negative (log_entry)\n");
+        printf("error: trace level is negative (log_entry)\n");
         fflush(stdout);
-        fprintf(stdout, "calling routine is %s\n", routine);
+        printf("calling routine is %s\n", routine);
         fflush(stdout);
         exitElegant(1);
         }
@@ -166,9 +166,9 @@ void log_exit(const char *routine)
         }
     if (trace_mode&TRACE_ENTRY) {
         if (trace_level<=0) {
-            fprintf(stdout, "error: trace level is nonpositive (log_exit)\n");
+            printf("error: trace level is nonpositive (log_exit)\n");
             fflush(stdout);
-            fprintf(stdout, "calling routine is %s\n", routine);
+            printf("calling routine is %s\n", routine);
             fflush(stdout);
             exitElegant(1);
             }
@@ -185,33 +185,33 @@ void traceback_handler(int sig)
     long i;
     switch (sig) {
 #if !defined(_WIN32)
-        case SIGHUP: fprintf(stdout, "\nTerminated by SIGHUP\n"); break;
-        case SIGQUIT: fprintf(stdout, "\nTerminated by SIGQUIT\n"); break;
-        case SIGTRAP: fprintf(stdout, "\nTerminated by SIGTRAP\n"); break;
+        case SIGHUP: printf("\nTerminated by SIGHUP\n"); break;
+        case SIGQUIT: printf("\nTerminated by SIGQUIT\n"); break;
+        case SIGTRAP: printf("\nTerminated by SIGTRAP\n"); break;
         case SIGBUS: 
-            fprintf(stdout, "\nTerminated by SIGBUS"); 
+            printf("\nTerminated by SIGBUS"); 
             break;
 #endif
-        case SIGINT: fprintf(stdout, "\nTerminated by SIGINT\n"); break;
-        case SIGABRT: fprintf(stdout, "\nTerminated by SIGABRT\n"); break;
-        case SIGILL: fprintf(stdout, "\nTerminated by SIGILL\n"); break;
+        case SIGINT: printf("\nTerminated by SIGINT\n"); break;
+        case SIGABRT: printf("\nTerminated by SIGABRT\n"); break;
+        case SIGILL: printf("\nTerminated by SIGILL\n"); break;
         case SIGFPE: 
-            fprintf(stdout, "\nTerminated by SIGFPE"); 
+            printf("\nTerminated by SIGFPE"); 
             break;
         case SIGSEGV: 
-            fprintf(stdout, "\nTerminated by SIGSEGV"); 
+            printf("\nTerminated by SIGSEGV"); 
             break;
-        default:      fprintf(stdout, "\nTerminated by unknown signal\n"); break;
+        default:      printf("\nTerminated by unknown signal\n"); break;
         }   
-    fprintf(stdout, "Program trace-back:\n");
+    printf("Program trace-back:\n");
     for (i=0; i<trace_level; i++) {
         fputs(routine_name[i], stdout);
         fputc('\n', stdout);
         }
     if (in_trace_routine==1)
-        fprintf(stdout, "log_entry\n");
+        printf("log_entry\n");
     else if (in_trace_routine==2)
-        fprintf(stdout, "log_exit\n");
+        printf("log_exit\n");
     fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
     exitElegant(1);
     }
@@ -221,15 +221,15 @@ void show_traceback(FILE *fp)
     long i;
     if (!traceback_on && !trace_on)
       return ;
-    fprintf(stdout, "Program trace-back:\n");
+    printf("Program trace-back:\n");
     for (i=0; i<trace_level; i++) {
         fputs(routine_name[i], stdout);
         fputc('\n', stdout);
         }
     if (in_trace_routine==1)
-        fprintf(stdout, "log_entry\n");
+        printf("log_entry\n");
     else if (in_trace_routine==2)
-        fprintf(stdout, "log_exit\n");
+        printf("log_exit\n");
     fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
     }
 

@@ -108,8 +108,8 @@ void track_through_rfmode(
 
     if (rfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
-    fprintf(stdout, (char*)"binless in rfmode is not supported in the current parallel version.\n");
-    fprintf(stdout, (char*)"Please use serial version.\n");
+    printf((char*)"binless in rfmode is not supported in the current parallel version.\n");
+    printf((char*)"Please use serial version.\n");
     fflush(stdout);
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
@@ -169,12 +169,12 @@ void track_through_rfmode(
     
     if (isMaster && (!been_warned)) {        
       if (rfmode->freq<1e3 && rfmode->freq)  {
-        fprintf(stdout, (char*)"warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+        printf((char*)"warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
         fflush(stdout);
         been_warned = 1;
       }
       if (been_warned) {
-        fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
+        printf((char*)"units of parameters for RFMODE are as follows:\n");
         fflush(stdout);
         print_dictionary_entry(stdout, T_RFMODE, 0, 0);
       }
@@ -661,7 +661,7 @@ void track_through_rfmode(
         }
 #if (!USE_MPI)
         if (Q<0.5) {
-          fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+          printf((char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
           fflush(stdout);
           exitElegant(1);
         }
@@ -669,7 +669,7 @@ void track_through_rfmode(
         if (myid == 1) { /* Let the first slave processor write the output */
           if (Q<0.5) {
             dup2(fd,fileno(stdout)); 
-            fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+            printf((char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
             fflush(stdout);
             close(fd);
             MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
@@ -1114,9 +1114,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->bin_size = 0.1/rfmode->freq;
     rfmode->n_bins = ((long)(T/rfmode->bin_size+1));
     rfmode->bin_size = T/rfmode->n_bins;
-    fprintf(stdout, (char*)"The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+    printf((char*)"The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, rfmode->bin_size, rfmode->n_bins);
-    fprintf(stdout, (char*)"Total span changed from %le to %le\n",
+    printf((char*)"Total span changed from %le to %le\n",
             T, rfmode->n_bins*rfmode->bin_size);
     fflush(stdout);
   }
@@ -1213,11 +1213,11 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     I = charge/To;
     rfmode->V = I*rfmode->RaInternal/(1+rfmode->beta)*cos(psi)*rfmode->preload_factor;
     rfmode->last_phase = psi-PI;
-    fprintf(stdout, (char*)"RFMODE %s at z=%fm preloaded:  %eV at %fdeg \n",
+    printf((char*)"RFMODE %s at z=%fm preloaded:  %eV at %fdeg \n",
             element_name, element_z, rfmode->V, rfmode->last_phase*180/PI);
     fflush(stdout);
-    fprintf(stdout, (char*)"To=%21.15es, I = %21.15eA, fref = %21.15eHz, df = %21.15eHz, psi = %21.15e\n", To, I, fref, rfmode->freq-fref, psi);
-    fprintf(stdout, (char*)"Q = %le, Ra = %le, beta = %le\n", rfmode->Q, rfmode->RaInternal, rfmode->beta);
+    printf((char*)"To=%21.15es, I = %21.15eA, fref = %21.15eHz, df = %21.15eHz, psi = %21.15e\n", To, I, fref, rfmode->freq-fref, psi);
+    printf((char*)"Q = %le, Ra = %le, beta = %le\n", rfmode->Q, rfmode->RaInternal, rfmode->beta);
     fflush(stdout);
     rfmode->last_t = element_z/(Po*c_mks/sqrt(sqr(Po)+1));
   }
@@ -1390,12 +1390,12 @@ void runBinlessRfMode(
     
   if (!been_warned) {        
     if (rfmode->freq<1e3 && rfmode->freq)  {
-      fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+      printf((char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
       fflush(stdout);
       been_warned = 1;
     }
     if (been_warned) {
-      fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
+      printf((char*)"units of parameters for RFMODE are as follows:\n");
       fflush(stdout);
       print_dictionary_entry(stdout, T_RFMODE, 0, 0);
     }
@@ -1458,7 +1458,7 @@ void runBinlessRfMode(
     Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
   }
   if (Q<0.5) {
-    fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+    printf((char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
     fflush(stdout);
     exitElegant(1);
   }

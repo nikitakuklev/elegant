@@ -57,10 +57,10 @@ void IBSRate (double particles,
   }
 
   if (verbosity>2) {
-    fprintf(stdout, "IBS Rates:\n");
-    fprintf(stdout, "gamma=%le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
+    printf("IBS Rates:\n");
+    printf("gamma=%le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
             gamma0, emitx0, emity0, sigmaDelta0, sigmaz0);
-    fprintf(stdout, "superperiods = %ld, particles = %le, isRing=%ld\n",
+    printf("superperiods = %ld, particles = %le, isRing=%ld\n",
             superperiods, particles, isRing);
   }
 

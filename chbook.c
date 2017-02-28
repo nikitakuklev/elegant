@@ -191,7 +191,7 @@ ntuple *readbookn(char *inputfile, long i_page)
   }
   switch(SDDS_CheckParameter(&mhist, "ND", NULL, SDDS_LONG, stderr)) {
   case SDDS_CHECK_NONEXISTENT:
-    fprintf(stdout, "\tParameter ND not found in file %s.\n", inputfile);
+    printf("\tParameter ND not found in file %s.\n", inputfile);
     exitElegant(1);
     break;
   case SDDS_CHECK_WRONGTYPE:
@@ -201,7 +201,7 @@ ntuple *readbookn(char *inputfile, long i_page)
   case SDDS_CHECK_OKAY:
     break;
   default:
-    fprintf(stdout, "Unexpected result from SDDS_CheckParameter routine while checking parameter ND in file %s.\n", inputfile);
+    printf("Unexpected result from SDDS_CheckParameter routine while checking parameter ND in file %s.\n", inputfile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     exitElegant(1);
     break;
@@ -292,26 +292,26 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
     } else {
       if (x[i+offset]>bName->xmax[i]) {
         if (verbose)           
-          fprintf(stdout, "warning: interpolate_bookn - %s value is out of up boundary. xmax=%g, x=%g\n", 
+          printf("warning: interpolate_bookn - %s value is out of up boundary. xmax=%g, x=%g\n", 
                   bName->vname[i], bName->xmax[i], x[i+offset]);
         if (zero_Edge) {
           flag=1;
-          if (verbose) fprintf(stdout, "set output to zero\n");
+          if (verbose) printf("set output to zero\n");
         } else { 
           x[i+offset] = bName->xmax[i];
-          if (verbose) fprintf(stdout, "set output to xmax\n");
+          if (verbose) printf("set output to xmax\n");
         }
       }
       if (x[i+offset]<bName->xmin[i]) {
         if (verbose)           
-          fprintf(stdout, "warning: interpolate_bookn - %s value is out of lower boundary. xmin=%g, x=%g\n", 
+          printf("warning: interpolate_bookn - %s value is out of lower boundary. xmin=%g, x=%g\n", 
                   bName->vname[i], bName->xmin[i], x[i+offset]);
         if (zero_Edge) {
           flag=1;
-          if (verbose) fprintf(stdout, "set output to zero\n");
+          if (verbose) printf("set output to zero\n");
         } else { 
           x[i+offset] = bName->xmin[i];
-          if (verbose) fprintf(stdout, "set output to xmin\n");
+          if (verbose) printf("set output to xmin\n");
         }
       }
       x0[i+offset] = (x[i+offset] - bName->xmin[i])/(bName->xmax[i] - bName->xmin[i]);
@@ -474,7 +474,7 @@ void chprint1(book1 *bName, char *filename, char *description, char *frequencyUn
     for (i=0; i<n_parameters; i++) {
       if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
           (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name)<0)) {
-        fprintf(stdout, "Unable to define SDDS parameter for chprint1--name was:\n%s\n",
+        printf("Unable to define SDDS parameter for chprint1--name was:\n%s\n",
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -482,7 +482,7 @@ void chprint1(book1 *bName, char *filename, char *description, char *frequencyUn
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
       fflush(stdout);
       last_index = index;
     }
@@ -571,7 +571,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
     for (i=0; i<n_parameters; i++) {
       if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
           (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name))<0) {
-        fprintf(stdout, "Unable to define SDDS parameter for chprint2--name was:\n%s\n",
+        printf("Unable to define SDDS parameter for chprint2--name was:\n%s\n",
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -579,7 +579,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
       fflush(stdout);
       last_index = index;
     }
@@ -682,7 +682,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
     for (i=0; i<n_parameters; i++) {
       if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
           (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name))<0) {
-        fprintf(stdout, "Unable to define SDDS parameter for chprintn--name was:\n%s\n",
+        printf("Unable to define SDDS parameter for chprintn--name was:\n%s\n",
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -690,7 +690,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        fprintf(stdout, "WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        printf("WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
       fflush(stdout);
       last_index = index;
     }
@@ -805,7 +805,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
     for (i=0; i<n_parameters; i++) {
       if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
           (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name))<0) {
-        fprintf(stdout, "Unable to define SDDS parameter for chprint1m--name was:\n%s\n",
+        printf("Unable to define SDDS parameter for chprint1m--name was:\n%s\n",
                 parameter_definition[i].name);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -813,7 +813,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
       fflush(stdout);
       last_index = index;
     }

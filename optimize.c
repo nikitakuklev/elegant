@@ -251,7 +251,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
-        fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
+        printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -261,7 +261,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         bombElegant("item name missing in optimization_variable list", NULL);
     str_toupper(item);
     if ((variables->varied_param[n_variables] = confirm_parameter(item, context->type))<0) {
-        fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
+        printf("error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -277,19 +277,19 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->initial_value[n_variables] = variables->varied_quan_value[n_variables];
     if (variables->initial_value[n_variables]>upper_limit) {
       if (force_inside) {
-	fprintf(stdout, "Warning: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+	printf("Warning: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
 	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = upper_limit;
       } else {
-	fprintf(stdout, "Error: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+	printf("Error: Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
 	exit(1);
       }
     }
     if (variables->initial_value[n_variables]<lower_limit) {
       if (force_inside) {
-	fprintf(stdout, "Warning: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
+	printf("Warning: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
 	variables->initial_value[n_variables] = variables->varied_quan_value[n_variables] = lower_limit;
       } else {
-	fprintf(stdout, "Error: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
+	printf("Error: Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
 	exit(1);
       }
     }
@@ -453,7 +453,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
-        fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
+        printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -463,7 +463,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
         bombElegant("item name missing in optimization_variable list", NULL);
     str_toupper(item);
     if ((covariables->varied_param[n_covariables] = confirm_parameter(item, context->type))<0) {
-        fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
+        printf("error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -486,7 +486,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation), NULL,
               covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables], 0) );
     if (rpn_check_error()) exitElegant(1);
-    fprintf(stdout, "Initial value of %s is %e %s\n", 
+    printf("Initial value of %s is %e %s\n", 
             covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
             covariables->varied_quan_unit[n_covariables]);
     fflush(stdout);
@@ -607,54 +607,54 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
         fflush(optimization_data->fp_log);
         }
     if (!log_file || optimization_data->fp_log!=stdout) {
-        fprintf(stdout, "\nOptimization to be performed using method '%s' in mode '%s' with tolerance %e.\n", 
+        printf("\nOptimization to be performed using method '%s' in mode '%s' with tolerance %e.\n", 
             optimize_method[optimization_data->method], optimize_mode[optimization_data->mode], optimization_data->tolerance);
         fflush(stdout);
-        fprintf(stdout, "    As many as %ld function evaluations will be performed on each of %ld passes.\n",
+        printf("    As many as %ld function evaluations will be performed on each of %ld passes.\n",
             optimization_data->n_evaluations, optimization_data->n_passes);
         fflush(stdout);
-         fprintf(stdout, "    The quantity to be optimized is defined by the equation\n        %s\n    subject to %ld constraints%c\n",
+         printf("    The quantity to be optimized is defined by the equation\n        %s\n    subject to %ld constraints%c\n",
             optimization_data->equation, constraints->n_constraints,
             constraints->n_constraints>0?':':'.');
          fflush(stdout);
         for (i=0; i<constraints->n_constraints; i++)
-            fprintf(stdout, "        %13.6e <= %10s <= %13.6e\n",
+            printf("        %13.6e <= %10s <= %13.6e\n",
                 constraints->lower[i], constraints->quantity[i], constraints->upper[i]);
             fflush(stdout);
-        fprintf(stdout, "    The following variables will be used in the optimization:\n");
+        printf("    The following variables will be used in the optimization:\n");
         fflush(stdout);
-        fprintf(stdout, "    name      initial value   lower limit    upper limit     step size\n");
+        printf("    name      initial value   lower limit    upper limit     step size\n");
         fflush(stdout);
-        fprintf(stdout, "--------------------------------------------------------------------------\n");
+        printf("--------------------------------------------------------------------------\n");
         fflush(stdout);
         for (i=0; i<variables->n_variables; i++) {
-            fprintf(stdout, "%12s  %13.6e", variables->varied_quan_name[i], variables->initial_value[i]);
+            printf("%12s  %13.6e", variables->varied_quan_name[i], variables->initial_value[i]);
             fflush(stdout);
             if (variables->lower_limit[i]==variables->upper_limit[i]) {
-                fprintf(stdout, "        -              -      ");
+                printf("        -              -      ");
                 fflush(stdout);
             }  else {
-                fprintf(stdout, "  %13.6e  %13.6e", variables->lower_limit[i], variables->upper_limit[i]);
+                printf("  %13.6e  %13.6e", variables->lower_limit[i], variables->upper_limit[i]);
                 fflush(stdout);
             }
             if (variables->orig_step[i]==0) {
-                fprintf(stdout, "        -\n");
+                printf("        -\n");
                 fflush(stdout);
             } else {
-                fprintf(stdout, "  %13.6e\n", variables->orig_step[i]);
+                printf("  %13.6e\n", variables->orig_step[i]);
                 fflush(stdout);
               }
           }
         fputc('\n', stdout);
         if (covariables->n_covariables) {
-            fprintf(stdout, "    The following covariables will be used in the optimization:\n");
+            printf("    The following covariables will be used in the optimization:\n");
             fflush(stdout);
-            fprintf(stdout, "    name      equation\n");
+            printf("    name      equation\n");
             fflush(stdout);
-            fprintf(stdout, "--------------------------------------------------------------------------\n");
+            printf("--------------------------------------------------------------------------\n");
             fflush(stdout);
             for (i=0; i<covariables->n_covariables; i++)
-                fprintf(stdout, "%12s  %s\n", covariables->varied_quan_name[i], covariables->equation[i]);
+                printf("%12s  %s\n", covariables->varied_quan_name[i], covariables->equation[i]);
                 fflush(stdout);
             fputc('\n', stdout);
             }
@@ -707,7 +707,7 @@ void optimizationInterruptHandler(int signal)
 {
   simplexMinAbort(1);
   optimAbort(1);
-  fprintf(stdout, "Aborting optimization...");
+  printf("Aborting optimization...");
 }
 #endif
 
@@ -832,7 +832,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  if (force_inside) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->upper_limit[i];
 	  else {
-	    fprintf(stdout, "Initial value (%e) is greater than upper limit for %s.%s\n", 
+	    printf("Initial value (%e) is greater than upper limit for %s.%s\n", 
 		    variables->initial_value[i],
 		    variables->element[i], variables->item[i]);
 	    exitElegant(1);
@@ -842,24 +842,24 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	  if (force_inside) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->lower_limit[i];
 	  else {
-	    fprintf(stdout, "Initial value (%e) is smaller than lower limit for %s.%s\n", 
+	    printf("Initial value (%e) is smaller than lower limit for %s.%s\n", 
 		    variables->initial_value[i],
 		    variables->element[i], variables->item[i]);
 	    exitElegant(1);
 	  }
 	}
-	fprintf(stdout, "Initial value for %s.%s is %e\n", 
+	printf("Initial value for %s.%s is %e\n", 
 		variables->element[i], variables->item[i],
 		variables->initial_value[i]);
 	rpn_store(variables->initial_value[i], NULL, variables->memory_number[i]);
 	variables->step[i] = variables->orig_step[i];
         if (variables->step[i]==0) {
 	  if (variables->lower_limit[i]==variables->upper_limit[i])
-	      fprintf(stdout, "Note: step size for %s set to %e.\n", 
+	      printf("Note: step size for %s set to %e.\n", 
                         variables->varied_quan_name[i], 
                         variables->orig_step[i] = variables->step[i] = 1);
             else
-	      fprintf(stdout, "Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
+	      printf("Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
                         variables->orig_step[i] = variables->step[i] = 
                         (variables->upper_limit[i]-variables->lower_limit[i])/10);
             fflush(stdout);
@@ -1254,10 +1254,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
 	if ((isSlave || !notSinglePart)&& (optimization_data->verbose>1)) {
 	  fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
-	  fprintf(stdout, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
+	  printf("new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
 	  fflush(stdout);
 	  for (i=0; i<variables->n_variables; i++)
-	    fprintf(stdout, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
+	    printf("    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
 	  fflush(stdout);
 	  if (covariables->n_covariables) {
 	    if (optimization_data->n_restarts==startsLeft)
@@ -1266,9 +1266,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	      for (i=0; i<covariables->n_covariables; i++)
 		covariables_global[i] = covariables->varied_quan_value[i];	
 	    }
-	    fprintf(stdout, "new covariable values:\n");
+	    printf("new covariable values:\n");
 	    for (i=0; i<covariables->n_covariables; i++) 
-	      fprintf(stdout, "    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
+	      printf("    %10s: %23.15e\n", covariables->varied_quan_name[i], covariables_global[i]);
 	  }
 	  fflush(stdout);
 	}
@@ -1301,7 +1301,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 
       if (result<=optimization_data->target) {
 	if (optimization_data->verbose>1) {
-	  fprintf(stdout, "Target value reached, terminating optimization\n");
+	  printf("Target value reached, terminating optimization\n");
 	}
         break;
       }
@@ -1314,14 +1314,14 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
 	if (fabs(result-lastResult)<optimization_data->tolerance) {
 	  if (optimization_data->verbose>1) {
-	    fprintf(stdout, "New result (%21.15e) not sufficiently different from old result (%21.15e), terminating optimization\n", result, lastResult);
+	    printf("New result (%21.15e) not sufficiently different from old result (%21.15e), terminating optimization\n", result, lastResult);
 	  }
 	  break;
 	}    
       lastResult = result;
       if (interrupt_file && fexists(interrupt_file) && 
 	  (interrupt_file_mtime==0 || interrupt_file_mtime<get_mtime(interrupt_file))) {
-	fprintf(stdout, "Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
+	printf("Interrupt file %s was created or changed---terminating optimization loop\n", interrupt_file);
         simplexMinAbort(1);
 	startsLeft = 0;
 	break;
@@ -1344,7 +1344,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           for (iworst=0; iworst<optimization_data->restart_worst_terms; iworst++) {
             if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms)) {
               optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
-              fprintf(stdout, "Adjusted weight for term from %le to %le: %s\n",
+              printf("Adjusted weight for term from %le to %le: %s\n",
                       optimization_data->termWeight[imax]/optimization_data->restart_worst_term_factor,
                       optimization_data->termWeight[imax], optimization_data->term[imax]);
               /* just to be sure it doesn't get picked as the max again */
@@ -1360,7 +1360,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
               optimization_data->termWeight[i] /= optimization_data->termWeight[imin];
         }
 	if (optimization_data->verbose>1 && startsLeft>1) { 
-          fprintf(stdout, "Redoing optimization\n");
+          printf("Redoing optimization\n");
           fflush(stdout);
 	}
       }
@@ -1375,7 +1375,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       signal(SIGINT, traceback_handler);
 #endif
 
-    fprintf(stdout, "Exited optimization loop\n");
+    printf("Exited optimization loop\n");
     fflush(stdout);
 
 #if USE_MPI
@@ -1412,10 +1412,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #if MPI_DEBUG
           if (isSlave) {
               fprintf (stdout, "Minimal value is %.15g after %ld iterations.\n", result, optimization_data->n_restarts+1-startsLeft);
-              fprintf(stdout, "new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
+              printf("new variable values for iteration %ld\n", optimization_data->n_restarts+1-startsLeft);
               fflush(stdout);
               for (i=0; i<variables->n_variables; i++)
-                  fprintf(stdout, "    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
+                  printf("    %10s: %23.15e\n", variables->varied_quan_name[i], variables->varied_quan_value[i]);
               fflush(stdout);
           }
 #endif
@@ -1460,14 +1460,14 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fflush(optimization_data->fp_log);
       }
       if (!log_file || optimization_data->fp_log!=stdout) {
-        fprintf(stdout, "Optimization results:\n    optimization function has value %.15g\n", 
+        printf("Optimization results:\n    optimization function has value %.15g\n", 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
           double sum;
-          fprintf(stdout, "Terms of equation: \n");
+          printf("Terms of equation: \n");
           for (i=sum=0; i<optimization_data->terms; i++) {
             rpn_clear();
-            fprintf(stdout, "%20s: %23.15e\n",
+            printf("%20s: %23.15e\n",
                     optimization_data->term[i],
                     optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
             sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
@@ -1475,27 +1475,27 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         }
         fflush(stdout);
 #if !USE_MPI
-        fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
+        printf("    A total of %ld function evaluations were made.\n", n_evaluations_made);
 #else
 	if (isMaster)
-	  fprintf(stdout, "    A total of %ld function evaluations were made with an average of %ld function evaluations per processor\n", n_total_evaluations_made, n_total_evaluations_made/n_processors);
+	  printf("    A total of %ld function evaluations were made with an average of %ld function evaluations per processor\n", n_total_evaluations_made, n_total_evaluations_made/n_processors);
 #endif
         fflush(stdout);
         if (constraints->n_constraints) {
-	  fprintf(stdout, "Constraints:\n");
+	  printf("Constraints:\n");
 	  fflush(stdout);
 	  for (i=0; i<constraints->n_constraints; i++)
-	    fprintf(stdout, "%10s: %23.15e\n", constraints->quantity[i], final_property_value[constraints->index[i]]);
+	    printf("%10s: %23.15e\n", constraints->quantity[i], final_property_value[constraints->index[i]]);
 	  fflush(stdout);
 	}
-        fprintf(stdout, "Optimum values of variables and changes from initial values:\n");
+        printf("Optimum values of variables and changes from initial values:\n");
         fflush(stdout);
         for (i=0; i<variables->n_variables; i++)
-	  fprintf(stdout, "%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
+	  printf("%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
 		  variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i]);
         fflush(stdout);
         for (i=0; i<covariables->n_covariables; i++)
-	  fprintf(stdout, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
+	  printf("%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         fflush(stdout);
       }
       if (term_log_file && strlen(term_log_file) && optimization_data->terms) {
@@ -1506,7 +1506,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             (ivalue=SDDS_DefineColumn(&termLog, "Contribution", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
             !SDDS_WriteLayout(&termLog) ||
             !SDDS_StartPage(&termLog, optimization_data->terms)) {
-          fprintf(stdout, "Problem writing optimization term log\n");
+          printf("Problem writing optimization term log\n");
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           iterm = ivalue = 0; /* suppress spurious compiler warning */
           exitElegant(1);
@@ -1516,13 +1516,13 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                                  iterm, optimization_data->term[i],
                                  ivalue,optimization_data->termWeight[i]*rpn(optimization_data->term[i]), 
                                  -1)) {
-            fprintf(stdout, "Problem writing optimization term log\n");
+            printf("Problem writing optimization term log\n");
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);          
           }
         }
         if (!SDDS_WritePage(&termLog) || !SDDS_Terminate(&termLog)) {
-          fprintf(stdout, "Problem writing optimization term log\n");
+          printf("Problem writing optimization term log\n");
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);          
         }
@@ -1694,8 +1694,8 @@ double optimization_function(double *value, long *invalid)
   log_entry("optimization_function");
   
 #if DEBUG
-  fprintf(stdout, "optimization_function: In optimization function\n");
-  fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
+  printf("optimization_function: In optimization function\n");
+  printf("Beamline flags: %lx\n", beamline->flags);
   fflush(stdout);
 #endif
 
@@ -1728,7 +1728,7 @@ double optimization_function(double *value, long *invalid)
 
   if (covariables->n_covariables) {
 #if DEBUG
-    fprintf(stdout, "optimization_function: Computing covariables\n");
+    printf("optimization_function: Computing covariables\n");
     fflush(stdout);
 #endif
 
@@ -1764,7 +1764,7 @@ double optimization_function(double *value, long *invalid)
   if (!runInSinglePartMode) /* For parallel genetic optimization, all the individuals for the first iteration are same */
 #endif
     if (recordUsedAgain>20) {
-      fprintf(stdout, "record used too many times---stopping optimization\n");
+      printf("record used too many times---stopping optimization\n");
       stopOptimization = 1;
       simplexMinAbort(1);
     }
@@ -1777,7 +1777,7 @@ double optimization_function(double *value, long *invalid)
   
   /* compute matrices for perturbed elements */
 #if DEBUG
-  fprintf(stdout, "optimization_function: Computing matrices\n");
+  printf("optimization_function: Computing matrices\n");
   fflush(stdout);
 #endif
   if (beamline->links && beamline->links->n_links)
@@ -1802,7 +1802,7 @@ double optimization_function(double *value, long *invalid)
   }
 
 #if DEBUG
-  fprintf(stdout, "optimization_function: Generating beam\n");
+  printf("optimization_function: Generating beam\n");
   fflush(stdout);
 #endif
   /* generate initial beam distribution and track it */
@@ -1827,34 +1827,34 @@ double optimization_function(double *value, long *invalid)
   if (doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to find closed orbit\n");
+    printf("warning: unable to find closed orbit\n");
     fflush(stdout);
   }
   if (!*invalid && orbitCorrMode!=-1 && 
       !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 
                      INITIAL_CORRECTION+NO_OUTPUT_CORRECTION)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to perform orbit correction\n");
+    printf("warning: unable to perform orbit correction\n");
     fflush(stdout);
   }
   if (!*invalid && doTuneCorr &&
       !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to do tune correction\n");
+    printf("warning: unable to do tune correction\n");
     fflush(stdout);
   }
   if (!*invalid && doChromCorr &&
       !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to do chromaticity correction\n");
+    printf("warning: unable to do chromaticity correction\n");
     fflush(stdout);
   }
   if (!*invalid && doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, beam, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to find closed orbit\n");
+    printf("warning: unable to find closed orbit\n");
     fflush(stdout);
   }
 
@@ -1864,7 +1864,7 @@ double optimization_function(double *value, long *invalid)
   
 #if DEBUG
   if (doClosedOrbit) {
-    fprintf(stdout, "Closed orbit: %g, %g, %g, %g, %g, %g\n",
+    printf("Closed orbit: %g, %g, %g, %g, %g, %g\n",
 	    beamline->closed_orbit->centroid[0],
 	    beamline->closed_orbit->centroid[1],
 	    beamline->closed_orbit->centroid[2],
@@ -1872,7 +1872,7 @@ double optimization_function(double *value, long *invalid)
 	    beamline->closed_orbit->centroid[4],
 	    beamline->closed_orbit->centroid[5]);
   }
-  fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
+  printf("Beamline flags: %lx\n", beamline->flags);
 #endif
 
   if (!*invalid && beamline->flags&BEAMLINE_TWISS_WANTED) {
@@ -1890,12 +1890,12 @@ double optimization_function(double *value, long *invalid)
     if (unstable)
       *invalid = 1;
 #if DEBUG
-    fprintf(stdout, "Twiss parameters done.\n");
-    fprintf(stdout, "betax=%g, alphax=%g, etax=%g\n", 
+    printf("Twiss parameters done.\n");
+    printf("betax=%g, alphax=%g, etax=%g\n", 
             beamline->elast->twiss->betax,
             beamline->elast->twiss->alphax,
             beamline->elast->twiss->etax);
-    fprintf(stdout, "betay=%g, alphay=%g, etay=%g\n", 
+    printf("betay=%g, alphay=%g, etay=%g\n", 
             beamline->elast->twiss->betay,
             beamline->elast->twiss->alphay,
             beamline->elast->twiss->etay);
@@ -2022,7 +2022,7 @@ double optimization_function(double *value, long *invalid)
     rpn_store(twiss_p96.etapy, NULL, twiss_mem[105]);
 
 #if DEBUG
-    fprintf(stdout, "Twiss parameters stored.\n");
+    printf("Twiss parameters stored.\n");
     fflush(stdout);
 #endif
   }
@@ -2052,13 +2052,13 @@ double optimization_function(double *value, long *invalid)
     for (i=0; i<5; i++)
       rpn_store(beamline->radIntegrals.RI[i], NULL, radint_mem[i+9]);
 #if DEBUG
-    fprintf(stdout, "Radiation integrals stored.\n");
+    printf("Radiation integrals stored.\n");
     fflush(stdout);
 #endif
   }
 
 #if DEBUG
-  fprintf(stdout, "Starting moments_output if requested\n");
+  printf("Starting moments_output if requested\n");
   fflush(stdout);
 #endif
   runMomentsOutput(run, beamline, startingOrbitCoord, 1, 0);
@@ -2097,7 +2097,7 @@ double optimization_function(double *value, long *invalid)
         printf("%s = %le\n", tuneFootprintName[i], rpn_recall(tuneFootprintMem[i]));
     }
 #if DEBUG
-    fprintf(stdout, "Done setting values from tune footprint\n");
+    printf("Done setting values from tune footprint\n");
     fflush(stdout);
 #endif
   }
@@ -2116,7 +2116,7 @@ double optimization_function(double *value, long *invalid)
     rpn_store(XYZMax[i], NULL, floorStat_mem[i+3]);
   }
 #if DEBUG
-    fprintf(stdout, "Floor coordinates stored.\n");
+    printf("Floor coordinates stored.\n");
     fflush(stdout);
 #endif
   compute_end_positions(beamline);
@@ -2182,7 +2182,7 @@ double optimization_function(double *value, long *invalid)
 
       /* compute final parameters and store in rpn memories */
 #if DEBUG
-      fprintf(stdout, "optimization_function: Computing final parameters\n");
+      printf("optimization_function: Computing final parameters\n");
       fflush(stdout);
 #endif
       if (!output->sums_vs_z)
@@ -2204,7 +2204,7 @@ double optimization_function(double *value, long *invalid)
 					charge))
 	    != final_property_values) {
 #endif
-	  fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
+	  printf("error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
 		  i, final_property_values);
 	  fflush(stdout);
 	  abort();
@@ -2219,7 +2219,7 @@ double optimization_function(double *value, long *invalid)
 	free_matrices(M); free(M); M = NULL;
 
 #if DEBUG
-	fprintf(stdout, "optimization_function: Checking constraints\n");
+	printf("optimization_function: Checking constraints\n");
 	fflush(stdout);
 #endif
 	/* check constraints */
@@ -2248,7 +2248,7 @@ double optimization_function(double *value, long *invalid)
 	}
       
 #if DEBUG
-	fprintf(stdout, "optimization_function: Computing rpn function\n");
+	printf("optimization_function: Computing rpn function\n");
 	fflush(stdout);
 #endif
 	result = 0;
@@ -2284,7 +2284,7 @@ double optimization_function(double *value, long *invalid)
 		  optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
 	      }
 	    balanceTerms = 0;
-	    fprintf(stdout, "\nOptimization terms balanced.\n");
+	    printf("\nOptimization terms balanced.\n");
 	    fflush(stdout);
 	  } else {
             for (i=0; i<optimization_data->terms; i++)
@@ -2391,7 +2391,7 @@ double optimization_function(double *value, long *invalid)
     storeOptimRecord(value, variables->n_variables, *invalid, result);
 
 #if DEBUG
-    fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
+    printf("optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
     fflush(stdout);
 #endif
 
@@ -2594,7 +2594,7 @@ void SDDS_PopulationSetup(char *population_log, SDDS_TABLE *popLogPtr, OPTIM_VAR
 	  !SDDS_DefineSimpleColumns(popLogPtr,  optim->n_variables, optim->varied_quan_name, 
 				    optim->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_WriteLayout(popLogPtr)) {
-	fprintf(stdout, "Problem setting up population output file %s\n", population_log);
+	printf("Problem setting up population output file %s\n", population_log);
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	exitElegant(1);

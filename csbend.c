@@ -101,7 +101,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
         sumFx += Fx_xy[i][j]*xp[i]*yp[j];
 /*
         if (first)
-          fprintf(stdout, "Including in Fx: %e * x^%ld y^%ld\n", Fx_xy[i][j], i, j);
+          printf("Including in Fx: %e * x^%ld y^%ld\n", Fx_xy[i][j], i, j);
 */
       }
     }
@@ -113,7 +113,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
         sumFy += Fy_xy[i][j]*xp[i]*yp[j];
 /*
         if (first)
-          fprintf(stdout, "Including in Fy: %e * x^%ld y^%ld\n", Fy_xy[i][j], i, j);
+          printf("Including in Fy: %e * x^%ld y^%ld\n", Fy_xy[i][j], i, j);
 */
       }
     }
@@ -227,7 +227,7 @@ void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long ex
   /*
   for (i=0; i<11; i++) 
     for (j=0; j<11; j++)
-      fprintf(stdout, "Fx[%ld][%ld] = %e   Fy[%ld][%ld] = %e\n", i, j, Fx_xy[i][j], i, j, Fy_xy[i][j]);
+      printf("Fx[%ld][%ld] = %e   Fy[%ld][%ld] = %e\n", i, j, Fx_xy[i][j], i, j, Fy_xy[i][j]);
       */
 }
 
@@ -493,7 +493,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e2_kick_limit *= rho0/rho_actual;
   }
   if (e1_kick_limit>0 || e2_kick_limit>0)
-    fprintf(stdout, "rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
+    printf("rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
     fflush(stdout);
   
@@ -575,17 +575,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (isSlave || !notSinglePart) {
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
-      fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      printf("error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
     if (!(coord = part[i_part])) {
-      fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      printf("error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stdout, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      printf("error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
@@ -651,7 +651,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (particle_lost) {
       if (!part[i_top]) {
-        fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+        printf("error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                 i_part, i_top);
         fflush(stdout);
         abort();
@@ -661,7 +661,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       swapParticles(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
-          fprintf(stdout, 
+          printf(
                   "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                   i_part, i_top);
           fflush(stdout);
@@ -1384,7 +1384,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   if (charge) {
     macroParticleCharge = charge->macroParticleCharge;
   } else if (csbend->bins && !csrWarning && csbend->csr) {
-    fprintf(stdout, "Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
+    printf("Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
     fflush(stdout);
     csrWarning = 1;
   }
@@ -1666,17 +1666,17 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* check particle data, transform coordinates, and handle edge effects */
   for (i_part=0; i_part<n_part; i_part++) {
     if (!part) {
-      fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      printf("error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
     if (!(coord = part[i_part])) {
-      fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      printf("error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stdout, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      printf("error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
       fflush(stdout);
       abort();
     }
@@ -1790,7 +1790,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
           if (particleLost) {
             if (!part[i_top]) {
-              fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+              printf("error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                       i_part, i_top);
               fflush(stdout);
               abort();
@@ -1800,7 +1800,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             swapParticles(part[i_part], part[i_top]);
             if (accepted) {
               if (!accepted[i_top]) {
-                fprintf(stdout, 
+                printf(
                         "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                         i_part, i_top);
                 fflush(stdout);
@@ -1888,9 +1888,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 					part, n_part, 4);
 #if (!USE_MPI) 
 	if (nBinned != n_part) {
-          fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+          printf("Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		  nBinned, n_part, z_start, kick, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	  printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
@@ -1906,10 +1906,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
           nBinned = nBinned_total; 
 	  if (!all_binned && isMaster) {
-	    fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+	    printf("Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		    z_start, kick,
 		  csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	  printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
@@ -1934,9 +1934,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                   csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1,
                                   csbend->clipNegativeBins);
           if (nz && negativeWarningsLeft) {
-	    fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n", nz);
+	    printf("Warning: low pass filter resulted in negative values in %ld bins\n", nz);
             if (--negativeWarningsLeft==0)
-              fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
+              printf("         Further warnings will be suppressed for this run.\n");
             fflush(stdout);
           }
         }
@@ -2188,9 +2188,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 				     part, n_part, 4);
 #if (!USE_MPI)
     if (nBinned!=n_part) {
-      fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
+      printf("Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
 	      nBinned, n_part, z_start, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
@@ -2207,10 +2207,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       nBinned = nBinned_total; 
       if (!all_binned && isMaster) {
-	fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+	printf("Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		z_start, kick,
 	      csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
       }
@@ -2250,7 +2250,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
       if (p1<=0) {
 	if (!part[i_top]) {
-	  fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+	  printf("error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
 		  i_part, i_top);
 	  fflush(stdout);
 	  abort();
@@ -2258,7 +2258,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	swapParticles(part[i_part], part[i_top]);
 	if (accepted) {
 	  if (!accepted[i_top]) {
-	    fprintf(stdout, 
+	    printf(
 		    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
 		    i_part, i_top);
 	    fflush(stdout);
@@ -2622,19 +2622,19 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
   while ((zStart+1e-12)<csrWake.zLast) {
     if (incrementWarningsLeft) {
-      fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
+      printf("*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
               tContext.elementName, tContext.elementOccurrence);
-      fprintf(stdout, "    If you are not simulating a ring, this could be a problem!\n");
+      printf("    If you are not simulating a ring, this could be a problem!\n");
       incrementWarningsLeft --;
     }
     zStart += revolutionLength;
   }
   if (bitsSet(mode)>1) {
-    fprintf(stdout, "Error: Too many modes set for CSRDRIFT.\n");
+    printf("Error: Too many modes set for CSRDRIFT.\n");
     exitElegant(1);
   }
   if (csrWake.lastMode && csrWake.lastMode!=mode) {
-    fprintf(stdout, "Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
+    printf("Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
     exitElegant(1);
   }
   csrWake.lastMode = mode;
@@ -2643,8 +2643,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     return track_through_driftCSR_Stupakov(part, np, csrDrift, Po, accepted, zStart, charge, rootname);
 
   if (!warned) {
-    fprintf(stdout, "Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
-    fprintf(stdout, "This is the most physical model available at this time in elegant.\n");
+    printf("Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
+    printf("This is the most physical model available at this time in elegant.\n");
     warned = 1;
   }
   
@@ -2731,10 +2731,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   dzFirst = zStart - csrWake.zLast;
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
 #ifdef DEBUG
-  fprintf(stdout, "CSR in drift:\n");
-  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, zTravel = %21.15le\n", zStart, csrWake.zLast,
+  printf("CSR in drift:\n");
+  printf("zStart = %21.15le, zLast = %21.15le, zTravel = %21.15le\n", zStart, csrWake.zLast,
           zTravel);
-  fprintf(stdout, "dzFirst = %21.15e, s0 = %21.15e\n", dzFirst, csrWake.s0);
+  printf("dzFirst = %21.15e, s0 = %21.15e\n", dzFirst, csrWake.s0);
 #endif
 
   for (iKick=0; iKick<nKicks; iKick++) {
@@ -2857,16 +2857,16 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     }
     if ((myid==1) && (csrWake.dGamma && np_total!=binned_total)) {
       dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+      printf("only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned_total, np_total, tContext.elementName);
 #else
     if (csrWake.dGamma && np!=binned) {
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+      printf("only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned, np, tContext.elementName);
 #endif
-      fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
+      printf("beam ct min, max = %21.15e, %21.15e\n",
               ctmin, ctmax);
-      fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
+      printf("wake ct0 = %21.15e, ct1 = %21.15e\n",
               ct0, ct0+csrWake.dctBin*csrWake.bins);
       fflush(stdout);
 #if USE_MPI
@@ -2918,7 +2918,7 @@ long reset_driftCSR()
 {
   csrWake.lastMode = 0;
   if (csrWake.valid && csrWake.FdNorm) {
-    fprintf(stdout, "Last value of normalization factor for CSR wake was %le\n",
+    printf("Last value of normalization factor for CSR wake was %le\n",
             csrWake.lastFdNorm);
   }
   csrWake.valid = csrWake.bins = 0;
@@ -3309,17 +3309,17 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   }
   if ((myid==1) && (np_total!=binned_total)) {
     dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+    printf("Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	    binned_total, np_total,
 	    tContext.elementName, csrWake.binRangeFactor);
     fflush(stdout);
 #else
   if (nBinned!=np) {
-    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+    printf("Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	    nBinned, np,
 	    tContext.elementName, csrWake.binRangeFactor);
 #endif
-    fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+    printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	    ctLower, ctUpper, dct, nBins, maxBins);
     fflush(stdout);
 #if USE_MPI
@@ -3341,10 +3341,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
                               csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1,
                               csrWake.clipNegativeBins);
       if (nz && negativeWarningsLeft) {
-        fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
+        printf("Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
         if (--negativeWarningsLeft==0)
-          fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
+          printf("         Further warnings will be suppressed for this run.\n");
         fflush(stdout);
       }
     }
@@ -3470,7 +3470,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	  coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
 	  binned ++;
 	} else {
-	  fprintf(stdout, "Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
+	  printf("Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
 		  coord[4]-ctLower, dct, iBin);
 	}
 	p = (1+coord[5])*Po;
@@ -3484,7 +3484,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	 iKick%csrDrift->sliceAnalysisInterval==0)) {
 #if USE_MPI
       /* This function will be parallelized in the future */
-      fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+      printf("performSliceAnalysisOutput is not supported in parallel mode currently.\n");
       MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
       MPI_Abort(MPI_COMM_WORLD, 1); 
 #endif
@@ -3500,16 +3500,16 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     }
     if ((myid==1) && (np_total!=binned_total)) {
       dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+      printf("Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	      binned_total, np_total,
 	      tContext.elementName, csrWake.binRangeFactor);
 #else
     if (np!=binned) {
-      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+      printf("Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	      binned, np,
 	      tContext.elementName, csrWake.binRangeFactor);
 #endif
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
 #if USE_MPI
@@ -3547,7 +3547,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   free(phiSoln);
 #if DEBUG
   if (SolveForPhiStupakovDiffCount)
-    fprintf(stdout, "Phi solution accuracy for %ld solutions: %le\n",
+    printf("Phi solution accuracy for %ld solutions: %le\n",
             SolveForPhiStupakovDiffCount, SolveForPhiStupakovDiffSum/SolveForPhiStupakovDiffCount);
 #endif
   return np;
@@ -4088,7 +4088,7 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
   dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
   dcoord_etilt[5] = 0;
 #ifdef DEBUG
-  fprintf(stdout, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
+  printf("pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
           etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
           dcoord_etilt[3], dcoord_etilt[4]);
   fflush(stdout);
@@ -4097,7 +4097,7 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
   /* rotate by tilt to get into same frame as bend equations. */
   rotate_coordinates(dcoord_etilt, tilt);
 #ifdef DEBUG
-  fprintf(stdout, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
+  printf("offsets due to ETILT=%le:  %le %le %le %le %le\n",
           etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
           dcoord_etilt[3], dcoord_etilt[4]);
   fflush(stdout);

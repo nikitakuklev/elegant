@@ -227,7 +227,7 @@ int TouschekRate(LINE_LIST *beamline, long nElement)
     B2 = sqr(B1)-c0*c3;   	  
     if (B2<0) {
       if (fabs(B2/sqr(B1))<1e-7) {
-        fprintf(stdout, "warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eptr->name, eptr->occurence);
+        printf("warning: B2^2<0 at \"%s\" occurence %ld. Please seek experts help.\n", eptr->name, eptr->occurence);
       } else {
         B2 = 0;
       }
@@ -594,10 +594,10 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
             weight[i] = temp;
             i++;
           }
-	  /*          fprintf(stdout, "scatted particles %ld.\n", tsptr->simuCount); */
+	  /*          printf("scatted particles %ld.\n", tsptr->simuCount); */
         }
         if (total_event*11 > (long)2e9)  {
-          fprintf(stdout, "warning: The total random number used > 2e9. Use less n_simulated or use small delta");
+          printf("warning: The total random number used > 2e9. Use less n_simulated or use small delta");
           fflush(stdout);
           break;
         }
@@ -609,9 +609,9 @@ void TouschekDistribution(RUN *run, VARY *control, LINE_LIST *beamline)
    
       if (total_event/tsptr->simuCount > 20) {
         if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-          fprintf(stdout, "warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
+          printf("warning: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
         else
-          fprintf(stdout, "warning: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+          printf("warning: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
 	fflush(stdout);
       }
       tsptr->factor = tsptr->factor / (double)(total_event);
@@ -1060,7 +1060,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
       bombElegant("The input FullDist is not valid for this calculation - not same element location!", NULL);
   } else if (TranDist) {
     if (!ZDist) {
-      fprintf(stdout, "warning: ZDist need be given with TranDist. The input file is ignored\n");
+      printf("warning: ZDist need be given with TranDist. The input file is ignored\n");
       fflush(stdout);
       tsSpec->distIn = 0;
     } else {
@@ -1072,7 +1072,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
     }
   } else if (XDist || YDist || ZDist) {
     if (!XDist || !YDist || !ZDist) {
-      fprintf(stdout, "warning: [XYZ]Dist need be given at the same time. The input file is ignored\n");
+      printf("warning: [XYZ]Dist need be given at the same time. The input file is ignored\n");
       fflush(stdout);
       tsSpec->distIn = 0;
     } else {
@@ -1492,7 +1492,7 @@ short has_occurence_string(char *template)
     if ((code=regcomp(&regExpr, ".*%[0-9]*ld.*", REG_NOSUB))) {
       char errbuf[1000];
       regerror(code, &regExpr, errbuf, (size_t)1000);
-      fprintf(stdout, "%s\n", errbuf);
+      printf("%s\n", errbuf);
       bombElegant("problem compiling regular expression for filename occurence determination (has_occurence_string)", NULL);
     }
     first = 0;

@@ -80,24 +80,24 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     return;
   }
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
-    fprintf(stdout, "Problem opening file %s\n", multFile);
+    printf("Problem opening file %s\n", multFile);
     fflush(stdout);
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, NULL)!=SDDS_CHECK_OK ||
       SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Problems with data in multipole file %s\n", multFile);
+    printf("Problems with data in multipole file %s\n", multFile);
     fflush(stdout);
     exitElegant(1);
   }
   anCheck = SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
   normalCheck = SDDS_CheckColumn(&SDDSin, "normal", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
   if (!anCheck && !normalCheck) {
-    fprintf(stdout, "Problems with data in multipole file %s: neither \"an\" nor \"normal\" column found\n", multFile);
+    printf("Problems with data in multipole file %s: neither \"an\" nor \"normal\" column found\n", multFile);
     exitElegant(1);
   }
   if (anCheck && normalCheck) {
-    fprintf(stdout, "*** Warning: multipole file %s has both \"an\" and \"normal\" columns. \"normal\" used.\n", multFile);
+    printf("*** Warning: multipole file %s has both \"an\" and \"normal\" columns. \"normal\" used.\n", multFile);
     anCheck = 0;
   }
 
@@ -105,19 +105,19 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   skewCheck = SDDS_CheckColumn(&SDDSin, "skew", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
   if (!steering) {
     if (!bnCheck && !skewCheck) {
-      fprintf(stdout, "Problems with data in multipole file %s: neither \"bn\" nor \"skew\" column found\n", multFile);
+      printf("Problems with data in multipole file %s: neither \"bn\" nor \"skew\" column found\n", multFile);
       exitElegant(1);
     }
     if (bnCheck && skewCheck) {
-      fprintf(stdout, "*** Warning: multipole file %s has both \"bn\" and \"skew\" columns. \"skew\" used.\n", multFile);
+      printf("*** Warning: multipole file %s has both \"bn\" and \"skew\" columns. \"skew\" used.\n", multFile);
       bnCheck = 0;
     }
   } else {
     if (bnCheck || skewCheck) {
-      fprintf(stdout, "*** Warning: Steering multipole file %s should not have bn or skew columns.\n",
+      printf("*** Warning: Steering multipole file %s should not have bn or skew columns.\n",
             multFile);
-      fprintf(stdout, "Use \"normal\" column to specify multipole content for a horizontal steerer.\n");
-      fprintf(stdout, "Multipole content for vertical steerer is deduced from this.\n");
+      printf("Use \"normal\" column to specify multipole content for a horizontal steerer.\n");
+      printf("Multipole content for vertical steerer is deduced from this.\n");
       fflush(stdout);
     }
   }
@@ -129,7 +129,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exitElegant(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stdout, "Warning: no data in multipole file %s\n", multFile);
+    printf("Warning: no data in multipole file %s\n", multFile);
     fflush(stdout);
     SDDS_Terminate(&SDDSin);
   }
@@ -144,11 +144,11 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }    
   if (steering &&
       !(multData->bn=SDDS_Malloc(sizeof(*(multData->bn))*multData->orders))) {
-    fprintf(stdout, "Memory allocation failure (readErrorMultipoleData)\n");
+    printf("Memory allocation failure (readErrorMultipoleData)\n");
     exitElegant(1);
   }
   if (SDDS_ReadPage(&SDDSin)==2) {
-    fprintf(stdout, "Warning: multipole file %s has multiple pages, which are ignored\n",
+    printf("Warning: multipole file %s has multiple pages, which are ignored\n",
             multFile);
     fflush(stdout);
   }
@@ -158,7 +158,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     /* check for disallowed multipoles */
     for (i=0; i<multData->orders; i++) {
       if (ODD(multData->order[i])) {
-        fprintf(stdout, "Error: steering multipole file %s has disallowed odd orders.\n",
+        printf("Error: steering multipole file %s has disallowed odd orders.\n",
                 multFile);
         exitElegant(1);
       }
@@ -172,7 +172,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     if (multData->orders>1 && i!=multData->orders) {
       /* dipole present */
       if (!multData->an[i]) {
-        fprintf(stdout, "Steering multipole data in %s is invalid: an is zero for order=0\n",
+        printf("Steering multipole data in %s is invalid: an is zero for order=0\n",
                 multFile);
         exitElegant(1);
       }
@@ -190,9 +190,9 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     for (i=0; i<multData->orders; i++)
       multData->bn[i] = multData->an[i]*ipow(-1.0, multData->order[i]/2);
 #ifdef DEBUG
-    fprintf(stdout, "Steering multipole data: \n");
+    printf("Steering multipole data: \n");
     for (i=0; i<multData->orders; i++)
-      fprintf(stdout, "%ld: %e %e\n", multData->order[i],
+      printf("%ld: %e %e\n", multData->order[i],
               multData->an[i], multData->bn[i]);
 #endif
   }
@@ -254,7 +254,7 @@ void initialize_fmultipole(FMULT *multipole)
     exitElegant(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stdout, "Warning: no data in FMULT file %s\n", multipole->filename);
+    printf("Warning: no data in FMULT file %s\n", multipole->filename);
     fflush(stdout);
     SDDS_Terminate(&SDDSin);
     return;
@@ -269,7 +269,7 @@ void initialize_fmultipole(FMULT *multipole)
     exitElegant(1);
   }    
   if (SDDS_ReadPage(&SDDSin)==2) {
-    fprintf(stdout, "Warning: FMULT file %s has multiple pages, which are ignored\n",
+    printf("Warning: FMULT file %s has multiple pages, which are ignored\n",
             multipole->filename);
     fflush(stdout);
   }
@@ -333,12 +333,12 @@ long fmultipole_tracking(
   multipoleKicksDone += (i_top+1)*multData.orders*n_kicks*4;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
-      fprintf(stdout, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
+      printf("null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
       fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stdout, "null accepted coordinates pointer for particle %ld (fmultipole_tracking)", i_part);
+      printf("null accepted coordinates pointer for particle %ld (fmultipole_tracking)", i_part);
       fflush(stdout);
       abort();
     }
@@ -452,12 +452,12 @@ long multipole_tracking(
     multipoleKicksDone += (i_top+1)*n_kicks*4;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
-            fprintf(stdout, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+            printf("null coordinate pointer for particle %ld (multipole_tracking)", i_part);
             fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            fprintf(stdout, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+            printf("null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
             fflush(stdout);
             abort();
             }
@@ -894,7 +894,7 @@ long multipole_tracking2(
     }
     break;
   default:
-    fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
+    printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
     KnL = dx = dy = dz = tilt = drift = 0;
     integ_order = order = n_kicks = 0;
@@ -953,12 +953,12 @@ long multipole_tracking2(
     *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
-      fprintf(stdout, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+      printf("null coordinate pointer for particle %ld (multipole_tracking)", i_part);
       fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stdout, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+      printf("null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
       fflush(stdout);
       abort();
     }

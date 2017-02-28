@@ -262,13 +262,13 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #if USE_MPI
 	MPI_Allreduce(&count[islice], &countTotal, 1, MPI_LONG, MPI_SUM, workers);
         if (countTotal<10) {
-          fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+          printf("count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
           zeroslice (islice, IBS);
           continue;
         }
 #else 
 	if (count[islice]<10) {
-	  fprintf(stdout, "count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
+	  printf("count=%ld, warning: too few particles inside slice #%ld. No IBS taken into account in this slice.\n", count[islice], islice+1);
 	  zeroslice (islice, IBS);
 	  continue;
 	}

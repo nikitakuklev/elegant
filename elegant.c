@@ -368,7 +368,7 @@ char **argv;
     freopen(fileName, "w", stdout);
     freopen(fileName, "w", stderr);
     MPI_Get_processor_name(processor_name,&namelen);
-    fprintf(stdout, "Process %d on %s\n", myid, processor_name);
+    printf("Process %d on %s\n", myid, processor_name);
 #else   
     /* duplicate an open file descriptor, tested with gcc */
     fd = dup(fileno(stdout));
@@ -473,7 +473,7 @@ char **argv;
         break;
       case DEFINE_MACRO:
         if ((scanned[i].n_items-=1)<1) {
-          fprintf(stdout, "Invalid -macro syntax\n");
+          printf("Invalid -macro syntax\n");
           showUsageOrGreeting(SHOW_USAGE);
           exitElegant(1);
         }
@@ -485,7 +485,7 @@ char **argv;
           for (j=0; j<scanned[i].n_items; j++) {
             macroTag[macros] = scanned[i].list[j+1];
             if (!(macroValue[macros] = strchr(macroTag[macros], '='))) {
-              fprintf(stdout, "Invalid -macro syntax\n");
+              printf("Invalid -macro syntax\n");
               showUsageOrGreeting(SHOW_USAGE);
               exitElegant(1);
             }
@@ -505,7 +505,7 @@ char **argv;
 #if (!USE_MPI && defined(linux))
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
         if (scanned[i].n_items<2) {
-          fprintf(stdout, "Invalid -cpuList syntax\n");
+          printf("Invalid -cpuList syntax\n");
           showUsageOrGreeting(SHOW_USAGE);
           exitElegant(1);
         }
@@ -514,7 +514,7 @@ char **argv;
           unsigned long processorMask = 0;
           for (j=1; j<scanned[i].n_items; j++) {
             if (sscanf(scanned[i].list[j], "%ld", &k)!=1 && k<0)  {
-              fprintf(stdout, "Invalid -cpuList syntax\n");
+              printf("Invalid -cpuList syntax\n");
               showUsageOrGreeting(SHOW_USAGE);
               exitElegant(1);
             }
@@ -538,7 +538,7 @@ char **argv;
           bombElegant("invalid -rpnDefns syntax", NULL);
         break;
       default:
-        fprintf(stdout, "Unknown option given.\n");
+        printf("Unknown option given.\n");
         showUsageOrGreeting(SHOW_USAGE);
         break;
       }
@@ -548,7 +548,7 @@ char **argv;
       if (!inputfile)
         fp_in = fopen_e(inputfile = scanned[i].list[0], "r", 0);
       else {
-        fprintf(stdout, "Too many file names listed.\n");
+        printf("Too many file names listed.\n");
         showUsageOrGreeting(SHOW_USAGE);
         exitElegant(1);
       }
@@ -582,7 +582,7 @@ char **argv;
     inputfile = "stdin";
   } else {
     if (!inputfile) {
-      fprintf(stdout, "No input file was given.\n");
+      printf("No input file was given.\n");
       showUsageOrGreeting(SHOW_USAGE);
       exitElegant(1);
     }
@@ -683,7 +683,7 @@ char **argv;
       if (random_number_seed==0) {
         random_number_seed = (long)time((time_t)0);
         random_number_seed = 2*(random_number_seed/2) + 1;
-        fprintf(stdout, "clock-generated random_number_seed = %ld\n", random_number_seed);
+        printf("clock-generated random_number_seed = %ld\n", random_number_seed);
         fflush(stdout);
       }
       
@@ -800,7 +800,7 @@ char **argv;
 	      MPE_Log_event(event1b, 0, "end get_beamline");
       }
 #endif
-      fprintf(stdout, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
+      printf("length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
       fflush(stdout);
       lattice = saved_lattice;
       
@@ -859,9 +859,9 @@ char **argv;
       reset_driftCSR();
       break;
     case SET_AWE_BEAM: 
-      fprintf(stdout, "This program no longer supports awe-format files.\n");
-      fprintf(stdout, "Use awe2sdds to convert your data files, and use\n");
-      fprintf(stdout, "the sdds_beam command instead of awe_beam.\n");
+      printf("This program no longer supports awe-format files.\n");
+      printf("Use awe2sdds to convert your data files, and use\n");
+      printf("the sdds_beam command instead of awe_beam.\n");
       exit(1);
       break;
     case SET_BUNCHED_BEAM:
@@ -976,14 +976,14 @@ char **argv;
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) && 
             !soft_failure) {
-          fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+          printf("Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
         /* Compute twiss parameters with starting_coord as the start of the orbit */
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
             !soft_failure) {
-          fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+          printf("Twiss parameters not defined---continuing to next step\n");
           fflush(stdout);
           continue;
         }
@@ -1008,7 +1008,7 @@ char **argv;
           }
           for (i=failed=0; i<correction_iterations; i++) {
             if (correction_iterations>1) {
-              fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
+              printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
             }
             /* Orbit/trajectory correction */
@@ -1023,7 +1023,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                printf("Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1031,7 +1031,7 @@ char **argv;
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                printf("Tune correction failed---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1041,7 +1041,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                printf("Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1049,7 +1049,7 @@ char **argv;
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
                                               run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                printf("Chromaticity correction failed---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1080,13 +1080,13 @@ char **argv;
         /* Do post-correction output */
         if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
             !soft_failure) {
-          fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+          printf("Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
             !soft_failure) {
-          fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+          printf("Twiss parameters not defined---continuing to next step\n");
           fflush(stdout);
           continue;
         }
@@ -1097,7 +1097,7 @@ char **argv;
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
-          fprintf(stdout, "Coupled twiss parameters computation failed\n");
+          printf("Coupled twiss parameters computation failed\n");
           fflush(stdout);
         }
         if (do_response_output)
@@ -1171,10 +1171,10 @@ char **argv;
 #endif
       switch (commandCode) {
       case TRACK:
-        fprintf(stdout, "Finished tracking.\n");
+        printf("Finished tracking.\n");
         break;
       case ANALYZE_MAP:
-        fprintf(stdout, "Finished transport analysis.\n");
+        printf("Finished transport analysis.\n");
         break;
       }
       fflush(stdout);
@@ -1355,7 +1355,7 @@ char **argv;
     case CLOSED_ORBIT:
       do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
       if (correction_setuped)
-        fprintf(stdout, "warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
+        printf("warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
       fflush(stdout);
       break;
     case TUNE_FOOTPRINT:
@@ -1387,7 +1387,7 @@ char **argv;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
 #if DEBUG
-	fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+	printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  
         fill_double_array(starting_coord, 6, 0.0);
         if (correct.mode!=-1 || fl_do_tune_correction || do_chromatic_correction) {
@@ -1397,7 +1397,7 @@ char **argv;
             reset_special_elements(beamline, run_control.reset_rf_each_step?RESET_INCLUDE_RF:0);
             runFiducialParticle(&run_conditions, &run_control, starting_coord, beamline, 0, 0);
             if (correction_iterations>1) {
-              fprintf(stdout, "\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
+              printf("\nOrbit/tune/chromaticity correction iteration %ld\n", i+1);
               fflush(stdout);
             }
             if (correct.mode!=-1 && 
@@ -1411,7 +1411,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                printf("Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1419,7 +1419,7 @@ char **argv;
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                printf("Tune correction failed---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1429,7 +1429,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                printf("Closed orbit not found---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1437,7 +1437,7 @@ char **argv;
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
                                               run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                printf("Chromaticity correction failed---continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1457,21 +1457,21 @@ char **argv;
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
             !soft_failure) {
-          fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+          printf("Closed orbit not found---continuing to next step\n");
           fflush(stdout);
           continue;
         }
         if (do_twiss_output && 
             !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
             !soft_failure) {
-          fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+          printf("Twiss parameters not defined---continuing to next step\n");
           fflush(stdout);
           continue;
         }
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
-          fprintf(stdout, "Coupled twiss parameters calculation failed.\n");
+          printf("Coupled twiss parameters calculation failed.\n");
           fflush(stdout);
         }
         run_matrix_output(&run_conditions, beamline);
@@ -1499,7 +1499,7 @@ char **argv;
           break;
         }
       }
-      fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
+      printf("Finished all tracking steps.\n"); fflush(stdout);
       fflush(stdout);
       switch (commandCode) {
       case FIND_APERTURE:
@@ -1532,20 +1532,20 @@ char **argv;
 #endif
       switch (commandCode) {
       case FIND_APERTURE:
-	fprintf(stdout, "Finished dynamic aperture search.\n");
+	printf("Finished dynamic aperture search.\n");
         break;
       case FREQUENCY_MAP:
-	fprintf(stdout, "Finished frequency map analysis.\n");
+	printf("Finished frequency map analysis.\n");
         break;
       case MOMENTUM_APERTURE:
-	fprintf(stdout, "Finished momentum aperture search.\n");
+	printf("Finished momentum aperture search.\n");
         break;
       case CHAOS_MAP:
-	fprintf(stdout, "Finished chaos map analysis.\n");
+	printf("Finished chaos map analysis.\n");
         break;
       }
 #if DEBUG
-      fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+      printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
@@ -1732,10 +1732,10 @@ char **argv;
       addRampElements(&(run_conditions.rampData), &namelist_text, beamline, &run_conditions);
       break;
     default:
-      fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
+      printf("unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
       fflush(stdout);
       for (i=0; i<N_COMMANDS; i++)
-        fprintf(stdout, "%s\n", description[i]);
+        printf("%s\n", description[i]);
       fflush(stdout);
       exitElegant(1);
       break;
@@ -1745,9 +1745,9 @@ char **argv;
 #endif
   }
 #if DEBUG
-  fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+  printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  
-  fprintf(stdout, "End of input data encountered.\n"); fflush(stdout);
+  printf("End of input data encountered.\n"); fflush(stdout);
   fflush(stdout);
   lorentz_report();
   finish_load_parameters();
@@ -1771,22 +1771,22 @@ char **argv;
 void printFarewell(FILE *fp)
 {
 #if (!USE_MPI)
-  fprintf(stdout, "=====================================================================================\n");
-  fprintf(stdout, "Thanks for using elegant.  Please cite the following reference in your publications:\n");
-  fprintf(stdout, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
-  fprintf(stdout, "  Advanced Photon Source LS-287, September 2000.\n");
-  fprintf(stdout, "If you use a modified version, please indicate this in all publications.\n");
-  fprintf(stdout, "=====================================================================================\n");
+  printf("=====================================================================================\n");
+  printf("Thanks for using elegant.  Please cite the following reference in your publications:\n");
+  printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  printf("  Advanced Photon Source LS-287, September 2000.\n");
+  printf("If you use a modified version, please indicate this in all publications.\n");
+  printf("=====================================================================================\n");
 #else 
-  fprintf(stdout, "=====================================================================================\n");
-  fprintf(stdout, "Thanks for using Pelegant.  Please cite the following references in your publications:\n");
-  fprintf(stdout, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
-  fprintf(stdout, "  Advanced Photon Source LS-287, September 2000.\n");
-  fprintf(stdout, "  Y. Wang and M. Borland, \"Pelegant: A Parallel Accelerator Simulation Code for  \n");
-  fprintf(stdout, "  Electron Generation and Tracking\", Proceedings of the 12th Advanced Accelerator  \n"); 
-  fprintf(stdout, "  Concepts Workshop, AIP Conf. Proc. 877, 241 (2006).\n");
-  fprintf(stdout, "If you use a modified version, please indicate this in all publications.\n");
-  fprintf(stdout, "=====================================================================================\n");
+  printf("=====================================================================================\n");
+  printf("Thanks for using Pelegant.  Please cite the following references in your publications:\n");
+  printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  printf("  Advanced Photon Source LS-287, September 2000.\n");
+  printf("  Y. Wang and M. Borland, \"Pelegant: A Parallel Accelerator Simulation Code for  \n");
+  printf("  Electron Generation and Tracking\", Proceedings of the 12th Advanced Accelerator  \n"); 
+  printf("  Concepts Workshop, AIP Conf. Proc. 877, 241 (2006).\n");
+  printf("If you use a modified version, please indicate this in all publications.\n");
+  printf("=====================================================================================\n");
 #endif
 }
 
@@ -1817,11 +1817,11 @@ double find_beam_p_central(char *input)
   for (i=psum=0; i<rows; i++) 
     psum += p[i];
   if (SDDS_ReadPage(&SDDSin)>0)
-    fprintf(stdout, "Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
+    printf("Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
             input);
     fflush(stdout);
   SDDS_Terminate(&SDDSin);
-  fprintf(stdout, "Expanding about p = %21.15e\n", psum/rows);
+  printf("Expanding about p = %21.15e\n", psum/rows);
   fflush(stdout);
   return psum/rows;
 }
@@ -1833,7 +1833,7 @@ void check_heap()
 {
     struct mallinfo info;
     
-    fprintf(stdout, "Performing memory heap verification..."); fflush(stdout);
+    printf("Performing memory heap verification..."); fflush(stdout);
     fflush(stdout);
     if (malloc_verify())
         fputs("okay.", stdout);
@@ -1848,31 +1848,31 @@ void check_heap()
     info.arena = info.ordblks = info.smblks = info.hblks = info.hblkhd = info.usmblks = 0;   
     info.fsmblks = info.uordblks = info.fordblks = info.keepcost = info.allocated = info.treeoverhead = 0;
     info = mallinfo();
-    fprintf(stdout, "memory allocation information:\n");
+    printf("memory allocation information:\n");
     fflush(stdout);
-    fprintf(stdout, "  total space in arena: %ld\n", info.arena);     
+    printf("  total space in arena: %ld\n", info.arena);     
     fflush(stdout);
-    fprintf(stdout, "  number of ordinary blocks: %ld\n", info.ordblks);   
+    printf("  number of ordinary blocks: %ld\n", info.ordblks);   
     fflush(stdout);
-    fprintf(stdout, "  number of small blocks: %ld\n", info.smblks);    
+    printf("  number of small blocks: %ld\n", info.smblks);    
     fflush(stdout);
-    fprintf(stdout, "  number of holding blocks: %ld\n", info.hblks);     
+    printf("  number of holding blocks: %ld\n", info.hblks);     
     fflush(stdout);
-    fprintf(stdout, "  space in holding block headers: %ld\n", info.hblkhd);    
+    printf("  space in holding block headers: %ld\n", info.hblkhd);    
     fflush(stdout);
-    fprintf(stdout, "  space in small blocks in use: %ld\n", info.usmblks);   
+    printf("  space in small blocks in use: %ld\n", info.usmblks);   
     fflush(stdout);
-    fprintf(stdout, "  space in free small blocks: %ld\n", info.fsmblks);   
+    printf("  space in free small blocks: %ld\n", info.fsmblks);   
     fflush(stdout);
-    fprintf(stdout, "  space in ordinary blocks in use: %ld\n", info.uordblks);  
+    printf("  space in ordinary blocks in use: %ld\n", info.uordblks);  
     fflush(stdout);
-    fprintf(stdout, "  space in free ordinary blocks: %ld\n", info.fordblks);  
+    printf("  space in free ordinary blocks: %ld\n", info.fordblks);  
     fflush(stdout);
-    fprintf(stdout, "  cost of enabling keep option: %ld\n", info.keepcost);  
+    printf("  cost of enabling keep option: %ld\n", info.keepcost);  
     fflush(stdout);
-    fprintf(stdout, "  number of ordinary blocks allocated: %ld\n", info.allocated);
+    printf("  number of ordinary blocks allocated: %ld\n", info.allocated);
     fflush(stdout);
-    fprintf(stdout, "  bytes used in maintaining the free tree: %ld\n", info.treeoverhead);
+    printf("  bytes used in maintaining the free tree: %ld\n", info.treeoverhead);
     fflush(stdout);
     }
 #endif
@@ -2086,7 +2086,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
                   PRINTABLE_NULL(entity_description[type].parameter[j].string));
         break;
       default:
-        fprintf(stdout, "Invalid parameter type for %s item of %s\n",
+        printf("Invalid parameter type for %s item of %s\n",
                 PRINTABLE_NULL(entity_description[type].parameter[j].name),
                 entity_name[type]);
         fflush(stdout);
@@ -2234,7 +2234,7 @@ char *translateUnitsToTex(char *source)
           strncat(buffer, ptr, 1);
         break;
       default:
-        fprintf(stdout, "Unrecognized $ sequence: %s\n", ptr);
+        printf("Unrecognized $ sequence: %s\n", ptr);
         fflush(stdout);
         strncat(buffer, ptr, 1);
         break;
@@ -2325,11 +2325,11 @@ void createSemaphoreFile(char *filename)
     return ;
 #endif
   if (filename) {
-    fprintf(stdout, "Creating semaphore file %s\n", filename);
+    printf("Creating semaphore file %s\n", filename);
   } else 
     return;
   if (!(fp = fopen(filename, "w"))) {
-    fprintf(stdout, "Problem creating semaphore file %s\n", filename);
+    printf("Problem creating semaphore file %s\n", filename);
     exitElegant(1);
   } else { /* Put the CPU time in the .done file */
     if (wild_match(filename, "*.done"))
@@ -2370,9 +2370,9 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
       !check_sdds_column(&SDDSin, "s", "m") ||
       !check_sdds_column(&SDDSin, "xCenter", "m") ||
       !check_sdds_column(&SDDSin, "yCenter", "m") ) {
-    fprintf(stdout, "Necessary data quantities (s, xHalfAperture, yHalfAperture, xCenter, and yCenter) have wrong units or are not present in %s\n",
+    printf("Necessary data quantities (s, xHalfAperture, yHalfAperture, xCenter, and yCenter) have wrong units or are not present in %s\n",
             input);
-    fprintf(stdout, "Note that units must be \"m\" on all quantities\n");
+    printf("Note that units must be \"m\" on all quantities\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -2384,7 +2384,7 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   }
 
   if ((run->apertureData.points=SDDS_RowCount(&SDDSin))<2) {
-    fprintf(stdout, "** Warning: aperture input file %s has only %ld rows!",
+    printf("** Warning: aperture input file %s has only %ld rows!",
             input, run->apertureData.points);
   }
 
@@ -2398,16 +2398,16 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (run->apertureData.s[0]!=0) {
-    fprintf(stdout, "The first value of s in %s is not zero.\n", input);
+    printf("The first value of s in %s is not zero.\n", input);
     exitElegant(1);
   }
   for (i=0; i<run->apertureData.points; i++) {
     if (i && run->apertureData.s[i]<run->apertureData.s[i-1]) {
-      fprintf(stdout, "s values in %s are not monotonically increasing.\n", input);
+      printf("s values in %s are not monotonically increasing.\n", input);
       exitElegant(1);
     }
     if (run->apertureData.xMax[i]<0 || run->apertureData.yMax[i]<0) {
-      fprintf(stdout, "One or more xHalfAperture and yHalfAperture values in %s are negative.\n", input);
+      printf("One or more xHalfAperture and yHalfAperture values in %s are negative.\n", input);
       exitElegant(1);
     }
   }
@@ -2415,7 +2415,7 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   run->apertureData.persistent = persistent;
   run->apertureData.initialized = 1;
 
-  fprintf(stdout, "\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
+  printf("\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
   
   return;
 }
@@ -2629,12 +2629,12 @@ void bombTracking(const char *error)
 {
   TRACKING_CONTEXT tc;
   getTrackingContext(&tc);
-  fprintf(stdout, "error:  %s\n", error);
+  printf("error:  %s\n", error);
   if (tc.elementName)
-    fprintf(stdout, "Tracking through %s#%ld at s=%lem\n", 
+    printf("Tracking through %s#%ld at s=%lem\n", 
             tc.elementName, tc.elementOccurrence, tc.zEnd);
   else 
-    fprintf(stdout, "Tracking through unidentified element\n");
+    printf("Tracking through unidentified element\n");
   show_traceback(stdout);
 #if USE_MPI
   MPI_Barrier(MPI_COMM_WORLD); 
@@ -2736,9 +2736,9 @@ void bombElegant(const char *error, const char *usage)
     dup2(fd, fileno(stdout));
 #endif
   if (error)
-    fprintf(stdout, "error: %s\n", error);
+    printf("error: %s\n", error);
   if (usage)
-    fprintf(stdout, "usage: %s\n", usage);
+    printf("usage: %s\n", usage);
   if (semaphoreFile[2]) 
     createSemaphoreFile(semaphoreFile[2]);
   show_traceback(stdout);
@@ -2805,7 +2805,7 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
     memset(coord[0], 0, sizeof(**coord)*6);
   coord[0][6] = 1;
   pCentral = run->p_central;
-  fprintf(stdout, "Tracking fiducial particle\n");
+  printf("Tracking fiducial particle\n");
   if (!(code=do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                          NULL, NULL, NULL, NULL, run, control->i_step, 
                          (control->fiducial_flag&
@@ -2815,10 +2815,10 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
                          ALLOW_MPI_ABORT_TRACKING|INHIBIT_FILE_OUTPUT,
                          1, 0, NULL, NULL, NULL, NULL, NULL))) {
     if (mustSurvive) {
-      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      printf("Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     } else {
-      fprintf(stdout, "Warning: Fiducial particle lost!\n");
+      printf("Warning: Fiducial particle lost!\n");
     }
   }
 #if USE_MPI

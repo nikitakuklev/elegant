@@ -292,7 +292,7 @@ void setup_bunched_beam(
           if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
             bombElegant("problem starting Halton sequence", NULL);
         }
-        fprintf(stdout, "Using radix %" PRId32 " for %s Halton sequence for coordinate %ld\n",
+        printf("Using radix %" PRId32 " for %s Halton sequence for coordinate %ld\n",
                 halton_radix[2*i+offset], (haltonOpt?"optimized":"original"), 2*i+offset);
       }
     }
@@ -438,10 +438,10 @@ long new_bunched_beam(
                                    NULL, run, &unstable, NULL, NULL);
         control->cell->flags = savedFlags;
         free_matrices(M); free(M); M = NULL;
-        fprintf(stdout, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
+        printf("matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
                 beta_x, alpha_x, eta_x, etap_x);
         fflush(stdout);
-        fprintf(stdout, "betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
+        printf("betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
                 beta_y, alpha_y, eta_y, etap_y);
         fflush(stdout);
         fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
@@ -449,7 +449,7 @@ long new_bunched_beam(
         fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
                                   y_beam_type, distribution_cutoff[1], centroid+2);
       }
-      fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
+      printf("generating bunch %ld.%ld\n", control->i_step, control->i_vary);
       fflush(stdout);
 #if USE_MPI
         if (firstIsFiducial && beamCounter==1) {
@@ -525,7 +525,7 @@ long new_bunched_beam(
         if (bunch) {
             if (!SDDS_bunch_initialized)
                 bombElegant("'bunch' file is uninitialized (new_bunched_beam)", NULL);
-            fprintf(stdout, "dumping bunch\n");
+            printf("dumping bunch\n");
             fflush(stdout);
             dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po,
                              sqrt(-1.0), n_actual_particles);
@@ -622,12 +622,12 @@ long track_beam(
   /* now track particles */
   if (!(flags&SILENT_RUNNING)) {
 #if !SDDS_MPI_IO
-    fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
+    printf("tracking %ld particles\n", beam->n_to_track);
 #else
     if (partOnMaster)
-      fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
+      printf("tracking %ld particles\n", beam->n_to_track);
     else
-      fprintf(stdout, "tracking %ld particles\n", beam->n_to_track_total);
+      printf("tracking %ld particles\n", beam->n_to_track_total);
 #endif
     fflush(stdout);
   }
@@ -689,7 +689,7 @@ long track_beam(
   }
   
   if (!beam) {
-    fprintf(stdout, "error: beam pointer is null on return from do_tracking (track_beam)\n");
+    printf("error: beam pointer is null on return from do_tracking (track_beam)\n");
     fflush(stdout);
     abort();
   }
@@ -708,21 +708,21 @@ long track_beam(
 	MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce (&effort, &total_effort, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	MPI_Reduce (&multipoleKicksDone, &total_multipoleKicksDone, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
-	fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", total_left, total_effort);
+	printf("%ld particles transmitted, total effort of %ld particle-turns\n", total_left, total_effort);
 	fflush(stdout);
-	fprintf(stdout, "%lu multipole kicks done\n\n", total_multipoleKicksDone);
+	printf("%lu multipole kicks done\n\n", total_multipoleKicksDone);
       }
       else {
-	fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
+	printf("%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
 	fflush(stdout);
-	fprintf(stdout, "%lu multipole kicks done\n\n", multipoleKicksDone);
+	printf("%lu multipole kicks done\n\n", multipoleKicksDone);
       }
       fflush(stdout);
     }
 #else
-    fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
+    printf("%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
     fflush(stdout);
-    fprintf(stdout, "%lu multipole kicks done\n\n", multipoleKicksDone);
+    printf("%lu multipole kicks done\n\n", multipoleKicksDone);
     fflush(stdout);
 #endif
   }
@@ -765,12 +765,12 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->output_initialized)
       bombElegant("'output' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping output beam data..."); fflush(stdout);
+      printf("Dumping output beam data..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central,
                      finalCharge, beam->id_slots_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "done.\n"); fflush(stdout);
+      printf("done.\n"); fflush(stdout);
       fflush(stdout);
   }
 
@@ -778,12 +778,12 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->accept_initialized)
       bombElegant("'acceptance' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping acceptance output..."); fflush(stdout);
+      printf("Dumping acceptance output..."); fflush(stdout);
       fflush(stdout);
     dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0,
                      finalCharge, beam->id_slots_per_bunch);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "done.\n"); fflush(stdout);
+      printf("done.\n"); fflush(stdout);
       fflush(stdout);
   }
 
@@ -791,7 +791,7 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->losses_initialized)
       bombElegant("'losses' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) {
-      fprintf(stdout, "Dumping lost-particle data...\n"); fflush(stdout);
+      printf("Dumping lost-particle data...\n"); fflush(stdout);
 #if SDDS_MPI_IO
       if (SDDS_MPI_IO) {
 	long total_lost, n_lost;
@@ -803,11 +803,11 @@ void do_track_beam_output(RUN *run, VARY *control,
 	  MPI_Reduce (&n_lost, &total_lost, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	} else 
 	  total_lost = beam->lostBeam.nLost;
-	fprintf(stdout, "n_lost = %ld\n", 
+	printf("n_lost = %ld\n", 
 		total_lost);
       }
 #else
-      fprintf(stdout, "n_lost = %ld\n", beam->lostBeam.nLost);
+      printf("n_lost = %ld\n", beam->lostBeam.nLost);
 #endif
       fflush(stdout);
     }
@@ -819,7 +819,7 @@ void do_track_beam_output(RUN *run, VARY *control,
     beam->lostBeam.particle = NULL;
     beam->lostBeam.nLost =  beam->lostBeam.nLostMax = 0;
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "done.\n"); fflush(stdout);
+      printf("done.\n"); fflush(stdout);
     fflush(stdout);
   }
 
@@ -829,11 +829,11 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->sums_vs_z)
       bombElegant("missing beam sums pointer (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping centroid data..."); fflush(stdout);
+      printf("Dumping centroid data..."); fflush(stdout);
       fflush(stdout);
     dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "done.\n"); fflush(stdout);
+      printf("done.\n"); fflush(stdout);
       fflush(stdout);
   }
 
@@ -843,11 +843,11 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->sums_vs_z)
       bombElegant("missing beam sums pointer (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping sigma data..."); fflush(stdout);
+      printf("Dumping sigma data..."); fflush(stdout);
       fflush(stdout);
     dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "done.\n"); fflush(stdout);
+      printf("done.\n"); fflush(stdout);
       fflush(stdout);
   }
 
@@ -862,7 +862,7 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->sums_vs_z)
       bombElegant("beam sums array for final output is NULL", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping final properties data..."); fflush(stdout);
+      printf("Dumping final properties data..."); fflush(stdout);
     fflush(stdout);
 #if !USE_MPI
     dump_final_properties
@@ -889,24 +889,24 @@ void do_track_beam_output(RUN *run, VARY *control,
 #endif
     free_matrices(M); free(M); M = NULL;
     if (!(flags&SILENT_RUNNING)) {
-      fprintf(stdout, "done.\n"); 
+      printf("done.\n"); 
       fflush(stdout);
     }
   }
 
   if (output->sasefel.active && output->sasefel.filename) {
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping SASE FEL data...");
+      printf("Dumping SASE FEL data...");
       fflush(stdout);
     doSASEFELAtEndOutput(&(output->sasefel), control->i_step);
     if (!(flags&SILENT_RUNNING)) {
-      fprintf(stdout, "done.\n");
+      printf("done.\n");
       fflush(stdout);
     }
   }
 
   if (!(flags&SILENT_RUNNING)) {
-      fprintf(stdout, "Post-tracking output completed.\n");
+      printf("Post-tracking output completed.\n");
       fflush(stdout);
   }
 }

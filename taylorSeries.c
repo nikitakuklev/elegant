@@ -88,7 +88,7 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
       /* presently make having zero rows an error 
 	 later we can make the default behavior of 0 rows be
 	 equivalent to unity map. */
-      fprintf(stdout, "Warning: no data in TAYLORSERIES file %s\n", taylorSeries->filename);
+      printf("Warning: no data in TAYLORSERIES file %s\n", taylorSeries->filename);
       fflush(stdout);
       SDDS_Terminate(&SDDSin);
       return;
@@ -163,12 +163,12 @@ long taylorSeries_tracking(
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
-            fprintf(stdout, "null coordinate pointer for particle %ld (taylorSeries)", i_part);
+            printf("null coordinate pointer for particle %ld (taylorSeries)", i_part);
             fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            fprintf(stdout, "null accepted coordinates pointer for particle %ld (taylorSeries)", i_part);
+            printf("null accepted coordinates pointer for particle %ld (taylorSeries)", i_part);
             fflush(stdout);
             abort();
             }

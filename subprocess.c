@@ -64,7 +64,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
       }
     }
     strcat(buffer, ptr0);
-    fprintf(stdout, "%s\n", buffer);
+    printf("%s\n", buffer);
     fflush(stdout);
     executeCshCommand(buffer);
   }

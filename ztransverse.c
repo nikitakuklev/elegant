@@ -518,13 +518,13 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
         !ztransverse->ZyReal && !ztransverse->ZxImag)
       bombElegant("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
-      fprintf(stdout, "unable to read file %s\n", ztransverse->inputFile);
+      printf("unable to read file %s\n", ztransverse->inputFile);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors); 
       exitElegant(1);
     }
     if ((n_spect=SDDS_RowCount(&SDDSin))<4) {
-      fprintf(stdout, "too little data in %s\n", ztransverse->inputFile);
+      printf("too little data in %s\n", ztransverse->inputFile);
       fflush(stdout);
       exitElegant(1);
     }
@@ -535,17 +535,17 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ZReal[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyReal);
     ZImag[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyImag);
     if (!(freqData=SDDS_GetColumnInDoubles(&SDDSin, ztransverse->freqColumn))) {
-      fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
+      printf("Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
       fflush(stdout);
       exitElegant(1);
     }
     if (!checkPointSpacing(freqData, n_spect, 1e-6)) {
-      fprintf(stdout, "Frequency values are not equispaced (ZTRANSVERSE)\n");
+      printf("Frequency values are not equispaced (ZTRANSVERSE)\n");
       fflush(stdout);
       exitElegant(1);
     }
     if ((df_spect = (freqData[n_spect-1]-freqData[0])/(n_spect-1))<=0) {
-      fprintf(stdout, "Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
+      printf("Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
               ztransverse->inputFile);
       fflush(stdout);
       exitElegant(1);
@@ -555,7 +555,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ztransverse->n_bins = 2*(n_spect-1);
     ztransverse->bin_size = 1.0/(ztransverse->n_bins*df_spect);
     if (!SDDS_Terminate(&SDDSin)) {
-      fprintf(stdout, "Error closing data set %s\n",
+      printf("Error closing data set %s\n",
               ztransverse->inputFile);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -649,7 +649,7 @@ double *getTransverseImpedance(SDDS_DATASET *SDDSin,
     return Z;
   }
   if (!(Z=SDDS_GetColumnInDoubles(SDDSin, ZName))) {
-    fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n",
+    printf("Unable to read column %s (ZTRANSVERSE)\n",
             ZName);
     fflush(stdout);
     exitElegant(1);
@@ -673,21 +673,21 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
   else
     maxBins2 = pow(2, (long)(log(maxBins)/log(2)+1));
   if (maxBins>0 && maxBins!=maxBins2)
-    fprintf(stdout, "Adjusted maximum number of bins for %s %s to %ld\n",
+    printf("Adjusted maximum number of bins for %s %s to %ld\n",
             entity_name[tcontext.elementType],
             tcontext.elementName, maxBins2);
   
   if (1/(2*freq*bin_size)<10) {
     /* want maximum frequency in Z > 10*fResonance */
-    fprintf(stdout, "%s %s has excessive bin size for given resonance frequency\n",
+    printf("%s %s has excessive bin size for given resonance frequency\n",
             entity_name[tcontext.elementType],
             tcontext.elementName);
     bin_size = 1./freq/20;
-    fprintf(stdout, "  Bin size adjusted to %e\n", bin_size);
+    printf("  Bin size adjusted to %e\n", bin_size);
     fflush(stdout);
   }
   if (2*timeSpan>bin_size*n_bins) {
-    fprintf(stdout, "%s %s has insufficient time span for initial bunch\n",
+    printf("%s %s has insufficient time span for initial bunch\n",
             entity_name[tcontext.elementType],
             tcontext.elementName);
     n_bins = pow(2,
@@ -701,7 +701,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
       exitElegant(1);
 #endif
     }
-    fprintf(stdout, "  Number of bins adjusted to %ld\n",
+    printf("  Number of bins adjusted to %ld\n",
             n_bins);
     fflush(stdout);
   }
@@ -711,20 +711,20 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
   else
     factor = 200/(n_bins*bin_size*freq);
   if (factor>1) {
-    fprintf(stdout, "%s %s has too few bins or excessively small bin size for given frequency\n",
+    printf("%s %s has too few bins or excessively small bin size for given frequency\n",
             entity_name[tcontext.elementType],
             tcontext.elementName);
     if (n_bins*factor>maxBins2) {
       if ((n_bins*factor)/maxBins2>50) {
         if (Q<1)
-          fprintf(stdout, " With %ld bins, the frequency resolution is only %.1g times the resonant frequency\n",
+          printf(" With %ld bins, the frequency resolution is only %.1g times the resonant frequency\n",
                   maxBins2, freq*maxBins2*bin_size);
         else
-          fprintf(stdout, " With %ld bins, the frequency resolution is only %.1g times the resonance width\n",
+          printf(" With %ld bins, the frequency resolution is only %.1g times the resonance width\n",
                   maxBins2, freq/Q*maxBins2*bin_size);
-        fprintf(stdout, " It isn't possible to model this situation accurately with %ld bins.  Consider the RFMODE or TRFMODE element.\n",
+        printf(" It isn't possible to model this situation accurately with %ld bins.  Consider the RFMODE or TRFMODE element.\n",
                 maxBins2);
-        fprintf(stdout, " Alternatively, consider increasing your bin size or maximum number of bins\n");
+        printf(" Alternatively, consider increasing your bin size or maximum number of bins\n");
 #if USE_MPI
         mpiAbort = 1;
         return;
@@ -733,11 +733,11 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
 #endif
       }
       n_bins = maxBins2;
-      fprintf(stdout, "  Number of bins adjusted to %ld\n", n_bins);
+      printf("  Number of bins adjusted to %ld\n", n_bins);
       
     } else {
       n_bins = pow(2, (long)(log(n_bins*factor)/log(2)+1));
-      fprintf(stdout, "  Number of bins adjusted to %ld\n",
+      printf("  Number of bins adjusted to %ld\n",
               n_bins);
     }
     fflush(stdout);

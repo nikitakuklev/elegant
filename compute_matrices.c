@@ -73,7 +73,7 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
         }
     
 #ifdef WATCH_MEMORY
-    fprintf(stdout, "start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
+    printf("start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
            cpu_time()/100.0, page_faults(), memory_count());
     fflush(stdout);
 #endif
@@ -108,9 +108,9 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
 
   while (member) {
     if (member->type<0 || member->type>=N_TYPES) {
-      fprintf(stdout, "error: bad element type %ld (accumulate_matrices)\n", member->type);
+      printf("error: bad element type %ld (accumulate_matrices)\n", member->type);
       fflush(stdout);
-      fprintf(stdout, "element name is %s and end position is %em\n", 
+      printf("element name is %s and end position is %em\n", 
              (member->name?member->name:"{null}"), member->end_pos);
       fflush(stdout);
       abort();
@@ -123,7 +123,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
       compute_matrix(member, run, NULL);
     if (entity_description[member->type].flags&HAS_MATRIX) {
       if (!member->matrix) {
-        fprintf(stdout, "programming error: matrix not computed for element %s\n",
+        printf("programming error: matrix not computed for element %s\n",
                 member->name);
         fflush(stdout);
         abort();
@@ -191,9 +191,9 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
     
   while (member) {
     if (member->type<0 || member->type>=N_TYPES) {
-      fprintf(stdout, "error: bad element type %ld (accumulateRadiationMatrices)\n", member->type);
+      printf("error: bad element type %ld (accumulateRadiationMatrices)\n", member->type);
       fflush(stdout);
-      fprintf(stdout, "element name is %s and end position is %em\n", 
+      printf("element name is %s and end position is %em\n", 
              (member->name?member->name:"{null}"), member->end_pos);
       fflush(stdout);
       abort();
@@ -211,7 +211,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       compute_matrix(member, run, NULL);
     }
     if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
-      fprintf(stdout, "programming error: matrix not computed for element %s\n",
+      printf("programming error: matrix not computed for element %s\n",
               member->name);
       fflush(stdout);
       abort();
@@ -338,9 +338,9 @@ long fill_in_matrices(
     member = elem;
     while (member) {
         if (member->type<0 || member->type>=N_TYPES) {
-            fprintf(stdout, "error: bad element type %ld (fill_in_matrices)\n", member->type);
+            printf("error: bad element type %ld (fill_in_matrices)\n", member->type);
             fflush(stdout);
-            fprintf(stdout, "element name is %s and end position is %em\n", 
+            printf("element name is %s and end position is %em\n", 
                    (member->name?member->name:"{null}"), member->end_pos);
             fflush(stdout);
             abort();
@@ -1031,13 +1031,13 @@ VMATRIX *compute_matrix(
             fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
             exitElegant(1);
           }
-          fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
+          printf("File %s found: %s\n", matr->filename, filename);
           fpm = fopen_e(filename, "r", 0);
           free(filename);
           matr->M.order = matr->order;
           initialize_matrices(&(matr->M), matr->order);
           if (!read_matrices(&(matr->M), fpm)) {
-            fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
+            printf("error reading matrix from file %s\n", matr->filename);
             fflush(stdout);
             abort();
           }
@@ -1381,7 +1381,7 @@ VMATRIX *compute_matrix(
         if (entity_description[elem->type].flags&HAS_LENGTH)
             elem->matrix = drift_matrix(*((double*)elem->p_elem), run->default_order);
         if ((entity_description[elem->type].flags&HAS_MATRIX) && !elem->matrix) {
-            fprintf(stdout, "error: failed to compute matrix for %s, which should have a matrix.\n",
+            printf("error: failed to compute matrix for %s, which should have a matrix.\n",
                     elem->name);
             fflush(stdout);
             abort();
@@ -1658,7 +1658,7 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
       m_show(Bg, "%10.3e", "Bg: \n", stdout);
       m_show(Wi, "%10.3e", "Wi: \n", stdout);
       m_show(Bl, "%10.3e", "Wi*Bg: \n", stdout);
-      fprintf(stdout, "Bx = %e, By = %e\n", Bx, By);
+      printf("Bx = %e, By = %e\n", Bx, By);
 #endif
       m_free(&Bg);
       m_free(&Bl);
@@ -1712,7 +1712,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     C = M->C;
     
     if (*P_central<=0) {
-        fprintf(stdout, "error: P_central = %g\n", *P_central);
+        printf("error: P_central = %g\n", *P_central);
         fflush(stdout);
         abort();
         }
@@ -2115,7 +2115,7 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
       M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
     }
     else {
-      fprintf(stdout, "ILMATRIX problem: divide by zero\n");
+      printf("ILMATRIX problem: divide by zero\n");
       return NULL;
     }
   }

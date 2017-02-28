@@ -40,7 +40,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     if (flags&SDDS_EOS_NEWFILE) {
         if (SDDS_IsActive(SDDS_table)==1) {
             if (!SDDS_Terminate(SDDS_table)) {
-                fprintf(stdout, "Unable to terminate SDDS output (%s)\n", caller);
+                printf("Unable to terminate SDDS output (%s)\n", caller);
                 fflush(stdout);
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                 exitElegant(1);
@@ -70,17 +70,17 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
         index = -1;
         if (!SDDS_ProcessParameterString(SDDS_table, parameter_definition[i].text, 0) ||
             (index=SDDS_GetParameterIndex(SDDS_table, parameter_definition[i].name))<0) {
-            fprintf(stdout, "Unable to define SDDS parameter for %s--string was:\n%s\n", caller,
+            printf("Unable to define SDDS parameter for %s--string was:\n%s\n", caller,
                     parameter_definition[i].text);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
             }
         if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0)
-            fprintf(stdout, "\7\7\7WARNING: first defined parameter index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
+            printf("\7\7\7WARNING: first defined parameter index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
             fflush(stdout);
         if (last_index!=-1 && index!=(last_index+1))
-            fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+            printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
             fflush(stdout);
         last_index = index;
         }
@@ -96,17 +96,17 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
         index = -1;
         if (!SDDS_ProcessColumnString(SDDS_table, column_definition[i].text, 0) ||
             (index=SDDS_GetColumnIndex(SDDS_table, column_definition[i].name))<0) {
-            fprintf(stdout, "Unable to define SDDS column for %s--string was:\n%s\n", caller,
+            printf("Unable to define SDDS column for %s--string was:\n%s\n", caller,
                     column_definition[i].text);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
             }
         if (last_index==-1 && flags&SDDS_EOS_NEWFILE && index!=0)
-            fprintf(stdout, "\7\7\7WARNING: first defined column index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
+            printf("\7\7\7WARNING: first defined column index for SDDS file %s is not 0--this will probably cause unexpected results\n", filename);
             fflush(stdout);
         if (last_index!=-1 && index!=(last_index+1))
-            fprintf(stdout, "\7\7\7WARNING: column indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+            printf("\7\7\7WARNING: column indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
             fflush(stdout);
         last_index = index;
         }
@@ -123,7 +123,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 #endif
     if (flags&SDDS_EOS_COMPLETE) {
         if (!SDDS_WriteLayout(SDDS_table)) {
-            fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+            printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
@@ -446,7 +446,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       if ((watch->xIndex[0]=SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (!watch->excludeSlopes &&
            (watch->xIndex[1]=SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)) {
-        fprintf(stdout, "Unable to define SDDS columns x and/or xp for file %s (%s)\n",
+        printf("Unable to define SDDS columns x and/or xp for file %s (%s)\n",
                 filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -457,7 +457,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       if ((watch->yIndex[0]=SDDS_DefineColumn(SDDS_table, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (!watch->excludeSlopes &&
            (watch->yIndex[1]=SDDS_DefineColumn(SDDS_table, "yp",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)) {
-              fprintf(stdout, "Unable to define SDDS columns y and yp for file %s (%s)\n",
+              printf("Unable to define SDDS columns y and yp for file %s (%s)\n",
                 filename, caller);
               fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -471,7 +471,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
            =SDDS_DefineColumn(SDDS_table, "p", NULL, "m$be$nc", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (watch->longitIndex[2]
            =SDDS_DefineColumn(SDDS_table, "dt", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0) {
-        fprintf(stdout, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+        printf("Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
                 filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -479,7 +479,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       }
     }
     if ((watch->IDIndex = SDDS_DefineColumn(SDDS_table, "particleID", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0) {
-      fprintf(stdout, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+      printf("Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
               filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -493,20 +493,20 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
 	!SDDS_DefineSimpleParameter(SDDS_table, "ElapsedCoreTime", "s", SDDS_DOUBLE) ||	
 	!SDDS_DefineSimpleParameter(SDDS_table, "MemoryUsage", "kB", SDDS_LONG) ||	
 	!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (SDDS_DefineParameter(SDDS_table, "Description", NULL, NULL, NULL, "%s", SDDS_STRING, watch->label)<0) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
                              previousElementName?previousElementName:"_BEG_")<0) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -517,7 +517,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     if (!SDDS_WriteLayout(SDDS_table))
 #endif
     {
-      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -535,14 +535,14 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     if (!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE) ||
 	SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
                              previousElementName?previousElementName:"_BEG_")<0) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (isMaster)
     if (!SDDS_WriteLayout(SDDS_table)) {
-      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -558,14 +558,14 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     if (!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE) ||
 	SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
                              previousElementName?previousElementName:"_BEG_")<0) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (isMaster)
     if (!SDDS_WriteLayout(SDDS_table)) {
-      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -626,7 +626,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
            (histogram->columnIndex[1][1]
             =SDDS_DefineColumn(SDDS_table, "xpFrequency", NULL, 
                                histogram->normalize?NULL:"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0))) {
-	fprintf(stdout, "Unable to define SDDS columns x and xp for file %s (%s)\n",
+	printf("Unable to define SDDS columns x and xp for file %s (%s)\n",
 		filename, caller);
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -646,7 +646,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
             (histogram->columnIndex[3][1]
              =SDDS_DefineColumn(SDDS_table, "ypFrequency", NULL, 
                                 histogram->normalize?NULL:"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0))) {
-	fprintf(stdout, "Unable to define SDDS columns y and yp for file %s (%s)\n",
+	printf("Unable to define SDDS columns y and yp for file %s (%s)\n",
 		filename, caller);
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -671,7 +671,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 	  (histogram->columnIndex[6][1]
 	   =SDDS_DefineColumn(SDDS_table, "dtFrequency", NULL, 
 			      histogram->normalize?"1/s":"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ) {
-	fprintf(stdout, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+	printf("Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
 		filename, caller);
 	fflush(stdout);
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -685,13 +685,13 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      printf("Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (!SDDS_WriteLayout(SDDS_table)) {
-      fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -762,7 +762,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     bombElegant("Error: Invalid startPID, endPID in dump_watch_particles", NULL);
   for (i=0; i<particles; i++)
     if (!particle[i]) {
-      fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
+      printf("error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
       fflush(stdout);
       abort();
     }
@@ -961,7 +961,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 
     for (i=0; i<particles; i++)
         if (!particle[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_parameters)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_watch_parameters)\n", i);
             fflush(stdout);
             abort();
             }
@@ -1225,7 +1225,7 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
         bombElegant("NULL coordinate pointer passed to dump_watch_FFT", NULL);
     for (i=0; i<particles; i++)
         if (!particle[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_FFT)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_watch_FFT)\n", i);
             fflush(stdout);
             abort();
             }
@@ -1337,7 +1337,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 
     /* do the FFT */
     if (!realFFT2(real_imag, real_imag, n_data, 0)) {
-        fprintf(stdout, "error: FFT fails for slot %ld of watch point\n", slot);
+        printf("error: FFT fails for slot %ld of watch point\n", slot);
         fflush(stdout);
         abort();
         }
@@ -1379,7 +1379,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   /*
   for (ipart=0; ipart<particles; ipart++)
     if (!particle[ipart]) {
-      fprintf(stdout, "error: coordinate slot %ld is NULL (dump_particle_histogram)\n", ipart);
+      printf("error: coordinate slot %ld is NULL (dump_particle_histogram)\n", ipart);
       fflush(stdout);
       abort();
     }
@@ -1559,7 +1559,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     
       for (i=0; i<particles; i++)
         if (!particle[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_phase_space)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_phase_space)\n", i);
             fflush(stdout);
             abort();
 	}
@@ -1658,7 +1658,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 #endif
     for (i=0; i<particles; i++)
         if (!particle[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);
             fflush(stdout);
             abort();
             }
@@ -1747,13 +1747,13 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     cent = tmalloc(sizeof(*cent)*6);
     for (i=0; i<n_elements; i++) {
         if (!eptr) {
-            fprintf(stdout, "element pointer is NULL, i=%ld (dump_centroid)", i);
+            printf("element pointer is NULL, i=%ld (dump_centroid)", i);
             fflush(stdout);
             abort();
             }
         beam = sums+i;
         if (!beam->centroid) {
-            fprintf(stdout, "beam->centroid is NULL, i=%ld (dump_centroid)\n", i);
+            printf("beam->centroid is NULL, i=%ld (dump_centroid)\n", i);
             fflush(stdout);
             abort();
             }
@@ -1864,7 +1864,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   for (ie=0; ie<n_elements; ie++) {
     beam  = sums+ie;
     if (!beam->sigma) {
-      fprintf(stdout, "error: sigma element of BEAM_SUMS is undefined for element %ld (%s)\n",
+      printf("error: sigma element of BEAM_SUMS is undefined for element %ld (%s)\n",
               ie, name);
       fflush(stdout);
       exitElegant(1);
@@ -2027,7 +2027,7 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
 
     for (i=0; i<particles; i++)
         if (!particle[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_scattered_particles)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_scattered_particles)\n", i);
             fflush(stdout);
             abort();
         }
@@ -2130,7 +2130,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
 
     for (i=0; i<particles; i++)
         if (!particleLos[i]) {
-            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_scattered_loss_particles)\n", i);
+            printf("error: coordinate slot %ld is NULL (dump_scattered_loss_particles)\n", i);
             fflush(stdout);
             abort();
             }

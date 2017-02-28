@@ -87,11 +87,11 @@ void compute_amplification_factors(
   if (type) {
     str_toupper(type);
     if ((type_code=match_string(type, entity_name, N_TYPES, EXACT_MATCH))<0) {
-      fprintf(stdout, "warning: no exact match for type %s\n", type);
+      printf("warning: no exact match for type %s\n", type);
       fflush(stdout);
       if ((type_code=match_string(type, entity_name, N_TYPES, DCL_STYLE_MATCH|RETURN_FIRST_MATCH))<0)
         bombElegant("unknown type name", NULL);
-      fprintf(stdout, "assuming that you meant type %s\n", entity_name[type_code]);
+      printf("assuming that you meant type %s\n", entity_name[type_code]);
       fflush(stdout);
       cp_str(&type, entity_name[type_code]);
     }
@@ -289,7 +289,7 @@ void compute_amplification_factors(
     else 
       actuatorPosition = eptr->end_pos;
     number_to_do--;
-    fprintf(stdout, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
+    printf("\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
     fflush(stdout);
     if (entity_description[eptr->type].parameter[iparam].type!=IS_DOUBLE)
       bombElegant("item is not floating-point type", NULL);
@@ -403,7 +403,7 @@ void compute_amplification_factors(
     }
     if (correct->mode==-1 && emax) {
       /*
-      fprintf(stdout, printf_string,
+      printf(printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
       fputc('\n', stdout);
@@ -431,7 +431,7 @@ void compute_amplification_factors(
       if (n_kicks)
         rms_kick = sqrt(rms_kick/n_kicks);
       /*
-      fprintf(stdout, printf_string,
+      printf(printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
               max_kick/change, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
@@ -489,11 +489,11 @@ void compute_amplification_factors(
     /*
     fputc('\n', stdout);
     if (emaxc && correct->mode!=-1) {
-      fprintf(stdout, "maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
+      printf("maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
               max_Ac, Ai_unit, emaxc->name, emaxc->end_pos);
       fflush(stdout);
       if (emaxu) {
-        fprintf(stdout, "maximum orbit amplification function is %e %s at %s at z=%em\n",
+        printf("maximum orbit amplification function is %e %s at %s at z=%em\n",
                 max_Au, Ai_unit, emax->name, emax->end_pos);
         fflush(stdout);
       }
@@ -522,7 +522,7 @@ void compute_amplification_factors(
     fclose(fpkf);
     /*
       if (max_kick) {
-      fprintf(stdout, "maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
+      printf("maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
               max_kick, Cij_unit, CM->ucorr[j]->name, CM->ucorr[j]->occurence,
               SL->corr_param[CM->sl_index[j]], CM->ucorr[j]->end_pos);
       fflush(stdout);

@@ -281,13 +281,13 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
         !SDDS_DefineSimpleParameter(SDDSout, "Step", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(SDDSout, "undulatorK", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDSout, "undulatorPeriod", "m", SDDS_DOUBLE)) {
-      fprintf(stdout, "Unable define SDDS parameter for file %s\n", sasefelOutput->filename);
+      printf("Unable define SDDS parameter for file %s\n", sasefelOutput->filename);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (n_slices<=1) {
       if (!DefineSASEParameters(sasefelOutput, 0)) {
-        fprintf(stdout, "Unable define SDDS parameters for file %s\n", sasefelOutput->filename);
+        printf("Unable define SDDS parameters for file %s\n", sasefelOutput->filename);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -298,7 +298,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
        */
       for (slice=0; slice<=n_slices+1; slice++) {
         if (!DefineSASEParameters(sasefelOutput, slice)) {
-          fprintf(stdout, "Unable define SDDS parameters for file %s\n", sasefelOutput->filename);
+          printf("Unable define SDDS parameters for file %s\n", sasefelOutput->filename);
           fflush(stdout);
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -462,7 +462,7 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
                           "undulatorK", sasefelOutput->undulatorK,
                           "undulatorPeriod", sasefelOutput->undulatorPeriod,
                           NULL)) {
-    fprintf(stdout, "Unable write data to file %s\n", sasefelOutput->filename);
+    printf("Unable write data to file %s\n", sasefelOutput->filename);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -525,7 +525,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   MPI_Allreduce (&particles, &total_particles, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 #else
   if (!particles) {
-    fprintf(stdout, "no particles left---can't compute FEL parameters");
+    printf("no particles left---can't compute FEL parameters");
     fflush(stdout);
     /* fill in some dummy values */
     for (slice=0; slice<sasefelOutput->nSlices+1; slice++) {

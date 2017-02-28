@@ -323,15 +323,15 @@ long motion(
                 case DIFFEQ_OUTSIDE_INTERVAL:
                 case DIFFEQ_XI_GT_XF:
                 case DIFFEQ_EXIT_COND_FAILED:
-                    fprintf(stdout, (char*)"Integration failure: %s\n", diffeq_result_description(rk_return));
+                    printf((char*)"Integration failure: %s\n", diffeq_result_description(rk_return));
                     fflush(stdout);
 /*                    for (i=0; i<6; i++) 
-                        fprintf(stdout, (char*)"%11.4e  ", coord[i]);
+                        printf((char*)"%11.4e  ", coord[i]);
                         fflush(stdout);
-                    fprintf(stdout, (char*)"\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
+                    printf((char*)"\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
                         gamma0, P0[0], P0[1], P0[2]);
                     fflush(stdout);
-                    fprintf(stdout, (char*)"tolerance = %e     end_factor = %e\n",
+                    printf((char*)"tolerance = %e     end_factor = %e\n",
                         tolerance, end_factor);
                     fflush(stdout);
 */
@@ -352,13 +352,13 @@ long motion(
                     dP[1]   += P[1] - P0[1];
                     dP[2]   += P[2] - P0[2];
 #if defined(DEBUG)
-                    fprintf(stdout, (char*)"initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
+                    printf((char*)"initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
                     fflush(stdout);
-                    fprintf(stdout, (char*)"deriv calls: %ld\n", derivCalls);
+                    printf((char*)"deriv calls: %ld\n", derivCalls);
                     fflush(stdout);
-                    fprintf(stdout, (char*)"Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
+                    printf((char*)"Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
                     fflush(stdout);
-                    fprintf(stdout, (char*)"Pout = %21.15e  Zout = %21.15le\n", 
+                    printf((char*)"Pout = %21.15e  Zout = %21.15le\n", 
                             Po, q[2]/kscale);
                     fflush(stdout);
 #endif
@@ -500,7 +500,7 @@ void (*set_up_derivatives(
       long i;
       fputs((char*)"Error: field expansion for LSRMDLTR elements must be one of:\n", stdout);
       for (i=0; i<N_LSRMDLTR_FIELD_EXPANSIONS; i++)
-        fprintf(stdout, (char*)"    %s\n", lsrMdltrFieldExpansion[i]);
+        printf((char*)"    %s\n", lsrMdltrFieldExpansion[i]);
       exitElegant(1);
     }
     if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
@@ -729,12 +729,12 @@ void (*set_up_derivatives(
     X_aperture_center = twp->k*twp->dx;
     Y_aperture_center = twp->k*twp->dy;
 #if defined(DEBUG)
-    fprintf(stdout, (char*)"TWPL parameters:\n");
+    printf((char*)"TWPL parameters:\n");
     fflush(stdout);
-    fprintf(stdout, (char*)"l=%le acc=%le x_max=%le y_max=%le\n",
+    printf((char*)"l=%le acc=%le x_max=%le y_max=%le\n",
             twp->length, twp->accuracy, twp->x_max, twp->y_max);
     fflush(stdout);
-    fprintf(stdout, (char*)"dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
+    printf((char*)"dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
             twp->dx, twp->dy, twp->method, twp->ramp_time,
             twp->phase_reference);
     fflush(stdout);
@@ -779,10 +779,10 @@ void (*set_up_derivatives(
     twla->BsolS  = twla->B_solenoid * Bscale;
     twla->FrP = 4*sqr(particleCharge*twla->Ez/(omega*particleMass*c_mks))/gamma*twla->sum_bn2;
     if (!twlaBeenWarned && twla->sum_bn2!=0 && fabs(particleCharge*twla->Ez*PI/(2*twla->kz*me_mks*sqr(c_mks))/P_central_inner_scope)>0.1) {
-      fprintf(stdout, "****\n");
-      fprintf(stdout, "Warning: TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.");
-      fprintf(stdout, "         No further warnings of this type will be issued.\n");
-      fprintf(stdout, "****\n");
+      printf("****\n");
+      printf("Warning: TWLA does not satisfy requirements for validity of Hartman-Rosenzweig ponderomotive transverse focusing treatment.");
+      printf("         No further warnings of this type will be issued.\n");
+      printf("****\n");
       twlaBeenWarned = 1;
     }
     /* calculate initial tau value, less omega*t: 
@@ -820,11 +820,11 @@ void (*set_up_derivatives(
       twmta->Ky = twmta->ky/(*kscale);
       twmta->Kz = twmta->kz/(*kscale);
       /*
-        fprintf(stdout, (char*)"TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
+        printf((char*)"TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
         fflush(stdout);
-        fprintf(stdout, (char*)"      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
+        printf((char*)"      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
         fflush(stdout);
-        fprintf(stdout, (char*)"      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+        printf((char*)"      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
         fflush(stdout);
         */
       twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
@@ -1576,14 +1576,14 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
         fputs((char*)"error: no known mode listed for fiducialization--must be one of:\n", stdout);
         for (i=0; i<N_KNOWN_MODES; i++)
-          fprintf(stdout, (char*)"    %s\n", known_mode[i]);
+          printf((char*)"    %s\n", known_mode[i]);
           fflush(stdout);
         exitElegant(1);
       }
     }
   }
   if (i_var==-1 && fid_mode!=FID_AVERAGE) {
-    fprintf(stdout, (char*)"unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
+    printf((char*)"unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -1771,18 +1771,18 @@ void select_integrator(char *desired_method)
     log_entry((char*)"select_integrator");
 
 #if defined(DEBUG)
-    fprintf(stdout, (char*)"select_integrator called with pointer %lx\n", (long)(desired_method));
+    printf((char*)"select_integrator called with pointer %lx\n", (long)(desired_method));
     fflush(stdout);
-    fprintf(stdout, (char*)"this translates into string %s\n", desired_method);
+    printf((char*)"this translates into string %s\n", desired_method);
     fflush(stdout);
 #endif
     switch (integratorCode=match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
-        fprintf(stdout, (char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        printf((char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         fflush(stdout);
         break;
       case BULIRSCH_STOER:
-        fprintf(stdout, (char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        printf((char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         fflush(stdout);
         break;
       case NA_RUNGE_KUTTA:
@@ -1790,12 +1790,12 @@ void select_integrator(char *desired_method)
       case MODIFIED_MIDPOINT:
         break;
       default:
-        fprintf(stdout, (char*)"error: unknown integration method %s requested.\n", desired_method);
+        printf((char*)"error: unknown integration method %s requested.\n", desired_method);
         fflush(stdout);
-        fprintf(stdout, (char*)"Available methods are:\n");
+        printf((char*)"Available methods are:\n");
         fflush(stdout);
         for (i=0; i<N_METHODS; i++)
-            fprintf(stdout, (char*)"    %s\n", method[i]);
+            printf((char*)"    %s\n", method[i]);
             fflush(stdout);
         exitElegant(1);
         break;

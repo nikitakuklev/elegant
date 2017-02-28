@@ -81,8 +81,8 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
     }	
     MPI_Bcast(&tFid, 1, MPI_DOUBLE, 1, MPI_COMM_WORLD);
     /*
-    fprintf(stdout, "FID_MODE_FIRST mode is not supported in the current parallel version.\n");
-    fprintf(stdout, "Please use serial version.\n");
+    printf("FID_MODE_FIRST mode is not supported in the current parallel version.\n");
+    printf("Please use serial version.\n");
     fflush(stdout);
     MPI_Abort(MPI_COMM_WORLD, 9);
     */
@@ -271,17 +271,17 @@ long trackRfCavityWithWakes
     
     if (!been_warned) {        
         if (rfca->freq<1e3 && rfca->freq)  {
-            fprintf(stdout, "\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
+            printf("\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (fabs(rfca->volt)<100 && rfca->volt) {
-            fprintf(stdout, "\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
+            printf("\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stdout, "units of parameters for RFCA are as follows:\n");
+            printf("units of parameters for RFCA are as follows:\n");
             fflush(stdout);
             print_dictionary_entry(stdout, T_RFCA, 0, 0);
             }
@@ -365,7 +365,7 @@ long trackRfCavityWithWakes
     if (rfca->phase_reference==0) {
       rfca->phase_reference = unused_phase_reference();
 #if defined(DEBUG)
-      fprintf(stdout, "RFCA assigned to phase reference %ld\n", rfca->phase_reference);
+      printf("RFCA assigned to phase reference %ld\n", rfca->phase_reference);
 #endif
     }
     
@@ -388,7 +388,7 @@ long trackRfCavityWithWakes
                 }
             set_phase_reference(rfca->phase_reference, phase=rfca->phase_fiducial);
 #if defined(DEBUG)
-            fprintf(stdout, "RFCA fiducial phase is %e\n", phase);
+            printf("RFCA fiducial phase is %e\n", phase);
 #endif
             break;
         default:
@@ -805,7 +805,7 @@ long track_through_rfcw
   if (rfcw->cellLength<=0) 
     bombElegant("invalid cell length for RFCW", NULL);
   if (rfcw->length==0 && !warned) {
-    fprintf(stdout, "** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
+    printf("** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
     warned = 1;
   }
   /* set up the RFCA, TRWAKE, and WAKE structures */

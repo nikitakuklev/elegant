@@ -55,34 +55,34 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   
   if (match_column && strlen(match_column)) {
     if (use_row!=-1) {
-      fprintf(stdout, "Error: you asked to match a column and also gave use_row.\n");
+      printf("Error: you asked to match a column and also gave use_row.\n");
       exitElegant(1);
     } 
     if (!match_column_value || !strlen(match_column_value)) {
-      fprintf(stdout, "Error: you must give match_column_value with match_column\n");
+      printf("Error: you must give match_column_value with match_column\n");
       exitElegant(1);
     }
   }
   if (match_parameter && strlen(match_parameter)) {
     if (use_page!=-1) {
-      fprintf(stdout, "Error: you asked to match a parameter and also gave use_page.\n");
+      printf("Error: you asked to match a parameter and also gave use_page.\n");
       exitElegant(1);
     }
     if (!match_parameter_value || !strlen(match_parameter_value)) {
-      fprintf(stdout, "Error: you must give match_parameter_value with match_parameter\n");
+      printf("Error: you must give match_parameter_value with match_parameter\n");
       exitElegant(1);
     }
   }
     
   if (!filename || !strlen(filename)) {
-    fprintf(stdout, "Error: no filename given for rpn_load.\n");
+    printf("Error: no filename given for rpn_load.\n");
     exitElegant(1);
   }
 
   filename = compose_filename(filename, run->rootname);
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename)) {
-    fprintf(stdout, "Error: couldn't initialize SDDS input for %s\n",
+    printf("Error: couldn't initialize SDDS input for %s\n",
             filename);
     exitElegant(1);
   }
@@ -111,13 +111,13 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   }
 
   if (!foundPage) {
-    fprintf(stdout, "Error: no appropriate page found\n");
+    printf("Error: no appropriate page found\n");
     exitElegant(1);
   }
 
   if (!load_parameters) {
     if ((columnName = SDDS_GetColumnNames(&SDDSin, &columns))==NULL) {
-      fprintf(stdout, "Warning: No columns in file!\n");
+      printf("Warning: No columns in file!\n");
       return;
     }
 
@@ -125,7 +125,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
     matchRow = rows-1;
     if (use_row!=-1) {
       if (use_row>=rows) {
-        fprintf(stdout, "Error: number of rows in file (%ld) less than needed for use_row=%ld\n",
+        printf("Error: number of rows in file (%ld) less than needed for use_row=%ld\n",
                 rows, use_row);
         exitElegant(1);
       }
@@ -134,12 +134,12 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
 
     if (match_column) {
       if (SDDS_GetNamedColumnType(&SDDSin, match_column)!=SDDS_STRING) {
-        fprintf(stdout, "Error: column %s nonexistent or not string type.\n",
+        printf("Error: column %s nonexistent or not string type.\n",
                 match_column);
         exitElegant(1);
       }
       if (!(matchColumnData=SDDS_GetColumn(&SDDSin, match_column))) {
-        fprintf(stdout, "Error: unable to get data for column %s\n", match_column);
+        printf("Error: unable to get data for column %s\n", match_column);
         exitElegant(1);
       }
       if (matching_row_number<0) {
@@ -156,7 +156,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
       }
       
       if (matchRow<0 || matchRow>=rows) {
-        fprintf(stdout, "Error: unable to find match for %s in column %s\n",
+        printf("Error: unable to find match for %s in column %s\n",
                 match_column_value, match_column);
         exitElegant(1);
       }
@@ -170,12 +170,12 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
         break;
       default:
         if (!(data=SDDS_GetColumnInDoubles(&SDDSin, columnName[iColumn]))) {
-          fprintf(stdout, "Error: unable to get data for column %s as numerical data.\n",
+          printf("Error: unable to get data for column %s as numerical data.\n",
                   columnName[iColumn]);
           exitElegant(1);
         }
         if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*((tag?strlen(tag):0)+strlen(columnName[iColumn])+2)))) {
-          fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
+          printf("Memory allocation failure trying to create memory name for loaded data\n");
           exitElegant(1);
         }
         if (tag && strlen(tag))
@@ -183,7 +183,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
         else
           sprintf(memName, "%s", columnName[iColumn]);
         rpn_store(data[matchRow], NULL, rpn_create_mem(memName, 0));
-        fprintf(stdout, "%le --> %s\n", data[matchRow], memName);
+        printf("%le --> %s\n", data[matchRow], memName);
         free(columnName[iColumn]);
         free(data);
       }
@@ -195,7 +195,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   } else {
     /* load data from parameters */
     if ((parameterName = SDDS_GetParameterNames(&SDDSin, &parameters))==NULL) {
-      fprintf(stdout, "Warning: No parameters in file!\n");
+      printf("Warning: No parameters in file!\n");
       return;
     }
 
@@ -206,12 +206,12 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
         break;
       default:
         if (!SDDS_GetParameterAsDouble(&SDDSin, parameterName[iParameter], &data1)) {
-          fprintf(stdout, "Error: unable to get data for parameter %s as numerical data.\n",
+          printf("Error: unable to get data for parameter %s as numerical data.\n",
                   parameterName[iParameter]);
           exitElegant(1);
         }
         if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*((tag?strlen(tag):0)+strlen(parameterName[iParameter])+2)))) {
-          fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
+          printf("Memory allocation failure trying to create memory name for loaded data\n");
           exitElegant(1);
         }
         if (tag && strlen(tag))
@@ -219,7 +219,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
         else
           sprintf(memName, "%s", parameterName[iParameter]);
         rpn_store(data1, NULL, rpn_create_mem(memName, 0));
-        fprintf(stdout, "%le --> %s\n", data1,  memName);
+        printf("%le --> %s\n", data1,  memName);
         free(parameterName[iParameter]);
       }
     }

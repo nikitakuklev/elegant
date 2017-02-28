@@ -586,7 +586,7 @@ VMATRIX *sbend_matrix(
   i44426 = i36436 = i46436 = 0;
 
 #ifdef DEBUG
-  fprintf(stdout, "\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
+  printf("\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
           t0, h, ha, nh, betah2, gammah3, order);
   fflush(stdout);
 #endif
@@ -655,10 +655,10 @@ VMATRIX *sbend_matrix(
   
 
 #ifdef DEBUG
-    fprintf(stdout, "kx = %.16le, ky = %.16le\ncx = %.16le, cy = %.16le\nsx = %.16le, sy=%.16le\n",
+    printf("kx = %.16le, ky = %.16le\ncx = %.16le, cy = %.16le\nsx = %.16le, sy=%.16le\n",
         kx, ky, cx, cy, sx, sy);
     fflush(stdout);
-    fprintf(stdout, "kx2 = %.16le, ky2 = %.16le\n", kx2, ky2);
+    printf("kx2 = %.16le, ky2 = %.16le\n", kx2, ky2);
     fflush(stdout);
 #endif
 

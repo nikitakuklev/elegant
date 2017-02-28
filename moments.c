@@ -293,7 +293,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   double eNatural[3] = {0,0,0};
   
 #ifdef DEBUG
-  fprintf(stdout, "now in runMomentsOutput\n");
+  printf("now in runMomentsOutput\n");
   fflush(stdout);
 #endif
 

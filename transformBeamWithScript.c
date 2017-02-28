@@ -212,7 +212,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 
   prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1);
   if (script->verbosity>0) {
-    fprintf(stdout, "%s\n", cmdBuffer1);
+    printf("%s\n", cmdBuffer1);
     fflush(stdout);
   }
 
@@ -241,7 +241,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
 
   if (script->verbosity>0) {
-    fprintf(stdout, "Command completed\n");
+    printf("Command completed\n");
     fflush(stdout);
   }
 
@@ -261,10 +261,10 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       !check_sdds_column(&SDDSin, "t", "s")) {
     if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
         check_sdds_column(&SDDSin, "p", NULL)) {
-      fprintf(stdout, "Warning: p has no units in script output file.  Expected m$be$nc\n");
+      printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
       fflush(stdout);
     } else {
-      fprintf(stdout, 
+      printf(
               "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
       fflush(stdout);
       exitElegant(1);
@@ -282,7 +282,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
       bombElegant("The number of particles increased after the SCRIPT element, even though NO_NEW_PARTICLES=0.", NULL);
 
   if (script->verbosity>0) {
-    fprintf(stdout, "%ld particles in script output file (was %ld)\n", npNew, np);
+    printf("%ld particles in script output file (was %ld)\n", npNew, np);
     fflush(stdout);
   }
 
@@ -331,7 +331,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
         }
       }
       if (script->verbosity>1)
-        fprintf(stdout, "%ld particles of %ld lost based on particleID matching\n", lost, np);
+        printf("%ld particles of %ld lost based on particleID matching\n", lost, np);
       if (beam && lost)
         recordLostParticles(part, itop+1, itop+1+lost, &(beam->lostBeam), iPass);
     }
@@ -372,7 +372,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
     /* No particle ID data in the file, so generate some */
     for (j=0; j<npNew; j++)
       part[j][6] = j+1;
-    fprintf(stdout, "Changing particle ID for new particles to make them sequential\n");
+    printf("Changing particle ID for new particles to make them sequential\n");
   }
   
   /* Figure out the charge */
@@ -401,7 +401,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   if (script->verbosity) {
-    fprintf(stdout, "Done processing particle input file from script\n");
+    printf("Done processing particle input file from script\n");
     fflush(stdout);
   }
 
@@ -456,7 +456,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 
   prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1);
   if (script->verbosity>0) {
-    fprintf(stdout, "%s\n", cmdBuffer1);
+    printf("%s\n", cmdBuffer1);
     fflush(stdout);
   }
 
@@ -519,7 +519,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
 
   if (script->verbosity>0) {
-    fprintf(stdout, "Command completed\n");
+    printf("Command completed\n");
     fflush(stdout);
   }
 
@@ -573,10 +573,10 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
         !check_sdds_column(&SDDSin, "t", "s")) {
       if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
           check_sdds_column(&SDDSin, "p", NULL)) {
-        fprintf(stdout, "Warning: p has no units in script output file.  Expected m$be$nc\n");
+        printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
         fflush(stdout);
       } else {
-        fprintf(stdout, 
+        printf(
                 "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
         fflush(stdout);
         exitElegant(1);
@@ -608,7 +608,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
                     npTotal,  npNewTotal);
 
   if (script->verbosity>0 && isMaster) {
-    fprintf(stdout, "%ld particles in script output file (was %ld)\n", npNewTotal, npTotal);
+    printf("%ld particles in script output file (was %ld)\n", npNewTotal, npTotal);
     fflush(stdout);
   }
   
@@ -736,7 +736,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (script->verbosity) {
-    fprintf(stdout, "Done processing particle input file from script\n");
+    printf("Done processing particle input file from script\n");
     fflush(stdout);
   }
 

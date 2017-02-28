@@ -44,16 +44,16 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     if (echoNamelists) print_namelist(stdout, &error_control);
 
     if (summarize_error_settings) {
-        fprintf(stdout, "summary of random error settings: \n");
+        printf("summary of random error settings: \n");
         fflush(stdout);
         if (errcon->no_errors_first_step)
-          fprintf(stdout, "No errors will be generated for the first step.\n");
+          printf("No errors will be generated for the first step.\n");
           fflush(stdout);
         for (i=0; i<errcon->n_items; i++) {
             switch (errcon->error_type[i]) {
                 case UNIFORM_ERRORS:
                 case GAUSSIAN_ERRORS:
-                    fprintf(stdout, "%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
+                    printf("%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
                         errcon->quan_name[i], (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
                         known_error_type[errcon->error_type[i]], 
                         (errcon->flags[i]&FRACTIONAL_ERRORS?100:1)*errcon->error_level[i],
@@ -62,7 +62,7 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
                     fflush(stdout);
                     break;
                 case PLUS_OR_MINUS_ERRORS:
-                    fprintf(stdout, "%8s:  %sadditive %s errors with amplitude %e\n", 
+                    printf("%8s:  %sadditive %s errors with amplitude %e\n", 
                         errcon->quan_name[i], 
                         (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
                         known_error_type[errcon->error_type[i]],
@@ -118,7 +118,7 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
             set_element_flags(beamline, errcon->name, NULL, NULL, NULL, errcon->n_items, PARAMETERS_ARE_STATIC, 0, 1, 0);
         errcon->n_items = 0;
         }
-    fprintf(stdout, "\n*** Cleared error settings\n");
+    printf("\n*** Cleared error settings\n");
     fflush(stdout);
     log_exit("error_setup");
     }
@@ -166,33 +166,33 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     context = NULL;
     if (after && strlen(after)) {
       if (!(context=find_element(after, &context, &(beamline->elem)))) {
-        fprintf(stdout, "Element %s not found in beamline.\n", after);
+        printf("Element %s not found in beamline.\n", after);
         exitElegant(1);
       }
       sMin = context->end_pos;
       if (find_element(after, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+        printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
-      fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+      printf("%s found at s = %le m\n", after, sMin);
       fflush(stdout);
     }
     context = NULL;
     if (before && strlen(before)) {
       if (!(context=find_element(before, &context, &(beamline->elem)))) {
-        fprintf(stdout, "Element %s not found in beamline.\n", before);
+        printf("Element %s not found in beamline.\n", before);
         exitElegant(1);
       }
       sMax = context->end_pos;
       if (find_element(before, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+        printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
-      fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+      printf("%s found at s = %le m\n", before, sMax);
       fflush(stdout);
     }
     if (after && before && sMin>sMax) {
-      fprintf(stdout, "Element %s is not upstream of %s!\n",
+      printf("Element %s is not upstream of %s!\n",
               before, after);
       exitElegant(1);
     }
@@ -253,7 +253,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->boundTo[n_items] = bind_across_names?firstIndexInGroup:-1;
 /*
             if (errcon->boundTo[n_items]!=-1)
-              fprintf(stdout, "%s bound to %s\n", 
+              printf("%s bound to %s\n", 
                       errcon->name[n_items], errcon->name[errcon->boundTo[n_items]]);
 */
             errcon->sMin[n_items] = sMin;
@@ -261,7 +261,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->elem_type[n_items] = context->type;
 
             if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
-                fprintf(stdout, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+                printf("error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
                 fflush(stdout);
                 exitElegant(1);
                 }
@@ -273,11 +273,11 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
                 = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                             beamline);
             if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
-                fprintf(stdout, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+                printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                     errcon->name[n_items], errcon->item[n_items]);
                 fflush(stdout);
             if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
-                fprintf(stdout, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
+                printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                     errcon->name[n_items], errcon->item[n_items]);
                 fflush(stdout);
             errcon->n_items = ++n_items;
@@ -289,7 +289,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
     else {
         str_toupper(name);
         if (!(context=find_element(name, &context, &(beamline->elem)))) {
-            fprintf(stdout, "error: cannot add errors to element %s--not in beamline\n", name);
+            printf("error: cannot add errors to element %s--not in beamline\n", name);
             fflush(stdout);
             exitElegant(1);
             }
@@ -330,7 +330,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 
         errcon->elem_type[n_items] = context->type;
         if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
-            fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
+            printf("error: cannot vary %s--no such parameter for %s\n",item, name);
             fflush(stdout);
             exitElegant(1);
             }
@@ -342,12 +342,12 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                         beamline);
         if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
-            fprintf(stdout, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+            printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                 errcon->name[n_items], errcon->item[n_items]);
             fflush(stdout);
 
         if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
-            fprintf(stdout, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
+            printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                 errcon->name[n_items], errcon->item[n_items]);
             fflush(stdout);
         errcon->n_items = ++n_items;
@@ -355,7 +355,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         }
 
     if (!n_added && !allow_missing_elements) {
-        fprintf(stdout, "error: no match for name %s\n", name);
+        printf("error: no match for name %s\n", name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -391,7 +391,7 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
                 exitElegant(1);
             }
         }
-    fprintf(stdout, "error: unable to find value of parameter %ld for element %s of type %ld\n",
+    printf("error: unable to find value of parameter %ld for element %s of type %ld\n",
         param, pname, elem_type);
     fflush(stdout);
     exitElegant(1);

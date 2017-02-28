@@ -139,14 +139,14 @@ void bombElegantTemplate(char *template, char *a1, char *a2, char *usage)
 {
   fputs("error: ", stdout);
   if (a1 && a2)
-    fprintf(stdout, template, a1, a2);
+    printf(template, a1, a2);
   else if (a1) 
-    fprintf(stdout, template, a1);
+    printf(template, a1);
   else
-    fprintf(stdout, template);
+    printf(template);
   fputc('\n', stdout);
   if (usage)
-    fprintf(stdout, "usage: %s\n", usage);
+    printf("usage: %s\n", usage);
   exit(1);
 }
 

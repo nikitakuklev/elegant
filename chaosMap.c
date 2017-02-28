@@ -269,13 +269,13 @@ long doChaosMap(
 	      if (myid==1) {
 		double newPercentage = 100*(idelta*nx*ny+ix*ny+iy+1.0)/(ndelta*nx*ny);
 		if ((newPercentage-oldPercentage)>=1) {
-		  fprintf(stdout, "About %.1f%% done\n", newPercentage);
+		  printf("About %.1f%% done\n", newPercentage);
 		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}
 	      }
 #else
-	      fprintf(stdout, "Done with particle %ld of %ld\n",
+	      printf("Done with particle %ld of %ld\n",
 		      ix*ny*ndelta+iy*ndelta+idelta+1, nx*ny*ndelta);
 	      fflush(stdout);
 #endif

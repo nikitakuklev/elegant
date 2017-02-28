@@ -80,7 +80,7 @@ long SDDS_InitializeInputFromSearchPath(SDDS_DATASET *SDDSin, char *file)
   long value;
   if (!(filename=findFileInSearchPath(file)))
     return 0;
-  fprintf(stdout, "File %s found: %s\n", file, filename);
+  printf("File %s found: %s\n", file, filename);
   value = SDDS_InitializeInput(SDDSin, filename);
   free(filename);
   return value;

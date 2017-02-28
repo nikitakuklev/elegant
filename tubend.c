@@ -133,7 +133,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
           /* less than two solutions means we didn't enter the magnet */ 
           particleLost = 1;
 #if DEBUG
-          fprintf(stdout, "Circle intersection not found: %ld solutions\n", solutions);
+          printf("Circle intersection not found: %ld solutions\n", solutions);
           fflush(stdout);
 #endif
         } else {
@@ -221,7 +221,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
     else {
       /* lost particle */
       if (!part[i_top]) {
-        fprintf(stdout, 
+        printf(
                 "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_tubend)\n",
                 ip, i_top);
         fflush(stdout);
@@ -230,7 +230,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
       swapParticles(part[ip], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
-          fprintf(stdout, 
+          printf(
                   "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_tubend)\n",
                   ip, i_top);
           fflush(stdout);

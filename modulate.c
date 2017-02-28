@@ -55,33 +55,33 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   context = NULL;
   if (after && strlen(after)) {
     if (!(context=find_element(after, &context, &(beamline->elem)))) {
-      fprintf(stdout, "Element %s not found in beamline.\n", after);
+      printf("Element %s not found in beamline.\n", after);
       exitElegant(1);
     }
     sMin = context->end_pos;
     if (find_element(after, &context, &(beamline->elem))) {
-      fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+      printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
-    fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+    printf("%s found at s = %le m\n", after, sMin);
     fflush(stdout);
   }
   context = NULL;
   if (before && strlen(before)) {
     if (!(context=find_element(before, &context, &(beamline->elem)))) {
-      fprintf(stdout, "Element %s not found in beamline.\n", before);
+      printf("Element %s not found in beamline.\n", before);
       exitElegant(1);
     }
     sMax = context->end_pos;
     if (find_element(before, &context, &(beamline->elem))) {
-      fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+      printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
-    fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+    printf("%s found at s = %le m\n", before, sMax);
     fflush(stdout);
   }
   if (after && before && sMin>sMax) {
-    fprintf(stdout, "Element %s is not upstream of %s!\n",
+    printf("Element %s is not upstream of %s!\n",
             before, after);
     exitElegant(1);
   }
@@ -104,7 +104,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
         (start_occurence && context->occurence<start_occurence) ||
         (end_occurence && context->occurence>end_occurence) )
       continue;
-    fprintf(stdout, "Adding modulation for %s#%ld at s=%le\n", context->name, context->occurence, context->end_pos);
+    printf("Adding modulation for %s#%ld at s=%le\n", context->name, context->occurence, context->end_pos);
     
     modData->element          = SDDS_Realloc(modData->element, sizeof(*modData->element)*(n_items+1));
     modData->expression       = SDDS_Realloc(modData->expression, sizeof(*modData->expression)*(n_items+1));
@@ -141,7 +141,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       cp_str(&modData->expression[n_items], expression);
 
     if ((modData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
-      fprintf(stdout, "error: cannot modulate %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+      printf("error: cannot modulate %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
       fflush(stdout);
       exitElegant(1);
     }
@@ -150,7 +150,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
       = parameter_value(context->name, context->type, modData->parameterNumber[n_items], beamline);
 
     if (modData->unperturbedValue[n_items]==0 && modData->flags[n_items]&MULTIPLICATIVE_MOD) {
-      fprintf(stdout, "***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+      printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
               context->name, item);
       fflush(stdout);
     }
@@ -179,7 +179,7 @@ void addModulationElements(MODULATION_DATA *modData, NAMELIST_TEXT *nltext, LINE
   }
     
   if (!n_added) {
-    fprintf(stdout, "error: no match given modulation\n");
+    printf("error: no match given modulation\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -281,7 +281,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       lastValue = modData->lastVerboseValue[iMod];
       *((double*)(p_elem+entity_description[type].parameter[param].offset)) = value;
       if (modData->flags[iMod]&VERBOSE_MOD && fabs(value-lastValue)>modData->verboseThreshold[iMod]*(fabs(value)+fabs(lastValue))/2) {
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %21.15le at t = %21.15le (originally %21.15le)\n",
+        printf("Modulation value for element %s#%ld, parameter %s changed to %21.15le at t = %21.15le (originally %21.15le)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, value, t, modData->unperturbedValue[iMod]);
 	modData->lastVerboseValue[iMod] = value;
@@ -292,7 +292,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
       value = (long)(value+0.5);
       *((long*)(p_elem+entity_description[type].parameter[param].offset)) = value;
       if (modData->flags[iMod]&VERBOSE_MOD && value!=lastValue) {
-        fprintf(stdout, "Modulation value for element %s#%ld, parameter %s changed to %ld at t = %21.15le (originally %ld)\n",
+        printf("Modulation value for element %s#%ld, parameter %s changed to %ld at t = %21.15le (originally %ld)\n",
                 modData->element[iMod]->name, modData->element[iMod]->occurence,
                 entity_description[type].parameter[param].name, (long)(value+0.5), t, (long)(modData->unperturbedValue[iMod]));
 	modData->lastVerboseValue[iMod] = value;

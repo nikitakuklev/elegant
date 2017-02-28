@@ -39,17 +39,17 @@ long ramped_rf_cavity(
 
     if (!been_warned) {        
         if (ramprf->freq<1e3 && ramprf->freq)  {
-            fprintf(stdout, "\7\7\7warning: your RAMPRF frequency is less than 1kHz--this may be an error\n");
+            printf("\7\7\7warning: your RAMPRF frequency is less than 1kHz--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (fabs(ramprf->volt)<100 && ramprf->volt) {
-            fprintf(stdout, "\7\7\7warning: your RAMPRF voltage is less than 100V--this may be an error\n");
+            printf("\7\7\7warning: your RAMPRF voltage is less than 100V--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stdout, "units of parameters for RAMPRF are as follows:\n");
+            printf("units of parameters for RAMPRF are as follows:\n");
             fflush(stdout);
             print_dictionary_entry(stdout, T_RAMPRF, 0, 0);
             }
@@ -198,12 +198,12 @@ long ramped_rf_cavity(
 	  if (isnan(coord[i]) || isinf(coord[i]))
 	    break;
         if (i!=6) {
-	  fprintf(stdout, "error: bad coordinate for particle %ld in RAMPRF\n", i);
+	  printf("error: bad coordinate for particle %ld in RAMPRF\n", i);
 	  fflush(stdout);
 	  for (i=0; i<6; i++)
-	    fprintf(stdout, "%15.8e ", coord[i]);
+	    printf("%15.8e ", coord[i]);
 	  fflush(stdout);
-	  fprintf(stdout, "\nP = %15.8e  t = %15.8e\n", P, t);
+	  printf("\nP = %15.8e  t = %15.8e\n", P, t);
 	  fflush(stdout);
 	  abort();
 	}
@@ -335,7 +335,7 @@ double linear_interpolation(double *y, double *t, long n, double t0, long i)
     if (i==-1)
         return(y[0]);
     if (!(t0>=t[i] && t0<=t[i+1])) {
-        fprintf(stdout, "failure to bracket point in time array: t0=%e, t[0] = %e, t[n-1] = %e\n",
+        printf("failure to bracket point in time array: t0=%e, t[0] = %e, t[n-1] = %e\n",
                t0, t[0], t[n-1]);
         fflush(stdout);
         abort();

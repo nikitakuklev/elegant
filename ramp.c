@@ -40,33 +40,33 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   context = NULL;
   if (after && strlen(after)) {
     if (!(context=find_element(after, &context, &(beamline->elem)))) {
-      fprintf(stdout, "Element %s not found in beamline.\n", after);
+      printf("Element %s not found in beamline.\n", after);
       exitElegant(1);
     }
     sMin = context->end_pos;
     if (find_element(after, &context, &(beamline->elem))) {
-      fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+      printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
-    fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+    printf("%s found at s = %le m\n", after, sMin);
     fflush(stdout);
   }
   context = NULL;
   if (before && strlen(before)) {
     if (!(context=find_element(before, &context, &(beamline->elem)))) {
-      fprintf(stdout, "Element %s not found in beamline.\n", before);
+      printf("Element %s not found in beamline.\n", before);
       exitElegant(1);
     }
     sMax = context->end_pos;
     if (find_element(before, &context, &(beamline->elem))) {
-      fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+      printf("Element %s found in beamline more than once.\n", after);
       exitElegant(1);
     }
-    fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+    printf("%s found at s = %le m\n", before, sMax);
     fflush(stdout);
   }
   if (after && before && sMin>sMax) {
-    fprintf(stdout, "Element %s is not upstream of %s!\n",
+    printf("Element %s is not upstream of %s!\n",
             before, after);
     exitElegant(1);
   }
@@ -113,7 +113,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
     rampData->fpRecord[n_items] = NULL;
     
     if ((rampData->parameterNumber[n_items] = confirm_parameter(item, context->type))<0) {
-      fprintf(stdout, "error: cannot ramp %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+      printf("error: cannot ramp %s---no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
       fflush(stdout);
       exitElegant(1);
     }
@@ -122,7 +122,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
       = parameter_value(context->name, context->type, rampData->parameterNumber[n_items], beamline);
 
     if (rampData->unperturbedValue[n_items]==0 && rampData->flags[n_items]&MULTIPLICATIVE_RAMP) {
-      fprintf(stdout, "***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+      printf("***\7\7\7 warning: you've specified multiplicative modulation for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
               context->name, item);
       fflush(stdout);
     }
@@ -151,7 +151,7 @@ void addRampElements(RAMP_DATA *rampData, NAMELIST_TEXT *nltext, LINE_LIST *beam
   }
 
   if (!n_added) {
-    fprintf(stdout, "error: no match given ramp\n");
+    printf("error: no match given ramp\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -199,14 +199,14 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
     case IS_DOUBLE:
       *((double*)(p_elem+entity_description[type].parameter[param].offset)) = value;
       if (rampData->flags[iMod]&VERBOSE_RAMP) 
-        fprintf(stdout, "Ramp value for element %s, parameter %s is %le at pass %ld (originally %le)\n",
+        printf("Ramp value for element %s, parameter %s is %le at pass %ld (originally %le)\n",
                 rampData->element[iMod]->name,
                 entity_description[type].parameter[param].name, value, iPass, rampData->unperturbedValue[iMod]);
       break;
     case IS_LONG:
       *((long*)(p_elem+entity_description[type].parameter[param].offset)) = value + 0.5;
       if (rampData->flags[iMod]&VERBOSE_RAMP) 
-        fprintf(stdout, "Ramp value for element %s, parameter %s is %ld at pass %ld (originally %ld)\n",
+        printf("Ramp value for element %s, parameter %s is %ld at pass %ld (originally %ld)\n",
                 rampData->element[iMod]->name,
                 entity_description[type].parameter[param].name, (long)(value+0.5), iPass, (long)(rampData->unperturbedValue[iMod]));
       break;

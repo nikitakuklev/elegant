@@ -267,14 +267,14 @@ void do_transport_analysis(
     beamline->fiducial_flag = 0;
     p_central = run->p_central;
     if (verbosity>0) 
-      fprintf(stdout, "Tracking fiducial particle\n");
+      printf("Tracking fiducial particle\n");
     code = do_tracking(NULL, finalCoord, 1, NULL, beamline, &p_central, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
 		       1, 0, NULL, NULL, NULL, NULL, NULL);
 
     if (!code) {
-      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      printf("Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     }
     if (verbosity>0)
@@ -374,31 +374,31 @@ void do_transport_analysis(
     
     copyParticles(&finalCoordCopy, finalCoord, n_track);
     if (p_central!=run->p_central && verbosity>0)
-      fprintf(stdout, "Central momentum changed from %e to %e\n", run->p_central, p_central);
+      printf("Central momentum changed from %e to %e\n", run->p_central, p_central);
 
     if (verbosity>0){
         if (orbit && center_on_orbit) {
-            fprintf(stdout, "closed orbit: \n");
+            printf("closed orbit: \n");
             fflush(stdout);
             for (i=0; i<6; i++)
-                fprintf(stdout, "%16.8e ", orbit[i]);
+                printf("%16.8e ", orbit[i]);
             fputc('\n', stdout);
             }
-        fprintf(stdout, "final coordinates of refence particle: \n");
+        printf("final coordinates of refence particle: \n");
         fflush(stdout);
         for (i=0; i<6; i++)
-            fprintf(stdout, "%16.8e ", finalCoord[0][i]);
+            printf("%16.8e ", finalCoord[0][i]);
         fputc('\n', stdout);
         fflush(stdout);
         if (verbosity>1) {
           for (i=0; i<n_track-1; i++) {
-            fprintf(stdout, "Particle %ld start/end/delta coordinates:\n", i);
+            printf("Particle %ld start/end/delta coordinates:\n", i);
             for (j=0; j<6; j++)
-              fprintf(stdout, "%21.15e%c", initialCoord[i][j], j==5?'\n':' ');
+              printf("%21.15e%c", initialCoord[i][j], j==5?'\n':' ');
             for (j=0; j<6; j++)
-              fprintf(stdout, "%21.15e%c", finalCoord[i][j], j==5?'\n':' ');
+              printf("%21.15e%c", finalCoord[i][j], j==5?'\n':' ');
             for (j=0; j<6; j++)
-              fprintf(stdout, "%21.15e%c", finalCoord[i][j]-finalCoord[0][j], j==5?'\n':' ');
+              printf("%21.15e%c", finalCoord[i][j]-finalCoord[0][j], j==5?'\n':' ');
           }
           fflush(stdout);
         }
@@ -490,7 +490,7 @@ void do_transport_analysis(
         data[index] = errcon->error_value[i];
 
     if (!SDDS_StartTable(&SDDS_analyze, 1)) {
-        fprintf(stdout, "Unable to start SDDS table (do_transport_analysis)");
+        printf("Unable to start SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
@@ -503,14 +503,14 @@ void do_transport_analysis(
     for (i=0; i<SDDS_ColumnCount(&SDDS_analyze); i++)
         if (!SDDS_SetRowValues(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
                                i, data[i], -1)) {
-            fprintf(stdout, "Unable to set SDDS column %s (do_transport_analysis)\n", 
+            printf("Unable to set SDDS column %s (do_transport_analysis)\n", 
                     analysis_column[i].name);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
             }
     if (!SDDS_WriteTable(&SDDS_analyze)) {
-        fprintf(stdout, "Unable to write SDDS table (do_transport_analysis)");
+        printf("Unable to write SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
@@ -1490,7 +1490,7 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
     for (i=0; i<4; i+=2) {
       /* find nu, beta, alpha */
       if (fabs(cos_phi = (M->R[i][i] + M->R[i+1][i+1])/2)>1) {
-        fprintf(stdout, "warning: beamline unstable for %c plane\n", i==0?'x':'y');
+        printf("warning: beamline unstable for %c plane\n", i==0?'x':'y');
         fflush(stdout);
         beta = alpha = phi = 0;
       } else {
@@ -1503,7 +1503,7 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
       
       /* compute eta and eta' */
       if ((det = (2 - M->R[i][i] - M->R[i+1][i+1]))<=0) {
-        fprintf(stdout, "error: beamline unstable for %c plane--can't match dispersion functions\n",
+        printf("error: beamline unstable for %c plane--can't match dispersion functions\n",
 		i==0?'x':'y');
         fflush(stdout);
         det = 1e-6;

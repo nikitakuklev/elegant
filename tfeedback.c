@@ -153,7 +153,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
       position += dposition;
   }
 #ifdef DEBUG
-    fprintf(stdout, "TFBPICKUP: Putting value %e in slot %ld for bunch %ld\n",
+    printf("TFBPICKUP: Putting value %e in slot %ld for bunch %ld\n",
             position, pass%tfbp->filterLength, iBucket);
 #endif
     tfbp->data[iBucket][pass%tfbp->filterLength] = position;
@@ -165,7 +165,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
         output += tfbp->a[i]*tfbp->data[iBucket][j%tfbp->filterLength];
       }
 #ifdef DEBUG
-      fprintf(stdout, "TFBPICKUP: filter output is %e\n", output);
+      printf("TFBPICKUP: filter output is %e\n", output);
 #endif
       tfbp->filterOutput[iBucket] = output;
     }
@@ -193,7 +193,7 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
   for (i=sum=0; i<TFB_FILTER_LENGTH; i++)
     sum += tfbp->a[i];
   if (fabs(sum)>1e-6)
-    fprintf(stdout, "Warning: sum of a[i] is nonzero for TFBPICKUP\n");
+    printf("Warning: sum of a[i] is nonzero for TFBPICKUP\n");
 
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbp->a[i]!=0)
@@ -246,7 +246,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   MPI_Status mpiStatus;
 #endif
 
-#ifdef DEBUG
+#ifdef DEBUG || MPI_DEBUG
   printf("TFBDRIVER\n");
 #endif
 
@@ -266,8 +266,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   else if (myid==1)
     MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
 #endif
-#ifdef DEBUG
+#ifdef DEBUG || MPI_DEBUG
   printf("TFBDRIVER: %ld bunches\n", nBuckets);
+  fflush(stdout);
 #endif
   
   if (tfbd->initialized==0) {
@@ -320,21 +321,26 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
 #if USE_MPI
+#if MPI_DEBUG
+    printf("Waiting on barrier at top of bucket loop\n");
+    fflush(stdout);
+#endif
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
     rpass = (pass-tfbd->startPass)/updateInterval;
-#ifdef DEBUG
-    fprintf(stdout, "TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
+#ifdef DEBUG || MPI_DEBUG
+    printf("TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
 #endif
     
     tfbd->driverSignal[iBucket][rpass%(tfbd->delay+tfbd->filterLength)] = kick;
     
     if (rpass<tfbd->delay+tfbd->filterLength) {
-#ifdef DEBUG
-      fprintf(stdout, "TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
+#ifdef DEBUG || MPI_DEBUG
+      printf("TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
               pass, tfbd->delay);
+      fflush(stdout);
 #endif
       kick = 0;
     }
@@ -342,14 +348,14 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       kick = 0;
       for (i=0; i<tfbd->filterLength; i++) {
 #ifdef DEBUG
-        fprintf(stdout, "TFBDRIVER: adding term a[%ld]=%e  *   %e\n",
+        printf("TFBDRIVER: adding term a[%ld]=%e  *   %e\n",
                 i, tfbd->a[i], tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)]);
         fflush(stdout);
 #endif
         kick += tfbd->a[i]*tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)];
       }
-#ifdef DEBUG
-      fprintf(stdout, "TFBDRIVER: kick = %le\n", kick);
+#ifdef DEBUG || MPI_DEBUG
+      printf("TFBDRIVER: kick = %le\n", kick);
       fflush(stdout);
 #endif
       if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
@@ -372,6 +378,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
             long npTotal;
             double tSum, error;
             error = tSum = 0;
+	    npTotal = 0;
             for (i=0; i<npBucket[iBucket]; i++)
               tSum = KahanPlus(tSum, time0[ipBucket[iBucket][i]], &error);
 #if USE_MPI
@@ -384,6 +391,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
           }
         }
+
         
         if (!tfbd->longitudinal) {
           j = tfbd->pickup->iPlane+1;
@@ -409,19 +417,25 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
               part0[i][5] += kick*rfFactor;
             }
           } else {
-            if (npBucket)
+            if (npBucket) {
+#ifdef MPI_DEBUG
+	      printf("ib=%ld, tAve = %le, freq = %le, phase = %le\n, rfFactor = %le, np=%ld\n", 
+		     iBucket, tAve, tfbd->frequency, phase, rfFactor, npBucket[iBucket]);
+	      fflush(stdout);
+#endif
               for (i=0; i<npBucket[iBucket]; i++) {
                 if (tfbd->frequency>0) 
                   rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
                 part0[ipBucket[iBucket][i]][5] += kick*rfFactor;
               }
+	    }
           }
         }
       }
     }
     
-#ifdef DEBUG
-    fprintf(stdout, "TFBDRIVER: preparing for output for bunch %ld\n", iBucket);
+#ifdef DEBUG || MPI_DEBUG
+    printf("TFBDRIVER: preparing for output for bunch %ld\n", iBucket);
     fflush(stdout);
 #endif
 
@@ -452,17 +466,25 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
         tfbd->dataWritten = 0;
-  }
+      }
 
-#ifdef DEBUG
-    fprintf(stdout, "TFBDRIVER: end of loop for bunch %ld\n", iBucket);
+#ifdef DEBUG || MPI_DEBUG
+    printf("TFBDRIVER: end of loop for bunch %ld\n", iBucket);
     fflush(stdout);
 #endif
   }
   
-#ifdef DEBUG
-  fprintf(stdout, "TFBDRIVER: exited from loop over bunches\n");
+#ifdef DEBUG || MPI_DEBUG
+  printf("TFBDRIVER: exited from loop over bunches\n");
   fflush(stdout);
+#endif
+
+#if USE_MPI
+#ifdef MPI_DEBUG
+  printf("TFBDRIVER: Waiting on barrier after loop over bunches\n");
+  fflush(stdout);
+#endif
+  MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   if (time0) 
@@ -474,8 +496,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (npBucket)
     free(npBucket);
 
-#ifdef DEBUG
-  fprintf(stdout, "TFBDRIVER: end of routine\n");
+#ifdef DEBUG || MPI_DEBUG
+  printf("TFBDRIVER: end of routine\n");
   fflush(stdout);
 #endif
 }

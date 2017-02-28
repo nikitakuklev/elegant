@@ -64,7 +64,7 @@ void readSimpleFtable(FTABLE *ftable)
     double xmax, ymax, zmax;
     
     if (!fexists(ftable->inputFile)) {
-      fprintf(stdout, "file %s not found for FTABLE element\n", ftable->inputFile);
+      printf("file %s not found for FTABLE element\n", ftable->inputFile);
       fflush(stdout);
       exitElegant(1);
     }
@@ -96,7 +96,7 @@ void readSimpleFtable(FTABLE *ftable)
     }
 
     if (!(points=SDDS_CountRowsOfInterest(&SDDSin)) || points<2) {
-      fprintf(stdout, "file %s for FTABLE element has insufficient data\n", ftable->inputFile);
+      printf("file %s for FTABLE element has insufficient data\n", ftable->inputFile);
       fflush(stdout);
       exitElegant(1);
     }
@@ -147,7 +147,7 @@ void readSimpleFtable(FTABLE *ftable)
     zmin = z[0];
     zmax = z[points-1];
     dz = (zmax-zmin)/(nz-1);
-    fprintf(stdout, "FTABLE element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
+    printf("FTABLE element from file %s: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\n",
             ftable->inputFile, 
             nx, ny, nz,
             dx, dy, dz,

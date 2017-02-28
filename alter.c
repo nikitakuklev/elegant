@@ -96,17 +96,17 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (after && strlen(after)) {
         if (!(context=find_element(after, &context, &(beamline->elem)))) {
 	  if (printingEnabled)
-	    fprintf(stdout, "Element %s not found in beamline.\n", after);
+	    printf("Element %s not found in beamline.\n", after);
           exitElegant(1);
         }
         s_start = context->end_pos;
         if (find_element(after, &context, &(beamline->elem))) {
 	  if (printingEnabled)
-	    fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+	    printf("Element %s found in beamline more than once.\n", after);
           exitElegant(1);
         }
 	if (printingEnabled) {
-	  fprintf(stdout, "%s found at s = %le m\n", after, s_start);
+	  printf("%s found at s = %le m\n", after, s_start);
 	  fflush(stdout);
 	}
       }
@@ -114,17 +114,17 @@ void setup_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (before && strlen(before)) {
         if (!(context=find_element(before, &context, &(beamline->elem)))) {
 	  if (printingEnabled)
-	    fprintf(stdout, "Element %s not found in beamline.\n", before);
+	    printf("Element %s not found in beamline.\n", before);
           exitElegant(1);
         }
         s_end = context->end_pos;
         if (find_element(before, &context, &(beamline->elem))) {
 	  if (printingEnabled)
-	    fprintf(stdout, "Element %s found in beamline more than once.\n", before);
+	    printf("Element %s found in beamline more than once.\n", before);
           exitElegant(1);
         }
 	if (printingEnabled) {
-	  fprintf(stdout, "%s found at s = %le m\n", before, s_end);
+	  printf("%s found at s = %le m\n", before, s_end);
 	  fflush(stdout);
 	}
       }
@@ -243,7 +243,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
         switch (entity_description[eptr->type].parameter[iParam].type) {
         case IS_DOUBLE:
           if (alterSpec[i].verbose && printingEnabled)
-            fprintf(stdout, "Changing %s#%ld.%s from %21.15e to ",
+            printf("Changing %s#%ld.%s from %21.15e to ",
                     eptr->name, eptr->occurence,
                     entity_description[eptr->type].parameter[iParam].name, 
                     *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
@@ -271,14 +271,14 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
           *((double*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
             *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
           if (alterSpec[i].verbose && printingEnabled) {
-            fprintf(stdout, "%21.15e\n",
+            printf("%21.15e\n",
                     *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
             fflush(stdout);
           }
           break;
         case IS_LONG:
           if (alterSpec[i].verbose && printingEnabled)
-            fprintf(stdout, "Changing %s#%ld.%s from %ld to ",
+            printf("Changing %s#%ld.%s from %ld to ",
                     eptr->name, eptr->occurence,
                     entity_description[eptr->type].parameter[iParam].name, 
                     *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
@@ -308,7 +308,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
           *((long*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
             *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
           if (alterSpec[i].verbose && printingEnabled) {
-            fprintf(stdout, "%ld\n",
+            printf("%ld\n",
                     *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
             fflush(stdout);
           }
@@ -324,7 +324,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
            * pointing to static memory
            */
           if (alterSpec[i].verbose && printingEnabled)
-            fprintf(stdout, "Changing %s#%ld.%s from %s to ",
+            printf("Changing %s#%ld.%s from %s to ",
                     eptr->name, eptr->occurence,
                     entity_description[eptr->type].parameter[iParam].name, 
                     *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
@@ -348,7 +348,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
             changedDefinedParameter[nChangedDefinedParameter++] = eptr->name;
           }
           if (alterSpec[i].verbose && printingEnabled) {
-            fprintf(stdout, "%s\n",
+            printf("%s\n",
                     *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
             fflush(stdout);
           }
@@ -366,10 +366,10 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
       if (nMatches==0)  {
         if (alterSpec[i].allow_missing_elements) {
           if (printingEnabled)
-            fprintf(stdout, "Warning: no matches for %s\n", alterSpec[i].name);
+            printf("Warning: no matches for %s\n", alterSpec[i].name);
         } else {
           if (printingEnabled)
-            fprintf(stdout, "Error: no matches for %s\n", alterSpec[i].name);
+            printf("Error: no matches for %s\n", alterSpec[i].name);
           exitElegant(1);
         }
       } else 

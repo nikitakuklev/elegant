@@ -145,11 +145,11 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
         if (!(index_limit = load_enumerated_values(_control->enumerated_value+n_elements_to_vary, 
                                    enumeration_file, enumeration_column)))
             bombElegant("enumerated_values_file contains no valid values", NULL);
-        fprintf(stdout, "%ld values of %s loaded from file %s\n", index_limit, enumeration_column,
+        printf("%ld values of %s loaded from file %s\n", index_limit, enumeration_column,
                enumeration_file);
         fflush(stdout);
         if (_control->index_limit[index_number]) {
-            fprintf(stdout, "Warning: the limit for index %ld is specified more than once.\nThe lowest-valued specification is used.\n", index_number);
+            printf("Warning: the limit for index %ld is specified more than once.\nThe lowest-valued specification is used.\n", index_number);
             fflush(stdout);
             if (index_limit>_control->index_limit[index_number])
                 index_limit = _control->index_limit[index_number];
@@ -163,7 +163,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
                 _control->index_limit[index_number] = index_limit;
             }
         else if (index_limit>0) {
-            fprintf(stdout, "Warning: the limit for index %ld is specified more than once.\nThe first specification is used.\n",
+            printf("Warning: the limit for index %ld is specified more than once.\nThe first specification is used.\n",
                    index_number);
             fflush(stdout);
             }
@@ -174,7 +174,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
-        fprintf(stdout, "error: cannot vary element %s--not in beamline\n", name);
+        printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -182,7 +182,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     _control->varied_type[n_elements_to_vary] = context->type;
     str_toupper(item);
     if ((_control->varied_param[n_elements_to_vary] = confirm_parameter(item, context->type))<0) {
-        fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
+        printf("error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
         exitElegant(1);
         }
@@ -190,7 +190,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     cp_str(&_control->varied_quan_unit[n_elements_to_vary], 
         entity_description[_control->varied_type[n_elements_to_vary]].parameter[_control->varied_param[n_elements_to_vary]].unit);
     if (geometric && (multiplicative || differential)) {
-      fprintf(stdout, "error: geometric is incompatible with multiplicative and differential modes\n");
+      printf("error: geometric is incompatible with multiplicative and differential modes\n");
       exitElegant(1);
     }
 
@@ -254,7 +254,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
   links = beamline->links;
 
 #if DEBUG
-  fprintf(stdout, "vary_beamline called: i_step = %ld, i_vary = %ld\n", 
+  printf("vary_beamline called: i_step = %ld, i_vary = %ld\n", 
           _control->i_step, _control->i_vary);
   fflush(stdout);
 #endif
@@ -277,7 +277,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
 
   for (i=0, _control->indexLimitProduct=1; i<_control->n_indices; i++) {
     if ((_control->indexLimitProduct *= _control->index_limit[i])<=0) {
-      fprintf(stdout, "index %ld has a limit of <= 0", i);
+      printf("index %ld has a limit of <= 0", i);
       fflush(stdout);
       exitElegant(1);
     }
@@ -348,7 +348,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       _control->i_vary = 1;
       _control->i_step++;
       step_incremented = 1;
-      fprintf(stdout, "vary counter reset\n");
+      printf("vary counter reset\n");
       fflush(stdout);
     }
     else {
@@ -369,17 +369,17 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
         log_exit("vary_beamline");
         return(ret_val);
       }
-      fprintf(stdout, "counter advanced: ");
+      printf("counter advanced: ");
       fflush(stdout);
       for (i=0; i<_control->n_indices; i++)
-        fprintf(stdout, "%4ld ", _control->index[i]);
+        printf("%4ld ", _control->index[i]);
       fflush(stdout);
-      fprintf(stdout, "\nvalues advanced: ");
+      printf("\nvalues advanced: ");
       fflush(stdout);
       for (i=0; i<_control->n_elements_to_vary; i++)
-        fprintf(stdout, "%e ", _control->varied_quan_value[i]);
+        printf("%e ", _control->varied_quan_value[i]);
       fflush(stdout);
-      fprintf(stdout, "\n");
+      printf("\n");
       fflush(stdout);
       assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
                               _control->varied_quan_value, _control->n_elements_to_vary, beamline);
@@ -440,7 +440,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     /* compute matrices for perturbed elements */
     rebaseline_element_links(links, run, beamline);
     _control->i_step -= step_incremented;
-    fprintf(stdout, "%ld matrices (re)computed\n", 
+    printf("%ld matrices (re)computed\n", 
             (i=compute_changed_matrices(beamline, run)
              + assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
             + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
@@ -461,7 +461,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       _control->i_step++;
       step_incremented = 1;
     }
-    fprintf(stdout, "tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
+    printf("tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
     fflush(stdout);
     log_exit("vary_beamline.4");
     log_exit("vary_beamline");
@@ -475,7 +475,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
 
   if (links && links->n_links) {
     rebaseline_element_links(links, run, beamline);
-    fprintf(stdout, "%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
+    printf("%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
     fflush(stdout);
     if (i) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
@@ -489,7 +489,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     }
   }
 
-  fprintf(stdout, "tracking step %ld\n", ++_control->i_step);
+  printf("tracking step %ld\n", ++_control->i_step);
   fflush(stdout);
 
   log_exit("vary_beamline");
@@ -519,7 +519,7 @@ long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *bea
         }        
     if (_control->n_elements_to_vary || errcon->n_items) {
         /* compute matrices for perturbed elements */
-        fprintf(stdout, "%ld matrices (re)computed after correction\n", 
+        printf("%ld matrices (re)computed after correction\n", 
                (i=compute_changed_matrices(beamline, run)
                 + assert_element_links(links, run, beamline, DYNAMIC_LINK+POST_CORRECTION_LINK))
                + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
@@ -559,13 +559,13 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
     for (i_elem=0; i_elem<n_elems; i_elem++) {
         eptr = NULL;
         if (!elem_name[i_elem]) {
-            fprintf(stdout, "error: name missing for element %ld (set_element_flags)\n", i_elem);
+            printf("error: name missing for element %ld (set_element_flags)\n", i_elem);
             fflush(stdout);
             if (i_elem!=0)
-                fprintf(stdout, "preceeding element is %s\n", elem_name[i_elem-1]);
+                printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
             if (i_elem!=n_elems-1)
-                fprintf(stdout, "suceeding element is %s\n", elem_name[i_elem+1]);
+                printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
             }
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
@@ -606,13 +606,13 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
         param     = param_number[i_elem];
         data_type = entity_description[elem_type].parameter[param].type;
         if (!elem_name[i_elem]) {
-            fprintf(stdout, "error: name missing for element %ld (reset_parameter_values)\n", i_elem);
+            printf("error: name missing for element %ld (reset_parameter_values)\n", i_elem);
             fflush(stdout);
             if (i_elem!=0)
-                fprintf(stdout, "preceeding element is %s\n", elem_name[i_elem-1]);
+                printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
             if (i_elem!=n_elems-1)
-                fprintf(stdout, "suceeding element is %s\n", elem_name[i_elem+1]);
+                printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
             }
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
@@ -662,13 +662,13 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
         param     = param_number[i_elem];
         data_type = entity_description[elem_type].parameter[param].type;
         if (!elem_name[i_elem]) {
-            fprintf(stdout, "error: name missing for element %ld (assert_parameter_values)\n", i_elem);
+            printf("error: name missing for element %ld (assert_parameter_values)\n", i_elem);
             fflush(stdout);
             if (i_elem!=0)
-                fprintf(stdout, "preceeding element is %s\n", elem_name[i_elem-1]);
+                printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
             if (i_elem!=n_elems-1)
-                fprintf(stdout, "suceeding element is %s\n", elem_name[i_elem+1]);
+                printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
             }
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
@@ -773,13 +773,13 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
         i_group = 0;
         delta = DBL_MAX;
         if (!elem_name[i_elem]) {
-            fprintf(stdout, "error: name missing for element %ld (assert_perturbations)\n", i_elem);
+            printf("error: name missing for element %ld (assert_perturbations)\n", i_elem);
             fflush(stdout);
             if (i_elem!=0)
-                fprintf(stdout, "preceeding element is %s\n", elem_name[i_elem-1]);
+                printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
             if (i_elem!=n_elems-1)
-                fprintf(stdout, "suceeding element is %s\n", elem_name[i_elem+1]);
+                printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
             }
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
@@ -910,72 +910,72 @@ long compute_changed_matrices(LINE_LIST *beamline, RUN *run)
 void check_VARY_structure(VARY *vary, char *caller)
 {
     if (!vary->index) {
-        fprintf(stdout, "VARY structure index array is NULL (%s)", caller);
+        printf("VARY structure index array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->index_limit) {
-        fprintf(stdout, "VARY structure index_limit array is NULL (%s)", caller);
+        printf("VARY structure index_limit array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->element_index) {
-        fprintf(stdout, "VARY structure element_index array is NULL (%s)", caller);
+        printf("VARY structure element_index array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->element) {
-        fprintf(stdout, "VARY structure element array is NULL (%s)", caller);
+        printf("VARY structure element array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->item) {
-        fprintf(stdout, "VARY structure item array is NULL (%s)", caller);
+        printf("VARY structure item array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->initial) {
-        fprintf(stdout, "VARY structure initial array is NULL (%s)", caller);
+        printf("VARY structure initial array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->final) {
-        fprintf(stdout, "VARY structure final array is NULL (%s)", caller);
+        printf("VARY structure final array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->step) {
-        fprintf(stdout, "VARY structure step array is NULL (%s)", caller);
+        printf("VARY structure step array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->varied_quan_name) {
-        fprintf(stdout, "VARY structure varied_quan_name array is NULL (%s)", caller);
+        printf("VARY structure varied_quan_name array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->varied_quan_unit) {
-        fprintf(stdout, "VARY structure varied_quan_unit array is NULL (%s)", caller);
+        printf("VARY structure varied_quan_unit array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->varied_type) {
-        fprintf(stdout, "VARY structure varied_type array is NULL (%s)", caller);
+        printf("VARY structure varied_type array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->varied_quan_value) {
-        fprintf(stdout, "VARY structure varied_quan_value array is NULL (%s)", caller);
+        printf("VARY structure varied_quan_value array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->varied_param) {
-        fprintf(stdout, "VARY structure varied_param array is NULL (%s)", caller);
+        printf("VARY structure varied_param array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }
     if (!vary->flags) {
-        fprintf(stdout, "VARY structure flags array is NULL (%s)", caller);
+        printf("VARY structure flags array is NULL (%s)", caller);
         fflush(stdout);
         abort();
         }

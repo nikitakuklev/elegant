@@ -44,7 +44,7 @@ long check_duplic_elem(
     else
       new_name = (*new_elem)->name;
 #ifdef DEBUG    
-    fprintf(stdout, "checking name %s against %ld elements in list\n",
+    printf("checking name %s against %ld elements in list\n",
             new_name, n_elems);
     fflush(stdout);
 #endif
@@ -71,11 +71,11 @@ long check_duplic_elem(
       if (checkOnly) {
         free(elemArray);
 #ifdef DEBUG
-        fprintf(stdout, "**** check reveals problem\n");
+        printf("**** check reveals problem\n");
 #endif
         return 1;
       }
-      fprintf(stdout, "error: multiple definitions of element %s\n",
+      printf("error: multiple definitions of element %s\n",
               new_name);
       fflush(stdout);
       exitElegant(1);
@@ -87,11 +87,11 @@ long check_duplic_elem(
         if (checkOnly) {
           free(elemArray);
 #ifdef DEBUG
-          fprintf(stdout, "**** check reveals problem\n");
+          printf("**** check reveals problem\n");
 #endif
           return 1;
         }
-        fprintf(stdout, "error: multiple definitions of element %s\n",
+        printf("error: multiple definitions of element %s\n",
                 new_name);
         fflush(stdout);
         exitElegant(1);
@@ -103,11 +103,11 @@ long check_duplic_elem(
             if (checkOnly) {
               free(elemArray);
 #ifdef DEBUG
-              fprintf(stdout, "**** check reveals problem\n");
+              printf("**** check reveals problem\n");
 #endif
               return 1;
             }
-            fprintf(stdout, "error: multiple definitions of element %s\n",
+            printf("error: multiple definitions of element %s\n",
                     new_name);
             fflush(stdout);
             exitElegant(1);
@@ -123,7 +123,7 @@ long check_duplic_elem(
     }
     if (!checkOnly && insertionPoint) {
 #ifdef DEBUG
-      fprintf(stdout, "inserting %s before %s\n", new_name, insertionPoint->name);
+      printf("inserting %s before %s\n", new_name, insertionPoint->name);
       fflush(stdout);
 #endif
       elast = (*new_elem)->pred;
@@ -144,13 +144,13 @@ long check_duplic_elem(
 #ifdef DEBUG
   elem  = *elem0;
   i = 0;
-  fprintf(stdout, "Elements: \n");
+  printf("Elements: \n");
   while (elem && elem->name) {
-    fprintf(stdout, "  %s,%c", elem->name, ++i%10==0?'\n':' ');
+    printf("  %s,%c", elem->name, ++i%10==0?'\n':' ');
     fflush(stdout);
     elem = elem->succ;
   }
-  fprintf(stdout, "\n");
+  printf("\n");
   fflush(stdout);
 #endif
 
@@ -168,21 +168,21 @@ long check_duplic_line(
 
   n_lines--;
 #ifdef DEBUG
-  fprintf(stdout, "Checking name %s against %ld lines\n", new_name, n_lines);
+  printf("Checking name %s against %ld lines\n", new_name, n_lines);
 #endif
   for (i=0; i<n_lines; i++) {
 #ifdef DEBUG
-    fprintf(stdout, "%s,%c", line->name, (i+1)%10==0?'\n':' ');
+    printf("%s,%c", line->name, (i+1)%10==0?'\n':' ');
 #endif
     if (strcmp(new_name, line->name)==0) {
       if (checkOnly) {
 #ifdef DEBUG
-        fprintf(stdout, "+++ check reveals problem\n");
+        printf("+++ check reveals problem\n");
 #endif
         return 1;
       }
       *line->name = 0;
-      fprintf(stdout, "error: multiple definitions of line %s\n", 
+      printf("error: multiple definitions of line %s\n", 
              new_name);
       fflush(stdout);
       exitElegant(1);
@@ -190,7 +190,7 @@ long check_duplic_line(
     line = line->succ;
   }
 #ifdef DEBUG
-  fprintf(stdout, "\n");
+  printf("\n");
   fflush(stdout);
 #endif
   return 0;

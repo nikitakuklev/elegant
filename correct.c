@@ -371,10 +371,10 @@ void correction_setup(
     }
 
     if (verbose) {
-      fprintf(stdout, "there are %" PRId32 " useable horizontal monitors and %" PRId32 " useable horizontal correctors\n",
+      printf("there are %" PRId32 " useable horizontal monitors and %" PRId32 " useable horizontal correctors\n",
               _correct->CMFx->nmon, _correct->CMFx->ncor);
       fflush(stdout);
-      fprintf(stdout, "there are %" PRId32 " useable   vertical monitors and %" PRId32 " useable   vertical correctors\n",
+      printf("there are %" PRId32 " useable   vertical monitors and %" PRId32 " useable   vertical correctors\n",
               _correct->CMFy->nmon, _correct->CMFy->ncor);
       fflush(stdout);
     }
@@ -446,29 +446,29 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
     s_end = DBL_MAX;
     if (after && strlen(after)) {
       if (!(context=find_element(after, &context, &(beamline->elem)))) {
-        fprintf(stdout, "Element %s not found in beamline.\n", after);
+        printf("Element %s not found in beamline.\n", after);
         exitElegant(1);
       }
       s_start = context->end_pos;
       if (find_element(after, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+        printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
-      fprintf(stdout, "%s found at s = %le m\n", after, s_start);
+      printf("%s found at s = %le m\n", after, s_start);
       fflush(stdout);
     }
     context = NULL;
     if (before && strlen(before)) {
       if (!(context=find_element(before, &context, &(beamline->elem)))) {
-        fprintf(stdout, "Element %s not found in beamline.\n", before);
+        printf("Element %s not found in beamline.\n", before);
         exitElegant(1);
       }
       s_end = context->end_pos;
       if (find_element(before, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s found in beamline more than once.\n", before);
+        printf("Element %s found in beamline more than once.\n", before);
         exitElegant(1);
       }
-      fprintf(stdout, "%s found at s = %le m\n", before, s_end);
+      printf("%s found at s = %le m\n", before, s_end);
       fflush(stdout);
     }
     if (s_start>s_end) 
@@ -701,7 +701,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
       else
         coef = (M1->C[3]-M2->C[3])/(2*corr_tweek);
 #ifdef DEBUG
-      fprintf(stdout, "computed kick coefficient for %s.%s: %g rad/%s\n",
+      printf("computed kick coefficient for %s.%s: %g rad/%s\n",
 	      name, item, coef, entity_description[type].parameter[param_number].unit);
 #endif
 
@@ -711,7 +711,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
       elem->matrix = M0;
     }
     else {
-      fprintf(stdout, "error: element %s does not have a matrix--can't be used for steering.\n",
+      printf("error: element %s does not have a matrix--can't be used for steering.\n",
               elem->name);
       fflush(stdout);
       exitElegant(1);
@@ -841,7 +841,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           break;
         }
 	if (newly_pegged) {
-	  fprintf(stdout, "One or more correctors newly pegged\n");
+	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMx != correct->CMFx)
 	  copy_steering_results(correct->CMFx, correct->CMx, n_iter_taken);
@@ -905,7 +905,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
           break;
         }
 	if (newly_pegged) {
-	  fprintf(stdout, "One or more correctors newly pegged\n");
+	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMy != correct->CMFy)
 	  copy_steering_results(correct->CMFy, correct->CMy, n_iter_taken);
@@ -967,7 +967,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     x_failed = y_failed = bombed = 0;
     if (usePerturbedMatrix) {
       if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
-        fprintf(stdout, "Computing orbit correction matrices\n"); 
+        printf("Computing orbit correction matrices\n"); 
       if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0) && correct->xplane) {
 	if (!correct->use_response_from_computed_orbits)
 	  compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline,
@@ -1008,13 +1008,13 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                          correct->clorb_track_for_orbit,
                                          run, beamline, 
                                          closed_orbit, Cdp, &newly_pegged))<0) {
-          fprintf(stdout, "Horizontal correction has failed.\n");
+          printf("Horizontal correction has failed.\n");
           fflush(stdout);
           bombed = 1; 
           break;
         }
 	if (newly_pegged) {
-	  fprintf(stdout, "One or more correctors newly pegged\n");
+	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMx != correct->CMFx)
 	  copy_steering_results(correct->CMFx, correct->CMx, n_iter_taken);
@@ -1067,12 +1067,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                          run, beamline, 
                                          closed_orbit, Cdp, &newly_pegged))<0) {
           bombed = 1;
-          fprintf(stdout, "Vertical correction has failed.\n");
+          printf("Vertical correction has failed.\n");
           fflush(stdout);
           break;
         }
 	if (newly_pegged) {
-	  fprintf(stdout, "One or more correctors newly pegged\n");
+	  printf("One or more correctors newly pegged\n");
 	}
 	if (correct->CMFy != correct->CMy)
 	  copy_steering_results(correct->CMFy, correct->CMy, n_iter_taken);
@@ -1155,17 +1155,17 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 				 &CM->pegged, &CM->weight, coord, SL, run, beamline, 0);
 
   if (CM->nmon<CM->ncor) {
-    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    fprintf(stdout, "*** Correction may be unstable (use SV controls).\n");
+    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    printf("*** Correction may be unstable (use SV controls).\n");
     fflush(stdout);
   }
   if (CM->ncor==0) {
-    fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     return;
   }
   if (CM->nmon==0) {
-    fprintf(stdout, "Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     CM->ncor = 0;
     return;
@@ -1175,7 +1175,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     return;
 
   if (!(flags&COMPUTE_RESPONSE_SILENT)) {
-    fprintf(stdout, "computing response matrix...\n");
+    printf("computing response matrix...\n");
     fflush(stdout);
     report_stats(stdout, "start");
   }
@@ -1240,7 +1240,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 #ifdef DEBUG
-    fprintf(stdout, "corrector %s tweeked to %e (type=%ld, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
+    printf("corrector %s tweeked to %e (type=%ld, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
             i_type, kick_offset);
     fflush(stdout);
 #endif
@@ -1280,7 +1280,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (beamline->links)
       assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
 #ifdef DEBUG
-    fprintf(stdout, "corrector %s tweeked to %e\n", corr->name, *((double*)(corr->p_elem+kick_offset)));
+    printf("corrector %s tweeked to %e\n", corr->name, *((double*)(corr->p_elem+kick_offset)));
     fflush(stdout);
 #endif
     free_matrices(corr->matrix); free(corr->matrix); corr->matrix = NULL;
@@ -1424,8 +1424,8 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   }
 
   if (CM->nmon<CM->ncor) {
-    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    fprintf(stdout, "*** Correction may be unstable (use SV controls)\n");
+    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    printf("*** Correction may be unstable (use SV controls)\n");
     fflush(stdout);
   }
   for (iteration=0; iteration<=n_iterations; iteration++) {
@@ -1472,14 +1472,14 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                          (BEAM_SUMS**)NULL, (long*)NULL,
                          traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (beam) {
-      fprintf(stdout, "%ld particles survived tracking", n_part);
+      printf("%ld particles survived tracking", n_part);
       fflush(stdout);
       if (n_part==0) {
         for (i=0; i<beamline->n_elems+1; i++)
           if (traj[i].n_part==0)
             break;
         if (i!=0 && i<beamline->n_elems+1)
-          fprintf(stdout, "---all beam lost before z=%em (element %s)",
+          printf("---all beam lost before z=%em (element %s)",
                   traj[i].elem->end_pos, traj[i].elem->name);
         fflush(stdout);
         fputc('\n', stdout);
@@ -1539,7 +1539,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     fraction = minFraction*CM->corr_fraction;
 
 #if defined(DEBUG)
-    fprintf(stdout, "Changing correctors:");
+    printf("Changing correctors:");
     fflush(stdout);
 #endif
     /* step through beamline and change correctors */
@@ -1548,7 +1548,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       sl_index = CM->sl_index[i_corr];
       kick_offset = SL->param_offset[sl_index];
 #if defined(DEBUG)
-      fprintf(stdout, "name = %s#%ld, before = %e, ", corr->name, corr->occurence, *((double*)(corr->p_elem+kick_offset)));
+      printf("name = %s#%ld, before = %e, ", corr->name, corr->occurence, *((double*)(corr->p_elem+kick_offset)));
       fflush(stdout);
 #endif
       if (iteration==0)
@@ -1561,7 +1561,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       }
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
-      fprintf(stdout, "after = %e, limit = %le, sl_index = %ld\n", *((double*)(corr->p_elem+kick_offset)), SL->corr_limit[sl_index], sl_index);
+      printf("after = %e, limit = %le, sl_index = %ld\n", *((double*)(corr->p_elem+kick_offset)), SL->corr_limit[sl_index], sl_index);
       fflush(stdout);
 #endif
       if (corr->matrix) {
@@ -1729,12 +1729,12 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       reading += (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
 
 #if defined(DEBUG)
-      fprintf(stdout, "i_moni = %ld, i_corr = %ld, reading = %e", i_moni, i_corr, reading);
+      printf("i_moni = %ld, i_corr = %ld, reading = %e", i_moni, i_corr, reading);
       fflush(stdout);
 #endif
       if (iteration==n_iterations || (i_corr>=CM->ncor || Mij(CM->C, i_moni, i_corr)==0)) {
 #if defined(DEBUG)
-        fprintf(stdout, "\n");
+        printf("\n");
         fflush(stdout);
 #endif
         continue;
@@ -1760,7 +1760,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       /* Record the new kick strength */
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
-      fprintf(stdout, ", param = %e, fraction=%e -> kick = %e\n", param, fraction, *((double*)(corr->p_elem+kick_offset)));
+      printf(", param = %e, fraction=%e -> kick = %e\n", param, fraction, *((double*)(corr->p_elem+kick_offset)));
       fflush(stdout);
 #endif
       if (SL->corr_limit[sl_index] && fabs(*((double*)(corr->p_elem+kick_offset)))>(1+1e-6)*SL->corr_limit[sl_index]) {
@@ -2039,7 +2039,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
     moni_type_2 = T_MONI;
     break;
   default:
-    fprintf(stdout, "error: invalid coordinate for correction: %ld\n", plane);
+    printf("error: invalid coordinate for correction: %ld\n", plane);
     fflush(stdout);
     moni_type_1 = moni_type_2 = 0; /* suppress spurious compiler warning */
     exitElegant(1);
@@ -2089,7 +2089,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
       *kick_coef = trealloc(*kick_coef, sizeof(**kick_coef)*(*ncor+1));
       if (!((*kick_coef)[*ncor] = compute_kick_coefficient(corr, plane, corr->type, 
                                                            SL->corr_tweek[index], corr->name, SL->corr_param[index], run))) {
-        fprintf(stdout, "warning: changing %s.%s does not kick the beam--use for steering may result in a crash!\n",
+        printf("warning: changing %s.%s does not kick the beam--use for steering may result in a crash!\n",
                 corr->name, SL->corr_param[index]);
         fflush(stdout);
       }
@@ -2170,22 +2170,22 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
                                  &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 
 #ifdef DEBUG
-  fprintf(stdout, "finding twiss parameters beginning at %s.\n", start->name);
+  printf("finding twiss parameters beginning at %s.\n", start->name);
   fflush(stdout);
 #endif
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
     if (!(flags&COMPUTE_RESPONSE_SILENT)) {
-      fprintf(stdout, "updating twiss parameters...");
+      printf("updating twiss parameters...");
       fflush(stdout);
     }
     update_twiss_parameters(run, beamline, NULL);
 
 #ifdef DEBUG
-    fprintf(stdout, "Tunes: %e, %e\n", beamline->tune[0], beamline->tune[1]);
-    fprintf(stdout, "Initial eta: %e, %e\n", 
+    printf("Tunes: %e, %e\n", beamline->tune[0], beamline->tune[1]);
+    printf("Initial eta: %e, %e\n", 
             beamline->elem.twiss->etax, 
             beamline->elem.twiss->etay);
-    fprintf(stdout, "Final eta: %e, %e\n", 
+    printf("Final eta: %e, %e\n", 
             beamline->elast->twiss->etax, 
             beamline->elast->twiss->etay);
     fflush(stdout);
@@ -2195,31 +2195,31 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   }
 
 #ifdef DEBUG
-  fprintf(stdout, "monitors: ");
+  printf("monitors: ");
   fflush(stdout);
   for (i_moni=0; i_moni<CM->nmon; i_moni++)
-    fprintf(stdout, "%s ", CM->umoni[i_moni]->name);
+    printf("%s ", CM->umoni[i_moni]->name);
   fflush(stdout);
-  fprintf(stdout, "\ncorrectors: ");
+  printf("\ncorrectors: ");
   fflush(stdout);
   for (i_corr=0; i_corr<CM->ncor; i_corr++)
-    fprintf(stdout, "%s ", CM->ucorr[i_corr]->name);
+    printf("%s ", CM->ucorr[i_corr]->name);
   fflush(stdout);
   fputc('\n', stdout);
 #endif
 
   if (CM->nmon<CM->ncor) {
-    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    fprintf(stdout, "*** Correction may be unstable (use SV controls).\n");
+    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    printf("*** Correction may be unstable (use SV controls).\n");
     fflush(stdout);
   }
   if (CM->ncor==0) {
-    fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     return;
   }
   if (CM->nmon==0) {
-    fprintf(stdout, "Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     CM->ncor = 0;
     return;
@@ -2254,7 +2254,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   corrFactor   = tmalloc(sizeof(*corrFactor)*CM->ncor);
   corrFactorFL = tmalloc(sizeof(*corrFactorFL)*CM->ncor);
   if (!(flags&COMPUTE_RESPONSE_SILENT)) {
-    fprintf(stdout, "computing orbit response matrix...");
+    printf("computing orbit response matrix...");
     fflush(stdout);
   }
 
@@ -2334,7 +2334,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   if (flags&COMPUTE_RESPONSE_INVERT) {
     if (!(flags&COMPUTE_RESPONSE_SILENT)) {
       /* compute correction matrix T */
-      fprintf(stdout, "computing correction matrix...");
+      printf("computing correction matrix...");
       fflush(stdout);
     }
     if (CM->auto_limit_SVs && (CM->C->m < CM->C->n) && CM->remove_smallest_SVs < (CM->C->n - CM->C->m)) {
@@ -2374,7 +2374,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
                                  &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 
   if (CM->ncor==0) {
-    fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     return;
   }
@@ -2383,7 +2383,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     CM->kick_coef[i_corr] = 1;
 
   if (CM->nmon==0) {
-    fprintf(stdout, "Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
     CM->ncor = 0;
     return;
@@ -2401,7 +2401,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     return;
 
   if (!(flags&COMPUTE_RESPONSE_SILENT)) {
-    fprintf(stdout, "computing orbit response matrix...");
+    printf("computing orbit response matrix...");
     fflush(stdout);
   }
   
@@ -2441,7 +2441,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (!find_closed_orbit(clorb1, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            correct->clorb_iter_fraction, correct->clorb_fraction_multiplier, correct->clorb_multiplier_interval, NULL,
                            correct->clorb_track_for_orbit)) {
-      fprintf(stdout, "Failed to find perturbed closed orbit.\n");
+      printf("Failed to find perturbed closed orbit.\n");
       fflush(stdout);
       return;
     }
@@ -2453,7 +2453,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     if (!find_closed_orbit(clorb0, correct->clorb_accuracy, correct->clorb_iterations, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            correct->clorb_iter_fraction, correct->clorb_fraction_multiplier, correct->clorb_multiplier_interval, NULL,
                            correct->clorb_track_for_orbit)) {
-      fprintf(stdout, "Failed to find perturbed closed orbit.\n");
+      printf("Failed to find perturbed closed orbit.\n");
       fflush(stdout);
       return;
     }
@@ -2510,7 +2510,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
     if (!(flags&COMPUTE_RESPONSE_SILENT)) {
       /* compute correction matrix T */
-      fprintf(stdout, "computing correction matrix...");
+      printf("computing correction matrix...");
       fflush(stdout);
     }
     if (CM->auto_limit_SVs && (CM->C->m < CM->C->n) && CM->remove_smallest_SVs < (CM->C->n - CM->C->m)) {
@@ -2577,8 +2577,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   }
 
   if (CM->nmon<CM->ncor) {
-    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    fprintf(stdout, "*** Correction may be unstable (use SV controls)\n");
+    printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    printf("*** Correction may be unstable (use SV controls)\n");
     fflush(stdout);
   }
 
@@ -2602,7 +2602,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
     if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 
                            clorb_iter_frac, clorb_frac_mult, clorb_mult_interval, NULL, clorb_track_for_orbit)) {
-      fprintf(stdout, "Failed to find closed orbit.\n");
+      printf("Failed to find closed orbit.\n");
       fflush(stdout);
       return(-1);
     }
@@ -2651,14 +2651,14 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     rms_pos = sqrt(rms_pos/CM->nmon);
     if (iteration==0 && rms_pos>1e9) {
       /* if the closed orbit has RMS > 1e9m, I assume correction won't work and routine bombs */
-      fprintf(stdout, "Orbit beyond 10^9 m.  Aborting correction.\n");
+      printf("Orbit beyond 10^9 m.  Aborting correction.\n");
       fflush(stdout);
       return(-1);
     }
     if (rms_pos>best_rms_pos*1.01) {
       if (corr_fraction==1 || corr_fraction==0)
         break;            
-      fprintf(stdout, "orbit diverging on iteration %ld: RMS=%e m (was %e m)--redoing with correction fraction of %e\n", 
+      printf("orbit diverging on iteration %ld: RMS=%e m (was %e m)--redoing with correction fraction of %e\n", 
               iteration, rms_pos, best_rms_pos, corr_fraction = sqr(corr_fraction));
       best_rms_pos = rms_pos;
       fflush(stdout);
@@ -2770,13 +2770,13 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
 
   if (rms_pos>1e9) {
     /* if the final closed orbit has RMS > 1e9m, I assume correction didn't work and routine bombs */
-    fprintf(stdout, "Orbit beyond 1e9 m.  Aborting correction.\n");
+    printf("Orbit beyond 1e9 m.  Aborting correction.\n");
     fflush(stdout);
     return(-1);
   }
 
   if (rms_pos>best_rms_pos+CM->corr_accuracy && (corr_fraction==1 || corr_fraction==0)) {
-    fprintf(stdout, "orbit not improving--iteration terminated at iteration %ld with last result of %e m RMS\n",
+    printf("orbit not improving--iteration terminated at iteration %ld with last result of %e m RMS\n",
             iteration, rms_pos);
     fflush(stdout);
     /* step through beamline and change correctors back to last values */
@@ -2885,7 +2885,7 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
   if (correct->verbose)
-    fprintf(stdout, "%ld H correctors set to zero\n", nz);
+    printf("%ld H correctors set to zero\n", nz);
   return nz;
 }
 
@@ -2894,7 +2894,7 @@ long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
   long nz;
   nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
   if (correct->verbose)
-    fprintf(stdout, "%ld V correctors set to zero\n", nz);
+    printf("%ld V correctors set to zero\n", nz);
   return nz;
 }
 
@@ -3101,7 +3101,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
       bombElegant("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
     break;
   default:
-    fprintf(stdout, "error: element %s found in monitor list--internal logic error\n", 
+    printf("error: element %s found in monitor list--internal logic error\n", 
             elem->name);
     fflush(stdout);
     abort();
@@ -3259,7 +3259,7 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
     if (CM->ucorr[ic0]==newly_pegged) {
       if (CM->pegged[ic0]==2)
 	bombElegant("Previously pegged corrector has pegged again---shouldn't happen. (4)", NULL);
-      fprintf(stdout, "Corrector %ld is pegged\n", ic0);
+      printf("Corrector %ld is pegged\n", ic0);
       CM->pegged[ic0] = 2;
       break;
     }
@@ -3273,7 +3273,7 @@ int remove_pegged_corrector(CORMON_DATA *CMA, CORMON_DATA *CM, STEERING_LIST *SL
     if (!CM->pegged[ic0])
       CMA->ncor += 1;
     else {
-      fprintf(stdout, "Corrector %ld, %s#%ld, is pegged\n",
+      printf("Corrector %ld, %s#%ld, is pegged\n",
 	      ic0, CM->ucorr[ic0]->name, CM->ucorr[ic0]->occurence);
     }
   }

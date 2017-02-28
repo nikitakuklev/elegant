@@ -233,27 +233,27 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (echoNamelists) print_namelist(stdout, &fit_traces);
 
   if (!trace_data_file || !fexists(trace_data_file)) {
-    fprintf(stdout, "fit_traces: trace_data_file file not given or not found\n");
+    printf("fit_traces: trace_data_file file not given or not found\n");
     fflush(stdout);
     exitElegant(1);
   }
   if (!fit_parameters_file || !fexists(fit_parameters_file)) {
-    fprintf(stdout, "fit_traces: fit_parameters_file file not given or not found\n");
+    printf("fit_traces: fit_parameters_file file not given or not found\n");
     fflush(stdout);
     exitElegant(1);
   }
   if (iterations<1) {
-    fprintf(stdout, "fit_traces: iterations<1\n");
+    printf("fit_traces: iterations<1\n");
     fflush(stdout);
     exitElegant(1);
   }
   if (!fit_output_file) {
-    fprintf(stdout, "fit_traces: fit_output_file file not given\n");
+    printf("fit_traces: fit_output_file file not given\n");
     fflush(stdout);
     exitElegant(1);
   }
   if (use_SVD && SVs_to_remove && SVs_to_keep) {
-    fprintf(stdout, "Can't have both SVs_to_remove and SVs_to_keep nonzero.\n");
+    printf("Can't have both SVs_to_remove and SVs_to_keep nonzero.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -264,22 +264,22 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
    */
   traceData = fit_traces_readTraceDataFile(trace_data_file, beamline);
   if (!traceData->traces) {
-    fprintf(stdout, "fit_traces: no trace data in %s\n", trace_data_file);
+    printf("fit_traces: no trace data in %s\n", trace_data_file);
     fflush(stdout);
     exitElegant(1);
   }
-  fprintf(stdout, "%ld traces with %ld BPMs:\n", traceData->traces, traceData->BPMs);
+  printf("%ld traces with %ld BPMs:\n", traceData->traces, traceData->BPMs);
   fflush(stdout);
   for (iTrace=0; iTrace<traceData->traces; iTrace++) {
-    fprintf(stdout, "Trace %ld: ", iTrace);
+    printf("Trace %ld: ", iTrace);
     fflush(stdout);
     for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
-      fprintf(stdout, "(%10.3e, %10.3e)  ",
+      printf("(%10.3e, %10.3e)  ",
               traceData->x[iTrace][iBPM],
               traceData->y[iTrace][iBPM]);
       fflush(stdout);
     }
-    fprintf(stdout, "\n");
+    printf("\n");
     fflush(stdout);
   }
   
@@ -297,7 +297,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   
   /* check that there are enough traces for the given number of parameters */
   if (readbacks<(parameters+bpmCalParam->parameters)) {
-    fprintf(stdout, "fit_traces: too few traces for given number of fit parameters.\n");
+    printf("fit_traces: too few traces for given number of fit parameters.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -332,7 +332,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     n_restarts = 0;
   outputRow = 0;
   for (i_restart=0; i_restart<=n_restarts; i_restart++) {
-    fprintf(stdout, "Starting optimization pass %ld\n", i_restart);
+    printf("Starting optimization pass %ld\n", i_restart);
     if (n_restarts && i_restart>0)
       fit_trace_randomizeValues(paramVector0, traceData, fitParam, beamline, run, restart_randomization_level);
     else
@@ -371,14 +371,14 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
             break;
         }
-        fprintf(stdout, "RMS error is %e after trace optimization  %ld passes\n", 
+        printf("RMS error is %e after trace optimization  %ld passes\n", 
                 rmsError, passCount);
         fflush(stdout);
       }
       
       /*
         if (use_SVD) 
-        fprintf(stdout, "  min/max inverse SVs: %le %le\n",
+        printf("  min/max inverse SVs: %le %le\n",
         minSV, maxSV);
         fflush(stdout);
         */
@@ -426,20 +426,20 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         pass++;
       } while (--subIteration > 0);
       rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-      fprintf(stdout, "RMS error is %e after full  optimization  %ld passes,  %ld monitor calibrations, C=%e\n", 
+      printf("RMS error is %e after full  optimization  %ld passes,  %ld monitor calibrations, C=%e\n", 
               rmsError, passCount, monitorCalsDone, convergence_factor);
       fflush(stdout);
       if (use_SVD)  {
-        fprintf(stdout, "  min/max inverse SVs: %e %e\n",
+        printf("  min/max inverse SVs: %e %e\n",
                 minSV, maxSV);
         fflush(stdout);
       }
       if (rmsError<target) {
-        fprintf(stdout, "rms error less than target %e, terminating.\n", target);
+        printf("rms error less than target %e, terminating.\n", target);
         break;
       }
       if (fabs(lastRmsError-rmsError)<tolerance) {
-        fprintf(stdout, "rms error change less than tolerance %e, terminating.\n", tolerance);
+        printf("rms error change less than tolerance %e, terminating.\n", tolerance);
         break;
       }
     }
@@ -530,7 +530,7 @@ double fit_trace_findReadbackErrors
     lastBPMs = traceData->BPMs;
     if (!(x=SDDS_Realloc(x, sizeof(*x)*lastBPMs)) ||
         !(y=SDDS_Realloc(y, sizeof(*y)*lastBPMs))) {
-      fprintf(stdout, "Memory allocation failure in fit_trace_findReadbackErrors (1)\n");
+      printf("Memory allocation failure in fit_trace_findReadbackErrors (1)\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -538,7 +538,7 @@ double fit_trace_findReadbackErrors
   }
   if (!lastElements || lastElements!=beamline->n_elems) {
     if (!(trajectory = SDDS_Realloc(trajectory, sizeof(*trajectory)*beamline->n_elems))) {
-      fprintf(stdout, "Memory allocation failure in fit_trace_findReadbackErrors (2)\n");
+      printf("Memory allocation failure in fit_trace_findReadbackErrors (2)\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -591,7 +591,7 @@ void fit_traces_findDerivatives
         !(y0=SDDS_Realloc(y0, sizeof(*y0)*lastBPMs)) ||
         !(x=SDDS_Realloc(x, sizeof(*x)*lastBPMs)) ||
         !(y=SDDS_Realloc(y, sizeof(*y)*lastBPMs))) {
-      fprintf(stdout, "Memory allocation failure in fit_traces_findDerivatives\n");
+      printf("Memory allocation failure in fit_traces_findDerivatives\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -599,7 +599,7 @@ void fit_traces_findDerivatives
   }
   if (!lastElements || lastElements!=beamline->n_elems) {
     if (!(trajectory = SDDS_Realloc(trajectory, sizeof(*trajectory)*beamline->n_elems))) {
-      fprintf(stdout, "Memory allocation failure in fit_traces_findDerivatives\n");
+      printf("Memory allocation failure in fit_traces_findDerivatives\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -701,7 +701,7 @@ void find_trajectory_bpm_readouts
   if (!do_tracking(NULL, particle, nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
-    fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");
+    printf("Error tracking particle to find trajectory at BPMs.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -738,7 +738,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   ELEMENT_LIST *elem;
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, dataFile)) {
-    fprintf(stdout, "Error: couldn't read file %s\n", dataFile);
+    printf("Error: couldn't read file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
@@ -746,7 +746,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   if (SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "ElementName", NULL, SDDS_STRING, stdout) ||
       SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "ElementParameter", NULL, SDDS_STRING, stdout) ||
       SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "Delta", NULL, SDDS_ANY_NUMERIC_TYPE, stdout)) {
-    fprintf(stdout, "Problem with column(s) in file %s\n", dataFile);
+    printf("Problem with column(s) in file %s\n", dataFile);
     fflush(stdout);
     exitElegant(1);
   }
@@ -759,7 +759,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     changeLimitsPresent = 0;
     break;
   default:
-    fprintf(stdout, "Problem with column ChangeLimit.");
+    printf("Problem with column ChangeLimit.");
     fflush(stdout);
     exitElegant(1);
     break;
@@ -773,7 +773,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     lowerLimitsPresent = 0;
     break;
   default:
-    fprintf(stdout, "Problem with column LowerLimit.");
+    printf("Problem with column LowerLimit.");
     fflush(stdout);
     exitElegant(1);
     break;
@@ -786,7 +786,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     upperLimitsPresent = 0;
     break;
   default:
-    fprintf(stdout, "Problem with column UpperLimit.");
+    printf("Problem with column UpperLimit.");
     fflush(stdout);
     exitElegant(1);
     break;
@@ -794,13 +794,13 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   
   
   if (SDDS_ReadPage(&SDDSin)<=0) {
-    fprintf(stdout, "Problem reading data from file %s\n", dataFile);
+    printf("Problem reading data from file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
   if (!(ftp=malloc(sizeof(*ftp)))) {
-    fprintf(stdout, "Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
+    printf("Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -810,14 +810,14 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     exitElegant(1);
   }
   if ((names0=SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stdout, "No data in file (fit_traces_readFitParametersFile)\n");
+    printf("No data in file (fit_traces_readFitParametersFile)\n");
     fflush(stdout);
     exitElegant(1);
   }
   SDDS_SetRowFlags(&SDDSin, 0);
   for (i=0; i<names0; i++) {
     if (!(elem=find_element(name0[i], NULL, &(beamline->elem)))) {
-      fprintf(stdout, "Element %s not in lattice (fit_traces_readFitParametersFile)\n",
+      printf("Element %s not in lattice (fit_traces_readFitParametersFile)\n",
               name0[i]);
       fflush(stdout);
       exitElegant(1);
@@ -839,7 +839,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   }
   
   if (!(ftp->paramData=malloc(sizeof(*ftp->paramData)*ftp->parameters))) {
-    fprintf(stdout, "Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
+    printf("Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -850,7 +850,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
       (changeLimitsPresent && !(ftp->changeLimit=SDDS_GetColumnInDoubles(&SDDSin, "ChangeLimit"))) ||
       (lowerLimitsPresent && !(ftp->lowerLimit=SDDS_GetColumnInDoubles(&SDDSin, "LowerLimit"))) ||
       (upperLimitsPresent && !(ftp->upperLimit=SDDS_GetColumnInDoubles(&SDDSin, "UpperLimit")))) {
-    fprintf(stdout, "Problem reading data from file %s\n", dataFile);
+    printf("Problem reading data from file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
@@ -859,25 +859,25 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
       !(ftp->parameterIndex = malloc(sizeof(*ftp->parameterIndex)*ftp->parameters)) ||
       !(ftp->elementType = malloc(sizeof(*ftp->elementType)*ftp->parameters)) ||
       !(ftp->definedValue = malloc(sizeof(*ftp->definedValue)*ftp->parameters))) {
-    fprintf(stdout, "Error: memory allocation problem reading parameters file\n");
+    printf("Error: memory allocation problem reading parameters file\n");
     fflush(stdout);
     exitElegant(1);
   }
   for (i=0; i<ftp->parameters; i++) {
     if (!(ftp->target[i]=find_element(ftp->elementName[i], NULL, &(beamline->elem)))) {
-      fprintf(stdout, "Error: element %s not found in beamline\n", ftp->elementName[i]);
+      printf("Error: element %s not found in beamline\n", ftp->elementName[i]);
       fflush(stdout);
       exitElegant(1);
     }
     ftp->elementType[i] = elementType = ftp->target[i]->type;
     if ((ftp->parameterIndex[i]=parameterIndex=confirm_parameter(ftp->parameterName[i], elementType))<0) {
-      fprintf(stdout, "Error: element %s does not have a parameter called %s\n", 
+      printf("Error: element %s does not have a parameter called %s\n", 
               ftp->elementName[i], ftp->parameterName[i]);
       fflush(stdout);
       exitElegant(1);
     }
     if (entity_description[elementType].parameter[parameterIndex].type!=IS_DOUBLE) {
-      fprintf(stdout, "Error: parameter %s of element %s is not a double value\n",
+      printf("Error: parameter %s of element %s is not a double value\n",
               ftp->parameterName[i], ftp->elementName[i]);
       fflush(stdout);
       exitElegant(1);
@@ -891,19 +891,19 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
         if (ftp->lowerLimit[i]==ftp->upperLimit[i])
           continue;
         if (ftp->lowerLimit[i]>ftp->upperLimit[i]) {
-          fprintf(stdout, "Error: upperLimit<lowerLimit for parameter %s of element %s\n",
+          printf("Error: upperLimit<lowerLimit for parameter %s of element %s\n",
                   ftp->parameterName[i], ftp->elementName[i]);
           fflush(stdout);
           exitElegant(1);
         }
       }
       if (ftp->lowerLimit && ftp->lowerLimit[i]>ftp->definedValue[i]) {
-        fprintf(stdout, "Warning: parameter %s (%e) of element %s is already < lower limit (%e)\n",
+        printf("Warning: parameter %s (%e) of element %s is already < lower limit (%e)\n",
                 ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->lowerLimit[i]);
         fflush(stdout);
       }
       if (ftp->upperLimit && ftp->upperLimit[i]<ftp->definedValue[i]) {
-        fprintf(stdout, "Warning: parameter %s (%e) of element %s is already > upper limit (%e)\n",
+        printf("Warning: parameter %s (%e) of element %s is already > upper limit (%e)\n",
                 ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->upperLimit[i]);
         fflush(stdout);
       }
@@ -911,14 +911,14 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   }
   
   if (SDDS_ReadPage(&SDDSin)>1)
-    fprintf(stdout, "Warning: file %s has multiple pages---only the first is used.\n", dataFile);
+    printf("Warning: file %s has multiple pages---only the first is used.\n", dataFile);
     fflush(stdout);
   SDDS_Terminate(&SDDSin);
 
   if (bpmCalibrations)
-    fprintf(stdout, "%ld bpm calibration parameters defined.\n", ftp->parameters);
+    printf("%ld bpm calibration parameters defined.\n", ftp->parameters);
   else
-    fprintf(stdout, "%ld fit parameters defined.\n", ftp->parameters);
+    printf("%ld fit parameters defined.\n", ftp->parameters);
   fflush(stdout);
   
   return ftp;
@@ -938,7 +938,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   char **BPMName;
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, dataFile)) {
-    fprintf(stdout, "Error: couldn't read file %s\n", dataFile);
+    printf("Error: couldn't read file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
@@ -946,14 +946,14 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   if (SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "x", "m", SDDS_ANY_NUMERIC_TYPE, stdout) ||
       SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "y", "m", SDDS_ANY_NUMERIC_TYPE, stdout) ||
       SDDS_CHECK_OKAY!=SDDS_CheckColumn(&SDDSin, "BPMName", NULL, SDDS_STRING, stdout)) {
-    fprintf(stdout, "Problem with column(s) x, y, or BPMName in file %s\n",
+    printf("Problem with column(s) x, y, or BPMName in file %s\n",
             dataFile);
     fflush(stdout);
     exitElegant(1);
   }
   
   if (!(trace = malloc(sizeof(*trace)))) {
-    fprintf(stdout, "Error trying to allocate space for traces.\n");
+    printf("Error trying to allocate space for traces.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -966,7 +966,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
           !(trace->y = SDDS_Realloc(trace->y, (maxTraces+10)*sizeof(*trace->y))) || 
           !(trace->xSim = SDDS_Realloc(trace->xSim, (maxTraces+10)*sizeof(*trace->xSim))) ||
           !(trace->ySim = SDDS_Realloc(trace->ySim, (maxTraces+10)*sizeof(*trace->ySim)))) {
-        fprintf(stdout, "Error trying to allocate space for more traces.\n");
+        printf("Error trying to allocate space for more traces.\n");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);        
@@ -975,7 +975,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
     }
     if (!iTrace) {
       if (!(trace->BPMs = SDDS_CountRowsOfInterest(&SDDSin))) {
-        fprintf(stdout, "No traces on first page of trace file\n");
+        printf("No traces on first page of trace file\n");
         fflush(stdout);
         exitElegant(1);
       }
@@ -990,26 +990,26 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
         trace->xParamIndex[iBPM] = trace->yParamIndex[iBPM] = -2;
     } else {
       if (trace->BPMs != SDDS_CountRowsOfInterest(&SDDSin)) {
-        fprintf(stdout, "Fit traces have different numbers of data points.");
+        printf("Fit traces have different numbers of data points.");
         fflush(stdout);
         exitElegant(1);
       }
     }
     if (!(trace->x[iTrace]=SDDS_GetColumnInDoubles(&SDDSin, "x")) || 
         !(trace->y[iTrace]=SDDS_GetColumnInDoubles(&SDDSin, "y"))) {
-      fprintf(stdout, "Error trying to read x or y values for trace\n");
+      printf("Error trying to read x or y values for trace\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
     if (!(trace->xSim[iTrace]=malloc(sizeof(*trace->xSim[iTrace])*trace->BPMs)) ||
         !(trace->ySim[iTrace]=malloc(sizeof(*trace->ySim[iTrace])*trace->BPMs))) {
-      fprintf(stdout, "Memory allocation failure (xSim/ySim arrays)\n");
+      printf("Memory allocation failure (xSim/ySim arrays)\n");
       fflush(stdout);
       exitElegant(1);
     }
     if (!(BPMName=SDDS_GetColumn(&SDDSin, "BPMName"))) {
-      fprintf(stdout, "Error trying to read BPM names for trace\n");
+      printf("Error trying to read BPM names for trace\n");
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -1020,7 +1020,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
       /* require the same BPM names on every page */
       for (iBPM=0; iBPM<trace->BPMs; iBPM++) {
         if (strcmp(trace->BPMName[iBPM], BPMName[iBPM])) {
-          fprintf(stdout, "Fit traces have mismatched BPM names---all pages must have the names in the same order.\n");
+          printf("Fit traces have mismatched BPM names---all pages must have the names in the same order.\n");
           fflush(stdout);
           exitElegant(1);
         }
@@ -1036,7 +1036,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   iBPMFirst = 0;
   if (!(trace->latticeIndex=malloc(sizeof(*trace->latticeIndex)*trace->BPMs)) || \
       !(trace->element=malloc(sizeof(*trace->element)*trace->BPMs))) {
-    fprintf(stdout, "Memory allocation failure storing trace data.\n");
+    printf("Memory allocation failure storing trace data.\n");
     fflush(stdout);
     exitElegant(1);
   }
@@ -1044,7 +1044,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
       if (!(trace->element[iBPM]=find_element_index
             (trace->BPMName[iBPM], NULL, &(beamline->elem), trace->latticeIndex+iBPM))
           || trace->element[iBPM]->type!=T_MONI) {
-        fprintf(stdout, "Element %s not found or not of type MONI\n", trace->BPMName[iBPM]);
+        printf("Element %s not found or not of type MONI\n", trace->BPMName[iBPM]);
         fflush(stdout);
         exitElegant(1);
       }
@@ -1061,7 +1061,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
       trace->startingCoord[iTrace][3] = 0;
   }
   
-  fprintf(stdout, "%ld traces found with %ld BPMs.\n", trace->traces, trace->BPMs);
+  printf("%ld traces found with %ld BPMs.\n", trace->traces, trace->BPMs);
   fflush(stdout);
   fflush(stdout);
   return trace;
@@ -1090,7 +1090,7 @@ FIT_OUTPUT_DATA *fit_trace_setUpOutputFile(char *filename,
       !(outputData->paramDataIndex
         = malloc(sizeof(*outputData->paramDataIndex)*
                  (fitParam->parameters+bpmCalParam->parameters)))) {
-    fprintf(stdout, "memory allocation failure in fit_trace_setUpOutputFile");
+    printf("memory allocation failure in fit_trace_setUpOutputFile");
     fflush(stdout);
     exitElegant(1);
   }
@@ -1237,7 +1237,7 @@ double fit_trace_takeStep
   fit_traces_findDerivatives(traceData, fitParam, D, beamline, run);
 
 #ifdef DEBUG
-  fprintf(stdout, "D:\n");
+  printf("D:\n");
   fflush(stdout);
   m_foutput(stdout, D);
 #endif
@@ -1252,13 +1252,13 @@ double fit_trace_takeStep
     SingValue = v_resize(SingValue, D->n);
     svd(D, U, V, SingValue);
 #ifdef DEBUG
-    fprintf(stdout, "U:\n");
+    printf("U:\n");
     fflush(stdout);
     m_foutput(stdout, U);
-    fprintf(stdout, "V:\n");
+    printf("V:\n");
     fflush(stdout);
     m_foutput(stdout, V);
-    fprintf(stdout, "SingValue (raw): \n");
+    printf("SingValue (raw): \n");
     fflush(stdout);
     v_foutput(stdout, SingValue);
 #endif
@@ -1282,16 +1282,16 @@ double fit_trace_takeStep
     m_mlt(DInv, readbackVector, paramVector);
 
 #ifdef DEBUG
-    fprintf(stdout, "SingValue:\n");
+    printf("SingValue:\n");
     fflush(stdout);
     v_foutput(stdout, SingValue);
-    fprintf(stdout, "S:\n");
+    printf("S:\n");
     fflush(stdout);
     m_foutput(stdout, S);
-    fprintf(stdout, "T:\n");
+    printf("T:\n");
     fflush(stdout);
     m_foutput(stdout, T);
-    fprintf(stdout, "DInv:\n");
+    printf("DInv:\n");
     fflush(stdout);
     m_foutput(stdout, DInv);
 #endif
@@ -1306,16 +1306,16 @@ double fit_trace_takeStep
     m_mlt(DtDInv, Dt, DtDInvDt);
     m_mlt(DtDInvDt, readbackVector, paramVector);
 #ifdef DEBUG
-    fprintf(stdout, "DtDInv:\n");
+    printf("DtDInv:\n");
     fflush(stdout);
     m_foutput(stdout, DtDInv);
 #endif
   }
 #ifdef DEBUG
-  fprintf(stdout, "readbackVector:\n");
+  printf("readbackVector:\n");
   fflush(stdout);
   m_foutput(stdout, readbackVector);
-  fprintf(stdout, "paramVector:\n");
+  printf("paramVector:\n");
   fflush(stdout);
   m_foutput(stdout, paramVector);
 #endif
@@ -1356,12 +1356,12 @@ double fit_trace_takeStep
   }
   
   if (factor<1) {
-    fprintf(stdout, "changes reduced by factor %f to stay within change limits\n",
+    printf("changes reduced by factor %f to stay within change limits\n",
             factor);
     fflush(stdout);
     sm_mlt(factor, paramVector, paramVector);
   } else if (factor>1) {
-    fprintf(stdout, "Error: limiting factor exceeds 1.\n");
+    printf("Error: limiting factor exceeds 1.\n");
     fflush(stdout);
   }
 
@@ -1378,7 +1378,7 @@ double fit_trace_takeStep
     *(fitParam->paramData[iUserParam]) -= 
       paramVector->me[offset+iUserParam][0];
 /*
-    fprintf(stdout, "New value for %s[%s] is %e, change of %le\n",
+    printf("New value for %s[%s] is %e, change of %le\n",
             fitParam->elementName[iUserParam], fitParam->parameterName[iUserParam],
             *(fitParam->paramData[iUserParam]), paramVector->me[offset+iUserParam][0]);
     fflush(stdout);
@@ -1390,7 +1390,7 @@ double fit_trace_takeStep
     if (checkLimits && fitParam->lowerLimit &&
         *(fitParam->paramData[iUserParam])<fitParam->lowerLimit[iUserParam]) {
       *(fitParam->paramData[iUserParam]) = fitParam->lowerLimit[iUserParam];
-      fprintf(stdout, "Parameter %s of %s limited to %e\n",
+      printf("Parameter %s of %s limited to %e\n",
               fitParam->parameterName[iUserParam], fitParam->elementName[iUserParam],
               *(fitParam->paramData[iUserParam]));
       fflush(stdout);
@@ -1398,7 +1398,7 @@ double fit_trace_takeStep
     if (checkLimits && fitParam->upperLimit) {
       if (*(fitParam->paramData[iUserParam])>fitParam->upperLimit[iUserParam]) {
         *(fitParam->paramData[iUserParam]) = fitParam->upperLimit[iUserParam];
-        fprintf(stdout, "Parameter %s of %s limited to %e\n",
+        printf("Parameter %s of %s limited to %e\n",
                 fitParam->parameterName[iUserParam], fitParam->elementName[iUserParam],
                 *(fitParam->paramData[iUserParam]));
         fflush(stdout);

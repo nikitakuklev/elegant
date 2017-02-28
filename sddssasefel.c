@@ -212,7 +212,7 @@ int main(int argc, char **argv)
         elegantInput = 1;
         break;
       default:
-        fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
+        printf("error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
         exitElegant(1);
         break;
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
       if (SDDS_GetColumnIndex(&SDDSin, ValueName[i]->name)<0 ||
           ValueName[i]->onCommandline) {
         if (!ValueName[i]->onCommandline && ValueName[i]->requiredInFile) {
-          fprintf(stdout, "Error (sddssasefel): %s is required to be in the input file\n",
+          printf("Error (sddssasefel): %s is required to be in the input file\n",
                   ValueName[i]->name);
           fflush(stdout);
           exitElegant(1);
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
       if (SDDS_GetParameterIndex(&SDDSin, ValueName[i]->elegantName)<0 ||
           ValueName[i]->onCommandline) {
         if (!ValueName[i]->onCommandline && ValueName[i]->requiredInFile) {
-          fprintf(stdout, "Error (sddssasefel): %s is required to be in the input file\n",
+          printf("Error (sddssasefel): %s is required to be in the input file\n",
                   ValueName[i]->name);
           fflush(stdout);
           exitElegant(1);
@@ -455,14 +455,14 @@ void OptimizeSASEFELParameters
   if (i==8)
     return;
 #if DEBUG
-  fprintf(stdout, "Before optimization:\n");
+  printf("Before optimization:\n");
   fflush(stdout);
-  fprintf(stdout, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+  printf(" charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
   fflush(stdout);
   if (simplexMin(&result, x0, dx, lower, upper, disable, 8, 0.0, 1e-10,
                  SASEFELOptimFn, NULL, 500, 10, 12, 3.0, 1.0, 0)<0) {
-    fprintf(stdout, "Optimization unsuccessful\n");
+    printf("Optimization unsuccessful\n");
     fflush(stdout);
   }
 #endif
@@ -470,13 +470,13 @@ void OptimizeSASEFELParameters
     dx[i] = 0.1*x0[i];
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-9,
                  SASEFELOptimFn, NULL, 500, 10, 12, 3.0, 1.0, 0)<0) {
-    fprintf(stdout, "Optimization unsuccessful\n");
+    printf("Optimization unsuccessful\n");
     fflush(stdout);
   }
 #if DEBUG
-  fprintf(stdout, "After optimization:\n");
+  printf("After optimization:\n");
   fflush(stdout);
-  fprintf(stdout, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+  printf(" charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
   fflush(stdout);
 #endif
@@ -523,7 +523,7 @@ double SASEFELOptimFn(double *x, long *invalid)
     return 0;
   }
 #if DEBUG 
-  fprintf(stdout, "opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
+  printf("opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
           x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], saturationLength);
   fflush(stdout);
 #endif
@@ -542,7 +542,7 @@ void setOptimizationParameters(double *x0, double *dx, short *disable, long inde
     dx[index] = 0.1*x0[index];
     disable[index] = 0;
 #if DEBUG
-    fprintf(stdout, "optimizing %s\n", data.name);
+    printf("optimizing %s\n", data.name);
     fflush(stdout);
 #endif
   }

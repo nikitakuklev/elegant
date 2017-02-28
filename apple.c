@@ -82,7 +82,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
       } else {
 	apple->End_Pole = 0;
 	nleft = apple->periods;
-	fprintf(stdout, "warning: apple.c periods <2, set end_pole to zero\n");
+	printf("warning: apple.c periods <2, set end_pole to zero\n");
       }
     } else {
       nleft = apple->periods;
@@ -281,7 +281,7 @@ void f_ijk(double *X, long End_Pole, double step,
         f003y += 0.5/sqr(apple->kz[j])*(Cy*(4.*Ay3y/3. + apple->lz*apple->kz[j]*Ay1y)- 2.*Dy*(Ay1y - Ay2y/3.));
       }  
     }
-    /*    fprintf(stdout, "j=%ld, f002=%g , f002=%g, f002=%g\n", j, f002, f002x, f002y); */
+    /*    printf("j=%ld, f002=%g , f002=%g, f002=%g\n", j, f002, f002x, f002y); */
   }
   f002  = -step*apple->lz/4.*sqr(factor)*f002;
   f002x = -step*apple->lz/2.*sqr(factor)*f002x;
@@ -490,7 +490,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     apple->CxX3oYZ[xHarm[row]][j] = apple->CxX2oYZ[xHarm[row]][j] * kx[row];
     apple->CxXYoZ[xHarm[row]][j] = apple->CxXoZ[xHarm[row]][j] * ky[row];
     apple->CxY2oZ[xHarm[row]][j] = apple->CxYoZ[xHarm[row]][j] * ky[row];
-    /*fprintf(stdout, "i=%d, cmn=%g, kx=%g, ky=%g, kz=%g\n", row, apple->Cij[xHarm[row]][j], apple->kx[xHarm[row]][j], apple->ky[xHarm[row]][j], apple->kz[j]); */
+    /*printf("i=%d, cmn=%g, kx=%g, ky=%g, kz=%g\n", row, apple->Cij[xHarm[row]][j], apple->kx[xHarm[row]][j], apple->ky[xHarm[row]][j], apple->kz[j]); */
   }  
   apple->C1 = cos(apple->phi1);
   apple->C2 = cos(apple->phi2);

@@ -38,17 +38,17 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 
     if (!been_warned) {        
         if (modrf->freq<1e3 && modrf->freq)  {
-            fprintf(stdout, "\7\7\7warning: your MODRF frequency is less than 1kHz--this may be an error\n");
+            printf("\7\7\7warning: your MODRF frequency is less than 1kHz--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (fabs(modrf->volt)<100 && modrf->volt) {
-            fprintf(stdout, "\7\7\7warning: your MODRF voltage is less than 100V--this may be an error\n");
+            printf("\7\7\7warning: your MODRF voltage is less than 100V--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stdout, "units of parameters for MODRF are as follows:\n");
+            printf("units of parameters for MODRF are as follows:\n");
             fflush(stdout);
             print_dictionary_entry(stdout, T_MODRF, 0, 0);
             }
@@ -61,7 +61,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         bombElegant("NULL particle data pointer (modulated_rf_cavity)", NULL);
       for (ip=0; ip<np; ip++)
         if (!part[ip]) {
-          fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
+          printf("NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
           fflush(stdout);
 #if USE_MPI
           MPI_Abort(MPI_COMM_WORLD, 1);

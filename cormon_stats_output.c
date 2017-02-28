@@ -144,7 +144,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
                                    IC_PMAX, data[j][IC_PMAX],
                                    IC_CDP, data[j][IC_CDP],
                                    IC_STAGE, stage[j], -1)) {
-                fprintf(stdout, "Unable to set row %ld values (dump_cormon_stats)\n", j);
+                printf("Unable to set row %ld values (dump_cormon_stats)\n", j);
                 fflush(stdout);
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                 exitElegant(1);
@@ -165,7 +165,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
     if (verbose) {
         for (j=0; j<=n_iterations; j++) 
           if (Cdp) {
-                fprintf(stdout, "   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f   %8.3f %s\n",
+                printf("   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f   %8.3f %s\n",
                     'x'+(plane?1:0), j,
                     1e3*data[j][IC_KRMS], 1e3*data[j][IC_PRMS],
                     1e3*data[j][IC_KMAX], 1e3*data[j][IC_PMAX],
@@ -174,7 +174,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
                 fflush(stdout);
               }
           else {
-                fprintf(stdout, "   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f %s\n",
+                printf("   %c     %4ld     %8.3f    %8.3f     %8.3f     %8.3f %s\n",
                     'x'+(plane?1:0), j,
                     1e3*data[j][IC_KRMS], 1e3*data[j][IC_PRMS],
                     1e3*data[j][IC_KMAX], 1e3*data[j][IC_PMAX],
@@ -191,7 +191,7 @@ void finish_cormon_stats()
     if (!SDDS_cormon_initialized)
         return;
     if (!SDDS_Terminate(&SDDS_cormon)) {
-        fprintf(stdout, "Unable to terminate SDDS output for correctors (finish_cormon_stats)\n");
+        printf("Unable to terminate SDDS output for correctors (finish_cormon_stats)\n");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);

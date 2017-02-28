@@ -595,13 +595,13 @@ long doTuneFootprint(
 	    if (myid==0) {
 	      double newPercentage = (100.0*idelta)/ndelta;
 	      if ((newPercentage-oldPercentage)>=1) {
-		fprintf(stdout, "About %.1f%% done with energy scan\n", newPercentage);
+		printf("About %.1f%% done with energy scan\n", newPercentage);
 		oldPercentage = newPercentage;
 		fflush(stdout);
 	      }
 	    }
 #else
-	    fprintf(stdout, "Done with particle %ld of %ld for energy scan\n",
+	    printf("Done with particle %ld of %ld for energy scan\n",
 		    idelta+1, ndelta);
 	    fflush(stdout);
 #endif
@@ -753,13 +753,13 @@ long doTuneFootprint(
 	      if (myid==0) {
 		double newPercentage = 100*(ix*ny+iy+1.0)/(nx*ny);
 		if ((newPercentage-oldPercentage)>=5) {
-		  fprintf(stdout, "About %.1f%% done with x, y scan\n", newPercentage);
+		  printf("About %.1f%% done with x, y scan\n", newPercentage);
 		  oldPercentage = newPercentage;
 		  fflush(stdout);
 		}
 	      }
 #else
-	      fprintf(stdout, "Done with particle %ld of %ld\n",
+	      printf("Done with particle %ld of %ld\n",
 		      ix*ny+iy+1, nx*ny);
 	      fflush(stdout);
 #endif

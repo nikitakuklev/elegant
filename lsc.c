@@ -66,16 +66,16 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 
   Z0 = sqrt(mu_o/epsilon_o);
   if ((nb = LSC->bins)<2) {
-    fprintf(stdout, "Error: LSC must have an BINS>=2\n");
+    printf("Error: LSC must have an BINS>=2\n");
     exitElegant(1);
   }
   if (nb%2==1) {
-    fprintf(stdout, "Error: LSC must have an even number of bins\n");
+    printf("Error: LSC must have an even number of bins\n");
     exitElegant(1);
   }
   
 #if DEBUG
-  fprintf(stdout, "LSC: np=%ld, nb=%ld\n", np, nb);
+  printf("LSC: np=%ld, nb=%ld\n", np, nb);
   fflush(stdout);
 #endif
 
@@ -126,7 +126,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
     dt = (tmax-tmin)/(nb-3);
 #if DEBUG
-    fprintf(stdout, "tmin=%e, tmax=%e, dt=%e\n",
+    printf("tmin=%e, tmax=%e, dt=%e\n",
             tmin, tmax, dt);
     fflush(stdout);
 #endif
@@ -135,8 +135,8 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 
   if (!USE_MPI || !notSinglePart) {
     if (n_binned!=np) {
-      fprintf(stdout, "Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
-      fprintf(stdout, "This shouldn't happen.\n");
+      printf("Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
+      printf("This shouldn't happen.\n");
       fflush(stdout);
     }
   }
@@ -150,7 +150,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (!all_binned) {
       if (myid==1) {  
 	/* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */ 
-	fprintf(stdout, "warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
+	printf("warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
 	fflush(stdout); 
       }
     }
@@ -167,7 +167,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (LSC->smoothing) {
       SavitzyGolaySmooth(Itime, nb, LSC->SGOrder, LSC->SGHalfWidth, LSC->SGHalfWidth, 0);
 #if DEBUG
-      fprintf(stdout, "Smoothing completed\n");
+      printf("Smoothing completed\n");
       fflush(stdout);
 #endif
     }
@@ -186,7 +186,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     }  
 #endif
 #if DEBUG
-    fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
+    printf("Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
             Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
   fflush(stdout);
 #endif
@@ -202,7 +202,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-      fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
+      printf("Error: beam radius is zero in LSCDRIFT\n");
       exitElegant(1);
     }
     /* - compute kSC */
@@ -216,7 +216,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     dk = df*PIx2/c_mks;
 
 #if DEBUG
-    fprintf(stdout, "rb: %e m   LSC: I0=%e A    kSC=%e 1/m\nlength = %e m   dt = %e s    df = %e Hz   dk = %e 1/m\n",
+    printf("rb: %e m   LSC: I0=%e A    kSC=%e 1/m\nlength = %e m   dt = %e s    df = %e Hz   dk = %e 1/m\n",
             beamRadius, Imax, kSC, length, dt, df, dk);
   fflush(stdout);
 #endif
@@ -294,7 +294,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     factor = charge->macroParticleCharge/dt;
     a2 = Z0/(PI*sqr(beamRadius))*length;
 #if DEBUG
-    fprintf(stdout, "nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
+    printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
     fflush(stdout);
 
     if (!fpd) {
@@ -323,7 +323,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       }
     }
 #if DEBUG
-    fprintf(stdout, "Maximum |Z| = %e Ohm\n", Zmax);
+    printf("Maximum |Z| = %e Ohm\n", Zmax);
     fflush(stdout);
 #endif
 
@@ -390,12 +390,12 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
   if (nb%2==1) {
-    fprintf(stdout, "Error: LSC must have an even number of bins\n");
+    printf("Error: LSC must have an even number of bins\n");
     exitElegant(1);
   }
   
 #if DEBUG
-  fprintf(stdout, "%ld bins for LSC\n", nb);
+  printf("%ld bins for LSC\n", nb);
   fflush(stdout);
 #endif
 
@@ -420,18 +420,18 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #endif
   dt = (tmax-tmin)/(nb-3);
 #if DEBUG
-  fprintf(stdout, "tmin=%e, tmax=%e, dt=%e\n",
+  printf("tmin=%e, tmax=%e, dt=%e\n",
           tmin, tmax, dt);
   fflush(stdout);
 #endif
   n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
 #if DEBUG
-  fprintf(stdout, "%ld of %ld particles binned\n", n_binned, np);
+  printf("%ld of %ld particles binned\n", n_binned, np);
   fflush(stdout);
 #endif
   if (n_binned!=np && !USE_MPI) {/* This will not be checked in Pelegant to avoid communications */
-    fprintf(stdout, "Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
-    fprintf(stdout, "This shouldn't happen.\n");
+    printf("Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
+    printf("This shouldn't happen.\n");
     fflush(stdout);
   }
 
@@ -452,7 +452,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   }     
 #endif
 #if DEBUG
-  fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
+  printf("Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
           Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
   fflush(stdout);
 #endif
@@ -467,7 +467,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
       rms_emittance(part, 0, 2, np, &S11, NULL, &S33);    
 #endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-    fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
+    printf("Error: beam radius is zero in LSCDRIFT\n");
     exitElegant(1);
   }
   /* - compute kSC */
@@ -475,9 +475,9 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 
   /* - compute maximum length that we should be traveling between kicks */
 #if DEBUG
-  fprintf(stdout, "rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
+  printf("rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
           beamRadius, Imax, kSC, dt, df, dk);
-  fprintf(stdout, "lengthScale=%e m   dgamma/gamma=%e\n", lengthScale, dgammaOverGamma);
+  printf("lengthScale=%e m   dgamma/gamma=%e\n", lengthScale, dgammaOverGamma);
   fflush(stdout);
 #endif
   length = 1/kSC;
@@ -498,9 +498,9 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
       if (myid==1) 
 	dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
 #endif
-      fprintf(stdout, "Error: distance between LSC kicks for %s at z=%e is too large.\n",
+      printf("Error: distance between LSC kicks for %s at z=%e is too large.\n",
 	      context.elementName, context.zStart);
-      fprintf(stdout, "Suggest reducing distance between kicks by factor %e\n",
+      printf("Suggest reducing distance between kicks by factor %e\n",
             lengthScale/length);
 #if USE_MPI
       MPI_Abort (workers, 1);
@@ -582,7 +582,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   factor = charge->macroParticleCharge/dt;
   a2 = Z0/(PI*sqr(beamRadius))*lengthScale;
 #if DEBUG
-  fprintf(stdout, "nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
+  printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
   fflush(stdout);
 #endif
   Zmax = 0;
@@ -598,7 +598,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     Vfreq[iImag] = -Ifreq[iReal]*ZImag*factor;
   }
 #if DEBUG
-  fprintf(stdout, "Maximum |Z| = %e Ohm\n", Zmax);
+  printf("Maximum |Z| = %e Ohm\n", Zmax);
   fflush(stdout);
 #endif
 

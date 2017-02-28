@@ -481,14 +481,14 @@ long doMomentumApertureSearch(
     coord[0][6] = 1;
     pCentral = run->p_central;
     if (verbosity>1) 
-      fprintf(stdout, "Tracking fiducial particle\n");
+      printf("Tracking fiducial particle\n");
     delete_phase_references();
     reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
     if (!code) {
-      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      printf("Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     }
     printf("Fiducialization completed\n");
@@ -527,7 +527,7 @@ long doMomentumApertureSearch(
       }
 #if !USE_MPI
       if (verbosity>0) {
-        fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+        printf("Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
       }
 #endif
@@ -585,7 +585,7 @@ long doMomentumApertureSearch(
         deltaInterval = delta_step_size*deltaSign;
         
         if (verbosity>1) {
-          fprintf(stdout, " Searching for %s side from %e toward %e with interval %e\n", side==0?"negative":"positive",
+          printf(" Searching for %s side from %e toward %e with interval %e\n", side==0?"negative":"positive",
                   deltaStart, deltaLimit1[side], delta_step_size);
           fflush(stdout);
         }
@@ -605,11 +605,11 @@ long doMomentumApertureSearch(
                              (fiducialize?FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL:0)+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
 	                     control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
-            fprintf(stdout, "Fiducial particle tune is undefined.\n");
+            printf("Fiducial particle tune is undefined.\n");
             exitElegant(1);
           }
           if (verbosity>3)
-            fprintf(stdout, "  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
+            printf("  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
         }
         
         deltaLimit = deltaLimit1[side];
@@ -639,7 +639,7 @@ long doMomentumApertureSearch(
             coord[0][6] = 1;
             pCentral = run->p_central;
             if (verbosity>3) {
-              fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
+              printf("  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
                       delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5],
                       pCentral);
               fflush(stdout);
@@ -657,18 +657,18 @@ long doMomentumApertureSearch(
               if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
                 if (forbid_resonance_crossing) {
                   if (verbosity>3)
-                    fprintf(stdout, "   Resonance crossing detected (no tunes).  Particle lost\n");
+                    printf("   Resonance crossing detected (no tunes).  Particle lost\n");
                   code = 0; /* lost */
                 }
               } else {
                 if (verbosity>3) 
-                  fprintf(stdout, "   Tunes: %e, %e\n", tune[0], tune[1]);
+                  printf("   Tunes: %e, %e\n", tune[0], tune[1]);
                 if (forbid_resonance_crossing &&
                     ( (((long)(2*tune[0])) - ((long)(2*nominalTune[0])))!=0 ||
                      (((long)(2*tune[1])) - ((long)(2*nominalTune[1])))!=0) ) {
                   /* crossed integer or half integer */
                   if (verbosity>3)
-                    fprintf(stdout, "   Resonance crossing detected (%e, %e -> %e, %e).  Particle lost\n",
+                    printf("   Resonance crossing detected (%e, %e -> %e, %e).  Particle lost\n",
                             nominalTune[0], nominalTune[1], tune[0], tune[1]);
                   code = 0;
                 }
@@ -679,10 +679,10 @@ long doMomentumApertureSearch(
               /* particle lost */
               if (verbosity>3) {
                 long i;
-                fprintf(stdout, "  Particle lost with delta0 = %e at s = %e\n", delta, coord[0][4]);
+                printf("  Particle lost with delta0 = %e at s = %e\n", delta, coord[0][4]);
                 if (verbosity>4)
                   for (i=0; i<6; i++)
-                    fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
+                    printf("   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
               lostOnPass[slot][outputRow] = lostParticles[0][7];
@@ -695,9 +695,9 @@ long doMomentumApertureSearch(
               break;
             } else {
               if (verbosity>2)
-                fprintf(stdout, "  Particle survived with delta0 = %e\n", delta);
+                printf("  Particle survived with delta0 = %e\n", delta);
               if (verbosity>3)
-                fprintf(stdout, "     Final coordinates: %le, %le, %le, %le, %le, %le\n",
+                printf("     Final coordinates: %le, %le, %le, %le, %le, %le\n",
                         coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
               deltaSurvived[slot][outputRow] = delta;
               survivorFound[slot][outputRow] = 1;
@@ -709,17 +709,17 @@ long doMomentumApertureSearch(
           if (split==0) {
             if (!survivorFound[slot][outputRow]) {
 	      if (!soft_failure) {
-		fprintf(stdout, "Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+		printf("Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
 		exit(1);
 	      }
-              fprintf(stdout, "Warning: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+              printf("Warning: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
 	      deltaSurvived[slot][outputRow] = 0;
 	      survivorFound[slot][outputRow] = 1;
 	      split = splits;
             }
             if (!loserFound[slot][outputRow]) {
               if (!soft_failure) {
-                fprintf(stdout, "Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+                printf("Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
                 exitElegant(1);
               }
 	      loserFound[slot][outputRow] = 1;
@@ -743,7 +743,7 @@ long doMomentumApertureSearch(
 #endif
 #endif
         if (verbosity>0) {
-          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
+          printf("Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
                   deltaSurvived[slot][outputRow]);
           fflush(stdout);
         }
@@ -902,7 +902,7 @@ long multiparticleLocalMomentumAcceptance(
   deltaStep = (delta_positive_limit-delta_negative_limit)/(nDelta-1);
   nTotal = nElem*nDelta;
   if (nTotal%n_working_processors!=0) {
-    fprintf(stdout, "Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
+    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
             n_working_processors, nDelta, nElem);
     nEachProcessor =  (nTotal/n_working_processors)+1;
   } else {
@@ -914,7 +914,7 @@ long multiparticleLocalMomentumAcceptance(
           nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
 #endif
   if (myid==0) {
-    fprintf(stdout, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
+    printf("nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
             nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
     fflush(stdout);
   }
@@ -946,7 +946,7 @@ long multiparticleLocalMomentumAcceptance(
   coord[0][6] = 1;
   pCentral = run->p_central;
   if (verbosity>1) {
-    fprintf(stdout, "Tracking fiducial particle\n");
+    printf("Tracking fiducial particle\n");
     fflush(stdout);
   }
   delete_phase_references();
@@ -956,11 +956,11 @@ long multiparticleLocalMomentumAcceptance(
                      FIRST_BEAM_IS_FIDUCIAL+(verbosity>4?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, NULL, NULL);
   if (!code) {
     if (myid==0)
-      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      printf("Fiducial particle lost. Don't know what to do.\n");
     exitElegant(1);
   }
   if (myid==0) {
-    fprintf(stdout, "Fiducial particle tracked.\n");
+    printf("Fiducial particle tracked.\n");
     fflush(stdout);
   }
   
@@ -1138,7 +1138,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[0], turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (x).\n");
+    printf("Warning: NAFF failed for tune analysis from tracking (x).\n");
     return 0;
   }
 
@@ -1146,7 +1146,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[1], turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,0, 0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    printf("Warning: NAFF failed for tune analysis from tracking (xp).\n");
     return 0;
   }
 
@@ -1154,7 +1154,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[2], turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (y).\n");
+    printf("Warning: NAFF failed for tune analysis from tracking (y).\n");
     return 0;
   }
 
@@ -1162,7 +1162,7 @@ long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long
 		  &dummy, 0.0, 1.0, turnByTurnCoord[3], turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    printf("Warning: NAFF failed for tune analysis from tracking (yp).\n");
     return 0;
   }
 

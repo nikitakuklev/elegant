@@ -82,7 +82,7 @@ void setup_coupled_twiss_output(
         !SDDS_DefineSimpleColumn(&SDDScoupled, "betay2", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "etax", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "etay", "m", SDDS_DOUBLE)) {
-      fprintf(stdout, "Unable to set up file %s\n", filename);
+      printf("Unable to set up file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -106,7 +106,7 @@ void setup_coupled_twiss_output(
             strcpy_ss(units, "");
           sprintf(name, "S%ld%ld", i+1, j+1);
           if (!SDDS_DefineSimpleColumn(&SDDScoupled, name, units, SDDS_DOUBLE)) {
-            fprintf(stdout, "Unable to set up file %s\n", filename);
+            printf("Unable to set up file %s\n", filename);
             fflush(stdout);
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
@@ -115,7 +115,7 @@ void setup_coupled_twiss_output(
     }
     
     if (!SDDS_WriteLayout(&SDDScoupled)) {
-      fprintf(stdout, "Unable to set up file %s\n", filename);
+      printf("Unable to set up file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -146,7 +146,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
     return 0;
   
   if (verbosity>1)
-    fprintf(stdout, "\n* Computing coupled sigma matrix\n");
+    printf("\n* Computing coupled sigma matrix\n");
   
   if (emittances_from_twiss_command) {
     if (!(beamline->flags&BEAMLINE_TWISS_DONE)) {
@@ -160,7 +160,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
     emit_x = beamline->radIntegrals.ex0;
     sigma_dp = beamline->radIntegrals.sigmadelta;
     if (verbosity>1) 
-      fprintf(stdout, "Raw emittance = %e, momentum spread = %e\n", emit_x, sigma_dp);
+      printf("Raw emittance = %e, momentum spread = %e\n", emit_x, sigma_dp);
   }
   fflush(stdout);
   

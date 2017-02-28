@@ -221,11 +221,11 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         if (myid==1)
           dup2(fd, fileno(stdout));
 #endif
-        fprintf(stdout, "%s %s: Time span of bunch %ld (%21.15le->%21.15le, span %21.15le s) is more than half the total time span (%21.15le s).\n",
+        printf("%s %s: Time span of bunch %ld (%21.15le->%21.15le, span %21.15le s) is more than half the total time span (%21.15le s).\n",
                 entity_name[tcontext.elementType],
                 tcontext.elementName, iBucket, tmin, tmax, tmax-tmin, nb*dt);
-        fprintf(stdout, "If using broad-band impedance, you should increase the number of bins (or use auto-scaling) and rerun.\n");
-        fprintf(stdout, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+        printf("If using broad-band impedance, you should increase the number of bins (or use auto-scaling) and rerun.\n");
+        printf("If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
 	if (!zlongit->allowLongBeam) {
 #if USE_MPI
 #if MPI_DEBUG
@@ -279,10 +279,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
       }
 #if (!USE_MPI)
       if (n_binned!=np) {
-        fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
+        printf("Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
         if (!not_first_call) {
-          fprintf(stdout, "*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
-          fprintf(stdout, "    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
+          printf("*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
+          printf("    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
         }
         fflush(stdout);
       }
@@ -298,8 +298,8 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
           if (myid==1) 
             dup2(fd, fileno(stdout));
 #endif
-          fprintf(stdout, "*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
-          fprintf(stdout, "    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
+          printf("*** Not all particles binned in ZLONGIT. This may produce unphysical results.  Your impedance needs smaller frequency\n");
+          printf("    spacing to cover a longer time span. Invoking auto-scaling may help for broad-band impedances. \n");
           fflush(stdout); 
 #ifndef MPI_DEBUG
 #if defined(_WIN32)
@@ -606,7 +606,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                                         &(zlongit->bin_size), &(zlongit->n_bins), zlongit->max_n_bins);
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
         nfreq = zlongit->n_bins/2 + 1;
-        fprintf(stdout, "ZLONGIT has %ld frequency points with df=%e\n",
+        printf("ZLONGIT has %ld frequency points with df=%e\n",
                 nfreq, df);
         fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
@@ -687,7 +687,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
         nfreq = n_spect;
-        fprintf(stdout, "Using Nb=%ld and dt=%e s (span of %e s) in ZLONGIT\n",
+        printf("Using Nb=%ld and dt=%e s (span of %e s) in ZLONGIT\n",
                 zlongit->n_bins, zlongit->bin_size, zlongit->n_bins*zlongit->bin_size);
         fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
@@ -731,7 +731,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
 #ifndef MPI_DEBUG
           dup2(fd,fileno(stdout)); 
 #endif
-          fprintf(stdout, "Error: unable to write layout for ZLONGIT wake file %s\n", zlongit->wakes);
+          printf("Error: unable to write layout for ZLONGIT wake file %s\n", zlongit->wakes);
           fflush(stdout);
 #ifndef MPI_DEBUG
           close(fd);

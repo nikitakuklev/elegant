@@ -207,7 +207,7 @@ void initializeUndulatorKickMap(UKICKMAP *map)
   }
   
   if (!(map->points=SDDS_CountRowsOfInterest(&SDDSin)) || map->points<2) {
-    fprintf(stdout, "file %s for UKICKMAP element has insufficient data\n", map->inputFile);
+    printf("file %s for UKICKMAP element has insufficient data\n", map->inputFile);
     fflush(stdout);
     exitElegant(1);
   }
@@ -233,10 +233,10 @@ void initializeUndulatorKickMap(UKICKMAP *map)
     nx ++;
   }
   if ((nx>=map->points) || nx<=1 || y[0]>y[nx] || (map->ny = map->points/nx)<=1) {
-    fprintf(stdout, "file %s for UKICKMAP element doesn't have correct structure or amount of data\n",
+    printf("file %s for UKICKMAP element doesn't have correct structure or amount of data\n",
             map->inputFile);
     fflush(stdout);
-    fprintf(stdout, "nx = %ld, ny=%ld\n", map->nx, map->ny);
+    printf("nx = %ld, ny=%ld\n", map->nx, map->ny);
     fflush(stdout);
     exitElegant(1);
   }
@@ -246,7 +246,7 @@ void initializeUndulatorKickMap(UKICKMAP *map)
   map->ymin = y[0];
   map->ymax = y[map->points-1];
   map->dyg = (map->ymax-map->ymin)/(map->ny-1);
-  fprintf(stdout, "UKICKMAP element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
+  printf("UKICKMAP element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
           map->inputFile, map->nx, map->ny, map->dxg, map->dyg, 
           map->xmin, map->xmax, 
           map->ymin, map->ymax);

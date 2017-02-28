@@ -227,7 +227,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
         SWAP_DOUBLE(Bmin, Bmax);
       
       if (!quiet) 
-        fprintf(stdout, "3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
+        printf("3D BRAT field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
                 nx, ny, nz, dx, dy, dz,
                 xi, xf, yi, yf, zi, zf,
                 Bmin, Bmax
@@ -1123,7 +1123,7 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
     BzNorm = Bzd;
     
     if (!quiet) 
-      fprintf(stdout, "3D field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
+      printf("3D field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
               nx, ny, nz, dx, dy, dz,
               xi, xf, yi, yf, zi, zf,
               Bmin, Bmax

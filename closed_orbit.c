@@ -161,9 +161,9 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
       dp = 0;
 
     if (verbosity && do_output) {
-      fprintf(stdout, "Starting point for closed orbit\n");
+      printf("Starting point for closed orbit\n");
       for (i=0; i<6; i++) 
-        fprintf(stdout, "%e%s", starting_coord[i], i==5?"\n":", ");
+        printf("%e%s", starting_coord[i], i==5?"\n":", ");
     }
 
     if (!clorb)
@@ -188,10 +188,10 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 
     /* do output, if required */
     if (verbosity && !bad_orbit && do_output) {
-        fprintf(stdout, "closed orbit: \n");
+        printf("closed orbit: \n");
         fflush(stdout);
         for (i=0; i<6; i++)
-            fprintf(stdout, "%.8e ", starting_coord[i]);
+            printf("%.8e ", starting_coord[i]);
             fflush(stdout);
         fputc('\n', stdout);
         }
@@ -269,7 +269,7 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
                                IC_XP, traj[i].centroid[1], IC_YP, traj[i].centroid[3], 
                                IC_ELEMENT, name, IC_OCCURENCE, occurence, 
                                IC_TYPE, i==0?"MARK":entity_name[traj[i].elem->type], -1)) {
-            fprintf(stdout, "Unable to set row %ld values (dump_closed_orbit)\n", i);
+            printf("Unable to set row %ld values (dump_closed_orbit)\n", i);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exitElegant(1);
@@ -355,13 +355,13 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   }
 
   if (!m_invert(INV_ImR, ImR)) {
-    fprintf(stdout, "error: unable to invert matrix to find closed orbit!\nThe R matrix is:");
+    printf("error: unable to invert matrix to find closed orbit!\nThe R matrix is:");
     fflush(stdout);
     for (i=0; i<4; i++) {
-      fprintf(stdout, "R[%ld]: ", i+1);
+      printf("R[%ld]: ", i+1);
       fflush(stdout);
       for (j=0; j<4; j++)
-        fprintf(stdout, "%14.6e ", R->a[i][j]);
+        printf("%14.6e ", R->a[i][j]);
       fflush(stdout);
       fputc('\n', stdout);
     }
@@ -446,13 +446,13 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           change_fraction = change_fraction/2;
           goodCount = -10;
           if (change_fraction<0.01) {
-            fprintf(stdout, "warning: closed orbit diverging--iteration stopped (accuracy requirement is %e)\n", clorb_acc);
-            fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
+            printf("warning: closed orbit diverging--iteration stopped (accuracy requirement is %e)\n", clorb_acc);
+            printf("last error was %e, current is %e\n", last_error, error);
             fflush(stdout);
             n_iter = clorb_iter;
             break;
           }
-          fprintf(stdout, "reduced iteration fraction to %e\n", change_fraction);
+          printf("reduced iteration fraction to %e\n", change_fraction);
           fflush(stdout);
         } else {
           goodCount++;
@@ -484,7 +484,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][5] = dp;
       } while (++n_iter<clorb_iter);
       if (n_iter>=clorb_iter && error>clorb_acc)  {
-        fprintf(stdout, "error: closed orbit did not converge to better than %e after %ld iterations (requirement is %e)\n",
+        printf("error: closed orbit did not converge to better than %e after %ld iterations (requirement is %e)\n",
                 error, n_iter, clorb_acc);
         fflush(stdout);
         if (isnan(error) || isinf(error)) {
@@ -502,9 +502,9 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
       double buffer[4];
       if (convergenceProblem) {
         if (n_turns>0)
-          fprintf(stdout, "Trying secondary, tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
+          printf("Trying secondary, tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
         else
-          fprintf(stdout, "Using tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
+          printf("Using tracking-based method for orbit determination (%ld turns).\n", labs(n_turns));
         fflush(stdout);
       }
       for (i=0; i<4; i++)
@@ -532,7 +532,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][5] = dp;
         /*
         if (n_turns>0) {
-          fprintf(stdout, "New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
+          printf("New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
                   turn, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3], 
                   one_part[0][4], one_part[0][5]);
           fflush(stdout);
@@ -549,7 +549,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   }
   
 #ifdef DEBUG
-  fprintf(stdout, "final closed-orbit after %ld iterations:\n%e %e %e %e %e %e\n",
+  printf("final closed-orbit after %ld iterations:\n%e %e %e %e %e %e\n",
           n_iter, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3],
           one_part[0][4], one_part[0][5]);
   fflush(stdout);
@@ -644,13 +644,13 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     lastError = error;
     error = fabs(last_dp-dp);
 #if DEBUG
-      fprintf(stdout, "orbit error for iterationsDone=%ld, dp=%le is %le, ds=%le:\n", iterationsDone, dp, error, ds);
+      printf("orbit error for iterationsDone=%ld, dp=%le is %le, ds=%le:\n", iterationsDone, dp, error, ds);
       for (i=0; i<6; i++)
-	fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
-      fprintf(stdout, "\n");
+	printf("%10.3e ", clorb[0].centroid[i]);
+      printf("\n");
       for (i=0; i<6; i++)
-	fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
-      fprintf(stdout, "\n");
+	printf("%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+      printf("\n");
 #endif
     if (error<clorb_acc && iterationsDone>1) {
 #if DEBUG
@@ -690,19 +690,19 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     iterationsDone++;
   }
 #if DEBUG
-  fprintf(stdout, "%ld iterations done for delta in fixed-length orbit computation\ndelta convergence error was %le\ndelta=%le, length error was %le\n", 
+  printf("%ld iterations done for delta in fixed-length orbit computation\ndelta convergence error was %le\ndelta=%le, length error was %le\n", 
           iterationsDone, last_dp-dp, dp, ds);
 #endif
   if (iterationsDone<iterationsLeft)
     return 1;
-  fprintf(stdout, "Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
-  fprintf(stdout, "dp = %le, %le\n", dp, last_dp);
+  printf("Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
+  printf("dp = %le, %le\n", dp, last_dp);
   for (i=0; i<6; i++)
-    fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
-  fprintf(stdout, "\n");
+    printf("%10.3e ", clorb[0].centroid[i]);
+  printf("\n");
   for (i=0; i<6; i++)
-    fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
-  fprintf(stdout, "\n");
+    printf("%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+  printf("\n");
   
   return 0;
 }

@@ -136,8 +136,8 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
                     tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
             exit(1);
           }
-          fprintf(stdout, "Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
-          fprintf(stdout, "The beam length is %le s, while the wake length is %le s\n",
+          printf("Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
+          printf("The beam length is %le s, while the wake length is %le s\n",
                   tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
           /*
             if (abs(tmax-tmean)<abs(tmin-tmean)) 
@@ -149,9 +149,9 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 
         dt = wakeData->dt;
         if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
-          fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
-          fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
-          fprintf(stdout, "         Consider using a wake with finer time spacing in WAKE elements.\n");
+          printf("Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
+          printf("         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
+          printf("         Consider using a wake with finer time spacing in WAKE elements.\n");
           fflush(stdout);
           shortBunchWarning = 1;
         }
@@ -166,9 +166,9 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
           tmax += dt;
         }
         if (nb<=0) {
-          fprintf(stdout, "Warning: Number of wake bins is 0 or negative\n");
-          fprintf(stdout, "probably indicating an extremely long bunch\n");
-          fprintf(stdout, "Wake ignored!\n");
+          printf("Warning: Number of wake bins is 0 or negative\n");
+          printf("probably indicating an extremely long bunch\n");
+          printf("Wake ignored!\n");
           return;
         }
 #ifdef DEBUG
@@ -186,8 +186,8 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 
       if (!USE_MPI || !notSinglePart) {
         if (n_binned!=np) {
-          fprintf(stdout, "warning: only %ld of %ld particles were binned (WAKE)\n", n_binned, np);
-          fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+          printf("warning: only %ld of %ld particles were binned (WAKE)\n", n_binned, np);
+          printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
           fflush(stdout);
           return;
         }
@@ -201,8 +201,8 @@ else if (isSlave) {
   if (!all_binned) {
     if (myid==1) {  
       /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-      fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-      fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+      printf("warning: Not all of %ld particles were binned (WAKE)\n", np);
+      printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
       fflush(stdout); 
     }
   }

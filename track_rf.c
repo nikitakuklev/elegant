@@ -167,7 +167,7 @@ void track_through_rf_deflector(
 	  y += yp*length;
 	}
 #ifdef DEBUG
-	fprintf(stdout, "ip=%ld  is=%ld  dphase=%f, phase=%f\n",
+	printf("ip=%ld  is=%ld  dphase=%f, phase=%f\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
 	cos_phase = cos((t_part-tLight)*omega + Ephase);

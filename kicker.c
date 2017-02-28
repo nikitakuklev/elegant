@@ -120,9 +120,9 @@ void track_through_kicker(
                 if (kicker->t_wf[i]>=time)
                     break;
             if (i==kicker->n_wf) {
-                fprintf(stdout, "error: waveform interpolation problem in track_through_kicker()\n");
+                printf("error: waveform interpolation problem in track_through_kicker()\n");
                 fflush(stdout);
-                fprintf(stdout, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
+                printf("particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
                         time, kicker->tmin, kicker->tmax);
                 fflush(stdout);
                 exitElegant(1);
@@ -237,7 +237,7 @@ void track_through_kicker(
     
 /*
     if (np)
-        fprintf(stdout, "average kicker amplitude = %f\n", sum_amp/np);
+        printf("average kicker amplitude = %f\n", sum_amp/np);
         fflush(stdout);
  */
 
@@ -387,9 +387,9 @@ void track_through_mkicker(
         if (kicker->t_wf[i]>=time)
           break;
       if (i==kicker->n_wf) {
-        fprintf(stdout, "error: waveform interpolation problem in track_through_mkicker()\n");
+        printf("error: waveform interpolation problem in track_through_mkicker()\n");
         fflush(stdout);
-        fprintf(stdout, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
+        printf("particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
                 time, kicker->tmin, kicker->tmax);
         fflush(stdout);
         exitElegant(1);
@@ -464,7 +464,7 @@ void initializeDeflectionMap(KICKER *kicker)
   }
   
   if (!(kicker->points=SDDS_CountRowsOfInterest(&SDDSin)) || kicker->points<2) {
-    fprintf(stdout, "file %s for KICKER element has insufficient data\n", kicker->deflectionMap);
+    printf("file %s for KICKER element has insufficient data\n", kicker->deflectionMap);
     fflush(stdout);
     exitElegant(1);
   }
@@ -482,10 +482,10 @@ void initializeDeflectionMap(KICKER *kicker)
     nx ++;
   }
   if ((nx>=kicker->points) || nx<=1 || y[0]>y[nx] || (kicker->ny = kicker->points/nx)<=1) {
-    fprintf(stdout, "file %s for KICKER element doesn't have correct structure or amount of data\n",
+    printf("file %s for KICKER element doesn't have correct structure or amount of data\n",
             kicker->deflectionMap);
     fflush(stdout);
-    fprintf(stdout, "nx = %ld, ny=%ld\n", kicker->nx, kicker->ny);
+    printf("nx = %ld, ny=%ld\n", kicker->nx, kicker->ny);
     fflush(stdout);
     exitElegant(1);
   }
@@ -495,7 +495,7 @@ void initializeDeflectionMap(KICKER *kicker)
   kicker->ymin = y[0];
   kicker->ymax = y[kicker->points-1];
   kicker->dyg = (kicker->ymax-kicker->ymin)/(kicker->ny-1);
-  fprintf(stdout, "KICKER element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
+  printf("KICKER element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
           kicker->deflectionMap, kicker->nx, kicker->ny, kicker->dxg, kicker->dyg, 
           kicker->xmin, kicker->xmax, 
           kicker->ymin, kicker->ymax);

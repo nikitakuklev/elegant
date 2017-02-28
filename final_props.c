@@ -207,7 +207,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
       (optimization_quantities &&
        !SDDS_DefineSimpleParameters(SDDS_table, optimization_quantities, optimization_quantity_name, optimization_quantity_unit,
                                     SDDS_DOUBLE))) {
-    fprintf(stdout, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
+    printf("Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
@@ -221,7 +221,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
         if (strcmp(error_element_name[i], error_element_name[j])==0)
           break;
       if (i==j) {
-        fprintf(stdout, "Problem defining extra SDDS parameter %s in file %s (%s)\n", error_element_name[i],
+        printf("Problem defining extra SDDS parameter %s in file %s (%s)\n", error_element_name[i],
                 filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -230,7 +230,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
       duplicates++;
     }
     if ((error_element_index[i] = SDDS_GetParameterIndex(SDDS_table, error_element_name[i]))<0) {
-      fprintf(stdout, "Problem defining extra SDDS parameter %s in file %s (%s): couldn't retrieve index\n",
+      printf("Problem defining extra SDDS parameter %s in file %s (%s): couldn't retrieve index\n",
                error_element_name[i],
               filename, caller);
       fflush(stdout);
@@ -241,7 +241,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
   *error_element_duplicates = duplicates;
   
   if (!SDDS_WriteLayout(SDDS_table)) {
-    fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+    printf("Unable to write SDDS layout for file %s (%s)\n", filename, caller);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
@@ -289,7 +289,7 @@ void dump_final_properties
     if (isMaster)
       if ((n_properties=SDDS_ParameterCount(SDDS_table)) !=
 	  (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates)) {
-        fprintf(stdout, "error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
+        printf("error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
                 n_properties, 
                 FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates);
         fflush(stdout);
@@ -304,7 +304,7 @@ void dump_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
                         totalSteps, charge))!=
         (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates))) {
-        fprintf(stdout, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
+        printf("error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
             n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates));
         fflush(stdout);
         abort();
@@ -469,7 +469,7 @@ long compute_final_properties
 #endif
     for (i=sum=0; i<sums->n_part; i++) {
       if (!coord[i]) {
-        fprintf(stdout, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
+        printf("coordinate element for particle %ld is null (compute_final_properties)\n", i);
         fflush(stdout);
         abort();
       }
@@ -740,12 +740,12 @@ double beam_width(double fraction, double **coord, long n_part,
   /* find indices of particles that are at +/- fraction/2 from the median */
   i_median = n_part/2;
   if ((i_lo = i_median - fraction/2.*n_part)<0) {
-    fprintf(stdout, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
+    printf("warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_lo, n_part, fraction);
     fflush(stdout);
   }
   if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
-    fprintf(stdout, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
+    printf("warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_hi, n_part, fraction);
     fflush(stdout);
   }
@@ -1019,7 +1019,7 @@ void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, l
     if (!n)
         return;
     if (!bp) {
-        fprintf(stdout, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_longitudinal_parameters\n");
+        printf("NULL ONE_PLANE_PARAMETERS pointer passed to compute_longitudinal_parameters\n");
         fflush(stdout);
         abort();
         }
@@ -1079,7 +1079,7 @@ void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, lon
   if (!n)
     return;
   if (!bp) {
-    fprintf(stdout, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_transverse_parameters\n");
+    printf("NULL ONE_PLANE_PARAMETERS pointer passed to compute_transverse_parameters\n");
     fflush(stdout);
     abort();
   }
@@ -1129,7 +1129,7 @@ void rpn_store_final_properties(double *value, long number)
     long i;
     log_entry("rpn_store_final_parameters");
     if (number!=FINAL_PROPERTY_PARAMETERS) {
-        fprintf(stdout, "error: number of values (%ld) being stored != FINAL_PROPERTY_PARAMETERS (rpn_store_final_parameters)\n",
+        printf("error: number of values (%ld) being stored != FINAL_PROPERTY_PARAMETERS (rpn_store_final_parameters)\n",
                 number);
         fflush(stdout);
         abort();
