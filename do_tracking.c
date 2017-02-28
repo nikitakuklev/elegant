@@ -1512,6 +1512,14 @@ long do_tracking(
 		saveISR = ((CSBEND*)eptr->p_elem)->isr;
 		((CSBEND*)eptr->p_elem)->isr = 0;
 	      }
+
+#ifdef HAVE_GPU
+	      /* CSBEND with REFERENCE_CORRECTION currently doesn't work on the GPU */
+	      if (((CSBEND*)eptr->p_elem)->referenceCorrection) {
+		coord = forceParticlesToCpu("track_through_csbend");
+	      };
+#endif
+
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
 					   *P_central, accepted, last_z, NULL, run->rootname, maxamp,
 					   &(run->apertureData));
