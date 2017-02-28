@@ -412,6 +412,11 @@ public:
 
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
+      if (present &&
+	  ((xMax && fabs(x + dx - xCen)>xMax) ||
+	   (yMax && fabs(y + dy - yCen)>yMax) )) {
+	return 0;
+      }
       for (step=0; step<4; step++) {
         if (drift) {
           dsh = drift*driftFrac[step];
@@ -419,11 +424,6 @@ public:
           y += yp*dsh;
           s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
           *dzLoss += dsh;
-        }
-        if (present &&
-            ((xMax && fabs(x + dx - xCen)>xMax) ||
-             (yMax && fabs(y + dy - yCen)>yMax) )) {
-          return 0;
         }
   
         if (!kickFrac[step])
@@ -810,7 +810,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     }
     break;
   default:
-    fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
+    printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
     KnL = dx = dy = dz = tilt = drift = 0;
     integ_order = order = n_kicks = 0;

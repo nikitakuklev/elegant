@@ -536,7 +536,7 @@ void gpu_do_match_energy(long np, double* P_central, long change_beam) {
 #endif 
 
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e to match beam, ratio %e\n",
+      printf("Changing reference momentum from %e to %e to match beam, ratio %e\n",
               *P_central, P_average, (*P_central/P_average-1)*active);
 #endif
     if (fabs(P_average-(*P_central))/(*P_central)>1e-14){ 
@@ -596,8 +596,8 @@ void gpu_do_match_energy(long np, double* P_central, long change_beam) {
 
       cudaError_t err = cudaThreadSynchronize();
       if(err!=0){
-	fprintf(stdout,"GPU Error or caught assert(isfinite(coord[4])) after trying to match energy\n");
-	fprintf(stdout, "P_average = %e  P_central = %e  dP_centroid = %e\n",
+	printf("GPU Error or caught assert(isfinite(coord[4])) after trying to match energy\n");
+	printf("P_average = %e  P_central = %e  dP_centroid = %e\n",
 		P_average, *P_central, dP_centroid);
 	fflush(stdout);
 #if (USE_MPI)
@@ -756,7 +756,7 @@ void gpu_set_central_momentum(long np, double  P_new, double *P_central) {
 
     if (*P_central != P_new) {
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e in %s at %e to match beam\n",
+      printf("Changing reference momentum from %e to %e in %s at %e to match beam\n",
               *P_central, P_new, trackingContext.elementName, trackingContext.zEnd);
 #endif
       if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster)) {
@@ -772,7 +772,7 @@ void gpu_set_central_momentum(long np, double  P_new, double *P_central) {
     }
     if (*P_central != P_new) {
 #ifdef DEBUG_FIDUCIALIZATION
-      fprintf(stdout, "Changing reference momentum from %e to %e in %s\n",
+      printf("Changing reference momentum from %e to %e in %s\n",
               *P_central, P_new, trackingContext.elementName);
 #endif
       gpuDriver(np, gpu_set_central_momentum_kernel(*P_central, P_new));

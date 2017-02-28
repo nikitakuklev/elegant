@@ -51,16 +51,16 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
 
   Z0 = sqrt(mu_o/epsilon_o);
   if ((nb = LSC->bins)<2) {
-    fprintf(stdout, "Error: LSC must have an BINS>=2\n");
+    printf("Error: LSC must have an BINS>=2\n");
     exitElegant(1);
   }
   if (nb%2==1) {
-    fprintf(stdout, "GPU Error: LSC must have an even number of bins\n");
+    printf("GPU Error: LSC must have an even number of bins\n");
     exitElegant(1);
   }
   
 #if DEBUG
-  fprintf(stdout, "GPU: %ld bins for LSC\n", nb);
+  printf("GPU: %ld bins for LSC\n", nb);
   fflush(stdout);
 #endif
 
@@ -101,7 +101,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     dt = (tmax-tmin)/(nb-3);
 #if DEBUG
     double tmean = gpuReduceAdd(d_time, np) / np;
-    fprintf(stdout, "tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
+    printf("tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
             tmean, tmin, tmax, dt);
     fflush(stdout);
 #endif
@@ -113,8 +113,8 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
   
     if (!USE_MPI || !notSinglePart) {
       if (n_binned!=np) {
-	fprintf(stdout, "GPU: Warning: only %ld of %u particles were binned (LSCDRIFT)!  Note that tmin %g, tmax %g\n", n_binned, np, tmin, tmax);
-	fprintf(stdout, "GPU: This shouldn't happen.\n");
+	printf("GPU: Warning: only %ld of %u particles were binned (LSCDRIFT)!  Note that tmin %g, tmax %g\n", n_binned, np, tmin, tmax);
+	printf("GPU: This shouldn't happen.\n");
 	fflush(stdout);
       }
     } 
@@ -128,7 +128,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
       if (!all_binned) {
 	if (myid==1) {  
 	  /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */ 
-	  fprintf(stdout, "GPU: warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
+	  printf("GPU: warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
 	  fflush(stdout); 
 	}
       }
@@ -145,7 +145,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     if (LSC->smoothing) {
       SavitzyGolaySmooth(Itime, nb, LSC->SGOrder, LSC->SGHalfWidth, LSC->SGHalfWidth, 0);
 #if DEBUG
-      fprintf(stdout, "GPU: Smoothing completed\n");
+      printf("GPU: Smoothing completed\n");
       fflush(stdout);
 #endif
     }
@@ -164,7 +164,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
   }  
 #endif
 #if DEBUG
-  fprintf(stdout, "GPU: Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
+  printf("GPU: Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
           Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
   fflush(stdout);
 #endif
@@ -183,7 +183,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-      fprintf(stdout, "GPU: Error: beam radius is zero in LSCDRIFT\n");
+      printf("GPU: Error: beam radius is zero in LSCDRIFT\n");
       exitElegant(1);
     }
     /* - compute kSC */
@@ -197,7 +197,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     dk = df*PIx2/c_mks;
 
 #if DEBUG
-  fprintf(stdout, "rb: %e m   LSC: I0=%e A    kSC=%e 1/m\nlength = %e m   dt = %e s    df = %e Hz   dk = %e 1/m\n",
+  printf("rb: %e m   LSC: I0=%e A    kSC=%e 1/m\nlength = %e m   dt = %e s    df = %e Hz   dk = %e 1/m\n",
             beamRadius, Imax, kSC, length, dt, df, dk);
   fflush(stdout);
 #endif
@@ -275,7 +275,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
     factor = charge->macroParticleCharge/dt;
     a2 = Z0/(PI*sqr(beamRadius))*length;
 #if DEBUG
-    fprintf(stdout, "nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
+    printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
     fflush(stdout);
 
     if (!fpd) {
@@ -304,7 +304,7 @@ void gpu_track_through_lscdrift(unsigned int np, LSCDRIFT *LSC, double Po,
       }
     }
 #if DEBUG
-    fprintf(stdout, "Maximum |Z| = %e Ohm\n", Zmax);
+    printf("Maximum |Z| = %e Ohm\n", Zmax);
     fflush(stdout);
 #endif
 
@@ -367,12 +367,12 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
   if (nb%2==1) {
-    fprintf(stdout, "GPU: Error: LSC must have an even number of bins\n");
+    printf("GPU: Error: LSC must have an even number of bins\n");
     exitElegant(1);
   }
   
 #if DEBUG
-  fprintf(stdout, "%ld bins for LSC\n", nb);
+  printf("%ld bins for LSC\n", nb);
   fflush(stdout);
 #endif
 
@@ -401,7 +401,7 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
 #endif
   dt = (tmax-tmin)/(nb-3);
 #if DEBUG
-  fprintf(stdout, "tmean=(not computed on gpu), tmin=%e, tmax=%e, dt=%e\n",
+  printf("tmean=(not computed on gpu), tmin=%e, tmax=%e, dt=%e\n",
           tmin, tmax, dt);
   fflush(stdout);
 #endif
@@ -409,12 +409,12 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
   cudaMemcpy(Itime, d_Itime, nb*sizeof(double), cudaMemcpyDeviceToHost);
 
 #if DEBUG
-  fprintf(stdout, "%ld of %ld particles binned\n", n_binned, np);
+  printf("%ld of %ld particles binned\n", n_binned, np);
   fflush(stdout);
 #endif
   if (n_binned!=np && !USE_MPI) {/* This will not be checked in Pelegant to avoid communications */
-    fprintf(stdout, "GPU: Warning: only %ld of %u particles were binned (LSCKICK)!\n", n_binned, np);
-    fprintf(stdout, "GPU: This shouldn't happen (LSCKICK).\n");
+    printf("GPU: Warning: only %ld of %u particles were binned (LSCKICK)!\n", n_binned, np);
+    printf("GPU: This shouldn't happen (LSCKICK).\n");
     fflush(stdout);
   }
 
@@ -435,7 +435,7 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
   }     
 #endif
 #if DEBUG
-  fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
+  printf("Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
           Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
   fflush(stdout);
 #endif
@@ -452,7 +452,7 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
 #endif
 
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-    fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
+    printf("Error: beam radius is zero in LSCDRIFT\n");
     exitElegant(1);
   }
   /* - compute kSC */
@@ -460,9 +460,9 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
 
   /* - compute maximum length that we should be traveling between kicks */
 #if DEBUG
-  fprintf(stdout, "rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
+  printf("rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
           beamRadius, Imax, kSC, dt, df, dk);
-  fprintf(stdout, "lengthScale=%e m   dgamma/gamma=%e\n", lengthScale, dgammaOverGamma);
+  printf("lengthScale=%e m   dgamma/gamma=%e\n", lengthScale, dgammaOverGamma);
   fflush(stdout);
 #endif
   length = 1/kSC;
@@ -483,9 +483,9 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
       if (myid==1) 
 	dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
 #endif
-      fprintf(stdout, "Error: distance between LSC kicks for %s at z=%e is too large.\n",
+      printf("Error: distance between LSC kicks for %s at z=%e is too large.\n",
 	      context.elementName, context.zStart);
-      fprintf(stdout, "Suggest reducing distance between kicks by factor %e\n",
+      printf("Suggest reducing distance between kicks by factor %e\n",
             lengthScale/length);
 #if USE_MPI
       MPI_Abort (workers, 1);
@@ -567,7 +567,7 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
   factor = charge->macroParticleCharge/dt;
   a2 = Z0/(PI*sqr(beamRadius))*lengthScale;
 #if DEBUG
-  fprintf(stdout, "nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
+  printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
   fflush(stdout);
 #endif
   Zmax = 0;
@@ -583,7 +583,7 @@ void gpu_addLSCKick(double* d_particles, unsigned int particlePitch,
     Vfreq[iImag] = -Ifreq[iReal]*ZImag*factor;
   }
 #if DEBUG
-  fprintf(stdout, "Maximum |Z| = %e Ohm\n", Zmax);
+  printf("Maximum |Z| = %e Ohm\n", Zmax);
   fflush(stdout);
 #endif
 

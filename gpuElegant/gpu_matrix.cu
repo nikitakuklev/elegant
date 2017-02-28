@@ -460,7 +460,7 @@ void gpu_track_particles(VMATRIX *M, unsigned int n_part) {
       gpu_hexpole_matrix_track_particles(M, n_part);
       return;
     default:
-      fprintf(stdout, "invalid order: %ld  (gpu_track_particle)\n", M->order);
+      printf("invalid order: %ld  (gpu_track_particle)\n", M->order);
       fflush(stdout);
       exitElegant(1);
       break;

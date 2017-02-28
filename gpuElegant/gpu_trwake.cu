@@ -162,7 +162,7 @@ void gpu_track_through_trwake(long np0,
           bombElegant("track_through_wake: gpuElegant requires nbins<nparticles", NULL);
 
         if (tmin>tmax || nb<=0) {
-          fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
+          printf("Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
           exitElegant(1);
         }
 
@@ -201,8 +201,8 @@ void gpu_track_through_trwake(long np0,
       }
 #if (!USE_MPI)
       if (n_binned!=np) {
-        fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-        fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
+        printf("warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+        printf("consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
         fflush(stdout);
       }
 #else
@@ -215,16 +215,16 @@ void gpu_track_through_trwake(long np0,
           if (!all_binned) {
             if (myid==1) {
               /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */
-              fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-              fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+              printf("warning: Not all of %ld particles were binned (WAKE)\n", np);
+              printf("consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
               fflush(stdout);
             }
           }
         }
       } else {
         if (n_binned!=np) {
-          fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
-          fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
+          printf("warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+          printf("consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
           fflush(stdout);
         }
       }

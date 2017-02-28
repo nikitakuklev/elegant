@@ -654,7 +654,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     e2_kick_limit *= rho0/rho_actual;
   }
   if (e1_kick_limit>0 || e2_kick_limit>0)
-    fprintf(stdout, "rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
+    printf("rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
     fflush(stdout);
   
@@ -1824,7 +1824,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
   if (charge) {
     macroParticleCharge = charge->macroParticleCharge;
   } else if (csbend->bins && !csrWarning && csbend->csr) {
-    fprintf(stdout, "Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
+    printf("Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
     fflush(stdout);
     csrWarning = 1;
   }
@@ -2234,9 +2234,9 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
  
 #if (!USE_MPI) 
 	if (nBinned != n_part) {
-          fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+          printf("Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		  nBinned, n_part, z_start, kick, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	  printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
@@ -2252,10 +2252,10 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
 	  MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
           nBinned = nBinned_total; 
 	  if (!all_binned && isMaster) {
-	    fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+	    printf("Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		    z_start, kick,
 		  csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	  printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
@@ -2280,9 +2280,9 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
                                   csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1,
                                   csbend->clipNegativeBins);
           if (nz && negativeWarningsLeft) {
-	    fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n", nz);
+	    printf("Warning: low pass filter resulted in negative values in %ld bins\n", nz);
             if (--negativeWarningsLeft==0)
-              fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
+              printf("         Further warnings will be suppressed for this run.\n");
             fflush(stdout);
           }
         }
@@ -2535,9 +2535,9 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
 
 #if (!USE_MPI)
     if (nBinned!=n_part) {
-      fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
+      printf("Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
 	      nBinned, n_part, z_start, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
@@ -2554,10 +2554,10 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
       MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       nBinned = nBinned_total; 
       if (!all_binned && isMaster) {
-	fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+	printf("Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
 		z_start, kick,
 	      csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
       }
@@ -2890,7 +2890,7 @@ public:
       }
       //} else {
       //  No message on GPU
-      //  fprintf(stdout, "Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n", coord[4]-ctLower, dct, iBin);
+      //  printf("Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n", coord[4]-ctLower, dct, iBin);
       //}
     }
     p = (1+coord[5])*Po;
@@ -2996,19 +2996,19 @@ long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
   while (zStart+1.e-12<csrWake.zLast) {
     if (incrementWarningsLeft) {
-      fprintf(stdout, "*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
+      printf("*** Warning: incrementing zStart by revolution length for CSRDRIFT (%s #%ld).\n",
               tContext.elementName, tContext.elementOccurrence);
-      fprintf(stdout, "    If you are not simulating a ring, this could be a problem!\n");
+      printf("    If you are not simulating a ring, this could be a problem!\n");
       incrementWarningsLeft --;
     }
     zStart += revolutionLength;
   }
   if (bitsSet(mode)>1) {
-    fprintf(stdout, "Error: Too many modes set for CSRDRIFT.\n");
+    printf("Error: Too many modes set for CSRDRIFT.\n");
     exitElegant(1);
   }
   if (csrWake.lastMode && csrWake.lastMode!=mode) {
-    fprintf(stdout, "Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
+    printf("Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
     exitElegant(1);
   }
   csrWake.lastMode = mode;
@@ -3017,8 +3017,8 @@ long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
     return gpu_track_through_driftCSR_Stupakov(np, csrDrift, Po, accepted, zStart, charge, rootname);
 
   if (!warned) {
-    fprintf(stdout, "Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
-    fprintf(stdout, "This is the most physical model available at this time in elegant.\n");
+    printf("Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
+    printf("This is the most physical model available at this time in elegant.\n");
     warned = 1;
   }
   
@@ -3105,10 +3105,10 @@ long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
   dzFirst = zStart - csrWake.zLast;
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
 #ifdef DEBUG
-  fprintf(stdout, "CSR in drift:\n");
-  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, zTravel = %21.15le\n", zStart, csrWake.zLast,
+  printf("CSR in drift:\n");
+  printf("zStart = %21.15le, zLast = %21.15le, zTravel = %21.15le\n", zStart, csrWake.zLast,
           zTravel);
-  fprintf(stdout, "dzFirst = %21.15e, s0 = %21.15e\n", dzFirst, csrWake.s0);
+  printf("dzFirst = %21.15e, s0 = %21.15e\n", dzFirst, csrWake.s0);
 #endif
 
   for (iKick=0; iKick<nKicks; iKick++) {
@@ -3210,16 +3210,16 @@ long gpu_track_through_driftCSR(long np, CSRDRIFT *csrDrift, double Po,
     }
     if ((myid==1) && (csrWake.dGamma && np_total!=binned_total)) {
       dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+      printf("only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned_total, np_total, tContext.elementName);
 #else
     if (csrWake.dGamma && np!=binned) {
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+      printf("only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned, np, tContext.elementName);
 #endif
-      fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
+      printf("beam ct min, max = %21.15e, %21.15e\n",
               ctmin, ctmax);
-      fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
+      printf("wake ct0 = %21.15e, ct1 = %21.15e\n",
               ct0, ct0+csrWake.dctBin*csrWake.bins);
       fflush(stdout);
 #if USE_MPI
@@ -3393,17 +3393,17 @@ long gpu_track_through_driftCSR_Stupakov(long np, CSRDRIFT *csrDrift,
   }
   if ((myid==1) && (np_total!=binned_total)) {
     dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+    printf("Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	    binned_total, np_total,
 	    tContext.elementName, csrWake.binRangeFactor);
     fflush(stdout);
 #else
   if (nBinned!=np) {
-    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+    printf("Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	    nBinned, np,
 	    tContext.elementName, csrWake.binRangeFactor);
 #endif
-    fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+    printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	    ctLower, ctUpper, dct, nBins, maxBins);
     fflush(stdout);
 #if USE_MPI
@@ -3429,10 +3429,10 @@ long gpu_track_through_driftCSR_Stupakov(long np, CSRDRIFT *csrDrift,
                               csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1,
                               csrWake.clipNegativeBins);
       if (nz && negativeWarningsLeft) {
-        fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
+        printf("Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
         if (--negativeWarningsLeft==0)
-          fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
+          printf("         Further warnings will be suppressed for this run.\n");
         fflush(stdout);
       }
     }
@@ -3561,11 +3561,11 @@ long gpu_track_through_driftCSR_Stupakov(long np, CSRDRIFT *csrDrift,
 	 iKick%csrDrift->sliceAnalysisInterval==0)) {
 #if USE_MPI
       /* This function will be parallelized in the future */
-      fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+      printf("performSliceAnalysisOutput is not supported in parallel mode currently.\n");
       MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
       MPI_Abort(MPI_COMM_WORLD, 1); 
 #endif
-      fprintf(stdout, "performSliceAnalysisOutput is not supported in on the GPU currently.\n");
+      printf("performSliceAnalysisOutput is not supported in on the GPU currently.\n");
       //performSliceAnalysisOutput(tContext.sliceAnalysis, part, np, 
       //			   0, tContext.step, Po, 
       //			   csrWake.MPCharge*np,
@@ -3578,16 +3578,16 @@ long gpu_track_through_driftCSR_Stupakov(long np, CSRDRIFT *csrDrift,
     }
     if ((myid==1) && (np_total!=binned_total)) {
       dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
-      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+      printf("Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	      binned_total, np_total,
 	      tContext.elementName, csrWake.binRangeFactor);
 #else
     if (np!=binned) {
-      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+      printf("Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	      binned, np,
 	      tContext.elementName, csrWake.binRangeFactor);
 #endif
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+      printf("ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
 #if USE_MPI
@@ -3619,7 +3619,7 @@ long gpu_track_through_driftCSR_Stupakov(long np, CSRDRIFT *csrDrift,
   free(phiSoln);
 #if DEBUG
   if (SolveForPhiStupakovDiffCount)
-    fprintf(stdout, "Phi solution accuracy for %ld solutions: %le\n",
+    printf("Phi solution accuracy for %ld solutions: %le\n",
             SolveForPhiStupakovDiffCount, SolveForPhiStupakovDiffSum/SolveForPhiStupakovDiffCount);
 #endif
   return np;

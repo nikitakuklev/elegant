@@ -124,13 +124,13 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
     }
 
 #ifdef DEBUG
-    fprintf(stdout, "Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
+    printf("Performing bucket assignment, nBuckets=%ld\n", *nBuckets);
     fflush(stdout);
 #endif
 #if USE_MPI
     if (isSlave || !notSinglePart) {
 #ifdef DEBUG
-      fprintf(stdout, "...performing bucket assignment\n");
+      printf("...performing bucket assignment\n");
       fflush(stdout);
 #endif
 #endif
