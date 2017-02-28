@@ -58,8 +58,9 @@ Historical change logs are appended to the end of this manual.
   not to kick the beam. This allows using unusual controls such as path length to steer the beam. This
   issue was pointed out by V. Sajaev (APS).
 \item The \verb|load_parameters| and \verb|save_lattice| commands incorrectedly saved the edge angles and other edge-related
-  quantities for bending magnets that were reflected. This issue was fixed. Previously-saved parameter files should be modified
-  (e.g., remove the edge parameters). This problem was reported by Y. Li (BNL).
+  quantities for bending magnets that were reflected. This issue was fixed. {\em Previously-saved parameter files should be modified
+  (e.g., remove the edge parameters)} unless the magnets had the same parameters for the entrance and exit. 
+  This problem was reported by Y. Li (BNL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
