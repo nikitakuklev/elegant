@@ -1,4 +1,3 @@
-
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -82,10 +81,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 33.0.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 33.0.1, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 33.0.0, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 33.0.1, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   time_t timeNow;
   char *timeNowString;
@@ -1474,11 +1473,13 @@ char **argv;
           printf("Coupled twiss parameters calculation failed.\n");
           fflush(stdout);
         }
-        if (do_rf_setup)
-          run_rf_setup(&run_conditions, beamline, 0);
         run_matrix_output(&run_conditions, beamline);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
+        if (do_rf_setup)
+          run_rf_setup(&run_conditions, beamline, 0);
+        if (do_moments_output)
+          runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
         switch (commandCode) {
