@@ -95,10 +95,10 @@ public:
     double *tSigmaDelta2 = NULL;
     if (d_sigmaDelta2) tSigmaDelta2 = &d_sigmaDelta2[tid];
     if (integ_order==4) {
-      particle_lost = !gpu_integrate_kick_multipole_ord4(coord, KnL,
+      particle_lost = !gpu_integrate_kick_multipole_ord4(coord, KnL, n_parts, 
                          drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit);
     } else if (integ_order==2) {
-      particle_lost = !gpu_integrate_kick_multipole_ord2(coord, KnL,
+      particle_lost = !gpu_integrate_kick_multipole_ord2(coord, KnL, n_parts, 
                          drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit);
     }
     if (particle_lost) {
@@ -118,7 +118,7 @@ public:
 #define dp coord[5]    
 
   __device__ int
-  gpu_integrate_kick_multipole_ord2(gpuParticleAccessor& coord, double KnL,
+  gpu_integrate_kick_multipole_ord2(gpuParticleAccessor& coord, double KnL, long n_kicks, 
       double drift, double *dzLoss, double *sigmaDelta2, int radial,
       double srGaussianLimit) {
     double p, qx, qy, denom, beta0, beta1, s;
@@ -127,6 +127,8 @@ public:
     
     drift = drift/n_parts/2.0;
     KnL = KnL/n_parts;
+    xkick = xkick/n_kicks;
+    ykick = ykick/n_kicks;
    
     // prepocessor defines 
     //x = coord[0];
@@ -148,27 +150,12 @@ public:
       return 0;
     }
   
-    /* apply steering corrector kick */
-    xp += xkick/(1+dp)/2;
-    yp += ykick/(1+dp)/2;
-  
     /* calculate initial canonical momenta */
     denom = 1+sqr(xp)+sqr(yp);
     denom = EXSQRT(denom, sqrtOrder);
     qx = (1+dp)*xp/denom;
     qy = (1+dp)*yp/denom;
   
-    /* apply steering corrector multipoles */
-    if (steeringMultDataOrders>=0) {
-      for (imult=0; imult<steeringMultDataOrders; imult++) {
-        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultDataOrder[imult], 
-                                        steeringMultDataKnL[imult]*xkick/2, 0);
-        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultDataOrder[imult], 
-                                        steeringMultDataJnL[imult]*ykick/2, 1);
-      }
-    }
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
         gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -210,6 +197,23 @@ public:
         gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy,
             x, y, order, KnL, 0);
   
+      if (xkick)
+	gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick, 0);
+      if (ykick)
+	gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick, 1);
+
+      /* apply steering corrector multipoles */
+      if (steeringMultDataOrders>=0) {
+	for (imult=0; imult<steeringMultDataOrders; imult++) {
+	  gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+					      steeringMultDataOrder[imult], 
+					      steeringMultDataKnL[imult]*xkick/n_kicks, 0);
+	  gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+					      steeringMultDataOrder[imult], 
+					      steeringMultDataJnL[imult]*ykick/n_kicks, 1);
+	}
+      }
+      
       /* do kicks for spurious multipoles */
       for (imult=0; imult<multDataOrders; imult++) {
         if (multDataKnL[imult]) 
@@ -279,17 +283,6 @@ public:
       }
     }
 
-    /* apply steering corrector multipoles */
-    if (steeringMultDataOrders>=0) {
-      for (imult=0; imult<steeringMultDataOrders; imult++) {
-        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultDataOrder[imult], 
-                                        steeringMultDataKnL[imult]*xkick/2, 0);
-        gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultDataOrder[imult], 
-                                        steeringMultDataJnL[imult]*ykick/2, 1);
-      }
-    }
     // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
@@ -299,10 +292,6 @@ public:
     denom = EXSQRT(denom, sqrtOrder);
     xp = qx/denom;
     yp = qy/denom;
-  
-    /* apply steering corrector kick */
-    xp += xkick/(1+dp)/2;
-    yp += ykick/(1+dp)/2;
   
     //coord[0] = x;
     //coord[1] = xp;
@@ -333,7 +322,7 @@ public:
 #define BETA 1.25992104989487316477
 
   __device__ int
-  gpu_integrate_kick_multipole_ord4(gpuParticleAccessor& coord, double KnL,
+  gpu_integrate_kick_multipole_ord4(gpuParticleAccessor& coord, double KnL, long n_kicks,
       double drift, double *dzLoss, double *sigmaDelta2, int radial,
       double srGaussianLimit) {
     double p, qx, qy, denom, beta0, beta1, s;
@@ -347,6 +336,8 @@ public:
     
     drift = drift/n_parts;
     KnL = KnL/n_parts;
+    xkick = xkick/n_parts;
+    ykick = ykick/n_parts;
   
     //x = coord[0];
     //xp = coord[1];
@@ -367,27 +358,10 @@ public:
       return 0;
     }
   
-    /* apply steering corrector kick */
-    xp += xkick/(1+dp)/2;
-    yp += ykick/(1+dp)/2;
-  
     /* calculate initial canonical momenta */
     qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
     qy = (1+dp)*yp/denom;
   
-    /* apply steering corrector multipoles */
-    if (steeringMultDataOrders>=0) {
-      for (imult=0; imult<steeringMultDataOrders; imult++) {
-        if (steeringMultDataKnL[imult])
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                          steeringMultDataOrder[imult], 
-                                          steeringMultDataKnL[imult]*xkick/2, 0);
-        if (steeringMultDataJnL[imult]) 
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                          steeringMultDataOrder[imult], 
-                                          steeringMultDataJnL[imult]*ykick/2, 1);
-      }
-    }
 
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
@@ -435,6 +409,25 @@ public:
         else 
           gpu_applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y,
                                                  order, KnL*kickFrac[step], 0);
+
+	if (xkick)
+	  gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick*kickFrac[step], 0);
+	if (ykick)
+	  gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick*kickFrac[step], 1);
+	
+	/* apply steering corrector multipoles */
+	if (steeringMultDataOrders>=0) {
+	  for (imult=0; imult<steeringMultDataOrders; imult++) {
+	    if (steeringMultDataKnL[imult])
+	      gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+						  steeringMultDataOrder[imult], 
+						  steeringMultDataKnL[imult]*xkick*kickFrac[step], 0);
+	    if (steeringMultDataJnL[imult]) 
+	      gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+						  steeringMultDataOrder[imult], 
+						  steeringMultDataJnL[imult]*ykick*kickFrac[step], 1);
+	  }
+	}
 
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multDataOrders; imult++) {
@@ -506,19 +499,6 @@ public:
       }
     }
 
-    /* apply steering corrector multipoles */
-    if (steeringMultDataOrders>=0) {
-      for (imult=0; imult<steeringMultDataOrders; imult++) {
-        if (steeringMultDataKnL[imult]) 
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                          steeringMultDataOrder[imult], 
-                                          steeringMultDataKnL[imult]*xkick/2, 0);
-        if (steeringMultDataJnL[imult]) 
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                          steeringMultDataOrder[imult], 
-                                          steeringMultDataJnL[imult]*ykick/2, 1);
-      }
-    }
     // for numerical accuracy
     denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
     if (denom <= 0) return 0;
@@ -527,10 +507,6 @@ public:
     //}
     xp = qx/(denom=EXSQRT(denom, sqrtOrder));
     yp = qy/denom;
-  
-    /* apply steering corrector kick */
-    xp += xkick/(1+dp)/2;
-    yp += ykick/(1+dp)/2;
   
     //coord[0] = x;
     //coord[1] = xp;
