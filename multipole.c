@@ -1038,7 +1038,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   
   drift = drift/n_kicks/2.0;
   KnL = KnL/n_kicks;
-  
+  xkick = xkick/n_kicks;
+  ykick = ykick/n_kicks;
+
   x = coord[0];
   xp = coord[1];
   y = coord[2];
@@ -1058,27 +1060,12 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     return 0;
   }
 
-  /* apply steering corrector kick */
-  xp += xkick/(1+dp)/2;
-  yp += ykick/(1+dp)/2;
-
   /* calculate initial canonical momenta */
   denom = 1+sqr(xp)+sqr(yp);
   denom = EXSQRT(denom, sqrtOrder);
   qx = (1+dp)*xp/denom;
   qy = (1+dp)*yp/denom;
 
-  if (steeringMultData && steeringMultData->orders) {
-    /* apply steering corrector multipoles */
-    for (imult=0; imult<steeringMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                      steeringMultData->order[imult], 
-                                      steeringMultData->KnL[imult]*xkick/2, 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                      steeringMultData->order[imult], 
-                                      steeringMultData->JnL[imult]*ykick/2, 1);
-    }
-  }
   if (edgeMultData && edgeMultData->orders) {
     for (imult=0; imult<edgeMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1120,6 +1107,23 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
     else
       applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+
+    if (xkick)
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick, 0);
+    if (ykick)
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick, 1);
+
+    if (steeringMultData && steeringMultData->orders) {
+      /* apply steering corrector multipoles */
+      for (imult=0; imult<steeringMultData->orders; imult++) {
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->KnL[imult]*xkick/n_kicks, 0);
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->JnL[imult]*ykick/n_kicks, 1);
+      }
+    }
 
     /* do kicks for spurious multipoles */
     if (multData) {
@@ -1183,17 +1187,6 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       edgeMultData->JnL[imult], 1);
     }
   }
-  if (steeringMultData && steeringMultData->orders) {
-    /* apply steering corrector multipoles */
-    for (imult=0; imult<steeringMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                      steeringMultData->order[imult], 
-                                      steeringMultData->KnL[imult]*xkick/2, 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                      steeringMultData->order[imult], 
-                                      steeringMultData->JnL[imult]*ykick/2, 1);
-    }
-  }
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
     coord[0] = x;
     coord[2] = y;
@@ -1202,10 +1195,6 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   denom = EXSQRT(denom, sqrtOrder);
   xp = qx/denom;
   yp = qy/denom;
-
-  /* apply steering corrector kick */
-  xp += xkick/(1+dp)/2;
-  yp += ykick/(1+dp)/2;
 
   coord[0] = x;
   coord[1] = xp;
@@ -1256,6 +1245,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   
   drift = drift/n_parts;
   KnL = KnL/n_parts;
+  xkick = xkick/n_parts;
+  ykick = ykick/n_parts;
 
   x = coord[0];
   xp = coord[1];
@@ -1276,27 +1267,10 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     return 0;
   }
 
-  /* apply steering corrector kick */
-  xp += xkick/(1+dp)/2;
-  yp += ykick/(1+dp)/2;
-
   /* calculate initial canonical momenta */
   qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
   qy = (1+dp)*yp/denom;
 
-  if (steeringMultData && steeringMultData->orders) {
-    /* apply steering corrector multipoles */
-    for (imult=0; imult<steeringMultData->orders; imult++) {
-      if (steeringMultData->KnL[imult])
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultData->order[imult], 
-                                        steeringMultData->KnL[imult]*xkick/2, 0);
-      if (steeringMultData->JnL[imult]) 
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultData->order[imult], 
-                                        steeringMultData->JnL[imult]*ykick/2, 1);
-    }
-  }
   if (edgeMultData && edgeMultData->orders) {
     for (imult=0; imult<edgeMultData->orders; imult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -1344,7 +1318,25 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
       else 
 	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
 					   order, KnL*kickFrac[step], 0);
+      if (xkick)
+        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick*kickFrac[step], 0);
+      if (ykick)
+        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick*kickFrac[step], 1);
 	
+      if (steeringMultData && steeringMultData->orders) {
+        /* apply steering corrector multipoles */
+        for (imult=0; imult<steeringMultData->orders; imult++) {
+          if (steeringMultData->KnL[imult]) 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                            steeringMultData->order[imult], 
+                                            steeringMultData->KnL[imult]*xkick*kickFrac[step], 0);
+          if (steeringMultData->JnL[imult]) 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                            steeringMultData->order[imult], 
+                                            steeringMultData->JnL[imult]*ykick*kickFrac[step], 1);
+        }
+      }
+
       if (multData) {
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multData->orders; imult++) {
@@ -1406,19 +1398,6 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                       edgeMultData->JnL[imult], 1);
     }
   }
-  if (steeringMultData && steeringMultData->orders) {
-    /* apply steering corrector multipoles */
-    for (imult=0; imult<steeringMultData->orders; imult++) {
-      if (steeringMultData->KnL[imult]) 
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultData->order[imult], 
-                                        steeringMultData->KnL[imult]*xkick/2, 0);
-      if (steeringMultData->JnL[imult]) 
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
-                                        steeringMultData->order[imult], 
-                                        steeringMultData->JnL[imult]*ykick/2, 1);
-    }
-  }
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
     coord[0] = x;
     coord[2] = y;
@@ -1427,10 +1406,6 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   denom = EXSQRT(denom, sqrtOrder);
   xp = qx/denom;
   yp = qy/denom;
-
-  /* apply steering corrector kick */
-  xp += xkick/(1+dp)/2;
-  yp += ykick/(1+dp)/2;
 
   coord[0] = x;
   coord[1] = xp;

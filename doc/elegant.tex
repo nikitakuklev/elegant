@@ -73,6 +73,8 @@ Historical change logs are appended to the end of this manual.
 \begin{itemize}
 \item The \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements now support inclusion of multipole errors linked to the
   correction strength.
+\item The steering kicks and steering multipoles in the \verb|KQUAD| element are now implemented in the body of the element,
+  rather than at the ends.
 \item The \verb|WATCH| element was improved so that the \verb|dt| column in coordinate-logging mode and the \verb|dCt| column in
   parameter- and centroid-logging modes are more useful. In particular, in normal cases these will now more reliably be centered
   on zero. One can also provide a reference frequency relative to which the reference time is defined. This improvement grew out of
