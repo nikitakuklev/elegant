@@ -1348,6 +1348,7 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
   for (i=0; i<6; i++)
     for (j=0; j<6; j++) 
       Mm[i][j] = gsl_matrix_get(M, i, j);
+  gsl_matrix_free(M);
 
   /* Transform coordinates */
   for (ip=0; ip<np; ip++) {
