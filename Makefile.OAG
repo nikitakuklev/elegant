@@ -539,11 +539,13 @@ endif
 
 
 ifeq ($(GPU),1)
+CUDA_LIBDIR = $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64)
+
 elegantto_OBJS =    ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_matrix.o \
                 ../gpuElegant/gpu_memory_management.o \
                 ../gpuElegant/elegantto_gpu.o
-elegantto_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 
 elegant_OBJS =  ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_bin_time_distribution.o \
@@ -568,7 +570,7 @@ elegant_OBJS =  ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_wake.o \
                 ../gpuElegant/printCudaDeviceProp.o \
                 ../gpuElegant/elegant_gpu.o
-elegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 
 Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.o \
                 ../gpuElegant/mpi_gpu_bin_time_distribution.o \
@@ -593,7 +595,7 @@ Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.o \
                 ../gpuElegant/mpi_gpu_wake.o \
                 ../gpuElegant/mpi_printCudaDeviceProp.o \
                 ../gpuElegant/Pelegant_gpu.o
-Pelegant_LDFLAGS = -L/usr/local/cuda/lib64 -Wl,-rpath,/usr/local/cuda/lib64 -lcudart -lcurand
+Pelegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 endif
 
 ifeq ($(VERIFY),1)

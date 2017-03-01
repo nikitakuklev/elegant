@@ -4,7 +4,7 @@
 #include <gpu_reductions.hcu>
 #include <gpu_csbend.h> // gpu_binParticleCoordinate
 
-inline __device__ double atomicAdd(double* address, double val) {
+inline __device__ double atomicAddOAG(double* address, double val) {
   double old = *address, assumed;
   do {
     assumed = old;
@@ -76,14 +76,14 @@ __global__ void gpu_rms_kernel(double* d_particles, unsigned int particlePitch,
   }
 
   if(tx==0){
-    atomicAdd( d_result, s_v1[0]);
-    atomicAdd( d_result + 1 , s_v2[0]);
+    atomicAddOAG((double*) (d_result), s_v1[0]);
+    atomicAddOAG((double*) (d_result + 1) , s_v2[0]);
     if(S11)
-      atomicAdd( d_result + 2 , s_s11[0]);
+      atomicAddOAG((double*) (d_result + 2) , s_s11[0]);
     if(S12)
-      atomicAdd( d_result + 3, s_s12[0]);
+      atomicAddOAG((double*) (d_result + 3), s_s12[0]);
     if(S22)
-      atomicAdd( d_result + 4, s_s22[0]);
+      atomicAddOAG((double*) (d_result + 4), s_s22[0]);
   }
 }
 

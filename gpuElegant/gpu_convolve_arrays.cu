@@ -10,7 +10,7 @@
 #undef min
 #endif
 
-inline __device__ double atomicAdd(double* address, double val) {
+inline __device__ double atomicAddOAG(double* address, double val) {
 
   double old = *address, assumed;
   do {
@@ -85,7 +85,7 @@ __global__ void gpuConvolveArraysKernel(double* d_output,
   for(unsigned int tx = threadIdx.x; tx < BUFFER_Y; tx+=NTHREADS){
     unsigned int ib = ibStart + tx;
     if(ib < nOutputs){  
-      atomicAdd(d_output + ib, s_sums[tx][0]);		
+      atomicAddOAG((double*)(d_output + ib), s_sums[tx][0]);		
     }
   }
 }
