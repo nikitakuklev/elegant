@@ -189,6 +189,7 @@ endif
 csrImpedance_SYS_LIBS += $(SYS_GSLLIB)
 #sddsrandmult_LIBS = $(GSLLIB)
 sddsrandmult_SYS_LIBS += $(SYS_GSLLIB)
+sddsmatchmoments_SYS_LIBS += $(SYS_GSLLIB)
 
 
 
