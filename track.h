@@ -1087,6 +1087,7 @@ typedef struct {
 #define RUN_ZERO_PARTICLES 0x00002000UL
 /* indicates that element will be done on all of the processors */
 #define MPALGORITHM (0x00004000UL|RUN_ZERO_PARTICLES)
+#define GPU_SUPPORT  0x00008000UL
 
 typedef struct {
     long n_params;

@@ -82,6 +82,9 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 33.0.2, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+#elseif USE_GPU
+  char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
+  char *GREETING="This is gpu-elegant 33.0.2 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 33.0.2, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
@@ -1773,14 +1776,7 @@ char **argv;
 
 void printFarewell(FILE *fp)
 {
-#if (!USE_MPI)
-  printf("=====================================================================================\n");
-  printf("Thanks for using elegant.  Please cite the following reference in your publications:\n");
-  printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
-  printf("  Advanced Photon Source LS-287, September 2000.\n");
-  printf("If you use a modified version, please indicate this in all publications.\n");
-  printf("=====================================================================================\n");
-#else 
+#if (USE_MPI)
   printf("=====================================================================================\n");
   printf("Thanks for using Pelegant.  Please cite the following references in your publications:\n");
   printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
@@ -1788,6 +1784,22 @@ void printFarewell(FILE *fp)
   printf("  Y. Wang and M. Borland, \"Pelegant: A Parallel Accelerator Simulation Code for  \n");
   printf("  Electron Generation and Tracking\", Proceedings of the 12th Advanced Accelerator  \n"); 
   printf("  Concepts Workshop, AIP Conf. Proc. 877, 241 (2006).\n");
+  printf("If you use a modified version, please indicate this in all publications.\n");
+  printf("=====================================================================================\n");
+#elseif USE_GPU
+  printf("=====================================================================================\n");
+  printf("Thanks for using gpu-elegant.  Please cite the following references in your publications:\n");
+  printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  printf("  Advanced Photon Source LS-287, September 2000.\n");
+  printf("  J. R. King, I. V. Pogorelov, M. Borland, R. Soliday, K. Amyx,\n");
+  printf("  \"Current status of the GPU-Accelerated version of elegant,\" Proc. IPAC15, 623 (2015).\n");
+  printf("If you use a modified version, please indicate this in all publications.\n");
+  printf("=====================================================================================\n");
+#else
+  printf("=====================================================================================\n");
+  printf("Thanks for using elegant.  Please cite the following reference in your publications:\n");
+  printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  printf("  Advanced Photon Source LS-287, September 2000.\n");
   printf("If you use a modified version, please indicate this in all publications.\n");
   printf("=====================================================================================\n");
 #endif
@@ -1966,6 +1978,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
     fprintf(fp, "SDDS1\n");
     fprintf(fp, "&parameter name=ElementType, type=string &end\n");
     fprintf(fp, "&parameter name=ParallelCapable, type=short &end\n");
+    fprintf(fp, "&parameter name=GPUCapable, type=short &end\n");
     fprintf(fp, "&column name=ParameterName, type=string &end\n");
     fprintf(fp, "&column name=Units, type=string &end\n");
     fprintf(fp, "&column name=Type, type=string &end\n");
@@ -2014,6 +2027,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
     fprintf(fp, "Parallel capable? : %s\\\\\n", entity_description[type].flags&UNIPROCESSOR?"no":"yes");
+    fprintf(fp, "GPU capable? : %s\\\\\n", entity_description[type].flags&GPU_SUPPORT?"yes":"no");
     fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
     fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
   } else {
@@ -2023,6 +2037,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&UNIPROCESSOR?0:1));
+      fprintf(fp, "%ld\n", (long)(entity_description[type].flags&GPU_SUPPORT?1:0));
       fprintf(fp, "%ld\n", entity_description[type].n_params+1);
     }
     else 
