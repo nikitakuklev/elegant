@@ -2,7 +2,7 @@ TOP=../../..
 include $(TOP)/configure/CONFIG
 include $(TOP)/configure/RULES
 
-NVCC = $(wildcard /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc)
+NVCC = $(firstword $(wildcard /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc))
 
 MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
 
@@ -12,7 +12,11 @@ else
 all: elegantto_gpu.o elegant_gpu.o
 endif
 
+ifdef BASE_3_15
+clean:
+else
 clean::
+endif
 	rm -f *.o
 
 OBJNAMES = gpu_base.o \
