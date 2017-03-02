@@ -539,7 +539,7 @@ endif
 
 
 ifeq ($(GPU),1)
-CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64))
+CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu))
 
 elegantto_OBJS =    ../gpuElegant/gpu_base.o \
                 ../gpuElegant/gpu_matrix.o \
