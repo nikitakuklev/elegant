@@ -35,9 +35,9 @@ ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1 # 1 for parallel elegant, 0 for serial elegant  
   #USER_MPI_FLAGS += -DMPI_DEBUG=1 
   USER_MPI_FLAGS += -DSDDS_MPI_IO=1
-  #ifdef darwin
-    USER_MPI_FLAGS += -mmacosx-version-min=10.9
-  #endif
+ifdef darwin
+  USER_MPI_FLAGS += -mmacosx-version-min=10.9
+endif
   PRODOAG = Pelegant
   STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
 ifdef WIN32
