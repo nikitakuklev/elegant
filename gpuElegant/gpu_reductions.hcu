@@ -22,7 +22,7 @@ inline __device__ double device_min(double a, double b){
 };
 
 #include <limits.h>
-#include <values.h>
+#include <float.h>
 inline __device__ unsigned int device_initial_max(unsigned int a){ 
   return UINT_MAX; 
 }
@@ -172,14 +172,14 @@ __global__ void gpuReduceKernel(T* d_data, T* d_result, unsigned int n,
     // each block takes a ticket, the last block to finish the calculation
     // does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();    
 
     if( amLast ){
       r_data = functor.initialValue();
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	r_data = functor(r_data, d_result[tx]);
       }
       // find the maximum value of histogram
@@ -296,19 +296,19 @@ __global__ void gpuDoubleReduceKernel(T* d_resultAlpha, T* d_resultBeta,
     // each block takes a ticket, the last block to finish the calculation
     // does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();
 
     if( amLast ){
       r_alpha = reductionFunctorAlpha.initialValue();
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	r_alpha = reductionFunctorAlpha(r_alpha, d_resultAlpha[tx]);
       }
 
       r_beta = reductionFunctorBeta.initialValue();
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	r_beta = reductionFunctorBeta(r_beta, d_resultBeta[tx]);
       }
 
@@ -401,7 +401,7 @@ __global__ void gpuComparatorReduceKernel(T1* d_keys, T2* d_vals,
     // each block takes a ticket, the last block to finish the calculation
     // does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();    
@@ -409,7 +409,7 @@ __global__ void gpuComparatorReduceKernel(T1* d_keys, T2* d_vals,
     if( amLast ){
       rkey = comparator.initialValue();
       rval = 0;
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	T1 newkey = d_resultKeys[tx];
 	T2 newval = d_resultVals[tx];
 	comparator(rkey, rval, newkey, newval);

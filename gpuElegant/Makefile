@@ -2,7 +2,7 @@ TOP=../../..
 include $(TOP)/configure/CONFIG
 include $(TOP)/configure/RULES
 
-NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc))
+NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc))
 
 MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
 

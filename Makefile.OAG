@@ -35,6 +35,9 @@ ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1 # 1 for parallel elegant, 0 for serial elegant  
   #USER_MPI_FLAGS += -DMPI_DEBUG=1 
   USER_MPI_FLAGS += -DSDDS_MPI_IO=1
+  #ifdef darwin
+    USER_MPI_FLAGS += -mmacosx-version-min=10.9
+  #endif
   PRODOAG = Pelegant
   STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
 ifdef WIN32
@@ -47,7 +50,7 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.1.1/bin/ )
+    MPI_PATH = $(wildcard /lustre/3rdPartySoftware/mvapich2-1.9rc1/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.2/bin/ )
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
   CC += $(USER_MPI_FLAGS)
@@ -545,7 +548,7 @@ elegantto_SYS_LIBS += cudart curand
 elegant_SYS_LIBS += cudart curand
 Pelegant_SYS_LIBS += cudart curand
 else
-CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu))
+CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-8.0/lib))
 elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 Pelegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand

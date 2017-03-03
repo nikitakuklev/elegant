@@ -205,19 +205,19 @@ __global__ void gpuParticleDoubleReductionKernel(double* d_particles,
     __threadfence();
     // each block takes a ticket, the last block to finish the calculation does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();    
 
     if( amLast ){
       r_alpha = reductionFunctorAlpha.initialValue();
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	r_alpha = reductionFunctorAlpha(r_alpha, d_resultAlpha[tx]);
       }
 
       r_beta = reductionFunctorBeta.initialValue();
-      for( uint tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < gridDim.x; tx += blockDim.x){
 	r_beta = reductionFunctorBeta(r_beta, d_resultBeta[tx]);
       }
 
@@ -327,7 +327,7 @@ __global__ void gpuParticleKahanAddKernel(FLOATTYPE* d_particles,
     __threadfence();
   
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();
