@@ -82,7 +82,7 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is elegant 33.0.2, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
-#elif USE_GPU
+#elif HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
   char *GREETING="This is gpu-elegant 33.0.2 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #else
@@ -1786,7 +1786,7 @@ void printFarewell(FILE *fp)
   printf("  Concepts Workshop, AIP Conf. Proc. 877, 241 (2006).\n");
   printf("If you use a modified version, please indicate this in all publications.\n");
   printf("=====================================================================================\n");
-#elif USE_GPU
+#elif HAVE_GPU
   printf("=====================================================================================\n");
   printf("Thanks for using gpu-elegant.  Please cite the following references in your publications:\n");
   printf("  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
