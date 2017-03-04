@@ -2,6 +2,7 @@
 
 #include <gpu_reductions.h>
 #include <gpu_reductions.hcu>
+#undef align
 #include <gpu_base.h>
 
 template<class T, class OPERATOR>

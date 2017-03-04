@@ -41,7 +41,7 @@ __global__ void sumReductionTrueKahanThreadfenceKernel(TRANSFORM transform,
     __threadfence();
   
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();

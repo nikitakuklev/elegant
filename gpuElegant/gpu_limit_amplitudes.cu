@@ -6,6 +6,7 @@
 #include <gpu_csbend.h> // gpu_exactDrift
 #include <gpu_matter.hcu> // gpu_track_through_matter_dfunc, gpu_setMatterTables
 #include <gpu_matter.h> // gpu_set_track_through_matter
+#undef align
 #include <gpu_killParticles.hcu>
 
 #ifdef SIGN

@@ -162,7 +162,7 @@ __global__ void gpu_binTransverseKernel(double* d_Itime0, double* d_Itime1,
   __syncthreads();
 
   // atomic add to global memory to calculate final histogram
-  for ( uint tx = threadIdx.x; tx < nb; tx+=blockDim.x){
+  for ( unsigned int tx = threadIdx.x; tx < nb; tx+=blockDim.x){
     double r_temp_0 = s_blockHistogram_0[tx];
     double r_temp_1 = s_blockHistogram_1[tx];
     
@@ -252,7 +252,7 @@ __global__ void gpu_binTransverseKernel_binDecomp(double* d_Itime0,
   __syncthreads();
  
   // atomic add to global memory to calculate final histogram
-  for ( uint tx = threadIdx.x; tx < NB_PER_BLOCK; tx+=blockDim.x){
+  for ( unsigned int tx = threadIdx.x; tx < NB_PER_BLOCK; tx+=blockDim.x){
     unsigned int ib = tx + ib_min;
     if(ib < nb){
       double r_temp_0 = s_blockHistogram_0[tx];

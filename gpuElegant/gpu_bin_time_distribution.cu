@@ -158,7 +158,7 @@ __global__ void gpu_binDistribution_kernel(double* d_doubleHistogram,
   __syncthreads();
 
   // atomic add to global memory to calculate final histogram
-  for ( uint tx = threadIdx.x; tx < nb; tx+=blockDim.x){
+  for ( unsigned int tx = threadIdx.x; tx < nb; tx+=blockDim.x){
     unsigned int r_temp = s_blockHistogram[tx];
 
        if(r_temp){
@@ -173,16 +173,16 @@ __global__ void gpu_binDistribution_kernel(double* d_doubleHistogram,
     // each block takes a ticket, the last block to finish the calculation 
     // does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x);
       amLast = (ticket == gridDim.x - 1);
     }
     __syncthreads();    
 
     if( amLast ){
 
-      uint r_op = 0;
+      unsigned int r_op = 0;
 
-      for( uint tx = threadIdx.x; tx < nb; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < nb; tx += blockDim.x){
 	unsigned int temp = d_unsignedHistogram[tx] ;
 
 	d_doubleHistogram[tx] = temp;
@@ -249,7 +249,7 @@ __global__ void gpu_binDistribution_decompKernel(double* d_doubleHistogram,
   __syncthreads();
  
   // atomic add to global memory to calculate final histogram
-  for ( uint tx = threadIdx.x; tx < NB_PER_BLOCK; tx+=blockDim.x){
+  for ( unsigned int tx = threadIdx.x; tx < NB_PER_BLOCK; tx+=blockDim.x){
     unsigned int ib = tx + ib_min;
     if(ib < nb){
       unsigned int r_temp = s_blockHistogram[tx];
@@ -267,16 +267,16 @@ __global__ void gpu_binDistribution_decompKernel(double* d_doubleHistogram,
     // each block takes a ticket, the last block to finish the calculation
     // does the reduction
     if(threadIdx.x==0){
-      uint ticket = atomicInc(retirementCount, gridDim.x*gridDim.y);
+      unsigned int ticket = atomicInc(retirementCount, gridDim.x*gridDim.y);
       amLast = (ticket == gridDim.x*gridDim.y - 1);
     }
     __syncthreads();    
 
     if( amLast ){
 
-      uint r_op = 0;
+      unsigned int r_op = 0;
 
-      for( uint tx = threadIdx.x; tx < nb; tx += blockDim.x){
+      for( unsigned int tx = threadIdx.x; tx < nb; tx += blockDim.x){
 	unsigned int temp = d_unsignedHistogram[tx] ;
 
 	d_doubleHistogram[tx] = temp;
@@ -436,8 +436,8 @@ unsigned int gpu_binParticles_and_countBinned(double* d_histogram,
 }
   
 unsigned int gpu_binTimeDistribution_and_countBinned(double* d_Itime, 
-    double* d_time, const uint np,  const double tmin, const double dt,
-    const uint nbins){
+    double* d_time, const unsigned int np,  const double tmin, const double dt,
+    const unsigned int nbins){
   GPUBASE* gpuBase = getGpuBase();
   unsigned int* d_tempu = gpuBase->d_blockTempu;
 
@@ -469,7 +469,7 @@ unsigned int gpu_binTimeDistribution_and_countBinned(double* d_Itime,
 }
 
 void gpu_binTimeDistribution_and_findMax(double* d_Itime, double* d_time, 
-    const uint np,  const double tmin, const double dt, const uint nbins, 
+    const unsigned int np,  const double tmin, const double dt, const unsigned int nbins, 
     double* Imax){
   GPUBASE* gpuBase = getGpuBase();
   unsigned int* d_tempu = gpuBase->d_blockTempu;

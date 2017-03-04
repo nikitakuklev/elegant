@@ -3,6 +3,7 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
+#undef align
 #include <gpu_killParticles.hcu> 
 #include <gpu_base.h>
 #include <gpu_particle_template_function.hcu>
