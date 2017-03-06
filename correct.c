@@ -1299,33 +1299,22 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
     /* compute coefficients of array C that are driven by this corrector */
     corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/(2*corr_tweek);
-    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
-      char memName[1024];
-      i = CM->mon_index[i_moni];
-      Mij(CM->C, i_moni, i_corr) = moniCalibration[i_moni]*corrCalibration*
-        (traj1[i].centroid[coord] - traj0[i].centroid[coord]);
-      sprintf(memName, "%cR_%s#%ld_%s#%ld.%s", coord==0?'H':'V',
-              CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
-              CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
-              SL->corr_param[CM->sl_index[i_corr]]);
-      rpn_store(Mij(CM->C, i_moni, i_corr), NULL, rpn_create_mem(memName, 0));
-    }
 #else
-
-    /* compute coefficients of array C that are driven by this corrector */
     corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/corr_tweek;
+#endif
+
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       char memName[1024];
       i = CM->mon_index[i_moni];
-      Mij(CM->C, i_moni, i_corr) = moniCalibration[i_moni]*corrCalibration*
-        (traj1[i].centroid[coord] - traj0[i].centroid[coord]);
+      Mij(CM->C, i_moni, i_corr) = corrCalibration*
+        (computeMonitorReading(CM->umoni[i_moni], coord, traj1[i].centroid[0], traj1[i].centroid[2], 0)
+         - computeMonitorReading(CM->umoni[i_moni], coord, traj0[i].centroid[0], traj0[i].centroid[2], 0));
       sprintf(memName, "%cR_%s#%ld_%s#%ld.%s", coord==0?'H':'V',
               CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
               CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
               SL->corr_param[CM->sl_index[i_corr]]);
       rpn_store(Mij(CM->C, i_moni, i_corr), NULL, rpn_create_mem(memName, 0));
     }
-#endif
 
     /* change the corrector back */
     *((double*)(corr->p_elem+kick_offset)) = kick0;
@@ -2462,8 +2451,9 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       i = CM->mon_index[i_moni];
       Mij(CM->C, i_moni, i_corr) = 
-        (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/(2*corr_tweek)*
-        getMonitorCalibration(CM->umoni[i_moni], coord);
+        (computeMonitorReading(CM->umoni[i_moni], coord, clorb1[i].centroid[0], clorb1[i].centroid[2], 0)
+         - computeMonitorReading(CM->umoni[i_moni], coord, clorb0[i].centroid[0], clorb0[i].centroid[2], 0)
+         )/(2*corr_tweek);
       
       /* store result in rpn memory */
       sprintf(memName, "%sR_%s#%ld_%s#%ld.%s", 
