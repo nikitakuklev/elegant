@@ -1,9 +1,6 @@
 TOP=../../..
 include $(TOP)/configure/CONFIG
 
-ifeq ($(EPICS_HOST_ARCH),win32-x86)
-WIN32 = 1
-endif
 ifeq ($(EPICS_HOST_ARCH),windows-x64)
 WIN32 = 1
 endif
@@ -103,7 +100,7 @@ HNAMES = gpu_base.h \
 
 
 ifdef WIN32
-CFLAGS = -c -ccbin cl -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-Ox\",\"-DNDEBUG\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS = -c -ccbin cl -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-Ox\",\"-DNDEBUG\",\"-MD\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 else
 CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 endif

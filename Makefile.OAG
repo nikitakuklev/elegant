@@ -542,75 +542,84 @@ endif
 
 
 ifeq ($(GPU),1)
+ifdef WIN32
+CUDA_LIBDIR = D:/Cuda8.0/lib/x64
+elegantto_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
+elegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
+Pelegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
+OBJJ =obj
+else 
+OBJJ = o
 CUDART = $(words $(wildcard /usr/lib/x86_64-linux-gnu/libcudart.so /usr/lib64/libcudart.so))
 ifneq ($(CUDART), 0)
 elegantto_SYS_LIBS += cudart curand
 elegant_SYS_LIBS += cudart curand
 Pelegant_SYS_LIBS += cudart curand
-else
+else 
 CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-8.0/lib))
 elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 Pelegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
+endif 
 endif
 
-elegantto_OBJS =    ../gpuElegant/gpu_base.o \
-                ../gpuElegant/gpu_matrix.o \
-                ../gpuElegant/gpu_memory_management.o \
-                ../gpuElegant/elegantto_gpu.o
+elegantto_OBJS =    ../gpuElegant/gpu_base.$(OBJJ) \
+                ../gpuElegant/gpu_matrix.$(OBJJ) \
+                ../gpuElegant/gpu_memory_management.$(OBJJ) \
+                ../gpuElegant/elegantto_gpu.$(OBJJ)
 
-elegant_OBJS =  ../gpuElegant/gpu_base.o \
-                ../gpuElegant/gpu_bin_time_distribution.o \
-                ../gpuElegant/gpu_bin_transverse_distribution.o \
-                ../gpuElegant/gpu_compute_centroids.o \
-                ../gpuElegant/gpu_convolve_arrays.o \
-                ../gpuElegant/gpu_csbend.o \
-                ../gpuElegant/gpu_final_props.o \
-                ../gpuElegant/gpu_funcs.o \
-                ../gpuElegant/gpu_kahan.o \
-                ../gpuElegant/gpu_killParticles.o \
-                ../gpuElegant/gpu_limit_amplitudes.o \
-                ../gpuElegant/gpu_lrwake.o \
-                ../gpuElegant/gpu_lsc.o \
-                ../gpuElegant/gpu_matrix.o \
-                ../gpuElegant/gpu_matter.o \
-                ../gpuElegant/gpu_memory_management.o \
-                ../gpuElegant/gpu_multipole.o \
-                ../gpuElegant/gpu_reductions.o \
-                ../gpuElegant/gpu_simple_rfca.o \
-                ../gpuElegant/gpu_trwake.o \
-                ../gpuElegant/gpu_wake.o \
-                ../gpuElegant/printCudaDeviceProp.o \
-                ../gpuElegant/elegant_gpu.o
+elegant_OBJS =  ../gpuElegant/gpu_base.$(OBJJ) \
+                ../gpuElegant/gpu_bin_time_distribution.$(OBJJ) \
+                ../gpuElegant/gpu_bin_transverse_distribution.$(OBJJ) \
+                ../gpuElegant/gpu_compute_centroids.$(OBJJ) \
+                ../gpuElegant/gpu_convolve_arrays.$(OBJJ) \
+                ../gpuElegant/gpu_csbend.$(OBJJ) \
+                ../gpuElegant/gpu_final_props.$(OBJJ) \
+                ../gpuElegant/gpu_funcs.$(OBJJ) \
+                ../gpuElegant/gpu_kahan.$(OBJJ) \
+                ../gpuElegant/gpu_killParticles.$(OBJJ) \
+                ../gpuElegant/gpu_limit_amplitudes.$(OBJJ) \
+                ../gpuElegant/gpu_lrwake.$(OBJJ) \
+                ../gpuElegant/gpu_lsc.$(OBJJ) \
+                ../gpuElegant/gpu_matrix.$(OBJJ) \
+                ../gpuElegant/gpu_matter.$(OBJJ) \
+                ../gpuElegant/gpu_memory_management.$(OBJJ) \
+                ../gpuElegant/gpu_multipole.$(OBJJ) \
+                ../gpuElegant/gpu_reductions.$(OBJJ) \
+                ../gpuElegant/gpu_simple_rfca.$(OBJJ) \
+                ../gpuElegant/gpu_trwake.$(OBJJ) \
+                ../gpuElegant/gpu_wake.$(OBJJ) \
+                ../gpuElegant/printCudaDeviceProp.$(OBJJ) \
+                ../gpuElegant/elegant_gpu.$(OBJJ)
 
-Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.o \
-                ../gpuElegant/mpi_gpu_bin_time_distribution.o \
-                ../gpuElegant/mpi_gpu_bin_transverse_distribution.o \
-                ../gpuElegant/mpi_gpu_compute_centroids.o \
-                ../gpuElegant/mpi_gpu_convolve_arrays.o \
-                ../gpuElegant/mpi_gpu_csbend.o \
-                ../gpuElegant/mpi_gpu_final_props.o \
-                ../gpuElegant/mpi_gpu_funcs.o \
-                ../gpuElegant/mpi_gpu_kahan.o \
-                ../gpuElegant/mpi_gpu_killParticles.o \
-                ../gpuElegant/mpi_gpu_limit_amplitudes.o \
-                ../gpuElegant/mpi_gpu_lrwake.o \
-                ../gpuElegant/mpi_gpu_lsc.o \
-                ../gpuElegant/mpi_gpu_matrix.o \
-                ../gpuElegant/mpi_gpu_matter.o \
-                ../gpuElegant/mpi_gpu_memory_management.o \
-                ../gpuElegant/mpi_gpu_multipole.o \
-                ../gpuElegant/mpi_gpu_reductions.o \
-                ../gpuElegant/mpi_gpu_simple_rfca.o \
-                ../gpuElegant/mpi_gpu_trwake.o \
-                ../gpuElegant/mpi_gpu_wake.o \
-                ../gpuElegant/mpi_printCudaDeviceProp.o \
-                ../gpuElegant/Pelegant_gpu.o
+Pelegant_OBJS =  ../gpuElegant/mpi_gpu_base.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_bin_time_distribution.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_bin_transverse_distribution.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_compute_centroids.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_convolve_arrays.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_csbend.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_final_props.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_funcs.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_kahan.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_killParticles.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_limit_amplitudes.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_lrwake.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_lsc.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_matrix.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_matter.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_memory_management.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_multipole.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_reductions.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_simple_rfca.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_trwake.$(OBJJ) \
+                ../gpuElegant/mpi_gpu_wake.$(OBJJ) \
+                ../gpuElegant/mpi_printCudaDeviceProp.$(OBJJ) \
+                ../gpuElegant/Pelegant_gpu.$(OBJJ)
 endif
 
 ifeq ($(VERIFY),1)
-elegantto_OBJS += ../gpuElegant/gpu_verify.o
-elegant_OBJS += ../gpuElegant/gpu_verify.o
+elegantto_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
+elegant_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
 endif
 
 

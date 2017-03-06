@@ -31,7 +31,9 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 
+#ifndef _GPU_MULTIPOLE_H_
 extern unsigned long multipoleKicksDone;
+#endif
 
 #define ODD(j) ((j)%2)
 

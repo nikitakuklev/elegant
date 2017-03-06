@@ -30,6 +30,7 @@ void gpu_exactDrift(long np, double length);
 #define COORD_LIMIT 10.0
 
 #define expansionOrderMax 10
+
 // From multData and steeringMultData 
 __device__ __constant__ int32_t multDataOrder[expansionOrderMax];
 __device__ __constant__ double multDataKnL[expansionOrderMax];
@@ -540,7 +541,7 @@ public:
 #undef dp
 };
 
-extern unsigned long multipoleKicksDone;
+__device__ extern unsigned long multipoleKicksDone;
 
 extern "C" {
 
@@ -563,7 +564,8 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   static long sextWarning = 0, quadWarning = 0, octWarning = 0, quseWarning = 0;
   double lEffective = -1, lEnd = 0;
   short doEndDrift = 0;
-  
+  unsigned long d_multipoleKicksDone;
+
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long sqrtOrder, freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -815,9 +817,14 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   else
     n_parts = n_kicks;
   
-  multipoleKicksDone += (i_top+1)*n_kicks;
+  //Copy multipoleKicksDone from host cpu to gpu device
+  cudaMemcpyToSymbol(&d_multipoleKicksDone, &multipoleKicksDone, sizeof(long), 0, cudaMemcpyHostToDevice);
+
+  d_multipoleKicksDone += (i_top+1)*n_kicks;
   if (multData)
-    multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
+    d_multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
+  //Copy d_multipoleKicksDone from gpu device to host cpu
+  cudaMemcpyToSymbol(&multipoleKicksDone, &d_multipoleKicksDone, sizeof(long), 0, cudaMemcpyDeviceToHost);
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+drift/2);
   
