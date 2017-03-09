@@ -29,6 +29,8 @@ typedef struct {
 #define COMMAND_FLAG_IGNORE             0x0002UL
 #define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
 #define COMMAND_FLAG_USE_FIRST          0x0008UL
+#define ALLOW_MISSING_ELEMENTS          0x0010UL
+#define ALLOW_MISSING_PARAMETERS        0x0020UL
     char **includeNamePattern, **includeItemPattern, **includeTypePattern;
     long includeNamePatterns, includeItemPatterns, includeTypePatterns;
     char **excludeNamePattern, **excludeItemPattern, **excludeTypePattern;
@@ -127,7 +129,9 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   long index;
   
   load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
-  load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
+  load_request[load_requests].flags = (change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0) +
+    (allow_missing_elements ? ALLOW_MISSING_ELEMENTS: 0 ) +
+    (allow_missing_parameters ? ALLOW_MISSING_PARAMETERS : 0 );
   load_request[load_requests].filename = compose_filename(filename, run->rootname);
   if (change_defined_values && !force_occurence_data)
     load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
@@ -484,29 +488,29 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, &(beamline->elem)))) ||
 	  (!occurence && (!find_element_hash(element[j], 1,  &eptr, &(beamline->elem)))))  {
 	if (occurence) {
-	  if (missingElementWarningsLeft || !allow_missing_elements) {
+	  if (missingElementWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_ELEMENTS)) {
 	    if (printingEnabled) {
 	      printf("%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
-		      allow_missing_elements?"Warning":"Error",
+		      (load_request[i].flags&ALLOW_MISSING_ELEMENTS)?"Warning":"Error",
 		      occurence[j], element[j]);
-	      if (allow_missing_elements && --missingElementWarningsLeft==0)
+	      if ((load_request[i].flags&ALLOW_MISSING_ELEMENTS) && --missingElementWarningsLeft==0)
 		printf("Further missing elements warnings suppressed\n");
 	      fflush(stdout);
 	    }
 	  }
 	} else {
-	  if (missingElementWarningsLeft || !allow_missing_elements) {
+	  if (missingElementWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_ELEMENTS)) {
 	    if (printingEnabled) {
 	      printf("%s: unable to find element %s (do_load_parameters)\n", 
-		      allow_missing_elements?"Warning":"Error",
+		      (load_request[i].flags&ALLOW_MISSING_ELEMENTS)?"Warning":"Error",
 		      element[j]);
-	      if (allow_missing_elements && --missingElementWarningsLeft==0)
+	      if ((load_request[i].flags&ALLOW_MISSING_ELEMENTS) && --missingElementWarningsLeft==0)
 		printf("Further missing elements warnings suppressed\n");
 	      fflush(stdout);
 	    }
 	  }
 	}
-	if (!allow_missing_elements)
+	if (!(load_request[i].flags&ALLOW_MISSING_ELEMENTS))
 	  exitElegant(1);
 	element_missing = 1;
       }
@@ -520,26 +524,26 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       lastMissingElement[0] = 0;
       lastMissingOccurence = 0;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
-        if (missingParameterWarningsLeft || !allow_missing_parameters) {
+        if (missingParameterWarningsLeft || !(load_request[i].flags&ALLOW_MISSING_PARAMETERS)) {
 	  if (printingEnabled) {
 #if !USE_MPI
 	    printf("%s: element %s does not have a parameter %s (do_load_parameters)\n",
-		    allow_missing_parameters?"Warning":"Error",
+		    (load_request[i].flags&ALLOW_MISSING_PARAMETERS)?"Warning":"Error",
 		    eptr->name, parameter[j]);
 #else
-	    if (allow_missing_parameters)
+	    if ((load_request[i].flags&ALLOW_MISSING_PARAMETERS))
 	      printf("%s: element %s does not have a parameter %s (do_load_parameters)\n",
 		      "Warning", eptr->name, parameter[j]);
 	    else
 	      fprintf(stderr, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
 		      "Error", eptr->name, parameter[j]);
 #endif
-	    if (allow_missing_parameters && --missingParameterWarningsLeft==0)
+	    if ((load_request[i].flags&ALLOW_MISSING_PARAMETERS) && --missingParameterWarningsLeft==0)
 	      printf("Further missing parameters warnings suppressed\n");
 	    fflush(stdout);
 	  }
         }
-        if (!allow_missing_parameters)
+        if (!(load_request[i].flags&ALLOW_MISSING_PARAMETERS))
           exitElegant(1);
         continue;
       }
