@@ -4,17 +4,6 @@
 #include <gpu_reductions.hcu>
 #include <gpu_base.h>
 
-inline __device__ double atomicAddOAG(double* address, double val) {
-  double old = *address, assumed;
-  do {
-    assumed = old;
-    old = __longlong_as_double( atomicCAS((unsigned long long int*)address,
-					  __double_as_longlong(assumed),
-					  __double_as_longlong(val + assumed)));
-  } while (assumed != old);
-  return old;
-} 
-
 class gpuBinParticleDistribution {
 public:
   gpuBinParticleDistribution(double* d_particles, unsigned int particlePitch, 
@@ -162,7 +151,7 @@ __global__ void gpu_binDistribution_kernel(double* d_doubleHistogram,
     unsigned int r_temp = s_blockHistogram[tx];
 
        if(r_temp){
-      unsigned int oldt = atomicAddOAG((double*)(d_unsignedHistogram + tx), r_temp);    
+      unsigned int oldt = atomicAdd((d_unsignedHistogram + tx), r_temp);    
     }
   }
   
@@ -254,7 +243,7 @@ __global__ void gpu_binDistribution_decompKernel(double* d_doubleHistogram,
     if(ib < nb){
       unsigned int r_temp = s_blockHistogram[tx];
       if(r_temp)
-	atomicAddOAG((double*)(d_unsignedHistogram + ib), r_temp);    
+	atomicAdd((d_unsignedHistogram + ib), r_temp);    
     }
   }
   
