@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 33.0.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 33.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,84 +35,31 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 33.0}
+\section{Highlights of What's New in Version 33.1}
 
-Here is a summary of what's changed since release 32.0.
+Here is a summary of what's changed since release 33.0.
 Historical change logs are appended to the end of this manual.
-
-This version includes an alpha release of GPU-enabled code. The original GPU code was developed by 
-Tech-X corporation \cite{GPU1}, with further work by R. Soliday (APS).
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|SREFFECTS| element now correctly computes the equilibrium horizontal and vertical emittances when
-  $J_x \neq 1$. Previously, the computation used an equation that implicitly assumes $J_x = 1$.
-\item The \verb|MALIGN| element could cause spurious integer changes in the reported tunes if the \verb|DZ| parameter
-  was negative. This problem, reported by V. Sajaev (APS), was fixed.
-\item A memory management bug related to the systematic and random multipole data store was fixed. This in principle
-  affected \verb|KQUAD|, \verb|KSEXT|, and other elements using the \verb|SYSTEMATIC_MULTIPOLES| and \verb|RANDOM_MULTIPOLES|
-  features. In testing, no effect was in fact observed.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|correction_matrix_output| command command were ignoring the monitor calibrations
-  (\verb|MONI|, \verb|HMON|, and \verb|VMON|) values when \verb|use_response_from_computed_orbits = 1|.
-  This was reported by V. Sajaev (APS).
-\item The \verb|steering_element| command no longer aborts even if the declared steering corrector appears 
-  not to kick the beam. This allows using unusual controls such as path length to steer the beam. This
-  issue was pointed out by V. Sajaev (APS).
-\item The \verb|load_parameters| and \verb|save_lattice| commands incorrectedly saved the edge angles and other edge-related
-  quantities for bending magnets that were reflected. This issue was fixed. {\em Previously-saved parameter files should be modified
-  (e.g., remove the edge parameters)} unless the magnets had the same parameters for the entrance and exit. 
-  This problem was reported by Y. Li (BNL).
-\item The \verb|rf_setup| and \verb|moments_output| commands will now run in a loop with \verb|find_aperture|,
-  \verb|momentum_aperture|, and \verb|frequency_map| operations, if set for per-step execution. Previously,
-  this would only happen for the \verb|track|, \verb|analyze_map|, and \verb|touschek_scatter| commands.
+\item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \verb|allow_missing_parameters|
+  qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements now support inclusion of multipole errors linked to the
-  correction strength.
-\item The steering kicks and steering multipoles in the \verb|KQUAD| element are now implemented in the body of the element,
-  rather than at the ends.
-\item The \verb|WATCH| element was improved so that the \verb|dt| column in coordinate-logging mode and the \verb|dCt| column in
-  parameter- and centroid-logging modes are more useful. In particular, in normal cases these will now more reliably be centered
-  on zero. One can also provide a reference frequency relative to which the reference time is defined. This improvement grew out of
-  discussions with J. Calvey and T. Berenc (APS).
-\item The reported phases of the beam- and generator-induced parts of the voltage for the \verb|RFMODE| element \verb|RECORD| file
-  are now computed using a method that should be more reliable. This improvement grew out of
-  discussions with J. Calvey and T. Berenc (APS).
-\item The \verb|RECORD| output from the \verb|RFMODE| element now includes the phase of the net cavity voltage. This was requested
-  by M. Venturini (LBNL).
-\item The \verb|RFMODE| element now supports injection of noise into the rf source and low-level rf system. This is based on discussions
-  with T. Berenc (APS).
-\item The \verb|SCRIPT| element can now import \verb|particleID| data from the script without attempting to use this information
-  for lost-particle accounting. This provides better functionality when the \verb|particleID| is used for other purposes, such as
-  bunch membership.
-\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, used for bunch-by-bunch feedback, now allow 30-term FIR filters, up from
-  15 turns in earlier versions.
-\item The \verb|TFBDRIVER| element now accepts specification of the frequency and phase of the driver cavity.
-\item Aperture enforcement inside \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, \verb|CSBEND|, and \verb|CSRCSBEND| elements
-  has been improved. In particular, the \verb|ELLIPTICAL|, \verb|EXPONENT|, \verb|YEXPONENT|, and \verb|OPEN_SIDE| parameters of
-  \verb|MAXAMP| are now implemented. In addition, for the fourth-order integrator, the apertures are no longer asserted at
-  each integration step, but only after each slice (or ``kick'', to use the misleading terminology of the element parameters).
-\item Added the \verb|ALLOW_LONG_BEAM| parameter to the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|bunched_beam| command can now be set to take the fully-coupled 6D bunch parameters from the calculations of the
-  \verb|moments_output| command, provided the latter is used to compute matched, equilibrium parameters.
-  This was requested by forum user \verb|duanz|.
-\item Added occurrence and positional filters for the \verb|steering_element| command. This was requested by V. Sajaev (ANL).
-\item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
-  \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
-\item Compared to previous versions, the lost-particle data file (\verb|losses| file requested by the \verb|run_setup|
-  command) will exhibit changes in the order in which particles are recorded. This was a result of reworking the code for
-  lost particle management.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -121,11 +68,19 @@ Tech-X corporation \cite{GPU1}, with further work by R. Soliday (APS).
 \item None.
 \end{itemize}
 
+\subsection{Changes Specific to the GPU Version}
+
+The GPU version continues to be an alpha release and contains bugs.
+Users are encouraged to test results against the serial or parallel versions.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The program \verb|madto| was renamed \verb|elegantto|, to more accurately reflect what it does.
-  It will not translate \verb|elegant| lattice files into MAD8 format.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6906,6 +6861,99 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log}
+
+\subsection{Highlights of What's New in Version 33.0, March 3, 2017}
+
+Here is a summary of what's changed since release 32.0.
+Historical change logs are appended to the end of this manual.
+
+This version includes an alpha release of GPU-enabled code. The original GPU code was developed by 
+Tech-X corporation \cite{GPU1}, with further work by R. Soliday (APS).
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|SREFFECTS| element now correctly computes the equilibrium horizontal and vertical emittances when
+  $J_x \neq 1$. Previously, the computation used an equation that implicitly assumes $J_x = 1$.
+\item The \verb|MALIGN| element could cause spurious integer changes in the reported tunes if the \verb|DZ| parameter
+  was negative. This problem, reported by V. Sajaev (APS), was fixed.
+\item A memory management bug related to the systematic and random multipole data store was fixed. This in principle
+  affected \verb|KQUAD|, \verb|KSEXT|, and other elements using the \verb|SYSTEMATIC_MULTIPOLES| and \verb|RANDOM_MULTIPOLES|
+  features. In testing, no effect was in fact observed.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|correction_matrix_output| command command were ignoring the monitor calibrations
+  (\verb|MONI|, \verb|HMON|, and \verb|VMON|) values when \verb|use_response_from_computed_orbits = 1|.
+  This was reported by V. Sajaev (APS).
+\item The \verb|steering_element| command no longer aborts even if the declared steering corrector appears 
+  not to kick the beam. This allows using unusual controls such as path length to steer the beam. This
+  issue was pointed out by V. Sajaev (APS).
+\item The \verb|load_parameters| and \verb|save_lattice| commands incorrectedly saved the edge angles and other edge-related
+  quantities for bending magnets that were reflected. This issue was fixed. {\em Previously-saved parameter files should be modified
+  (e.g., remove the edge parameters)} unless the magnets had the same parameters for the entrance and exit. 
+  This problem was reported by Y. Li (BNL).
+\item The \verb|rf_setup| and \verb|moments_output| commands will now run in a loop with \verb|find_aperture|,
+  \verb|momentum_aperture|, and \verb|frequency_map| operations, if set for per-step execution. Previously,
+  this would only happen for the \verb|track|, \verb|analyze_map|, and \verb|touschek_scatter| commands.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements now support inclusion of multipole errors linked to the
+  correction strength.
+\item The steering kicks and steering multipoles in the \verb|KQUAD| element are now implemented in the body of the element,
+  rather than at the ends.
+\item The \verb|WATCH| element was improved so that the \verb|dt| column in coordinate-logging mode and the \verb|dCt| column in
+  parameter- and centroid-logging modes are more useful. In particular, in normal cases these will now more reliably be centered
+  on zero. One can also provide a reference frequency relative to which the reference time is defined. This improvement grew out of
+  discussions with J. Calvey and T. Berenc (APS).
+\item The reported phases of the beam- and generator-induced parts of the voltage for the \verb|RFMODE| element \verb|RECORD| file
+  are now computed using a method that should be more reliable. This improvement grew out of
+  discussions with J. Calvey and T. Berenc (APS).
+\item The \verb|RECORD| output from the \verb|RFMODE| element now includes the phase of the net cavity voltage. This was requested
+  by M. Venturini (LBNL).
+\item The \verb|RFMODE| element now supports injection of noise into the rf source and low-level rf system. This is based on discussions
+  with T. Berenc (APS).
+\item The \verb|SCRIPT| element can now import \verb|particleID| data from the script without attempting to use this information
+  for lost-particle accounting. This provides better functionality when the \verb|particleID| is used for other purposes, such as
+  bunch membership.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements, used for bunch-by-bunch feedback, now allow 30-term FIR filters, up from
+  15 turns in earlier versions.
+\item The \verb|TFBDRIVER| element now accepts specification of the frequency and phase of the driver cavity.
+\item Aperture enforcement inside \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, \verb|CSBEND|, and \verb|CSRCSBEND| elements
+  has been improved. In particular, the \verb|ELLIPTICAL|, \verb|EXPONENT|, \verb|YEXPONENT|, and \verb|OPEN_SIDE| parameters of
+  \verb|MAXAMP| are now implemented. In addition, for the fourth-order integrator, the apertures are no longer asserted at
+  each integration step, but only after each slice (or ``kick'', to use the misleading terminology of the element parameters).
+\item Added the \verb|ALLOW_LONG_BEAM| parameter to the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|bunched_beam| command can now be set to take the fully-coupled 6D bunch parameters from the calculations of the
+  \verb|moments_output| command, provided the latter is used to compute matched, equilibrium parameters.
+  This was requested by forum user \verb|duanz|.
+\item Added occurrence and positional filters for the \verb|steering_element| command. This was requested by V. Sajaev (ANL).
+\item Several informational printouts for the \verb|touschekScatter| command are no longer shown by default, but only if the 
+  \verb|verbosity| control is set to a non-zero value. This makes short runs more efficient.
+\item Compared to previous versions, the lost-particle data file (\verb|losses| file requested by the \verb|run_setup|
+  command) will exhibit changes in the order in which particles are recorded. This was a result of reworking the code for
+  lost particle management.
+\end{itemize}
+
+\subsubsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|madto| was renamed \verb|elegantto|, to more accurately reflect what it does.
+  It will not translate \verb|elegant| lattice files into MAD8 format.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 32.0, 5 Jan. 2017}
 
