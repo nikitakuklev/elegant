@@ -549,6 +549,10 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
   if (npBucket)
     free(npBucket);
 
+#if USE_MPI
+  MPI_Barrier(workers);
+#endif
+
 #ifdef DEBUG
   printf("Done with ZLONGIT\n");
   fflush(stdout);

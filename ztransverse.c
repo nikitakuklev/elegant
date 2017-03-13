@@ -388,13 +388,15 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
       printf("Preparing to wait on barrier at end of loop for bucket %ld\n", iBucket);
       fflush(stdout);
 #endif
-      MPI_Barrier(workers);
 #endif
 #ifdef DEBUG
         printf("Done with bucket %ld\n", iBucket);
         fflush(stdout);
 #endif
       }
+#if USE_MPI
+      MPI_Barrier(workers);
+#endif
     }
   }
     
@@ -428,6 +430,9 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   if (posIfreq)
     free(posIfreq);
 
+#if USE_MPI
+      MPI_Barrier(workers);
+#endif
 #ifdef DEBUG
   printf("Done with ZTRANSVERSE\n");
   fflush(stdout);
