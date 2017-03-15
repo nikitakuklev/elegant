@@ -11,6 +11,7 @@
     STRING method = "global";
     STRING trajectory_output = NULL;
     STRING corrector_output = NULL;
+    STRING bpm_output = NULL;
     STRING statistics = NULL;
     double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};

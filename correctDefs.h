@@ -117,3 +117,8 @@ void compute_amplification_factors(NAMELIST_TEXT *nltext, RUN *run, CORRECTION *
     long closed_orbit, LINE_LIST *beamline);
 
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
+
+void finish_orb_traj_output();
+void finish_bpm_output();
+void finish_corrector_output();
+void finish_cormon_stats();

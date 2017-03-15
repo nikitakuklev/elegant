@@ -153,6 +153,7 @@ void correction_setup(
     if (isSlave) {
        trajectory_output = NULL;
        corrector_output = NULL;
+       bpm_output = NULL;
        statistics = NULL;
     }
 #endif
@@ -184,6 +185,8 @@ void correction_setup(
     if (trajectory_output)
         setup_orb_traj_output(trajectory_output=compose_filename(trajectory_output, run->rootname),
                     correction_mode[_correct->mode], run);
+    if (bpm_output)
+      setup_bpm_output(bpm_output=compose_filename(bpm_output, run->rootname), run);
     if (statistics)
         setup_cormon_stats(statistics=compose_filename(statistics, run->rootname), run);
     if (corrector_output)
@@ -952,8 +955,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       }
     }
     if (!(flags&NO_OUTPUT_CORRECTION) && (flags&FINAL_CORRECTION) && 
-        ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
+        ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, sim_step);
+    }
     if (starting_coord)
       for (i=0; i<6; i++)
         starting_coord[i] = 0;  /* don't want to seem to be returning a closed orbit here */
@@ -1118,8 +1123,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       }
     }
     if (!(flags&NO_OUTPUT_CORRECTION) && !bombed && (flags&FINAL_CORRECTION) && 
-        ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
+        ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, sim_step);
+    }
     break;
   }
 
@@ -1489,8 +1496,8 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       reading = computeMonitorReading(eptr, coord, x, y, 0);
       if (isnan(reading) || isinf(reading)) 
         return 0;
-      CM->posi[iteration][i_moni] = Mij(Qo, i_moni, 0) =  
-        reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
+      CM->posi[iteration][i_moni] = reading;
+      Mij(Qo, i_moni, 0) = reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
     }
     
     if (iteration==n_iterations)
@@ -2630,10 +2637,9 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
       x = clorb[i].centroid[0];
       y = clorb[i].centroid[2];
       eptr = clorb[i].elem;
-      reading = computeMonitorReading(eptr, coord, x, y, 0);
  
-      Mij(Qo, i_moni, 0) = CM->posi[iteration][i_moni] = reading + 
-        (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0.0);
+      CM->posi[iteration][i_moni] = reading = computeMonitorReading(eptr, coord, x, y, 0);
+      Mij(Qo, i_moni, 0) = reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0.0);
       rms_pos += sqr(Mij(Qo, i_moni, 0));
       if (!clorb[i].elem->succ)
         break;
@@ -3315,3 +3321,9 @@ void copy_CM_structure(CORMON_DATA *CMA, CORMON_DATA *CM)
   CMA->ncor = 0;
 }
 
+void finishCorrectionOutput() {
+  finish_orb_traj_output();
+  finish_bpm_output();
+  finish_corrector_output();
+  finish_cormon_stats();
+}

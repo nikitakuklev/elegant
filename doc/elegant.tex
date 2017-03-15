@@ -59,7 +59,8 @@ Historical change logs are appended to the end of this manual.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Added \verb|bpm_output| option to the \verb|correct| command, which provides optional output of beam position monitor
+  readings after orbit or trajectory correction. This was suggested by V. Sajaev (APS).
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -1347,6 +1348,7 @@ during the computations.
     STRING trajectory_output = NULL;
     STRING corrector_output = NULL;
     STRING statistics = NULL;
+    STRING bpm_output = NULL;
     double corrector_tweek[2] = {1e-3, 1e-3};
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
@@ -1400,6 +1402,9 @@ For closed orbit, must be ``global''.
 horizontal and vertical planes is on separate pages. Typically, one will need to use \verb|sddscombine -merge=Step ...| in order to place the data from both planes on the same page. Also, be aware that if all correctors have the same name, using \verb|change_defined_values=1| on \verb|load_parameters| will not produce the expected results. See the documentation for \verb|load_parameters| for more details.
 \item \verb|statistics| --- The (incomplete) name of an SDDS file to which statistical information about the
 trajectories (or orbits) and corrector strengths will be written.  Recommended value: ``\%s.scor''.
+\item \verb|bpm_output| --- The (incomplete) name of an SDDS file to which post-correction BPM errors will be written. The
+  errors are the residual after correction, and include the effects of offsets (\verb|DX| and \verb|DY|), setpoints
+  (\verb|XSETPOINT|, \verb|YSETPOINT|, and \verb|SETPOINT|), and tilts (\verb|TILT|).
 \item \verb|corrector_tweek[2]| --- The amount by which to change the correctors in order to compute correction coefficients for
 transport lines.
 [The word ``tweak'' is misspelled ``tweek'' in the code.]   The default value, 1 mrad, may be too large for systems with

@@ -1168,6 +1168,8 @@ char **argv;
         finish_response_output();
       if (parameters)
         finishLatticeParametersFile();
+      if (correct.mode!=-1)
+        finishCorrectionOutput();
 #ifdef SUNOS4
       check_heap();
 #endif
@@ -1533,6 +1535,8 @@ char **argv;
         finish_twiss_output(beamline);
       if (do_response_output)
         finish_response_output();
+      if (correct.mode!=-1)
+        finishCorrectionOutput();
 #ifdef SUNOS4
       check_heap();
 #endif
