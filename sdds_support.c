@@ -986,7 +986,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
-    accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
+    accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, NULL, 0.0, 0.0,
+                         watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     if (isMaster) {
       if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");

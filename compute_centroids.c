@@ -273,6 +273,7 @@ void accumulate_beam_sums(
                           long n_part,
                           double p_central,
 			  double mp_charge,
+                          double *timeValue, double tMin, double tMax, /* time filter */
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -303,7 +304,7 @@ void accumulate_beam_sums(
     startGpuTimer();
     gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, startPID, endPID, flags);
     startCpuTimer();
-    accumulate_beam_sums(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
+    accumulate_beam_sums(sums, coord, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
     compareReductionArrays(NULL, NULL, sums, "accumulate_beam_sums");
 #else 
     gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
@@ -312,9 +313,14 @@ void accumulate_beam_sums(
   }
 #endif /* HAVE_GPU */
 
-  timeCoord = malloc(sizeof(double)*n_part);
+
+   timeCoord = malloc(sizeof(*timeCoord)*n_part);
+   if (!timeValue)
+     computeTimeCoordinates(timeCoord, p_central, coord, n_part);
+   else
+    memcpy(timeCoord, timeValue, sizeof(*timeCoord)*n_part);
+
   chosen = malloc(sizeof(short)*n_part);
-  computeTimeCoordinates(timeCoord, p_central, coord, n_part);
   
   if (exactNormalizedEmittance) {
     pz = malloc(sizeof(double)*n_part);
@@ -327,7 +333,8 @@ void accumulate_beam_sums(
 
   if (n_part) {
     for (i_part=npCount=0; i_part<n_part; i_part++) {
-      if (startPID>=endPID || (coord[i_part][6]>=startPID && coord[i_part][6]<=endPID)) {
+      if ((startPID>=endPID || (coord[i_part][6]>=startPID && coord[i_part][6]<=endPID)) && 
+          (tMin>=tMax || (timeCoord[i_part]>=tMin && timeCoord[i_part]<=tMax))) {
         chosen[i_part] = 1;
         npCount++;
       } else 
@@ -479,14 +486,16 @@ void accumulate_beam_sums(
                           long n_part,
                           double p_central, 
 			  double mp_charge,
+                          double *timeValue, double tMin, double tMax, /* time filter */
                           long startPID, long endPID,
                           unsigned long flags
                           )
 {
   /* The order of these calls must not be changed, since the second call uses results from the first */
-  accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
+  accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
   if (exactNormalizedEmittance)
-    accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags|BEAM_SUMS_EXACTEMIT|BEAM_SUMS_NOMINMAX);
+    accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, timeValue, tMin, tMax, 
+                          startPID, endPID, flags|BEAM_SUMS_EXACTEMIT|BEAM_SUMS_NOMINMAX);
 }
 
 void accumulate_beam_sums1(
@@ -495,6 +504,7 @@ void accumulate_beam_sums1(
                           long n_part,
                           double p_central, 
 			  double mp_charge,
+                          double *timeValue, double tMin, double tMax, /* time filter */
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -526,7 +536,7 @@ void accumulate_beam_sums1(
     startGpuTimer();
     gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, startPID, endPID, flags);
     startCpuTimer();
-    accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, startPID, endPID, flags);
+    accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
     compareReductionArrays(NULL, NULL, sums, "accumulate_beam_sums");
 #else 
     gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
@@ -558,9 +568,13 @@ void accumulate_beam_sums1(
       active = 0;
   }
 
-  timeCoord = malloc(sizeof(double)*n_part);
+  if (!timeValue) {
+    timeCoord = malloc(sizeof(double)*n_part);
+    computeTimeCoordinatesOnly(timeCoord, p_central, coord, n_part);
+  } else
+    timeCoord = timeValue;
+
   chosen = malloc(sizeof(short)*n_part);
-  computeTimeCoordinatesOnly(timeCoord, p_central, coord, n_part);
 
   if (flags&BEAM_SUMS_EXACTEMIT) {
     pz = malloc(sizeof(double)*n_part);
@@ -571,7 +585,8 @@ void accumulate_beam_sums1(
   if (!sums->n_part) 
     sums->p0 = p_central;
   for (i_part=npCount=0; i_part<n_part; i_part++) {
-    if (startPID>=endPID || (coord[i_part][6]>=startPID && coord[i_part][6]<=endPID)) {
+    if ((startPID>=endPID || (coord[i_part][6]>=startPID && coord[i_part][6]<=endPID)) && 
+        (tMin>=tMax || (timeCoord[i_part]>=tMin && timeCoord[i_part]<=tMax))) {
       chosen[i_part] = 1;
       npCount++;
     } else 
@@ -911,7 +926,8 @@ void accumulate_beam_sums1(
   free(sumArray);
   free(errorArray);
 #endif
-  free(timeCoord);
+  if (timeCoord!=timeValue)
+    free(timeCoord);
   free(chosen);
   if (pz)
     free(pz);

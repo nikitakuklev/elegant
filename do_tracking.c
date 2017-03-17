@@ -172,6 +172,7 @@ long do_tracking(
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
+  SLICE_POINT *slicePoint;
   STRAY *stray;
   HISTOGRAM *histogram;
   MHISTOGRAM *mhist;
@@ -820,7 +821,7 @@ long do_tracking(
 #endif
         accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
 			     charge ? charge->macroParticleCharge : 0.0,
-			     0, 0, 0);
+			     NULL, 0.0, 0.0, 0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
         printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -1060,6 +1061,7 @@ long do_tracking(
 	    switch (type) {
 	    case T_IBSCATTER:
 	    case T_WATCH:
+            case T_SLICE_POINT:
 	    case T_CLEAN:
 	    case T_RCOL:
 	    case T_CHARGE:
@@ -1324,6 +1326,43 @@ long do_tracking(
 	      MPE_Log_event(event1b, 0, "end watch");
 #endif
 	      break;
+	    case T_SLICE_POINT:
+#if USE_MPI
+	      if (!notSinglePart) /* When each processor tracks the beam independently, the slice point will be disabled in Pelegant */
+		break;
+	      if (!partOnMaster && notSinglePart) { /* Update the total particle number to get the correct charge */
+		if (isMaster) nToTrack = 0;
+                if (beam)
+		MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	      } else { /* singlePart tracking or partOnMaster */
+                if (beam)
+		beam->n_to_track_total = nToTrack;
+	      }
+#endif
+	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
+	        slicePoint = (SLICE_POINT*)eptr->p_elem;
+	        if (!slicePoint->disable) {
+	          watch_pt_seen = 1; /* sic */
+	          if (!slicePoint->initialized) 
+	            set_up_slice_point(slicePoint, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
+	          if (i_pass==0 && (n_passes/slicePoint->interval)==0)
+	            printf("warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
+	     	     n_passes, watch->interval);
+#if SDDS_MPI_IO
+		  if (watch_not_allowed) {
+		    dup2(fd,fileno(stdout));
+		    printf("/****************************************************************************/\n");
+		    printf ("Slice point can not be used for dynamic aperture searching with Pelegant\n");
+		    printf("/****************************************************************************/\n");
+		    fflush(stdout);
+		    MPI_Abort(MPI_COMM_WORLD, 1);
+		  }
+#endif
+                  dump_slice_analysis(slicePoint, step, i_pass, n_passes, coord, nToTrack, *P_central,
+                                      beamline->revolution_length, z, charge?charge->macroParticleCharge:0.0);
+                }
+              }
+              break;
 	    case T_HISTOGRAM:
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
 		histogram = (HISTOGRAM*)eptr->p_elem;
@@ -2274,7 +2313,7 @@ long do_tracking(
 #endif
           accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
 			       charge ? charge->macroParticleCharge : 0.0, 
-			       0, 0, 0);
+			       NULL, 0.0, 0.0, 0, 0, 0);
 #ifdef DEBUG_BEAM_SUMS
           printMessageAndTime(stdout, "Done accumulating beam sums\n");
 #endif
@@ -2367,7 +2406,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
 			   charge ? charge->macroParticleCharge : 0.0,
-			   0, 0, 0);
+			   NULL, 0.0, 0.0, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -2518,7 +2557,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
 			   charge ? charge->macroParticleCharge : 0.0,
-			   0, 0, 0);
+			   NULL, 0.0, 0.0, 0, 0, 0);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
@@ -2538,7 +2577,7 @@ long do_tracking(
 #endif
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central,
 			   charge ? charge->macroParticleCharge : 0.0,
-			   0, 0, 0);
+			   NULL, 0.0, 0.0, 0, 0, 0);
 #if defined(BEAM_SUMS_DEBUG)
       printMessageAndTime(stdout, "Done accumulating beam sums\n");
       printf("beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
@@ -3248,7 +3287,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   static char s[1000];
 
   zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, Po, 0.0, 0, 0, 0);
+  accumulate_beam_sums(&sums, coord, np, Po, 0.0, NULL, 0.0, 0.0, 0, 0, 0);
   if (isMaster || !notSinglePart) {
     for (i=0; i<6; i++) {
       centroid[i] = sums.centroid[i];
@@ -4485,7 +4524,7 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
 #endif
 
   zero_beam_sums(&sums, 1);
-  accumulate_beam_sums(&sums, coord, np, pCentral, 0, 0, 0, 0);
+  accumulate_beam_sums(&sums, coord, np, pCentral, 0, NULL, 0.0, 0.0, 0, 0, 0);
   pAverage = pCentral*(1+sums.centroid[5]);
   
   for (i=0; i<2; i++) {

@@ -65,7 +65,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS"
+    "IONEFFECTS", "SLICE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -191,7 +191,8 @@ char *entity_text[N_TYPES] = {
     "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z).",
     "A straight magnetic field element using generalized gradient expansion.",
     "Conditional branch instruction to jump to another part of the beamline",
-    "Simulates ionization of residual gas and interaction with the beam."
+    "Simulates ionization of residual gas and interaction with the beam.",
+    "Performs slice-by-slice analysis of the beam for output to a file."
     } ;
 
 QUAD quad_example;
@@ -2727,6 +2728,23 @@ PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS] = {
 
 };  
 
+SLICE_POINT slice_point_example;
+/* names for slice point */
+PARAMETER slice_point_param[N_SLICE_POINT_PARAMS] = {
+    {"N_SLICES", "", IS_LONG, 0, (long)((char *)&slice_point_example.nSlices), NULL, 0.0, 10, "number of slices"},
+    {"START_PID", "", IS_LONG, 0, (long)((char *)&slice_point_example.startPID), NULL, 0.0, -1, "starting particleID for particles to dump"},
+    {"END_PID", "", IS_LONG, 0, (long)((char *)&slice_point_example.endPID), NULL, 0.0, -1, "ending particleID for particles to dump"},
+    {"INTERVAL", "", IS_LONG, 0, (long)((char *)&slice_point_example.interval), NULL, 0.0, 1, "interval for data output (in turns)"},
+    {"START_PASS", "", IS_LONG, 0, (long)((char*)&slice_point_example.start_pass), NULL, 0.0, 0, "pass on which to start"},
+    {"END_PASS", "", IS_LONG, 0, (long)((char*)&slice_point_example.end_pass), NULL, 0.0, -1, "pass on which to end (inclusive).  Ignored if negative."},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&slice_point_example.filename), "", 0.0, 0, "output filename, possibly incomplete (see below)"},
+    {"LABEL", "", IS_STRING, 0, (long)((char *)&slice_point_example.label), "", 0.0, 0, "output label"},
+    {"DISABLE", "", IS_LONG, 0, (long)((char *)&slice_point_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
+    {"USE_DISCONNECT", "", IS_LONG, 0, (long)((char *)&slice_point_example.useDisconnect), NULL, 0.0, 0, "If nonzero, files are disconnected between each write operation. May be useful for parallel operation.  Ignored otherwise."},
+    {"INDEX_OFFSET", "", IS_LONG, 0, (long)((char *)&slice_point_example.indexOffset), NULL, 0.0, 0, "Offset for file indices for sequential file naming."},
+    {"REFERENCE_FREQUENCY", "", IS_DOUBLE, 0, (long)((char *)&slice_point_example.referenceFrequency), NULL, -1.0, -1, "If non-zero, the indicated frequency is used to define the bucket center for purposes of computing time offsets."},
+    } ;
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2868,6 +2886,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
     { N_IONEFFECTS_PARAMS, NO_DICT_OUTPUT,     sizeof(IONEFFECTS),  ionEffects_param    },
+    { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES, sizeof(SLICE_POINT),    slice_point_param   }, 
 } ;
 
 void compute_offsets()

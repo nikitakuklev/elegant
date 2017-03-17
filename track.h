@@ -890,7 +890,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BGGEXP 116
 #define T_BRANCH 117
 #define T_IONEFFECTS 118
-#define N_TYPES  119
+#define T_SLICE_POINT 119
+#define N_TYPES  120
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1015,6 +1016,7 @@ extern char *entity_text[N_TYPES];
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 12
 #define N_BRANCH_PARAMS 3
+#define N_SLICE_POINT_PARAMS 11
 #define N_IONEFFECTS_PARAMS 7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -1658,6 +1660,20 @@ typedef struct {
     ntuple *Tr4d, *full6d;
     long initialized, count;
     } MHISTOGRAM;
+
+  /* slice analysis element */
+
+typedef struct {
+  long nSlices, startPID, endPID, interval, start_pass, end_pass;
+  char *filename, *label;
+  long disable, useDisconnect, indexOffset;
+  double referenceFrequency;
+  /* internal variables for SDDS output */
+  long initialized;
+  SDDS_TABLE SDDS_table;
+  double t0Last, t0LastError;
+  long passLast;
+} SLICE_POINT;
 
 /* Traveling wave (TEM) deflector plates using NAG integrator.
  */
@@ -3245,12 +3261,14 @@ extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 #define BEAM_SUMS_NOMINMAX 0x0002UL
 #define BEAM_SUMS_EXACTEMIT 0x0004UL
 extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central, double mp_charge,
+                                 double *timeValue, double tMin, double tMax,
 				 long startPID, long endPID, unsigned long flags);
 extern void accumulate_beam_sums1(BEAM_SUMS *sums,
                                   double **coord,
                                   long n_part,
                                   double p_central, 
                                   double mp_charge,
+                                  double *timeValue, double tMin, double tMax,
                                   long startPID, long endPID,
                                   unsigned long flags);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
@@ -3295,6 +3313,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long sliceEtilted, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
 extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);
+extern void set_up_slice_point(SLICE_POINT *slice, RUN *run, long occurence, char *previousElementName);
+void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lattice_file, char *caller, 
+                          char *previousElementName);
+void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_passes, 
+                         double **particle, long particles, double Po, 
+                         double revolutionLength, double z, double mp_charge);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, unsigned long flags);
 #define RESET_INCLUDE_RF     0x0001UL
