@@ -172,7 +172,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
     }
   }
 #if USE_MPI
-  findGlobalMinMax(&tMin, &tMax, particles, MPI_COMM_WORLD);
+  find_global_min_max(&tMin, &tMax, particles, MPI_COMM_WORLD);
 #endif
 
 #ifdef DEBUG
