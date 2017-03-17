@@ -568,11 +568,11 @@ void accumulate_beam_sums1(
       active = 0;
   }
 
-  if (!timeValue) {
-    timeCoord = malloc(sizeof(double)*n_part);
+  timeCoord = malloc(sizeof(double)*n_part);
+  if (!timeValue)
     computeTimeCoordinatesOnly(timeCoord, p_central, coord, n_part);
-  } else
-    timeCoord = timeValue;
+  else
+    memcpy(timeCoord,timeValue, sizeof(*timeCoord)*n_part);
 
   chosen = malloc(sizeof(short)*n_part);
 

@@ -1412,8 +1412,10 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
 {
     char *mode, *qualifier;
 
-    log_entry("set_up_watch_point");
-
+#if MPI_DEBUG
+    printf("set_up_watch_point called\n");
+    fflush(stdout);
+#endif
     if (watch->disable)
       return;
     if (watch->interval<=0 || watch->fraction<=0)
@@ -1437,7 +1439,6 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
     watch->initialized = 1;
     watch->count = 0;
     watch->flushSample = -1;
-    log_exit("set_up_watch_point");
     }
 
 void set_up_histogram(HISTOGRAM *histogram, RUN *run, long occurence)

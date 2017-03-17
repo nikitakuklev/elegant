@@ -65,12 +65,17 @@ void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lat
 {
   SDDS_TABLE *SDDS_table;
   char *filename;
-  
-#if USE_MPI && !SDDS_MPI_IO 
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
-      return;
+
+#if MPI_DEBUG
+    printf("SDDS_SlicePointSetup called\n");
+    fflush(stdout);
+#endif
+
+#if USE_MPI
+  if (myid<0)
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  if (myid!=0)
+    return;
 #endif
 
   SDDS_table = &slicePoint->SDDS_table;
@@ -212,13 +217,20 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
     accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, 
                          timeCoord, t0, t0+dt0, 
                          slicePoint->startPID, slicePoint->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
-
     for (i=0; i<2; i++) {
       emitc[i] = emit[i] = 0;
       computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
     }
+#ifdef DEBUG
+    printf("ex = %le, ey = %le\n", emit[0], emit[1]);
+    fflush(stdout);
+#endif
 
     if (isMaster) {
+#ifdef DEBUG
+      printf("Setting row values\n");
+      fflush(stdout);
+#endif
       if ((Cx_index=SDDS_GetColumnIndex(&slicePoint->SDDS_table, "Cx"))<0) {
         SDDS_SetError("Problem getting index of SDDS columns (dump_slice_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -257,6 +269,10 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
   }
 
   if (isMaster) {
+#ifdef DEBUG
+    printf("Setting parameter values\n");
+    fflush(stdout);
+#endif
     if (!SDDS_SetParameters(&slicePoint->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, "Pass", pass, "s", z, 
                             "pCentral", Po, "dt", (tMax-tMin)/(slicePoint->nSlices>1 ? slicePoint->nSlices-1 : 1),
@@ -265,6 +281,10 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     
+#ifdef DEBUG
+    printf("Writing table\n");
+    fflush(stdout);
+#endif
     if (!SDDS_WriteTable(&slicePoint->SDDS_table)) {
       SDDS_SetError("Problem writing data for SDDS table (dump_slice_analysis)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -273,5 +293,17 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       SDDS_DoFSync(&slicePoint->SDDS_table);
   }
 
+#if USE_MPI
+#ifdef DEBUG
+  printf("Waiting on final barrier\n");
+  fflush(stdout);
+#endif
+  MPI_Barrier(MPI_COMM_WORLD);
+#ifdef DEBUG
+  printf("Passed final barrier\n");
+  fflush(stdout);
+#endif
+#endif
+  
   free(timeCoord);
 }
