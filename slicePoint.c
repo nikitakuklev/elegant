@@ -206,14 +206,6 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
 #endif
     /* compute centroids, sigmas, and emittances for x, y, and s */
     zero_beam_sums(&sums, 1);
-    {
-      long count, j;
-      count = 0;
-      for (j=0; j<particles; j++) 
-        if (timeCoord[j]>=t0 && timeCoord[j]<=(t0+dt0))
-          count++;
-      printf("expected count: %ld\n", count);
-    }
     accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, 
                          timeCoord, t0, t0+dt0, 
                          slicePoint->startPID, slicePoint->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
@@ -238,7 +230,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
                                0, iSlice, 1, sums.n_part, 2, sums.charge, Cx_index+i, 
-                               i==4?(tMax+tMin)/2:sums.centroid[i],
+                               i==4?(t0+dt0/2):sums.centroid[i],
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
