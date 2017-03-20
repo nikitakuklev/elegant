@@ -557,9 +557,10 @@ void gpu_d_gauss_rn(double* d_ranarr, unsigned int n_num, double mean,
 __global__ void setupState(double* d_ranarr, unsigned int np, 
                            curandState_t* state) {
   for(unsigned int tid=threadIdx.x + blockIdx.x*blockDim.x; tid < np; 
-      tid += blockDim.x*gridDim.x) 
+      tid += blockDim.x*gridDim.x) {
     /* Do not modify the bits on conversion to a long long for the seed */
-    curand_init(*(unsigned long long*)&d_ranarr[tid],tid,0,state);
+    curand_init(*(unsigned long long*)&d_ranarr[tid],tid,0,state+tid);
+  }
 }
 
 /**
