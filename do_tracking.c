@@ -398,6 +398,8 @@ long do_tracking(
       beam->lostBeam.nLostMax = nOriginal;
     }
     gpuBaseInit(coord, nOriginal, accepted, beam->lostBeam.particle, isMaster);
+  } else {
+    gpuBaseInit(coord, nOriginal, accepted, lostBeam->particle, isMaster);
   }
 #endif
 
