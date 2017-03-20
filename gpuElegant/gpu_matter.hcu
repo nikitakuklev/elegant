@@ -102,7 +102,7 @@ inline __device__ unsigned int
       int is;
       ds = dgamma = 0;
       for (is=0; is<sections0 && !isLost; is++) {
-        if (curand_uniform_double(state)<prob) { //(random_2(1)<prob) {
+        if (curand_uniform_double(state)<prob) { //(random_2(1)<prob)
           //nScatters ++;
           /* single-scattering computation */
           /* scatter occurs at location 0<=zs<=L */
@@ -131,7 +131,7 @@ inline __device__ unsigned int
           if (probBS!=0 && curand_uniform_double(state)<probBS) //random_2(1)<probBS)
             gamma -= gamma*gpu_solveBremsstrahlungCDF(curand_uniform_double(state));
           if (probER!=0 && curand_uniform_double(state)<probER); //random_2(1)<probER)
-            gamma -= BS_Y0/(1-curand_uniform_double(state)*(1-BS_Y0));
+	  gamma -= BS_Y0/(1-curand_uniform_double(state)*(1-BS_Y0));
           if (gamma<=1) {
             isLost = 1;
             break;
