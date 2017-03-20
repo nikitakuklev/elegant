@@ -10,9 +10,9 @@ extern "C" {
 
 void gpu_compute_centroids(double *centroid, long np);
 
-void gpu_accumulate_beam_sums(BEAM_SUMS *sums, long n_part, double p_central, 
-                              double mp_charge, long startPID, long endPID, 
-                              unsigned long flags);
+void gpu_accumulate_beam_sums(BEAM_SUMS *sums, long n_part, double p_central, double mp_charge, 
+                              double *timeValue, double tMin, double tMax,
+                              long startPID, long endPID, unsigned long flags);
 
 #ifdef __cplusplus
 }

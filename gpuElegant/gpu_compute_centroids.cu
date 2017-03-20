@@ -239,6 +239,7 @@ void gpu_accumulate_beam_sums(
                           long n_part,
                           double p_central,
 			  double mp_charge,
+                          double *timeValue, double tMin, double tMax,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -275,7 +276,12 @@ void gpu_accumulate_beam_sums(
   double* d_center4 = d_temp_particles + 2*particlePitch;
   double* d_pz      = d_temp_particles + 3*particlePitch;
 
+  if (timeValue != NULL) {
+    fprintf(stderr, "timeValue in gpu_accumulate_beam_sums is not implemented yet\n");
+    exit;
+  }
   gpu_computeTimeCoordinates(n_part, d_timeCoord, p_central);
+  
   
   if (exactNormalizedEmittance) {
     gpuDriver(n_part, gpuPZ(d_pz, p_central));
@@ -454,6 +460,7 @@ void gpu_accumulate_beam_sums(
                           long n_part,
                           double p_central, 
 			  double mp_charge,
+                          double *timeValue, double tMin, double tMax,
                           long startPID, long endPID,
                           unsigned long flags
                           )
@@ -512,6 +519,10 @@ void gpu_accumulate_beam_sums(
   double* d_center4 = d_temp_particles + 2*particlePitch;
   double* d_pz      = d_temp_particles + 3*particlePitch;
 
+  if (timeValue != NULL) {
+    fprintf(stderr, "timeValue in gpu_accumulate_beam_sums is not implemented yet\n");
+    exit;
+  }
   gpu_computeTimeCoordinates(n_part, d_timeCoord, p_central);
 
   if (!sums->n_part) 
