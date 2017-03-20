@@ -128,7 +128,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
         }
 #if HAVE_GPU
         if (nb>np)
-          bombElegant("track_through_wake: gpuElegant requires nbins<nparticles", NULL);
+          bombElegant("track_through_wake: gpu-elegant requires nbins<nparticles", NULL);
 #endif
         if (tmin>tmax || nb<=0) {
           printf("Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
