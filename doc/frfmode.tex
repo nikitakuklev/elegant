@@ -7,7 +7,8 @@ columns and units:
 \item {\tt Frequency} --- The frequency of the mode in Hz.  Floating point.
 \item {\tt Q} --- The quality factor.  Floating point.
 \item {\tt ShuntImpedance} or {\tt ShuntImpedanceSymm} --- The shunt
-  impedance in Ohms, defined as $V^2/(2*P)$.   Floating point. By default, {\tt ShuntImpedance} is
+  impedance in Ohms, defined as $V^2/(2*P)$ (i.e., the ``circuit definition'').
+  Floating point. By default, {\tt ShuntImpedance} is
   used.  However, if the parameter \verb|USE_SYMM_DATA| is non-zero, then 
   {\tt ShuntImpedanceSymm}  is used.  The latter is the full-cavity 
   shunt impedance that URMEL computes
