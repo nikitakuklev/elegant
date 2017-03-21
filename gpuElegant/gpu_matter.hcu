@@ -41,8 +41,8 @@ inline __device__ double gpu_solveBremsstrahlungCDF(double F)
 inline __device__ unsigned int
     gpu_track_through_matter_dfunc(gpuParticleAccessor& coord, 
       int energyDecay, int nuclearBremsstrahlung, int energyStraggle,
-      int nSlots, double spacing, double width, double tilt, double center,
-      int multipleScattering, double Nrad, double L, double theta_rms,
+      int multipleScattering, int nSlots, double spacing, double width, double tilt, double center,
+      double Nrad, double L, double theta_rms,
       int sections0, double prob, double L1, double K2, 
       double probBS, double probER, double Po, double dGammaFactor, double z0,
       unsigned int *d_sortIndex, curandState_t *d_state) {

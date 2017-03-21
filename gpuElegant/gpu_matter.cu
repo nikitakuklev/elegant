@@ -31,8 +31,9 @@ public:
     double probBS, double probER, double Po, double dGammaFactor,
     double z0, unsigned int *d_sortIndex, curandState_t *d_state) :
     energyDecay(energyDecay), nuclearBremsstrahlung(nuclearBremsstrahlung),
-    energyStraggle(energyStraggle), nSlots(nSlots), spacing(spacing), width(width),
-    tilt(tilt), center(center), multipleScattering(multipleScattering),
+    energyStraggle(energyStraggle), multipleScattering(multipleScattering),
+    nSlots(nSlots), spacing(spacing), width(width),
+    tilt(tilt), center(center), 
     Nrad(Nrad), L(L), theta_rms(theta_rms), sections0(sections0),
     prob(prob), L1(L1), K2(K2), probBS(probBS), probER(probER), Po(Po),
     dGammaFactor(dGammaFactor), z0(z0), d_sortIndex(d_sortIndex),
@@ -154,9 +155,9 @@ long gpu_track_through_matter(long np, MATTER *matter, double Po,
   unsigned int* d_sortIndex = gpuBase->d_tempu_alpha;
   np = killParticles(np, d_sortIndex, accepted,
     gpu_track_through_matter_kernel(matter->energyDecay, matter->nuclearBremsstrahlung,
-    matter->energyStraggle, matter->nSlots, matter->spacing, matter->width, 
+    matter->energyStraggle, multipleScattering, matter->nSlots, matter->spacing, matter->width, 
     matter->tilt, matter->center,
-    multipleScattering, Nrad, L, theta_rms, sections0,
+    Nrad, L, theta_rms, sections0,
     prob, L1, K2, probBS, probER, Po, dGammaFactor, z0, d_sortIndex, d_state));
   
   log_exit("track_through_matter");
