@@ -779,7 +779,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
 	}
       } else if (distributionBasedRadiation) {
 	//FIX THIS
-        printf("ERROR with gpu_track_through_csbend: Bob intended to fix this but he forgot. Let him know\n");
+        bombElegant("distributionBasedRadiation on the GPU is not working yet. (track_through_csbend)", NULL);
         state =
           (curandState_t*)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
       }
