@@ -33,7 +33,7 @@ for {set n 0} {$n<$nHarmonics} {incr n} {
 # Regroup so that each page is a different harmonic.
 exec sddssort $input -pipe=out -column=phi,incr \
   | sddsprocess -pipe "-define=col,arc,i_row n_rows /" \
-  | sddsfft -pipe -fullOutput -nowarning -column=arc,Br \
+  | sddsfft -pipe -fullOutput -nowarning -column=arc,Br -nowarning \
   | sddsregroup -pipe=in $root.fft -newparameter=f -newcolumn=z 
 
 set R [exec sddsconvert $input -topage=1 -pipe=out | sdds2stream -pipe -parameter=R]
