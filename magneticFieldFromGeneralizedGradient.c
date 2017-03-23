@@ -198,7 +198,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   
   step = bgg->fieldLength/(bggData->nz-1);
   if (fabs(step/bggData->dz-1)>1e-6) 
-    bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\n", tcontext.elementName, tcontext.elementOccurrence, step, bggData->dz);
+    bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\nlength=%le m, nz=%ld\n",
+                  tcontext.elementName, tcontext.elementOccurrence, step, bggData->dz,
+                  bgg->fieldLength, bggData->nz);
 
   /* adjust for insertion length differing from field length */
   if (length!=fieldLength)
