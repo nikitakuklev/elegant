@@ -645,20 +645,33 @@ __global__ void enforceLimit(double* d_ranarr, unsigned int np, double mean,
  * @param limit_in_sigmas cutoff in stdevs of the normal distribtion
  * @param seed random number generator seed
  */
-void gpu_d_gauss_rn_lim(double* d_ranarr, unsigned int n_num, double mean, 
+void gpu_d_gauss_rn_lim(double* d_ranarr, unsigned int n_num, unsigned int groups, double mean, 
                         double sigma, double limit_in_sigmas, double seed) {
 
   curandState_t* state =
     (curandState_t*)gpu_get_rand_state(d_ranarr, n_num, seed);
+  struct GPULOCAL* gpuLocal = getGpuLocal();
+  curandGenerator_t* generator = gpuLocal->cuRandGen;
+  curandStatus_t errRand;
 
-  gpu_d_gauss_rn(d_ranarr, n_num, mean, sigma, seed);
+  gpu_init_rand_generator(seed);
+
+  /* requires an even n_num */
+  if (n_num%2>0) n_num+=1;
+
+  errRand = curandGenerateNormalDouble(*generator, d_ranarr,
+                                       n_num*groups, mean, sigma);
+  gpuCuRandErrorHandler((int)errRand,
+      "gpu_d_gauss_rn: curandGenerateNormalDouble");
 
   unsigned int nTx = 256;
   unsigned int nBx = (n_num + nTx - 1) / nTx;
   struct GPUBASE* gpuBase = getGpuBase();
   if(nBx > gpuBase->nReductionBlocks) nBx = gpuBase->nReductionBlocks;
-  enforceLimit<<<nBx,nTx>>>(d_ranarr, n_num, mean, 
+  
+  enforceLimit<<<nBx,nTx>>>(d_ranarr, n_num*groups, mean, 
                             sigma, limit_in_sigmas*sigma, state);
+  
   gpuErrorHandler("gpu_d_gauss_rn_lim: enforceLimit");
 }
 

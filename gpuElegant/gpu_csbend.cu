@@ -738,6 +738,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
   if (isSlave || !notSinglePart) {
     unsigned int particlePitch = gpuBase->gpu_array_pitch;
     unsigned int* d_sortIndex = gpuBase->d_tempu_alpha;
+    cudaError_t err;
 
     /* Copy Fx_xy, Fy_xy and table coefficients if needed */
     double Fall_xy[2*xOrderMax2];
@@ -747,10 +748,12 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         Fall_xy[ii*expansionOrderMax+jj+xOrderMax2] = Fy_xy[ii][jj];
       }
     }
-    cudaMemcpyToSymbol(c_Fx_xy, Fall_xy, sizeof(double)*xOrderMax2,
-                       0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol(c_Fy_xy, &(Fall_xy[xOrderMax2]), sizeof(double)*xOrderMax2, 
-                       0, cudaMemcpyHostToDevice);
+    err = cudaMemcpyToSymbol(c_Fx_xy, Fall_xy, sizeof(double)*xOrderMax2,
+			     0, cudaMemcpyHostToDevice);
+    gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
+    err = cudaMemcpyToSymbol(c_Fy_xy, &(Fall_xy[xOrderMax2]), sizeof(double)*xOrderMax2, 
+			     0, cudaMemcpyHostToDevice);
+    gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
     gpu_initializeInterpolationTables();
 
     /* d_temp_particles conflicts with killParticles */
@@ -765,17 +768,18 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     double* d_gauss_rn_p3 =  gpuBase->d_temp_particles + particlePitch*6;
 */
     double *d_gauss_rn, *d_gauss_rn_p2, *d_gauss_rn_p3;
-    cudaMalloc( (void**)&d_gauss_rn,    sizeof(double)*n_part*csbend->n_kicks);
-    cudaMalloc( (void**)&d_gauss_rn_p2, sizeof(double)*n_part*csbend->n_kicks);
-    cudaMalloc( (void**)&d_gauss_rn_p3, sizeof(double)*n_part*csbend->n_kicks);
     if (rad_coef || isrConstant) {
+      err = cudaMalloc( (void**)&d_gauss_rn,    sizeof(double)*n_part*csbend->n_kicks);
+      gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
+      err = cudaMalloc( (void**)&d_gauss_rn_p2, sizeof(double)*n_part*csbend->n_kicks);
+      gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
+      err = cudaMalloc( (void**)&d_gauss_rn_p3, sizeof(double)*n_part*csbend->n_kicks);
+      gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
       if (!distributionBasedRadiation && isrConstant) {
-        for (int ii=0; ii<csbend->n_kicks; ii++) {
-	  gpu_d_gauss_rn_lim(d_gauss_rn+(gpuBase->nOriginal*ii), gpuBase->nOriginal, 0.0, 1.0, 3.0, random_2(0));
-	  if (csbend->integration_order==4) {
-	    gpu_d_gauss_rn_lim(d_gauss_rn_p2+(gpuBase->nOriginal*ii), gpuBase->nOriginal, 0.0, 1.0, 3.0, random_2(0));
-	    gpu_d_gauss_rn_lim(d_gauss_rn_p3+(gpuBase->nOriginal*ii), gpuBase->nOriginal, 0.0, 1.0, 3.0, random_2(0));
-	  }
+	gpu_d_gauss_rn_lim(d_gauss_rn, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+	if (csbend->integration_order==4) {
+	  gpu_d_gauss_rn_lim(d_gauss_rn_p2, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+	  gpu_d_gauss_rn_lim(d_gauss_rn_p3, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
 	}
       } else if (distributionBasedRadiation) {
 	//FIX THIS
@@ -806,9 +810,11 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
         d_refTrajectoryData, refTrajectoryMode, apertureData)); 
     gpuErrorHandler("gpu_track_through_csbend: gpu_track_through_csbend_kernel");
-    cudaFree(d_gauss_rn);
-    cudaFree(d_gauss_rn_p2);
-    cudaFree(d_gauss_rn_p3);
+    if (rad_coef || isrConstant) {
+      cudaFree(d_gauss_rn);
+      cudaFree(d_gauss_rn_p2);
+      cudaFree(d_gauss_rn_p3);
+    }
   }
   if (distributionBasedRadiation) {
     radiansTotal += fabs(csbend->angle);
@@ -2140,7 +2146,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     /*
     if (rad_coef || isrConstant)
       if (!distributionBasedRadiation && isrConstant)
-        gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 0.0, 1.0, srGaussianLimit, random_2(0));
+        gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
       else if (distributionBasedRadiation)
         state =
           (curandState_t*)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
@@ -2154,11 +2160,11 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
 	if (rad_coef || isrConstant) {
 	  if (!distributionBasedRadiation && isrConstant) {
 	    if (csbend->integration_order==4) {
-	      gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 0.0, 1.0, srGaussianLimit, random_2(0));
-	      gpu_d_gauss_rn_lim(d_gauss_rn_p2, n_part, 0.0, 1.0, srGaussianLimit, random_2(0));
-	      gpu_d_gauss_rn_lim(d_gauss_rn_p3, n_part, 0.0, 1.0, srGaussianLimit, random_2(0));
+	      gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+	      gpu_d_gauss_rn_lim(d_gauss_rn_p2, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+	      gpu_d_gauss_rn_lim(d_gauss_rn_p3, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
 	    } else {
-	      gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 0.0, 1.0, srGaussianLimit, random_2(0));
+	      gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
 	    }
 	  } else if (distributionBasedRadiation) {
 	    state =

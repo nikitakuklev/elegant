@@ -312,8 +312,8 @@ void gpu_addCorrectorRadiationKick(long np, ELEMENT_LIST *elem, long type,
   double* d_gauss_rn=gpuBase->d_temp_particles;
 
   if (isr>0) 
-    gpu_d_gauss_rn_lim(d_gauss_rn, np, 0.0, 1.0, 3.0, random_2(0));
-
+    gpu_d_gauss_rn_lim(d_gauss_rn, np, 1, 0.0, 1.0, 3.0, random_2(0));
+  
   if (sigmaDelta2) 
     *sigmaDelta2 = gpuParticleReduction(np,
       gpuAddCorrectorRadiationKick(isr, Po, F2, length, isrCoef, radCoef,

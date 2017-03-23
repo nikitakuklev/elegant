@@ -188,7 +188,7 @@ void gpu_init_rand_state(double* d_ranarr, unsigned int n_num,
  * @param seed random number generator seed
  * @note if n_num is odd, d_ranarr should be of size n_num+1
  */
-void gpu_d_gauss_rn_lim(double* d_ranarr, unsigned int n_num, double mean,
+  void gpu_d_gauss_rn_lim(double* d_ranarr, unsigned int n_num, unsigned int groups, double mean,
                         double sigma, double limit_in_sigmas, double seed);
 
 /**
