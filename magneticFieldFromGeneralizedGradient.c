@@ -5,7 +5,6 @@
 #include "SDDS.h"
 #include "track.h"
 
-
 typedef struct {
   double radius;       /* reference radius */
   long nz;             /* number of z points */
@@ -31,12 +30,18 @@ long addBGGExpData(char *filename)
   char buffer[BUFSIZE];
   long im, ic, nc, readCode, nz;
   short m;
+  long *nstore;
   
   if (!fileHashTable)
     fileHashTable = hcreate(12);
 
   if (hfind(fileHashTable, filename, strlen(filename))) {
-    return *((long*)hstuff(fileHashTable));
+    printf("Using previously-stored BGGEXP data for filename %s\n", filename);
+    fflush(stdout);
+    im = *((long*)hstuff(fileHashTable));
+    printf("Using BGGEXP table %ld for filename %s\n", im, filename);
+    fflush(stdout);
+    return im;
   }
 
   getTrackingContext(&tcontext);
@@ -140,8 +145,10 @@ long addBGGExpData(char *filename)
   
   storedBGGExpData[nBGGExpDataSets].nm = im;
   storedBGGExpData[nBGGExpDataSets].nz = nz;
-  
-  hadd(fileHashTable, filename, strlen(filename), nBGGExpDataSets);
+
+  nstore = tmalloc(sizeof(*nstore));
+  *nstore = nBGGExpDataSets;
+  hadd(fileHashTable, filename, strlen(filename), (void*)nstore);
 
   printf("Done adding BGGEXP data from file %s\n", filename);
   fflush(stdout);
