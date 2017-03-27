@@ -593,7 +593,7 @@ int main( int argc, char **argv)
      */
     SDDS_DATASET SDDS_df;
     long i;
-    double sum, sum2, *distZData;
+    double sum, sum2, *distZData, t0;
     if (!SDDS_InitializeInput(&SDDS_df, distributionFile) || !SDDS_ReadPage(&SDDS_df))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if ((nDistData=SDDS_RowCount(&SDDS_df))<=2)
@@ -610,9 +610,10 @@ int main( int argc, char **argv)
       sum += distHistData[i];
     if (sum<=0)
       bomb("distribution sum is not positive", NULL);
+    t0 = distZData[0];
     for (i=0; i<nDistData; i++) {
       distHistData[i] /= sum;
-      distZData[i] *= c_mks; /* convert time to distance */
+      distZData[i] = c_mks*(distZData[i]-t0); /* convert time to distance */
     }
 
     /* compute the rms bunch duration, which is used as a scaling parameter and for output */
