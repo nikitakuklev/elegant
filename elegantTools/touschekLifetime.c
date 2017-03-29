@@ -449,8 +449,10 @@ int main( int argc, char **argv)
    * read from twiss file                             *
    \****************************************************/
 
-  if (verbosity)
-    fprintf( stdout, "Reading twiss file...\n");
+  if (verbosity) {
+    fprintf( stdout, "Reading twiss file...");
+    fflush(stdout);
+  }
   if (!SDDS_GetParameters(&twissPage,
                           "pCentral", &pCentral,
                           NULL) )
@@ -515,8 +517,15 @@ int main( int argc, char **argv)
   eType1 = SDDS_GetColumn(&twissPage, "ElementType");
   eOccur1 = SDDS_GetColumn(&twissPage, "ElementOccurence");
 
-  if (verbosity)
-    fprintf( stdout, "Reading aperture file...\n");
+  if (verbosity) {
+    fprintf( stdout, "done.\n");
+    fflush(stdout);
+  }
+
+  if (verbosity) {
+    fprintf( stdout, "Reading aperture file...");
+    fflush(stdout);
+  }
   eName2 = SDDS_GetColumn(&aperPage, "ElementName");
   for (i=0; i<elem2; i++)
     trim_spaces(eName2[i]);
@@ -526,6 +535,11 @@ int main( int argc, char **argv)
   if (deltaLimit>0)
     limitMomentumAperture(dpp, dpm, deltaLimit, elem2);
   
+  if (verbosity) {
+    fprintf( stdout, "done.\n");
+    fflush(stdout);
+  }
+
   /****************************************************\
    * Check and read beam profile input                *
   \****************************************************/
@@ -533,8 +547,10 @@ int main( int argc, char **argv)
     double sSum, s2Sum;
     short increasing = 0;
     if (beamInput) {
-      if (verbosity)
+      if (verbosity) { 
         fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
+        fflush(stdout);
+     }
       if (!SDDS_InitializeInput(&beamProfPage, beamInput))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       SDDS_ReadPage(&beamProfPage);
@@ -563,8 +579,10 @@ int main( int argc, char **argv)
 
     } else {
       /* slice analysis file */
-      if (verbosity)
+      if (verbosity) {
         fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", sliceAnalysis);
+        fflush(stdout);
+      }
       if (!SDDS_InitializeInput(&sliceAnalysisPage, sliceAnalysis))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       SDDS_ReadPage(&sliceAnalysisPage);
@@ -586,7 +604,7 @@ int main( int argc, char **argv)
         npSlice[i] /= e_mks;
       /* Convert Ct to s */
       for (i=0; i<nSlice; i++)
-        szSlice[i] /= c_mks;
+        szSlice[i] *= c_mks;
     }
 
     NP = sz = sigmap = emitx = emity = 0;
