@@ -26,7 +26,7 @@ static SDDS_DEFINITION slice_column[SLICE_COLUMNS] = {
     {"Slice", "&column name=Slice, type=long &end"},
     {"Particles", "&column name=Particles, description=\"Number of simulation particles in slice\", type=long, &end"},
     {"Charge", "&column name=Charge, description=\"Charge in the slice\", units=C, type=double &end"},
-    {"dt", "&column name=dt, symbol=\"<$gD$rt>\", units=s, type=double, description=\"relative time of flight\" &end"},
+    {"dCt", "&column name=dCt, symbol=\"$gD$rt\", units=s, type=double, description=\"relative time of flight\" &end"},
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
     {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double, description=\"y centroid\" &end"},
