@@ -311,8 +311,8 @@ int main( int argc, char **argv)
   }
   if (charge && NP)
     bomb("Give only one of -charge and -particles", NULL);
-  if (!(charge || NP || sliceAnalysis))
-    bomb("Give one of -charge, -particles, or -sliceAnalysis", NULL);
+  if (!(charge || NP || has_beam))
+    bomb("Give one of -charge, -particles, -beam, or -sliceAnalysis", NULL);
   if ((!coupling && !eyInput && !has_beam) || (coupling && eyInput))
     bomb("Give one and only one of coupling, eyInput, beam or sliceAnalysis",NULL);
   if (!sz && !rfVoltage && !has_beam) 
