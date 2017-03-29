@@ -21,11 +21,12 @@ static SDDS_DEFINITION slice_parameter[SLICE_PARAMETERS] = {
     {"SVNVersion", "&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
     } ;
 
-#define SLICE_COLUMNS 17
+#define SLICE_COLUMNS 18
 static SDDS_DEFINITION slice_column[SLICE_COLUMNS] = {
     {"Slice", "&column name=Slice, type=long &end"},
     {"Particles", "&column name=Particles, description=\"Number of simulation particles in slice\", type=long, &end"},
     {"Charge", "&column name=Charge, description=\"Charge in the slice\", units=C, type=double &end"},
+    {"dt", "&column name=dt, symbol=\"<$gD$rt>\", units=s, type=double, description=\"relative time of flight\" &end"},
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double, description=\"x centroid\" &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double, description=\"x' centroid\" &end"},
     {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double, description=\"y centroid\" &end"},
@@ -227,10 +228,16 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
         SDDS_SetError("Problem getting index of SDDS columns (dump_slice_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+      if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
+                             0, iSlice, 1, sums.n_part, 2, sums.charge,
+                             3, dt0*(iSlice-(slicePoint->nSlices-1)/2.0),
+                             -1)) {
+        SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
       for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
-                               0, iSlice, 1, sums.n_part, 2, sums.charge, Cx_index+i, 
-                               i==4?(t0+dt0/2):sums.centroid[i],
+                               Cx_index+i, i==4?(t0+dt0/2):sums.centroid[i],
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
