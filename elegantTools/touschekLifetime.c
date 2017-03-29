@@ -72,7 +72,7 @@
 #include "constants.h"
 
 static char *USAGE = "touschekLifetime <resultsFile>\n\
- -twiss=<twissFile> -aperture=<momentumApertureFile> [-beam=<beamProfile>] \n\
+ -twiss=<twissFile> -aperture=<momentumApertureFile> [-beam=<beamProfile> | -sliceAnalysis=<filename>] \n\
  {-charge=<nC>|-particles=<number>} {-coupling=<value>|-emityInput=<meters>}\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>,limit | -length=<mm>}\n\
@@ -81,6 +81,7 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
 twiss          Give &twiss_output output file from elegant, with radiation_integrals=1.\n\
 aperture       Give &momentum_aperture output file from elegant.\n\
 beam           Give beam profile file from elegant2genesis.\n\
+sliceAnalysis  Give slice analysis file from elegant SLICE element.\n\
 charge         Charge of bunch in nanocoulombs.\n\
 particles      Number of electrons in the bunch.\n\
 coupling       Ratio between vertical and horizontal emittances.\n\
@@ -96,7 +97,7 @@ length         Give rms bunch length in mm.\n\
 verbosity      Higher values result in more output during computations.\n\
 ignoreMismatch Ignore mismatch between names of elements in the Twiss and aperture files.\n\
 method         Choose integration method, direct or variable substitution.\n\n\
-Program by A. Xiao, M. Borland.  (This is version 7, August 2014, A. Xiao)";
+Program by A. Xiao, M. Borland.  (This is version 8, March 2017, M. Borland)\n";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -114,7 +115,8 @@ Program by A. Xiao, M. Borland.  (This is version 7, August 2014, A. Xiao)";
 #define EMITYINPUT 13
 #define METHOD 14
 #define BEAMPROF 15
-#define N_OPTIONS 16
+#define SLICEANAL 16
+#define N_OPTIONS 17
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -132,7 +134,8 @@ char *option[N_OPTIONS] = {
   "emitxinput",
   "emityinput",
   "method",
-  "beam"
+  "beam",
+  "sliceAnalysis",
 };
 
 void TouschekLifeCalc();  
@@ -166,8 +169,8 @@ long ignoreMismatch = 0, method=0;
 int main( int argc, char **argv)
 {
   SCANNED_ARG *scanned;
-  char *twissInput, *MAInput, *outputfile, *beamInput;
-  SDDS_DATASET twissPage, aperPage, resultsPage, beamProfPage;
+  char *twissInput, *MAInput, *outputfile, *beamInput, *sliceAnalysis;
+  SDDS_DATASET twissPage, aperPage, resultsPage, beamProfPage, sliceAnalysisPage;
   long verbosity;
   double etaymin, etaymax;
   long i;
@@ -187,10 +190,7 @@ int main( int argc, char **argv)
   if (argc == 1)
     bomb(NULL, USAGE);
 
-  twissInput  =  NULL;
-  MAInput  =  NULL;  
-  outputfile  =  NULL;
-  beamInput = NULL;
+  twissInput = MAInput = outputfile = beamInput = sliceAnalysis = NULL;
   verbosity = 0;
   NP = 0;
   charge = 0;
@@ -277,6 +277,12 @@ int main( int argc, char **argv)
         beamInput  =  scanned[i].list[1];
 	has_beam = 1;
         break;	
+      case SLICEANAL:
+        if (scanned[i].n_items<2)
+          bomb("invalid -sliceAnalysis syntax", NULL);
+        sliceAnalysis  =  scanned[i].list[1];
+	has_beam = 1;
+        break;	
       case DELTALIMIT:
         if (scanned[i].n_items != 2 || !get_double(&deltaLimit, scanned[i].list[1]) || deltaLimit<=0)
           bomb("invalid -deltaLimit syntax/values", "-deltaLimit=<percent>");        
@@ -303,9 +309,15 @@ int main( int argc, char **argv)
         bomb("too many filenames given", NULL);
     }
   }
-  if ((charge && NP) || (!charge && !NP && !has_beam)) {
-    bomb("Give one and only one of bunch charge input.",NULL);
-  }
+  if (charge && NP)
+    bomb("Give only one of -charge and -particles", NULL);
+  if (!(charge || NP || sliceAnalysis))
+    bomb("Give one of -charge, -particles, or -sliceAnalysis", NULL);
+  if ((!coupling && !eyInput && !has_beam) || (coupling && eyInput))
+    bomb("Give one and only one of coupling, eyInput, beam or sliceAnalysis",NULL);
+  if (!sz && !rfVoltage && !has_beam) 
+    bomb("Specify either the bunch length or the rf voltage or provide the bunch profile SDDS file.", NULL);
+  
   if (!charge) 
     charge = NP * e_mks;
   if (!NP) {
@@ -313,11 +325,7 @@ int main( int argc, char **argv)
     charge /= 1e9; 
     NP = charge/ e_mks;
   }
-  if ((!coupling && !eyInput && !has_beam) || (coupling && eyInput))
-    bomb("Give one and only one of coupling or eyInput",NULL);
-  if (!sz && !rfVoltage && !has_beam) 
-    bomb("Specify either the bunch length or the rf voltage or provide the bunch profile sdds file.", NULL);
-  
+
   /****************************************************\
    * Check input twissfile                            *
    \****************************************************/
@@ -524,30 +532,70 @@ int main( int argc, char **argv)
   if (has_beam) {
     double sSum, s2Sum;
     short increasing = 0;
-    if (verbosity)
-      fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
-    if (!SDDS_InitializeInput(&beamProfPage, beamInput))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    SDDS_ReadPage(&beamProfPage);
-    if (!SDDS_CheckColumn(&beamProfPage, "Ne", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "s", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "Sdelta", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "xemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "yemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
-	!SDDS_CheckColumn(&beamProfPage, "gamma", NULL, SDDS_DOUBLE, verbosity?stdout:NULL))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    nSlice = SDDS_CountRowsOfInterest(&beamProfPage);
-    npSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Ne");
-    szSlice = SDDS_GetColumnInDoubles(&beamProfPage, "s");
-    sigmapSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Sdelta");
-    exSlice = SDDS_GetColumnInDoubles(&beamProfPage, "xemit");
-    eySlice = SDDS_GetColumnInDoubles(&beamProfPage, "yemit");
-    gammaSlice = SDDS_GetColumnInDoubles(&beamProfPage, "gamma");
+    if (beamInput) {
+      if (verbosity)
+        fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", beamInput);
+      if (!SDDS_InitializeInput(&beamProfPage, beamInput))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      SDDS_ReadPage(&beamProfPage);
+      if (!SDDS_CheckColumn(&beamProfPage, "Ne", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&beamProfPage, "s", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&beamProfPage, "Sdelta", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&beamProfPage, "xemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&beamProfPage, "yemit", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&beamProfPage, "gamma", NULL, SDDS_DOUBLE, verbosity?stdout:NULL))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      nSlice = SDDS_CountRowsOfInterest(&beamProfPage);
+      npSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Ne");
+      szSlice = SDDS_GetColumnInDoubles(&beamProfPage, "s");
+      sigmapSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Sdelta");
+      exSlice = SDDS_GetColumnInDoubles(&beamProfPage, "xemit");
+      eySlice = SDDS_GetColumnInDoubles(&beamProfPage, "yemit");
+      gammaSlice = SDDS_GetColumnInDoubles(&beamProfPage, "gamma");
+
+      /* Convert normalized emittance to geometric emittance */
+      for (i=0; i<nSlice; i++)
+        if (gammaSlice[i]>0) {
+          exSlice[i] /= gammaSlice[i];
+          eySlice[i] /= gammaSlice[i];
+        }
+      free(gammaSlice);
+
+    } else {
+      /* slice analysis file */
+      if (verbosity)
+        fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", sliceAnalysis);
+      if (!SDDS_InitializeInput(&sliceAnalysisPage, sliceAnalysis))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      SDDS_ReadPage(&sliceAnalysisPage);
+      if (!SDDS_CheckColumn(&sliceAnalysisPage, "Charge", "C", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&sliceAnalysisPage, "Ct", "s", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&sliceAnalysisPage, "Sdelta", NULL, SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&sliceAnalysisPage, "ex", "m", SDDS_DOUBLE, verbosity?stdout:NULL) ||
+          !SDDS_CheckColumn(&sliceAnalysisPage, "ey", "m", SDDS_DOUBLE, verbosity?stdout:NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      nSlice = SDDS_CountRowsOfInterest(&sliceAnalysisPage);
+      npSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Charge");
+      szSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Ct");
+      sigmapSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Sdelta");
+      exSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "ex");
+      eySlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "ey");
+
+      /* Convert Coulombs to # electrons */
+      for (i=0; i<nSlice; i++)
+        npSlice[i] /= e_mks;
+      /* Convert Ct to s */
+      for (i=0; i<nSlice; i++)
+        szSlice[i] /= c_mks;
+    }
+
     NP = sz = sigmap = emitx = emity = 0;
     sSum = s2Sum = 0;
+
+    /* Ensure that s values are monotonically increasing */
     for (i=1; i<nSlice; i++) {
       if (szSlice[i]>szSlice[i-1])
-	increasing++;
+        increasing++;
     }
     if (increasing!=(nSlice-1) && increasing!=0) {
       fprintf(stdout, "Error: slice data is not monotonic in the 's' coordinate\n");
@@ -555,23 +603,21 @@ int main( int argc, char **argv)
     }
     if (increasing==0)
       for (i=0; i<nSlice; i++)
-	szSlice[i] *= -1;
+        szSlice[i] *= -1;
+
+    /* Compute number of particles, weighted emittances, weight energy spread */
     for (i=0; i<nSlice; i++) {
       NP += npSlice[i];
       sSum += npSlice[i]*szSlice[i];
       s2Sum += npSlice[i]*sqr(szSlice[i]);
       if (i+1==nSlice) {
-	szSlice[i]=szSlice[i-1];
+        szSlice[i]=szSlice[i-1];
       } else {
-	szSlice[i]=(szSlice[i+1]-szSlice[i])/2./sqrt(PI);
+        szSlice[i]=(szSlice[i+1]-szSlice[i])/2./sqrt(PI);
       }
       sigmap += npSlice[i]*sigmapSlice[i];
-      if (gammaSlice[i]>0) {
-          exSlice[i] /= gammaSlice[i];
-          eySlice[i] /= gammaSlice[i];
-          emitx += npSlice[i]*exSlice[i];
-          emity += npSlice[i]*eySlice[i];
-      }
+      emitx += npSlice[i]*exSlice[i];
+      emity += npSlice[i]*eySlice[i];
     }
     sigmap /= NP;
     emitx /= NP;
@@ -592,6 +638,7 @@ int main( int argc, char **argv)
     exSlice[0] = emitx;
     eySlice[0] = emity;
   }
+
   if (verbosity>0)
     fprintf( stdout, "Beam parameters set up.\n");
     
@@ -665,10 +712,17 @@ int main( int argc, char **argv)
       !SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (has_beam) {
-    if (SDDS_ReadPage(&beamProfPage)>0)
-      fprintf( stdout, "The code doesn't support multi beam pages.\n");
-    if (!SDDS_Terminate(&beamProfPage))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (beamInput) {
+      if (SDDS_ReadPage(&beamProfPage)>0)
+        fprintf( stdout, "The code doesn't support multiple beam pages.\n");
+      if (!SDDS_Terminate(&beamProfPage))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    } else {
+      if (SDDS_ReadPage(&sliceAnalysisPage)>0)
+        fprintf( stdout, "The code doesn't support multiple slice analysis pages.\n");
+      if (!SDDS_Terminate(&sliceAnalysisPage))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
   }
   
   return(0);
