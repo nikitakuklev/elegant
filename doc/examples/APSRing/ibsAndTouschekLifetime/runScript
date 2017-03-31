@@ -4,12 +4,16 @@
 elegant run.ele -macro=energy=1500
 
 # Run IBS for 20mm bunch length, full coupling, 0.1 nC/bunch
-ibsEmittance run.twi run.ibs -coupling=1 -length=20 -charge=0.1
+ibsEmittance run.twi run.ibs -coupling=1 -length=20 -charge=0.1 -nowarning
 
 # View the results
-sddsprintout -param run.ibs
+echo "****"
+sddsprintout -param=*Input run.ibs -title="Input values:"
+sddsprintout -param=emitx -param=emity -param=sigmaDelta -param=sigmaz run.ibs -title="IBS-inflated values:"
+echo "****"
 
 # Create some momentum aperture values by hand for expediency
+# In reality, should run the &momentum_aperture command to get a momentum aperture vs s
 sddsprocess run.twi -define=column,deltaPositive,0.025 -define=column,deltaNegative,-0.025 -nowarning
 \rm run.twi~
 
@@ -22,5 +26,5 @@ q=`sdds2stream -parameter=Charge run.ibs`
 
 touschekLifetime run.tl -twiss=run.twi -aperture=run.twi -charge=$q -length=$Ss -emitInput=$ex -emityInput=$ey  -deltaInput=$Sdelta
 
-sddsprintout -param run.tl
+sddsprintout -param run.tl -title="Touschek lifetime results with IBS-inflated beam:"
 
