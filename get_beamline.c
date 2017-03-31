@@ -1471,10 +1471,10 @@ void initializeFTable(FTABLE *ftable)
   }
   
   if ((ftable->Bx->nD !=3)||(ftable->By->nD !=3)||(ftable->Bz->nD !=3))
-    bombElegant("ND must be 3 for field table %s.", ftable->inputFile);
+    bombElegantVA("ND must be 3 for field table %s.", ftable->inputFile);
   ftable->length = ftable->Bz->xmax[2] - ftable->Bz->xmin[2];
   if (fabs((ftable->l0 + ftable->l1 + ftable->l2)-ftable->length)>1e-12)
-    bombElegant("L+L1+L2 != field length in file %s.", ftable->inputFile);
+    bombElegantVA("L+L1+L2 != field length in file %s. Must agree to within 1e-12.", ftable->inputFile);
 
   if (1) {
     double Bmin, Bmax;
