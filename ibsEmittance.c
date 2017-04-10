@@ -165,7 +165,25 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>|-distribution=<timeHistogramFile>,<t-column>,<hist-column>}\n\
  [-energy=<MeV>] \n\
  [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
- [-noWarning]\n\
+ [-noWarning]\n\n\
+-charge          Bunch charge in nanoCoulombs.\n\
+-particles       Number of electrons per bunch.\n\
+-coupling        Ratio of vertical to horizontal emittance.\n\
+-emityInput      Initial rms vertical emittance.\n\
+-deltaInput      Initial rms energy spread.\n\
+-emit0           Natural emittance. By default, use ex0 parameter in <twissFile>.\n\
+-delta0          Natural rms energy spread. By default, use Sdelta0 parameter in <twissFile>.\n\
+-superperiods    If <twissFile> was computed for only a fraction of the ring, set to indicate\n\
+                 how many repetitions of the <twissFile> are needed to make a full ring.\n\
+-isRing          Default is 1. Set to 0 for linac or transport line.\n\
+-forceCoupling   Default is 1, meaning that ratio given with -coupling option is enforced.\n\
+-RF              Specify rf parameters for bunch length calculation.\n\
+-length          Specify initial bunch length. Ratio of energy spread to bunch length is held fixed.\n\
+-distribution    Give slice-by-slice distribution of charge density in the bunch.\n\
+-energy          Change the beam energy by scaling radiation-integrals in <twissFile>.\n\
+-growthRatesOnly Compute only the growth rates, not the equilibrium.\n\
+-integrate       Integrate vs turn to show evolution of beam parameters.\n\
+-noWarning       Turn off warning messages.\n\n\
 By L. Emery, A. Xiao, and M. Borland. Version 6, January 2016\n";
 
 #define SET_ENERGY 0
@@ -624,13 +642,17 @@ int main( int argc, char **argv)
     sigmaz0 = sqrt(sum2);
 
     /* Find the spacing of the z points */
-    if ((dz = distZData[1] - distZData[0])==0)
+    if ((dz = distZData[1] - distZData[0])==0) {
+      fprintf(stderr, "Error: time data spacing seems not to be monotonic:\n");
+      for (i=0; i<nDistData; i++)
+        fprintf(stderr, "%21.15e\n", distZData[i]);
       bomb("Check spacing of time data in distribution file. Must be monotonically increasing or decreasing.", NULL);
+    }
     for (i=2; i<nDistData; i++) {
       double dz1;
       dz1 = distZData[i] - distZData[i-1];
-      if (fabs((dz1-dz)/dz)>1e-6)
-        bomb("Check spacing of time data in distribution file. Must change monotonically and be equispaced.", NULL);
+      if (fabs((dz1-dz)/dz)>1e-3)
+        bomb("Check spacing of time data in distribution file. Must change monotonically and be approximately equispaced.", NULL);
     }
     dz = fabs(dz);
     free(distZData);
