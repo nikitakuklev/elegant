@@ -156,7 +156,7 @@ double tLife;
 long elements, elem2;
 long *eOccur1;
 long nSlice;
-double pCentral, gamma0, NP, *npSlice, *szSlice, *sigmapSlice, *exSlice, *eySlice, *gammaSlice; 
+double pCentral, gamma0, NP, *npSlice, *szSlice, *sSlice, *sigmapSlice, *exSlice, *eySlice, *gammaSlice; 
 char **eName1, **eName2, **eType1;
 long ignoreMismatch = 0, method=0;
 
@@ -563,7 +563,7 @@ int main( int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       nSlice = SDDS_CountRowsOfInterest(&beamProfPage);
       npSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Ne");
-      szSlice = SDDS_GetColumnInDoubles(&beamProfPage, "s");
+      sSlice = SDDS_GetColumnInDoubles(&beamProfPage, "s");
       sigmapSlice = SDDS_GetColumnInDoubles(&beamProfPage, "Sdelta");
       exSlice = SDDS_GetColumnInDoubles(&beamProfPage, "xemit");
       eySlice = SDDS_GetColumnInDoubles(&beamProfPage, "yemit");
@@ -594,7 +594,7 @@ int main( int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       nSlice = SDDS_CountRowsOfInterest(&sliceAnalysisPage);
       npSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Charge");
-      szSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Ct");
+      sSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Ct");
       sigmapSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "Sdelta");
       exSlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "ex");
       eySlice = SDDS_GetColumnInDoubles(&sliceAnalysisPage, "ey");
@@ -602,17 +602,18 @@ int main( int argc, char **argv)
       /* Convert Coulombs to # electrons */
       for (i=0; i<nSlice; i++)
         npSlice[i] /= e_mks;
-      /* Convert Ct to s */
+      /* Convert seconds to meters */
       for (i=0; i<nSlice; i++)
-        szSlice[i] *= c_mks;
+        sSlice[i] *= c_mks;
     }
 
     NP = sz = sigmap = emitx = emity = 0;
     sSum = s2Sum = 0;
+    szSlice = tmalloc(sizeof(*szSlice)*nSlice);
 
     /* Ensure that s values are monotonically increasing */
     for (i=1; i<nSlice; i++) {
-      if (szSlice[i]>szSlice[i-1])
+      if (sSlice[i]>sSlice[i-1])
         increasing++;
     }
     if (increasing!=(nSlice-1) && increasing!=0) {
@@ -621,17 +622,20 @@ int main( int argc, char **argv)
     }
     if (increasing==0)
       for (i=0; i<nSlice; i++)
-        szSlice[i] *= -1;
+        sSlice[i] *= -1;
+    /* suppress large values of s */
+    for (i=nSlice-1; i>=0; i--)
+      sSlice[i] -= sSlice[0];
 
     /* Compute number of particles, weighted emittances, weight energy spread */
     for (i=0; i<nSlice; i++) {
       NP += npSlice[i];
-      sSum += npSlice[i]*szSlice[i];
-      s2Sum += npSlice[i]*sqr(szSlice[i]);
+      sSum += npSlice[i]*sSlice[i];
+      s2Sum += npSlice[i]*sqr(sSlice[i]);
       if (i+1==nSlice) {
-        szSlice[i]=szSlice[i-1];
+        szSlice[i] = szSlice[i-1];
       } else {
-        szSlice[i]=(szSlice[i+1]-szSlice[i])/2./sqrt(PI);
+        szSlice[i] = (sSlice[i+1]-sSlice[i])/2./sqrt(PI);
       }
       sigmap += npSlice[i]*sigmapSlice[i];
       emitx += npSlice[i]*exSlice[i];
@@ -643,6 +647,7 @@ int main( int argc, char **argv)
     sz = sqrt(s2Sum/NP - sqr(sSum/NP));
     coupling = emity/emitx;
     charge = NP * e_mks;
+    free(sSlice);
   } else {
     nSlice = 1;
     npSlice = calloc(sizeof(double), 1);
