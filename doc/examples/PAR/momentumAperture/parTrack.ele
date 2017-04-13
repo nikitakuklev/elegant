@@ -33,6 +33,7 @@
     p_central = 880,
     use_beamline="par",
     magnets = %s.mag
+        semaphore_file = %s.done
 &end
 
 &twiss_output
