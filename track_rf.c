@@ -16,7 +16,7 @@
 #include "track.h"
 
 void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
-void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central);
+void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central, double zEnd);
 void set_up_mrfdf(MRFDF *rf_param, double **initial, long n_particles, double pc_central);
 
 void track_through_rf_deflector(
@@ -34,9 +34,9 @@ void track_through_rf_deflector(
   double t_part;      /* time at which a particle enters cavity */
   double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2) */
   double x, xp, y, yp;
-  double beta, px, py, pz, beta_z, pc, gamma;
+  double beta, px, py, pz, pc, gamma;
   double omega, k, Ephase, voltFactor, t0;
-  double cos_tilt, sin_tilt, dtLight, tLight;
+  double dtLight, tLight;
   double length;
   long ip, is, n_kicks;
 
@@ -65,7 +65,7 @@ void track_through_rf_deflector(
   }
     
   if (!rf_param->initialized || !rf_param->fiducial_seen)
-      set_up_rfdf(rf_param, initial, n_particles, pc_central);
+    set_up_rfdf(rf_param, initial, n_particles, pc_central, zEnd);
 
   gamma = sqrt(sqr(pc_central)+1);
   beta  = pc_central/gamma;
@@ -124,8 +124,6 @@ void track_through_rf_deflector(
   fprintf(stderr, "dtLight=%e, length=%e, omega*dtLight=%e, Ephase = %e deg\n", dtLight, length, omega*dtLight*180/PI, Ephase*180/PI);
 #endif
 
-  cos_tilt = cos(rf_param->tilt);
-  sin_tilt = sin(rf_param->tilt);
   Estrength = voltFactor*(particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
 
   if (isSlave || !notSinglePart) {
@@ -151,7 +149,6 @@ void track_through_rf_deflector(
 #endif
       for (is=0; is<=n_kicks; is++) {
 	double cos_phase;
-	beta_z = pz/pc;
 	if (is==0 || is==n_kicks) {
 	  /* first half-drift and last half-drift */
 	  t_part += (length*sqrt(1+sqr(xp)+sqr(yp))/(2*c_mks*beta));
@@ -446,54 +443,54 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   }
 }
 
-void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central)
+void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central, double zEnd)
 {
-  long ip, i;
-  double pc, beta;
+  long i;
+  double phase;
   TABLE data;
   TRACKING_CONTEXT tContext;
-#ifdef USE_KAHAN
-  double error = 0.0; 
-#endif
 
   if (!rf_param->fiducial_seen) {
-    if (isSlave || !notSinglePart) {
-      for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-        pc = pc_central*(1+initial[ip][5]);
-        beta = pc/sqrt(1+sqr(pc));
-#ifndef USE_KAHAN
-        rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
-#else
-        rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
+    double t0, length, omega;
+
+    if (rf_param->phase_reference==0) {
+      rf_param->phase_reference = unused_phase_reference();
+    }
+#ifdef DEBUG
+    fprintf(stderr, "Finding fiducial for RFDF, phase_reference=%ld\n", rf_param->phase_reference);
+#endif
+    length = rf_param->length;
+    omega = PIx2*rf_param->frequency;
+    switch (get_phase_reference(&phase, rf_param->phase_reference)) {
+    case REF_PHASE_RETURNED:
+#ifdef DEBUG
+      fprintf(stderr, "Using previous reference phase\n");
+#endif
+      rf_param->t_first_particle = phase/(-omega);
+      break;
+    case REF_PHASE_NOT_SET:
+    case REF_PHASE_NONEXISTENT:
+      if (!rf_param->fiducial_seen) {
+        unsigned long mode;
+        if (!(mode = parseFiducialMode("tmean")))
+          bombElegant("invalid fiducial mode for RF_PARAM element", NULL);
+        rf_param->t_first_particle = findFiducialTime(initial, n_particles, zEnd-rf_param->length, 0.0, pc_central, mode);
+#ifdef DEBUG
+        fprintf(stderr, "tMean = %le s\n", rf_param->t_first_particle);
 #endif
       }
+      t0 = rf_param->t_first_particle;
+      set_phase_reference(rf_param->phase_reference, phase=-omega*t0);
+      break;
+    default:
+      bombElegant("unknown return value from get_phase_reference()", NULL);
+      break;
     }
-#if USE_MPI
-    if (USE_MPI && notSinglePart) {
-      long n_total;
-#ifndef USE_KAHAN 
-      double tmp;
+#ifdef DEBUG
+    fprintf(stderr, "phase=%le, t0=%le\n", phase, phase/(-omega));
 #endif
-      if (isMaster) {
-        n_particles = 0;
-        rf_param->t_first_particle = 0.0;
-      }
-#ifndef USE_KAHAN 
-      MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      rf_param->t_first_particle = tmp;
-#else
-      rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
-#endif
-      
-      MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-      n_particles = n_total; 
-    }
-#endif
-    if (n_particles)
-      rf_param->t_first_particle /= n_particles;
     rf_param->fiducial_seen = 1;
   }
-  
 
   if (rf_param->initialized)
     return;
