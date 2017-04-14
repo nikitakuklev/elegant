@@ -40,4 +40,7 @@ gasScatteringLifetimePresFile
         Examples of using scripts to compute gas scattering lifetime from
         DA and LMA data.
 
+ILMatrixScan
+        Set up ILMATRIX element, then scan the tune.
+
 Examples by M. Borland, APS.
