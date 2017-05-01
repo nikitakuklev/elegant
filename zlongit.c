@@ -644,10 +644,10 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         long n_spect=0;
         if (!zlongit->Zreal && !zlongit->Zimag)
             bombElegant("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
-        if (zlongit->Zreal && !getTableFromSearchPath(&Zr_data, zlongit->Zreal, 1, 0))
-            bombElegant("unable to read real impedance function (ZLONGIT)", NULL);
+        if (zlongit->Zreal && !getTableFromSearchPath(&Zr_data, zlongit->Zreal, 1, 0)) 
+  	    bombElegantVA("unable to read real impedance function (ZLONGIT) from file %s\n", zlongit->Zreal);
         if (zlongit->Zimag && !getTableFromSearchPath(&Zi_data, zlongit->Zimag, 1, 0))
-            bombElegant("unable to read imaginary impedance function (ZLONGIT)", NULL);
+   	    bombElegantVA("unable to read imaginary impedance function (ZLONGIT) from file %s\n", zlongit->Zimag);
         if (zlongit->Zreal && !zlongit->Zimag) {
             if (!checkPointSpacing(Zr_data.c1, Zr_data.n_data, 1e-6))
                 bombElegant("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
