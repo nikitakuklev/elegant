@@ -3434,7 +3434,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   }
     
   for (i=0; i<6; i++) {
-    M1->C[i] = eptr->matrix->C[i];
+    if (eptr->matrix && eptr->matrix->C)
+      M1->C[i] = eptr->matrix->C[i];
+    else 
+      M1->C[i] = 0;
     for (j=0; j<6; j++)
       M1->R[i][j] = i==j?1:0;
   }
@@ -3524,7 +3527,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       --particles;
     } else {
       /* momentum-dependent pathlength */
-      M1->C[4] = eptr->matrix->C[4]*(1 + deltaPoP*(alphac[0] + deltaPoP*(alphac[1] + deltaPoP*alphac[2])));
+      if (eptr->matrix && eptr->matrix->C) 
+	M1->C[4] = eptr->matrix->C[4]*(1 + deltaPoP*(alphac[0] + deltaPoP*(alphac[1] + deltaPoP*alphac[2])));
+      else if (ilmat)
+	M1->C[4] = ilmat->length*(1 + deltaPoP*(alphac[0] + deltaPoP*(alphac[1] + deltaPoP*alphac[2])));
       if (ilmat) 
         /* amplitude-dependent path length */
 	M1->C[4] += A[0]*(ilmat->dsdA[0] + A[0]*ilmat->dsdA2[0]/2) +
