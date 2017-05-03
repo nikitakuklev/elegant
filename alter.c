@@ -243,10 +243,10 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
         switch (entity_description[eptr->type].parameter[iParam].type) {
         case IS_DOUBLE:
           if (alterSpec[i].verbose && printingEnabled)
-            printf("Changing %s#%ld.%s from %21.15e to ",
-                    eptr->name, eptr->occurence,
-                    entity_description[eptr->type].parameter[iParam].name, 
-                    *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+            printf("Changing %s#%ld.%s at %le m from %21.15e to ",
+ 		   eptr->name, eptr->occurence, 
+		   entity_description[eptr->type].parameter[iParam].name, eptr->end_pos,
+		   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
           /* this step could be very inefficient */
           if ((nMatches==1 || has_wildcards(alterSpec[i].name)) &&
               (!nChangedDefinedParameter ||
@@ -278,9 +278,9 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
           break;
         case IS_LONG:
           if (alterSpec[i].verbose && printingEnabled)
-            printf("Changing %s#%ld.%s from %ld to ",
-                    eptr->name, eptr->occurence,
-                    entity_description[eptr->type].parameter[iParam].name, 
+            printf("Changing %s#%ld.%s at %le m from %ld to ",
+		   eptr->name, eptr->occurence,
+                    entity_description[eptr->type].parameter[iParam].name,  eptr->end_pos,
                     *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
           /* this step could be very inefficient */
           if ((nMatches==1 || has_wildcards(alterSpec[i].name)) &&
@@ -324,10 +324,10 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
            * pointing to static memory
            */
           if (alterSpec[i].verbose && printingEnabled)
-            printf("Changing %s#%ld.%s from %s to ",
-                    eptr->name, eptr->occurence,
-                    entity_description[eptr->type].parameter[iParam].name, 
-                    *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+            printf("Changing %s#%ld.%s at %le m from %s to ",
+		   eptr->name, eptr->occurence,
+		   entity_description[eptr->type].parameter[iParam].name, eptr->end_pos,
+		   *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
           cp_str((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset),
                  alterSpec[i].string_value);
           cp_str((char**)(p_elem0+entity_description[eptr->type].parameter[iParam].offset),
