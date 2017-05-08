@@ -33,13 +33,12 @@ long photonCount = 0;
 double energyCount = 0, radiansTotal = 0;
 double **Fx_xy = NULL, **Fy_xy = NULL;
 
-#define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 void convolveArrays1(double *output, long n, double *a1, double *a2);
 void dipoleFringeSym(double *Qf, double *Qi,
                      double rho, double inFringe, long higherOrder, double K1, double edge, double gap, double fint, double Rhe);
 
 
-void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
 		      double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle,
@@ -47,9 +46,9 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
-long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData);
-long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData);
 void exactDrift(double **part, long np, double length);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
@@ -61,8 +60,8 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 
 long correctDistribution(double *array, long npoints, double desiredSum);
 
-void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
-void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder);
+void convertToDipoleCanonicalCoordinates(double *Qi, double rho);
+void convertFromDipoleCanonicalCoordinates(double *Qi, double rho);
 
 long inversePoissonCDF(double mu, double C);
 
@@ -590,7 +589,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       abort();
     }
 
-    coord[4] += dzi*EXSQRT(1 + sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
+    coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
     coord[0]  = coord[0] + dxi + dzi*coord[1];
     coord[2]  = coord[2] + dyi + dzi*coord[3];
 
@@ -616,10 +615,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         rho = (1+dp)*rho_actual;
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        convertToDipoleCanonicalCoordinates(Qi, rho0);
         dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+        convertFromDipoleCanonicalCoordinates(Qf, rho0);
         x  = Qf[0];  
         xp = Qf[1];  
         y  = Qf[2];  
@@ -635,19 +634,19 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
       computeCSBENDFields(&Fx, &Fy, x, y);
 
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
+      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
-    convertToDipoleCanonicalCoordinates(Qi, rho0, csbend->sqrtOrder);
+    convertToDipoleCanonicalCoordinates(Qi, rho0);
     
     if (csbend->integration_order==4)
-      particle_lost = !integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po, &s_lost,
+      particle_lost = !integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &s_lost,
                                              &apertureData);
     else
-      particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po, &s_lost,
+      particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &s_lost,
                                              &apertureData);
-    convertFromDipoleCanonicalCoordinates(Qf, rho0, csbend->sqrtOrder);
+    convertFromDipoleCanonicalCoordinates(Qf, rho0);
 
     if (particle_lost) {
       if (!part[i_top]) {
@@ -687,7 +686,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
       computeCSBENDFields(&Fx, &Fy, x, y);
 
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
+      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
       Qf[5] -= dp_prime*x*tan(e2);
     }
 
@@ -723,10 +722,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         rho = (1+dp)*rho_actual;
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+        convertToDipoleCanonicalCoordinates(Qi, rho0);
         dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+        convertFromDipoleCanonicalCoordinates(Qf, rho0);
         x  = Qf[0];  
         xp = Qf[1];  
         y  = Qf[2];  
@@ -744,7 +743,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
-    coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
+    coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
   }
   
@@ -772,24 +771,24 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   return(i_top+1);
 }
 
-void convertToDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
+void convertToDipoleCanonicalCoordinates(double *Qi, double rho)
 {
   double f;
-  f = (1 + Qi[5])/EXSQRT(1 + sqr(Qi[1]) + sqr(Qi[3]), sqrtOrder);
+  f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
 
-void convertFromDipoleCanonicalCoordinates(double *Qi, double rho, long sqrtOrder)
+void convertFromDipoleCanonicalCoordinates(double *Qi, double rho)
 {
   double f;
-  f = 1/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
+  f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
 
 
-long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
@@ -822,13 +821,6 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
   if (n<1)
     bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
 
-  /* calculate canonical momenta (scaled to central momentum) */
-/*  dp = DPoP0;
-  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
-  QX = XP0*f;
-  QY = YP0*f;
-*/
-
   memcpy(Qf, Qi, sizeof(*Qi)*6);
   
   X = X0;
@@ -847,7 +839,7 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
         *s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         *s_lost = dist;
         return 0;
@@ -883,7 +875,7 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     QY += ds*(1+X/rho0)*Fx/rho_actual;
 
     if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder, 
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
 		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, ds, isrConstant, 
                        distributionBasedRadiation, includeOpeningAngle,
@@ -895,7 +887,7 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
         *s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         *s_lost = dist;
         return 0;
@@ -920,7 +912,7 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
         *s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         *s_lost = dist;
         return 0;
@@ -974,19 +966,12 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 
   }
 
-  /* convert back to slopes */
-/*
-  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
-  Qf[1] *= f;
-  Qf[3] *= f;
-*/
-
   Qf[4] += dist;
   return 1;
 }
 
 
-long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0,
+long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
@@ -1021,19 +1006,6 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
   if (n<1)
     bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
 
-  /* calculate canonical momenta (scaled to central momentum) */
-/*
-  dp = DPoP0;
-  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
-  QX = XP0*f;
-  QY = YP0*f;
-
-  X = X0;
-  Y = Y0;
-  S = S0;
-  DPoP = DPoP0;
-*/
-  
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
   dist = 0;
@@ -1047,7 +1019,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       *s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       *s_lost = dist;
       return 0;
@@ -1082,7 +1054,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) {
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
 		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -1095,7 +1067,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       *s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       *s_lost = dist;
       return 0;
@@ -1129,7 +1101,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
 		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -1141,7 +1113,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       *s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       *s_lost = dist;
       return 0;
@@ -1175,7 +1147,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) 
-      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
 		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -1187,7 +1159,7 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       *s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       *s_lost = dist;
       return 0;
@@ -1226,13 +1198,6 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
       dist -= refTrajectoryData[i][4];
     }
   }
-
-  /* convert back to slopes */
-/*
-  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
-  Qf[1] *= f;
-  Qf[3] *= f;
-*/
 
   Qf[4] += dist;
   return 1;
@@ -1728,10 +1693,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[3] = YP;
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+          convertToDipoleCanonicalCoordinates(Qi, rho0);
           dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
 	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+          convertFromDipoleCanonicalCoordinates(Qf, rho0);
 	  X  = Qf[0];  
 	  XP = Qf[1];  
 	  Y  = Qf[2];  
@@ -1773,15 +1738,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[3] = YP;
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+          convertToDipoleCanonicalCoordinates(Qi, rho0);
         
 	  if (csbend->integration_order==4)
-	    particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
+	    particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
 	  else
-	    particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po, &s_lost, &apertureData);
+	    particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
       
 	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+          convertFromDipoleCanonicalCoordinates(Qf, rho0);
 	  X  = Qf[0];  
 	  XP = Qf[1];  
 	  Y  = Qf[2];  
@@ -2294,10 +2259,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[3] = YP;
             Qi[4] = 0;  
             Qi[5] = DP;
-            convertToDipoleCanonicalCoordinates(Qi, rho0, 0);
+            convertToDipoleCanonicalCoordinates(Qi, rho0);
             dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
             /* retrieve coordinates from arrays */
-            convertFromDipoleCanonicalCoordinates(Qf, rho0, 0);
+            convertFromDipoleCanonicalCoordinates(Qf, rho0);
             X  = Qf[0];  
             XP = Qf[1];  
             Y  = Qf[2];  
@@ -4190,7 +4155,7 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
   free(realimag);
 }
 
-void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
 		      double x, double y, double theta, double thetaf, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,
@@ -4198,10 +4163,10 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
 {
   double f, xp, yp, F2, F, deltaFactor, dsFactor;
   
-  f = (1+x*h0)/EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
+  f = (1+x*h0)/sqrt(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy));
   xp = *Qx*f;
   yp = *Qy*f;
-  dsFactor = EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+  dsFactor = sqrt(sqr(1+x*h0)+sqr(xp)+sqr(yp));
   F2 = sqr(Fx)+sqr(Fy);
 
   if (!distributionBased) {
@@ -4263,7 +4228,7 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2,
           logPhoton(dDelta*Po, x, xp-dtheta/dDelta, y, yp-dphi/dDelta, theta, thetaf, 1/h0);
       }
     }
-    f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+    f = (1 + *dPoP)/sqrt(sqr(1+x*h0)+sqr(xp)+sqr(yp));
     *Qx = xp*f;
     *Qy = yp*f;
   }

@@ -346,7 +346,7 @@ long fmultipole_tracking(
 
     is_lost = 0;
     if (!integrate_kick_multipole_ord4(coord, multipole->dx, multipole->dy, 0.0, 0.0, Po, rad_coef, 0.0,
-                                       1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL, NULL,
+                                       1, 0.0, 0, 0.0, n_kicks, drift, &multData, NULL, NULL, NULL,
                                        &dzLoss, NULL, 0))
       is_lost = 1;
     
@@ -640,9 +640,9 @@ long multipole_tracking2(
                          double *sigmaDelta2
                          )
 {
-  double KnL;         /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
-  double dx, dy, dz;  /* offsets of the multipole center */
-  long order;         /* order (n) */
+  double KnL, KnL2;         /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
+  long order, order2;       /* order (n) */
+  double dx, dy, dz;        /* offsets of the multipole center */
   long n_kicks, integ_order;
   long i_part, i_top, n_parts;
   double *coef, *coord;
@@ -657,7 +657,7 @@ long multipole_tracking2(
   short doEndDrift = 0;
   
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
-  long sqrtOrder, freeMultData=0;
+  long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double K2L;
   
@@ -686,7 +686,8 @@ long multipole_tracking2(
     bombTracking("null p_elem pointer (multipole_tracking2)");
 
   rad_coef = xkick = ykick = isr_coef = 0;
-  sqrtOrder = 0;
+  order2 = 0;
+  KnL2 = 0;
 
   switch (elem->type) {
   case T_KQUAD:
@@ -712,7 +713,6 @@ long multipole_tracking2(
     xkick = kquad->xkick*kquad->xKickCalibration;
     ykick = kquad->ykick*kquad->yKickCalibration;
     integ_order = kquad->integration_order;
-    sqrtOrder = kquad->sqrtOrder?1:0;
     if (kquad->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
     isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
@@ -768,7 +768,10 @@ long multipole_tracking2(
     xkick = ksext->xkick*ksext->xKickCalibration;
     ykick = ksext->ykick*ksext->yKickCalibration;
     integ_order = ksext->integration_order;
-    sqrtOrder = ksext->sqrtOrder?1:0;
+    if (ksext->j1) {
+      KnL2 = ksext->j1*ksext->length;
+      order2 = -1; /* negative indicates skew instead of normal multipole */
+    }
     if (ksext->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
@@ -822,7 +825,6 @@ long multipole_tracking2(
     dy = koct->dy;
     dz = koct->dz;
     integ_order = koct->integration_order;
-    sqrtOrder = koct->sqrtOrder?1:0;
     if (koct->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
@@ -867,7 +869,6 @@ long multipole_tracking2(
     dy = kquse->dy;
     dz = kquse->dz;
     integ_order = kquse->integration_order;
-    sqrtOrder = 0;
     if (kquse->synch_rad)
       rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
     isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
@@ -881,18 +882,8 @@ long multipole_tracking2(
 	quseWarning = 1;
       }
     }
-    K2L = kquse->k2*kquse->length*(1+kquse->fse2);
-    if (K2L) {
-      multData = tmalloc(sizeof(*multData));
-      multData->orders = multData->initialized = 1;
-      multData->randomized = 0;
-      multData->order = tmalloc(sizeof(*(multData->order))*1);
-      multData->order[0] = 2;
-      multData->KnL = tmalloc(sizeof(*(multData->KnL))*1);
-      multData->KnL[0] = K2L;
-      multData->JnL = NULL;
-      freeMultData = 1;
-    }
+    KnL2 = kquse->k2*kquse->length*(1+kquse->fse2);
+    order2 = 2;
     break;
   default:
     printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
@@ -966,14 +957,18 @@ long multipole_tracking2(
 
     if ((integ_order==4 &&
          !integrate_kick_multipole_ord4(coord, dx, dy, xkick, ykick,
-                                        Po, rad_coef, isr_coef, order, sqrtOrder, KnL,
+                                        Po, rad_coef, isr_coef, 
+                                        order, KnL,
+                                        order2, KnL2,
                                         n_parts, drift, 
                                         multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
 					elem->type==T_KQUAD?kquad->radial:0)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, dx, dy, xkick, ykick,
-                                        Po, rad_coef, isr_coef, order, sqrtOrder, KnL, 
+                                        Po, rad_coef, isr_coef, 
+                                        order, KnL, 
+                                        order2, KnL2,
                                         n_parts, drift,
                                         multData, edgeMultData, steeringMultData,
                                         &apertureData, &dzLoss, sigmaDelta2,
@@ -1025,7 +1020,9 @@ long multipole_tracking2(
 
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, long sqrtOrder, double KnL, long n_kicks, double drift,
+                                  long order, double KnL, 
+                                  long order2, double KnL2,
+                                  long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, 
                                   MULTIPOLE_DATA *edgeMultData, 
                                   MULTIPOLE_DATA *steeringMultData,
@@ -1040,6 +1037,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   KnL = KnL/n_kicks;
   xkick = xkick/n_kicks;
   ykick = ykick/n_kicks;
+  KnL2 = KnL2/n_kicks;
 
   x = coord[0];
   xp = coord[1];
@@ -1062,7 +1060,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 
   /* calculate initial canonical momenta */
   denom = 1+sqr(xp)+sqr(yp);
-  denom = EXSQRT(denom, sqrtOrder);
+  denom = sqrt(denom);
   qx = (1+dp)*xp/denom;
   qy = (1+dp)*yp/denom;
 
@@ -1084,7 +1082,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     coord[2] = y;
     return 0;
   }
-  denom = EXSQRT(denom, sqrtOrder);
+  denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
 
@@ -1107,6 +1105,14 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
     else
       applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+
+    if (order2>0) {
+      /* additional normal multipole */
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order2, KnL2, 0);
+    } else if (order2<0) {
+      /* additional skew multipole */
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, -order2, KnL2, 1);
+    }
 
     if (xkick)
       apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick, 0);
@@ -1144,14 +1150,14 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       coord[2] = y;
       return 0;
     }
-    denom = EXSQRT(denom, sqrtOrder);
+    denom = sqrt(denom);
     xp = qx/denom;
     yp = qy/denom;
     if ((rad_coef || isr_coef) && drift) {
       double deltaFactor, F2, dsFactor;
       deltaFactor = sqr(1+dp);
       F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL/(2*drift));
-      dsFactor = EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder)*2*drift;
+      dsFactor = sqrt(1+sqr(xp)+sqr(yp))*2*drift;
       qx /= (1+dp);
       qy /= (1+dp);
       if (rad_coef)
@@ -1168,7 +1174,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     /* go through final drift */
     x += xp*drift;
     y += yp*drift;
-    s += drift*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+    s += drift*sqrt(1 + sqr(xp) + sqr(yp));
     *dzLoss += drift;
   }
   if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
@@ -1192,7 +1198,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     coord[2] = y;
     return 0;
   }
-  denom = EXSQRT(denom, sqrtOrder);
+  denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
 
@@ -1227,7 +1233,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, long sqrtOrder, double KnL, long n_parts, double drift,
+                                  long order, double KnL, 
+                                  long order2, double KnL2, 
+                                  long n_parts, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial) 
@@ -1245,6 +1253,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   
   drift = drift/n_parts;
   KnL = KnL/n_parts;
+  KnL2 = KnL2/n_parts;
   xkick = xkick/n_parts;
   ykick = ykick/n_parts;
 
@@ -1268,7 +1277,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   }
 
   /* calculate initial canonical momenta */
-  qx = (1+dp)*xp/(denom=EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder));
+  qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
   qy = (1+dp)*yp/denom;
 
   if (edgeMultData && edgeMultData->orders) {
@@ -1289,7 +1298,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     coord[2] = y;
     return 0;
   }
-  denom = EXSQRT(denom, sqrtOrder);
+  denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
 
@@ -1305,7 +1314,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         dsh = drift*driftFrac[step];
         x += xp*dsh;
         y += yp*dsh;
-        s += dsh*EXSQRT(1 + sqr(xp) + sqr(yp), sqrtOrder);
+        s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
         *dzLoss += dsh;
       }
 
@@ -1318,6 +1327,15 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
       else 
 	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
 					   order, KnL*kickFrac[step], 0);
+
+      if (order2>0) {
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+					order2, KnL2*kickFrac[step], 0);
+      } else if (order2<0) {
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+					-order2, KnL2*kickFrac[step], 1);
+      }
+
       if (xkick)
         apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick*kickFrac[step], 0);
       if (ykick)
@@ -1359,7 +1377,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         coord[2] = y;
         return 0;
       }
-      xp = qx/(denom=EXSQRT(denom, sqrtOrder));
+      xp = qx/(denom=sqrt(denom));
       yp = qy/denom;
       if ((rad_coef || isr_coef) && drift) {
 	double deltaFactor, F2, dsFactor, dsISRFactor;
@@ -1367,7 +1385,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         qy /= (1+dp);
 	deltaFactor = sqr(1+dp);
 	F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL/drift);
-	dsFactor = EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder);
+	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
 	dsISRFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
 	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
 	if (rad_coef)
@@ -1403,7 +1421,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
     coord[2] = y;
     return 0;
   }
-  denom = EXSQRT(denom, sqrtOrder);
+  denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
 

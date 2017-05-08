@@ -302,6 +302,7 @@ SEXT sext_example;
 PARAMETER sext_param[N_SEXT_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&sext_example.length), NULL, 0.0, 0, "length"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.k2), NULL, 0.0, 0, "geometric strength"},
+    {"J1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.j1), NULL, 0.0, 0, "geometric skew quadrupole strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dy), NULL, 0.0, 0, "misalignment"},
@@ -353,7 +354,7 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
-    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     };
 
 TAYLORSERIES taylorSeries_example;
@@ -947,8 +948,9 @@ PARAMETER mkicker_param[N_MKICKER_PARAMS] = {
 KSEXT ksext_example;
 /* kick sextupole physical parameters */
 PARAMETER ksext_param[N_KSEXT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&ksext_example.length), NULL, 0.0, 0, "length"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.k2), NULL, 0.0, 0, "geometric strength"},
+    {"J1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.j1), NULL, 0.0, 0, "geometric skew quadrupole strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.bore), NULL, 0.0, 0, "bore radius"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
@@ -969,7 +971,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
@@ -977,7 +979,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
 KOCT koct_example;
 /* kick octupole physical parameters */
 PARAMETER koct_param[N_KOCT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&koct_example.length), NULL, 0.0, 0, "length"},
     {"K3", "1/M$a4$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.k3), NULL, 0.0, 0, "geometric strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.bore), NULL, 0.0, 0, "bore radius"},
@@ -991,7 +993,7 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&koct_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
@@ -1031,7 +1033,7 @@ PARAMETER ksbend_param[N_KSBEND_PARAMS] = {
 KQUAD kquad_example;
 /* kick quadrupole physical parameters */
 PARAMETER kquad_param[N_KQUAD_PARAMS]={
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquad_example.length), NULL, 0.0, 0, "length"},
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.k1), NULL, 0.0, 0, "geometric strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.bore), NULL, 0.0, 0, "bore radius"},
@@ -1053,7 +1055,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1_effects), NULL, 0.0, 0, "include entrance edge effects?"},
@@ -1287,7 +1289,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"F8", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.f8), NULL, 0.0, 0, "Fractional field error fn=bn*xr^n/n!, additive."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&csbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
-    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_LONG, 0, (long)((char *)&csbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
     {"PHOTON_OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&csbend_example.photonOutputFile), NULL, 0.0, 0, "output file for photons, if USE_RAD_DIST=1"},
@@ -2444,7 +2446,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
 
 EDRIFT edrift_example;
 PARAMETER edrift_param[N_EDRIFT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
 };
 
 SCMULT scmult_example;   
@@ -2520,7 +2522,7 @@ KQUSE kquse_example;
 
 /* kick quad+sext physical parameters */
 PARAMETER kquse_param[N_KQUSE_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&kquse_example.length), NULL, 0.0, 0, "length"},
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},

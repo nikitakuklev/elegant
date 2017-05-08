@@ -903,7 +903,7 @@ extern char *entity_text[N_TYPES];
 #define N_QUAD_PARAMS 30
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
-#define N_SEXT_PARAMS 9
+#define N_SEXT_PARAMS 10
 #define N_OCTU_PARAMS 8
 #define N_MULT_PARAMS 12
 #define N_SOLE_PARAMS 7
@@ -938,7 +938,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 25
+#define N_KSEXT_PARAMS 26
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 43
 #define N_MAGNIFY_PARAMS 6
@@ -1157,7 +1157,7 @@ typedef struct {
 extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
-    double length, k2, tilt;
+    double length, k2, j1, tilt;
     double dx, dy, dz, fse;
     double ffringe;
     long order;
@@ -1896,7 +1896,7 @@ typedef struct {
 extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
-    double length, k2, tilt, bore, B;
+    double length, k2, j1, tilt, bore, B;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
@@ -3303,7 +3303,7 @@ extern void GWigSymplecticPass(double **coord, long num_particles, double pCentr
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
-extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
+extern VMATRIX *sextupole_matrix(double K2, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void startMatrixComputationTiming();
@@ -3710,13 +3710,13 @@ extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipol
                                 double p_error, double Po, double **accepted, double z_start);
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, long sqrtOrder, double KnL, long n_kicks, double drift,
+                                  long order, double KnL, long order2, double KnL2, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, long sqrtOrder, double KnL, long n_kicks, double drift,
+                                  long order, double KnL, long order2, double KnL2, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);

@@ -869,6 +869,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);
         break;
       default:
+        value = 0;
         doSave = 0;
         break;
       }

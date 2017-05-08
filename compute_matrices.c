@@ -446,7 +446,7 @@ VMATRIX *wiggler_matrix(double length, double radius, long poles,
     return(M);
     }
 
-VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe)
+VMATRIX *sextupole_matrix(double K2, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe)
 {
     VMATRIX *M, *Medge1, *Medge2;
     VMATRIX *Mfringe, *Mtot;
@@ -566,6 +566,244 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
         U[4][3][2][1] = K2*ipow(length,3)/3.0 ;
         U[4][3][3][0] = K2*ipow(length,3)/6.0 ;
         U[4][3][3][1] = K2*ipow(length,4)/8.0 ;
+      }
+    }
+
+    if (J1!=0) {
+      double L = length;
+
+      /* Add terms related to skew quadrupole, valid only if skew quad is "weak" */
+      R[0][0] += (ipow(J1,2)*ipow(L,4))/24.;
+      R[0][1] += (ipow(J1,2)*ipow(L,5))/120.;
+      R[0][2] += -(J1*ipow(L,2))/2.;
+      R[0][3] += -(J1*ipow(L,3))/6.;
+      R[1][0] += (ipow(J1,2)*ipow(L,3))/6.;
+      R[1][1] += (ipow(J1,2)*ipow(L,4))/24.;
+      R[1][2] += -(J1*L);
+      R[1][3] += -(J1*ipow(L,2))/2.;
+      R[2][0] += -(J1*ipow(L,2))/2.;
+      R[2][1] += -(J1*ipow(L,3))/6.;
+      R[2][2] += (ipow(J1,2)*ipow(L,4))/24.;
+      R[2][3] += (ipow(J1,2)*ipow(L,5))/120.;
+      R[3][0] += -(J1*L);
+      R[3][1] += -(J1*ipow(L,2))/2.;
+      R[3][2] += (ipow(J1,2)*ipow(L,3))/6.;
+      R[3][3] += (ipow(J1,2)*ipow(L,4))/24.;
+
+      if (M->order >= 2) {
+        T[0][0][0] += (ipow(J1,2)*K2*ipow(L,6))/240.;
+        T[0][1][0] += (ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[0][1][1] += (ipow(J1,2)*K2*ipow(L,8))/4032.;
+        T[0][2][0] += -(J1*K2*ipow(L,4))/24.;
+        T[0][2][1] += (J1*K2*ipow(L,5))/120.;
+        T[0][2][2] += -(ipow(J1,2)*K2*ipow(L,6))/240.;
+        T[0][3][0] += -(J1*K2*ipow(L,5))/40.;
+        T[0][3][1] += -(J1*K2*ipow(L,6))/360.;
+        T[0][3][2] += -(ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[0][3][3] += -(ipow(J1,2)*K2*ipow(L,8))/4032.;
+        T[0][5][0] += -(ipow(J1,2)*ipow(L,4))/12.;
+        T[0][5][1] += -(ipow(J1,2)*ipow(L,5))/60.;
+        T[0][5][2] += (J1*ipow(L,2))/2.;
+        T[0][5][3] += (J1*ipow(L,3))/6.;
+        T[1][0][0] += (ipow(J1,2)*K2*ipow(L,5))/40.;
+        T[1][1][0] += (ipow(J1,2)*K2*ipow(L,6))/72.;
+        T[1][1][1] += (ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[1][2][0] += -(J1*K2*ipow(L,3))/6.;
+        T[1][2][1] += (J1*K2*ipow(L,4))/24.;
+        T[1][2][2] += -(ipow(J1,2)*K2*ipow(L,5))/40.;
+        T[1][3][0] += -(J1*K2*ipow(L,4))/8.;
+        T[1][3][1] += -(J1*K2*ipow(L,5))/60.;
+        T[1][3][2] += -(ipow(J1,2)*K2*ipow(L,6))/72.;
+        T[1][3][3] += -(ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[1][5][0] += -(ipow(J1,2)*ipow(L,3))/3.;
+        T[1][5][1] += -(ipow(J1,2)*ipow(L,4))/12.;
+        T[1][5][2] += J1*L;
+        T[1][5][3] += (J1*ipow(L,2))/2.;
+        T[2][0][0] += -(J1*K2*ipow(L,4))/48.;
+        T[2][1][0] += -(J1*K2*ipow(L,5))/40.;
+        T[2][1][1] += -(J1*K2*ipow(L,6))/240.;
+        T[2][2][0] += (ipow(J1,2)*K2*ipow(L,6))/120.;
+        T[2][2][1] += (ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[2][2][2] += -(J1*K2*ipow(L,4))/16.;
+        T[2][3][0] += (ipow(J1,2)*K2*ipow(L,7))/504.;
+        T[2][3][1] += (ipow(J1,2)*K2*ipow(L,8))/2016.;
+        T[2][3][2] += -(J1*K2*ipow(L,5))/24.;
+        T[2][3][3] += -(J1*K2*ipow(L,6))/144.;
+        T[2][5][0] += (J1*ipow(L,2))/2.;
+        T[2][5][1] += (J1*ipow(L,3))/6.;
+        T[2][5][2] += -(ipow(J1,2)*ipow(L,4))/12.;
+        T[2][5][3] += -(ipow(J1,2)*ipow(L,5))/60.;
+        T[3][0][0] += -(J1*K2*ipow(L,3))/12.;
+        T[3][1][0] += -(J1*K2*ipow(L,4))/8.;
+        T[3][1][1] += -(J1*K2*ipow(L,5))/40.;
+        T[3][2][0] += (ipow(J1,2)*K2*ipow(L,5))/20.;
+        T[3][2][1] += (ipow(J1,2)*K2*ipow(L,6))/72.;
+        T[3][2][2] += -(J1*K2*ipow(L,3))/4.;
+        T[3][3][0] += (ipow(J1,2)*K2*ipow(L,6))/72.;
+        T[3][3][1] += (ipow(J1,2)*K2*ipow(L,7))/252.;
+        T[3][3][2] += (-5*J1*K2*ipow(L,4))/24.;
+        T[3][3][3] += -(J1*K2*ipow(L,5))/24.;
+        T[3][5][0] += J1*L;
+        T[3][5][1] += (J1*ipow(L,2))/2.;
+        T[3][5][2] += -(ipow(J1,2)*ipow(L,3))/3.;
+        T[3][5][3] += -(ipow(J1,2)*ipow(L,4))/12.;
+
+        if (M->order >= 3) {
+          U[0][0][0][0] += (ipow(J1,4)*ipow(L,6))/120.;
+          U[0][1][0][0] += (ipow(J1,2)*ipow(L,3))/6. + (ipow(J1,4)*ipow(L,7))/126.;
+          U[0][1][1][0] += (5*ipow(J1,2)*ipow(L,4))/24. + (ipow(J1,4)*ipow(L,8))/384.;
+          U[0][1][1][1] += (ipow(J1,2)*ipow(L,5))/24. + (ipow(J1,4)*ipow(L,9))/3456.;
+          U[0][2][0][0] += -(ipow(J1,3)*ipow(L,4))/8. - (J1*ipow(K2,2)*ipow(L,6))/80.;
+          U[0][2][1][0] += -(ipow(J1,3)*ipow(L,5))/5. - (J1*ipow(K2,2)*ipow(L,7))/168.;
+          U[0][2][1][1] += (-3*J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/240. - 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[0][2][2][0] += (ipow(J1,4)*ipow(L,6))/24.;
+          U[0][2][2][1] += (ipow(J1,2)*ipow(L,3))/2. + (ipow(J1,4)*ipow(L,7))/84.;
+          U[0][2][2][2] += -(ipow(J1,3)*ipow(L,4))/8. + (J1*ipow(K2,2)*ipow(L,6))/240.;
+          U[0][3][0][0] += (-3*ipow(J1,3)*ipow(L,5))/40. - (J1*ipow(K2,2)*ipow(L,7))/336.;
+          U[0][3][1][0] += -(J1*ipow(L,2))/2. - (31*ipow(J1,3)*ipow(L,6))/360. - 
+            (J1*ipow(K2,2)*ipow(L,8))/576.;
+          U[0][3][1][1] += (-5*J1*ipow(L,3))/12. - (19*ipow(J1,3)*ipow(L,7))/1008. - 
+            (J1*ipow(K2,2)*ipow(L,9))/3456.;
+          U[0][3][2][0] += (ipow(J1,2)*ipow(L,3))/3. + (ipow(J1,4)*ipow(L,7))/36.;
+          U[0][3][2][1] += (7*ipow(J1,2)*ipow(L,4))/12. + (11*ipow(J1,4)*ipow(L,8))/1344.;
+          U[0][3][2][2] += (-7*ipow(J1,3)*ipow(L,5))/40. + (J1*ipow(K2,2)*ipow(L,7))/336.;
+          U[0][3][3][0] += (5*ipow(J1,2)*ipow(L,4))/24. + (13*ipow(J1,4)*ipow(L,8))/2688.;
+          U[0][3][3][1] += (19*ipow(J1,2)*ipow(L,5))/120. + (5*ipow(J1,4)*ipow(L,9))/3456.;
+          U[0][3][3][2] += -(J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/144. + 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[0][3][3][3] += -(J1*ipow(L,3))/12. - (11*ipow(J1,3)*ipow(L,7))/1008. + 
+            (J1*ipow(K2,2)*ipow(L,9))/10368.;
+          U[0][5][0][0] += -(ipow(J1,2)*K2*ipow(L,6))/80.;
+          U[0][5][1][0] += -(ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[0][5][1][1] += -(ipow(J1,2)*K2*ipow(L,8))/1344.;
+          U[0][5][2][0] += (J1*K2*ipow(L,4))/12.;
+          U[0][5][2][1] += -(J1*K2*ipow(L,5))/60.;
+          U[0][5][2][2] += (ipow(J1,2)*K2*ipow(L,6))/80.;
+          U[0][5][3][0] += (J1*K2*ipow(L,5))/20.;
+          U[0][5][3][1] += (J1*K2*ipow(L,6))/180.;
+          U[0][5][3][2] += (ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[0][5][3][3] += (ipow(J1,2)*K2*ipow(L,8))/1344.;
+          U[0][5][5][0] += (ipow(J1,2)*ipow(L,4))/8.;
+          U[0][5][5][1] += (ipow(J1,2)*ipow(L,5))/40.;
+          U[0][5][5][2] += -(J1*ipow(L,2))/2.;
+          U[0][5][5][3] += -(J1*ipow(L,3))/6.;
+          U[1][0][0][0] += (ipow(J1,4)*ipow(L,5))/20.;
+          U[1][1][0][0] += (ipow(J1,2)*ipow(L,2))/2. + (ipow(J1,4)*ipow(L,6))/18.;
+          U[1][1][1][0] += (5*ipow(J1,2)*ipow(L,3))/6. + (ipow(J1,4)*ipow(L,7))/48.;
+          U[1][1][1][1] += (5*ipow(J1,2)*ipow(L,4))/24. + (ipow(J1,4)*ipow(L,8))/384.;
+          U[1][2][0][0] += -(ipow(J1,3)*ipow(L,3))/2. - (3*J1*ipow(K2,2)*ipow(L,5))/40.;
+          U[1][2][1][0] += -(ipow(J1,3)*ipow(L,4)) - (J1*ipow(K2,2)*ipow(L,6))/24.;
+          U[1][2][1][1] += (-3*J1*L)/2. - (11*ipow(J1,3)*ipow(L,5))/40. - 
+            (J1*ipow(K2,2)*ipow(L,7))/144.;
+          U[1][2][2][0] += (ipow(J1,4)*ipow(L,5))/4.;
+          U[1][2][2][1] += (3*ipow(J1,2)*ipow(L,2))/2. + (ipow(J1,4)*ipow(L,6))/12.;
+          U[1][2][2][2] += -(ipow(J1,3)*ipow(L,3))/2. + (J1*ipow(K2,2)*ipow(L,5))/40.;
+          U[1][3][0][0] += (-3*ipow(J1,3)*ipow(L,4))/8. - (J1*ipow(K2,2)*ipow(L,6))/48.;
+          U[1][3][1][0] += -(J1*L) - (31*ipow(J1,3)*ipow(L,5))/60. - (J1*ipow(K2,2)*ipow(L,7))/72.;
+          U[1][3][1][1] += (-5*J1*ipow(L,2))/4. - (19*ipow(J1,3)*ipow(L,6))/144. - 
+            (J1*ipow(K2,2)*ipow(L,8))/384.;
+          U[1][3][2][0] += ipow(J1,2)*ipow(L,2) + (7*ipow(J1,4)*ipow(L,6))/36.;
+          U[1][3][2][1] += (7*ipow(J1,2)*ipow(L,3))/3. + (11*ipow(J1,4)*ipow(L,7))/168.;
+          U[1][3][2][2] += (-7*ipow(J1,3)*ipow(L,4))/8. + (J1*ipow(K2,2)*ipow(L,6))/48.;
+          U[1][3][3][0] += (5*ipow(J1,2)*ipow(L,3))/6. + (13*ipow(J1,4)*ipow(L,7))/336.;
+          U[1][3][3][1] += (19*ipow(J1,2)*ipow(L,4))/24. + (5*ipow(J1,4)*ipow(L,8))/384.;
+          U[1][3][3][2] += -(J1*L)/2. - (11*ipow(J1,3)*ipow(L,5))/24. + 
+            (J1*ipow(K2,2)*ipow(L,7))/144.;
+          U[1][3][3][3] += -(J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/144. + 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[1][5][0][0] += (-3*ipow(J1,2)*K2*ipow(L,5))/40.;
+          U[1][5][1][0] += -(ipow(J1,2)*K2*ipow(L,6))/24.;
+          U[1][5][1][1] += -(ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[1][5][2][0] += (J1*K2*ipow(L,3))/3.;
+          U[1][5][2][1] += -(J1*K2*ipow(L,4))/12.;
+          U[1][5][2][2] += (3*ipow(J1,2)*K2*ipow(L,5))/40.;
+          U[1][5][3][0] += (J1*K2*ipow(L,4))/4.;
+          U[1][5][3][1] += (J1*K2*ipow(L,5))/30.;
+          U[1][5][3][2] += (ipow(J1,2)*K2*ipow(L,6))/24.;
+          U[1][5][3][3] += (ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[1][5][5][0] += (ipow(J1,2)*ipow(L,3))/2.;
+          U[1][5][5][1] += (ipow(J1,2)*ipow(L,4))/8.;
+          U[1][5][5][2] += -(J1*L);
+          U[1][5][5][3] += -(J1*ipow(L,2))/2.;
+          U[2][0][0][0] += -(ipow(J1,3)*ipow(L,4))/8. + (J1*ipow(K2,2)*ipow(L,6))/240.;
+          U[2][1][0][0] += (-7*ipow(J1,3)*ipow(L,5))/40. + (J1*ipow(K2,2)*ipow(L,7))/336.;
+          U[2][1][1][0] += -(J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/144. + 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[2][1][1][1] += -(J1*ipow(L,3))/12. - (11*ipow(J1,3)*ipow(L,7))/1008. + 
+            (J1*ipow(K2,2)*ipow(L,9))/10368.;
+          U[2][2][0][0] += (ipow(J1,4)*ipow(L,6))/24.;
+          U[2][2][1][0] += (ipow(J1,2)*ipow(L,3))/3. + (ipow(J1,4)*ipow(L,7))/36.;
+          U[2][2][1][1] += (5*ipow(J1,2)*ipow(L,4))/24. + (13*ipow(J1,4)*ipow(L,8))/2688.;
+          U[2][2][2][0] += -(ipow(J1,3)*ipow(L,4))/8. - (J1*ipow(K2,2)*ipow(L,6))/80.;
+          U[2][2][2][1] += (-3*ipow(J1,3)*ipow(L,5))/40. - (J1*ipow(K2,2)*ipow(L,7))/336.;
+          U[2][2][2][2] += (ipow(J1,4)*ipow(L,6))/120.;
+          U[2][3][0][0] += (ipow(J1,2)*ipow(L,3))/2. + (ipow(J1,4)*ipow(L,7))/84.;
+          U[2][3][1][0] += (7*ipow(J1,2)*ipow(L,4))/12. + (11*ipow(J1,4)*ipow(L,8))/1344.;
+          U[2][3][1][1] += (19*ipow(J1,2)*ipow(L,5))/120. + (5*ipow(J1,4)*ipow(L,9))/3456.;
+          U[2][3][2][0] += -(ipow(J1,3)*ipow(L,5))/5. - (J1*ipow(K2,2)*ipow(L,7))/168.;
+          U[2][3][2][1] += -(J1*ipow(L,2))/2. - (31*ipow(J1,3)*ipow(L,6))/360. - 
+            (J1*ipow(K2,2)*ipow(L,8))/576.;
+          U[2][3][2][2] += (ipow(J1,2)*ipow(L,3))/6. + (ipow(J1,4)*ipow(L,7))/126.;
+          U[2][3][3][0] += (-3*J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/240. - 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[2][3][3][1] += (-5*J1*ipow(L,3))/12. - (19*ipow(J1,3)*ipow(L,7))/1008. - 
+            (J1*ipow(K2,2)*ipow(L,9))/3456.;
+          U[2][3][3][2] += (5*ipow(J1,2)*ipow(L,4))/24. + (ipow(J1,4)*ipow(L,8))/384.;
+          U[2][3][3][3] += (ipow(J1,2)*ipow(L,5))/24. + (ipow(J1,4)*ipow(L,9))/3456.;
+          U[2][5][0][0] += (J1*K2*ipow(L,4))/24.;
+          U[2][5][1][0] += (J1*K2*ipow(L,5))/20.;
+          U[2][5][1][1] += (J1*K2*ipow(L,6))/120.;
+          U[2][5][2][0] += -(ipow(J1,2)*K2*ipow(L,6))/40.;
+          U[2][5][2][1] += -(ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[2][5][2][2] += (J1*K2*ipow(L,4))/8.;
+          U[2][5][3][0] += -(ipow(J1,2)*K2*ipow(L,7))/168.;
+          U[2][5][3][1] += -(ipow(J1,2)*K2*ipow(L,8))/672.;
+          U[2][5][3][2] += (J1*K2*ipow(L,5))/12.;
+          U[2][5][3][3] += (J1*K2*ipow(L,6))/72.;
+          U[2][5][5][0] += -(J1*ipow(L,2))/2.;
+          U[2][5][5][1] += -(J1*ipow(L,3))/6.;
+          U[2][5][5][2] += (ipow(J1,2)*ipow(L,4))/8.;
+          U[2][5][5][3] += (ipow(J1,2)*ipow(L,5))/40.;
+          U[3][0][0][0] += -(ipow(J1,3)*ipow(L,3))/2. + (J1*ipow(K2,2)*ipow(L,5))/40.;
+          U[3][1][0][0] += (-7*ipow(J1,3)*ipow(L,4))/8. + (J1*ipow(K2,2)*ipow(L,6))/48.;
+          U[3][1][1][0] += -(J1*L)/2. - (11*ipow(J1,3)*ipow(L,5))/24. + 
+            (J1*ipow(K2,2)*ipow(L,7))/144.;
+          U[3][1][1][1] += -(J1*ipow(L,2))/4. - (11*ipow(J1,3)*ipow(L,6))/144. + 
+            (J1*ipow(K2,2)*ipow(L,8))/1152.;
+          U[3][2][0][0] += (ipow(J1,4)*ipow(L,5))/4.;
+          U[3][2][1][0] += ipow(J1,2)*ipow(L,2) + (7*ipow(J1,4)*ipow(L,6))/36.;
+          U[3][2][1][1] += (5*ipow(J1,2)*ipow(L,3))/6. + (13*ipow(J1,4)*ipow(L,7))/336.;
+          U[3][2][2][0] += -(ipow(J1,3)*ipow(L,3))/2. - (3*J1*ipow(K2,2)*ipow(L,5))/40.;
+          U[3][2][2][1] += (-3*ipow(J1,3)*ipow(L,4))/8. - (J1*ipow(K2,2)*ipow(L,6))/48.;
+          U[3][2][2][2] += (ipow(J1,4)*ipow(L,5))/20.;
+          U[3][3][0][0] += (3*ipow(J1,2)*ipow(L,2))/2. + (ipow(J1,4)*ipow(L,6))/12.;
+          U[3][3][1][0] += (7*ipow(J1,2)*ipow(L,3))/3. + (11*ipow(J1,4)*ipow(L,7))/168.;
+          U[3][3][1][1] += (19*ipow(J1,2)*ipow(L,4))/24. + (5*ipow(J1,4)*ipow(L,8))/384.;
+          U[3][3][2][0] += -(ipow(J1,3)*ipow(L,4)) - (J1*ipow(K2,2)*ipow(L,6))/24.;
+          U[3][3][2][1] += -(J1*L) - (31*ipow(J1,3)*ipow(L,5))/60. - (J1*ipow(K2,2)*ipow(L,7))/72.;
+          U[3][3][2][2] += (ipow(J1,2)*ipow(L,2))/2. + (ipow(J1,4)*ipow(L,6))/18.;
+          U[3][3][3][0] += (-3*J1*L)/2. - (11*ipow(J1,3)*ipow(L,5))/40. - 
+            (J1*ipow(K2,2)*ipow(L,7))/144.;
+          U[3][3][3][1] += (-5*J1*ipow(L,2))/4. - (19*ipow(J1,3)*ipow(L,6))/144. - 
+            (J1*ipow(K2,2)*ipow(L,8))/384.;
+          U[3][3][3][2] += (5*ipow(J1,2)*ipow(L,3))/6. + (ipow(J1,4)*ipow(L,7))/48.;
+          U[3][3][3][3] += (5*ipow(J1,2)*ipow(L,4))/24. + (ipow(J1,4)*ipow(L,8))/384.;
+          U[3][5][0][0] += (J1*K2*ipow(L,3))/6.;
+          U[3][5][1][0] += (J1*K2*ipow(L,4))/4.;
+          U[3][5][1][1] += (J1*K2*ipow(L,5))/20.;
+          U[3][5][2][0] += (-3*ipow(J1,2)*K2*ipow(L,5))/20.;
+          U[3][5][2][1] += -(ipow(J1,2)*K2*ipow(L,6))/24.;
+          U[3][5][2][2] += (J1*K2*ipow(L,3))/2.;
+          U[3][5][3][0] += -(ipow(J1,2)*K2*ipow(L,6))/24.;
+          U[3][5][3][1] += -(ipow(J1,2)*K2*ipow(L,7))/84.;
+          U[3][5][3][2] += (5*J1*K2*ipow(L,4))/12.;
+          U[3][5][3][3] += (J1*K2*ipow(L,5))/12.;
+          U[3][5][5][0] += -(J1*L);
+          U[3][5][5][1] += -(J1*ipow(L,2))/2.;
+          U[3][5][5][2] += (ipow(J1,2)*ipow(L,3))/2.;
+          U[3][5][5][3] += (ipow(J1,2)*ipow(L,4))/8.;
+        }
       }
     }
 
@@ -954,7 +1192,7 @@ VMATRIX *compute_matrix(
         break;
       case T_SEXT:
         sext = (SEXT*)elem->p_elem;
-        elem->matrix = sextupole_matrix(sext->k2, sext->length, 
+        elem->matrix = sextupole_matrix(sext->k2, sext->j1, sext->length, 
                                         sext->order?sext->order:run->default_order, sext->tilt,
                                         sext->fse, 0.0, 0.0, sext->ffringe);
         if (sext->dx || sext->dy || sext->dz)
@@ -1116,7 +1354,7 @@ VMATRIX *compute_matrix(
             ksext->k2 = 2*ksext->B/sqr(ksext->bore)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (ksext->n_kicks<1)
             bombElegant("n_kicks must by > 0 for KSEXT element", NULL);
-        elem->matrix = sextupole_matrix(ksext->k2, ksext->length, 
+        elem->matrix = sextupole_matrix(ksext->k2, ksext->j1, ksext->length, 
                                         (run->default_order?run->default_order:2), ksext->tilt,
                                         ksext->fse, 
                                         ksext->xkick*ksext->xKickCalibration, ksext->ykick*ksext->yKickCalibration,
@@ -2502,7 +2740,7 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
     M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);
     break;
   case 2: /* sextupole */
-    M = sextupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0);
+    M = sextupole_matrix(KnL/length, 0, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0);
     break;
   case 3: /* octupole */
     M = octupole_matrix(KnL/length, length, order, mult->tilt, 0.0);

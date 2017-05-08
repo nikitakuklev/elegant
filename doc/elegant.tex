@@ -46,18 +46,24 @@ Historical change logs are appended to the end of this manual.
 \item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
   used the same data file. This was fixed.
 \item The \verb|RFDF| element had a bug in computing the energy-dependence of the time of flight,
-  as reported by Daniel Marx. This was fixed.
+  as reported by Daniel Marx. This was fixed. The missing phase reference feature was also implemented.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
 \item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \verb|allow_missing_parameters|
   qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
+\item Fixed a bug in saving parameters when elements are subdivided: the lengths of certain elements were incorrect in
+  the saved file.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|KSEXT| element now supports a skew-quad correction term. This was suggested by Z. Duan (IHEP).
 \item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
+\item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
+  \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
+  The default behavior (exact square roots) is unchanged.
 \end{itemize}
 
 \subsection{New and Modified Commands}
