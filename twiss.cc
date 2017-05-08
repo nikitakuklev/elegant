@@ -971,64 +971,66 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 
 #define IP_STEP 0
 #define IP_SVN 1
-#define IP_NUX (1+1)
-#define IP_DNUXDP (2+1)
-#define IP_DNUXDP2 (3+1)
-#define IP_DNUXDP3 (4+1)
-#define IP_AX (5+1)
-#define IP_NUY (6+1)
-#define IP_DNUYDP (7+1)
-#define IP_DNUYDP2 (8+1)
-#define IP_DNUYDP3 (9+1)
-#define IP_AY (10+1)
-#define IP_DPHRANGE (11+1)
-#define IP_NUXUPPER (12+1)
-#define IP_NUXLOWER (13+1)
-#define IP_NUYUPPER (14+1)
-#define IP_NUYLOWER (15+1)
-#define IP_STAGE (16+1)
-#define IP_PCENTRAL (17+1)
-#define IP_DBETAXDP (18+1)
-#define IP_DBETAYDP (19+1)
-#define IP_DALPHAXDP (20+1)
-#define IP_DALPHAYDP (21+1)
-#define IP_ETAX2    ((20+2)+1)
-#define IP_ETAY2    ((21+2)+1)
-#define IP_ETAX3    ((22+2)+1)
-#define IP_ETAY3    ((23+2)+1)
-#define IP_ETAPX2    (IP_ETAY3+1)
-#define IP_ETAPY2    (IP_ETAY3+2)
-#define IP_ETAPX3    (IP_ETAY3+3)
-#define IP_ETAPY3    (IP_ETAY3+4)
-#define IP_BETAXMIN ((24+2)+5)
-#define IP_BETAXAVE ((25+2)+5)
-#define IP_BETAXMAX ((26+2)+5)
-#define IP_BETAYMIN ((27+2)+5)
-#define IP_BETAYAVE ((28+2)+5)
-#define IP_BETAYMAX ((29+2)+5)
-#define IP_ETAXMAX ((30+2)+5)
-#define IP_ETAYMAX ((31+2)+5)
-#define IP_WAISTSX ((32+2)+5)
-#define IP_WAISTSY ((33+2)+5)
-#define IP_DNUXDAX ((34+2)+5)
-#define IP_DNUXDAY ((35+2)+5)
-#define IP_DNUYDAX ((36+2)+5)
-#define IP_DNUYDAY ((37+2)+5)
-#define IP_DNUXDAX2 ((38+2)+5)
-#define IP_DNUXDAY2 ((39+2)+5)
-#define IP_DNUXDAXAY ((40+2)+5)
-#define IP_DNUYDAX2 ((41+2)+5)
-#define IP_DNUYDAY2 ((42+2)+5)
-#define IP_DNUYDAXAY ((43+2)+5)
-#define IP_NUXTSWAMIN ((44+2)+5)
-#define IP_NUXTSWAMAX ((45+2)+5)
-#define IP_NUYTSWAMIN ((46+2)+5)
-#define IP_NUYTSWAMAX ((47+2)+5)
-#define IP_COUPLINGINTEGRAL ((48+2)+5)
-#define IP_COUPLINGOFFSET ((49+2)+5)
-#define IP_EMITRATIO ((50+2)+5)
-#define IP_ALPHAC2 ((51+2)+5)
-#define IP_ALPHAC  ((52+2)+5)
+#define IP_NUX (IP_SVN+1)
+#define IP_DNUXDP (IP_NUX+1)
+#define IP_DNUXDP2 (IP_DNUXDP+1)
+#define IP_DNUXDP3 (IP_DNUXDP2+1)
+#define IP_AX (IP_DNUXDP3+1)
+#define IP_AXLOC (IP_AX+1)
+#define IP_NUY (IP_AXLOC+1)
+#define IP_DNUYDP (IP_NUY+1)
+#define IP_DNUYDP2 (IP_DNUYDP+1)
+#define IP_DNUYDP3 (IP_DNUYDP2+1)
+#define IP_AY (IP_DNUYDP3+1)
+#define IP_AYLOC (IP_AY+1)
+#define IP_DPHRANGE (IP_AYLOC+1)
+#define IP_NUXUPPER (IP_DPHRANGE+1)
+#define IP_NUXLOWER (IP_NUXUPPER+1)
+#define IP_NUYUPPER (IP_NUXLOWER+1)
+#define IP_NUYLOWER (IP_NUYUPPER+1)
+#define IP_STAGE (IP_NUYLOWER+1)
+#define IP_PCENTRAL (IP_STAGE+1)
+#define IP_DBETAXDP (IP_PCENTRAL+1)
+#define IP_DBETAYDP (IP_DBETAXDP+1)
+#define IP_DALPHAXDP (IP_DBETAYDP+1)
+#define IP_DALPHAYDP (IP_DALPHAXDP+1)
+#define IP_ETAX2 (IP_DALPHAYDP+1)
+#define IP_ETAY2 (IP_ETAX2+1)
+#define IP_ETAX3 (IP_ETAY2+1)
+#define IP_ETAY3 (IP_ETAX3+1)
+#define IP_ETAPX2 (IP_ETAY3+1)
+#define IP_ETAPY2 (IP_ETAPX2+1)
+#define IP_ETAPX3 (IP_ETAPY2+1)
+#define IP_ETAPY3 (IP_ETAPX3+1)
+#define IP_BETAXMIN (IP_ETAPY3+1)
+#define IP_BETAXAVE (IP_BETAXMIN+1)
+#define IP_BETAXMAX (IP_BETAXAVE+1)
+#define IP_BETAYMIN (IP_BETAXMAX+1)
+#define IP_BETAYAVE (IP_BETAYMIN+1)
+#define IP_BETAYMAX (IP_BETAYAVE+1)
+#define IP_ETAXMAX (IP_BETAYMAX+1)
+#define IP_ETAYMAX (IP_ETAXMAX+1)
+#define IP_WAISTSX (IP_ETAYMAX+1)
+#define IP_WAISTSY (IP_WAISTSX+1)
+#define IP_DNUXDAX (IP_WAISTSY+1)
+#define IP_DNUXDAY (IP_DNUXDAX+1)
+#define IP_DNUYDAX (IP_DNUXDAY+1)
+#define IP_DNUYDAY (IP_DNUYDAX+1)
+#define IP_DNUXDAX2 (IP_DNUYDAY+1)
+#define IP_DNUXDAY2 (IP_DNUXDAX2+1)
+#define IP_DNUXDAXAY (IP_DNUXDAY2+1)
+#define IP_DNUYDAX2 (IP_DNUXDAXAY+1)
+#define IP_DNUYDAY2 (IP_DNUYDAX2+1)
+#define IP_DNUYDAXAY (IP_DNUYDAY2+1)
+#define IP_NUXTSWAMIN (IP_DNUYDAXAY+1)
+#define IP_NUXTSWAMAX (IP_NUXTSWAMIN+1)
+#define IP_NUYTSWAMIN (IP_NUXTSWAMAX+1)
+#define IP_NUYTSWAMAX (IP_NUYTSWAMIN+1)
+#define IP_COUPLINGINTEGRAL (IP_NUYTSWAMAX+1)
+#define IP_COUPLINGOFFSET (IP_COUPLINGINTEGRAL+1)
+#define IP_EMITRATIO (IP_COUPLINGOFFSET+1)
+#define IP_ALPHAC2 (IP_EMITRATIO+1)
+#define IP_ALPHAC (IP_ALPHAC2+1)
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -1056,11 +1058,13 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"dnux/dp2", (char*)"&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
 {(char*)"dnux/dp3", (char*)"&parameter name=dnux/dp3, symbol=\"$gx$r$bx3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 3rd-order chromaticity\" &end"},
 {(char*)"Ax", (char*)"&parameter name=Ax, symbol=\"A$bx$n\", type=double, units=\"m\", description=\"Horizontal acceptance\" &end"},
+{(char*)"AxLocation", (char*)"&parameter name=AxLocation, type=double, units=\"m\", description=\"Location of horizontal acceptance limit\" &end"},
 {(char*)"nuy", (char*)"&parameter name=nuy, symbol=\"$gn$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical tune\" &end"},
 {(char*)"dnuy/dp", (char*)"&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
 {(char*)"dnuy/dp2", (char*)"&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
 {(char*)"dnuy/dp3", (char*)"&parameter name=dnuy/dp3, symbol=\"$gx$r$by3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 3rd-order chromaticity\" &end"},
 {(char*)"Ay", (char*)"&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"m\", description=\"Vertical acceptance\" &end"},
+{(char*)"AyLocation", (char*)"&parameter name=AyLocation, type=double, units=\"m\", description=\"Location of vertical acceptance limit\" &end"},
 {(char*)"deltaHalfRange", (char*)"&parameter name=deltaHalfRange, symbol=\"$gDd$r/2\", type=double, description=\"Half range of momentum offset for chromatic tune spread evaluation\" &end"},
 {(char*)"nuxChromUpper", (char*)"&parameter name=nuxChromUpper, symbol=\"$gx$r$bu$n\", type=double, description=\"Upper limit of x tune due to chromaticity and deltaRange\" &end"},
 {(char*)"nuxChromLower", (char*)"&parameter name=nuxChromLower, symbol=\"$gx$r$bu$n\", type=double, description=\"Lower limit of x tune due to chromaticity and deltaRange\" &end"},
@@ -1276,8 +1280,8 @@ void dump_twiss_parameters(
   compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
   if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                           IP_STEP, twiss_count, IP_STAGE, stage, 
-                          IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
-                          IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
+                          IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0], IP_AXLOC, acceptance[2],
+                          IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], IP_AYLOC, acceptance[3],
                           IP_DNUXDP2, beamline->chrom2[0],
                           IP_DNUYDP2, beamline->chrom2[1],
                           IP_DNUXDP3, beamline->chrom3[0],
