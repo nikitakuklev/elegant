@@ -36,6 +36,9 @@
 #endif 
 
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "namelist.h"
 #include "SDDS.h"
 #include "rpn.h"
@@ -449,6 +452,8 @@ typedef struct {
     APERTURE_DATA apertureData;
     MODULATION_DATA modulationData;
     RAMP_DATA rampData;
+    char *trackingInterruptFile;
+    time_t *trackingInterruptFileMtime;
     long n_passes_fiducial;      /* if >0, the number of times to go through for the fiducial particle */
 #if USE_MPI
     int n_processors;
@@ -4262,7 +4267,8 @@ extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, doub
 				 int max_order_of_fits, int verbose);
 extern int makeInitialParticleEnsemble(double ***initial, double *reference, double ***final, 
 				       double ***error, int n_points1, double *step);
-  
+
+extern time_t get_mtime(char *filename);  
 #ifdef __cplusplus
 }
 #endif

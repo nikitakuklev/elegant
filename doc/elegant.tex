@@ -72,6 +72,9 @@ Historical change logs are appended to the end of this manual.
   readings after orbit or trajectory correction. This was suggested by V. Sajaev (APS).
 \item The \verb|twiss_output| command now records the location of the acceptance-limiting apertures in parameters
   \verb|AxLocation| and \verb|AyLocation|.
+\item The \verb|track| command has a new field, \verb|interrupt_file|, which gives the name of a file to monitor
+  as a semaphore to interrupt the tracking. If the file is created or updated during tracking, then tracking will
+  terminate on completion of the next pass.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -4842,6 +4845,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
     long use_linear_chromatic_matrix = 0;
     long longitudinal_ring_only = 0;
     long stop_tracking_particle_limit = -1;
+    STRING interrupt_file = "%s.interrupt";
 &end
 \end{verbatim}
 
@@ -4873,6 +4877,11 @@ for a ring.
 \item \verb|stop_tracking_particle_limit| --- If a non-negative is given, then
 {\tt elegant} will stop tracking when the number of particles falls below the
 given value.  It will be as if all the particles were lost.
+\item \verb|interrupt_file| --- Gives the (possibly incomplete) name of a file to monitor
+  as a semaphore to interrupt the tracking. If the file is created or updated during tracking, 
+  then tracking will terminate on completion of the next pass.
+  Output already written to \verb|WATCH| files is preserved, but unwritten data
+  (e.g., buffered, but not written to disk) is lost.
 \end{itemize}
 
 %\begin{latexonly}

@@ -36,9 +36,7 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variab
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
 #endif
 
-#include <sys/types.h>
 static time_t interrupt_file_mtime = 0;
-#include <sys/stat.h>
 time_t get_mtime(char *filename)
 {
   struct stat statbuf;

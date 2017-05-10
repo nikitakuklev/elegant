@@ -465,6 +465,11 @@ long do_tracking(
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
+    if (run->trackingInterruptFile && fexists(run->trackingInterruptFile) && 
+        get_mtime(run->trackingInterruptFile)>run->trackingInterruptFileMtime) {
+      n_passes = i_pass-passOffset;
+      break;
+    }
     log_entry("do_tracking.2.1");
     if (run->stopTrackingParticleLimit>0) {
 #if !USE_MPI

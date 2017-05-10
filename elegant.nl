@@ -67,6 +67,7 @@
     long longitudinal_ring_only = 0;
     long ibs_only = 0;
     long stop_tracking_particle_limit = -1;
+    STRING interrupt_file = "%s.interrupt";
 #end
 
 #namelist print_dictionary static

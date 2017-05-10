@@ -813,10 +813,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                   K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
                   break;
                 case T_SEXT:
-                  K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                  K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy) + 
+                    ((SEXT*)(elem->p_elem))->j1;
                   break;
                 case T_KSEXT:
-                  K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+                  K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy) +
+                    ((KSEXT*)(elem->p_elem))->j1;
                   break;
                 case T_SOLE:
                   ks = -((SOLE*)(elem->p_elem))->ks;

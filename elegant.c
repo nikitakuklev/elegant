@@ -908,6 +908,12 @@ char **argv;
           bombElegant(NULL, NULL);
         if (echoNamelists) print_namelist(stdout, &track);
         run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
+        if (interrupt_file && strlen(interrupt_file)) {
+          run_conditions.trackingInterruptFile = compose_filename(interrupt_file, rootname);
+          run_conditions.trackingInterruptFileMtime = 0;
+          if (fexists(run_conditions.trackingInterruptFile))
+            run_conditions.trackingInterruptFileMtime = get_mtime(run_conditions.trackingInterruptFile);
+        }
         /*
 #if USE_MPI
         if (stop_tracking_particle_limit!=-1)
