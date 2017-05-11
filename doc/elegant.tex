@@ -64,6 +64,8 @@ Historical change logs are appended to the end of this manual.
 \item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
   \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
   The default behavior (exact square roots) is unchanged.
+\item The \verb|CSBEND| element now includes skew multipole errors. This involves newly-computed expressions for the
+  fields in curvilinear coordinates, so slight numerical changes may be seen.
 \end{itemize}
 
 \subsection{New and Modified Commands}

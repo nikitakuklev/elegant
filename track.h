@@ -956,7 +956,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 60
+#define N_CSBEND_PARAMS 68
 #define N_MATTER_PARAMS 16
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
@@ -2198,7 +2198,9 @@ typedef struct {
 extern PARAMETER csbend_param[N_CSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e[2], tilt;
+    double length, angle;
+    double k1, k2, k3, k4, k5, k6, k7, k8;
+    double e[2], tilt;
     double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
@@ -2211,6 +2213,7 @@ typedef struct {
     long use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
     double xReference, f1, f2, f3, f4, f5, f6, f7, f8;
+    double g1, g2, g3, g4, g5, g6, g7, g8;
     long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
     char *photonOutputFile;
@@ -2218,7 +2221,7 @@ typedef struct {
     long referenceCorrection, trackingMatrix;
     /* for internal use only: */
     unsigned long edgeFlags;
-    double b[8];
+    double b[8], c[8];
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
     long refKicks;
@@ -2231,7 +2234,8 @@ typedef struct {
 extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e[2], tilt;
+    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8;
+    double e[2], tilt;
     double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
@@ -2255,7 +2259,7 @@ typedef struct {
     /* for internal use only: */
     short wakeFileActive, particleFileActive;
     SDDS_DATASET SDDSout, SDDSpart;
-    double b[8];
+    double b[8], c[8];
     short xIndex, xpIndex, tIndex, pIndex;
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
