@@ -606,7 +606,7 @@ char **argv;
   
   run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
   
-  starting_coord = tmalloc(sizeof(*starting_coord)*7);
+  starting_coord = tmalloc(sizeof(*starting_coord)*COORDINATES_PER_PARTICLE);
   
   beam_type = -1;
 
@@ -2033,8 +2033,8 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   char buffer[16384];
   char *specialDescription = "Optionally used to assign an element to a group, with a user-defined name.  Group names will appear in the parameter output file in the column ElementGroup";
   if (latex_form) {
-    fprintf(fp, "\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\subsection{%s}\n", 
-            entity_name[type], entity_name[type]);
+    fprintf(fp, "\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\subsection{%s---%s}\n", 
+            entity_name[type], entity_name[type], makeTexSafeString(entity_text[type], 0));
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
     fprintf(fp, "Parallel capable? : %s\\\\\n", entity_description[type].flags&UNIPROCESSOR?"no":"yes");
     fprintf(fp, "GPU capable? : %s\\\\\n", entity_description[type].flags&GPU_SUPPORT?"yes":"no");
@@ -2337,12 +2337,12 @@ void getRunSetupContext (RUN *context)
 
 void swapParticles(double *p1, double *p2)
 {
-  double buffer[7];
+  double buffer[COORDINATES_PER_PARTICLE];
   if (p1==p2)
     return;
-  memcpy(buffer,     p1, sizeof(double)*7);
-  memcpy(p1    ,     p2, sizeof(double)*7);
-  memcpy(p2    , buffer, sizeof(double)*7);
+  memcpy(buffer,     p1, sizeof(double)*COORDINATES_PER_PARTICLE);
+  memcpy(p1    ,     p2, sizeof(double)*COORDINATES_PER_PARTICLE);
+  memcpy(p2    , buffer, sizeof(double)*COORDINATES_PER_PARTICLE);
 }
 
 void createSemaphoreFile(char *filename)
@@ -2826,7 +2826,7 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
   /* Prevent do_tracking() from recognizing these flags. Instead, we'll control behavior directly */
   /* beamline->fiducial_flag = 0; */
   
-  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
   if (startCoord)
     memcpy(coord[0], startCoord, sizeof(double)*6);
   else

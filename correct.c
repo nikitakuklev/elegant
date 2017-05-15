@@ -1198,12 +1198,12 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   /* arrays for trajectory data */
   traj0 = tmalloc(sizeof(*traj0)*beamline->n_elems);
   traj1 = tmalloc(sizeof(*traj1)*beamline->n_elems);
-  one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
+  one_part = (double**)czarray_2d(sizeof(**one_part), 1, COORDINATES_PER_PARTICLE);
 
   /* find initial trajectory */
   p = p0 = sqrt(sqr(run->ideal_gamma)-1);
   n_part = 1;
-  fill_double_array(*one_part, 7, 0.0);
+  fill_double_array(*one_part, COORDINATES_PER_PARTICLE, 0.0);
   if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    traj0, run, 0, 
                    TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
@@ -1265,7 +1265,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* track with positively-tweeked corrector */
     p = p0;
     n_part = 1;
-    fill_double_array(*one_part, 7, 0.0);
+    fill_double_array(*one_part, COORDINATES_PER_PARTICLE, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
       bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
@@ -1299,7 +1299,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* track with tweeked corrector */
     p = p0;
     n_part = 1;
-    fill_double_array(*one_part, 7, 0.0);
+    fill_double_array(*one_part, COORDINATES_PER_PARTICLE, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
       bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
@@ -1341,7 +1341,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   free(moniCalibration);
   tfree(traj0); traj0 = NULL;
   tfree(traj1); traj1 = NULL;
-  free_czarray_2d((void**)one_part, 1, 7); one_part = NULL;
+  free_czarray_2d((void**)one_part, 1, COORDINATES_PER_PARTICLE); one_part = NULL;
 #ifdef DEBUG
   matrix_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
@@ -1409,13 +1409,13 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   Qo = matrix_get(CM->nmon, 1);   /* Vector of BPM errors */
    
   if (!beam) {
-    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
     tracking_flags = TEST_PARTICLES;
   }
   else {
     if (beam->n_to_track==0)
       bombElegant("no particles to track in global_trajcor_plane()", NULL);
-    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, COORDINATES_PER_PARTICLE);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
 
@@ -1437,7 +1437,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
     if (!beam) {
       if (!starting_coord)
-        fill_double_array(*particle, 7, 0.0);
+        fill_double_array(*particle, COORDINATES_PER_PARTICLE, 0.0);
       else {
         for (i=0; i<6; i++)
           particle[0][i] = starting_coord[i];
@@ -1577,9 +1577,9 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
 
   if (!beam)
-    free_czarray_2d((void**)particle, 1, 7);
+    free_czarray_2d((void**)particle, 1, COORDINATES_PER_PARTICLE);
   else
-    free_czarray_2d((void**)particle, beam->n_to_track, 7);
+    free_czarray_2d((void**)particle, beam->n_to_track, COORDINATES_PER_PARTICLE);
   particle = NULL;
   log_exit("global_trajcor_plane");
 
@@ -1617,13 +1617,13 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     bombElegant("no trajectory arrays supplied (one_to_one_trajcor_plane)", NULL);
   
   if (!beam) {
-    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
     tracking_flags = TEST_PARTICLES;
   }
   else {
     if (beam->n_to_track==0)
       bombElegant("no particles to track in one_to_one_trajcor_plane()", NULL);
-    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, COORDINATES_PER_PARTICLE);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
   
@@ -1639,9 +1639,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     p = sqrt(sqr(run->ideal_gamma)-1);
     if (!beam) {
       if (!starting_coord)
-        fill_double_array(*particle, 7, 0.0);
+        fill_double_array(*particle, COORDINATES_PER_PARTICLE, 0.0);
       else {
-        for (i=0; i<7; i++)
+        for (i=0; i<COORDINATES_PER_PARTICLE; i++)
           particle[0][i] = starting_coord[i];
       }
       n_part = 1;
@@ -1699,9 +1699,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       
       if (!beam) {
         if (!starting_coord)
-          fill_double_array(*particle, 7, 0.0);
+          fill_double_array(*particle, COORDINATES_PER_PARTICLE, 0.0);
         else {
-          for (i=0; i<7; i++)
+          for (i=0; i<COORDINATES_PER_PARTICLE; i++)
             particle[0][i] = starting_coord[i];
         }
         n_part = 1;
@@ -1780,9 +1780,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   }
 
   if (!beam)
-    free_czarray_2d((void**)particle, 1, 7);
+    free_czarray_2d((void**)particle, 1, COORDINATES_PER_PARTICLE);
   else
-    free_czarray_2d((void**)particle, beam->n_to_track, 7);
+    free_czarray_2d((void**)particle, beam->n_to_track, COORDINATES_PER_PARTICLE);
   particle = NULL;
   log_exit("one_to_one_trajcor_plane");
 }
@@ -1809,12 +1809,12 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     bombElegant("no trajectory arrays supplied (thread__trajcor_plane)", NULL);
   
   if (!beam) {
-    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
   }
   else {
     if (beam->n_to_track==0)
       bombElegant("no particles to track in thread__trajcor_plane()", NULL);
-    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, COORDINATES_PER_PARTICLE);
   }
   tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   nElems = beamline->n_elems+1;
@@ -1836,9 +1836,9 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     p = sqrt(sqr(run->ideal_gamma)-1);
     if (!beam) {
       if (!starting_coord)
-        fill_double_array(*particle, 7, 0.0);
+        fill_double_array(*particle, COORDINATES_PER_PARTICLE, 0.0);
       else {
-        for (i=0; i<7; i++)
+        for (i=0; i<COORDINATES_PER_PARTICLE; i++)
           particle[0][i] = starting_coord[i];
       }
       n_part = 1;
@@ -1929,9 +1929,9 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
               p = sqrt(sqr(run->ideal_gamma)-1);
               if (!beam) {
                 if (!starting_coord)
-                  fill_double_array(*particle, 7, 0.0);
+                  fill_double_array(*particle, COORDINATES_PER_PARTICLE, 0.0);
                 else {
-                  for (i=0; i<7; i++)
+                  for (i=0; i<COORDINATES_PER_PARTICLE; i++)
                     particle[0][i] = starting_coord[i];
                 }
                 n_part = 1;
@@ -2007,9 +2007,9 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   }
   
   if (!beam)
-    free_czarray_2d((void**)particle, 1, 7);
+    free_czarray_2d((void**)particle, 1, COORDINATES_PER_PARTICLE);
   else
-    free_czarray_2d((void**)particle, beam->n_to_track, 7);
+    free_czarray_2d((void**)particle, beam->n_to_track, COORDINATES_PER_PARTICLE);
   particle = NULL;
 }
 

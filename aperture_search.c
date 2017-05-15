@@ -308,9 +308,9 @@ long do_aperture_search_mp(
   log_entry("do_aperture_search_mp");
 
   log_entry("do_aperture_search_mp.1");
-  coord     = (double**)czarray_2d(sizeof(**coord), ny+1, 7);
+  coord     = (double**)czarray_2d(sizeof(**coord), ny+1, COORDINATES_PER_PARTICLE);
   coord[ny] = NULL;
-  accepted  = (double**)czarray_2d(sizeof(**accepted), ny+1, 7);
+  accepted  = (double**)czarray_2d(sizeof(**accepted), ny+1, COORDINATES_PER_PARTICLE);
   accepted[ny] = NULL;
   xy_left   = (double**)czarray_2d(sizeof(**xy_left), ny+1, 2); 
   xy_left[ny] = NULL;
@@ -553,8 +553,8 @@ long do_aperture_search_mp(
   log_exit("do_aperture_search_mp.5");
 
   log_entry("do_aperture_search_mp.8");
-  free_czarray_2d((void**)coord, ny, 7);
-  free_czarray_2d((void**)accepted, ny, 7);
+  free_czarray_2d((void**)coord, ny, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)accepted, ny, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)xy_left, ny, 2);
   free_czarray_2d((void**)xy_right, ny, 2);
   free(found);
@@ -584,7 +584,7 @@ long do_aperture_search_sp(
 
   log_entry("do_aperture_search_sp");
 
-  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
   xy_left   = (double**)czarray_2d(sizeof(**xy_left), ny, 2); 
   xy_right  = (double**)czarray_2d(sizeof(**xy_right), ny, 2); 
   n_left = n_right = 0;
@@ -872,7 +872,7 @@ long do_aperture_search_sp(
 #if USE_MPI
   }
 #endif
-  free_czarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)xy_left, ny, 2);
   free_czarray_2d((void**)xy_right, ny, 2);
 
@@ -945,7 +945,7 @@ long do_aperture_search_line(
   return do_aperture_search_line_p(run, control, referenceCoord, errcon, beamline, lines, returnValue);
 #endif
 
-  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
 
   dxFactor = tmalloc(sizeof(*dxFactor)*lines);
   dyFactor = tmalloc(sizeof(*dyFactor)*lines);
@@ -1253,7 +1253,7 @@ long do_aperture_search_line(
   }
 #endif
   
-  free_czarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
   free(dxFactor);
   free(dyFactor);
   free(xLimit);
@@ -1309,7 +1309,7 @@ long do_aperture_search_line_p(
   if (nx>maxSteps)
     maxSteps = nx;
 
-  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
 
   /* These arrays are used to store results for each line and each step on the line */
   survived = (double**)czarray_2d(sizeof(**survived), lines, maxSteps);
@@ -1630,7 +1630,7 @@ long do_aperture_search_line_p(
     }
   }
   
-  free_czarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)survived, lines, maxSteps);
   free_czarray_2d((void**)xLost2, lines, maxSteps);
   free_czarray_2d((void**)yLost2, lines, maxSteps);

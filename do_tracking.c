@@ -4345,9 +4345,9 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
 
   if (isMaster) {
     if(*coord==NULL)
-      *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, 7);
+      *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, COORDINATES_PER_PARTICLE);
     if ((dumpAcceptance && (*accepted==NULL)) || (accepted && *accepted)) {
-      *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, 7); 
+      *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, COORDINATES_PER_PARTICLE); 
     }
   }
 

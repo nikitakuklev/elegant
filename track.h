@@ -75,6 +75,7 @@ extern "C" {
 extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
 extern long particleIsElectron;
 
+/* Coordinates are x, x', y, y', s, delta, particleID */
 #define COORDINATES_PER_PARTICLE 7
 
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */

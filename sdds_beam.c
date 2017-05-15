@@ -242,9 +242,9 @@ long new_sdds_beam(
         /* no beam has been read before, or else it was purged from memory to save RAM */
         /* free any arrays we may have from previous pass */
         if (beam->particle)
-          free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
+          free_czarray_2d((void**)beam->particle, beam->n_particle, COORDINATES_PER_PARTICLE);
         if (beam->accepted)
-          free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
+          free_czarray_2d((void**)beam->accepted, beam->n_particle, COORDINATES_PER_PARTICLE);
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
         if ((beam->n_original=get_sdds_particles(&beam->original, &beam->id_slots_per_bunch, track_pages_separately, 0))<0) {
@@ -258,7 +258,7 @@ long new_sdds_beam(
         }
         if (save_initial_coordinates || n_particles_per_ring!=1)
           beam->particle = (double**)czarray_2d
-            (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), 7);
+            (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), COORDINATES_PER_PARTICLE);
         else {
           beam->particle = beam->original;
           beam->n_particle = beam->n_original;
@@ -268,7 +268,7 @@ long new_sdds_beam(
         if (isSlave || !notSinglePart)
 #endif
           beam->accepted = (double**)czarray_2d
-            (sizeof(double), (long)(beam->n_particle*factor), 7);
+            (sizeof(double), (long)(beam->n_particle*factor), COORDINATES_PER_PARTICLE);
         new_particle_data = 1;	
       }
       else
@@ -281,11 +281,11 @@ long new_sdds_beam(
        */
       /* Free arrays from previous pass */
       if (beam->particle)
-        free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
+        free_czarray_2d((void**)beam->particle, beam->n_particle, COORDINATES_PER_PARTICLE);
       if (beam->accepted)
-        free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
+        free_czarray_2d((void**)beam->accepted, beam->n_particle, COORDINATES_PER_PARTICLE);
       if (beam->original && beam->original!=beam->particle)
-        free_czarray_2d((void**)beam->original, beam->n_original, 7);
+        free_czarray_2d((void**)beam->original, beam->n_original, COORDINATES_PER_PARTICLE);
       beam->particle = beam->accepted = beam->original = NULL;
 
       /* read the new page */
@@ -297,14 +297,14 @@ long new_sdds_beam(
 	  n_tables_to_skip = 0;    /* use the user's parameter only the first time */
 	  if (save_initial_coordinates || n_particles_per_ring!=1)
 	    beam->particle = (double**)czarray_2d
-	      (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), 7);
+	      (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), COORDINATES_PER_PARTICLE);
 	  else {
 	    beam->particle = beam->original;
 	    beam->n_particle = beam->n_original;
 	  }
 	  if (run->acceptance) 
 	    beam->accepted = (double**)czarray_2d
-	      (sizeof(double), (long)(beam->n_particle*factor), 7);
+	      (sizeof(double), (long)(beam->n_particle*factor), COORDINATES_PER_PARTICLE);
 	}
       }
       else { 
@@ -489,10 +489,10 @@ long new_sdds_beam(
 #endif
       n_duplicates += 1;
       if (beam->particle!=beam->original) {
-        beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), n_duplicates*n0, 7);
+        beam->particle = (double**)resize_czarray_2d((void**)beam->particle, sizeof(double), n_duplicates*n0, COORDINATES_PER_PARTICLE);
       } else {
-        beam->particle = (double**)czarray_2d(sizeof(double), n_duplicates*n0, 7);
-        memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*7);
+        beam->particle = (double**)czarray_2d(sizeof(double), n_duplicates*n0, COORDINATES_PER_PARTICLE);
+        memcpy(beam->particle[0], beam->original[0], sizeof(double)*n0*COORDINATES_PER_PARTICLE);
       }
 #if USE_MPI
       printf("Arrays resized\n");
@@ -557,7 +557,7 @@ long new_sdds_beam(
         fflush(stdout);
         exitElegant(1);
       }
-      for (j=0; j<7; j++) 
+      for (j=0; j<COORDINATES_PER_PARTICLE; j++) 
         beam->particle[i][j] = beam->original[i][j];
       p = p_central*(1+beam->particle[i][5]);
       beta = p/sqrt(p*p+1);
@@ -614,22 +614,22 @@ long new_sdds_beam(
 #endif    
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 
-    data_all = (double**)resize_czarray_2d((void**)data_all, sizeof(double), (long)(np_total), 7);
+    data_all = (double**)resize_czarray_2d((void**)data_all, sizeof(double), (long)(np_total), COORDINATES_PER_PARTICLE);
     
     MPI_Allgather(&np, 1, MPI_LONG, n_vector_long, 1, MPI_LONG, MPI_COMM_WORLD);
     offset_array[0] = 0;
     for (i=0; i<n_processors-1; i++) {
-      n_vector[i] = 7*n_vector_long[i]; 
+      n_vector[i] = COORDINATES_PER_PARTICLE*n_vector_long[i]; 
       offset_array[i+1] = offset_array[i] + n_vector[i];
     }
-    n_vector[n_processors-1] = 7*n_vector_long[n_processors-1]; 
+    n_vector[n_processors-1] = COORDINATES_PER_PARTICLE*n_vector_long[n_processors-1]; 
 
     if (!beam->n_original) /* A dummy memory is allocated on Master */ 
-      data = (double**)czarray_2d(sizeof(**data), 1, 7);
-    MPI_Allgatherv(&data[0][0], 7*np, MPI_DOUBLE, &data_all[0][0], n_vector, offset_array, MPI_DOUBLE, MPI_COMM_WORLD );
+      data = (double**)czarray_2d(sizeof(**data), 1, COORDINATES_PER_PARTICLE);
+    MPI_Allgatherv(&data[0][0], COORDINATES_PER_PARTICLE*np, MPI_DOUBLE, &data_all[0][0], n_vector, offset_array, MPI_DOUBLE, MPI_COMM_WORLD );
   
     if (data)
-      free_czarray_2d((void**)data, np, 7);
+      free_czarray_2d((void**)data, np, COORDINATES_PER_PARTICLE);
     if (offset_array)
       tfree(offset_array);
     if (n_vector)
@@ -641,7 +641,7 @@ long new_sdds_beam(
     beam->n_to_track = np_total;
 
     /* The memory for original will be reallocated to hold the whole beam */
-    beam->original = (double**)resize_czarray_2d((void**)beam->original, sizeof(double), (long)(np_total), 7);
+    beam->original = (double**)resize_czarray_2d((void**)beam->original, sizeof(double), (long)(np_total), COORDINATES_PER_PARTICLE);
   }
 #endif
 #ifdef MPI_DEBUG
@@ -662,7 +662,7 @@ long new_sdds_beam(
         fflush(stdout);
         exitElegant(1);
       }
-      for (j=0; j<7; j++)
+      for (j=0; j<COORDINATES_PER_PARTICLE; j++)
         beam->original[i][j] = beam->particle[i][j];
     }
     beam->n_saved = beam->n_to_track;
@@ -688,7 +688,7 @@ long new_sdds_beam(
 #ifdef MPI_DEBUG
     printf("Freeing original data (beam->n_original = %ld)\n", beam->n_original);
 #endif
-      free_czarray_2d((void**)beam->original, beam->n_original, 7); 
+      free_czarray_2d((void**)beam->original, beam->n_original, COORDINATES_PER_PARTICLE); 
       beam->original = NULL;
       beam->n_original = 0;
     }
@@ -911,7 +911,7 @@ long get_sdds_particles(double ***particle,
 	if ((np_new=np+rows)>np_max) {
 	  /* must reallocate to get more space */
 	  np_max = np + rows;
-	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
+	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), COORDINATES_PER_PARTICLE);
 	}
 
 #if SDDS_MPI_IO
@@ -923,7 +923,7 @@ long get_sdds_particles(double ***particle,
 	else if (isSlave)
 	  active = 1;     	
 	if (!active) /* Avoid to crash caused by returning a NULL pointer for fiducialization */ 
-	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
+	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), COORDINATES_PER_PARTICLE);
 	else
 	{
 #endif  

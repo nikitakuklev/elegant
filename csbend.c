@@ -26,6 +26,7 @@
 long negativeWarningsLeft = 100;
 long dipoleFringeWarning = 0;
 long expansionOrder1 = 11;  /* order of expansion+1 */
+long hasSkew = 0;
 double rho0, rho_actual, rad_coef=0, isrConstant=0;
 double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
 long distributionBasedRadiation, includeOpeningAngle;
@@ -83,7 +84,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 {
   double xp[11], yp[11];
   double sumFx=0, sumFy=0;
-  long i, j;
+  long i, j, j0, dj;
   /*
   static short first = 1;
   */
@@ -93,9 +94,12 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
     xp[i] = xp[i-1]*x;
     yp[i] = yp[i-1]*y;
   }
-  
+
+  dj = hasSkew ? 1 : 2;
+  j0 = hasSkew? 0 : 1;
+
   for (i=0; i<expansionOrder1; i++)
-    for (j=0; j<expansionOrder1; j++) {
+    for (j=j0; j<expansionOrder1; j+=dj) {
       if (Fx_xy[i][j]) {
         sumFx += Fx_xy[i][j]*xp[i]*yp[j];
 /*
@@ -107,7 +111,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
   *Fx = sumFx;
 
   for (i=0; i<expansionOrder1; i++)
-    for (j=0; j<expansionOrder1; j++) {
+    for (j=0; j<expansionOrder1; j+=dj) {
       if (Fy_xy[i][j]) {
         sumFy += Fy_xy[i][j]*xp[i]*yp[j];
 /*
@@ -140,7 +144,14 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
   expansionOrder1 = expansionOrder + 1;
   if (expansionOrder1>11)
     bombElegant("expansion order >10 for CSBEND or CSRCSBEND", NULL);
-  
+
+  hasSkew = 0;
+  for (i=0; i<expansionOrder; i++)  
+    if (c[i]) {
+      hasSkew = 1;
+      break;
+    }
+
   if (!Fx_xy)
     Fx_xy = (double**)czarray_2d(sizeof(double), 11, 11);
   if (!Fy_xy)
@@ -660,8 +671,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         csbend->refKicks = 0;
       }
       
-      part0 = (double**)czarray_2d(sizeof(double), 1, 7);
-      memset(part0[0], 0, sizeof(**part0)*7);
+      part0 = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE);
+      memset(part0[0], 0, sizeof(**part0)*COORDINATES_PER_PARTICLE);
       memcpy(&csbend0, csbend, sizeof(*csbend));
       csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
       
@@ -679,7 +690,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       csbend->refKicks = csbend->n_kicks;
       csbend->refLength = csbend->length;
       csbend->refAngle = csbend->angle;
-      free_czarray_2d((void**)part0, 1, 7);
+      free_czarray_2d((void**)part0, 1, COORDINATES_PER_PARTICLE);
 
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->refKicks;

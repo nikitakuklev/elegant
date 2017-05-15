@@ -429,7 +429,7 @@ long doMomentumApertureSearch(
   printf("Running in search mode\n");
   
   /* allocate arrays for tracking */
-  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
 
   /* allocate arrays for storing data for negative and positive momentum limits for each element */
   lostOnPass = (int32_t**)czarray_2d(sizeof(**lostOnPass), (output_mode?1:2), (output_mode?2:1)*nElem);
@@ -460,7 +460,7 @@ long doMomentumApertureSearch(
   turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
   
   /* need to do this because do_tracking() in principle may realloc this pointer */
-  lostParticles = (double**)czarray_2d(sizeof(double),1, 8);	 
+  lostParticles = (double**)czarray_2d(sizeof(double),1, COORDINATES_PER_PARTICLE+1);	 
  
   elem = elem0;
   iElem = 0;
@@ -834,7 +834,7 @@ long doMomentumApertureSearch(
     SDDS_DoFSync(&SDDSma);
       
 
-  free_czarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)lostOnPass, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)loserFound, (output_mode?1:2), (output_mode?2:1)*nElem);
   free_czarray_2d((void**)survivorFound, (output_mode?1:2), (output_mode?2:1)*nElem);
@@ -921,11 +921,11 @@ long multiparticleLocalMomentumAcceptance(
   
   /* allocate and initialize array for tracking */
   if (myid==0) {
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, 7);
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor*n_working_processors, COORDINATES_PER_PARTICLE);
     lostParticles = NULL;
   } else {
-    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, 7);
-    lostParticles = (double**)czarray_2d(sizeof(double), nEachProcessor, 8);	 
+    coord = (double**)czarray_2d(sizeof(**coord), nEachProcessor, COORDINATES_PER_PARTICLE);
+    lostParticles = (double**)czarray_2d(sizeof(double), nEachProcessor, COORDINATES_PER_PARTICLE+1);	 
   }
   
 #ifdef DEBUG
@@ -1094,7 +1094,7 @@ long multiparticleLocalMomentumAcceptance(
     free_czarray_2d((void**)deltaSurvived, 2, nElem);
     /* free_czarray_2d((void**)coord, nEachProcessor*n_working_processors, 7); */
   } else {
-    free_czarray_2d((void**)coord, nEachProcessor, 7);
+    free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
   }
   
   MPI_Barrier(MPI_COMM_WORLD);

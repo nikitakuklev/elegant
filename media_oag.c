@@ -106,22 +106,22 @@ sorted in the input file, it will fail. Plus, it was never adapted for the non-w
 	static long last_n_total = 0;
 
 	if (!last_n_total && data)
-	  free_zarray_2d((void**)data, last_n_total, 7);
-	data = (double**)zarray_2d(sizeof(**data), n_total, 7);
+	  free_zarray_2d((void**)data, last_n_total, COORDINATES_PER_PARTICLE);
+	data = (double**)zarray_2d(sizeof(**data), n_total, COORDINATES_PER_PARTICLE);
 	last_n_total = n_total;
     
       
 	MPI_Allgather(&n, 1, MPI_LONG, n_vector_long, 1, MPI_LONG, MPI_COMM_WORLD);
       offset[0] = 0;
       for (i=0; i<n_processors-1; i++) {
-	n_vector[i] = 7*n_vector_long[i];
+	n_vector[i] = COORDINATES_PER_PARTICLE*n_vector_long[i];
 	offset[i+1] = offset[i] + n_vector[i];
       }	
-      n_vector[n_processors-1] = 7*n_vector_long[n_processors-1];	
+      n_vector[n_processors-1] = COORDINATES_PER_PARTICLE*n_vector_long[n_processors-1];	
 
       if (!n) /* We need allocate dummy memory to make MPI_Gatherv work */
-	x = (double**)zarray_2d(sizeof(**data), 1, 7);
-      MPI_Allgatherv (&x[0][0], 7*n, MPI_DOUBLE, &data[0][0], n_vector, offset, MPI_DOUBLE, MPI_COMM_WORLD);
+	x = (double**)zarray_2d(sizeof(**data), 1, COORDINATES_PER_PARTICLE);
+      MPI_Allgatherv (&x[0][0], COORDINATES_PER_PARTICLE*n, MPI_DOUBLE, &data[0][0], n_vector, offset, MPI_DOUBLE, MPI_COMM_WORLD);
 
       if (isMaster)
 	best_i = find_median_of_row(&median, data, index, n_total)+1;

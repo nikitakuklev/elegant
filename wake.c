@@ -100,8 +100,8 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 #endif
         if (np>max_np) {
           if (part)
-            free_czarray_2d((void**)part, max_np, 7);
-          part = (double**)czarray_2d(sizeof(double), np, 7);
+            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
           time = (double*)tmalloc(sizeof(*time)*np);
           pbin = trealloc(pbin, sizeof(*pbin)*np);
           max_np = np;
@@ -109,7 +109,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
         for (ip=tmean=0; ip<np; ip++) {
           time[ip] = time0[ipBucket[iBucket][ip]];
           tmean += time[ip];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
         }
         if (np>0)
           tmean /= np;
@@ -254,7 +254,7 @@ else if (isSlave) {
 #endif
 
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+          memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
 
 #ifdef DEBUG
         printf("Done with bucket %ld\n", iBucket);
@@ -279,7 +279,7 @@ else if (isSlave) {
     do_match_energy(part0, np0, PoInput, 0);
 
   if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, 7);
+    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0) 
     free(time);
   if (time0) 

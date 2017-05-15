@@ -3688,9 +3688,9 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
       M->C[i] = 0;
     }
   }
-  oneParticle = (double**)czarray_2d(sizeof(**oneParticle), 1, 7);
+  oneParticle = (double**)czarray_2d(sizeof(**oneParticle), 1, COORDINATES_PER_PARTICLE);
   if (!startingCoord)
-    fill_double_array(oneParticle[0], 7, 0.0);
+    fill_double_array(oneParticle[0], COORDINATES_PER_PARTICLE, 0.0);
   else {
     memcpy(oneParticle[0], startingCoord, 6*sizeof(**oneParticle));
     oneParticle[0][6] = 0;
@@ -3874,7 +3874,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   free(y);
   free(xp);
   free(yp);
-  free_czarray_2d((void**)oneParticle, 1, 7);
+  free_czarray_2d((void**)oneParticle, 1, COORDINATES_PER_PARTICLE);
   if (useMatrix) {
     M->C[i] = CSave[i];
   }

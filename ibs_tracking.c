@@ -174,14 +174,14 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 #endif
         if (np>max_np) {
           if (part)
-            free_czarray_2d((void**)part, max_np, 7);
-          part = (double**)czarray_2d(sizeof(double), np, 7);
+            free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+          part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
           time = (double*)trealloc(time, sizeof(*time)*np);
           max_np = np;
         }
         for (ip=0; ip<np; ip++) {
           time[ip] = time0[ipBucket[iBucket][ip]];
-          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*7);
+          memcpy(part[ip], part0[ipBucket[iBucket][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
         }
       }
     }
@@ -464,7 +464,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
       if (nBuckets!=1) {
 	/* copy back to original buffer */
 	for (ip=0; ip<np; ip++)
-	  memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*7);
+	  memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
       }
     }
     

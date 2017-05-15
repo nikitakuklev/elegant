@@ -692,7 +692,7 @@ void find_trajectory_bpm_readouts
   long iBPM, i;
   
   if (!particle) {
-    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
     particle[0][4] = particle[0][5] = 0;
   }
   for (i=0; i<4; i++)

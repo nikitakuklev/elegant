@@ -520,7 +520,7 @@ void trackWithIonEffects
       if (nBunches!=1) {
         /*** Copy bunch coordinates back to master array */
         for (ip=0; ip<np; ip++)
-          memcpy(part0[ipBunch[iBunch][ip]], part[ip], sizeof(double)*7);
+          memcpy(part0[ipBunch[iBunch][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
       }
 
 #if USE_MPI

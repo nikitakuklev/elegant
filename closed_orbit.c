@@ -342,7 +342,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     m_alloc(&co, 4, 1);
     m_alloc(&diff, 4, 1);
     m_alloc(&change, 4, 1);
-    one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, COORDINATES_PER_PARTICLE);
     initialized = 1;
   }
 
