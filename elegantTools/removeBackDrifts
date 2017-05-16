@@ -1,0 +1,35 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
+
+#
+# Remove negative or backward drifts
+#
+
+set usage {usage: removeBackDrifts -input <filename> -output <filename>}
+set args $argv
+set input ""
+set output ""
+if {[APSStrictParseArguments {input output}] || ![string length $input] || ![string length $output]} {
+    return -code error "$usage"
+}
+
+if ![file exists $input] {
+    return -code error "$input: not found"
+}
+if [file exists $output] {
+    return -code error "$output: already exists"
+}
+
+exec sddsprocess $input -pipe=out \
+     -process=s,min,%sMinBackDrift \
+     "-rpnexpression=sMinBackDrift -1 + sto sHighWaterMark,repeat" \
+     "-define=column,keepFlagBackDrift,s sHighWaterMark < ? 0 : s sto sHighWaterMark 1 $" \
+     -filter=column,keepFlagBackDrift,1,1 \
+     | sddsconvert -pipe=in $output -delete=parameter,sMinBackDrift -delete=column,keepFlagBackDrift
+
