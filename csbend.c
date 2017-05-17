@@ -26,7 +26,7 @@
 long negativeWarningsLeft = 100;
 long dipoleFringeWarning = 0;
 long expansionOrder1 = 11;  /* order of expansion+1 */
-long hasSkew = 0;
+long hasSkew = 0, hasNormal = 0;
 double rho0, rho_actual, rad_coef=0, isrConstant=0;
 double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
 long distributionBasedRadiation, includeOpeningAngle;
@@ -85,9 +85,12 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
   double xp[11], yp[11];
   double sumFx=0, sumFy=0;
   long i, j, j0, dj;
-  /*
-  static short first = 1;
-  */
+
+  if (!hasSkew && !hasNormal) {
+    *Fx = 0;
+    *Fy = 1;
+    return;
+  }
 
   xp[0] = yp[0] = 1;
   for (i=1; i<expansionOrder1; i++) {
@@ -99,25 +102,18 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
   j0 = hasSkew? 0 : 1;
 
   for (i=0; i<expansionOrder1; i++)
-    for (j=j0; j<expansionOrder1; j+=dj) {
+    /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
+    for (j=j0; j<expansionOrder1-i; j+=dj) {
       if (Fx_xy[i][j]) {
         sumFx += Fx_xy[i][j]*xp[i]*yp[j];
-/*
-        if (first)
-          printf("Including in Fx: %e * x^%ld y^%ld\n", Fx_xy[i][j], i, j);
-*/
       }
     }
   *Fx = sumFx;
 
   for (i=0; i<expansionOrder1; i++)
-    for (j=0; j<expansionOrder1; j+=dj) {
+    for (j=0; j<expansionOrder1-i; j+=dj) {
       if (Fy_xy[i][j]) {
         sumFy += Fy_xy[i][j]*xp[i]*yp[j];
-/*
-        if (first)
-          printf("Including in Fy: %e * x^%ld y^%ld\n", Fy_xy[i][j], i, j);
-*/
       }
     }
 
@@ -145,12 +141,13 @@ void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlin
   if (expansionOrder1>11)
     bombElegant("expansion order >10 for CSBEND or CSRCSBEND", NULL);
 
-  hasSkew = 0;
-  for (i=0; i<expansionOrder; i++)  
-    if (c[i]) {
+  hasSkew = hasNormal = 0;
+  for (i=0; i<expansionOrder; i++) {
+    if (b[i])
+      hasNormal = 1;
+    if (c[i]) 
       hasSkew = 1;
-      break;
-    }
+  }
 
   if (!Fx_xy)
     Fx_xy = (double**)czarray_2d(sizeof(double), 11, 11);
