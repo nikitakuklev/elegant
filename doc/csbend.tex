@@ -39,6 +39,17 @@ Setting {\tt NONLINEAR=0} turns off all the terms above {\tt K\_1} (or {\tt b\_1
 also turns off effects due to curvature that would
 normally result in a gradient producing terms of higher order.
 
+The \verb|EXPANSION_ORDER| parameter controls the order of the expansion of the nonlinear
+fields, so that terms are limited to $x^i y^j$ with $i+j\leq$\verb|EXPANSION_ORDER|.
+By default, when \verb|EXPANSION\_ORDER=0|, the expansion order is set automatically, as follows:
+If the highest non-zero multipole order (specified by \verb|Kn|, \verb|Bn|, \verb|Fn|, or \verb|Gn|)
+is $n$ (with $n=1$ being quadruople), then the expansion order is set to $n+3$.
+However, the expansion order is never automatically set to less than 4, unless all the 
+multipole terms are zero, in which case the expansion always yields a constant.
+Since the number of polynomial terms increases like the square of the expansion order, using many
+multipole terms can significantly increase run time.
+The maximum value for the expansion order is 10.
+
 {\bf Edge angles and edge effects} 
 
 Some confusion may exist about the edge angles, particularly the signs.
