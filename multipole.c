@@ -31,6 +31,28 @@ typedef struct {
 static STORED_MULTIPOLE_DATA *storedMultipoleData = NULL;
 static long nMultipoleDataSets = 0;
 
+long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
+                      MULTIPOLE_DATA *multData)
+{
+  long i, j, maxOrder;
+  MULTIPOLE_DATA *ptr[3];
+  maxOrder = order>order2 ? order : order2;
+  ptr[0] = edgeMultData;
+  ptr[1] = steeringMultData;
+  ptr[2] = multData;
+  for (i=0; i<3; i++) {
+    if (ptr[i]) {
+      for (j=0; j<(ptr[i])->orders; j++) {
+        if (maxOrder<(ptr[i])->order[j])
+          maxOrder = (ptr[i])->order[j];
+      }
+    }
+  }
+  return maxOrder;
+}
+
+
+
 long searchForStoredMultipoleData(char *multFile)
 {
   long i;
@@ -221,6 +243,10 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
 void fillPowerArray(double x, double *xpow, long order)
 {
   long i;
+
+  if (!xpow) 
+    bombElegant("Error: NULL pointer passed to fillPowerArray---Seek expert help!", NULL);
+
   xpow[0] = 1;
   for (i=1; i<=order; i++) {
     xpow[i] = xpow[i-1]*x;
@@ -415,7 +441,7 @@ long multipole_tracking(
 
     if ((order=multipole->order)<0)
       bombTracking("order < 0 in multipole_tracking()");
-    if (order>maxOrder || maxOrder==-1) {
+    if (order>maxOrder || maxOrder==-1 || !xpow || !ypow) {
       xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
       ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
       maxOrder = order;
@@ -607,8 +633,8 @@ double *expansion_coefficients(long n)
     return(expansion_coef[n]);
 
   if (n>maxOrder) {
-    expansion_coef = trealloc(expansion_coef, sizeof(*expansion_coef)*(n+1));
-    orderDone      = trealloc(orderDone, sizeof(*orderDone)*(n+1));
+    expansion_coef = SDDS_Realloc(expansion_coef, sizeof(*expansion_coef)*(n+1));
+    orderDone      = SDDS_Realloc(orderDone, sizeof(*orderDone)*(n+1));
     for (i=maxOrder+1; i<=n; i++)
       orderDone[i] = 0;
     maxOrder = n;
@@ -1032,7 +1058,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, imult;
-  
+  long maxOrder;
+  double *xpow, *ypow;
+
   drift = drift/n_kicks/2.0;
   KnL = KnL/n_kicks;
   xkick = xkick/n_kicks;
@@ -1058,6 +1086,10 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     return 0;
   }
 
+  maxOrder = findMaximumOrder(order, order2, edgeMultData, steeringMultData, multData);
+  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
+  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+
   /* calculate initial canonical momenta */
   denom = 1+sqr(xp)+sqr(yp);
   denom = sqrt(denom);
@@ -1065,11 +1097,13 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   qy = (1+dp)*yp/denom;
 
   if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
     for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
@@ -1100,32 +1134,34 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       coord[2] = y;
       return 0;
     }
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
 
     if (!radial)
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, order, KnL, 0);
     else
-      applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL, 0);
+      applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, order, KnL, 0);
 
     if (order2>0) {
       /* additional normal multipole */
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order2, KnL2, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, order2, KnL2, 0);
     } else if (order2<0) {
       /* additional skew multipole */
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, -order2, KnL2, 1);
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, -order2, KnL2, 1);
     }
 
     if (xkick)
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -xkick, 0);
     if (ykick)
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick, 1);
+      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -ykick, 1);
 
     if (steeringMultData && steeringMultData->orders) {
       /* apply steering corrector multipoles */
       for (imult=0; imult<steeringMultData->orders; imult++) {
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                         steeringMultData->order[imult], 
                                         steeringMultData->KnL[imult]*xkick/n_kicks, 0);
-        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                         steeringMultData->order[imult], 
                                         steeringMultData->JnL[imult]*ykick/n_kicks, 1);
       }
@@ -1135,11 +1171,11 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     if (multData) {
       for (imult=0; imult<multData->orders; imult++) {
         if (multData->KnL && multData->KnL[imult])
-          apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+          apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                           multData->order[imult], 
                                           multData->KnL[imult]/n_kicks, 0);
         if (multData->JnL && multData->JnL[imult]) 
-          apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+          apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                           multData->order[imult], 
                                           multData->JnL[imult]/n_kicks, 1);
       }
@@ -1184,11 +1220,13 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   }
 
   if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
     for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
@@ -1201,6 +1239,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
+
+  free(xpow);
+  free(ypow);
 
   coord[0] = x;
   coord[1] = xp;
@@ -1244,6 +1285,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, step, imult;
   double dsh;
+  long maxOrder;
+  double *xpow, *ypow;
   static double driftFrac[4] = {
     0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
     } ;
@@ -1280,12 +1323,18 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
   qy = (1+dp)*yp/denom;
 
+  maxOrder = findMaximumOrder(order, order2, edgeMultData, steeringMultData, multData);
+  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
+  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+
   if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
     for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
@@ -1321,35 +1370,38 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
       if (!kickFrac[step])
         break;
 
+      fillPowerArray(x, xpow, maxOrder);
+      fillPowerArray(y, ypow, maxOrder);
+
       if (!radial)
-	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
 					order, KnL*kickFrac[step], 0);
       else 
-	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+	applyRadialCanonicalMultipoleKicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
 					   order, KnL*kickFrac[step], 0);
 
       if (order2>0) {
-	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
 					order2, KnL2*kickFrac[step], 0);
       } else if (order2<0) {
-	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
+	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
 					-order2, KnL2*kickFrac[step], 1);
       }
 
       if (xkick)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick*kickFrac[step], 0);
+        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -xkick*kickFrac[step], 0);
       if (ykick)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick*kickFrac[step], 1);
+        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -ykick*kickFrac[step], 1);
 	
       if (steeringMultData && steeringMultData->orders) {
         /* apply steering corrector multipoles */
         for (imult=0; imult<steeringMultData->orders; imult++) {
           if (steeringMultData->KnL[imult]) 
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                             steeringMultData->order[imult], 
                                             steeringMultData->KnL[imult]*xkick*kickFrac[step], 0);
           if (steeringMultData->JnL[imult]) 
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                             steeringMultData->order[imult], 
                                             steeringMultData->JnL[imult]*ykick*kickFrac[step], 1);
         }
@@ -1359,13 +1411,13 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multData->orders; imult++) {
           if (multData->KnL && multData->KnL[imult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                             multData->order[imult], 
                                             multData->KnL[imult]*kickFrac[step]/n_parts,
                                             0);
           }
           if (multData->JnL && multData->JnL[imult]) {
-            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                             multData->order[imult], 
                                             multData->JnL[imult]*kickFrac[step]/n_parts,
                                             1);
@@ -1407,11 +1459,13 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   }
   
   if (edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
     for (imult=0; imult<edgeMultData->orders; imult++) {
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->KnL[imult], 0);
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
                                       edgeMultData->order[imult], 
                                       edgeMultData->JnL[imult], 1);
     }
@@ -1424,6 +1478,9 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   denom = sqrt(denom);
   xp = qx/denom;
   yp = qy/denom;
+
+  free(xpow);
+  free(ypow);
 
   coord[0] = x;
   coord[1] = xp;
@@ -1452,28 +1509,19 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 
 void apply_canonical_multipole_kicks(double *qx, double *qy, 
                                      double *sum_Fx_return, double *sum_Fy_return,
-                                     double x, double y,
+                                     double *xpow, double *ypow,
                                      long order, double KnL, long skew)
 {
   long i;
   double sum_Fx, sum_Fy;
   double *coef;
-  static long maxOrder = -1;
-  static double *xpow = NULL, *ypow = NULL;
-  if (order>maxOrder || maxOrder==-1) {
-    xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
-    ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
-    maxOrder = order;
-  }
+  
   if (sum_Fx_return)
     *sum_Fx_return = 0;
   if (sum_Fy_return)
     *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
 
-  fillPowerArray(x, xpow, order);
-  fillPowerArray(y, ypow, order);
-  
   /* sum up the terms for the multipole expansion */
   for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
     /*
@@ -1502,22 +1550,12 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
 
 void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
 					double *sum_Fx_return, double *sum_Fy_return,
-					double x, double y,
+					double *xpow, double *ypow,
 					long order, double KnL, long skew)
 {
   long i;
   double sum_Fx, sum_Fy;
   double *coef;
-  static long maxOrder = -1;
-  static double *xpow = NULL, *ypow = NULL;
-
-  if (order>maxOrder || maxOrder==-1) {
-    xpow = SDDS_Realloc(xpow, sizeof(*xpow)*(order+1));
-    ypow = SDDS_Realloc(ypow, sizeof(*ypow)*(order+1));
-    maxOrder = order;
-  }
-  fillPowerArray(x, xpow, order);
-  fillPowerArray(y, ypow, order);
   
   if (sum_Fx_return)
     *sum_Fx_return = 0;

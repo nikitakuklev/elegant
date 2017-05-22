@@ -3730,6 +3730,13 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);
+void apply_canonical_multipole_kicks(double *qx, double *qy, 
+                                     double *sum_Fx_return, double *sum_Fy_return,
+                                     double *xpow, double *ypow,
+                                     long order, double KnL, long skew);
+void fillPowerArray(double x, double *xpow, long order);
+long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
+                      MULTIPOLE_DATA *multData);
 
 /* prototypes for taylorseries.c: */
 extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,

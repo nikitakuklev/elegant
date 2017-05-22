@@ -23,19 +23,31 @@ int applySteeringMultipoleKicks(
                                 MULTIPOLE_DATA *multData
                                 )
 {
-  long imult;
+  long imult, maxOrder;
   double denom, qx, qy, delta;
+  double *xpow, *ypow;
+
+  if (!xkick && !ykick)
+    return 1;
+
   denom = sqrt(1+sqr(coord[1])+sqr(coord[3]));
   delta = coord[5];
   qx = (1+delta)*coord[1]/denom;
   qy = (1+delta)*coord[3]/denom;
+
+  maxOrder = findMaximumOrder(-1, -1, multData, NULL, NULL);
+  xpow = tmalloc(sizeof(*xpow)*maxOrder);
+  ypow = tmalloc(sizeof(*ypow)*maxOrder);
+  fillPowerArray(coord[0], xpow, maxOrder);
+  fillPowerArray(coord[2], ypow, maxOrder);
+
   for (imult=0; imult<multData->orders; imult++) {
     if (xkick)
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, coord[0], coord[2], 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
                                       multData->order[imult], 
                                       multData->KnL[imult]*xkick, 0);
     if (ykick)
-      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, coord[0], coord[2], 
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow,
                                       multData->order[imult], 
                                       multData->JnL[imult]*ykick, 1);
   }
@@ -44,6 +56,10 @@ int applySteeringMultipoleKicks(
   denom = sqrt(denom);
   coord[1] = qx/denom;
   coord[3] = qy/denom;
+  
+  free(xpow);
+  free(ypow);
+
   return 1;
 }
 

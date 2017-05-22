@@ -6,16 +6,6 @@ extern "C" {
 #endif
 
 double *expansion_coefficients(long n);
-void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
-					double *sum_Fx_return, double *sum_Fy_return,
-					double x, double y,
-					long order, double KnL, long skew);
-
-void apply_canonical_multipole_kicks(double *qx, double *qy,
-                                   double *sum_Fx, double *sum_Fy,
-                                   double x, double y,
-                                   long order, double KnL, long skew);
-
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
                                       MULTIPOLE_DATA *edgeMult,

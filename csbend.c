@@ -103,23 +103,14 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 
   for (i=0; i<expansionOrder1; i++)
     /* Note: using expansionOrder-i here ensures that for x^i*y^j , i+j<=(expansionOrder1-1) */
-    for (j=j0; j<expansionOrder1-i; j+=dj) {
-      if (Fx_xy[i][j]) {
-        sumFx += Fx_xy[i][j]*xp[i]*yp[j];
-      }
-    }
+    for (j=j0; j<expansionOrder1-i; j+=dj)
+      sumFx += Fx_xy[i][j]*xp[i]*yp[j];
   *Fx = sumFx;
 
   for (i=0; i<expansionOrder1; i++)
-    for (j=0; j<expansionOrder1-i; j+=dj) {
-      if (Fy_xy[i][j]) {
-        sumFy += Fy_xy[i][j]*xp[i]*yp[j];
-      }
-    }
-
+    for (j=0; j<expansionOrder1-i; j+=dj)
+      sumFy += Fy_xy[i][j]*xp[i]*yp[j];
   *Fy = sumFy;
-
-  /* first = 0; */
 }
 
 void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlinear, long expansionOrder)
