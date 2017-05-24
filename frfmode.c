@@ -494,6 +494,8 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r", SDDS_ANY_FLOATING_TYPE,
 			   NULL)!=SDDS_CHECK_OK &&
 	  SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK &&
+	  SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohm", SDDS_ANY_FLOATING_TYPE,
 			   NULL)!=SDDS_CHECK_OK) {
 	printf("Error: problem with ShuntImpedanceSymm column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
 	exit(1);
@@ -503,6 +505,8 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r", SDDS_ANY_FLOATING_TYPE,
 			   NULL)!=SDDS_CHECK_OK &&
 	  SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK &&
+	  SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohm", SDDS_ANY_FLOATING_TYPE,
 			   NULL)!=SDDS_CHECK_OK) {
 	printf("Error: problem with ShuntImpedance column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
 	exit(1);
