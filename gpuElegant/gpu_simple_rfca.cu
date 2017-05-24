@@ -506,7 +506,7 @@ long gpu_trackRfCavityWithWakes (
 
   matrixMethod = 0;
   if (rfca->bodyFocusModel) {
-    char *modelName[2] = { "none", "srs" };
+    char *modelName[2] = { (char*)"none", (char*)"srs" };
     switch (match_string(rfca->bodyFocusModel, modelName, 2, 0)) {
     case 0:
       break;
@@ -923,17 +923,17 @@ long gpu_track_through_rfcw(long np, RFCW *rfcw, double **accepted,
     rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
       if (rfcw->trWakeFile || rfcw->zWakeFile)
-        SDDS_Bomb("You can't give wakeFile along with trWakeFile or zWakeFile for RFCW element");
+        SDDS_Bomb((char*)"You can't give wakeFile along with trWakeFile or zWakeFile for RFCW element");
       SDDS_CopyString(&rfcw->trWakeFile, rfcw->wakeFile);
       SDDS_CopyString(&rfcw->zWakeFile, rfcw->wakeFile);
     }
     
     if (rfcw->WxColumn || rfcw->WyColumn) {
       if (!rfcw->trWakeFile)
-        SDDS_Bomb("no input file for transverse wake for RFCW element");
+        SDDS_Bomb((char*)"no input file for transverse wake for RFCW element");
       SDDS_CopyString(&rfcw->trwake.inputFile, rfcw->trWakeFile);
       if (!rfcw->tColumn)
-        SDDS_Bomb("no tColumn value for wake for RFCW element");
+        SDDS_Bomb((char*)"no tColumn value for wake for RFCW element");
       SDDS_CopyString(&rfcw->trwake.tColumn, rfcw->tColumn);
       if (rfcw->WxColumn) 
         SDDS_CopyString(&rfcw->trwake.WxColumn, rfcw->WxColumn);
@@ -953,10 +953,10 @@ long gpu_track_through_rfcw(long np, RFCW *rfcw, double **accepted,
   if (!rfcw->initialized && rfcw->includeZWake) {
     if (rfcw->WzColumn) {
       if (!rfcw->zWakeFile)
-        SDDS_Bomb("no input file for z wake for RFCW element");
+        SDDS_Bomb((char*)"no input file for z wake for RFCW element");
       SDDS_CopyString(&rfcw->wake.inputFile, rfcw->zWakeFile);
       if (!rfcw->tColumn)
-        SDDS_Bomb("no tColumn value for wake for RFCW element");
+        SDDS_Bomb((char*)"no tColumn value for wake for RFCW element");
       SDDS_CopyString(&rfcw->wake.tColumn, rfcw->tColumn);
       SDDS_CopyString(&rfcw->wake.WColumn, rfcw->WzColumn);
       rfcw->wake.initialized = 0;

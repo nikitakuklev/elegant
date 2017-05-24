@@ -247,7 +247,7 @@ void gpu_accumulate_beam_sums(
   long i, j;
   double centroid[7], centroidn[7], pmin[7], pmax[7];
   double Sijarr[7][7], Sijnarr[7][7];
-  double Sij, Sijn;
+  //double Sij, Sijn;
   long npCount=0;
   short sparse[7][7] = {
     { 1, 1, 0, 0, 0, 1, 0 },
@@ -278,7 +278,7 @@ void gpu_accumulate_beam_sums(
 
   if (timeValue != NULL) {
     fprintf(stderr, "timeValue in gpu_accumulate_beam_sums is not implemented yet\n");
-    exit;
+    exit(1);
   }
   gpu_computeTimeCoordinates(n_part, d_timeCoord, p_central);
   
@@ -381,7 +381,7 @@ void gpu_accumulate_beam_sums(
 #ifdef USE_KAHAN
         errorSig=errorSign=0.0;
 #endif
-        Sij = Sijn = 0;
+        //Sij = Sijn = 0;
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
           /* Only compute the diagonal blocks and dispersive correlations */
           sums->sigma[j][i] = sums->sigma[i][j] = 0;

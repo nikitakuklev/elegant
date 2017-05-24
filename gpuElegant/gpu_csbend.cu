@@ -35,7 +35,7 @@ __device__ __constant__ double c_FTable[200];
 // device kernel declarations (defined below)
 __device__ void 
 gpu_addRadiationKick(double *Qx, double *Qy, double *dPoP, 
-    double *sigmaDelta2, int sqrtOrder, double x, double y, double theta, double thetaf, double h0, double Fx, 
+    double *sigmaDelta2, double x, double y, double theta, double thetaf, double h0, double Fx, 
     double Fy, double ds, double radCoef, double dsISR, double isrCoef, 
     int distributionBased, int includeOpeningAngle, 
     double meanPhotonsPerMeter, double normalizedCriticalEnergy, double Po,
@@ -43,21 +43,21 @@ gpu_addRadiationKick(double *Qx, double *Qy, double *dPoP,
 __device__ double gpu_pickNormalizedPhotonEnergy(double RN);
 __device__ long 
 gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, 
-    double s, int n, int sqrtOrder, double rho0, 
+    double s, int n, double rho0, 
     double p0, double &s_lost,
     double d_rho_actual, double d_rad_coef, double d_isrConstant, 
     int d_distributionBasedRadiation, int d_includeOpeningAngle,
     double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-    int d_expansionOrder, double *d_gauss_rn1, curandState_t *state,
+    int d_expansionOrder, int d_hasSkew, double *d_gauss_rn1, curandState_t *state,
     double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData);
 __device__ long 
 gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, 
-    double s, int n, int sqrtOrder, double rho0, double p0,
+    double s, int n, double rho0, double p0,
     double &s_lost,
     double d_rho_actual, double d_rad_coef, double d_isrConstant, 
     int d_distributionBasedRadiation, int d_includeOpeningAngle,
     double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-    int d_expansionOrder, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+    int d_expansionOrder, int d_hasSkew, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
     double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData);
 __device__ void 
 gpu_apply_edge_effects(double *x, double *xp, double *y, double *yp, 
@@ -92,7 +92,7 @@ double photonLowEnergyCutoff;
 #define RECORD_TRAJECTORY 1
 #define SUBTRACT_TRAJECTORY 2
 void convolveArrays1(double *output, long n, double *a1, double *a2);
-void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear,
+void computeCSBENDFieldCoefficients(double *b, double *c, double h1, long nonlinear,
                                     long expansionOrder);
 void readWakeFilterFile(long *values, double **freq, double **real,
                         double **imag,  char *freqName, char *realName,
@@ -106,19 +106,19 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 }
 
 __device__ void 
-gpu_convertToDipoleCanonicalCoordinates(double *Qi, double rho, int sqrtOrder)
+gpu_convertToDipoleCanonicalCoordinates(double *Qi, double rho)
 {
   double f;
-  f = (1 + Qi[5])/EXSQRT(1 + sqr(Qi[1]) + sqr(Qi[3]), sqrtOrder);
+  f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
 
 __device__ void 
-gpu_convertFromDipoleCanonicalCoordinates(double *Qi, double rho, int sqrtOrder)
+gpu_convertFromDipoleCanonicalCoordinates(double *Qi, double rho)
 {
   double f;
-  f = 1/EXSQRT(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]), sqrtOrder);
+  f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
@@ -141,11 +141,11 @@ __device__ int gpu_inversePoissonCDF(double mu, double C)
 }
 
 __device__ void gpu_computeCSBENDFields(double *Fx, double *Fy, 
-    double x, double y, double d_expansionOrder)
+    double x, double y, double d_expansionOrder, long d_hasSkew)
 {
   double xp[11], yp[11];
   double sumFx=0, sumFy=0;
-  int i, j;
+  int i, j, j0, dj;
   
   xp[0] = yp[0] = 1;
   for (i=1; i<d_expansionOrder; i++) {
@@ -153,8 +153,11 @@ __device__ void gpu_computeCSBENDFields(double *Fx, double *Fy,
     yp[i] = yp[i-1]*y;
   }
   
+  dj = d_hasSkew ? 1 : 2;
+  j0 = d_hasSkew? 0 : 1;
+
   for (i=0; i<d_expansionOrder; i++)
-    for (j=1; j<d_expansionOrder-i; j+=2) {
+    for (j=j0; j<d_expansionOrder; j+=dj) {
       if (c_Fx_xy[i*expansionOrderMax+j]) {
         sumFx += c_Fx_xy[i*expansionOrderMax+j]*xp[i]*yp[j];
       }
@@ -162,7 +165,7 @@ __device__ void gpu_computeCSBENDFields(double *Fx, double *Fy,
   *Fx = sumFx;
 
   for (i=0; i<d_expansionOrder; i++)
-    for (j=0; j<d_expansionOrder-i; j+=2) {
+    for (j=0; j<d_expansionOrder; j+=dj) {
       if (c_Fy_xy[i*expansionOrderMax+j]) {
         sumFy += c_Fy_xy[i*expansionOrderMax+j]*xp[i]*yp[j];
       }
@@ -187,7 +190,7 @@ public:
   double h1, h2;
   int edge1_effects, edge2_effects; 
   int edge_order, n_kicks;
-  int integration_order, d_expansionOrder, sqrtOrder;
+  int integration_order, d_expansionOrder, d_hasSkew;
   unsigned long edgeFlags;
   // From csbend.h globals
   double d_rho0, d_rho_actual, d_rad_coef, d_isrConstant;
@@ -203,12 +206,12 @@ public:
       double cos_ttilt, double sin_ttilt, double e1, double e2,
       double he1, double he2, double psi1, double psi2, double n,
       double dcet0, double dcet1, double dcet2, double dcet3,
-      double e1_kick_limit, double e2_kick_limit, double sqrtOrder,
+      double e1_kick_limit, double e2_kick_limit,
       double length, double b0, double hgap, double fint, double h1, double h2, 
       int edge1_effects, int edge2_effects,
       int edge_order, int n_kicks, int integration_order, 
       unsigned long edgeFlags, double d_rho0, double d_rho_actual,
-      double d_rad_coef, double d_isrConstant, int d_expansionOrder,
+      double d_rad_coef, double d_isrConstant, int d_expansionOrder, int d_hasSkew,
       double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
       int d_distributionBasedRadiation, int d_includeOpeningAngle,
       double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA apertureData) :
@@ -218,13 +221,13 @@ public:
     dzf(dzf), cos_ttilt(cos_ttilt), sin_ttilt(sin_ttilt), e1(e1), e2(e2),
     he1(he1), he2(he2), psi1(psi1), psi2(psi2), n(n), dcet0(dcet0), 
     dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), e1_kick_limit(e1_kick_limit),
-    e2_kick_limit(e2_kick_limit), sqrtOrder(sqrtOrder), length(length),
+    e2_kick_limit(e2_kick_limit), length(length),
     b0(b0), hgap(hgap), fint(fint), h1(h1), h2(h2), 
     edge1_effects(edge1_effects), edge2_effects(edge2_effects), 
     edge_order(edge_order), n_kicks(n_kicks),
     integration_order(integration_order), edgeFlags(edgeFlags), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
-    d_isrConstant(d_isrConstant), d_expansionOrder(d_expansionOrder),
+    d_isrConstant(d_isrConstant), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew),
     d_meanPhotonsPerMeter0(d_meanPhotonsPerMeter0),
     d_normalizedCriticalEnergy0(d_normalizedCriticalEnergy0),
     d_distributionBasedRadiation(d_distributionBasedRadiation),
@@ -239,7 +242,7 @@ public:
     double Fx, Fy, dp_prime;
     double Qi[6], Qf[6];
 
-    coord[4] += dzi*EXSQRT(1 + sqr(coord[1]) + sqr(coord[3]), sqrtOrder);
+    coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
     coord[0]  = coord[0] + dxi + dzi*coord[1];
     coord[2]  = coord[2] + dyi + dzi*coord[3];
 
@@ -266,10 +269,10 @@ public:
 
 	/* load input coordinates into arrays */
 	Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, 0);
+	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
         gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, -1., edge_order, b0/d_rho0, e1, 2*hgap, fint, h1);
 	/* retrieve coordinates from arrays */
-	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, 0);
+	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
 	x  = Qf[0];  
 	xp = Qf[1];  
 	y  = Qf[2];  
@@ -283,13 +286,13 @@ public:
 
     if (edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && d_rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-      gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+      gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
 
-      dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/d_rho0)+sqr(xp)+sqr(yp), sqrtOrder);
+      dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/d_rho0)+sqr(xp)+sqr(yp));
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
-    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, sqrtOrder);
+    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
  
     int particle_lost = 0;
     double s_lost;
@@ -305,24 +308,24 @@ public:
       if (d_gauss_rn_p2) t_gauss_rn2 = &d_gauss_rn_p2[n_kicks*tid];
       if (d_gauss_rn_p3) t_gauss_rn3 = &d_gauss_rn_p3[n_kicks*tid];
       particle_lost = !gpu_integrate_csbend_ord4(Qf, Qi, tSigmaDelta2, length, 
-          n_kicks, sqrtOrder, d_rho0, Po, s_lost,
+          n_kicks, d_rho0, Po, s_lost,
           d_rho_actual, d_rad_coef, d_isrConstant, 
           d_distributionBasedRadiation, d_includeOpeningAngle,
           d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-          d_expansionOrder, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
+          d_expansionOrder, d_hasSkew, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
           d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
     } else {
       if (d_gauss_rn) t_gauss_rn1 = &d_gauss_rn[n_kicks*tid];
       particle_lost = !gpu_integrate_csbend_ord2(Qf, Qi, tSigmaDelta2, length,
-          n_kicks, sqrtOrder, d_rho0, Po, s_lost,
+          n_kicks, d_rho0, Po, s_lost,
           d_rho_actual, d_rad_coef, d_isrConstant, 
           d_distributionBasedRadiation, d_includeOpeningAngle,
           d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-          d_expansionOrder, t_gauss_rn1, t_state, srGaussianLimit,
+          d_expansionOrder, d_hasSkew, t_gauss_rn1, t_state, srGaussianLimit,
           d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
     }
 
-    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, sqrtOrder);
+    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
 
     if (particle_lost) {
       // TODO: accepted particles
@@ -340,9 +343,9 @@ public:
       yp = Qf[3];
       dp = Qf[5];
 
-      gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+      gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
 
-      dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/d_rho0)+sqr(xp)+sqr(yp), sqrtOrder);
+      dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/d_rho0)+sqr(xp)+sqr(yp));
       Qf[5] -= dp_prime*x*tan(e2);
     }
 
@@ -379,10 +382,10 @@ public:
 
 	/* load input coordinates into arrays */
 	Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, 0);
+	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
         gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, 1., edge_order, b0/d_rho0, e2, 2*hgap, fint, h2);
 	/* retrieve coordinates from arrays */
-	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, 0);
+	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
 	x  = Qf[0];  
 	xp = Qf[1];  
 	y  = Qf[2];  
@@ -400,7 +403,7 @@ public:
 
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
-    coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), sqrtOrder);
+    coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
 
     d_sortIndex[tid] = tid;
     return 1;
@@ -414,6 +417,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
        double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData)
 {
   double h;
+  long j;
   double n, fse;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double angle, e1, e2, Kg;
@@ -458,8 +462,8 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         csbend->refKicks = 0;
       }
       
-      part0 = (double**)czarray_2d(sizeof(double), 1, 7);
-      memset(part0[0], 0, sizeof(**part0)*7);
+      part0 = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE);
+      memset(part0[0], 0, sizeof(**part0)*COORDINATES_PER_PARTICLE);
       memcpy(&csbend0, csbend, sizeof(*csbend));
       csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
       
@@ -481,7 +485,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
       csbend->refKicks = csbend->n_kicks;
       csbend->refLength = csbend->length;
       csbend->refAngle = csbend->angle;
-      free_czarray_2d((void**)part0, 1, 7);
+      free_czarray_2d((void**)part0, 1, COORDINATES_PER_PARTICLE);
 
       refTrajectoryData = csbend->refTrajectoryChange;
       refTrajectoryPoints = csbend->refKicks;
@@ -534,8 +538,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     csbend->b[6] = csbend->k7*rho0;
     csbend->b[7] = csbend->k8*rho0;
   }
+  for (j=0; j<8; j++)
+    csbend->c[j] = 0;
   if (csbend->xReference>0) {
-    double term = 1/csbend->xReference, f[8];
+    double term = 1/csbend->xReference, f[8], g[8];
     long i;
     f[0] = csbend->f1;
     f[1] = csbend->f2;
@@ -545,8 +551,17 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     f[5] = csbend->f6;
     f[6] = csbend->f7;
     f[7] = csbend->f8;
+    g[0] = csbend->g1;
+    g[1] = csbend->g2;
+    g[2] = csbend->g3;
+    g[3] = csbend->g4;
+    g[4] = csbend->g5;
+    g[5] = csbend->g6;
+    g[6] = csbend->g7;
+    g[7] = csbend->g8;
     for (i=0; i<8; i++) {
       csbend->b[i] += f[i]*term;
+      csbend->c[i] += g[i]*term;
       term *= (i+2)/csbend->xReference;
     }
   }
@@ -561,8 +576,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
     rho0  = csbend->length/angle;
-    for (i=0; i<8; i+=2)
+    for (i=0; i<8; i+=2) {
       csbend->b[i] *= -1;
+      csbend->c[i] *= -1;
+    }
   }
   else {
     angle = csbend->angle;
@@ -690,7 +707,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     includeOpeningAngle = csbend->includeOpeningAngle;
   }
     
-  computeCSBENDFieldCoefficients(csbend->b, h, csbend->nonlinear, csbend->expansionOrder);
+  computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
 
   ttilt = tilt + etilt;
   if (ttilt==0) {
@@ -801,12 +818,12 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         Po, z_start, dxi, dyi, dzi, dxf, dyf, dzf, cos_ttilt, 
         sin_ttilt, e1, e2, he1, he2, psi1, psi2, n, dcoord_etilt[0],
         dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3], 
-        e1_kick_limit, e2_kick_limit, csbend->sqrtOrder, 
+        e1_kick_limit, e2_kick_limit, 
         csbend->length, csbend->b[0], csbend->hgap, csbend->fint, 
         csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
         csbend->edge_order, csbend->n_kicks, csbend->integration_order,
         csbend->edgeFlags, rho0, rho_actual, rad_coef, isrConstant,
-        expansionOrder1, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
+        expansionOrder1, hasSkew, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
         distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
         d_refTrajectoryData, refTrajectoryMode, apertureData)); 
     gpuErrorHandler("gpu_track_through_csbend: gpu_track_through_csbend_kernel");
@@ -838,12 +855,12 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
 
 __device__ long 
 gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, 
-    double s, int n, int sqrtOrder, double rho0, 
+    double s, int n, double rho0, 
     double p0, double &s_lost,
     double d_rho_actual, double d_rad_coef, double d_isrConstant, 
     int d_distributionBasedRadiation, int d_includeOpeningAngle,
     double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-    int d_expansionOrder, double *d_gauss_rn1, curandState_t *state,
+    int d_expansionOrder, int d_hasSkew, double *d_gauss_rn1, curandState_t *state,
     double srGaussianLimit,  double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
 {
   int i;
@@ -873,12 +890,6 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
 //  if (n<1)
 //    bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
 
-  /* calculate canonical momenta (scaled to central momentum) */
-/*  dp = DPoP0;
-  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
-  QX = XP0*f;
-  QY = YP0*f;
-*/
 
   memcpy(Qf, Qi, sizeof(*Qi)*6);
   
@@ -898,7 +909,7 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
         s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         s_lost = dist;
         return 0;
@@ -927,13 +938,13 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
     x = X;
     y = Y;
 
-    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
 
     /* do kicks */
     QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
     QY += ds*(1+X/rho0)*Fx/d_rho_actual;
     if (d_rad_coef || d_isrConstant)
-      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder, 
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
 		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
 		       ds, d_rad_coef, ds, d_isrConstant, 
                        d_distributionBasedRadiation, d_includeOpeningAngle,
@@ -946,7 +957,7 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
         s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         s_lost = dist;
         return 0;
@@ -971,7 +982,7 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
         s_lost = dist;
         return 0;
       }
-      f = EXSQRT(f, sqrtOrder);
+      f = sqrt(f);
       if (fabs(QX/f)>1) {
         s_lost = dist;
         return 0;
@@ -1023,25 +1034,18 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
     }
   }
 
-  /* convert back to slopes */
-/*
-  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
-  Qf[1] *= f;
-  Qf[3] *= f;
-*/
-
   Qf[4] += dist;
   return 1;
 }
 
 __device__ long 
 gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, 
-    double s, int n, int sqrtOrder, double rho0, double p0,
+    double s, int n, double rho0, double p0,
     double &s_lost,
     double d_rho_actual, double d_rad_coef, double d_isrConstant, 
     int d_distributionBasedRadiation, int d_includeOpeningAngle,
     double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
-    int d_expansionOrder, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+    int d_expansionOrder, int d_hasSkew, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
     double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
 {
   int i;
@@ -1074,18 +1078,6 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
 //  if (n<1)
 //    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
 
-  /* calculate canonical momenta (scaled to central momentum) */
-/*
-  dp = DPoP0;
-  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
-  QX = XP0*f;
-  QY = YP0*f;
-
-  X = X0;
-  Y = Y0;
-  S = S0;
-  DPoP = DPoP0;
-*/
   
   memcpy(Qf, Qi, sizeof(*Qi)*6);
 
@@ -1105,7 +1097,7 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       s_lost = dist;
       return 0;
@@ -1134,13 +1126,13 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
     x = X;
     y = Y;
 
-    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
     
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
     QY += ds*(1+X/rho0)*Fx/d_rho_actual;
     if (d_rad_coef || d_isrConstant) {
-      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
 		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, d_rad_coef, s/3, d_isrConstant,
                        d_distributionBasedRadiation, d_includeOpeningAngle,
@@ -1154,7 +1146,7 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       s_lost = dist;
       return 0;
@@ -1182,13 +1174,13 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
     /* -- calculate the scaled fields */
     x = X;
     y = Y;
-    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
 
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
     QY += ds*(1+X/rho0)*Fx/d_rho_actual;
     if (d_rad_coef || d_isrConstant)
-      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
 		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
 		       ds, d_rad_coef, s/3, d_isrConstant,
                        d_distributionBasedRadiation, d_includeOpeningAngle,
@@ -1201,7 +1193,7 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       s_lost = dist;
       return 0;
@@ -1229,13 +1221,13 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
     /* -- calculate the scaled fields */
     x = X;
     y = Y;
-    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder);
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew);
 
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
     QY += ds*(1+X/rho0)*Fx/d_rho_actual;
     if (d_rad_coef || d_isrConstant) 
-      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
 		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
 		       ds, d_rad_coef, s/3, d_isrConstant,
                        d_distributionBasedRadiation, d_includeOpeningAngle,
@@ -1248,7 +1240,7 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       s_lost = dist;
       return 0;
     }
-    f = EXSQRT(f, sqrtOrder);
+    f = sqrt(f);
     if (fabs(QX/f)>1) {
       s_lost = dist;
       return 0;
@@ -1287,13 +1279,6 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
       dist -= d_refTrajectoryData[i*5+4];
     }
   }
-
-  /* convert back to slopes */
-/*
-  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
-  Qf[1] *= f;
-  Qf[3] *= f;
-*/
 
   Qf[4] += dist;
   return 1;
@@ -1399,10 +1384,10 @@ public:
       Qi[3] = YP;
       Qi[4] = 0;  
       Qi[5] = DP;
-      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, 0);
+      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
       gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, -1., edge_order, b0/d_rho0, e1, 2*hgap, fint, h1);
       /* retrieve coordinates from arrays */
-      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, 0);
+      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
       X  = Qf[0];  
       XP = Qf[1];  
       Y  = Qf[2];  
@@ -1417,13 +1402,13 @@ public:
   double *d_x, *d_y;
   double e1;
   // From CSRCSBEND struct
-  int d_expansionOrder;
+  int d_expansionOrder, d_hasSkew;
   // From csbend.h globals
   double d_rho0, d_rad_coef;
 
   gpu_track_through_csbendCSR_kernel4(double *d_x, double *d_y, double e1,
-      int d_expansionOrder, double d_rho0, double d_rad_coef) : d_x(d_x), d_y(d_y), e1(e1), 
-      d_expansionOrder(d_expansionOrder), 
+      int d_expansionOrder, int d_hasSkew, double d_rho0, double d_rad_coef) : d_x(d_x), d_y(d_y), e1(e1), 
+      d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew),
       d_rho0(d_rho0), d_rad_coef(d_rad_coef) {};
 
   __device__ inline void operator()(gpuParticleAccessor& coord){
@@ -1432,7 +1417,7 @@ public:
     double Fx, Fy;
 
     /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-    gpu_computeCSBENDFields(&Fx, &Fy, d_x[tid], d_y[tid], d_expansionOrder);
+    gpu_computeCSBENDFields(&Fx, &Fy, d_x[tid], d_y[tid], d_expansionOrder, d_hasSkew);
   
     double dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
       sqrt(sqr(1+X/d_rho0)+sqr(XP)+sqr(YP));
@@ -1449,7 +1434,7 @@ public:
   // From CSRCSBEND struct
   int integration_order;
   double length, n_kicks;
-  int d_expansionOrder;
+  int d_expansionOrder, d_hasSkew;
   // From csbend.h globals
   double d_rho0, d_rho_actual, d_rad_coef, d_isrConstant;
   double d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0;
@@ -1457,14 +1442,14 @@ public:
   MULT_APERTURE_DATA apertureData;
   gpu_track_through_csbendCSR_kernel5(unsigned int *d_sortIndex, double* d_beta0,
     double *d_gauss_rn, double *d_gauss_rn_p2, double *d_gauss_rn_p3, curandState_t *state, double Po, int integration_order,
-    double length, double n_kicks, int d_expansionOrder, double d_rho0,
+    double length, double n_kicks, int d_expansionOrder, int d_hasSkew, double d_rho0,
     double d_rho_actual, double d_rad_coef, double d_isrConstant,
     double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
     int d_distributionBasedRadiation, int d_includeOpeningAngle, 
     double srGaussianLimit, MULT_APERTURE_DATA apertureData) :
     d_sortIndex(d_sortIndex), d_beta0(d_beta0), d_gauss_rn(d_gauss_rn), d_gauss_rn_p2(d_gauss_rn_p2), d_gauss_rn_p3(d_gauss_rn_p3), 
     state(state), Po(Po), integration_order(integration_order), length(length), 
-    n_kicks(n_kicks), d_expansionOrder(d_expansionOrder), d_rho0(d_rho0),
+      n_kicks(n_kicks), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef), 
     d_isrConstant(d_isrConstant),
     d_meanPhotonsPerMeter0(d_meanPhotonsPerMeter0),
@@ -1486,7 +1471,7 @@ public:
     Qi[3] = YP;
     Qi[4] = 0;  
     Qi[5] = DP;
-    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, 0);
+    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
   
     int particle_lost = 0;
     double s_lost; /* unused here */
@@ -1500,20 +1485,20 @@ public:
       if (d_gauss_rn_p2) t_gauss_rn2 = &d_gauss_rn_p2[tid];
       if (d_gauss_rn_p3) t_gauss_rn3 = &d_gauss_rn_p3[tid];
       particle_lost = !gpu_integrate_csbend_ord4(Qf, Qi, NULL, length/n_kicks,
-         1, 0, d_rho0, Po, s_lost,
+         1, d_rho0, Po, s_lost,
          d_rho_actual, d_rad_coef, d_isrConstant,
          d_distributionBasedRadiation, d_includeOpeningAngle,
          d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-         d_expansionOrder, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
+         d_expansionOrder, d_hasSkew, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
          NULL, 0, &apertureData);
     } else {
       if (d_gauss_rn) t_gauss_rn1 = &d_gauss_rn[tid];
       particle_lost = !gpu_integrate_csbend_ord2(Qf, Qi, NULL, length/n_kicks,
-         1, 0, d_rho0, Po, s_lost,
+         1, d_rho0, Po, s_lost,
          d_rho_actual, d_rad_coef, d_isrConstant,
          d_distributionBasedRadiation, d_includeOpeningAngle,
          d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-         d_expansionOrder, t_gauss_rn1, t_state, srGaussianLimit,
+         d_expansionOrder, d_hasSkew, t_gauss_rn1, t_state, srGaussianLimit,
          NULL, 0, &apertureData);
     }
 
@@ -1524,7 +1509,7 @@ public:
       d_sortIndex[tid] = tid;  
   
     /* retrieve coordinates from arrays */
-    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, 0);
+    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
     X  = Qf[0];  
     XP = Qf[1];  
     Y  = Qf[2];  
@@ -1577,16 +1562,16 @@ public:
   unsigned int *d_sortIndex;
   double Po, e2, z_start;
   // From CSRCSBEND struct
-  int d_expansionOrder;
+  int d_expansionOrder, d_hasSkew;
   unsigned long edgeFlags;
   // From csbend.h globals
   double d_rho0, d_rad_coef;
 
   gpu_track_through_csbendCSR_kernel7(unsigned int *d_sortIndex, double Po,
-    double e2, double z_start, int d_expansionOrder,
+    double e2, double z_start, int d_expansionOrder, int d_hasSkew,
     unsigned long edgeFlags, double d_rho0, double d_rad_coef) : 
     d_sortIndex(d_sortIndex), Po(Po), e2(e2), z_start(z_start), 
-    d_expansionOrder(d_expansionOrder),
+    d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew),
     edgeFlags(edgeFlags), d_rho0(d_rho0), d_rad_coef(d_rad_coef) {};
 
   __device__ unsigned int operator()(gpuParticleAccessor& coord){
@@ -1597,7 +1582,7 @@ public:
 
     if (edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && d_rad_coef) {
       /* post-adjust dp/p to correct error made by integrating over entire sector */
-      gpu_computeCSBENDFields(&Fx, &Fy, X, Y, d_expansionOrder);
+      gpu_computeCSBENDFields(&Fx, &Fy, X, Y, d_expansionOrder, d_hasSkew);
       
       dp_prime = -d_rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
         sqrt(sqr(1+X/d_rho0)+sqr(XP)+sqr(YP));
@@ -1665,10 +1650,10 @@ public:
       Qi[3] = YP;
       Qi[4] = 0;  
       Qi[5] = DP;
-      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0, 0);
+      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
       gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, 1., edge_order, b0/d_rho0, e2, 2*hgap, fint, h2);
       /* retrieve coordinates from arrays */
-      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0, 0);
+      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
       X  = Qf[0];  
       XP = Qf[1];  
       Y  = Qf[2];  
@@ -1727,7 +1712,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
   double ctLower(0), ctUpper(0), dct(0), slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
   long nBins, nBinned = 0;
-  long kick;
+  long kick, j;
   double fse;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double angle, e1, e2, Kg;
@@ -1869,6 +1854,8 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     csbend->b[6] = csbend->k7*rho0;
     csbend->b[7] = csbend->k8*rho0;
   }
+  for (j=0; j<8; j++)
+    csbend->c[j] = 0;
 
   he1 = csbend->h[csbend->e1Index];
   he2 = csbend->h[csbend->e2Index];
@@ -1880,8 +1867,10 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
-    for (i=0; i<8; i+=2)
+    for (i=0; i<8; i+=2) {
       csbend->b[i] *= -1;
+      csbend->c[i] *= -1;
+    }
   }
   else {
     angle = csbend->angle;
@@ -1939,7 +1928,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
                                    0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
   }
-  computeCSBENDFieldCoefficients(csbend->b, h, csbend->nonlinear, csbend->expansionOrder);
+  computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
 
   ttilt = tilt + etilt;
   if (ttilt==0) {
@@ -2117,7 +2106,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     }
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       gpuDriver(n_part, gpu_track_through_csbendCSR_kernel4(d_x, d_y, e1,
-                expansionOrder1, rho0, rad_coef));
+                                                            expansionOrder1, hasSkew, rho0, rad_coef));
       gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel4");
     }
   }
@@ -2174,7 +2163,7 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
         gpuDriver(n_part,
           gpu_track_through_csbendCSR_kernel5(d_sortIndex, d_beta0, 
           d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state, Po, csbend->integration_order, csbend->length, 
-          csbend->n_kicks, expansionOrder1, rho0, rho_actual, rad_coef,
+          csbend->n_kicks, expansionOrder1, hasSkew, rho0, rho_actual, rad_coef,
           isrConstant, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
 	  distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData));
         gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel5");
@@ -2587,8 +2576,8 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     /* remove lost particles, handle edge effects, and transform coordinates */    
     n_part = killParticles(n_part, d_sortIndex, accepted,
                gpu_track_through_csbendCSR_kernel7(d_sortIndex, Po,
-               e2, z_start, expansionOrder1,
-               csbend->edgeFlags, rho0, rad_coef));
+                                                   e2, z_start, expansionOrder1, hasSkew,
+                                                   csbend->edgeFlags, rho0, rad_coef));
     gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel7");
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       if (csbend->useMatrix)
@@ -3736,14 +3725,15 @@ gpu_dipoleFringeSym(double *Qf, double *Qi,
 {
   double dx, dpx, dy, dpy;
   double tan_edge, sin_edge, sec_edge, cos_edge;
-  double x0, px0, y0, py0, dp0, psi;
-  double k0, k3, k2, Kg;
+  double x0, px0, y0, py0, dp0;
+  //double psi, Kg;
+  double k0, k3, k2;
   double k4, k5, k6;
 
   k0 = sqr(PI)/6.;
   k2 = fint;
   k3 = 1.0*1./6.;
-  Kg = gap*fint;
+  //Kg = gap*fint;
   k4 = -1.0*sqr(PI)/3.;
   k5 = 0.0;
   k6 = -1.0;
@@ -3754,7 +3744,7 @@ gpu_dipoleFringeSym(double *Qf, double *Qi,
   py0 = Qi[3];  
   dp0 = Qi[5];
   dx = dpx = dy = dpy = 0;
-  psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
+  //psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
 
   sec_edge=1./cos(edge);
   tan_edge=tan(edge);
@@ -3902,7 +3892,7 @@ gpu_dipoleFringeSym(double *Qf, double *Qi,
 
 __device__ void 
 gpu_addRadiationKick(double *Qx, double *Qy, double *dPoP, 
-    double *sigmaDelta2, int sqrtOrder, double x, double y, double theta, double thetaf, double h0, double Fx, 
+    double *sigmaDelta2, double x, double y, double theta, double thetaf, double h0, double Fx, 
     double Fy, double ds, double radCoef, double dsISR, double isrCoef, 
     int distributionBased, int includeOpeningAngle, 
     double meanPhotonsPerMeter, double normalizedCriticalEnergy0, 
@@ -3911,10 +3901,10 @@ gpu_addRadiationKick(double *Qx, double *Qy, double *dPoP,
 {
   double f, xp, yp, F2, F, deltaFactor, dsFactor;
   
-  f = (1+x*h0)/EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
+  f = (1+x*h0)/sqrt(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy));
   xp = *Qx*f;
   yp = *Qy*f;
-  dsFactor = EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+  dsFactor = sqrt(sqr(1+x*h0)+sqr(xp)+sqr(yp));
   F2 = sqr(Fx)+sqr(Fy);
 
   if (!distributionBased) {
@@ -3982,7 +3972,7 @@ gpu_addRadiationKick(double *Qx, double *Qy, double *dPoP,
         yp += dphi;
       }
     }
-    f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+    f = (1 + *dPoP)/sqrt(sqr(1+x*h0)+sqr(xp)+sqr(yp));
     *Qx = xp*f;
     *Qy = yp*f;
   }
