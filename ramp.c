@@ -210,6 +210,13 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
                 rampData->element[iMod]->name,
                 entity_description[type].parameter[param].name, (long)(value+0.5), iPass, (long)(rampData->unperturbedValue[iMod]));
       break;
+    case IS_SHORT:
+      *((short*)(p_elem+entity_description[type].parameter[param].offset)) = value + 0.5;
+      if (rampData->flags[iMod]&VERBOSE_RAMP) 
+        printf("Ramp value for element %s, parameter %s is %hd at pass %ld (originally %hd)\n",
+                rampData->element[iMod]->name,
+                entity_description[type].parameter[param].name, (short)(value+0.5), iPass, (short)(rampData->unperturbedValue[iMod]));
+      break;
     default:
       break;
     }

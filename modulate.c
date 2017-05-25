@@ -298,6 +298,17 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
 	modData->lastVerboseValue[iMod] = value;
       }
       break;
+    case IS_SHORT:
+      lastValue = modData->lastVerboseValue[iMod];
+      value = (short)(value+0.5);
+      *((short*)(p_elem+entity_description[type].parameter[param].offset)) = value;
+      if (modData->flags[iMod]&VERBOSE_MOD && value!=lastValue) {
+        printf("Modulation value for element %s#%ld, parameter %s changed to %hd at t = %21.15le (originally %hd)\n",
+                modData->element[iMod]->name, modData->element[iMod]->occurence,
+                entity_description[type].parameter[param].name, (short)(value+0.5), t, (short)(modData->unperturbedValue[iMod]));
+	modData->lastVerboseValue[iMod] = value;
+      }
+      break;
     default:
       break;
     }

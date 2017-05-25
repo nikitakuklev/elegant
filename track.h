@@ -1021,7 +1021,7 @@ extern char *entity_text[N_TYPES];
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 12
-#define N_BRANCH_PARAMS 3
+#define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 11
 #define N_IONEFFECTS_PARAMS 7
 
@@ -1053,6 +1053,8 @@ typedef struct {
 #define IS_DOUBLE 1
 #define IS_LONG 2
 #define IS_STRING 3
+#define IS_SHORT 4
+
 #define DEFAULT_FREQUENCY 2856e6
 #define DEFAULT_GAP 0.01
 #define DEFAULT_FINT 0.5
@@ -1800,9 +1802,9 @@ extern PARAMETER branch_param[N_BRANCH_PARAMS];
 
 typedef struct {
   long counter, verbosity;
-  char *branchTo;
+  char *branchTo, *elseTo;
   /* internal variables */
-  ELEMENT_LIST *beptr;
+  ELEMENT_LIST *beptr1, *beptr2;
   double z;
   long privateCounter;
 } BRANCH;
@@ -2227,8 +2229,8 @@ typedef struct {
     double refLength, refAngle, **refTrajectoryChange;
     long refKicks;
     short photonFileActive;
-    SDDS_DATASET SDDSphotons;
-    long e1Index, e2Index;
+    SDDS_DATASET *SDDSphotons;
+    short e1Index, e2Index;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */

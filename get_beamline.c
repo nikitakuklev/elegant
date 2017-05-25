@@ -698,7 +698,10 @@ double compute_end_positions(LINE_LIST *lptr)
         branch = (BRANCH*)eptr->p_elem;
         branch->z = z;
         if (branch->counter) {
-          eptr = branch->beptr;
+          eptr = branch->beptr1;
+          continue;
+        } else {
+          eptr = branch->beptr2;
           continue;
         }
       }
@@ -751,6 +754,13 @@ void show_elem(ELEMENT_LIST *eptr, long type)
                 printf( "    %s = %ld with offset %ld\n", 
                     parameter[j].name, 
                     *(long *)(eptr->p_elem+parameter[j].offset),
+                    parameter[j].offset);
+                fflush(stdout);
+                break;
+            case IS_SHORT:
+                printf( "    %s = %hd with offset %ld\n", 
+                    parameter[j].name, 
+                    *(short *)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
                 fflush(stdout);
                 break;
@@ -967,6 +977,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   long j;
   double dvalue;
   long lvalue;
+  short svalue;
   char *ptr;
   PARAMETER *parameter;
   char s[16384], t[1024], name[1024];
@@ -1028,6 +1039,16 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
             if (!suppress_defaults || lvalue!=parameter[j].integer) {
               /* value is not the default, so add to output */
               sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+              strcat(s, t);
+              if (j!=entity_description[eptr->type].n_params-1)
+                strcat(s, ",");
+            }
+            break;
+          case IS_SHORT:
+            svalue = *(short *)(eptr->p_elem+parameter[j].offset);
+            if (!suppress_defaults || svalue!=parameter[j].integer) {
+              /* value is not the default, so add to output */
+              sprintf(t, "%s=%hd", parameter[j].name, svalue);
               strcat(s, t);
               if (j!=entity_description[eptr->type].n_params-1)
                 strcat(s, ",");
@@ -1098,6 +1119,16 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
               if (!suppress_defaults || lvalue!=parameter[j].integer) {
                 /* value is not the default, so add to output */
                 sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+                strcat(s, t);
+                if (j!=entity_description[eptr->type].n_params-1)
+                  strcat(s, ",");
+              }
+              break;
+            case IS_SHORT:
+              svalue = *(short *)(eptr->p_elem+parameter[j].offset);
+              if (!suppress_defaults || svalue!=parameter[j].integer) {
+                /* value is not the default, so add to output */
+                sprintf(t, "%s=%ld", parameter[j].name, svalue);
                 strcat(s, t);
                 if (j!=entity_description[eptr->type].n_params-1)
                   strcat(s, ",");
@@ -1254,6 +1285,17 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
         fflush(stdout);
 #endif
         break;
+      case IS_SHORT:
+        *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+          nearestInteger(value[i_elem]);
+#if DEBUG
+        printf("   changing parameter %s of %s #%ld to %hd\n",
+                entity_description[elem_type].parameter[param].name,
+                eptr->name, eptr->occurence,
+                *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
+#endif
+        break;
       case IS_STRING:
       default:
         bombElegant("unknown/invalid variable quantity", NULL);
@@ -1319,6 +1361,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
       fflush(stdout);
       break;
     case IS_LONG:
+    case IS_SHORT:
       if (valueString) {
         if (!sscanf(valueString, "%lf", &value)) {
           printf("Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
@@ -1326,29 +1369,48 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
           exitElegant(1);
         }
       }
-      if (mode&LOAD_FLAG_VERBOSE)
-        printf("Changing definition (mode %s) %s.%s from %ld to ",
-                (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
-                ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
-                 (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
-                elem_name, entity_description[elem_type].parameter[param].name,
-                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-      fflush(stdout);
-      if (mode&LOAD_FLAG_ABSOLUTE) {
-        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-          nearestInteger(value);
+      if (mode&LOAD_FLAG_VERBOSE) {
+        printf("Changing definition (mode %s) %s.%s ",
+               (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
+               ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
+                (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
+               elem_name, entity_description[elem_type].parameter[param].name);
+        if (data_type==IS_LONG)
+          printf("from %ld to ",
+                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        else
+          printf("from %hd to ",
+                 *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       }
-      else if (mode&LOAD_FLAG_DIFFERENTIAL) {
-        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
-          nearestInteger(value);
+      if (data_type==IS_LONG) {
+        if (mode&LOAD_FLAG_ABSOLUTE) 
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_DIFFERENTIAL)
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_FRACTIONAL)
+          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      } else {
+        if (mode&LOAD_FLAG_ABSOLUTE)
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_DIFFERENTIAL)
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+            nearestInteger(value);
+        else if (mode&LOAD_FLAG_FRACTIONAL) 
+          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       }
-      else if (mode&LOAD_FLAG_FRACTIONAL) {
-        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      if (mode&LOAD_FLAG_VERBOSE) {
+        if (data_type==IS_LONG)
+          printf("%ld\n",
+                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        else 
+          printf("%hd\n",
+                 *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       }
-      if (mode&LOAD_FLAG_VERBOSE)
-        printf("%ld\n",
-                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-      fflush(stdout);
       break;
     case IS_STRING:
       if (mode&LOAD_FLAG_VERBOSE)
@@ -1517,20 +1579,38 @@ void resolveBranchPoints(LINE_LIST *lptr)
     do {
       if (eptr->type==T_BRANCH) {
         branch = (BRANCH*)eptr->p_elem;
-        if (branch->branchTo==NULL)
-          bombElegantVA("No branch target named for BRANCH %s", eptr->name);
-        eptr2 = eptr->succ;
-        while (eptr2) {
-          if (strcmp(eptr2->name, branch->branchTo)==0)
-            break;
-          eptr2 = eptr2->succ;
-        }
-        if (!eptr2)
-          bombElegantVA("Failed to find target %s for BRANCH %s", branch->branchTo, eptr->name);
-        if (eptr2->type!=T_MARK)
-          bombElegantVA("Branch target %s is not a MARK element", branch->branchTo);
-        printf("Found branch point %s for BRANCH %s\n", branch->branchTo, eptr->name);
-        branch->beptr = eptr2;
+        if (branch->branchTo) {
+          /* Resolve branch for non-positive counter */
+          eptr2 = eptr->succ;
+          while (eptr2) {
+            if (strcmp(eptr2->name, branch->branchTo)==0)
+              break;
+            eptr2 = eptr2->succ;
+          }
+          if (!eptr2)
+            bombElegantVA("Failed to find downstream target %s for BRANCH %s", branch->branchTo, eptr->name);
+          if (eptr2->type!=T_MARK)
+            bombElegantVA("Branch target %s is not a MARK element", branch->branchTo);
+          printf("Found branch point %s for BRANCH %s\n", branch->branchTo, eptr->name);
+          branch->beptr1 = eptr2;
+        } else
+          branch->beptr1 = eptr->succ;
+        if (branch->elseTo) {
+          /* Resolve branch for positive counter */
+          eptr2 = eptr->succ;
+          while (eptr2) {
+            if (strcmp(eptr2->name, branch->elseTo)==0)
+              break;
+            eptr2 = eptr2->succ;
+          }
+          if (!eptr2)
+            bombElegantVA("Failed to find downstream target %s for BRANCH %s", branch->elseTo, eptr->name);
+          if (eptr2->type!=T_MARK)
+            bombElegantVA("Branch target %s is not a MARK element", branch->elseTo);
+          printf("Found branch point %s for BRANCH %s\n", branch->elseTo, eptr->name);
+          branch->beptr2 = eptr2;
+        } else
+          branch->beptr2 = eptr->succ;
       }
     } while ((eptr=eptr->succ));
 }

@@ -1006,16 +1006,25 @@ long do_tracking(
           if (i_pass==0) 
             branch->privateCounter = branch->counter;
           if (branch->privateCounter<=0) {
-            if (!branch->beptr)
-              bombElegant("No element pointer defined for BRANCH---seek expert help!", NULL);
+            if (!branch->beptr1)
+              bombElegant("No element pointer defined for BRANCH (1)---seek expert help!", NULL);
             if (branch->verbosity) {
-              printf("Branching to %s\n", branch->branchTo);
+              printf("Branching to %s\n", branch->beptr1->name);
               fflush(stdout);
             }
-            eptr = branch->beptr;
+            eptr = branch->beptr1->pred;
             z = branch->z;
-          } else 
+          } else {
+            if (!branch->beptr2)
+              bombElegant("No element pointer defined for BRANCH (2)---seek expert help!", NULL);
+            if (branch->verbosity) {
+              printf("Branching to %s\n", branch->beptr2->name);
+              fflush(stdout);
+            }
+            eptr = branch->beptr2->pred;
+            z = branch->z;
             branch->privateCounter--;
+          }
         }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {

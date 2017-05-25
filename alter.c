@@ -277,11 +277,19 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
           }
           break;
         case IS_LONG:
-          if (alterSpec[i].verbose && printingEnabled)
-            printf("Changing %s#%ld.%s at %le m from %ld to ",
-		   eptr->name, eptr->occurence,
-                    entity_description[eptr->type].parameter[iParam].name,  eptr->end_pos,
-                    *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+        case IS_SHORT:
+          if (alterSpec[i].verbose && printingEnabled) {
+            if (entity_description[eptr->type].parameter[iParam].type==IS_LONG)
+              printf("Changing %s#%ld.%s at %le m from %ld to ",
+                     eptr->name, eptr->occurence,
+                     entity_description[eptr->type].parameter[iParam].name,  eptr->end_pos,
+                     *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+            else
+              printf("Changing %s#%ld.%s at %le m from %hd to ",
+                     eptr->name, eptr->occurence,
+                     entity_description[eptr->type].parameter[iParam].name,  eptr->end_pos,
+                     *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+          }
           /* this step could be very inefficient */
           if ((nMatches==1 || has_wildcards(alterSpec[i].name)) &&
               (!nChangedDefinedParameter ||
@@ -297,20 +305,38 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
             }
             changedDefinedParameter[nChangedDefinedParameter++] = eptr->name;
           }
-          if (alterSpec[i].differential)
-            *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
-              nearestInteger(alterSpec[i].value);
-          else if (alterSpec[i].multiplicative)
-            *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) *= 1+alterSpec[i].value;
-          else
-            *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) =
-              nearestInteger(alterSpec[i].value);
-          *((long*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
-            *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
-          if (alterSpec[i].verbose && printingEnabled) {
-            printf("%ld\n",
-                    *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
-            fflush(stdout);
+          if (entity_description[eptr->type].parameter[iParam].type==IS_LONG) {
+            if (alterSpec[i].differential)
+              *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
+                nearestInteger(alterSpec[i].value);
+            else if (alterSpec[i].multiplicative)
+              *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) *= 1+alterSpec[i].value;
+            else
+              *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) =
+                nearestInteger(alterSpec[i].value);
+            *((long*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
+              *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
+            if (alterSpec[i].verbose && printingEnabled) {
+              printf("%ld\n",
+                     *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+              fflush(stdout);
+            }
+          } else {
+            if (alterSpec[i].differential)
+              *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
+                nearestInteger(alterSpec[i].value);
+            else if (alterSpec[i].multiplicative)
+              *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) *= 1+alterSpec[i].value;
+            else
+              *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) =
+                nearestInteger(alterSpec[i].value);
+            *((short*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
+              *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
+            if (alterSpec[i].verbose && printingEnabled) {
+              printf("%hd\n",
+                     *((short*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+              fflush(stdout);
+            }
           }
           break;
         case IS_STRING:

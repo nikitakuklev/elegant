@@ -2100,6 +2100,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
           fprintf(fp, "  %.15g", entity_description[type].parameter[j].number);
         break;
       case IS_LONG:
+      case IS_SHORT:
         if (latex_form && entity_description[type].parameter[j].integer==0)
           fprintf(fp, " \\verb|0|");
         else      

@@ -366,6 +366,7 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
 {
     ELEMENT_LIST *eptr;
     long lresult;
+    short sresult;
     double dresult;
     char *p_elem;
     long data_type;
@@ -385,6 +386,10 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
                 lresult = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
                 log_exit("parameter_value");
                 return((double)lresult);
+            case IS_SHORT:
+                sresult = *((short*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                log_exit("parameter_value");
+                return((double)sresult);
             case IS_STRING:
             default:
                 bombElegant("unknown/invalid variable quantity", NULL);

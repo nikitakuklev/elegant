@@ -857,7 +857,8 @@ BRANCH branch_example;
 PARAMETER branch_param[N_BRANCH_PARAMS] = {
     {"COUNTER", "", IS_LONG, 0, (long)((char *)&branch_example.counter), NULL, 0.0, 0, "Counter, which is decremented by 1 for each pass."},
     {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&branch_example.verbosity), NULL, 0.0, 0, "Larger values result in more output during running."},
-    {"BRANCH_TO", "", IS_STRING, 0, (long)((char *)&branch_example.branchTo), NULL, 0.0, 0, "Name of element to which to jump when counter is non-positive."},
+    {"BRANCH_TO", "", IS_STRING, 0, (long)((char *)&branch_example.branchTo), NULL, 0.0, 0, "Optional name of element to which to jump when counter is non-positive."},
+    {"ELSE_TO", "", IS_STRING, 0, (long)((char *)&branch_example.elseTo), NULL, 0.0, 0, "Optional name of element to which to jump when counter is positive."},
     } ;
 
 QFRING qfring_example;

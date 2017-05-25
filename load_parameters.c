@@ -326,6 +326,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         case IS_LONG:
           *((long*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
           break;
+        case IS_SHORT:
+          *((short*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
+          break;
         default:
           printf("internal error: invalid value type for load request value restoration\n");
           fflush(stdout);
@@ -646,6 +649,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             fflush(stdout);
           break;
         case IS_LONG:
+        case IS_SHORT:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
 	      if (printingEnabled) {
@@ -657,35 +661,68 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           } else {
             newValue = value[j];
           }
-          if (verbose && printingEnabled)
-            printf("Changing %s.%s #%" PRId32 "  from %ld  to ",
-                    eptr->name,
-                    entity_description[eptr->type].parameter[param].name, numberChanged,
-                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
-            fflush(stdout);
-          load_request[i].starting_value[load_request[i].values]
-            = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
-          load_request[i].value_type[load_request[i].values] = IS_LONG;
-          if (mode_flags&LOAD_FLAG_ABSOLUTE) {
-            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = 
-              nearestInteger(newValue);
-	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
-	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
-		nearestInteger(newValue);
-	  } else if (mode_flags&LOAD_FLAG_DIFFERENTIAL) {
-            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += 
-              nearestInteger(newValue);
-	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
-	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
-		nearestInteger(newValue);
-	  } else if (mode_flags&LOAD_FLAG_FRACTIONAL) {
-            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
-	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
-	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
-	  }
           if (verbose && printingEnabled) {
-            printf("%ld \n",
-                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            printf("Changing %s.%s #%" PRId32 " ",
+                   eptr->name,
+                   entity_description[eptr->type].parameter[param].name, numberChanged);
+            if (entity_description[eptr->type].parameter[param].type==IS_LONG)
+              printf("%ld  to ",
+                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            else 
+              printf("%hd  to ",
+                     *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
+          }
+          if (entity_description[eptr->type].parameter[param].type==IS_LONG) {
+            load_request[i].starting_value[load_request[i].values]
+              = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
+            load_request[i].value_type[load_request[i].values] = IS_LONG;
+            if (mode_flags&LOAD_FLAG_ABSOLUTE) {
+              *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = 
+                nearestInteger(newValue);
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+                  nearestInteger(newValue);
+            } else if (mode_flags&LOAD_FLAG_DIFFERENTIAL) {
+              *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += 
+                nearestInteger(newValue);
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+                  nearestInteger(newValue);
+            } else if (mode_flags&LOAD_FLAG_FRACTIONAL) {
+              *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+            }
+          } else {
+            load_request[i].starting_value[load_request[i].values]
+              = *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset));
+            load_request[i].value_type[load_request[i].values] = IS_SHORT;
+            if (mode_flags&LOAD_FLAG_ABSOLUTE) {
+              *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = 
+                nearestInteger(newValue);
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((short*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+                  nearestInteger(newValue);
+            } else if (mode_flags&LOAD_FLAG_DIFFERENTIAL) {
+              *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += 
+                nearestInteger(newValue);
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((short*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+                  nearestInteger(newValue);
+            } else if (mode_flags&LOAD_FLAG_FRACTIONAL) {
+              *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+              if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+                *((short*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+            }
+          }
+          if (verbose && printingEnabled) {
+            if (entity_description[eptr->type].parameter[param].type==IS_LONG) 
+              printf("%ld \n",
+                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            else 
+              printf("%hd \n",
+                     *((short*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
 	  }
           break;
@@ -867,6 +904,9 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         break;
       case IS_LONG:
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);
+        break;
+      case IS_SHORT:
+        value = *(short*)(eptr->p_elem+parameter[iParam].offset);
         break;
       default:
         value = 0;

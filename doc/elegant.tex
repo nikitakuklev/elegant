@@ -4844,8 +4844,6 @@ h00400 & drives $4 \nu_y$ \\ \hline
     long offset_by_orbit = 0;
     long offset_momentum_also = 1;
     long soft_failure = 1;
-    long use_linear_chromatic_matrix = 0;
-    long longitudinal_ring_only = 0;
     long stop_tracking_particle_limit = -1;
     STRING interrupt_file = "%s.interrupt";
 &end
@@ -4870,12 +4868,6 @@ used on the \verb|closed_orbit| command, this flag should be set to
 a failure of orbit correction), continue to produce file output.  This
 creates essentially empty slots in the files corresponding to the failed
 steps.
-\item \verb|use_linear_chromatic_matrix| --- For each particle, a first-order
-matrix is computed for the particular momentum offset 
-of the particle using the linear chromaticity and linear dependence of 
-the beta functions on momentum.
-\item \verb|longitudinal_ring_only| --- Tracks longitudinal coordinates only
-for a ring.  
 \item \verb|stop_tracking_particle_limit| --- If a non-negative is given, then
 {\tt elegant} will stop tracking when the number of particles falls below the
 given value.  It will be as if all the particles were lost.
@@ -4884,6 +4876,16 @@ given value.  It will be as if all the particles were lost.
   then tracking will terminate on completion of the next pass.
   Output already written to \verb|WATCH| files is preserved, but unwritten data
   (e.g., buffered, but not written to disk) is lost.
+\end{itemize}
+
+There are also several deprecated parameters:
+\begin{itemize}
+\item \verb|use_linear_chromatic_matrix| --- For each particle, a first-order
+matrix is computed for the particular momentum offset 
+of the particle using the linear chromaticity and linear dependence of 
+the beta functions on momentum. Use \verb|ILMATRIX| elements instead.
+\item \verb|longitudinal_ring_only| --- Tracks longitudinal coordinates only
+for a ring.  Use \verb|ILMATRIX| elements instead.
 \end{itemize}
 
 %\begin{latexonly}

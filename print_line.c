@@ -47,6 +47,12 @@ void print_line(FILE *fp, LINE_LIST *lptr)
                         *(long *)(eptr->p_elem+parameter[j].offset),
                         parameter[j].unit);
                     break;
+                case IS_SHORT:
+                    fprintf(fp, "    %s = %hd %s\n", 
+                        parameter[j].name, 
+                        *(short *)(eptr->p_elem+parameter[j].offset),
+                        parameter[j].unit);
+                    break;
                 case IS_STRING:
                     if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                         fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
@@ -89,6 +95,12 @@ void print_elem(FILE *fp, ELEMENT_LIST *eptr)
                     *(long *)(eptr->p_elem+parameter[j].offset),
                     parameter[j].unit);
                 break;
+            case IS_SHORT:
+                fprintf(fp, "    %s = %hd %s\n", 
+                    parameter[j].name, 
+                    *(short *)(eptr->p_elem+parameter[j].offset),
+                    parameter[j].unit);
+                break;
             case IS_STRING:
                 if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                     fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
@@ -128,6 +140,12 @@ void print_elem_list(FILE *fp, ELEMENT_LIST *eptr)
                         fprintf(fp, "    %s = %ld %s\n", 
                             parameter[j].name, 
                             *(long *)(eptr->p_elem+parameter[j].offset),
+                            parameter[j].unit);
+                        break;
+                    case IS_SHORT:
+                        fprintf(fp, "    %s = %hd %s\n", 
+                            parameter[j].name, 
+                            *(short *)(eptr->p_elem+parameter[j].offset),
                             parameter[j].unit);
                         break;
                     case IS_STRING:

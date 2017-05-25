@@ -1135,7 +1135,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     /* Return average value for all particles */
     *sigmaDelta2 /= i_top+1;
 
-  if (csbend->photonOutputFile && !SDDS_UpdatePage(&csbend->SDDSphotons, FLUSH_TABLE))
+  if (csbend->photonOutputFile && !SDDS_UpdatePage(csbend->SDDSphotons, FLUSH_TABLE))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   
   return(i_top+1);
@@ -4862,32 +4862,33 @@ void setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
   getTrackingContext(&tc);
   if (!csbend->photonFileActive) {
     csbend->photonOutputFile = compose_filename(csbend->photonOutputFile, rootname);
-    if (!SDDS_InitializeOutput(&csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, tc.elementName) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "y", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "yp", "", SDDS_FLOAT) ||
-        !SDDS_WriteLayout(&csbend->SDDSphotons)) {
+    csbend->SDDSphotons = tmalloc(sizeof(SDDS_DATASET));
+    if (!SDDS_InitializeOutput(csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, tc.elementName) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "y", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "yp", "", SDDS_FLOAT) ||
+        !SDDS_WriteLayout(csbend->SDDSphotons)) {
       SDDS_SetError("Problem setting up photon output file for CSBEND");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     csbend->photonFileActive = 1;
   }
-  if (!SDDS_StartPage(&csbend->SDDSphotons, 10000) || 
-      !SDDS_SetParameters(&csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
+  if (!SDDS_StartPage(csbend->SDDSphotons, 10000) || 
+      !SDDS_SetParameters(csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
                           "LowEnergyCutoff", photonLowEnergyCutoff, "ElementName", tc.elementName, "ElementOccurence", tc.elementOccurrence, NULL)) {
     SDDS_SetError("Problem setting up photon output file for CSBEND");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   photonRows = 0;
-  SDDSphotons = &csbend->SDDSphotons;
+  SDDSphotons = csbend->SDDSphotons;
 }
 
 void logPhoton(double Ep, double x, double xp, double y, double yp, double thetar, double thetaf, double rho)

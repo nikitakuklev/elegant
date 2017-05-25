@@ -849,6 +849,9 @@ void parse_element(
     case IS_LONG:
       *(long*)(p_elem+parameter[i].offset) = parameter[i].integer;
       break;
+    case IS_SHORT:
+      *(short*)(p_elem+parameter[i].offset) = parameter[i].integer;
+      break;
     case IS_STRING:
       if (parameter[i].string==NULL)
         *(char**)(p_elem+parameter[i].offset) = NULL;
@@ -905,6 +908,12 @@ void parse_element(
                   parameter[i].unit);
           fflush(stdout);
           break;
+        case IS_SHORT:
+          printf("%s (%hd %s)\n",
+                 parameter[i].name, (short)parameter[i].integer,
+                 parameter[i].unit);
+          fflush(stdout);
+          break;
         case IS_STRING:
           printf("%s (\"%s\")\n",
                   parameter[i].name, 
@@ -957,6 +966,24 @@ void parse_element(
           printf("Error scanning token %s for integer value for parameter %s of %s.  Please check syntax.\n", 
                  ptr, parameter[i].name, eptr->name);
           exitElegant(1);
+        }
+      }
+      break;
+    case IS_SHORT:
+      if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
+        rpn_token = get_token(ptr);
+        SDDS_UnescapeQuotes(rpn_token, '"');
+        *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
+        if (rpn_check_error()) exitElegant(1);
+        printf("computed value for %s.%s is %hd\n", 
+                eptr->name, parameter[i].name, 
+                *((short*)(p_elem+parameter[i].offset)));
+        fflush(stdout);
+      } 
+      else {
+        if (sscanf(ptr, "%hd", (short*)(p_elem+parameter[i].offset))!=1) {
+          printf("Error scanning token %s for integer value for parameter %s of %s.  Please check syntax.\n", 
+                 ptr, parameter[i].name, eptr->name);
         }
       }
       break;
@@ -1058,6 +1085,10 @@ void copy_p_elem(char *target, char *source, long type)
       *((long*)(target+entity_description[type].parameter[i].offset)) = 
 	*((long*)(source+entity_description[type].parameter[i].offset)) ;
       break;
+    case IS_SHORT:
+      *((short*)(target+entity_description[type].parameter[i].offset)) = 
+	*((short*)(source+entity_description[type].parameter[i].offset)) ;
+      break;
     case IS_STRING:
       cp_str(((char**)(target+entity_description[type].parameter[i].offset)),
 	     *((char**)(source+entity_description[type].parameter[i].offset)) );
@@ -1116,6 +1147,9 @@ void resetElementToDefaults(char *p_elem, long type)
       break;
     case IS_LONG:
       *((long*)(p_elem+parameter[i].offset)) = parameter[i].integer;
+      break;
+    case IS_SHORT:
+      *((short*)(p_elem+parameter[i].offset)) = parameter[i].integer;
       break;
     case IS_STRING:
       if (parameter[i].string==NULL)

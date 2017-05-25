@@ -627,6 +627,10 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
 		      *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) ;
                     break;
+                case IS_SHORT:
+                    *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+		      *((short*)(p_elem0+entity_description[elem_type].parameter[param].offset)) ;
+                    break;
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity", NULL);
@@ -681,6 +685,10 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
                       nearestInteger(value[i_elem]);
                     break;
+                case IS_SHORT:
+                    *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      nearestInteger(value[i_elem]);
+                    break;
                 case IS_STRING:
                 default:
                     bombElegant("unknown/invalid variable quantity", NULL);
@@ -716,6 +724,10 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
                 return(1);
             case IS_LONG:
                 *value = *((long*)(p_elem+entity_description[type].parameter[param_number].offset));
+                log_exit("get_parameter_value");
+                return(1);
+            case IS_SHORT:
+                *value = *((short*)(p_elem+entity_description[type].parameter[param_number].offset));
                 log_exit("get_parameter_value");
                 return(1);
             case IS_STRING:
@@ -848,6 +860,31 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                             nearestInteger(delta);
                         else
                           *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+                            nearestInteger(delta);
+                      }
+                    }
+                    break;
+                case IS_SHORT:
+                    if (permit_flags&FORCE_ZERO_ERRORS) {
+                      delta = 0;
+                      if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
+                        delta = *((short*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                    }
+                    else {
+                      if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
+                          (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
+                          i_group==0) 
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                      else if (bound_to[i_elem]>=0)
+                        delta = perturb[bound_to[i_elem]];
+                      if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
+                        *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
+                      else {
+                        if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
+                          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                            nearestInteger(delta);
+                        else
+                          *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
                             nearestInteger(delta);
                       }
                     }
