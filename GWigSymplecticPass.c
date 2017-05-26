@@ -193,7 +193,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   }
 
   if (cwiggler->fieldOutputInitialized) {
-    if (!SDDS_StartPage(&cwiggler->SDDSFieldOutput, 1000)) {
+    if (!SDDS_StartPage(cwiggler->SDDSFieldOutput, 1000)) {
       printf("*** Error: unable to start SDDS page for CWIGGLER field output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -277,7 +277,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   }
 
   if (!singleStep && cwiggler->fieldOutputInitialized) {
-    if (!SDDS_WritePage(&cwiggler->SDDSFieldOutput)) {
+    if (!SDDS_WritePage(cwiggler->SDDSFieldOutput)) {
       printf("*** Error: unable to write SDDS page for CWIGGLER field output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -309,15 +309,17 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
   }
   if (!cwiggler->initialized) {
     if (cwiggler->fieldOutput) {
-      if (!SDDS_InitializeOutput(&cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "px", "", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
-          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
-          !SDDS_WriteLayout(&cwiggler->SDDSFieldOutput)) {
+      if (!cwiggler->SDDSFieldOutput)
+        cwiggler->SDDSFieldOutput = tmalloc(sizeof(*(cwiggler->SDDSFieldOutput)));
+      if (!SDDS_InitializeOutput(cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "px", "", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
+          !SDDS_WriteLayout(cwiggler->SDDSFieldOutput)) {
         printf("*** Error: problem setting up field output file for CWIGGLER\n");
         SDDS_PrintErrors(stdout,  SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }

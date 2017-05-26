@@ -1022,8 +1022,8 @@ void finish_output(
       WATCH *watch;
       watch = (WATCH*)eptr->p_elem;
       if (watch->initialized) {
-        if ((watch->useDisconnect && SDDS_IsDisconnected(&watch->SDDS_table) && 
-             !SDDS_ReconnectFile(&watch->SDDS_table)) || !SDDS_Terminate(&watch->SDDS_table)) {
+        if ((watch->useDisconnect && SDDS_IsDisconnected(watch->SDDS_table) && 
+             !SDDS_ReconnectFile(watch->SDDS_table)) || !SDDS_Terminate(watch->SDDS_table)) {
           char s[1024];
           sprintf(s, "Warning: error terminating watch file %s\n", 
                   watch->filename);

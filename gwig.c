@@ -635,7 +635,7 @@ void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B)
 {
   SDDS_DATASET *SDDSout;
 
-  SDDSout = &(cwiggler->SDDSFieldOutput);
+  SDDSout = cwiggler->SDDSFieldOutput;
   
   if (cwiggler->fieldOutputRow==cwiggler->fieldOutputRows) {
     if (!SDDS_LengthenTable(SDDSout, 1000)) {

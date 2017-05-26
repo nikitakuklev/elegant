@@ -601,13 +601,14 @@ long beam_scraper(
     matter.pLimit = scraper->pLimit;
     matter.width = matter.spacing = matter.tilt = matter.center = 0;
     matter.nSlots = 0;
-    
+    matter.startPass = matter.endPass = -1;
+
     for (ip=0; ip<np; ip++) {
       ini = initial[ip];
       if ((do_x && do_x*(ini[0]-scraper->dx)>limit) ||
           (do_y && do_y*(ini[2]-scraper->dy)>limit)) {
         /* scatter and/or absorb energy */
-        if (!track_through_matter(&ini, 1, &matter, Po, NULL, z))
+        if (!track_through_matter(&ini, 1, 0, &matter, Po, NULL, z))
           ini[5] = -1;
       } else {
         ini[0] = ini[0] + ini[1]*scraper->length;

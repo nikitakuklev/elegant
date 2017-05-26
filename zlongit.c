@@ -401,18 +401,18 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         factor = zlongit->macroParticleCharge*particleRelSign/dt;
         if ((zlongit->wake_interval<=0 || ((i_pass0-zlongit->wake_start)%zlongit->wake_interval)==0) &&
             i_pass0>=zlongit->wake_start && i_pass0<=zlongit->wake_end) {
-          if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
+          if (!SDDS_StartTable(zlongit->SDDS_wake, nb)) {
             SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
           for (ib=0; ib<nb; ib++) {
-            if (!SDDS_SetRowValues(&zlongit->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
+            if (!SDDS_SetRowValues(zlongit->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
                                    0, ib*dt, 1, Vtime[ib], 2, Itime[ib]*factor, -1)) {
               SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_zlongit)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
           }
-          if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+          if (!SDDS_SetParameters(zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                   "Pass", i_pass0, "Bunch", iBucket, "q",
 #if USE_MPI
                                   zlongit->macroParticleCharge*particleRelSign*particles_total, 
@@ -424,18 +424,18 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
           if (zlongit->broad_band) {
-            if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+            if (!SDDS_SetParameters(zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                     "Ra", zlongit->Ra, "fo", zlongit->freq, "Deltaf", 1./dt, NULL)) {
               SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
           }
-          if (!SDDS_WriteTable(&zlongit->SDDS_wake)) {
+          if (!SDDS_WriteTable(zlongit->SDDS_wake)) {
             SDDS_SetError("Problem writing SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
           if (!inhibitFileSync)
-            SDDS_DoFSync(&zlongit->SDDS_wake);
+            SDDS_DoFSync(zlongit->SDDS_wake);
         }
       }
 #if USE_MPI
@@ -713,7 +713,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
 
     zlongit->SDDS_wake_initialized = 0;
 #if USE_MPI
-    if (zlongit->SDDS_wake_initialized && !SDDS_Terminate(&zlongit->SDDS_wake)) {
+    if (zlongit->SDDS_wake_initialized && !SDDS_Terminate(zlongit->SDDS_wake)) {
       SDDS_SetError("Problem terminating SDDS output (set_up_zlongit)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -721,17 +721,18 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
 #endif
     if (zlongit->wakes) {
         zlongit->wakes = compose_filename(zlongit->wakes, run->rootname);
+        zlongit->SDDS_wake = tmalloc(sizeof(*(zlongit->SDDS_wake)));
         if (zlongit->broad_band) 
-          SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
+          SDDS_ElegantOutputSetup(zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
                                   run->runfile, run->lattice, wake_parameter, BB_WAKE_PARAMETERS,
                                   wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         else {
-          SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
+          SDDS_ElegantOutputSetup(zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
                                   run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
                                   wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         }
 #if USE_MPI
-        if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
+        if (!SDDS_WriteLayout(zlongit->SDDS_wake)) {
 #ifndef MPI_DEBUG
           dup2(fd,fileno(stdout)); 
 #endif

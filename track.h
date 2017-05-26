@@ -958,7 +958,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 68
-#define N_MATTER_PARAMS 16
+#define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
@@ -1119,12 +1119,12 @@ typedef struct {
     double length, k1, tilt;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
-    long xSteering, ySteering, order;
-    long edge1_effects, edge2_effects;
+    short xSteering, ySteering, order;
+    short edge1_effects, edge2_effects;
     char *fringeType;
     double ffringe, lEffective;
     double fringeIntP[5], fringeIntM[5];
-    long radial;
+    short radial;
     } QUAD;
 
 /* names and storage structure for bending magnet physical parameters */
@@ -1136,14 +1136,14 @@ typedef struct {
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long edge_effects[2];
-    long order, edge_order, TRANSPORT;
-    long use_bn;
+    short edge_effects[2];
+    short order, edge_order, TRANSPORT;
+    short use_bn;
     double b1, b2;
     /* for internal use only: */
-    unsigned long edgeFlags;
+    unsigned short edgeFlags;
     double k1_internal, k2_internal;
-    long e1Index, e2Index;
+    short e1Index, e2Index;
     } BEND;
 
 /* names and storage structure for drift length physical parameters */
@@ -1151,7 +1151,7 @@ extern PARAMETER drift_param[N_DRIFT_PARAMS];
 
 typedef struct {
     double length;
-    long order;
+    short order;
     } DRIFT;
 
 /* names and storage structure for exact drift physical parameters */
@@ -1168,7 +1168,7 @@ typedef struct {
     double length, k2, j1, tilt;
     double dx, dy, dz, fse;
     double ffringe;
-    long order;
+    short order;
     } SEXT;
 
 /* names and storage structure for octupole physical parameters */
@@ -1177,7 +1177,7 @@ extern PARAMETER octu_param[N_OCTU_PARAMS];
 typedef struct {
     double length, k3, tilt;
     double dx, dy, dz, fse;
-    long order;
+    short order;
     } OCTU;
 
 /* names and storage structure for solenoid */
@@ -1186,7 +1186,7 @@ extern PARAMETER sole_param[N_SOLE_PARAMS] ;
 typedef struct {
     double length, ks, B;
     double dx, dy, dz;
-    long order;
+    short order;
     } SOLE;
 
 /* names and storage structure for arbitrary multipole */
@@ -1195,7 +1195,7 @@ extern PARAMETER mult_param[N_MULT_PARAMS];
 typedef struct {
     double length, KnL, tilt, bore, BTipL;
     double dx, dy, dz, factor;
-    long order, n_kicks, synch_rad;
+    short order, n_kicks, synch_rad;
     } MULT;
 
 /* names and storage structure for arbitary multipole from an SDDS File */
@@ -1203,9 +1203,10 @@ extern PARAMETER fmult_param[N_FMULT_PARAMS];
 
 typedef struct {
   double length, tilt, dx, dy, dz, fse;
-  long n_kicks, synch_rad;
+  long n_kicks;
+  short synch_rad;
   char *filename;
-  long sqrtOrder;
+  short sqrtOrder;
   /* For internal use: */
   MULTIPOLE_DATA multData;
 } FMULT;
@@ -1215,8 +1216,8 @@ extern PARAMETER hcor_param[N_HCOR_PARAMS] ;
    
 typedef struct {
     double length, kick, tilt, b2, calibration;
-    long edge_effects, order, steering;
-    long synchRad, isr;
+    short edge_effects, order, steering;
+    short synchRad, isr;
     double lEffRad;
     } HCOR;
 
@@ -1227,8 +1228,8 @@ extern PARAMETER ehvcor_param[N_EHVCOR_PARAMS] ;
    
 typedef struct {
     double length, kick, tilt, calibration;
-    long steering, synchRad, isr;
     double lEffRad;
+    short steering, synchRad, isr;
     char *steeringMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
@@ -1236,8 +1237,8 @@ typedef struct {
 
 typedef struct {
     double length, kick, tilt, calibration;
-    long steering, synchRad, isr; 
     double lEffRad;
+    short steering, synchRad, isr; 
     char *steeringMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
@@ -1245,8 +1246,8 @@ typedef struct {
 
 typedef struct {
     double length, xkick, ykick, tilt, xcalibration, ycalibration;
-    long steering, synchRad, isr;
     double lEffRad;
+    short steering, synchRad, isr;
     char *steeringMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
@@ -1257,8 +1258,8 @@ extern PARAMETER vcor_param[N_VCOR_PARAMS] ;
 
 typedef struct {
     double length, kick, tilt, b2, calibration;
-    long edge_effects, order, steering;
-    long synchRad, isr;
+    short edge_effects, order, steering;
+    short synchRad, isr;
     double lEffRad;
     } VCOR;
 
@@ -1267,16 +1268,17 @@ extern PARAMETER rfca_param[N_RFCA_PARAMS] ;
    
 typedef struct {
     double length, volt, phase, freq, Q;
-    long phase_reference, change_p0, change_t;
+    long phase_reference;
+    short change_p0, change_t;
     char *fiducial;
-    long end1Focus, end2Focus;
+    short end1Focus, end2Focus;
     char *bodyFocusModel;
     long nKicks;
     double dx, dy;
     double tReference;
-    long linearize, lockPhase;
+    short linearize, lockPhase;
     /* for internal use only: */
-    long fiducial_seen;
+    short fiducial_seen;
     double phase_fiducial;
     } RFCA;
 
@@ -1299,9 +1301,9 @@ extern PARAMETER hmon_param[N_HMON_PARAMS] ;
    
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
-    long order;
+    short order;
     char *readout;   /* rpn equation for x readout as function of x and y */
-    long coFitpoint;
+    short coFitpoint;
     short initialized;
     long coMemoryNumber[2];
     } HMON;
@@ -1311,9 +1313,9 @@ extern PARAMETER vmon_param[N_VMON_PARAMS] ;
    
 typedef struct {
     double length, dx, dy, weight, tilt, calibration, setpoint;
-    long order;
+    short order;
     char *readout;   /* rpn equation for y readout as function of x and y */
-    long coFitpoint;
+    short coFitpoint;
     short initialized;
     long coMemoryNumber[2];
     } VMON;
@@ -1323,9 +1325,9 @@ extern PARAMETER moni_param[N_MONI_PARAMS] ;
    
 typedef struct {
     double length, dx, dy, weight, tilt, xcalibration, ycalibration, xsetpoint, ysetpoint;
-    long order;
+    short order;
     char *x_readout, *y_readout; /* rpn equations for x and y readouts as function of actual x and y */
-    long coFitpoint;
+    short coFitpoint;
     short initialized;
     long coMemoryNumber[4];
     } MONI;
@@ -1342,7 +1344,7 @@ extern PARAMETER rcol_param[N_RCOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
-    long invert;
+    short invert;
     } RCOL;
 
 /* names and storage structure for elliptical collimator physical parameters */
@@ -1351,7 +1353,7 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
-    long exponent, yExponent, invert;
+    short exponent, yExponent, invert;
     } ECOL;
 
 /* storage structure for beam cleaner */
@@ -1365,8 +1367,8 @@ typedef struct {
 /* storage structure for twiss element (sets twiss parameters) */
 typedef struct {
   TWISS twiss;
-  long fromBeam, from0Values, computeOnce, applyOnce, verbose;
-  long disable;
+  short fromBeam, from0Values, computeOnce, applyOnce, verbose;
+  short disable;
   TWISS twiss0;
   /* internal variables */
   long transformComputed;
@@ -1393,7 +1395,7 @@ typedef struct {
 
 typedef struct {
   double dx, dy;   /* Useful for recording position of girder ends, for example */
-  long fitpoint;
+  short fitpoint;
   /* values for internal use: */
   unsigned long init_flags; /* 1:twiss_mem initialized, 
                                2:centroid_mem, sigma_mem, emit_mem initialized,
@@ -1428,8 +1430,8 @@ typedef struct {
     double dp1, dp2;    /* for momentum filtration */
     double xPuck, widthPuck;  /* for momentum filtration */
     double dx, dy, dz, tilt;
-    long part;
-    long order;
+    short part;
+    short order;
     double gradient;   
     } ALPH;
 
@@ -1441,19 +1443,19 @@ typedef struct {
   double length, phase, tilt, frequency, voltage, fse, b2;
   double time_offset;             /* equivalent to phase */
   long n_kicks, phase_reference;
-  long standingWave;
+  short standingWave;
   char *voltageWaveform;
-  long voltageIsPeriodic, alignWaveforms;
+  short voltageIsPeriodic, alignWaveforms;
   double voltageNoise, phaseNoise;
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
   long startPass, endPass;
-  long driftMatrix;
+  short driftMatrix;
   double dx, dy, dz;
-  long magneticDeflection;
+  short magneticDeflection;
   /* for internal use only */
   double t_first_particle;        
-  long initialized, fiducial_seen;
+  short initialized, fiducial_seen;
   double Ts;                          /* accumulated time-of-flight of central particle */
   double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
   double V_tFinal, V_tInitial;
@@ -1483,14 +1485,14 @@ typedef struct {
   double phase, tilt, frequency, voltage;
   long phase_reference;
   char *voltageWaveform;
-  long voltageIsPeriodic, alignWaveforms;
+  short voltageIsPeriodic, alignWaveforms;
   double voltageNoise, phaseNoise;
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
   long startPass, endPass;
   /* for internal use only */
   double t_first_particle;        
-  long   initialized, fiducial_seen;
+  short   initialized, fiducial_seen;
   double Ts;                          /* accumulated time-of-flight of central particle */
   double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
   double V_tFinal, V_tInitial;
@@ -1505,7 +1507,8 @@ typedef struct {
     double length, frequency, phase, Ez_peak, time_offset;
     long phase_reference;
     double dx, dy, dzMA, eTilt, eYaw, ePitch;
-    long n_steps, radial_order, change_p0;
+    long n_steps;
+    short radial_order, change_p0;
     char *inputFile, *zColumn, *EzColumn;
     char *solenoidFile, *solenoid_zColumn, *solenoid_rColumn, *solenoidBzColumn, *solenoidBrColumn;
     double solenoidFactor, dxSol, dySol, dzSolMA, eTiltSol, eYawSol, ePitchSol;
@@ -1625,13 +1628,16 @@ typedef struct {
     double fraction;
     long startPID, endPID, interval, start_pass, end_pass;
     char *filename, *label, *mode;
-    long xData, yData, longitData, excludeSlopes, flushInterval, disable;
-    long useDisconnect, indexOffset;
+    short xData, yData, longitData, excludeSlopes;
+    long flushInterval;
+    short disable, useDisconnect;
+    long indexOffset;
     double referenceFrequency;
     /* internal variables for SDDS output */
-    long initialized, count, mode_code, window_code;
+    short initialized;
+    long count, mode_code, window_code;
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
-    SDDS_TABLE SDDS_table;
+    SDDS_TABLE *SDDS_table;
     double t0Last, t0LastError;
     long passLast, flushSample;
     } WATCH;
@@ -1642,16 +1648,17 @@ extern PARAMETER histogram_param[N_HISTOGRAM_PARAMS];
 
 typedef struct {
     char *filename;
-    long interval, startPass, bins, fixedBinSize;
-    long xData, yData, longitData;
+    long interval, startPass, bins;
+    short fixedBinSize, xData, yData, longitData;
     double binSizeFactor;
-    long normalize, disable, sparse;
+    short normalize, disable, sparse;
     long startPID, endPID;
     /* internal variables for SDDS output */
-    long initialized, count;
+    short initialized;
+    long count;
     long columnIndex[7][2];  /* x, xp, y, yp, t, p, dt */
     double binSize[7];
-    SDDS_TABLE SDDS_table;
+    SDDS_TABLE *SDDS_table;
     } HISTOGRAM;
 
 extern PARAMETER mhistogram_param[N_MHISTOGRAM_PARAMS];
@@ -1660,13 +1667,14 @@ typedef struct {
     char *file1d, *file2dH, *file2dV, *file2dL, *file4d, *file6d;
     char *inputBinFile;
     long interval, startPass;
-    long normalize, disable, lumped;
+    short normalize, disable, lumped;
     /* internal variables for SDDS output */
     int32_t *bins1d, *bins2d, *bins4d, *bins6d;
     book1m *x1d;
     ntuple *x2d, *y2d, *z2d;
     ntuple *Tr4d, *full6d;
-    long initialized, count;
+    short initialized;
+    long count;
     } MHISTOGRAM;
 
   /* slice analysis element */
@@ -1674,11 +1682,12 @@ typedef struct {
 typedef struct {
   long nSlices, startPID, endPID, interval, start_pass, end_pass;
   char *filename, *label;
-  long disable, useDisconnect, indexOffset;
+  long indexOffset;
   double referenceFrequency;
+  short disable, useDisconnect;
   /* internal variables for SDDS output */
-  long initialized;
-  SDDS_TABLE SDDS_table;
+  short initialized;
+  SDDS_TABLE *SDDS_table;
   double t0Last, t0LastError;
   long passLast;
 } SLICE_POINT;
@@ -1856,7 +1865,7 @@ typedef struct {
 extern PARAMETER remcor_param[N_REMCOR_PARAMS];
 
 typedef struct {
-    long x, xp, y, yp, with, onceOnly;
+    short x, xp, y, yp, with, onceOnly;
     /* for internal use only */
     long ratioSet[4];
     double ratio[4];
@@ -2006,9 +2015,9 @@ extern PARAMETER matr_param[N_MATR_PARAMS] ;
 typedef struct {
     double length;
     char *filename;
-    long order;
+    short order;
     /* for internal use only */
-    long matrix_read, fiducialSeen;
+    short matrix_read, fiducialSeen;
     double sReference;
     VMATRIX M;
     } MATR;
@@ -2019,13 +2028,13 @@ typedef struct {
     double length, angle;
     double dx, dy, dz;
     double tilt, yaw, pitch;
-    long order;
+    short order;
     double C[6];
     double deltaP;
     double R[6][6];
     double T[6][6][6];
     /* for internal use only */
-    long fiducialSeen;
+    short fiducialSeen;
     double sReference;
     } EMATRIX;
 
@@ -2044,7 +2053,7 @@ typedef struct {
     double dsdA2[2];
     double dsdAxAy;
     double tilt;
-    long allowResonanceCrossing, verbosity;
+    short allowResonanceCrossing, verbosity;
     } ILMATRIX;
 
 /* names and storage structure for scattering element physical parameters */
@@ -2208,26 +2217,27 @@ typedef struct {
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long n_kicks, nonlinear, synch_rad;
-    long edge_effects[2], edge_order;
-    long integration_order;
+    long n_kicks;
+    short nonlinear, synch_rad;
+    short edge_effects[2], edge_order;
+    short integration_order;
     double edge_kick_limit[2];
-    long kick_limit_scaling;
-    long use_bn, expansionOrder;
+    short kick_limit_scaling;
+    short use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
     double xReference, f1, f2, f3, f4, f5, f6, f7, f8;
     double g1, g2, g3, g4, g5, g6, g7, g8;
-    long isr, isr1Particle, sqrtOrder;
-    long distributionBasedRadiation, includeOpeningAngle;
+    short isr, isr1Particle, sqrtOrder;
+    short distributionBasedRadiation, includeOpeningAngle;
     char *photonOutputFile;
     double photonLowEnergyCutoff;
-    long referenceCorrection, trackingMatrix;
+    short referenceCorrection, trackingMatrix;
     /* for internal use only: */
-    unsigned long edgeFlags;
+    unsigned short edgeFlags;
     double b[8], c[8];
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
-    long refKicks;
+    short refKicks;
     short photonFileActive;
     SDDS_DATASET *SDDSphotons;
     short e1Index, e2Index;
@@ -2243,31 +2253,35 @@ typedef struct {
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long n_kicks, nonlinear, useMatrix, synch_rad;
-    long edge_effects[2],  edge_order;
-    long integration_order, bins, binOnce;
+    long n_kicks;
+    short nonlinear, useMatrix, synch_rad;
+    short edge_effects[2],  edge_order;
+    short integration_order;
+    long bins;
+    short binOnce;
     double binRangeFactor;
-    long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
+    short SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
     char *histogramFile;
-    long outputInterval, outputLastWakeOnly, steadyState, integratedGreensFunction;
-    long use_bn, expansionOrder;
+    long outputInterval;
+    short outputLastWakeOnly, steadyState, integratedGreensFunction;
+    short use_bn, expansionOrder;
     double b1, b2, b3, b4, b5, b6, b7, b8;
-    long isr, isr1Particle, csr, csrBlock;
+    short isr, isr1Particle, csr, csrBlock;
     char *derbenevCriterionMode, *particleOutputFile;
     long particleOutputInterval, sliceAnalysisInterval;
     double lowFrequencyCutoff0, lowFrequencyCutoff1;
     double highFrequencyCutoff0, highFrequencyCutoff1;
-    long clipNegativeBins;
+    short clipNegativeBins;
     char *wakeFilterFile, *wffFreqColumn, *wffRealColumn, *wffImagColumn;
     /* for internal use only: */
     short wakeFileActive, particleFileActive;
-    SDDS_DATASET SDDSout, SDDSpart;
+    SDDS_DATASET *SDDSout, *SDDSpart;
     double b[8], c[8];
     short xIndex, xpIndex, tIndex, pIndex;
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
-    unsigned long edgeFlags;
-    long e1Index, e2Index;
+    unsigned short edgeFlags;
+    short e1Index, e2Index;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */
@@ -2275,15 +2289,18 @@ extern PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS];
 
 typedef struct {
   double length, attenuationLength, dz;
-  long nKicks, spread, useOvertakingLength;
+  long nKicks;
+  short spread, useOvertakingLength;
   double overtakingLengthMultiplier;
-  long useSaldin54, nSaldin54Points, csr;
+  short csr, useSaldin54;
+  long nSaldin54Points;
   char *normMode, *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
-  long useStupakov;
+  short useStupakov;
   char *StupakovOutput;
   long StupakovOutputInterval, sliceAnalysisInterval;
-  long linearOptics;
-  long LSCBins, LSCInterpolate;
+  short linearOptics;
+  short LSCInterpolate;
+  long LSCBins;
   double LSCLowFrequencyCutoff0, LSCLowFrequencyCutoff1, LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
   /* used internally only */
   FILE *fpSaldin;
@@ -2332,6 +2349,7 @@ typedef struct {
     double A, rho, pLimit;
     double width, spacing, tilt, center;
     long nSlots;
+    long startPass, endPass;
     } MATTER;
 
 /* names and storage structure for RF mode physical parameters */
@@ -2439,9 +2457,9 @@ typedef struct {
     double *tNoise[8], *fNoise[8];
     long nNoise[8];                /* If 0, no noise data */
     /* files for record output */
-    SDDS_DATASET SDDSrec  ;    /* seen by beam */
+    SDDS_DATASET *SDDSrec  ;    /* seen by beam */
     long sample_counter;       /* row in the output record */
-    SDDS_DATASET SDDSfbrec;  /* seen by  feedback system */
+    SDDS_DATASET *SDDSfbrec;  /* seen by  feedback system */
     long fbSample;           /* row in the output record */
     long fileInitialized;
     } RFMODE;
@@ -2476,7 +2494,7 @@ typedef struct {
     double *beta;              /* normalized load impedance */
     double last_t;             /* time at which last particle was seen */
     double *last_phase;        /* phase at t=last_t */
-    SDDS_DATASET SDDSout;
+    SDDS_DATASET *SDDSout;
     long *modeIndex;           /* SDDS index of mode column in output file */
     } FRFMODE;
 
@@ -2516,7 +2534,7 @@ typedef struct {
     double last_t;             /* time at which last particle was seen */
     double last_xphase;        /* phase at t=last_t */
     double last_yphase;        /* phase at t=last_t */
-    SDDS_DATASET SDDSrec;
+    SDDS_DATASET *SDDSrec;
     long fileInitialized;
     } TRFMODE;
 
@@ -2557,7 +2575,7 @@ typedef struct {
     double last_t;             /* time at which last particle was seen */
     double *lastPhasex;        /* phase at t=last_t */
     double *lastPhasey;        /* phase at t=last_t */
-    SDDS_DATASET SDDSout;
+    SDDS_DATASET *SDDSout;
     long *xModeIndex, *yModeIndex;
     } FTRFMODE;
 
@@ -2590,7 +2608,7 @@ typedef struct {
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
     /* variables for SDDS output of wakes */
-    SDDS_TABLE SDDS_wake;
+    SDDS_TABLE *SDDS_wake;
     long SDDS_wake_initialized;
     double macroParticleCharge;
     } ZLONGIT;
@@ -2629,7 +2647,7 @@ typedef struct {
     long initialized;
     double macroParticleCharge;
     /* variables for SDDS output of wakes */
-    SDDS_TABLE SDDS_wake;
+    SDDS_TABLE *SDDS_wake;
     long SDDS_wake_initialized;
     } ZTRANSVERSE;
 
@@ -2820,9 +2838,10 @@ typedef struct {
   double dxMap, dzMap;
   double yawMap;
   double fieldFactor;
-  long useFTABLE;
+  short useFTABLE;
   /* these are set by the program when the file is read */
-  long initialized, dataIndex;
+  short initialized;
+  long dataIndex;
 } BRAT;
 
 /* magnetic field generalized gradient expansion */
@@ -2835,12 +2854,12 @@ typedef struct {
   double strength;        /* multiply fields by a factor */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
-  long mMaximum;          /* maximum value of m that is included */
-  long maximum2n;         /* maximum value of 2*n that is included */
-  long zInterval;         /* interval between z points used */
-  long symplectic;        /* use symplectic integrator */
+  short mMaximum;          /* maximum value of m that is included */
+  short maximum2n;         /* maximum value of 2*n that is included */
+  short zInterval;         /* interval between z points used */
+  short symplectic;        /* use symplectic integrator */
   /* these are set by the program when the file is read */
-  long initialized;
+  short initialized;
   long dataIndex;
 } BGGEXP;
 
@@ -2870,7 +2889,8 @@ extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
   double length, radius, K, B;
   double dx, dy, dz, tilt;
-  long poles, focusing;
+  long poles;
+  short focusing;
   /* internal use only */
   double radiusInternal;  /* may be computed from K */
 } WIGGLER;
@@ -2880,21 +2900,22 @@ extern PARAMETER cwiggler_param[N_CWIGGLER_PARAMS];
 typedef struct {
   double length, BMax, BxMax, ByMax;
   double dx, dy, dz, tilt;
-  long periods, stepsPerPeriod, integrationOrder;
+  long periods, stepsPerPeriod;
+  short integrationOrder;
   char *ByFile, *BxFile;
-  long BySplitPole, BxSplitPole;
-  long sr, isr, isr1Particle, sinusoidal, vertical, helical;
-  long forceMatched;
+  short BySplitPole, BxSplitPole;
+  short sr, isr, isr1Particle, sinusoidal, vertical, helical;
+  short forceMatched;
   char *fieldOutput;
-  long verbosity;
+  short verbosity;
   /* for internal use */
-  long initialized;
+  short initialized;
   double *ByData, *BxData; 
   long ByHarmonics, BxHarmonics;
   double BPeak[2];              
   double radiusInternal[2];     
   double zEndPointH[2], zEndPointV[2];
-  SDDS_DATASET SDDSFieldOutput;
+  SDDS_DATASET *SDDSFieldOutput;
   short fieldOutputInitialized;
   long fieldOutputRow, fieldOutputRows;
 } CWIGGLER;
@@ -2904,14 +2925,15 @@ extern PARAMETER apple_param[N_APPLE_PARAMS];
 typedef struct {
   double length, BMax, shimScale;
   double dx, dy, dz, tilt;
-  long periods, step, order, End_Pole, shimOn;
+  long periods, step;
+  short order, End_Pole, shimOn;
   char *Input;
   char *shimInput;
-  long sr, isr, isr1Particle;
+  short sr, isr, isr1Particle;
   double x0, gap0, dgap, phi1, phi2, phi3, phi4;
-  long verbosity;
+  short verbosity;
   /* for internal use */
-  long initialized;
+  short initialized;
   long NxHarm, NzHarm, ShimHarm;
   double C1, C2, C3, C4;
   double S1, S2, S3, S4;
@@ -2920,7 +2942,7 @@ typedef struct {
   double **CxX2oZ, **CxXYoZ, **CxX3oYZ, **CxY2oZ;
   double lz;
   double kx_shim, *Ci_shim, *Si_shim;
-  long drift;
+  short drift;
   double BPeak[2], radiusInternal[2];
 } APPLE;
 
@@ -2929,12 +2951,11 @@ extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
   double length;
   char *command;
-  long useCsh, verbosity, startPass, endPass, passInterval, onPass;
+  short useCsh, verbosity;
+  long startPass, endPass, passInterval, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
-  long keepFiles, driftMatrix;
-  long useParticleID; 
-  long noNewParticles;
-  long determineLossesFromParticleID;
+  short keepFiles, driftMatrix;
+  short useParticleID, noNewParticles, determineLossesFromParticleID;
   double NP[10];
   char *SP[10];
 } SCRIPT;
@@ -2963,11 +2984,13 @@ extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
 typedef struct {
   char *ID, *plane;
   double rmsNoise, a[TFB_FILTER_LENGTH];
-  long bunchedBeamMode, updateInterval;
+  long updateInterval;
   double referenceFrequency;
   double dx, dy;
+  short bunchedBeamMode;
   /* internal parameters */
-  long initialized, iPlane, filterLength, startPass;
+  short initialized, iPlane;
+  long filterLength, startPass;
   double *filterOutput;
   double tReference;
   long nBunches, tReferenceSet;
@@ -2980,14 +3003,17 @@ extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
 typedef struct {
   char *ID;
   double strength, kickLimit, frequency, phase;
-  long delay, longitudinal;
+  long delay;
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
-  long bunchedBeamMode, updateInterval, outputInterval;
+  long updateInterval, outputInterval;
+  short longitudinal;
+  short bunchedBeamMode; 
   /* internal parameters */
-  long initialized, filterLength, dataWritten, outputIndex, startPass;
+  short initialized;
+  long filterLength, dataWritten, outputIndex, startPass;
   TFBPICKUP *pickup;
-  SDDS_DATASET SDDSout;
+  SDDS_DATASET *SDDSout;
   long nBunches;
   /* circular buffer for storing output signal */
   long maxDelay;
@@ -3000,10 +3026,9 @@ extern PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS];
 typedef struct {
   double length, lEffective;
   long bins;
-  long smoothing, SGHalfWidth, SGOrder, interpolate;
+  short smoothing, SGHalfWidth, SGOrder, interpolate, lsc;
   double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
-  long lsc;
 } LSCDRIFT;
 
 /* PLanar Undulator with optional laser heater */
@@ -3017,11 +3042,11 @@ typedef struct {
   double poleFactor1, poleFactor2, poleFactor3;
   double usersLaserWavelength, laserPeakPower, laserW0, laserPhase;
   double laserX0, laserY0, laserZ0, laserTilt;
-  long laserM, laserN;  /* mode numbers TEM-m-n*/
-  long synchRad, isr;
+  short laserM, laserN;  /* mode numbers TEM-m-n*/
+  short synchRad, isr;
+  short helical;
   char *timeProfileFile;
   double timeProfileOffset;
-  long helical;
   /* internal variables */
   double laserWavelength, Ef0Laser, omega, k;
   double Escale, Bscale;
@@ -3050,8 +3075,8 @@ extern PARAMETER kquse_param[N_KQUSE_PARAMS];
 typedef struct {
     double length, k1, k2, tilt;
     double dx, dy, dz, fse1, fse2;
-    long n_kicks, synch_rad;
-    long integration_order, isr, isr1Particle, matrixTracking;
+    long n_kicks;
+    short synch_rad, integration_order, isr, isr1Particle, matrixTracking;
   } KQUSE;
 
 /* names and storage structure for kick map physical parameters */
@@ -3062,9 +3087,9 @@ typedef struct {
   char *inputFile;
   long nKicks, periods;
   double Kreference;
-  long synchRad, isr;
+  short synchRad, isr;
   /* for internal use only */
-  long initialized;
+  short initialized;
   long points, nx, ny;
   double *xpFactor, *ypFactor;
   double xmin, xmax, dxg;
@@ -3079,11 +3104,11 @@ typedef struct {
   double l0, angle, l1, l2, e1, e2;
   double tilt, dx, dy, dz, factor, threshold;
   char *inputFile;
-  long nKicks, verbose;
-  long simpleInput;
+  long nKicks;
+  short  verbose, simpleInput;
   /* for internal use only */
-  long initialized;
-  long dataIsCopy;
+  short initialized;
+  short dataIsCopy;
   double length;
   ntuple *Bx, *By, *Bz;
 } FTABLE;  
@@ -3935,7 +3960,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamli
 void reset_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline);
 void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline);
 
-long track_through_matter(double **part, long np, MATTER *matter, double Po, double **accepted, double z0);
+long track_through_matter(double **part, long np, long iPass, MATTER *matter, double Po, double **accepted, double z0);
 
 void track_through_rfmode(double **part, long np, RFMODE *rfmode, double Po,
     char *element_name, double element_z, long pass, long n_passes, CHARGE *charge);

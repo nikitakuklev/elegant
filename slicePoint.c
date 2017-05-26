@@ -79,7 +79,9 @@ void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lat
     return;
 #endif
 
-  SDDS_table = &slicePoint->SDDS_table;
+  if (!slicePoint->SDDS_table)
+    slicePoint->SDDS_table = tmalloc(sizeof(*(slicePoint->SDDS_table)));
+  SDDS_table = slicePoint->SDDS_table;
   filename = slicePoint->filename;
 
   SDDS_ElegantOutputSetup(SDDS_table, filename, SDDS_BINARY, 0, "slice analysis",
@@ -185,7 +187,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
   printf("time limits: %le, %le\n", tMin, tMax);
 #endif
     
-  if (isMaster && !SDDS_StartTable(&slicePoint->SDDS_table, slicePoint->nSlices)) {
+  if (isMaster && !SDDS_StartTable(slicePoint->SDDS_table, slicePoint->nSlices)) {
     SDDS_SetError("Problem starting SDDS table (dump_slice_analysis)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -224,11 +226,11 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
       printf("Setting row values\n");
       fflush(stdout);
 #endif
-      if ((Cx_index=SDDS_GetColumnIndex(&slicePoint->SDDS_table, "Cx"))<0) {
+      if ((Cx_index=SDDS_GetColumnIndex(slicePoint->SDDS_table, "Cx"))<0) {
         SDDS_SetError("Problem getting index of SDDS columns (dump_slice_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
+      if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
                              0, iSlice, 1, sums.n_part, 2, sums.charge,
                              3, dt0*(iSlice-(slicePoint->nSlices-1)/2.0),
                              -1)) {
@@ -236,7 +238,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       for (i=0; i<6; i++) {
-        if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
+        if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
                                Cx_index+i, i==4?(t0+dt0/2):sums.centroid[i],
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
@@ -244,20 +246,20 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
         }
       }
 
-      if ((Sx_index=SDDS_GetColumnIndex(&slicePoint->SDDS_table, "Sx"))<0 ||
-          (ex_index=SDDS_GetColumnIndex(&slicePoint->SDDS_table, "ex"))<0) {
+      if ((Sx_index=SDDS_GetColumnIndex(slicePoint->SDDS_table, "Sx"))<0 ||
+          (ex_index=SDDS_GetColumnIndex(slicePoint->SDDS_table, "ex"))<0) {
         SDDS_SetError("Problem getting index of SDDS columns (dump_slice_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       for (i=0; i<6; i++) {
-        if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
+        if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
                                Sx_index+i, i==4?sqrt(sums.sigma[6][6]):sqrt(sums.sigma[i][i]),
                                -1)) {
           SDDS_SetError("Problem setting row values for SDDS table (dump_slice_analysis)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
       }
-      if (!SDDS_SetRowValues(&slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
+      if (!SDDS_SetRowValues(slicePoint->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iSlice,
                              ex_index, emit[0], 
                              ex_index+1, emit[1],
                              -1)) {
@@ -272,7 +274,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
     printf("Setting parameter values\n");
     fflush(stdout);
 #endif
-    if (!SDDS_SetParameters(&slicePoint->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+    if (!SDDS_SetParameters(slicePoint->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, "Pass", pass, "s", z, 
                             "pCentral", Po, "dt", (tMax-tMin)/(slicePoint->nSlices>1 ? slicePoint->nSlices-1 : 1),
                             NULL)) {
@@ -284,12 +286,12 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
     printf("Writing table\n");
     fflush(stdout);
 #endif
-    if (!SDDS_WriteTable(&slicePoint->SDDS_table)) {
+    if (!SDDS_WriteTable(slicePoint->SDDS_table)) {
       SDDS_SetError("Problem writing data for SDDS table (dump_slice_analysis)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (!inhibitFileSync)
-      SDDS_DoFSync(&slicePoint->SDDS_table);
+      SDDS_DoFSync(slicePoint->SDDS_table);
   }
 
 #if USE_MPI

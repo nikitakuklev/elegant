@@ -420,7 +420,9 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       return;
 #endif
 
-  SDDS_table = &watch->SDDS_table;
+  if (!watch->SDDS_table)
+    watch->SDDS_table = tmalloc(sizeof(*(watch->SDDS_table)));
+  SDDS_table = watch->SDDS_table;
   filename = watch->filename;
   watch_mode = watch->mode_code;
 
@@ -601,7 +603,9 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
     bombElegant("When using HISTOGRAM in SPARSE mode, only one of LONGIT_DATA, X_DATA, or Y_DATA may be requested.", NULL);
   
   if (isMaster) {
-    SDDS_table = &histogram->SDDS_table;
+    if (!histogram->SDDS_table)
+      histogram->SDDS_table = tmalloc(sizeof(*(histogram->SDDS_table)));
+    SDDS_table = histogram->SDDS_table;
     filename = histogram->filename;
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "histograms of phase-space coordinates",
 			    command_file, lattice_file,
@@ -767,7 +771,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       abort();
     }
   }
-  if (!SDDS_StartTable(&watch->SDDS_table, particles)) {
+  if (!SDDS_StartTable(watch->SDDS_table, particles)) {
     SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -783,7 +787,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     count++;
     if (watch->fraction==1 || random_2(0)<watch->fraction) {
       if (watch->xData && 
-          !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+          !SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
                              watch->xIndex[0], particle[i][0], 
                              watch->excludeSlopes?-1:watch->xIndex[1], particle[i][1],
                              -1)) {
@@ -791,7 +795,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (watch->yData &&
-          !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+          !SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
                              watch->yIndex[0], particle[i][2], 
                              watch->excludeSlopes?-1:watch->yIndex[1], particle[i][3],
                              -1)) {
@@ -801,7 +805,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       if (watch->longitData) {
         p = Po*(1+particle[i][5]);
         t = particle[i][4]/(c_mks*p/sqrt(sqr(p)+1));
-        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+        if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
                                watch->longitIndex[0], t,
                                watch->longitIndex[1], p,
                                watch->longitIndex[2], t-t0,
@@ -810,7 +814,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
       }
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
+      if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
                              watch->IDIndex, (long)particle[i][6], -1)) {
         SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -830,7 +834,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   /* if (total_row)  */
 #endif
   memoryUsed = memoryUsage();
-  if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+  if (!SDDS_SetParameters(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, 
                           "Particles", count, 
                           "Charge", mp_charge*count,
@@ -853,24 +857,24 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   }
 
 #if SDDS_MPI_IO
-  if ((watch->useDisconnect) && (!SDDS_ReconnectFile(&watch->SDDS_table)))
+  if ((watch->useDisconnect) && (!SDDS_ReconnectFile(watch->SDDS_table)))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (total_row)
-  if (!SDDS_MPI_WriteTable(&watch->SDDS_table))
+  if (!SDDS_MPI_WriteTable(watch->SDDS_table))
 #else
-  if (SDDS_IsDisconnected(&(watch->SDDS_table)) &&  (!SDDS_ReconnectFile(&watch->SDDS_table)))
+  if (SDDS_IsDisconnected(watch->SDDS_table) &&  (!SDDS_ReconnectFile(watch->SDDS_table)))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (!SDDS_WriteTable(&watch->SDDS_table))
+  if (!SDDS_WriteTable(watch->SDDS_table))
 #endif
   {
     SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   } 
   if (!inhibitFileSync)
-    SDDS_DoFSync(&watch->SDDS_table);
-  if ((watch->useDisconnect) && (!SDDS_DisconnectFile(&watch->SDDS_table)))
+    SDDS_DoFSync(watch->SDDS_table);
+  if ((watch->useDisconnect) && (!SDDS_DisconnectFile(watch->SDDS_table)))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (!SDDS_ShortenTable(&watch->SDDS_table, 1))
+  if (!SDDS_ShortenTable(watch->SDDS_table, 1))
   {
     SDDS_SetError("Problem shortening SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -974,7 +978,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     sample = (pass-watchStartPass)/watch->interval;
 
     if (isMaster) 
-    if ((watchStartPass==pass) && !SDDS_StartTable(&watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
+    if ((watchStartPass==pass) && !SDDS_StartTable(watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -989,12 +993,12 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     accumulate_beam_sums(&sums, particle, particles, Po, mp_charge, NULL, 0.0, 0.0,
                          watch->startPID, watch->endPID, BEAM_SUMS_SPARSE|BEAM_SUMS_NOMINMAX);
     if (isMaster) {
-      if ((Cx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Cx"))<0) {
+      if ((Cx_index=SDDS_GetColumnIndex(watch->SDDS_table, "Cx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       for (i=0; i<6; i++) {
-        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+        if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
                                Cx_index+i, sums.centroid[i],
                                -1)) {
 	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
@@ -1014,21 +1018,21 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
         computeEmitTwissFromSigmaMatrix(emit+i, emitc+i, NULL, NULL, sums.sigma, i*2);
       }
       if (isMaster) {
-        if ((Sx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "Sx"))<0 ||
-            (ex_index=SDDS_GetColumnIndex(&watch->SDDS_table, "ex"))<0 ||
-            (ecx_index=SDDS_GetColumnIndex(&watch->SDDS_table, "ecx"))<0) {
+        if ((Sx_index=SDDS_GetColumnIndex(watch->SDDS_table, "Sx"))<0 ||
+            (ex_index=SDDS_GetColumnIndex(watch->SDDS_table, "ex"))<0 ||
+            (ecx_index=SDDS_GetColumnIndex(watch->SDDS_table, "ecx"))<0) {
 	  SDDS_SetError("Problem getting index of SDDS columns (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
         for (i=0; i<7; i++) {
-          if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+          if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
                                  Sx_index+i, sqrt(sums.sigma[i][i]),
                                  -1)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
         }
-        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
+        if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample, 
                                ex_index, emit[0], 
                                ex_index+1, emit[1],
                                ecx_index, emitc[0],
@@ -1053,7 +1057,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #endif
     if (isMaster) {
       if (watch->mode_code==WATCH_PARAMETERS)
-	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+	if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
 			       "el", emittance_l, NULL)) {
 	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1066,7 +1070,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #else
     emittance_l=rms_longitudinal_emittance(particle, particles, Po, watch->startPID, watch->endPID);
     if (watch->mode_code==WATCH_PARAMETERS)
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+      if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
 			     "el", emittance_l, NULL)) {
 	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1107,7 +1111,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       else
 	tc = 0;
       if (isMaster) {
-	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+	if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
 			       "Ct", tc, "dCt", tc-tc0,
 			       "pAverage", p_sum_total/particles_total, "pCentral", Po, 
 			       "KAverage", (gamma_sum_total/particles_total-1)*me_mev, NULL)) {
@@ -1122,7 +1126,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     else
       tc = 0;
  
-    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+    if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Ct", tc, "dCt", tc-tc0,
                            "pAverage", p_sum/npCount, "pCentral", Po, 
                            "KAverage", (gamma_sum/npCount-1)*particleMassMV, NULL)) {
@@ -1139,7 +1143,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     memoryUsed = memoryUsage();
     if (isMaster) {
       /* number of particles */
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,			     
+      if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,			     
 #if USE_MPI
 			     "Particles", npCount_total,
 			     "Transmission", (original_particles?((double)particles_total)/original_particles:(double)0.0),
@@ -1158,7 +1162,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+      if (!SDDS_SetParameters(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
 			      "Step", step, "s", z, NULL)) {
 	SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1167,18 +1171,18 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 
       if (sample==(n_passes-1)/watch->interval) {
 	if (watch->flushInterval>0) {
-	  if (sample!=watch->flushSample && !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
+	  if (sample!=watch->flushSample && !SDDS_UpdatePage(watch->SDDS_table, 0)) {
 	    SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	  }
 	}
-	else if (!SDDS_WriteTable(&watch->SDDS_table)) {
+	else if (!SDDS_WriteTable(watch->SDDS_table)) {
 	  SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	}
       } else {
       if (watch->flushInterval>0 && sample%watch->flushInterval==0 &&
-          !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
+          !SDDS_UpdatePage(watch->SDDS_table, 0)) {
         SDDS_SetError("Problem flushing data for SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -1188,7 +1192,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 	      MPE_Log_event(event1a, 0, "start watch"); /* record time spent on I/O operations */
 #endif
       if (!inhibitFileSync)
-	SDDS_DoFSync(&watch->SDDS_table);
+	SDDS_DoFSync(watch->SDDS_table);
 #ifdef  USE_MPE
 	      MPE_Log_event(event1b, 0, "end watch");
 #endif   
@@ -1231,7 +1235,7 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
             abort();
             }
 
-    if (pass==0 && !SDDS_StartTable(&watch->SDDS_table, 2*samples)) {
+    if (pass==0 && !SDDS_StartTable(watch->SDDS_table, 2*samples)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_FFT)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -1248,7 +1252,7 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
         sum_dp /= particles;
         }
     /* SDDS is used to store the centroid vs pass data prior to FFT */
-    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample_index,
+    if (!SDDS_SetRowValues(watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, sample_index,
                            0, ((double)sample_index)/samples, 1, sum_x, 2, sum_y, 3, sum_dp, -1)) {
         SDDS_SetError("Problem setting row values for SDDS table (dump_watch_FFT)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1256,37 +1260,37 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
 
     if (sample_index==samples-1) {
         /* sample/samples stored temporarily in frequency column: */
-        if (!(sample[0]=(double*)SDDS_GetColumn(&watch->SDDS_table, "f"))  || 
-            !(sample[1]=(double*)SDDS_GetColumn(&watch->SDDS_table, "Cx")) ||
-            !(sample[2]=(double*)SDDS_GetColumn(&watch->SDDS_table, "Cy")) ||
-            !(sample[3]=(double*)SDDS_GetColumn(&watch->SDDS_table, "Cdelta"))) {
+        if (!(sample[0]=(double*)SDDS_GetColumn(watch->SDDS_table, "f"))  || 
+            !(sample[1]=(double*)SDDS_GetColumn(watch->SDDS_table, "Cx")) ||
+            !(sample[2]=(double*)SDDS_GetColumn(watch->SDDS_table, "Cy")) ||
+            !(sample[3]=(double*)SDDS_GetColumn(watch->SDDS_table, "Cdelta"))) {
             SDDS_SetError("Problem retrieving sample values from SDDS table (dump_watch_FFT)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         do_watch_FFT(sample, samples, 1, watch->window_code);
         do_watch_FFT(sample, samples, 2, watch->window_code);
         do_watch_FFT(sample, samples, 3, watch->window_code);
-        if (!SDDS_EraseData(&watch->SDDS_table) ||
-            !SDDS_SetColumn(&watch->SDDS_table, SDDS_SET_BY_INDEX, sample[0], samples/2, 0) ||
-            !SDDS_SetColumn(&watch->SDDS_table, SDDS_SET_BY_INDEX, sample[1], samples/2, 1) ||
-            !SDDS_SetColumn(&watch->SDDS_table, SDDS_SET_BY_INDEX, sample[2], samples/2, 2) ||
-            !SDDS_SetColumn(&watch->SDDS_table, SDDS_SET_BY_INDEX, sample[3], samples/2, 3) ) {
+        if (!SDDS_EraseData(watch->SDDS_table) ||
+            !SDDS_SetColumn(watch->SDDS_table, SDDS_SET_BY_INDEX, sample[0], samples/2, 0) ||
+            !SDDS_SetColumn(watch->SDDS_table, SDDS_SET_BY_INDEX, sample[1], samples/2, 1) ||
+            !SDDS_SetColumn(watch->SDDS_table, SDDS_SET_BY_INDEX, sample[2], samples/2, 2) ||
+            !SDDS_SetColumn(watch->SDDS_table, SDDS_SET_BY_INDEX, sample[3], samples/2, 3) ) {
             SDDS_SetError("Problem setting columns of SDDS table (dump_watch_FFT)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         for (i=0; i<4; i++)
             free(sample[i]);
-        if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+        if (!SDDS_SetParameters(watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                 "Step", step, NULL)) {
             SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_FFT)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
-        if (!SDDS_WriteTable(&watch->SDDS_table)) {
+        if (!SDDS_WriteTable(watch->SDDS_table)) {
             SDDS_SetError("Problem writing data to SDDS file (dump_watch_FFT)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         if (!inhibitFileSync)
-          SDDS_DoFSync(&watch->SDDS_table);
+          SDDS_DoFSync(watch->SDDS_table);
         }
     log_exit("dump_watch_FFT");
     }
@@ -1386,7 +1390,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     }
   */
   if (isMaster) {
-    if (!SDDS_StartTable(&histogram->SDDS_table, histogram->bins)) {
+    if (!SDDS_StartTable(histogram->SDDS_table, histogram->bins)) {
       SDDS_SetError("Problem starting SDDS table (dump_particle_histogram)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -1491,16 +1495,16 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
         long row;
 	for (ibin=row=0; ibin<histogram->bins; ibin++) {
           if (frequency[ibin] && 
-              !SDDS_SetRowValues(&histogram->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
+              !SDDS_SetRowValues(histogram->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
                                  histogram->columnIndex[icoord][0], coordinate[ibin],
                                  histogram->columnIndex[icoord][1], frequency[ibin], -1)) {
             SDDS_Bomb("Problem setting row values (dump_particle_histogram)");
           }
         }
       } else {
-        if (!SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX, 
+        if (!SDDS_SetColumn(histogram->SDDS_table, SDDS_SET_BY_INDEX, 
                             coordinate, histogram->bins, histogram->columnIndex[icoord][0]) ||
-            !SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX,
+            !SDDS_SetColumn(histogram->SDDS_table, SDDS_SET_BY_INDEX,
                             frequency, histogram->bins, histogram->columnIndex[icoord][1])) {
           SDDS_Bomb("Problem setting column values (dump_particle_histogram)");
         }
@@ -1512,7 +1516,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   if (isMaster && nChosen_total)
 #endif
   {
-    if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+    if (!SDDS_SetParameters(histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
 			    "Step", step, "Pass", pass, "Particles", nChosen, "pCentral", Po,
 			    "PassLength", length, "Charge", charge,
 			    "PassCentralTime", t0, "s", z,
@@ -1520,12 +1524,12 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
       SDDS_SetError("Problem setting SDDS parameters (dump_particle_histogram)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-    if (!SDDS_WriteTable(&histogram->SDDS_table)) {
+    if (!SDDS_WriteTable(histogram->SDDS_table)) {
       SDDS_SetError("Problem writing SDDS table (dump_particle_histogram)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     } 
     if (!inhibitFileSync)
-      SDDS_DoFSync(&histogram->SDDS_table);
+      SDDS_DoFSync(histogram->SDDS_table);
   }
   histogram->count++;
 }

@@ -110,7 +110,7 @@ void track_through_trfmode(
 
   if (trfmode->fileInitialized && pass==0) {
     long n = n_passes/trfmode->sample_interval;
-    if (!SDDS_StartPage(&(trfmode->SDDSrec), n)) {
+    if (!SDDS_StartPage(trfmode->SDDSrec, n)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem startingn page for TRFMODE record file");
     }
@@ -495,19 +495,19 @@ void track_through_trfmode(
 #endif
       printf("Setting TRFMODE record data for pass=%ld\n", pass);
       if ((pass%trfmode->sample_interval)==0 && 
-          (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+          (!SDDS_SetRowValues(trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                               (pass/trfmode->sample_interval),
                               (char*)"Pass", pass, 
                               (char*)"t", trfmode->last_t,
                               (char*)"Vx", sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi)),
                               (char*)"Vy", sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi)),
                               NULL) ||
-           !SDDS_UpdatePage(&trfmode->SDDSrec, FLUSH_TABLE))) {
+           !SDDS_UpdatePage(trfmode->SDDSrec, FLUSH_TABLE))) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem setting up data for TRFMODE record file");
       }
       /*
-      if (pass==n_passes-1 && !SDDS_Terminate(&trfmode->SDDSrec)) {
+      if (pass==n_passes-1 && !SDDS_Terminate(trfmode->SDDSrec)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem writing data for TRFMODE record file");
       }
@@ -600,24 +600,28 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     long n = n_passes/trfmode->sample_interval;
     trfmode->record = compose_filename(trfmode->record, run->rootname);
     if (!trfmode->perParticleOutput && trfmode->binless) {
-      if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxRealMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyRealMax", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+      if (!trfmode->SDDSrec)
+        trfmode->SDDSrec = tmalloc(sizeof(*(trfmode->SDDSrec)));
+      if (!SDDS_InitializeOutput(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "VxMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "VxRealMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "VyMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "VyRealMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_WriteLayout(trfmode->SDDSrec)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       } 
     } else {
-      if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
-	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
-	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+      if (!trfmode->SDDSrec)
+        trfmode->SDDSrec = tmalloc(sizeof(*(trfmode->SDDSrec)));
+      if (!SDDS_InitializeOutput(trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
+	  !SDDS_WriteLayout(trfmode->SDDSrec)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	SDDS_Bomb("problem setting up TRFMODE record file");
       }
@@ -730,7 +734,7 @@ void runBinlessTrfMode(
   }
 
   if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
-    if (!SDDS_StartPage(&trfmode->SDDSrec, trfmode->perParticleOutput?np:1)) {
+    if (!SDDS_StartPage(trfmode->SDDSrec, trfmode->perParticleOutput?np:1)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem setting up TRFMODE record file");
     }
@@ -830,7 +834,7 @@ void runBinlessTrfMode(
 	if (VyRealMax<fabs(trfmode->Vyr))
 	  VyRealMax = fabs(trfmode->Vyr);
       } else {
-	if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+	if (!SDDS_SetRowValues(trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			       ip0, 
 			       "Pass", pass, "t", tData[ip0].t,
 			       "Vx", trfmode->Vx, "VxReal", trfmode->Vxr,
@@ -847,7 +851,7 @@ void runBinlessTrfMode(
 
   if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
     if (!trfmode->perParticleOutput) {
-      if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+      if (!SDDS_SetRowValues(trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			     0,
 			     "Pass", pass, "t", tData[0].t,
 			     "VxMax", VxMax, "VxRealMax", VxRealMax,
@@ -857,7 +861,7 @@ void runBinlessTrfMode(
 	SDDS_Bomb("problem setting up TRFMODE record data (2)");
       }
     }
-    if (!SDDS_WritePage(&trfmode->SDDSrec)) {
+    if (!SDDS_WritePage(trfmode->SDDSrec)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem writing TRFMODE record data");
     }

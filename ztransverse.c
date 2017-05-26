@@ -327,12 +327,12 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           factor = ztransverse->macroParticleCharge*particleRelSign/dt;
           if ((ztransverse->wake_interval<=0 || ((i_pass0-ztransverse->wake_start)%ztransverse->wake_interval)==0) &&
               i_pass0>=ztransverse->wake_start && i_pass0<=ztransverse->wake_end) {
-            if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
+            if (first && !SDDS_StartTable(ztransverse->SDDS_wake, nb)) {
               SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
             for (ib=0; ib<nb; ib++) {
-              if (!SDDS_SetRowValues(&ztransverse->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
+              if (!SDDS_SetRowValues(ztransverse->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
                                      0, ib*dt, 
                                      1+plane*2, posItime[plane][ib]*factor,  
                                      2+plane*2, Vtime[ib], -1)) {
@@ -340,13 +340,13 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
               }
             }
-            if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+            if (!SDDS_SetParameters(ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                     "Pass", i_pass0, "q", ztransverse->macroParticleCharge*particleRelSign*np, NULL)) {
               SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
             if (ztransverse->broad_band) {
-              if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+              if (!SDDS_SetParameters(ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                       "Rs", ztransverse->Rs, "fo", ztransverse->freq, 
                                       "Deltaf", ztransverse->bin_size, NULL)) {
                 SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
@@ -354,12 +354,12 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
               }
             }
             if (!first) {
-              if (!SDDS_WriteTable(&ztransverse->SDDS_wake)) {
+              if (!SDDS_WriteTable(ztransverse->SDDS_wake)) {
                 SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
               }
               if (!inhibitFileSync)
-                SDDS_DoFSync(&ztransverse->SDDS_wake);
+                SDDS_DoFSync(ztransverse->SDDS_wake);
             }
           }
         }
@@ -599,14 +599,15 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
   /* Only the serial version will dump this part of output */
   if (ztransverse->wakes) {
     ztransverse->wakes = compose_filename(ztransverse->wakes, run->rootname);
+    ztransverse->SDDS_wake = tmalloc(sizeof(*(ztransverse->SDDS_wake)));
     if (ztransverse->broad_band) 
-      SDDS_ElegantOutputSetup(&ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
+      SDDS_ElegantOutputSetup(ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
 			      1, "transverse wake",
 			      run->runfile, run->lattice, wake_parameter, BB_WAKE_PARAMETERS,
 			      wake_column, WAKE_COLUMNS, "set_up_ztransverse", 
 			      SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     else {
-      SDDS_ElegantOutputSetup(&ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
+      SDDS_ElegantOutputSetup(ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
 			      1, "transverse wake",
 			      run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
 			      wake_column, WAKE_COLUMNS, "set_up_ztransverse", 

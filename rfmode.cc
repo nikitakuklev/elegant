@@ -146,7 +146,7 @@ void track_through_rfmode(
 #if USE_MPI
       if (myid==0) {
 #endif
-      if (rfmode->record && !SDDS_StartPage(&rfmode->SDDSrec, rfmode->flush_interval)) {
+        if (rfmode->record && !SDDS_StartPage(rfmode->SDDSrec, rfmode->flush_interval)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE record file");
       }
@@ -154,7 +154,7 @@ void track_through_rfmode(
       }
       if (myid==1) {
 #endif
-      if (rfmode->driveFrequency>0 && rfmode->feedbackRecordFile && !SDDS_StartPage(&rfmode->SDDSfbrec, rfmode->flush_interval)) {
+      if (rfmode->driveFrequency>0 && rfmode->feedbackRecordFile && !SDDS_StartPage(rfmode->SDDSfbrec, rfmode->flush_interval)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem starting page for RFMODE feedback record file");
       }
@@ -532,12 +532,12 @@ void track_through_rfmode(
               if (myid==1) {
 #endif
                 if ((rfmode->fbSample+1)%rfmode->flush_interval==0) {
-                  if (!SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
+                  if (!SDDS_UpdatePage(rfmode->SDDSfbrec, FLUSH_TABLE)) {
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     SDDS_Bomb((char*)"problem flushing RFMODE feedback record file");
                   }
                 }
-                if (!SDDS_SetRowValues(&rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                if (!SDDS_SetRowValues(rfmode->SDDSfbrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                        rfmode->fbSample,
                                        (char*)"Pass", pass, (char*)"t", rfmode->fbLastTickTime,
                                        (char*)"fResonance", rfmode->freq,
@@ -553,7 +553,7 @@ void track_through_rfmode(
                 }
                 /*
                   if ((rfmode->fbSample%1000==0 || (pass==(n_passes-1) && iBucket==(nBuckets-1)))
-                  && !SDDS_UpdatePage(&rfmode->SDDSfbrec, FLUSH_TABLE)) {
+                  && !SDDS_UpdatePage(rfmode->SDDSfbrec, FLUSH_TABLE)) {
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                   printf("Warning: problem writing data for RFMODE feedback record file, row %ld\n", rfmode->fbSample);
                   }
@@ -900,7 +900,7 @@ void track_through_rfmode(
 #endif
         if ((pass%rfmode->sample_interval)==0) {
 #ifdef DEBUG
-          printf("sampling RFMODE output, pass=%ld, sample_counter=%ld, n_alloc=%ld\n", pass, rfmode->sample_counter, rfmode->SDDSrec.n_rows_allocated);
+          printf("sampling RFMODE output, pass=%ld, sample_counter=%ld, n_alloc=%ld\n", pass, rfmode->sample_counter, rfmode->SDDSrec->n_rows_allocated);
           fflush(stdout);
 #endif
 #if USE_MPI
@@ -911,7 +911,7 @@ void track_through_rfmode(
               printf("Preparing to flush table\n");
               fflush(stdout);
 #endif
-              if (!SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
+              if (!SDDS_UpdatePage(rfmode->SDDSrec, FLUSH_TABLE)) {
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                 SDDS_Bomb((char*)"problem flushing RFMODE record file");
               }
@@ -962,7 +962,7 @@ void track_through_rfmode(
             printf("Writing record file\n");
             fflush(stdout);
 #endif
-            if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+            if (!SDDS_SetRowValues(rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                    rfmode->sample_counter++,
                                    (char*)"Bunch", jBucket, (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
                                    (char*)"FractionBinned", np_total?(1.0*n_binned)/np_total:0.0,
@@ -975,7 +975,7 @@ void track_through_rfmode(
                                    (char*)"Charge", rfmode->mp_charge*np_total, 
                                    NULL)
                 || (rfmode->driveFrequency>0 &&
-                    !SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                    !SDDS_SetRowValues(rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                        rfmode->sample_counter-1,                
                                        (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
                                        (char*)"PhaseGenerator", n_summed?atan2(Vgi_sum/n_summed, Vgr_sum/n_summed):0.0,
@@ -986,7 +986,7 @@ void track_through_rfmode(
               printf("Warning: problem setting up data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }
             /*
-            if (rfmode->sample_counter%100==0 && !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+            if (rfmode->sample_counter%100==0 && !SDDS_UpdatePage(rfmode->SDDSrec, 0)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               printf("Warning: problem writing data for RFMODE record file, row %ld\n", rfmode->sample_counter);
             }
@@ -1032,7 +1032,7 @@ void track_through_rfmode(
         if (myid==0) {
 #endif
           if (pass==n_passes-1) {
-            if (!SDDS_UpdatePage(&rfmode->SDDSrec, FLUSH_TABLE)) {
+            if (!SDDS_UpdatePage(rfmode->SDDSrec, FLUSH_TABLE)) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
               SDDS_Bomb((char*)"problem writing data for RFMODE record file");
             }
@@ -1128,25 +1128,26 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 #if (USE_MPI)
       if (myid == 0) 
 #endif
-        if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
-            SDDS_DefineParameter(&rfmode->SDDSrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Bunch", NULL, NULL, (char*)"Bunch number", NULL, SDDS_LONG, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"NumberOccupied", NULL, NULL, (char*)"Number of bins that are occupied", NULL, SDDS_LONG, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"FractionBinned", NULL, NULL, (char*)"Fraction of particles that are binned", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"V", NULL, (char*)"V", (char*)"Beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VReal", NULL, (char*)"V", (char*)"Real part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Phase", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VPostBeam", NULL, (char*)"V", (char*)"Beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, (char*)"s", (char*)"Time at which VPostBeam and PhasePostBeam hold", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"Charge", NULL, (char*)"C", (char*)"Bunch charge", NULL, SDDS_DOUBLE, 0)<0 ||
+        if (!(rfmode->SDDSrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSrec)))) ||
+            !SDDS_InitializeOutput(rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
+            SDDS_DefineParameter(rfmode->SDDSrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Bunch", NULL, NULL, (char*)"Bunch number", NULL, SDDS_LONG, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"NumberOccupied", NULL, NULL, (char*)"Number of bins that are occupied", NULL, SDDS_LONG, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"FractionBinned", NULL, NULL, (char*)"Fraction of particles that are binned", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"V", NULL, (char*)"V", (char*)"Beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"VReal", NULL, (char*)"V", (char*)"Real part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Phase", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"VPostBeam", NULL, (char*)"V", (char*)"Beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, (char*)"rad", (char*)"Phase of beam-induced voltage after bunch passage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"tPostBeam", NULL, (char*)"s", (char*)"Time at which VPostBeam and PhasePostBeam hold", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Charge", NULL, (char*)"C", (char*)"Bunch charge", NULL, SDDS_DOUBLE, 0)<0 ||
             (rfmode->driveFrequency>0 &&
-             (SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VGenerator", NULL, (char*)"V", (char*)"Generator voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-              SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"PhaseGenerator", NULL, (char*)"rad", (char*)"Generator phase", NULL, SDDS_DOUBLE, 0)<0 ||
-              SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"VCavity", NULL, (char*)"V", (char*)"Net cavity voltage (if generator active)", NULL, SDDS_DOUBLE, 0)<0 ||
-              SDDS_DefineColumn(&rfmode->SDDSrec, (char*)"PhaseCavity", NULL, (char*)"V", (char*)"Phase of net cavity voltage (if generator active)", NULL, SDDS_DOUBLE, 0)<0)) ||
-            !SDDS_WriteLayout(&rfmode->SDDSrec)) {
+             (SDDS_DefineColumn(rfmode->SDDSrec, (char*)"VGenerator", NULL, (char*)"V", (char*)"Generator voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+              SDDS_DefineColumn(rfmode->SDDSrec, (char*)"PhaseGenerator", NULL, (char*)"rad", (char*)"Generator phase", NULL, SDDS_DOUBLE, 0)<0 ||
+              SDDS_DefineColumn(rfmode->SDDSrec, (char*)"VCavity", NULL, (char*)"V", (char*)"Net cavity voltage (if generator active)", NULL, SDDS_DOUBLE, 0)<0 ||
+              SDDS_DefineColumn(rfmode->SDDSrec, (char*)"PhaseCavity", NULL, (char*)"V", (char*)"Phase of net cavity voltage (if generator active)", NULL, SDDS_DOUBLE, 0)<0)) ||
+            !SDDS_WriteLayout(rfmode->SDDSrec)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem setting up RFMODE record file");
         }
@@ -1156,21 +1157,22 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 #if (USE_MPI)
       if (myid == 1) 
 #endif
-        if (!SDDS_InitializeOutput(&rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
-            SDDS_DefineParameter(&rfmode->SDDSfbrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"t", NULL, (char*)"s", (char*)"Time", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"fResonance", NULL, (char*)"Hz", (char*)"Cavity resonance frequency", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"fDrive", NULL, (char*)"Hz", (char*)"Rf drive frequency", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"VbReal", NULL, (char*)"V", (char*)"Real part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"VbImag", NULL, (char*)"V", (char*)"Imaginary part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"VgReal", NULL, (char*)"V", (char*)"Real part of generator-driven voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"VgImag", NULL, (char*)"V", (char*)"Imaginary part of generator-driven voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"VCavity", NULL, (char*)"V", (char*)"Magnitude of total cavity voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"PhaseCavity", NULL, (char*)"rad", (char*)"Phase of cavity voltage", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"IgAmplitude", NULL, (char*)"A", (char*)"Generator current amplitude", NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(&rfmode->SDDSfbrec, (char*)"IgPhase", NULL, (char*)"rad", (char*)"Generator phase", NULL, SDDS_DOUBLE, 0)<0 ||
-            !SDDS_WriteLayout(&rfmode->SDDSfbrec)) {
+        if (!(rfmode->SDDSfbrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSfbrec)))) ||
+            !SDDS_InitializeOutput(rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
+            SDDS_DefineParameter(rfmode->SDDSfbrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"t", NULL, (char*)"s", (char*)"Time", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"fResonance", NULL, (char*)"Hz", (char*)"Cavity resonance frequency", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"fDrive", NULL, (char*)"Hz", (char*)"Rf drive frequency", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"VbReal", NULL, (char*)"V", (char*)"Real part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"VbImag", NULL, (char*)"V", (char*)"Imaginary part of beam-induced voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"VgReal", NULL, (char*)"V", (char*)"Real part of generator-driven voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"VgImag", NULL, (char*)"V", (char*)"Imaginary part of generator-driven voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"VCavity", NULL, (char*)"V", (char*)"Magnitude of total cavity voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"PhaseCavity", NULL, (char*)"rad", (char*)"Phase of cavity voltage", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"IgAmplitude", NULL, (char*)"A", (char*)"Generator current amplitude", NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"IgPhase", NULL, (char*)"rad", (char*)"Generator phase", NULL, SDDS_DOUBLE, 0)<0 ||
+            !SDDS_WriteLayout(rfmode->SDDSfbrec)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem setting up RFMODE feedback record file");
         }
@@ -1516,12 +1518,12 @@ void runBinlessRfMode(
   }
 
   if (rfmode->record) {
-    if (pass==0 && !SDDS_StartPage(&rfmode->SDDSrec, rfmode->flush_interval)) {
+    if (pass==0 && !SDDS_StartPage(rfmode->SDDSrec, rfmode->flush_interval)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb((char*)"problem starting page for RFMODE record file");
     }
     if ((pass%rfmode->sample_interval)==0) {
-      if (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+      if (!SDDS_SetRowValues(rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                              (pass/rfmode->sample_interval),
                              (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
                              (char*)"FractionBinned", 1.0,
@@ -1531,17 +1533,21 @@ void runBinlessRfMode(
                              (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
                              (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
                              NULL) ||
-          !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+          !SDDS_UpdatePage(rfmode->SDDSrec, 0)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
       }
     }
-    if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+    if (pass==n_passes-1) {
+      free(rfmode->SDDSrec);
+      rfmode->SDDSrec = NULL;
+      if (!SDDS_Terminate(rfmode->SDDSrec)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb((char*)"problem writing data for RFMODE record file");
+      }
     }
   }
-  
+
 #if defined(MINIMIZE_MEMORY)
   free(tData);
   tData = NULL;

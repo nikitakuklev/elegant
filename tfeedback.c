@@ -16,7 +16,7 @@
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pass, double Po, long idSlotsPerBunch)
 {
-  double sum, position, output, offset;
+  double sum, position, output;
   long i, j;
   long np;
   double *time0 = NULL;           /* array to record arrival time of each particle */
@@ -246,7 +246,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   MPI_Status mpiStatus;
 #endif
 
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER\n");
 #endif
 
@@ -266,7 +266,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   else if (myid==1)
     MPI_Send(&nBuckets, 1, MPI_LONG, 0, 1, MPI_COMM_WORLD);
 #endif
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER: %ld bunches\n", nBuckets);
   fflush(stdout);
 #endif
@@ -329,7 +329,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
     rpass = (pass-tfbd->startPass)/updateInterval;
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
     printf("TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
 #endif
@@ -337,7 +337,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     tfbd->driverSignal[iBucket][rpass%(tfbd->delay+tfbd->filterLength)] = kick;
     
     if (rpass<tfbd->delay+tfbd->filterLength) {
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
       printf("TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
               pass, tfbd->delay);
       fflush(stdout);
@@ -354,7 +354,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
         kick += tfbd->a[i]*tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)];
       }
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
       printf("TFBDRIVER: kick = %le\n", kick);
       fflush(stdout);
 #endif
@@ -375,10 +375,11 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
             compute_average(&tAve, time0, np0);
 #endif
           } else {
-            long npTotal;
+#if USE_MPI
+            long npTotal = 0;
+#endif
             double tSum, error;
             error = tSum = 0;
-	    npTotal = 0;
             for (i=0; i<npBucket[iBucket]; i++)
               tSum = KahanPlus(tSum, time0[ipBucket[iBucket][i]], &error);
 #if USE_MPI
@@ -434,7 +435,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       }
     }
     
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
     printf("TFBDRIVER: preparing for output for bunch %ld\n", iBucket);
     fflush(stdout);
 #endif
@@ -448,7 +449,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           printf("Flushing output file\n");
           fflush(stdout);
 #endif
-          if (!SDDS_UpdatePage(&tfbd->SDDSout, FLUSH_TABLE)) {
+          if (!SDDS_UpdatePage(tfbd->SDDSout, FLUSH_TABLE)) {
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
             SDDS_Bomb("problem flushing data for TFBDRIVER output file");
           }
@@ -458,7 +459,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         printf("Preparing to set rows\n");
         fflush(stdout);
 #endif
-        if (!SDDS_SetRowValues(&tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+        if (!SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                tfbd->outputIndex++, "Bunch", iBucket, "Pass", pass,
                                "PickupOutput", tfbd->pickup->filterOutput[iBucket], 
                                "DriverOutput", kick, NULL)) {
@@ -468,13 +469,13 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         tfbd->dataWritten = 0;
       }
 
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
     printf("TFBDRIVER: end of loop for bunch %ld\n", iBucket);
     fflush(stdout);
 #endif
   }
   
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER: exited from loop over bunches\n");
   fflush(stdout);
 #endif
@@ -496,7 +497,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (npBucket)
     free(npBucket);
 
-#ifdef DEBUG || MPI_DEBUG
+#if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER: end of routine\n");
   fflush(stdout);
 #endif
@@ -510,7 +511,7 @@ void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
     return;
 #endif
   if (tfbd->initialized && !(tfbd->dataWritten)) {
-    if (!SDDS_WritePage(&tfbd->SDDSout)) {
+    if (!SDDS_WritePage(tfbd->SDDSout)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem writing data for TFBDRIVER output file (flushTransverseFeedbackDriverFiles)");
     }
@@ -557,12 +558,14 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
 #endif
   if (tfbd->outputFile) {
     tfbd->outputFile = compose_filename(tfbd->outputFile, rootname);
-    if (!SDDS_InitializeOutput(&tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
-        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
-        !SDDS_WriteLayout(&tfbd->SDDSout) || !SDDS_StartPage(&tfbd->SDDSout, tfbd->outputInterval)) {
+    if (!tfbd->SDDSout)
+      tfbd->SDDSout = tmalloc(sizeof(*(tfbd->SDDSout)));
+    if (!SDDS_InitializeOutput(tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
+        !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
     }

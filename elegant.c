@@ -1989,6 +1989,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
     fprintf(fp, "&parameter name=ElementType, type=string &end\n");
     fprintf(fp, "&parameter name=ParallelCapable, type=short &end\n");
     fprintf(fp, "&parameter name=GPUCapable, type=short &end\n");
+    fprintf(fp, "&parameter name=Size, type=long, units=bytes &end\n");
     fprintf(fp, "&column name=ParameterName, type=string &end\n");
     fprintf(fp, "&column name=Units, type=string &end\n");
     fprintf(fp, "&column name=Type, type=string &end\n");
@@ -2048,6 +2049,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&UNIPROCESSOR?0:1));
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&GPU_SUPPORT?1:0));
+      fprintf(fp, "%ld\n", entity_description[type].structure_size);
       fprintf(fp, "%ld\n", entity_description[type].n_params+1);
     }
     else 
@@ -2481,56 +2483,87 @@ void closeBeamlineOutputFiles(LINE_LIST *beamline)
     switch (eptr->type) {
     case T_WATCH:
       if (((WATCH*)(eptr->p_elem))->initialized) {
-        SDDS_Terminate(&(((WATCH*)(eptr->p_elem))->SDDS_table));
-        ((WATCH*)(eptr->p_elem))->initialized = 0;
+        SDDS_Terminate(((WATCH*)(eptr->p_elem))->SDDS_table);
+        free(((WATCH*)(eptr->p_elem))->SDDS_table);
       }
+      ((WATCH*)(eptr->p_elem))->initialized = 0;
+      ((WATCH*)(eptr->p_elem))->SDDS_table = NULL;
       break;
     case T_HISTOGRAM:
       if (((HISTOGRAM*)(eptr->p_elem))->initialized) {
-        SDDS_Terminate(&(((HISTOGRAM*)(eptr->p_elem))->SDDS_table));
-        ((HISTOGRAM*)(eptr->p_elem))->initialized = 0;
+        SDDS_Terminate(((HISTOGRAM*)(eptr->p_elem))->SDDS_table);
+        free(((HISTOGRAM*)(eptr->p_elem))->SDDS_table);
       }
+      ((HISTOGRAM*)(eptr->p_elem))->initialized = 0;
+      ((HISTOGRAM*)(eptr->p_elem))->SDDS_table = NULL;
       break;
     case T_CSRCSBEND:
       CsrCsBend = (CSRCSBEND*)(eptr->p_elem);
-      if (CsrCsBend->histogramFile) 
-        SDDS_Terminate(&(CsrCsBend->SDDSout));
-      if (CsrCsBend->particleOutputFile)
-        SDDS_Terminate(&(CsrCsBend->SDDSpart));
+      if (CsrCsBend->histogramFile && CsrCsBend->SDDSout) {
+        SDDS_Terminate(CsrCsBend->SDDSout);
+        free(CsrCsBend->SDDSout);
+      }
+      CsrCsBend->SDDSout = NULL;
+      if (CsrCsBend->particleOutputFile && CsrCsBend->SDDSpart) {
+        SDDS_Terminate(CsrCsBend->SDDSpart);
+        free(CsrCsBend->SDDSpart);
+      }
+      CsrCsBend->SDDSpart = NULL;
       break;
     case T_RFMODE:
-      if (((RFMODE*)(eptr->p_elem))->record && ((RFMODE*)(eptr->p_elem))->fileInitialized)
-        SDDS_Terminate(&(((RFMODE*)(eptr->p_elem))->SDDSrec));
+      if (((RFMODE*)(eptr->p_elem))->record && ((RFMODE*)(eptr->p_elem))->fileInitialized) {
+        SDDS_Terminate(((RFMODE*)(eptr->p_elem))->SDDSrec);
+        free(((RFMODE*)(eptr->p_elem))->SDDSrec);
+      }
+      ((RFMODE*)(eptr->p_elem))->SDDSrec = NULL;
       ((RFMODE*)(eptr->p_elem))->fileInitialized = 0;
       break;
     case T_FRFMODE:
-      if (((FRFMODE*)(eptr->p_elem))->outputFile && ((FRFMODE*)(eptr->p_elem))->initialized)
-        SDDS_Terminate(&(((FRFMODE*)(eptr->p_elem)))->SDDSout);
+      if (((FRFMODE*)(eptr->p_elem))->outputFile && ((FRFMODE*)(eptr->p_elem))->initialized) {
+        SDDS_Terminate(((FRFMODE*)(eptr->p_elem))->SDDSout);
+        free(((FRFMODE*)(eptr->p_elem))->SDDSout);
+      }
+      ((FRFMODE*)(eptr->p_elem))->SDDSout = NULL;
       ((FRFMODE*)(eptr->p_elem))->initialized = 0;
       break;
     case T_TRFMODE:
-      if (((TRFMODE*)(eptr->p_elem))->record && ((TRFMODE*)(eptr->p_elem))->fileInitialized)
-        SDDS_Terminate(&(((TRFMODE*)(eptr->p_elem))->SDDSrec));
+      if (((TRFMODE*)(eptr->p_elem))->record && ((TRFMODE*)(eptr->p_elem))->fileInitialized) {
+        SDDS_Terminate(((TRFMODE*)(eptr->p_elem))->SDDSrec);
+        free(((TRFMODE*)(eptr->p_elem))->SDDSrec);
+      }
+      ((TRFMODE*)(eptr->p_elem))->SDDSrec = NULL;
       ((TRFMODE*)(eptr->p_elem))->fileInitialized = 0;
       break;
     case T_FTRFMODE:
-      if (((FTRFMODE*)(eptr->p_elem))->outputFile && ((FTRFMODE*)(eptr->p_elem))->initialized)
-        SDDS_Terminate(&(((FTRFMODE*)(eptr->p_elem)))->SDDSout);
+      if (((FTRFMODE*)(eptr->p_elem))->outputFile && ((FTRFMODE*)(eptr->p_elem))->initialized) {
+        SDDS_Terminate(((FTRFMODE*)(eptr->p_elem))->SDDSout);
+        free(((FTRFMODE*)(eptr->p_elem))->SDDSout);
+      }
+      ((FTRFMODE*)(eptr->p_elem))->SDDSout = NULL;
       ((FTRFMODE*)(eptr->p_elem))->initialized = 0;
       break;
     case T_ZLONGIT:
-      if (((ZLONGIT*)(eptr->p_elem))->wakes && ((ZLONGIT*)(eptr->p_elem))->SDDS_wake_initialized)
-        SDDS_Terminate(&(((ZLONGIT*)(eptr->p_elem)))->SDDS_wake);
+      if (((ZLONGIT*)(eptr->p_elem))->wakes && ((ZLONGIT*)(eptr->p_elem))->SDDS_wake_initialized) {
+        SDDS_Terminate(((ZLONGIT*)(eptr->p_elem))->SDDS_wake);
+        free(((ZLONGIT*)(eptr->p_elem))->SDDS_wake);
+      }
+      ((ZLONGIT*)(eptr->p_elem))->SDDS_wake = NULL;
       ((ZLONGIT*)(eptr->p_elem))->SDDS_wake_initialized = 0;
       break;
     case T_ZTRANSVERSE:
-      if (((ZTRANSVERSE*)(eptr->p_elem))->wakes && ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake_initialized)
-        SDDS_Terminate(&(((ZTRANSVERSE*)(eptr->p_elem)))->SDDS_wake);
+      if (((ZTRANSVERSE*)(eptr->p_elem))->wakes && ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake_initialized) {
+        SDDS_Terminate(((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake);
+        free(((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake);
+      }
+      ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake = NULL;
       ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake_initialized = 0;      
       break;      
     case T_TFBDRIVER:
-      if (((TFBDRIVER*)(eptr->p_elem))->outputFile)
-	SDDS_Terminate(&(((TFBDRIVER*)(eptr->p_elem)))->SDDSout);
+      if (((TFBDRIVER*)(eptr->p_elem))->outputFile && (((TFBDRIVER*)(eptr->p_elem)))->SDDSout) {
+	SDDS_Terminate(((TFBDRIVER*)(eptr->p_elem))->SDDSout);
+        free(((TFBDRIVER*)(eptr->p_elem))->SDDSout);
+      }
+      ((TFBDRIVER*)(eptr->p_elem))->SDDSout = NULL;
       break;
     default:
       break;

@@ -68,7 +68,7 @@ void track_through_frfmode(
 #if (USE_MPI)
   if (myid == 1) { /* We let the first slave to dump the parameter */
 #endif
-    if (rfmode->outputFile && pass==0 && !SDDS_StartPage(&rfmode->SDDSout, n_passes))
+    if (rfmode->outputFile && pass==0 && !SDDS_StartPage(rfmode->SDDSout, n_passes))
       SDDS_Bomb("Problem starting page for FRFMODE output file");
 #if (USE_MPI)
   }
@@ -359,7 +359,7 @@ void track_through_frfmode(
           if (myid == 1) { /* We let the first slave to dump the parameter */
 #endif
             if (rfmode->outputFile && 
-                !SDDS_SetRowValues(&rfmode->SDDSout, 
+                !SDDS_SetRowValues(rfmode->SDDSout, 
                                    SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
                                    rfmode->modeIndex[imode], rfmode->V[imode], -1))
               SDDS_Bomb("Problem writing data to FRFMODE output file");
@@ -386,12 +386,12 @@ void track_through_frfmode(
 #if (USE_MPI)
         if (myid == 1) { /* We let the first slave to dump the parameter */
 #endif
-          if (!SDDS_SetRowValues(&rfmode->SDDSout, 
+          if (!SDDS_SetRowValues(rfmode->SDDSout, 
                                  SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
                                  "Pass", pass, NULL))
             SDDS_Bomb("Problem writing data to FRFMODE output file");
           if ((rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
-              !SDDS_UpdatePage(&rfmode->SDDSout, 0))
+              !SDDS_UpdatePage(rfmode->SDDSout, 0))
             SDDS_Bomb("Problem writing data to FRFMODE output file");
 #if USE_MPI
         }
@@ -580,9 +580,10 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     char *filename;
     getTrackingContext(&context);
     filename = compose_filename(rfmode->outputFile, context.rootname);
-    if (!SDDS_InitializeOutput(&rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, 
-                               filename) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
+    if (!(rfmode->SDDSout))
+      rfmode->SDDSout = tmalloc(sizeof(*(rfmode->SDDSout)));
+    if (!SDDS_InitializeOutput(rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+        !SDDS_DefineSimpleColumn(rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
       fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -595,14 +596,14 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       char s[100];
       sprintf(s, "VMode%03ld", imode);
       if ((rfmode->modeIndex[imode]
-           =SDDS_DefineColumn(&rfmode->SDDSout, s, NULL, "V", NULL, NULL, 
+           =SDDS_DefineColumn(rfmode->SDDSout, s, NULL, "V", NULL, NULL, 
                               SDDS_DOUBLE, 0))<0) {
         fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
       }
     }
-    if (!SDDS_WriteLayout(&rfmode->SDDSout)) {
+    if (!SDDS_WriteLayout(rfmode->SDDSout)) {
       fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);

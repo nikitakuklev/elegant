@@ -30,7 +30,7 @@ double radiationLength(long Z, double A, double rho);
 double solveBremsstrahlungCDF(double F);
 
 long track_through_matter(
-                          double **part, long np, MATTER *matter, double Po, double **accepted, double z0
+                          double **part, long np, long iPass, MATTER *matter, double Po, double **accepted, double z0
                           )
 {
   long ip;
@@ -61,7 +61,12 @@ long track_through_matter(
 
   if (particleIsElectron==0)
     bombElegant("MATTER element doesn't work for particles other than electrons", NULL);
-  
+
+  if ((matter->startPass>=0 && matter->startPass>iPass) || (matter->endPass>=0 && matter->endPass<iPass)) {
+    exactDrift(part, np, matter->length);
+    return np;
+  }
+
   if (matter->length!=0) {
     L = matter->length;
     impulseMode = 0;
