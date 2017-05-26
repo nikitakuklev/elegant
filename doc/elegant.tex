@@ -66,6 +66,10 @@ Historical change logs are appended to the end of this manual.
   The default behavior (exact square roots) is unchanged.
 \item The \verb|CSBEND| element now includes skew multipole errors. This involves newly-computed expressions for the
   fields in curvilinear coordinates, so slight numerical changes may be seen.
+\item Improvements were made to memory management for numerous elements, chiefly \verb|CSBEND|, \verb|CSRCSBEND|,
+  \verb|CWIGGLER|, \verb|FRFMODE|, \verb|FTRFMODE|, \verb|RFMODE|, \verb|SLICE|, \verb|TFBDRIVER|, \verb|TRFMODE|,
+  \verb|ZTRANSVERSE|, and \verb|ZLONGIT|. This can dramatically decrease memory usage in some cases.
+\item The \verb|MATTER| element now has start- and end-pass controls.
 \end{itemize}
 
 \subsection{New and Modified Commands}
