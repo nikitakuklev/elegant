@@ -576,11 +576,11 @@ void trackWithIonEffects
       double kx=0;
       double ky=0;
       for (ip=0; ip<np; ip++) {
-        /* Here, for illustration, just give a 1 urad x kick and a -0.5 urad y kick */
-
+        /*
 	coord[0] = part[ip][0];
 	coord[1] = part[ip][2];
-	gaussianBeamKick(coord, ionCentroid, ionSigma, kick, qIon, me_mks, 1);
+        */
+	gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 
 	
 	part[ip][1] += kick[0] / c_mks / Po; //1e-6;
