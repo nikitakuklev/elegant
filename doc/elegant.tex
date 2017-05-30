@@ -1865,8 +1865,12 @@ The proper use of this command can be confusing.  A typical sequence will be as 
     STRING mode = "many-particle";
     double xmin = -0.1;
     double xmax =  0.1;
+    double xpmin = 0.0;
+    double xpmax = 0.0;
     double ymin =  0.0;
     double ymax =  0.1;
+    double ypmin = 0.0;
+    double ypmax = 0.0;
     long nx  = 21;
     long ny  = 11;
     long n_splits = 0;
@@ -1914,8 +1918,12 @@ and ``eleven-line''.
 file for the boundary points of the aperture search.  Recommended value: ``\%s.bnd''.
 Valid for many- and single-particle modes.
 
-\item \verb|xmin|, \verb|xmax|, \verb|ymin|, \verb|ymax| --- Region of the aperture search.
-The minimum values are relevant only for many- and single-particle modes.
+\item \verb|xmin|, \verb|xmax|, \verb|ymin|, \verb|ymax| ---
+  Region of the aperture search, in spatial coordinates. The minimum values are relevant only for many- and single-particle modes.
+
+\item \verb|xpmin|, \verb|xpmax|, \verb|ypmin|, \verb|ypmax| ---
+  Region of the aperture search, in slope coordinates. The minimum values are relevant only for many- and single-particle modes.
+  Ignored unless \verb|xmin=xmax| and \verb|ymin=ymax|.
 
 \item \verb|nx| --- For many- and single-particle modes, the number of x values to take in initial search.
   For line modes, this determines the initial x and y step sizes via $\Delta x = x_{max}/n_x$ and
