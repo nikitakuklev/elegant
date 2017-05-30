@@ -846,7 +846,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     cudaFree(d_sigmaDelta2);
   }
 
-  if (csbend->photonOutputFile && !SDDS_UpdatePage(&csbend->SDDSphotons, FLUSH_TABLE))
+  if (csbend->photonOutputFile && !SDDS_UpdatePage(csbend->SDDSphotons, FLUSH_TABLE))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   
   return(n_part);
@@ -2006,21 +2006,22 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     /* set up SDDS output file for particle coordinates inside bend */
     csbend->particleFileActive = 1;
     csbend->particleOutputFile = compose_filename(csbend->particleOutputFile, rootname);
-    if (!SDDS_InitializeOutput(&csbend->SDDSpart, SDDS_BINARY, 1, 
+    csbend->SDDSpart = (SDDS_DATASET*)tmalloc(sizeof(*(csbend->SDDSpart)));
+    if (!SDDS_InitializeOutput(csbend->SDDSpart, SDDS_BINARY, 1, 
                                NULL, NULL, csbend->particleOutputFile) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Kick", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Angle", NULL, SDDS_DOUBLE) ||
-        (csbend->xIndex=SDDS_DefineColumn(&csbend->SDDSpart, "x", NULL, "m", 
+        !SDDS_DefineSimpleParameter(csbend->SDDSpart, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSpart, "Kick", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSpart, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSpart, "Angle", NULL, SDDS_DOUBLE) ||
+        (csbend->xIndex=SDDS_DefineColumn(csbend->SDDSpart, "x", NULL, "m", 
                                           NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
-        (csbend->xpIndex=SDDS_DefineColumn(&csbend->SDDSpart, "xp", NULL, NULL, 
+        (csbend->xpIndex=SDDS_DefineColumn(csbend->SDDSpart, "xp", NULL, NULL, 
                                            NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (csbend->tIndex=SDDS_DefineColumn(&csbend->SDDSpart, "t", NULL, "s", 
+        (csbend->tIndex=SDDS_DefineColumn(csbend->SDDSpart, "t", NULL, "s", 
                                           NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (csbend->pIndex=SDDS_DefineColumn(&csbend->SDDSpart, "p", NULL, "m$be$nc", 
+        (csbend->pIndex=SDDS_DefineColumn(csbend->SDDSpart, "p", NULL, "m$be$nc", 
                                           NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        !SDDS_WriteLayout(&csbend->SDDSpart)) {
+        !SDDS_WriteLayout(csbend->SDDSpart)) {
       SDDS_SetError((char*)"Problem setting up particle output file for CSR");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
@@ -2032,24 +2033,25 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     /* set up SDDS output file for CSR monitoring */
     csbend->wakeFileActive = 1;
     csbend->histogramFile = compose_filename(csbend->histogramFile, rootname);
-    if (!SDDS_InitializeOutput(&csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Kick", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Angle", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "SlippageLength", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "TotalBunchLength", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "BinSize", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "dsKick", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "DerbenevRatio", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "s", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGamma", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "GammaDeriv", "1/m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT1", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT2", NULL, SDDS_DOUBLE) ||
-        !SDDS_WriteLayout(&csbend->SDDSout)) {
+    csbend->SDDSout = (SDDS_DATASET*)tmalloc(sizeof(*(csbend->SDDSout)));
+     if (!SDDS_InitializeOutput(csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "Kick", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "Angle", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "SlippageLength", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "TotalBunchLength", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "BinSize", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "dsKick", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(csbend->SDDSout, "DerbenevRatio", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "s", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "DeltaGamma", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "GammaDeriv", "1/m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "DeltaGammaT1", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSout, "DeltaGammaT2", NULL, SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(csbend->SDDSout)) {
       SDDS_SetError((char*)"Problem setting up wake output file for CSR");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
@@ -2426,14 +2428,14 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
           printf ("GPUelegant does not support particle output with csbend_csr.");
       //  long ip;
       //  /* dump particle data at this location */
-      //  if (!SDDS_StartPage(&csbend->SDDSpart, n_part) ||
-      //      !SDDS_SetParameters(&csbend->SDDSpart, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+      //  if (!SDDS_StartPage(csbend->SDDSpart, n_part) ||
+      //      !SDDS_SetParameters(csbend->SDDSpart, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
       //                          "Pass", -1, "Kick", kick, "pCentral", Po, "Angle", phiBend, 
       //                          NULL))
       //    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       //  convertFromCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
       //  for (ip=0; ip<n_part; ip++) {
-      //    if (!SDDS_SetRowValues(&csbend->SDDSpart, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+      //    if (!SDDS_SetRowValues(csbend->SDDSpart, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
       //                           ip, 
       //                           csbend->xIndex, part[ip][0],
       //                           csbend->xpIndex, part[ip][1],
@@ -2443,10 +2445,10 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
       //      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       //  }
       //  convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
-      //  if (!SDDS_WritePage(&csbend->SDDSpart))
+      //  if (!SDDS_WritePage(csbend->SDDSpart))
       //    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       //  if (!inhibitFileSync)
-      //    SDDS_DoFSync(&csbend->SDDSpart);
+      //    SDDS_DoFSync(csbend->SDDSpart);
 	}
       }
 
@@ -2484,13 +2486,13 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
         }
  
 	if (isMaster) {
-        if (!SDDS_StartPage(&csbend->SDDSout, nBins) ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "DeltaGammaT2") ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
-            !SDDS_SetParameters(&csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+        if (!SDDS_StartPage(csbend->SDDSout, nBins) ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "DeltaGammaT2") ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
+            !SDDS_SetParameters(csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                 "Pass", -1, "Kick", kick, "dsKick", csbend->length/csbend->n_kicks,
                                 "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
                                 "TotalBunchLength", ctUpper-ctLower,
@@ -2509,12 +2511,12 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
           T2[iBin] = dGamma[iBin]/(csbend->length/csbend->n_kicks);
         }
 	if (isMaster){
-        if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
-            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
-            !SDDS_WritePage(&csbend->SDDSout))
+        if (!SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
+            !SDDS_SetColumn(csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
+            !SDDS_WritePage(csbend->SDDSout))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         if (!inhibitFileSync)
-          SDDS_DoFSync(&csbend->SDDSout);
+          SDDS_DoFSync(csbend->SDDSout);
       }
     }
   }
@@ -2707,31 +2709,32 @@ void gpu_setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
   getTrackingContext(&tc);
   if (!csbend->photonFileActive) {
     csbend->photonOutputFile = compose_filename(csbend->photonOutputFile, rootname);
-    if (!SDDS_InitializeOutput(&csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, tc.elementName) ||
-        0>SDDS_DefineParameter(&csbend->SDDSphotons, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "y", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSphotons, "yp", "", SDDS_FLOAT) ||
-        !SDDS_WriteLayout(&csbend->SDDSphotons)) {
+    csbend->SDDSphotons = (SDDS_DATASET*)tmalloc(sizeof(SDDS_DATASET));
+    if (!SDDS_InitializeOutput(csbend->SDDSphotons, SDDS_BINARY, 1, NULL, NULL, csbend->photonOutputFile) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "Particles", NULL, NULL, "Number of charged particles", NULL, SDDS_LONG, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "LowEnergyCutoff", NULL, "eV", "Minimum photon energy included in output", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, tc.elementName) ||
+        0>SDDS_DefineParameter(csbend->SDDSphotons, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, NULL) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "Ep", "eV", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "x", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "xp", "", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "y", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(csbend->SDDSphotons, "yp", "", SDDS_FLOAT) ||
+        !SDDS_WriteLayout(csbend->SDDSphotons)) {
       SDDS_SetError((char*)"Problem setting up photon output file for CSBEND");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     csbend->photonFileActive = 1;
   }
-  if (!SDDS_StartPage(&csbend->SDDSphotons, 10000) || 
-      !SDDS_SetParameters(&csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
+  if (!SDDS_StartPage(csbend->SDDSphotons, 10000) || 
+      !SDDS_SetParameters(csbend->SDDSphotons, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", np, "Step", tc.step,
                           "LowEnergyCutoff", photonLowEnergyCutoff, "ElementName", tc.elementName, "ElementOccurence", tc.elementOccurrence, NULL)) {
     SDDS_SetError((char*)"Problem setting up photon output file for CSBEND");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   photonRows = 0;
-  SDDSphotons = &csbend->SDDSphotons;
+  SDDSphotons = csbend->SDDSphotons;
 }
 
 void gpu_logPhoton(double Ep, double x, double xp, double y, double yp, double thetar, double thetaf, double rho)

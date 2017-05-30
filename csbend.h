@@ -11,6 +11,7 @@ extern "C" {
 extern long negativeWarningsLeft;
 extern long dipoleFringeWarning;
 extern long expansionOrder1;  /* order of expansion+1 */
+extern long hasSkew, hasNormal;
 extern double rho0, rho_actual, rad_coef, isrConstant;
 extern double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
 extern long distributionBasedRadiation, includeOpeningAngle;

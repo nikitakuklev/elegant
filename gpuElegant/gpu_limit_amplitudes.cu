@@ -616,7 +616,7 @@ public:
     if ((do_x && do_x*(part[0]-dx)>limit) ||
         (do_y && do_y*(part[2]-dy)>limit)) {
       /* scatter and/or absorb energy */
-      //if (!track_through_matter(&part, 1, &matter, Po, NULL, z))
+      //if (!track_through_matter(&part, 1, 0, &matter, Po, NULL, z))
       if (!gpu_track_through_matter_dfunc(part, energyDecay,
              nuclearBremsstrahlung, energyStraggle, nSlots, spacing,
              width, tilt, center, multipleScattering,
@@ -732,6 +732,7 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
     matter.pLimit = scraper->pLimit;
     matter.width = matter.spacing = matter.tilt = matter.center = 0;
     matter.nSlots = 0;
+    matter.startPass = matter.endPass = -1;
     
     /* setup matter variables */
     double L, Nrad, theta_rms=0;

@@ -8,6 +8,7 @@
 #include <gpu_particle_template_function.hcu>
 #include <gpu_matter.hcu> // device code shared with scraper in limit_amplitudes
 #include <gpu_base.h>
+#include <gpu_csbend.h>
 
 #define AMU (1.6605e-27)
 #define ALPHA (1./137.036)
@@ -122,7 +123,7 @@ void gpu_set_track_through_matter(long np, MATTER *matter, double Po,
   }
 }
 
-long gpu_track_through_matter(long np, MATTER *matter, double Po, 
+long gpu_track_through_matter(long np, long iPass, MATTER *matter, double Po, 
                               double **accepted, double z0)
 {
   double L, Nrad, theta_rms=0;
@@ -134,6 +135,12 @@ long gpu_track_through_matter(long np, MATTER *matter, double Po,
   
   log_entry("track_through_matter");
   
+
+  if ((matter->startPass>=0 && matter->startPass>iPass) || (matter->endPass>=0 && matter->endPass<iPass)) {
+    gpu_exactDrift(np, matter->length);
+    return np;
+  }
+
   if (matter->length!=0) {
     L = matter->length;
     impulseMode = 0;
