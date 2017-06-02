@@ -585,7 +585,15 @@ void trackWithIonEffects
       fclose(fion);
     }
 
-
+  if (time0) 
+    free(time0);
+  if (ibParticle) 
+    free(ibParticle);
+  if (ipBunch)
+    free_czarray_2d((void**)ipBunch, nBunches, np0);
+  if (npBunch)
+    free(npBunch);
+    
   } /* End of branch restricting execution to worker nodes */
 }
 
