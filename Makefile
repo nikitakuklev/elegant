@@ -260,6 +260,11 @@ sliceAnalysis$(OBJ): sliceAnalysis.h
 sliceAnalysis.h: ../sliceAnalysis.nl
 	nlpp -suppressSummaryVariables ../sliceAnalysis.nl sliceAnalysis.h
 
+gasScattering$(OBJ): gasScattering.h
+
+gasScattering.h: ../gasScattering.nl
+	nlpp -suppressSummaryVariables ../gasScattering.nl gasScattering.h
+
 steer_elem$(OBJ): steer_elem.h
 
 steer_elem.h: ../steer_elem.nl

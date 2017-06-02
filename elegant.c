@@ -81,13 +81,13 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 33.1Beta4, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 33.1Beta5, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #elif HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is gpu-elegant 33.1Beta4 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 33.1Beta5 ALPHA RELEASE, "__DATE__", by M. Borland, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
-  char *GREETING="This is elegant 33.1Beta4, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 33.1Beta5, "__DATE__", by M. Borland, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   time_t timeNow;
   char *timeNowString;
@@ -168,7 +168,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define CHAOS_MAP  63
 #define TUNE_FOOTPRINT 64
 #define ION_EFFECTS 65
-#define N_COMMANDS      66
+#define GAS_SCATTERING 66
+#define N_COMMANDS      67
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -183,7 +184,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint", "ion_effects",
+    "tune_footprint", "ion_effects", "gas_scattering",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -253,6 +254,7 @@ char *description[N_COMMANDS] = {
     "chaos_map                        command to perform chaos map analysis",
     "tune_footprint                   command to perform tune footprint tracking",
     "ion_effects                      command to set up modeling of ion effects"
+    "gas_scattering                   determine x', y' aperture from tracking as a function of position in the ring",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1379,6 +1381,7 @@ char **argv;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
+    case GAS_SCATTERING:
     case CHAOS_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
@@ -1390,6 +1393,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
+        break;
+      case GAS_SCATTERING:
+        setupGasScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
         break;
       case CHAOS_MAP:
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
@@ -1505,6 +1511,10 @@ char **argv;
           doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
                                    (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
+        case GAS_SCATTERING:
+          runGasScattering(&run_conditions, &run_control, &error_control, beamline, 
+                           (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
+          break;
         case CHAOS_MAP:
           doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
           break;
@@ -1524,6 +1534,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
         finishMomentumApertureSearch();
+        break;
+      case GAS_SCATTERING:
+        finishGasScattering();
         break;
       case CHAOS_MAP:
         finishChaosMap();
@@ -1555,6 +1568,9 @@ char **argv;
         break;
       case MOMENTUM_APERTURE:
 	printf("Finished momentum aperture search.\n");
+        break;
+      case GAS_SCATTERING:
+	printf("Finished gas scattering.\n");
         break;
       case CHAOS_MAP:
 	printf("Finished chaos map analysis.\n");
