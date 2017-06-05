@@ -1011,6 +1011,7 @@ long multiparticleLocalMomentumAcceptance(
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* gather lost particle data to master */
+  nLeft = 0;
   gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
   printf("Lost-particle gather done\n"); fflush(stdout);
 
