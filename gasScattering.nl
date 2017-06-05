@@ -6,7 +6,6 @@
 #include "namelist.h"
 
 #namelist gas_scattering static
-    STRING aperture_contour = NULL;
     STRING output = NULL;
     double xpmin = -0.01;
     double xpmax = 0.01;

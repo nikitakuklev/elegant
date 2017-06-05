@@ -34,11 +34,6 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
 {
   long ix, iy, id, ie, ip, particleID;
   MALIGN mal;
-#ifdef DEBUG
-  if (i_elem==0)
-    fprintf(fpd, "processor %d has %ld particles on pass %ld\n",
-            myid, np, pass);
-#endif
   if (pass==fireOnPass) {
     for (ie=0; ie<nElements; ie++) {
       if (eptr==elementArray[ie])
@@ -51,16 +46,10 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
     mal.startPID = mal.endPID = -1;
     for (ip=0; ip<np; ip++) {
       if ((particleID = coord[ip][6])<0) {
-#ifdef DEBUG
-        fprintf(fpd, "particleID = %ld, excluded\n", particleID);
-#endif
         continue;
       }
       id = particleID%(nx*ny);
       if ((particleID-id)/(nx*ny)!=ie) {
-#ifdef DEBUG
-        fprintf(fpd, "ie = %ld, computed ie is %ld, excluded\n", ie, (particleID-id)/nDelta);
-#endif
         continue;
       }
       if (id>nx*ny)
@@ -74,18 +63,7 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
         mal.dyp *= sqrt(betay0/elementArray[ie]->twiss->betay);
       }
       offset_beam(coord+ip, 1, &mal, *pCentral);
-#ifdef DEBUG
-      if (fpd)
-        fprintf(fpd, "Imparted error (%le, %le) to particle %ld (ie=%ld, pId=%ld) on processor %d\n", 
-                mal.xp, mal.yp, ip, ie, (long)coord[ip][6], myid);
-#endif
     }
-#ifdef DEBUG
-    if (fpd) {
-      fprintf(fpd, "Slope kick done on processor %d\n", myid);
-      fflush(fpd);
-    }
-#endif
   }
 }
 #endif
