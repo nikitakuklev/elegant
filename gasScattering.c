@@ -125,8 +125,8 @@ void setupGasScattering(
         (isOrig=SDDS_DefineColumn(&SDDSsa, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixpOrig=SDDS_DefineColumn(&SDDSsa, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iypOrig=SDDS_DefineColumn(&SDDSsa, "yp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (iupOrig=SDDS_DefineColumn(&SDDSsa, "up", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (ivpOrig=SDDS_DefineColumn(&SDDSsa, "vp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (iupOrig=SDDS_DefineColumn(&SDDSsa, "up", NULL, "m$a1/2$n", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (ivpOrig=SDDS_DefineColumn(&SDDSsa, "vp", NULL, "m$a1/2$n", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixLost=SDDS_DefineColumn(&SDDSsa, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iyLost=SDDS_DefineColumn(&SDDSsa, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ideltaLost=SDDS_DefineColumn(&SDDSsa, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -386,6 +386,12 @@ long runGasScattering(
                              (ix*(xpmax-xpmin)/(nx-1.0) + xpmin)*(twiss_scaling?sqrt(betax0/elementArray[ie]->twiss->betax):1),
                              iypOrig,
                              (iy*(ypmax-ypmin)/(ny-1.0) + ypmin)*(twiss_scaling?sqrt(betay0/elementArray[ie]->twiss->betay):1),
+                             iupOrig, 
+                             (ix*(xpmax-xpmin)/(nx-1.0) + xpmin)*(twiss_scaling?sqrt(betax0/elementArray[ie]->twiss->betax):1)
+                             *sqrt(elementArray[ie]->twiss->betax),
+                             ivpOrig,
+                             (iy*(ypmax-ypmin)/(ny-1.0) + ypmin)*(twiss_scaling?sqrt(betay0/elementArray[ie]->twiss->betay):1)
+                             *sqrt(elementArray[ie]->twiss->betay),
                              ixLost, lostParticles[ip][0],
                              iyLost, lostParticles[ip][2],
                              ideltaLost, lostParticles[ip][5],
