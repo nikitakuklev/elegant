@@ -2356,6 +2356,8 @@ PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"A28", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[28]), NULL, 0.0, 0, "Filter coefficient"},
    {"A29", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[29]), NULL, 0.0, 0, "Filter coefficient"},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.updateInterval), NULL, 0.0, 0, "Interval in turns for sampling data and updating filter output."},
+   {"START_PASS", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to perform computations."},
+   {"END_PASS", "", IS_LONG, 0, (long)((char*)&tfbPickup_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to perform computations."},
    {"REFERENCE_FREQUENCY", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.referenceFrequency), NULL, 0.0, 0, "Reference frequency for computing phase offsets."},
    {"DX", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.dx), NULL, 0.0, 0, "Horizontal offset (subtracted from pickup signal)."},
    {"DY", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.dy), NULL, 0.0, 0, "Vertical offset (subtracted from pickup signal)"},
@@ -2404,6 +2406,8 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"A29", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[29]), NULL, 0.0, 0, "Filter coefficient"},
    {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.updateInterval), NULL, 0.0, 0, "Interval in units of pickup update interval for sampling pickup data and updating filter output."},
    {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.outputInterval), NULL, 0.0, 1024, "Number of samples to buffer between writing output file updates."},
+   {"START_PASS", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.startPass), NULL, 0.0, -1, "If positive, first pass on which to drive beam."},
+   {"END_PASS", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.endPass), NULL, 0.0, -1, "If positive, last pass on which to drive beam."},
    {"LONGITUDINAL", "", IS_SHORT, 0, (long)((char*)&tfbDriver_example.longitudinal), NULL, 0.0, 0, "If non-zero, kick is in the longituidinal plane. KICK_LIMIT is in fractional momentum deviation."},
    {"BUNCHED_BEAM_MODE", "", IS_SHORT, 0, (long)((char*)&tfbDriver_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, run in bunched beam mode."},
 } ;

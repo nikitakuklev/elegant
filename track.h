@@ -991,8 +991,8 @@ extern char *entity_text[N_TYPES];
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+9)
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
-#define N_TFBPICKUP_PARAMS 38
-#define N_TFBDRIVER_PARAMS 41
+#define N_TFBPICKUP_PARAMS 40
+#define N_TFBDRIVER_PARAMS 43
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 25
@@ -2984,13 +2984,13 @@ extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
 typedef struct {
   char *ID, *plane;
   double rmsNoise, a[TFB_FILTER_LENGTH];
-  long updateInterval;
+  long updateInterval, startPass, endPass;
   double referenceFrequency;
   double dx, dy;
   short bunchedBeamMode;
   /* internal parameters */
   short initialized, iPlane;
-  long filterLength, startPass;
+  long filterLength, pass0;
   double *filterOutput;
   double tReference;
   long nBunches, tReferenceSet;
@@ -3007,11 +3007,12 @@ typedef struct {
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
   long updateInterval, outputInterval;
+  long startPass, endPass;
   short longitudinal;
   short bunchedBeamMode; 
   /* internal parameters */
   short initialized;
-  long filterLength, dataWritten, outputIndex, startPass;
+  long filterLength, dataWritten, outputIndex, pass0;
   TFBPICKUP *pickup;
   SDDS_DATASET *SDDSout;
   long nBunches;

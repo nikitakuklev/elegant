@@ -40,6 +40,9 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
     return;
 #endif
 
+  if ((tfbp->startPass>0 && pass<tfbp->startPass) || (tfbp->endPass>0 && pass>tfbp->endPass))
+    return;
+
   if (tfbp->initialized==0)
     initializeTransverseFeedbackPickup(tfbp);
 
@@ -84,7 +87,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
         bombElegant("Memory allocation problem for TFBPICKUP", NULL);
       tfbp->filterOutput[i] = 0;
     }
-    tfbp->startPass = pass;
+    tfbp->pass0 = pass;
   }
   
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
@@ -157,10 +160,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
             position, pass%tfbp->filterLength, iBucket);
 #endif
     tfbp->data[iBucket][pass%tfbp->filterLength] = position;
-    if ((pass-tfbp->startPass)<tfbp->filterLength) {
+    if ((pass-tfbp->pass0)<tfbp->filterLength) {
       tfbp->filterOutput[iBucket] = 0;
     } else {
-      j = (pass-tfbp->startPass)/tfbp->updateInterval;
+      j = (pass-tfbp->pass0)/tfbp->updateInterval;
       for (i=output=0; i<tfbp->filterLength; i++, j--) {
         output += tfbp->a[i]*tfbp->data[iBucket][j%tfbp->filterLength];
       }
@@ -256,6 +259,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     return;
 #endif
 
+  if ((tfbd->startPass>0 && pass<tfbd->startPass) || (tfbd->endPass>0 && pass>tfbd->endPass))
+    return;
+
   if (isSlave || !notSinglePart) 
     determine_bucket_assignments(part0, np0, tfbd->bunchedBeamMode?idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBucket, &npBucket, &nBuckets, -1);
 
@@ -279,6 +285,13 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   
   if ((tfbd->pickup->iPlane==5 || tfbd->pickup->iPlane==4) && !tfbd->longitudinal)
     bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta or time, but driver not working on longitudinal plane", NULL);
+
+  if (tfbd->startPass>0 && tfbd->startPass!=tfbd->pickup->startPass)
+    bombElegantVA("TFBDRIVER linked to TFBPICKUP with different START_PASS value (%ld vs %ld).", 
+		  tfbd->startPass, tfbd->pickup->startPass);
+  if (tfbd->endPass>0 && tfbd->endPass!=tfbd->pickup->endPass)
+    bombElegantVA("TFBDRIVER linked to TFBPICKUP with different END_PASS value (%ld vs %ld).", 
+		  tfbd->endPass, tfbd->pickup->endPass);
 
   if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
     bombElegantVA("TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
@@ -313,7 +326,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
       tfbd->driverSignal[iBucket] = calloc((tfbd->delay+1+TFB_FILTER_LENGTH), sizeof(**tfbd->driverSignal));
     }
-    tfbd->startPass = pass;
+    tfbd->pass0 = pass;
   } 
 
   if (tfbd->nBunches!=tfbd->pickup->nBunches)
@@ -328,7 +341,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     kick = tfbd->pickup->filterOutput[iBucket]*tfbd->strength;
-    rpass = (pass-tfbd->startPass)/updateInterval;
+    rpass = (pass-tfbd->pass0)/updateInterval;
 #if defined(DEBUG) || MPI_DEBUG
     printf("TFBDRIVER: pass %ld\nstoring kick %e in slot %ld based on filter output of %e\n",
             pass, kick, rpass%(tfbd->delay+tfbd->filterLength), tfbd->pickup->filterOutput[iBucket]);
