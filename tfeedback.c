@@ -212,10 +212,11 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
     tfbp->iPlane = 2;
   else if (strcmp(tfbp->plane, "delta")==0 || strcmp(tfbp->plane, "DELTA")==0) 
     tfbp->iPlane = 5;
-  else if (strcmp(tfbp->plane, "time")==0 || strcmp(tfbp->plane, "TIME")==0) {
+  else if (strcmp(tfbp->plane, "time")==0 || strcmp(tfbp->plane, "TIME")==0 ||
+	   strcmp(tfbp->plane, "phase")==0 || strcmp(tfbp->plane, "PHASE")==0) {
     tfbp->iPlane = 4;
     if (tfbp->referenceFrequency<=0)
-      bombElegant("PLANE parameter set to \"time\", but REFERENCE_FREQUENCY is non-positive", NULL);
+      bombElegant("PLANE parameter set to \"time\" or \"phase\", but REFERENCE_FREQUENCY is non-positive", NULL);
   }
   else
     bombElegant("PLANE parameter for TFBPICKUP must be x, y, delta, or time", NULL);
