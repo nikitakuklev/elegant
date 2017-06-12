@@ -64,12 +64,13 @@ Historical change logs are appended to the end of this manual.
 \item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
   \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
   The default behavior (exact square roots) is unchanged.
-\item The \verb|CSBEND| element now includes skew multipole errors. This involves newly-computed expressions for the
+\item The \verb|CSBEND| element now includes skew multipole errors up to eighth order. This involves newly-computed expressions for the
   fields in curvilinear coordinates, so slight numerical changes may be seen.
 \item Improvements were made to memory management for numerous elements, chiefly \verb|CSBEND|, \verb|CSRCSBEND|,
   \verb|CWIGGLER|, \verb|FRFMODE|, \verb|FTRFMODE|, \verb|RFMODE|, \verb|SLICE|, \verb|TFBDRIVER|, \verb|TRFMODE|,
   \verb|ZTRANSVERSE|, and \verb|ZLONGIT|. This can dramatically decrease memory usage in some cases.
 \item The \verb|MATTER| element now has start- and end-pass controls.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements (used for turn-by-turn feedback) now have start- and end-pass controls.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -101,7 +102,9 @@ Users are encouraged to test results against the serial or parallel versions.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item \verb|touschekLifetime| can now use data from the \verb|SLICE| element in {\tt elegant} for slice-based lifetime computations.
+\item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
+  improves the appearance of plots and is needed for certain types of analysis.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5156,6 +5159,9 @@ up-to-date than these manual pages.
   It analyzes data for many harmonics and produces a single curve that shows the envelope of maximum
   brightness or flux over all harmonics.
   (Program by M. Borland.)
+\item {\tt removeBackDrifts} --- Allows post-processing s-dependent files to remove negative drifts, which
+  improves the appearance of plots and is needed for certain types of analysis.
+  (Program by M. Borland.)
 \item {\tt sddsanalyzebeam} --- Analyzes a beam of macro-particles and produces an SDDS file
         containing beam moments, emittances, equivalent beta functions, etc.  The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
@@ -6607,7 +6613,7 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 touschekLifetime {\em outputFile}
- -twiss={\em twissFile} -aperture={\em momentumApertureFile} [-beam={\em beamProfile}] 
+ -twiss={\em twissFile} -aperture={\em momentumApertureFile} [-beam={\em beamProfile} | -sliceAnalysis={\em filename}] 
  {-charge={\em nC}|-particles={\em value}} \{-coupling={\em value}|-emityInput={\em value}\}
  {-RF=Voltage={\em MV},harmonic={\em value}[,limit] | -length={\em mm}} 
  [-emitInput={\em valueInMeters}] [-deltaInput={\em value}] [-verbosity={\em value}]
@@ -6631,6 +6637,10 @@ yield incorrect results.
   this option is given, other input beam parameters are ignored. You
   can use this option to compute touschek lifetime for a non-Gaussian
   longitudinally distributed bunch.
+\item {\tt -sliceAnalysis} --- Give slice analysis file from the \verb|SLICE| element in \verb|elegant|.
+ If this option is given, other input beam parameters are ignored. You
+ can use this option to compute touschek lifetime for a non-Gaussian
+ longitudinally distributed bunch.
 \item {\tt -charge}, {\tt -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
 \item {\tt -emitInput} --- Give the initial total emittance in meters (if {\tt -coupling} is used) or
