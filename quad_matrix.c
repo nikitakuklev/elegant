@@ -402,21 +402,27 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
 	  for (j=0; j<6; j++) {
 	    if (j==2 || j==3) continue;
 	    for (k=0; k<=j; k++) {
-	      if (j<4 && k<4) { 
-		M->T[i+2][j+2][k+2] = M->T[i][j][k];
-		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
-		   i+2, j+2, k+2, i, j, k, M->T[i][j][k]); */
-	      }
-	      else if (k<4 && (k+2)<=j) {
-		M->T[i+2][j][k+2] = M->T[i][j][k];
-		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
-		   i+2, j, k+2, i, j, k, M->T[i][j][k]); */
-	      }
-	      else {
-		M->T[i+2][j][k] = M->T[i][j][k];
-		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
-		   i+2, j, k, i, j, k, M->T[i][j][k]); */
-	      }
+              if (k==2 || k==3) continue;
+              if (j<4) {
+                /* j=(0, 1) */
+                if (k<2) {
+                  /* k=(0, 1) */
+                  M->T[i+2][j+2][k+2] = M->T[i][j][k];
+                } else {
+                  /* k=(4, 5) */
+                  M->T[i+2][j+2][k] = M->T[i][j][k];
+                }
+              } else {
+                /* j=(4, 5) */
+                if (k<2) {
+                  /* k=(0, 1) */
+                  if ((k+2)<=j)
+                    M->T[i+2][j][k+2] = M->T[i][j][k];
+                } else {
+                  /* k=(4, 5) */
+                  M->T[i+2][j][k] = M->T[i][j][k];
+                }
+              }
 	    }
 	  }
 	}
@@ -424,75 +430,117 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
 	  for (j=0; j<6; j++) {
 	    if (j==2 || j==3) continue;
 	    for (k=0; k<=j; k++) {
-	      if (j<4 && k<4) {
-		M->T[i][j+2][k+2] = M->T[i][j][k];
-		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
-		   i, j+2, k+2, i, j, k, M->T[i][j][k]); */
-	      }
-	      else if (k<4 && (k+2)<=j) {
-		M->T[i][j][k+2] = M->T[i][j][k];
-		/* printf("T[%ld][%ld][%ld] = T[%ld][%ld][%ld] = %le\n", 
-		   i, j, k+2, i, j, k, M->T[i][j][k]); */
-	      }
+              if (k==2 || k==3) continue;
+              if (j<4) {
+                /* j=(0, 1) */
+                if (k<2) {
+                  /* k=(0, 1) */
+                  M->T[i][j+2][k+2] = M->T[i][j][k];
+                } else {
+                  /* k=(4, 5) */
+                  M->T[i][j+2][k] = M->T[i][j][k];
+                }
+              } else {
+                /* j=(4, 5) */
+                if (k<2) {
+                  /* k=(0, 1) */
+                  if ((k+2)<=j)
+                    M->T[i][j][k+2] = M->T[i][j][k];
+                }
+              }
 	    }
 	  }
 	}
 	if (M->order>2) {
-	  for (i=0; i<2; i++) {
-	    for (j=0; j<6; j++) {
-	      if (j==2 || j==3) continue;
-	      for (k=0; k<=j; k++) {
-		if (j<4 && k<4) { 
-		  for (l=0; l<=k; l++) {
-		    if (l<4 && (l+2)<=k) 
-		      M->Q[i+2][j+2][k+2][l+2] = M->Q[i][j][k][l];
-		    else
-		      M->Q[i+2][j+2][k+2][l] = M->Q[i][j][k][l];
-		  }
-		}
-		else if (k<4 && (k+2)<=j) {
-		  for (l=0; l<=k; l++) {
-		    if (l<4 && (l+2)<=k)
-		      M->Q[i+2][j][k+2][l+2] = M->Q[i][j][k][l];
-		    else
-		      M->Q[i+2][j][k+2][l] = M->Q[i][j][k][l];
-		  }
-		}
-		else {
-		  for (l=0; l<=k; l++) {
-		    if (l<4 && (l+2)<=k)
-		      M->Q[i+2][j][k][l+2] = M->Q[i][j][k][l];
-		    else
-		      M->Q[i+2][j][k][l] = M->Q[i][j][k][l];
-		  }
-		}
-	      }
-	    }
-	  }
-	  for (i=4; i<6; i++) {
-	    for (j=0; j<6; j++) {
-	      if (j==2 || j==3) continue;
-	      for (k=0; k<=j; k++) {
-		if (j<4 && k<4) {
-		  for (l=0; l<=k; l++) {
-		    if (l<4 && (l+2)<=k)
-		      M->Q[i][j+2][k+2][l+4] = M->Q[i][j][k][l];
-		    else
-		      M->Q[i][j+2][k+2][l+4] = M->Q[i][j][k][l];
-		  }
-		}
-		else if (k<4 && (k+2)<=j) {
-		  for (l=0; l<=k; l++) {
-		    if (l<4 && (l+2)<=k)
-		      M->Q[i][j][k+2][l+2] = M->Q[i][j][k][l];
-		    else
-		      M->Q[i][j][k+2][l] = M->Q[i][j][k][l];
-		  }
-		}
-	      }
-	    }
-	  }
-	}
+          for (i=0; i<2; i++) {
+            for (j=0; j<6; j++) {
+              if (j==2 || j==3) continue;
+              for (k=0; k<=j; k++) {
+                if (k==2 || k==3) continue;
+                for (l=0; l<=k; l++) {
+                  if (l==2 || l==3) continue;
+                  if (j<4) {
+                    /* j=(0, 1) */
+                    if (k<2) {
+                      /* k=(0, 1) */
+                      if (l<2) {
+                        M->Q[i+2][j+2][k+2][l+2] = M->Q[i][j][k][l];
+                      } else {
+                        /* l=(4, 5) */
+                        M->Q[i+2][j+2][k+2][l] = M->Q[i][j][k][l];
+                      }
+                    } else {
+                      /* k=(4, 5) */
+                      if ((l+2)<=k)
+                        M->Q[i+2][j+2][k][l+2] = M->Q[i][j][k][l];
+                    }
+                  } else {
+                    /* j=(4, 5) */
+                    if (k<2) {
+                      /* k=(0, 1) */
+                      if ((k+2)<=j) {
+                        if (l<2) {
+                          M->Q[i+2][j][k+2][l+2] = M->Q[i][j][k][l];
+                        } else {
+                          /* l=(4, 5) */
+                          M->Q[i+2][j][k+2][l] = M->Q[i][j][k][l];
+                        }
+                      }
+                    } else {
+                      /* k=(4, 5) */
+                      if ((l+2)<=k)
+                        M->Q[i+2][j][k][l+2] = M->Q[i][j][k][l];
+                    }
+                  }
+                }
+              }
+            }
+          }
+          for (i=4; i<6; i++) {
+            for (j=0; j<6; j++) {
+              if (j==2 || j==3) continue;
+              for (k=0; k<=j; k++) {
+                if (k==2 || k==3) continue;
+                for (l=0; l<=k; l++) {
+                  if (l==2 || l==3) continue;
+                  if (j<4) {
+                    /* j=(0, 1) */
+                    if (k<2) {
+                      /* k=(0, 1) */
+                      if (l<2) {
+                        M->Q[i][j+2][k+2][l+2] = M->Q[i][j][k][l];
+                      } else {
+                        /* l=(4, 5) */
+                        M->Q[i][j+2][k+2][l] = M->Q[i][j][k][l];
+                      }
+                    } else {
+                      /* k=(4, 5) */
+                      if ((l+2)<=k)
+                        M->Q[i][j+2][k][l+2] = M->Q[i][j][k][l];
+                    }
+                  } else {
+                    /* j=(4, 5) */
+                    if (k<2) {
+                      /* k=(0, 1) */
+                      if ((k+2)<=j) {
+                        if (l<2) {
+                          M->Q[i][j][k+2][l+2] = M->Q[i][j][k][l];
+                        } else {
+                          /* l=(4, 5) */
+                          M->Q[i][j][k+2][l] = M->Q[i][j][k][l];
+                        }
+                      }
+                    } else {
+                      /* k=(4, 5) */
+                      if ((l+2)<=k)
+                        M->Q[i][j][k][l+2] = M->Q[i][j][k][l];
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
