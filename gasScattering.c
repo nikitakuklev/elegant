@@ -30,6 +30,15 @@ static double alphax0, alphay0;
 static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, iupOrig, ivpOrig, isOrig,
     ixLost, iyLost, ideltaLost, isLost;
 
+double computeSlopeKick(long i, long n, double pmax, double pmin, long twiss_scaling, double beta0, double beta)
+{
+  double slope;
+  slope = i*(pmax-pmin)/(n-1.0) + pmin;
+  if (twiss_scaling) 
+    slope *= sqrt(beta0/beta);
+  return slope;
+}
+  
 static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
 {
   long ix, iy, id, ie, ip, particleID;
@@ -56,12 +65,8 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
         bombElegant("invalid id value (>nx*ny)", NULL);
       ix = id%ny;
       iy = id/ny;
-      mal.dxp = ix*(xpmax-xpmin)/(nx-1.0) + xpmin;
-      mal.dyp = iy*(ypmax-ypmin)/(ny-1.0) + ypmin;
-      if (twiss_scaling) {
-        mal.dxp *= sqrt(betax0/elementArray[ie]->twiss->betax);
-        mal.dyp *= sqrt(betay0/elementArray[ie]->twiss->betay);
-      }
+      mal.dxp = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
+      mal.dyp = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
       offset_beam(coord+ip, 1, &mal, *pCentral);
     }
   }
@@ -350,6 +355,7 @@ long runGasScattering(
     }
     
     for (ip=iRow=0; ip<nLost; ip++) {
+      double xpOrig, ypOrig;
       if (verbosity>5) {
         printf("Processing ip=%ld, particleID=%ld\n", ip, (long)lostParticles[ip][6]);
         fflush(stdout);
@@ -372,26 +378,17 @@ long runGasScattering(
       ie = (particleID-id)/(nx*ny);
       ix = id%ny;
       iy = id/ny;
-      if (verbosity>5) {
-        printf("id = %ld, ie = %ld, ix = %ld, iy = %ld\n", 
-               id, ie, ix, iy);
-        fflush(stdout);
-      }
+      xpOrig = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
+      ypOrig = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
                              iElementType, entity_name[elementArray[ie]->type],
                              iElementOccurence, elementArray[ie]->occurence, 
                              isOrig, elementArray[ie]->end_pos,
-                             ixpOrig, 
-                             (ix*(xpmax-xpmin)/(nx-1.0) + xpmin)*(twiss_scaling?sqrt(betax0/elementArray[ie]->twiss->betax):1),
-                             iypOrig,
-                             (iy*(ypmax-ypmin)/(ny-1.0) + ypmin)*(twiss_scaling?sqrt(betay0/elementArray[ie]->twiss->betay):1),
-                             iupOrig, 
-                             (ix*(xpmax-xpmin)/(nx-1.0) + xpmin)*(twiss_scaling?sqrt(betax0/elementArray[ie]->twiss->betax):1)
-                             *sqrt(elementArray[ie]->twiss->betax),
-                             ivpOrig,
-                             (iy*(ypmax-ypmin)/(ny-1.0) + ypmin)*(twiss_scaling?sqrt(betay0/elementArray[ie]->twiss->betay):1)
-                             *sqrt(elementArray[ie]->twiss->betay),
+                             ixpOrig, xpOrig,
+                             iypOrig, ypOrig,
+                             iupOrig, xpOrig*sqrt(elementArray[ie]->twiss->betax),
+                             ivpOrig, ypOrig*sqrt(elementArray[ie]->twiss->betay),
                              ixLost, lostParticles[ip][0],
                              iyLost, lostParticles[ip][2],
                              ideltaLost, lostParticles[ip][5],
@@ -404,7 +401,7 @@ long runGasScattering(
         printf("Set data for row %ld: %s, %s, %ld, %le, %le, %le, %le %le, %le, %le\n",
                iRow-1,
                elementArray[ie]->name, entity_name[elementArray[ie]->type], elementArray[ie]->occurence,
-               elementArray[ie]->end_pos, ix*(xpmax-xpmin)/(nx-1.0) + xpmin, iy*(ypmax-ypmin)/(ny-1.0) + ypmin,
+               elementArray[ie]->end_pos, xpOrig, ypOrig,
                lostParticles[ip][0], lostParticles[ip][2], lostParticles[ip][5], lostParticles[ip][4]);
         fflush(stdout);
       }
