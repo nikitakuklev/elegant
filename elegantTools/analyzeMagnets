@@ -183,8 +183,9 @@ if ![string length $caption] {
 if $latex {
     exec sddsprintout -format=double=%10.3f $rootname-B.sdds $rootname-B.tex \
       "-latex=booktable,longtable,caption=$caption1,group=PartOfElement" \
-      "-column=ElementName,label=Element Name" -column=Length "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 \
-      "-column=Ec,label=Critical energy" -column=IntegratedPowerDensity -column=PowerDensity -col=IdenticalCount,label=Count
+      "-column=ElementName,label=Name" -column=Length,label=L "-column=AngleDeg,label=Angle" -column=B -col=B1 -col=B2 \
+      "-column=Ec,label=Crit.En." "-column=IntegratedPowerDensity,label=Int.Pow.Dens." \
+      "-column=PowerDensity,label=Pow.Dens." -col=IdenticalCount,label=Count
 }
 
 file delete -force $paramFile.1 $rootname-B1 $rootname-B-K1 $rootname-B-K2
