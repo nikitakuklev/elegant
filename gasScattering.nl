@@ -13,7 +13,7 @@
     double ypmin = 0.0;
     double ypmax = 0.01;
     long ny = 11;
-    long twiss_scaling = 1;
+    long twiss_scaling = 0;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
