@@ -29,6 +29,8 @@ static double betax0, betay0;
 static double alphax0, alphay0;
 static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, iupOrig, ivpOrig, isOrig,
     ixLost, iyLost, ideltaLost, isLost;
+MPI_Win lastPassWin;
+static long lastPassWorker=-1;
 
 double computeSlopeKick(long i, long n, double pmax, double pmin, long twiss_scaling, double beta0, double beta)
 {
@@ -43,6 +45,16 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
 {
   long ix, iy, id, ie, ip, particleID;
   MALIGN mal;
+  if (i_elem==0) {
+#if MPI_DEBUG
+    printf("pass %ld, elem %ld call to slopeOffsetFunction\n", pass, i_elem);
+    fflush(stdout);
+#endif
+    MPI_Put(&pass, 1, MPI_LONG, 0, myid, 1, MPI_LONG, lastPassWin);
+    MPI_Win_fence(0, lastPassWin);
+    lastPassWorker = pass;
+  }
+
   if (pass==fireOnPass) {
     for (ie=0; ie<nElements; ie++) {
       if (eptr==elementArray[ie])
@@ -175,6 +187,7 @@ long runGasScattering(
   double **lostParticles;
   double pCentral;
   ELEMENT_LIST *elem, *elem0;
+  long *lastPass = NULL;
 #if MPI_DEBUG
   short mpiDebug = 1;
 #else
@@ -290,6 +303,13 @@ long runGasScattering(
     fflush(stdout);
   }
 
+  if (myid==0) {
+    lastPass = calloc(n_processors, sizeof(*lastPass));
+    MPI_Win_create(lastPass, n_processors*sizeof(long), sizeof(long), MPI_INFO_NULL, MPI_COMM_WORLD, &lastPassWin);
+  } else
+    MPI_Win_create(NULL, 0, sizeof(long), MPI_INFO_NULL, MPI_COMM_WORLD, &lastPassWin);
+  MPI_Win_fence(0, lastPassWin);
+
   nLost = 0;
   nLeft = 0;
   if (myid!=0) {
@@ -329,10 +349,27 @@ long runGasScattering(
     setTrackingOmniWedgeFunction(NULL);
   }
 
-  if (verbosity>3 && (myid==0 || mpiDebug)) {
-    printf("Waiting on barrier after tracking\n");
-    fflush(stdout);
-  }    
+  if (myid==0) {
+    long iproc, nDone; 
+    nDone = 0;
+    while (nDone!=(n_processors-1)) {
+      MPI_Win_fence(0, lastPassWin);
+      nDone = 0;
+      for (iproc=1; iproc<n_processors; iproc++) {
+        if (lastPass[iproc]==(control->n_passes-1)) {
+          nDone++;
+        }
+      }
+      printf("Pass %ld\n", lastPass[1]);
+      fflush(stdout);
+    }
+  } else {
+    while (lastPassWorker!=(control->n_passes-1)) {
+      lastPassWorker ++;
+      MPI_Put(&lastPassWorker, 1, MPI_LONG, 0, myid, 1, MPI_LONG, lastPassWin);
+      MPI_Win_fence(0, lastPassWin);
+    }
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
 
