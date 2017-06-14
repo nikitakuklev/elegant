@@ -353,7 +353,7 @@ long runGasScattering(
   }
 
   if (myid==0) {
-    long iproc, nDone, nTotalLeft, nMinLeft, nMaxLeft; 
+    long iproc, nDone, nTotalLeft, nMinLeft, nMaxLeft, nMeanLeft, nSummed; 
     nDone = 0;
     while (nDone!=(n_processors-1)) {
       MPI_Win_fence(0, lastPassWin);
@@ -361,6 +361,8 @@ long runGasScattering(
       nTotalLeft = 0;
       nMinLeft = LONG_MAX;
       nMaxLeft = -1;
+      nSummed = 0;
+      nMeanLeft = 0;
       for (iproc=1; iproc<n_processors; iproc++) {
         if (lastPass[2*iproc]==(control->n_passes-1)) {
           nDone++;
@@ -370,9 +372,12 @@ long runGasScattering(
           nMinLeft = lastPass[2*iproc+1];
         if (nMaxLeft<lastPass[2*iproc+1])
           nMaxLeft = lastPass[2*iproc+1];
+        nMeanLeft += lastPass[2*iproc+1];
+        nSummed ++;
       }
       printMessageAndTime(stdout, "Pass ");
-      printf(" %ld, %ld particles (%ld, %ld)\n", lastPass[2], nTotalLeft, nMinLeft, nMaxLeft);
+      printf(" %ld, %ld particles (min=%ld, max=%ld, ave=%g)\n", lastPass[2], nTotalLeft, nMinLeft, nMaxLeft,
+             (nMeanLeft*1.0)/nSummed);
       fflush(stdout);
     }
   } else {
@@ -392,9 +397,6 @@ long runGasScattering(
   gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
   if (myid==0 || mpiDebug) {
     printf("Lost-particle gather done, nLost = %ld\n", nLost); 
-    for (ip=0; ip<nLost; ip++) {
-      printf("ip=%ld, particleID=%ld\n", ip, (long)lostParticles[ip][6]);
-    }
     fflush(stdout);
   }
   
