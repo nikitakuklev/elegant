@@ -360,7 +360,8 @@ long runGasScattering(
           nDone++;
         }
       }
-      printf("Pass %ld\n", lastPass[1]);
+      printMessageAndTime(stdout, "Pass ");
+      printf(" %ld\n", lastPass[1]);
       fflush(stdout);
     }
   } else {
