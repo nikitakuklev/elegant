@@ -107,6 +107,8 @@ Users are encouraged to test results against the serial or parallel versions.
 \item \verb|touschekLifetime| can now use data from the \verb|SLICE| element in {\tt elegant} for slice-based lifetime computations.
 \item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
   improves the appearance of plots and is needed for certain types of analysis.
+\item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
+  suggested by forum post by user jan.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5982,6 +5984,7 @@ sddscollapse quadScan.fin -pipe=out \\
 \begin{flushleft}{\tt
 sddsemitproc [{\em inputfile}] [{\em outputfile}] [-pipe=[input][,output]]
  [-sigmaData={\em xName},{\em yName}]
+ [-variableName={\em columnName}]
  [-errorData={\em xName},{\em yName} | 
   -errorLevel={\em valueInm},[\{gaussian,{\em nSigmas} | uniform\}]]
  [-nErrorSets={\em number}] [-seed=integer]
@@ -6025,6 +6028,10 @@ error bars (``sigma's'') of the measured values.
 
 \item {\bf switches:}
 \begin{itemize}
+
+\item {\tt -variableName={\em columnName}} --- Supplies the name of
+ a column in {\em inputFile} that will be copied into {\em outputFile}
+ for use in plotting. Does not affect any results.
 
 \item {\tt -sigmaData={\em xName},{\em yName}} --- Supplies the names
 of the columns in {\em inputfile} from which the x and y rms beam

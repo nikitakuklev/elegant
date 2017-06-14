@@ -134,17 +134,19 @@
 #define SET_PIPE 9
 #define SET_INCLUDE_DISPERSION 10
 #define SET_ERROR_DATA 11
-#define N_OPTIONS 12
+#define SET_VARIABLE_NAME 12
+#define N_OPTIONS 13
 
 char *option[N_OPTIONS] = {
     "errorlevel", "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "ignoreplane",
-    "sigmadata", "pipe", "includedispersion", "errordata",
+    "sigmadata", "pipe", "includedispersion", "errordata", "variablename"
     } ;
 
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  -sigmaData=<xName>,<yName> [-includeDispersion[=vertical]] \n\
+ [-variableName=<columnName>]\n\
  [-errorData=<xName>,<yName> | \n\
  [-errorLevel=<x_valueInm>,<y_valueInm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
@@ -171,6 +173,9 @@ USAGE,
 "    to add to the sigmas. -deviationLimit allows exclusion from the ",
 "    fit of bad data.  -limitMode allows you to specify what is done",
 "    with data at or below the resolution limit.",
+"-variableName allows naming the column in the input file that should be",
+"    taken as the independent variable for the output. It doesn't affect",
+"    the results in any way.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma or width values.",
 "-includeDispersion is used if there is dispersion in the system. For this",
@@ -395,6 +400,12 @@ int main(
          } else if (scanned[i_arg].n_items>2)  
            SDDS_Bomb("invalid -includeDispersion syntax");
         SDDS_Bomb("The -includeDispersion option isn't reliable.  Suggest subtracting off energy spread contribution to beam size manually.");
+        break;
+      case SET_VARIABLE_NAME:
+        if (scanned[i_arg].n_items!=2 ||
+            !(variable_name=scanned[i_arg].list[1]) ||
+            !strlen(variable_name))
+          SDDS_Bomb("invalid -variableName syntax");
         break;
       default:
         bomb("unknown option given", USAGE);
