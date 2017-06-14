@@ -44,13 +44,16 @@ double computeSlopeKick(long i, long n, double pmax, double pmin, long twiss_sca
 static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
 {
   long ix, iy, id, ie, ip, particleID;
+  long sharedData[2];
   MALIGN mal;
   if (i_elem==0) {
 #if MPI_DEBUG
     printf("pass %ld, elem %ld call to slopeOffsetFunction\n", pass, i_elem);
     fflush(stdout);
 #endif
-    MPI_Put(&pass, 1, MPI_LONG, 0, myid, 1, MPI_LONG, lastPassWin);
+    sharedData[0] = pass;
+    sharedData[1] = np;
+    MPI_Put(&sharedData[0], 2, MPI_LONG, 0, 2*myid, 2, MPI_LONG, lastPassWin);
     MPI_Win_fence(0, lastPassWin);
     lastPassWorker = pass;
   }
@@ -304,8 +307,8 @@ long runGasScattering(
   }
 
   if (myid==0) {
-    lastPass = calloc(n_processors, sizeof(*lastPass));
-    MPI_Win_create(lastPass, n_processors*sizeof(long), sizeof(long), MPI_INFO_NULL, MPI_COMM_WORLD, &lastPassWin);
+    lastPass = calloc(2*n_processors, sizeof(*lastPass));
+    MPI_Win_create(lastPass, 2*n_processors*sizeof(long), sizeof(long), MPI_INFO_NULL, MPI_COMM_WORLD, &lastPassWin);
   } else
     MPI_Win_create(NULL, 0, sizeof(long), MPI_INFO_NULL, MPI_COMM_WORLD, &lastPassWin);
   MPI_Win_fence(0, lastPassWin);
@@ -350,24 +353,29 @@ long runGasScattering(
   }
 
   if (myid==0) {
-    long iproc, nDone; 
+    long iproc, nDone, nTotal; 
     nDone = 0;
     while (nDone!=(n_processors-1)) {
       MPI_Win_fence(0, lastPassWin);
       nDone = 0;
+      nTotal = 0;
       for (iproc=1; iproc<n_processors; iproc++) {
-        if (lastPass[iproc]==(control->n_passes-1)) {
+        if (lastPass[2*iproc]==(control->n_passes-1)) {
           nDone++;
         }
+        nTotal += lastPass[2*iproc+1];
       }
       printMessageAndTime(stdout, "Pass ");
-      printf(" %ld\n", lastPass[1]);
+      printf(" %ld, %ld particles\n", lastPass[2], nTotal);
       fflush(stdout);
     }
   } else {
+    long buffer[2];
     while (lastPassWorker!=(control->n_passes-1)) {
       lastPassWorker ++;
-      MPI_Put(&lastPassWorker, 1, MPI_LONG, 0, myid, 1, MPI_LONG, lastPassWin);
+      buffer[0] = lastPassWorker;
+      buffer[1] = 0;
+      MPI_Put(&buffer[0], 2, MPI_LONG, 0, 2*myid, 2, MPI_LONG, lastPassWin);
       MPI_Win_fence(0, lastPassWin);
     }
   }
