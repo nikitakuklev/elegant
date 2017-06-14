@@ -353,20 +353,26 @@ long runGasScattering(
   }
 
   if (myid==0) {
-    long iproc, nDone, nTotal; 
+    long iproc, nDone, nTotalLeft, nMinLeft, nMaxLeft; 
     nDone = 0;
     while (nDone!=(n_processors-1)) {
       MPI_Win_fence(0, lastPassWin);
       nDone = 0;
-      nTotal = 0;
+      nTotalLeft = 0;
+      nMinLeft = LONG_MAX;
+      nMaxLeft = -1;
       for (iproc=1; iproc<n_processors; iproc++) {
         if (lastPass[2*iproc]==(control->n_passes-1)) {
           nDone++;
         }
-        nTotal += lastPass[2*iproc+1];
+        nTotalLeft += lastPass[2*iproc+1];
+        if (nMinLeft>lastPass[2*iproc+1])
+          nMinLeft = lastPass[2*iproc+1];
+        if (nMaxLeft<lastPass[2*iproc+1])
+          nMaxLeft = lastPass[2*iproc+1];
       }
       printMessageAndTime(stdout, "Pass ");
-      printf(" %ld, %ld particles\n", lastPass[2], nTotal);
+      printf(" %ld, %ld particles (%ld, %ld)\n", lastPass[2], nTotalLeft, nMinLeft, nMaxLeft);
       fflush(stdout);
     }
   } else {
