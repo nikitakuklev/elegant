@@ -6,7 +6,8 @@
  * This file is distributed subject to a Software License Agreement found
  * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
-
+#define DEBUG 1
+#define DEBUG_CRASH 1
 /* routine: do_tracking()
  * purpose: track a collection of particles through a beamline
  *
@@ -465,6 +466,11 @@ long do_tracking(
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
+#ifdef DEBUG_CRASH
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.35, ");
+    printf("pass = %ld\n", i_pass);
+    fflush(stdout);
+#endif
     if (run->trackingInterruptFile && strlen(run->trackingInterruptFile) && 
         fexists(run->trackingInterruptFile) && get_mtime(run->trackingInterruptFile)>run->trackingInterruptFileMtime) {
       n_passes = i_pass-passOffset;
@@ -737,12 +743,17 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 1: ");
+      printf("element %s#%ld, %ld particles\n", eptr->name, eptr->occurence, nToTrack);
+      fflush(stdout);
+#endif
       if (run->showElementTiming)
         tStart = getTimeInSecs();
       if (run->monitorMemoryUsage)
 	memoryBefore = memoryUsage();
 #ifdef DEBUG_CRASH 
-      printMessageAndTime(stdout, "do_tracking checkpoint 1\n");
+      printMessageAndTime(stdout, "do_tracking checkpoint 2\n");
 #endif
       if (trackingOmniWedgeFunction) {
 #ifdef HAVE_GPU
@@ -756,6 +767,9 @@ long do_tracking(
 #endif
         (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
       }
+#ifdef DEBUG_CRASH 
+      printMessageAndTime(stdout, "do_tracking checkpoint 3\n");
+#endif
 
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;

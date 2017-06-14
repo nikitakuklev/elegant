@@ -46,6 +46,7 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
   long ix, iy, id, ie, ip, particleID;
   long sharedData[2];
   MALIGN mal;
+  long nKicksMade = 0;
   if (i_elem==0) {
 #if MPI_DEBUG
     printf("pass %ld, elem %ld call to slopeOffsetFunction\n", pass, i_elem);
@@ -59,21 +60,50 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
   }
 
   if (pass==fireOnPass) {
+#if MPI_DEBUG
+    printf("firing on pass %ld, elem %ld\n", pass, i_elem);
+    fflush(stdout);
+#endif
     for (ie=0; ie<nElements; ie++) {
       if (eptr==elementArray[ie])
         break;
     }
-    if (ie==nElements) return;
-    elementArray[ie] = eptr;
+    if (ie==nElements) {
+#if MPI_DEBUG
+      printf("element not in array, returning\n");
+      fflush(stdout);
+#endif
+      return;
+    }
+#if MPI_DEBUG
+    printf("identified element %s as %ld in array (out of %ld)\n", eptr->name, ie, nElements);
+    fflush(stdout);
+    printf("elementArray[%ld] : name=%s, type=%s\n",
+           ie, elementArray[ie]->name, 
+           entity_name[elementArray[ie]->type]);
+    fflush(stdout);
+#endif
     mal.dxp = mal.dyp = 0;
     mal.dz = mal.dt = mal.de = mal.dx = mal.dy = 0;
     mal.startPID = mal.endPID = -1;
-    for (ip=0; ip<np; ip++) {
+    for (ip=nKicksMade=0; ip<np; ip++) {
+#if MPI_DEBUG
+      printf("checking particle %ld of %ld, particleID=%ld\n", ip, np, (long)coord[ip][6]);
+      fflush(stdout);
+#endif
       if ((particleID = coord[ip][6])<0) {
+#if MPI_DEBUG
+        printf("buffer particle, skipping\n");
+        fflush(stdout);
+#endif
         continue;
       }
       id = particleID%(nx*ny);
       if ((particleID-id)/(nx*ny)!=ie) {
+#if MPI_DEBUG
+        printf("not my problem, skipping\n");
+        fflush(stdout);
+#endif
         continue;
       }
       if (id>nx*ny)
@@ -82,8 +112,17 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
       iy = id/ny;
       mal.dxp = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
       mal.dyp = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
+#if MPI_DEBUG
+      printf("applying kicks\n");
+      fflush(stdout);
+#endif
       offset_beam(coord+ip, 1, &mal, *pCentral);
+      nKicksMade++;
     }
+#if MPI_DEBUG
+    printf("finished making %ld kicks\n", nKicksMade);
+    fflush(stdout);
+#endif
   }
 }
 #endif
@@ -324,7 +363,8 @@ long runGasScattering(
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
       else
         memset(coord[ip], 0, sizeof(**coord)*6);
-      coord[ip][6] = (myid-1)*nEachProcessor + ip;
+      coord[ip][6] = myid-1 + ip*nWorkingProcessors;
+      /* coord[ip][6] = (myid-1)*nEachProcessor + ip; */
       if (coord[ip][6]>=nTotal) {
         /* Don't track more buffer particles than needed */
         coord[ip][6] = -1;
