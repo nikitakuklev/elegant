@@ -6,8 +6,7 @@
  * This file is distributed subject to a Software License Agreement found
  * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
-#define DEBUG 1
-#define DEBUG_CRASH 1
+
 /* routine: do_tracking()
  * purpose: track a collection of particles through a beamline
  *
