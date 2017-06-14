@@ -7,6 +7,7 @@
 
 #namelist gas_scattering static
     STRING output = NULL;
+    STRING log_file = NULL;
     double xpmin = -0.01;
     double xpmax = 0.01;
     long nx = 11;

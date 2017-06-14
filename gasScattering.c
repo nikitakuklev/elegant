@@ -19,6 +19,7 @@
 
 static SDDS_DATASET SDDSsa;
 static long fireOnPass = 1;
+static FILE *fp_log = NULL;
 
 #if USE_MPI
 void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
@@ -108,8 +109,8 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
       }
       if (id>nx*ny)
         bombElegant("invalid id value (>nx*ny)", NULL);
-      ix = id%ny;
-      iy = id/ny;
+      ix = id%nx;
+      iy = id/nx;
       mal.dxp = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
       mal.dyp = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
 #if MPI_DEBUG
@@ -199,6 +200,17 @@ void setupGasScattering(
     if (!SDDS_SaveLayout(&SDDSsa) || !SDDS_WriteLayout(&SDDSsa)){
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
+    }
+
+    if (log_file) {
+      log_file = compose_filename(log_file, run->rootname);
+      fp_log = fopen(log_file, "w");
+      fprintf(fp_log, "SDDS1\n&column name=Pass type=long &end\n");
+      fprintf(fp_log, "&column name=Particles type=long &end\n");
+      fprintf(fp_log, "&column name=MinParticles type=long &end\n");
+      fprintf(fp_log, "&column name=MaxParticles type=long &end\n");
+      fprintf(fp_log, "&column name=MeanParticles type=double &end\n");
+      fprintf(fp_log, "&data mode=ascii no_row_counts=1 &end\n");
     }
   }
 #endif
@@ -421,6 +433,11 @@ long runGasScattering(
       printf(" %ld, %ld particles (min=%ld, max=%ld, ave=%g)\n", lastPass[2], nTotalLeft, nMinLeft, nMaxLeft,
              (nMeanLeft*1.0)/nSummed);
       fflush(stdout);
+      if (fp_log) {
+        fprintf(fp_log, "%ld %ld %ld %ld %le\n",  lastPass[2], nTotalLeft, nMinLeft, nMaxLeft,
+                (nMeanLeft*1.0)/nSummed);
+        fflush(fp_log);
+      }
     }
   } else {
     long buffer[2];
@@ -434,6 +451,10 @@ long runGasScattering(
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
+  if (fp_log) {
+    fclose(fp_log);
+    fp_log = NULL;
+  }
 
   nLeft = 0;
   gatherLostParticles(&lostParticles, &nLost, nLeft, n_processors, myid);
