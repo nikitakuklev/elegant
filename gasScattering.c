@@ -493,8 +493,8 @@ long runGasScattering(
       particleID = lostParticles[ip][6];
       id = particleID%(nx*ny);
       ie = (particleID-id)/(nx*ny);
-      ix = id%ny;
-      iy = id/ny;
+      ix = id%nx;
+      iy = id/nx;
       xpOrig = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
       ypOrig = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
