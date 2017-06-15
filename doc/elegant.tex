@@ -109,6 +109,8 @@ Users are encouraged to test results against the serial or parallel versions.
   improves the appearance of plots and is needed for certain types of analysis.
 \item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
   suggested by forum post by user jan.
+\item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
+  for odd multipole orders (e.g., dipole, sextupole, ...). This was reported by forum user Ji\_Li and has been fixed.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5349,7 +5351,8 @@ The columns are \verb|phi| and \verb|Br|, giving respectively the polar angle in
 Tesla. Each page should have the same number of rows $n$.
 The \verb|phi| values are assumed to be equispaced starting at 0 and ending at $2\pi (1-1/n)$.
 The pages are labeled by the parameter \verb|z|, which gives the longitudinal coordinate in meters for the data on that page.
-These \verb|z| values are assumed to be equispaced and to cover the entire length of the magnet.
+These \verb|z| values are assumed to be equispaced and to cover the entire length of the magnet, starting and ending well outside
+the magnet. (For periodic systems, the \verb|wiggler| option may be appropriate. See below.)
 Finally, a parameter \verb|R| must exist that gives the radius in meters for the \verb|Br| values.
 
 \item \verb|output| --- Give the root name for the output files. The main output file, which has extension \verb|ggrad|
@@ -5360,6 +5363,8 @@ Finally, a parameter \verb|R| must exist that gives the radius in meters for the
 
 \item \verb|nHarmonics| --- The number of harmonics to include.
 
+\item \verb|wiggler| --- If non-zero, the fields are assumed to cover a {\em single period} of a periodic wiggler or
+  undulator. 
 \end{itemize}
 
 \item {\bf authors:} M. Borland (ANL/APS).
