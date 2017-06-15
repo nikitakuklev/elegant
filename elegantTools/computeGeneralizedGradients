@@ -9,13 +9,14 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number>\nHarmonic 2 is quadrupole, 3 is octupole, etc.}
+set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-periodic 1\]\nHarmonic 2 is quadrupole, 3 is octupole, etc."
 set args $argv
 set input ""
 set output ""
 set mainHarmonic -1
 set nHarmonics 3
-if {[APSStrictParseArguments {input output mainHarmonic nHarmonics}] || ![string length $input] || ![string length $output] || \
+set periodic 0
+if {[APSStrictParseArguments {input output mainHarmonic nHarmonics periodic}] || ![string length $input] || ![string length $output] || \
     [expr $mainHarmonic<1] || [expr $nHarmonics<1]} {
     return -code error "$usage"
 }
@@ -25,7 +26,7 @@ set root $output
 
 set pageList ""
 for {set n 0} {$n<$nHarmonics} {incr n} {
-    lappend pageList [expr 2*$m0*($n+1)-1]
+    lappend pageList [expr $m0*(2*$n+1)+1]
 }
 
 # Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
@@ -38,6 +39,11 @@ exec sddssort $input -pipe=out -column=phi,incr \
 
 set R [exec sddsconvert $input -topage=1 -pipe=out | sdds2stream -pipe -parameter=R]
 
+set base last
+if $periodic {
+    set base ave
+}
+
 # Find normalized gradients for listed pages (harmonics):
 # Take FFT of BmR(z)
 # Reorganize so that the FFT is expressed over [-fMax, fMax]
@@ -45,13 +51,12 @@ set R [exec sddsconvert $input -topage=1 -pipe=out | sdds2stream -pipe -paramete
 # Take FFT (really an IFFT)
 # Reorganize so that the IFFT is expressed over [-zMax, zMax]
 # Perform some test sums to compute Br(z,R) and Bz(z,R) at R=0.01m
-exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
-    | sddsprocess -pipe \
-    "-define=col,BmRz,ImagFFTBr chs" \
-    "-define=parameter,m,i_page 2 * 1 - 2 *,type=short" \
+# Note: I'm(kR) is odd (even) if m is even (odd)
+exec sddsprocess $root.fft -pipe=out "-define=parameter,m,i_page 1 -,type=short"  \
+    | sddsconvert -pipe -keeppages=[join $pageList ,] \
+    | sddsprocess -pipe "-define=col,BmRz,ImagFFTBr chs" \
     | sddsfft -pipe -col=z,BmRz -full=unfolded -nowarning \
-    | sddsprocess -pipe \
-    -process=f,max,fMax \
+    | sddsprocess -pipe -process=f,max,fMax \
     "-define=parameter,df,fMax n_rows 1 - /" \
     "-redefine=column,f,i_row n_rows 2 / < ? i_row : i_row n_rows - $ df *" \
     | sddssort -pipe -column=f \
@@ -59,7 +64,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     "-define=parameter,R,$R,units=m" \
     "-define=column,k,f 2 * pi *" \
     "-define=col,kR,k R *" \
-    "-define=col,ImpkR,kR abs 1e-8 + m 1 - BesIn kR abs 1e-16 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 : 1  $ * " \
+    "-define=col,ImpkR,kR abs 1e-8 + m 1 - BesIn kR abs 1e-8 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 m 1 + pow : 1  $ * " \
     "-define=col,dCms0,RealFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms2,RealFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms4,RealFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
@@ -78,7 +83,7 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     "-define=col,dCms12p,RealFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms14p,RealFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
     "-define=col,dCms16p,RealFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    | sddsfft -pipe -column=f,dC* -full=unfolded -nowarning \
+    | sddsfft -pipe -column=f,dCms* -full=unfolded -nowarning \
     | sddsprocess -pipe \
     -process=f,max,zMax \
     "-define=parameter,dz,zMax n_rows 1 - /" \
@@ -87,8 +92,8 @@ exec sddsconvert $root.fft -pipe=out -keeppages=[join $pageList ,] \
     | sddsconvert -pipe -edit=column,*FFTdCms*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
     | sddsprocess -pipe=in $root.ggrad.full \
     -rpndef=$env(RPN_DEFNS),alpha.rpn \
-    "-process=Cnm*,last,%sLast" \
-    "-redefine=col,%s,%s %sLast -,select=Cnm*" \
+    "-process=Cnm*,$base,%s$base" \
+    "-redefine=col,%s,%s %s$base -,select=Cnm*" \
     "-define=col,Br0,Cnm0 0  m alphalm * R m 1 - pow * pi 4 / m * sin *" \
     "-define=col,Br2,Cnm2 1  m alphalm * R m 1 + pow * pi 4 / m * sin * Br0 +" \
     "-define=col,Br4,Cnm4 2  m alphalm * R m 3 + pow * pi 4 / m * sin * Br2 +" \
