@@ -3,7 +3,7 @@ SDDS1
 &column name=InstallLocation, type=string,  &end
 &data mode=ascii, &end
 ! page number 1
-                   8
+                   9
 oag/apps/src/elegant/elegantTools/skewResponse0Template.ele /usr/local/oag/apps/configData/elegant/skewResponse0Template.ele 
 oag/apps/src/elegant/elegantTools/skewResponseCPTemplate.ele /usr/local/oag/apps/configData/elegant/skewResponseCPTemplate.ele 
 oag/apps/src/elegant/elegantTools/etayCPCorrTemplate.ele /usr/local/oag/apps/configData/elegant/etayCPCorrTemplate.ele 
@@ -12,3 +12,4 @@ oag/apps/src/elegant/elegantTools/couplingCorrTemplate2.ele /usr/local/oag/apps/
 oag/apps/src/elegant/elegantTools/couplingCorrTemplate3.ele /usr/local/oag/apps/configData/elegant/couplingCorrTemplate3.ele 
 oag/apps/src/elegant/elegantTools/spiffe2elegant.lte /usr/local/oag/apps/configData/elegant/spiffe2elegant.lte 
 oag/apps/src/elegant/elegantTools/spiffe2elegant.ele /usr/local/oag/apps/configData/elegant/spiffe2elegant.ele 
+oag/apps/src/elegant/elegantTools/alpha.rpn /usr/local/oag/apps/configData/elegant/alpha.rpn

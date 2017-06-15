@@ -21,6 +21,14 @@ if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler}] || 
     puts stderr "$usage"
     exit 1
 }
+set alphaRpn $OAGGlobal(OAGAppConfigDataDirectory)/elegant/alpha.rpn
+if ![file exists $alphaRpn] {
+    set alphaRpn alpha.rpn
+    if ![file exists $alphaRpn] {
+        puts stderr "Didn't find $OAGGlobal(OAGAppConfigDataDirectory)/elegant/alpha.rpn or alpha.rpn!"
+        exit 1
+    }
+}
 
 set m0 $mainHarmonic
 set root $output 
@@ -92,7 +100,7 @@ exec sddsprocess $root.fft -pipe=out "-define=parameter,m,i_page 1 -,type=short"
     | sddssort -pipe -column=z \
     | sddsconvert -pipe -edit=column,*FFTdCms*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
     | sddsprocess -pipe=in $root.ggrad.full \
-    -rpndef=$env(RPN_DEFNS),alpha.rpn \
+    -rpndef=$env(RPN_DEFNS),$alphaRpn \
     "-process=Cnm*,$base,%s$base" \
     "-redefine=col,%s,%s %s$base -,select=Cnm*" \
     "-define=col,Br0,Cnm0 0  m alphalm * R m 1 - pow * pi 4 / m * sin *" \
