@@ -9,16 +9,17 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-periodic 1\]\nHarmonic 2 is quadrupole, 3 is octupole, etc."
+set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-wiggler 1\]\nHarmonic 2 is quadrupole, 3 is octupole, etc.\nInput file should normally start and end in zero-field region outside magnet.\nUse the wiggler option if fields are for a *single period* of a wiggler or undulator.\n"
 set args $argv
 set input ""
 set output ""
 set mainHarmonic -1
 set nHarmonics 3
-set periodic 0
-if {[APSStrictParseArguments {input output mainHarmonic nHarmonics periodic}] || ![string length $input] || ![string length $output] || \
+set wiggler 0
+if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler}] || ![string length $input] || ![string length $output] || \
     [expr $mainHarmonic<1] || [expr $nHarmonics<1]} {
-    return -code error "$usage"
+    puts stderr "$usage"
+    exit 1
 }
 
 set m0 $mainHarmonic
@@ -40,7 +41,7 @@ exec sddssort $input -pipe=out -column=phi,incr \
 set R [exec sddsconvert $input -topage=1 -pipe=out | sdds2stream -pipe -parameter=R]
 
 set base last
-if $periodic {
+if $wiggler {
     set base ave
 }
 
