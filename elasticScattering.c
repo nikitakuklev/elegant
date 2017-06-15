@@ -7,7 +7,7 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-/* file: gasScattering.c
+/* file: elasticScattering.c
  * purpose: Do tracking to find slope aperture starting from the end of each element.
  *
  * Michael Borland, 2017
@@ -15,7 +15,7 @@
 
 #include "mdb.h"
 #include "track.h"
-#include "gasScattering.h"
+#include "elasticScattering.h"
 
 static SDDS_DATASET SDDSsa;
 static long fireOnPass = 1;
@@ -26,25 +26,27 @@ void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, l
 
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
-static double betax0, betay0;
-static double alphax0, alphay0;
-static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, iupOrig, ivpOrig, isOrig,
-    ixLost, iyLost, ideltaLost, isLost;
+static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, isOrig,
+  ixLost, iyLost, ideltaLost, isLost, ithetaOrig, iphiOrig;
 MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
-double computeSlopeKick(long i, long n, double pmax, double pmin, long twiss_scaling, double beta0, double beta)
+void computeScatteringAngles(long itheta, long iphi, double *xpReturn, double *ypReturn, double *thetaReturn, double *phiReturn)
 {
-  double slope;
-  slope = i*(pmax-pmin)/(n-1.0) + pmin;
-  if (twiss_scaling) 
-    slope *= sqrt(beta0/beta);
-  return slope;
+  double theta, phi;
+  phi = (iphi*PI)/(n_phi-1);
+  theta = (theta_max-theta_min)/(n_theta-1.0)*itheta + theta_min;
+  *xpReturn = theta*cos(phi);
+  *ypReturn = theta*sin(phi);
+  if (thetaReturn)
+    *thetaReturn = theta;
+  if (phiReturn)
+    *phiReturn = phi;
 }
   
 static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
 {
-  long ix, iy, id, ie, ip, particleID;
+  long itheta, iphi, id, ie, ip, particleID;
   long sharedData[2];
   MALIGN mal;
   long nKicksMade = 0;
@@ -99,20 +101,19 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
 #endif
         continue;
       }
-      id = particleID%(nx*ny);
-      if ((particleID-id)/(nx*ny)!=ie) {
+      id = particleID%(n_theta*n_phi);
+      if ((particleID-id)/(n_theta*n_phi)!=ie) {
 #if MPI_DEBUG
         printf("not my problem, skipping\n");
         fflush(stdout);
 #endif
         continue;
       }
-      if (id>nx*ny)
-        bombElegant("invalid id value (>nx*ny)", NULL);
-      ix = id%nx;
-      iy = id/nx;
-      mal.dxp = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
-      mal.dyp = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
+      if (id>n_theta*n_phi)
+        bombElegant("invalid id value (>n_theta*n_phi)", NULL);
+      itheta = id%n_theta;
+      iphi = id/n_theta;
+      computeScatteringAngles(itheta, iphi, &mal.dxp, &mal.dyp, NULL, NULL);
 #if MPI_DEBUG
       printf("applying kicks\n");
       fflush(stdout);
@@ -128,7 +129,7 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
 }
 #endif
 
-void setupGasScattering(
+void setupElasticScattering(
                                  NAMELIST_TEXT *nltext,
                                  RUN *run,
                                  VARY *control,
@@ -138,29 +139,25 @@ void setupGasScattering(
   char description[200];
   
 #if !USE_MPI
-  bombElegant("gas_scattering command is not available in serial elegant.", NULL);
+  bombElegant("elastic_scattering command is not available in serial elegant.", NULL);
 #endif
 
 #if USE_MPI
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  if (processNamelist(&gas_scattering, nltext)==NAMELIST_ERROR)
+  if (processNamelist(&elastic_scattering, nltext)==NAMELIST_ERROR)
     bombElegant(NULL, NULL);
-  if (echoNamelists) print_namelist(stdout, &gas_scattering);
-  if (twiss_scaling && !twissFlag)
-    bombElegant("You must compute twiss parameters if twiss_scaling is desired", NULL);
+  if (echoNamelists) print_namelist(stdout, &elastic_scattering);
 
   if (run->concat_order!=0)
-    bombElegant("at present, gas_scattering is incompatible with concatenation", NULL);
+    bombElegant("at present, elastic_scattering is incompatible with concatenation", NULL);
   
   /* check for data errors */
   if (!output)
     bombElegant("no output filename specified", NULL);
-  if (xpmin >= xpmax)
-    bombElegant("xpmin >= xpmax",  NULL);
-  if (ypmin >= ypmax)
-    bombElegant("ypmin >= ypmax",  NULL);
+  if (theta_min >= theta_max)
+    bombElegant("theta_min >= theta_max",  NULL);
   if (s_start>=s_end)
     bombElegant("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
@@ -185,8 +182,8 @@ void setupGasScattering(
         (isOrig=SDDS_DefineColumn(&SDDSsa, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixpOrig=SDDS_DefineColumn(&SDDSsa, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iypOrig=SDDS_DefineColumn(&SDDSsa, "yp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (iupOrig=SDDS_DefineColumn(&SDDSsa, "up", NULL, "m$a1/2$n", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-        (ivpOrig=SDDS_DefineColumn(&SDDSsa, "vp", NULL, "m$a1/2$n", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (ithetaOrig=SDDS_DefineColumn(&SDDSsa, "theta", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (iphiOrig=SDDS_DefineColumn(&SDDSsa, "phi", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixLost=SDDS_DefineColumn(&SDDSsa, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iyLost=SDDS_DefineColumn(&SDDSsa, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ideltaLost=SDDS_DefineColumn(&SDDSsa, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -216,17 +213,17 @@ void setupGasScattering(
 #endif
 }
 
-void finishGasScattering()
+void finishElasticScattering()
 {
 #if USE_MPI
   if (SDDS_IsActive(&SDDSsa) && !SDDS_Terminate(&SDDSsa)) {
-    SDDS_SetError("Problem terminating SDDS output (finishGasScattering)");
+    SDDS_SetError("Problem terminating SDDS output (finishElasticScattering)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 #endif
 }
 
-long runGasScattering(
+long runElasticScattering(
                               RUN *run,
                               VARY *control,
                               ERRORVAL *errcon,
@@ -236,7 +233,7 @@ long runGasScattering(
 {    
 #if USE_MPI
   double **coord;
-  long nTotal, id, ip, ie, ix, iy, nLost, nLeft, nElem, nEachProcessor, code, iRow;
+  long nTotal, id, ip, ie, itheta, iphi, nLost, nLeft, nElem, nEachProcessor, code, iRow;
   long nWorkingProcessors = n_processors - 1;
   double **lostParticles;
   double pCentral;
@@ -250,27 +247,18 @@ long runGasScattering(
 #endif
 
 #if !USE_MPI
-  bombElegant("Can't do gas scattering in serial elegant.", NULL);
+  bombElegant("Can't do elastic scattering in serial elegant.", NULL);
 #endif
 
 #if USE_MPI
   if (myid==0 || mpiDebug) {
-    printf("Started multi-particle gas scattering algorithm\n");
+    printf("Started multi-particle elastic scattering algorithm\n");
     fflush(stdout);
   }
   
   elem = &(beamline->elem);
-  if (twiss_scaling) {
-    betax0 = elem->twiss->betax;
-    alphax0 = elem->twiss->alphax;
-    betay0 = elem->twiss->betay;
-    alphay0 = elem->twiss->alphay;
-  } else {
-    betax0 = betay0 = 1;
-    alphax0 = alphay0 = 0;
-  }
 
-  /* determine how many elements will be tracked */
+  /* determine how man_phi elements will be tracked */
   elem0 = NULL;
   nElem = 0;
   elementArray = NULL;
@@ -288,17 +276,17 @@ long runGasScattering(
   }
   nElements = nElem;
   if (nElem==0) 
-    SDDS_Bomb("no elements found for gas scattering computation");
+    SDDS_Bomb("no elements found for elastic scattering computation");
   if (verbosity>0 && (myid==0 || mpiDebug)) {
     printf("%ld elements selected for tracking\n", nElements);
     fflush(stdout);
   }
     
   nElem = nElements;
-  nTotal = nElem*nx*ny;
+  nTotal = nElem*n_theta*n_phi;
   if (nTotal%nWorkingProcessors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nx=%ld, ny=%ld, nElem=%ld)\n",
-           nWorkingProcessors, nx, ny, nElem);
+    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_theta=%ld, n_phi=%ld, nElem=%ld)\n",
+           nWorkingProcessors, n_theta, n_phi, nElem);
     fflush(stdout);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
@@ -306,8 +294,8 @@ long runGasScattering(
   }
   
   if (myid==0 || mpiDebug) {
-    printf("nTotal = %ld, nWorkingProcessors = %ld, nx = %ld, ny = %ld, nElements = %ld, nEachProcessor = %ld\n",
-           nTotal, nWorkingProcessors, nx, ny, nElements, nEachProcessor);
+    printf("nTotal = %ld, nWorkingProcessors = %ld, n_theta = %ld, n_phi = %ld, nElements = %ld, nEachProcessor = %ld\n",
+           nTotal, nWorkingProcessors, n_theta, n_phi, nElements, nEachProcessor);
     fflush(stdout);
   }
   
@@ -472,7 +460,7 @@ long runGasScattering(
     }
     
     for (ip=iRow=0; ip<nLost; ip++) {
-      double xpOrig, ypOrig;
+      double xpOrig, ypOrig, thetaOrig, phiOrig;
       if (verbosity>5) {
         printf("Processing ip=%ld, particleID=%ld\n", ip, (long)lostParticles[ip][6]);
         fflush(stdout);
@@ -489,14 +477,13 @@ long runGasScattering(
         continue;
       }
       
-      /* Figure out (ix, iy, ie) */
+      /* Figure out (itheta, iphi, ie) */
       particleID = lostParticles[ip][6];
-      id = particleID%(nx*ny);
-      ie = (particleID-id)/(nx*ny);
-      ix = id%nx;
-      iy = id/nx;
-      xpOrig = computeSlopeKick(ix, nx, xpmax, xpmin, twiss_scaling, betax0, elementArray[ie]->twiss->betax);
-      ypOrig = computeSlopeKick(iy, ny, ypmax, ypmin, twiss_scaling, betay0, elementArray[ie]->twiss->betay);
+      id = particleID%(n_theta*n_phi);
+      ie = (particleID-id)/(n_theta*n_phi);
+      itheta = id%n_theta;
+      iphi = id/n_theta;
+      computeScatteringAngles(itheta, iphi, &xpOrig, &ypOrig, &thetaOrig, &phiOrig);
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
                              iElementType, entity_name[elementArray[ie]->type],
@@ -504,8 +491,8 @@ long runGasScattering(
                              isOrig, elementArray[ie]->end_pos,
                              ixpOrig, xpOrig,
                              iypOrig, ypOrig,
-                             iupOrig, xpOrig*sqrt(elementArray[ie]->twiss->betax),
-                             ivpOrig, ypOrig*sqrt(elementArray[ie]->twiss->betay),
+                             ithetaOrig, thetaOrig,
+                             iphiOrig, phiOrig,
                              ixLost, lostParticles[ip][0],
                              iyLost, lostParticles[ip][2],
                              ideltaLost, lostParticles[ip][5],

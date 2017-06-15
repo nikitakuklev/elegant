@@ -291,10 +291,10 @@ sliceAnalysis$(OBJ): sliceAnalysis.h
 sliceAnalysis.h: ../sliceAnalysis.nl
 	nlpp -suppressSummaryVariables ../sliceAnalysis.nl sliceAnalysis.h
 
-gasScattering$(OBJ): gasScattering.h
+elasticScattering$(OBJ): elasticScattering.h
 
-gasScattering.h: ../gasScattering.nl
-	nlpp -suppressSummaryVariables ../gasScattering.nl gasScattering.h
+elasticScattering.h: ../elasticScattering.nl
+	nlpp -suppressSummaryVariables ../elasticScattering.nl elasticScattering.h
 
 steer_elem$(OBJ): steer_elem.h
 

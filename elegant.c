@@ -168,7 +168,7 @@ void showUsageOrGreeting (unsigned long mode)
 #define CHAOS_MAP  63
 #define TUNE_FOOTPRINT 64
 #define ION_EFFECTS 65
-#define GAS_SCATTERING 66
+#define ELASTIC_SCATTERING 66
 #define N_COMMANDS      67
 
 char *command[N_COMMANDS] = {
@@ -184,7 +184,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint", "ion_effects", "gas_scattering",
+    "tune_footprint", "ion_effects", "elastic_scattering",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -254,7 +254,7 @@ char *description[N_COMMANDS] = {
     "chaos_map                        command to perform chaos map analysis",
     "tune_footprint                   command to perform tune footprint tracking",
     "ion_effects                      command to set up modeling of ion effects"
-    "gas_scattering                   determine x', y' aperture from tracking as a function of position in the ring",
+    "elastic_scattering                   determine x', y' aperture from tracking as a function of position in the ring",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1381,7 +1381,7 @@ char **argv;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
-    case GAS_SCATTERING:
+    case ELASTIC_SCATTERING:
     case CHAOS_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
@@ -1394,8 +1394,8 @@ char **argv;
       case MOMENTUM_APERTURE:
         setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
         break;
-      case GAS_SCATTERING:
-        setupGasScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+      case ELASTIC_SCATTERING:
+        setupElasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
         break;
       case CHAOS_MAP:
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
@@ -1511,8 +1511,8 @@ char **argv;
           doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
                                    (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
-        case GAS_SCATTERING:
-          runGasScattering(&run_conditions, &run_control, &error_control, beamline, 
+        case ELASTIC_SCATTERING:
+          runElasticScattering(&run_conditions, &run_control, &error_control, beamline, 
                            (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
         case CHAOS_MAP:
@@ -1535,8 +1535,8 @@ char **argv;
       case MOMENTUM_APERTURE:
         finishMomentumApertureSearch();
         break;
-      case GAS_SCATTERING:
-        finishGasScattering();
+      case ELASTIC_SCATTERING:
+        finishElasticScattering();
         break;
       case CHAOS_MAP:
         finishChaosMap();
@@ -1569,8 +1569,8 @@ char **argv;
       case MOMENTUM_APERTURE:
 	printf("Finished momentum aperture search.\n");
         break;
-      case GAS_SCATTERING:
-	printf("Finished gas scattering.\n");
+      case ELASTIC_SCATTERING:
+	printf("Finished elastic scattering.\n");
         break;
       case CHAOS_MAP:
 	printf("Finished chaos map analysis.\n");

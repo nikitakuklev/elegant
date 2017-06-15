@@ -1,20 +1,17 @@
-/* file: gasScattering.nl
- * contents: namelist for gas scattering simulation
+/* file: elasticScattering.nl
+ * contents: namelist for elastic scattering simulation
  * 
  * Michael Borland, 2017
  */
 #include "namelist.h"
 
-#namelist gas_scattering static
+#namelist elastic_scattering static
     STRING output = NULL;
     STRING log_file = NULL;
-    double xpmin = -0.01;
-    double xpmax = 0.01;
-    long nx = 11;
-    double ypmin = 0.0;
-    double ypmax = 0.01;
-    long ny = 11;
-    long twiss_scaling = 0;
+    double theta_min = 0.001;
+    double theta_max = 0.010;
+    long n_theta = 11;
+    long n_phi = 37;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
