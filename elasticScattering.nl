@@ -12,6 +12,7 @@
     double theta_max = 0.010;
     long n_theta = 11;
     long n_phi = 37;
+    long twiss_scaling = 0;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;

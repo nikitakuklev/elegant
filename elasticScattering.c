@@ -24,6 +24,7 @@ static FILE *fp_log = NULL;
 #if USE_MPI
 void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
 
+static double betax0, betay0;
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
 static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, isOrig,
@@ -31,11 +32,21 @@ static long iElementName, iElementOccurence, iElementType, ixpOrig, iypOrig, isO
 MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
-void computeScatteringAngles(long itheta, long iphi, double *xpReturn, double *ypReturn, double *thetaReturn, double *phiReturn)
+void computeScatteringAngles(long itheta, long iphi, double *xpReturn, double *ypReturn, double *thetaReturn, double *phiReturn,
+                             TWISS *twiss)
 {
-  double theta, phi;
+  double theta, phi, theta0;
+  double xScale, yScale;
+
   phi = (iphi*PI)/(n_phi-1);
-  theta = (theta_max-theta_min)/(n_theta-1.0)*itheta + theta_min;
+  
+  theta0 = theta_min;
+  if (twiss_scaling) {
+    xScale = sqrt(twiss->betax/betax0);
+    yScale = sqrt(twiss->betay/betay0);
+    theta0 = theta_min*(xScale<yScale?xScale:yScale);
+  }
+  theta = (theta_max-theta0)/(n_theta-1.0)*itheta + theta0;
   *xpReturn = theta*cos(phi);
   *ypReturn = theta*sin(phi);
   if (thetaReturn)
@@ -113,7 +124,7 @@ static void slopeOffsetFunction(double **coord, long np, long pass, long i_elem,
         bombElegant("invalid id value (>n_theta*n_phi)", NULL);
       itheta = id%n_theta;
       iphi = id/n_theta;
-      computeScatteringAngles(itheta, iphi, &mal.dxp, &mal.dyp, NULL, NULL);
+      computeScatteringAngles(itheta, iphi, &mal.dxp, &mal.dyp, NULL, NULL, eptr->twiss);
 #if MPI_DEBUG
       printf("applying kicks\n");
       fflush(stdout);
@@ -207,6 +218,8 @@ void setupElasticScattering(
       fprintf(fp_log, "&column name=MinParticles type=long &end\n");
       fprintf(fp_log, "&column name=MaxParticles type=long &end\n");
       fprintf(fp_log, "&column name=MeanParticles type=double &end\n");
+      fprintf(fp_log, "&column name=ElapsedTime type=double units=s &end\n");
+      fprintf(fp_log, "&column name=ElapsedCoreTime type=double units=s &end\n");
       fprintf(fp_log, "&data mode=ascii no_row_counts=1 &end\n");
     }
   }
@@ -257,6 +270,10 @@ long runElasticScattering(
   }
   
   elem = &(beamline->elem);
+  if (twiss_scaling && !elem->twiss)
+    bombElegant("twiss_scaling was invoked but twiss parameters were not computed", NULL);
+  betax0 = elem->twiss->betax;
+  betay0 = elem->twiss->betay;
 
   /* determine how man_phi elements will be tracked */
   elem0 = NULL;
@@ -422,8 +439,8 @@ long runElasticScattering(
              (nMeanLeft*1.0)/nSummed);
       fflush(stdout);
       if (fp_log) {
-        fprintf(fp_log, "%ld %ld %ld %ld %le\n",  lastPass[2], nTotalLeft, nMinLeft, nMaxLeft,
-                (nMeanLeft*1.0)/nSummed);
+        fprintf(fp_log, "%ld %ld %ld %ld %le %le %le\n",  lastPass[2], nTotalLeft, nMinLeft, nMaxLeft,
+                (nMeanLeft*1.0)/nSummed, delapsed_time(), delapsed_time()*n_processors);
         fflush(fp_log);
       }
     }
@@ -483,7 +500,7 @@ long runElasticScattering(
       ie = (particleID-id)/(n_theta*n_phi);
       itheta = id%n_theta;
       iphi = id/n_theta;
-      computeScatteringAngles(itheta, iphi, &xpOrig, &ypOrig, &thetaOrig, &phiOrig);
+      computeScatteringAngles(itheta, iphi, &xpOrig, &ypOrig, &thetaOrig, &phiOrig, elementArray[ie]->twiss);
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
                              iElementType, entity_name[elementArray[ie]->type],
