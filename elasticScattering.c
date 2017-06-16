@@ -469,7 +469,7 @@ long runElasticScattering(
   }
   
   if (myid==0) {
-    long badThetaMin = 0, nThetaMax;
+    long badThetaMin = 0, nThetaMax = 0;
     if (!SDDS_StartPage(&SDDSsa, nLost) ||
         !SDDS_SetParameters(&SDDSsa, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
                             control->i_step, NULL)) {
