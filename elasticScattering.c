@@ -469,6 +469,7 @@ long runElasticScattering(
   }
   
   if (myid==0) {
+    long badThetaMin = 0;
     if (!SDDS_StartPage(&SDDSsa, nLost) ||
         !SDDS_SetParameters(&SDDSsa, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
                             control->i_step, NULL)) {
@@ -501,6 +502,8 @@ long runElasticScattering(
       itheta = id%n_theta;
       iphi = id/n_theta;
       computeScatteringAngles(itheta, iphi, &xpOrig, &ypOrig, &thetaOrig, &phiOrig, elementArray[ie]->twiss);
+      if (itheta==0)
+        badThetaMin ++;
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
                              iElementType, entity_name[elementArray[ie]->type],
@@ -539,6 +542,11 @@ long runElasticScattering(
       SDDS_DoFSync(&SDDSsa);
     free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
     free_czarray_2d((void**)lostParticles, nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE+1);	 
+    if (badThetaMin) {
+      printf("*** Warning: in %ld cases, a particle that was on the inner ring (theta = theta_min) was lost.\n",
+             badThetaMin);
+      printf("*** You should reduce theta_min and/or use twiss_scaling, and re-rerun.\n");
+    }
   }
   else {
     free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
