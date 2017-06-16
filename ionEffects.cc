@@ -178,14 +178,14 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   while (eptr) {
     if (eptr->type == T_IONEFFECTS) {
       ionEffects = (IONEFFECTS*)eptr->p_elem;
-      if (verbosity>1) 
+      if (verbosity>10) 
         printf("IONEFFECTS element %s#%ld at s=%le m spans s:[%le, %le] m\n",
                eptr->name, eptr->occurence, eptr->end_pos, ionEffects->sStart, ionEffects->sEnd);
 
       /* Determine the average pressure for each gas */
       ionEffects->pressure = (double*)tmalloc(sizeof(*(ionEffects->pressure))*pressureData.nGasses);
       computeAverageGasPressures(ionEffects->sStart, ionEffects->sEnd, ionEffects->pressure, &pressureData);
-      if (verbosity>2) {
+      if (verbosity>20) {
         long i;
         printf("Average pressures over s:[%le, %le] m\n", ionEffects->sStart, ionEffects->sEnd);
         for (i=0; i<pressureData.nGasses; i++)
@@ -254,7 +254,7 @@ void trackWithIonEffects
 #endif
 
     for (iBunch=0; iBunch<nBunches; iBunch++) {
-      if (verbosity>2) {
+      if (verbosity>20) {
         printf("Working on bunch %ld\n", iBunch);
         fflush(stdout);
       }
@@ -308,10 +308,18 @@ void trackWithIonEffects
 #endif
       /* total bunch charge */
       qBunch = npTotal*charge->macroParticleCharge;
-      if (verbosity>3) {
+      if (verbosity>30) {
         printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
                npTotal, tNow, sigma[0], sigma[1], centroid[0], centroid[1], qBunch);
         fflush(stdout);
+      }
+      
+      if ((verbosity > 4) &&  (ionEffects->sStart < 10)) {
+	FILE * fbeam;
+	fbeam = fopen("beam_info.dat", "a");
+	fprintf(fbeam, "%le  %le  %le  %le  %le  %le \n",
+               tNow, sigma[0], sigma[1], centroid[0], centroid[1], qBunch);
+	fclose(fbeam);
       }
 
       /*** Advance the ion positions */
@@ -571,7 +579,8 @@ void trackWithIonEffects
 
 
     // write out coordinates of each ion
-    if (((iPass == 0) || (iPass == 99)) || (verbosity > 9)) {
+    //if (((iPass == 0) || (iPass == 99)) || (verbosity > 9)) {
+    if ((iPass % 100 == 0) || (verbosity > 9)) {
       double xtemp, ytemp, qtemp; 
       fion = fopen("ion_coord.dat", "a");
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -579,7 +588,7 @@ void trackWithIonEffects
 	  xtemp = ionEffects->coordinate[iSpecies][jMacro][0];
 	  ytemp = ionEffects->coordinate[iSpecies][jMacro][2];
 	  qtemp = ionEffects->coordinate[iSpecies][jMacro][4];
-	  fprintf(fion, "%f  %f  %f  %e  %d \n",  ionEffects->sStart, xtemp, ytemp, qtemp, iSpecies);
+	  fprintf(fion, "%f  %e  %e  %e  %d \n",  ionEffects->sStart, xtemp, ytemp, qtemp, iSpecies);
 	}
       }
       fclose(fion);
