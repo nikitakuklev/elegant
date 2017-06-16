@@ -18,6 +18,7 @@
 #include "elasticScattering.h"
 
 static SDDS_DATASET SDDSsa;
+static SDDS_DATASET SDDSout;
 static long fireOnPass = 1;
 static FILE *fp_log = NULL;
 
@@ -165,8 +166,8 @@ void setupElasticScattering(
     bombElegant("at present, elastic_scattering is incompatible with concatenation", NULL);
   
   /* check for data errors */
-  if (!output)
-    bombElegant("no output filename specified", NULL);
+  if (!losses)
+    bombElegant("no losses filename specified", NULL);
   if (theta_min >= theta_max)
     bombElegant("theta_min >= theta_max",  NULL);
   if (s_start>=s_end)
@@ -178,11 +179,11 @@ void setupElasticScattering(
   
   nElements = 0;
 
-  output = compose_filename(output, run->rootname);
+  losses = compose_filename(losses, run->rootname);
   sprintf(description, "Slope aperture search");
 
   if (myid==0) {
-    if (!SDDS_InitializeOutput(&SDDSsa, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
+    if (!SDDS_InitializeOutput(&SDDSsa, SDDS_BINARY, 1, description, "momentum aperture",  losses)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
@@ -222,7 +223,19 @@ void setupElasticScattering(
       fprintf(fp_log, "&column name=ElapsedCoreTime type=double units=s &end\n");
       fprintf(fp_log, "&data mode=ascii no_row_counts=1 &end\n");
     }
+    
   }
+
+  if (output) {
+    long nsp;
+    nsp = notSinglePart;
+    notSinglePart = 1; /* trick SDDS_PhaseSpaceSetup() into opening file in parallel mode (slaves write) */
+    output = compose_filename(output, run->rootname);
+    SDDS_PhaseSpaceSetup(&SDDSout, output, SDDS_BINARY, 1, "output phase space", run->runfile, run->lattice, 
+                         "setupElasticScattering");
+    notSinglePart = nsp;
+  }
+
 #endif
 }
 
@@ -230,6 +243,10 @@ void finishElasticScattering()
 {
 #if USE_MPI
   if (SDDS_IsActive(&SDDSsa) && !SDDS_Terminate(&SDDSsa)) {
+    SDDS_SetError("Problem terminating SDDS output (finishElasticScattering)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (SDDS_IsActive(&SDDSout) && !SDDS_Terminate(&SDDSout)) {
     SDDS_SetError("Problem terminating SDDS output (finishElasticScattering)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -459,6 +476,14 @@ long runElasticScattering(
   if (fp_log) {
     fclose(fp_log);
     fp_log = NULL;
+  }
+
+  if (output) {
+    long nsp;
+    nsp = notSinglePart;
+    notSinglePart = 1;  /* trick dump_phase_space into working in paralle io mode */
+    dump_phase_space(&SDDSout, coord, nLeft, control->i_step, run->p_central, 0.0, 0);
+    notSinglePart = nsp;
   }
 
   nLeft = 0;

@@ -6,6 +6,7 @@
 #include "namelist.h"
 
 #namelist elastic_scattering static
+    STRING losses = NULL;
     STRING output = NULL;
     STRING log_file = NULL;
     double theta_min = 0.001;
