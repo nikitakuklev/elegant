@@ -45,6 +45,8 @@ Historical change logs are appended to the end of this manual.
 \begin{itemize}
 \item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
   used the same data file. This was fixed.
+\item The \verb|BGGEXP| element refused to run if $m=1$ (dipole) was the main multipole, which
+  prevented modeling wigglers. This was reported by forum user Ji\_Li and was fixed.
 \item The \verb|RFDF| element had a bug in computing the energy-dependence of the time of flight,
   as reported by Daniel Marx. This was fixed. The missing phase reference feature was also implemented.
 \item Using the third-order matrix of the \verb|QUAD| element with \verb|RADIAL=1| would result in a crash.
@@ -110,7 +112,8 @@ Users are encouraged to test results against the serial or parallel versions.
 \item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
   suggested by forum post by user jan.
 \item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
-  for odd multipole orders (e.g., dipole, sextupole, ...). This was reported by forum user Ji\_Li and has been fixed.
+  for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
+  This was reported by forum user Ji\_Li and has been fixed.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}

@@ -124,11 +124,22 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "t", "s", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "s", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "qIons", "C", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIons", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Sx", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Sy", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Cx", "m", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Cy", "m", SDDS_DOUBLE) ||
-            !SDDS_SaveLayout(SDDS_ionDensityOutput) || !SDDS_WriteLayout(SDDS_ionDensityOutput)) {
+            !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Cy", "m", SDDS_DOUBLE)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+#if USE_MPI
+        if (!SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIonsMin", NULL, SDDS_LONG) ||
+          !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIonsMax", NULL, SDDS_LONG)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+#endif
+        if (!SDDS_SaveLayout(SDDS_ionDensityOutput) || !SDDS_WriteLayout(SDDS_ionDensityOutput)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
@@ -653,11 +664,18 @@ void trackWithIonEffects
       }
     }
 
+    long mTotTotal;
 #if USE_MPI
     /* Sum ion centroid and charge data over all nodes */
-    long mTotTotal;
+    long mTotMin, mTotMax;
     double qIonTotal, ionCentroidTotal[2];
     MPI_Allreduce(&mTot, &mTotTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (myid==0)
+      mTot = LONG_MAX;
+    MPI_Allreduce(&mTot, &mTotMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
+    if (myid==0)
+      mTot = LONG_MIN;
+    MPI_Allreduce(&mTot, &mTotMax, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
     MPI_Allreduce(&qIon, &qIonTotal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(ionCentroid, ionCentroidTotal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     qIon = qIonTotal;
@@ -669,6 +687,7 @@ void trackWithIonEffects
     if (qIon) {
       ionCentroid[0] = ionCentroid[0]/qIon;
       ionCentroid[1] = ionCentroid[1]/qIon;
+      mTotTotal = mTot;
     }
 #endif
     
@@ -709,7 +728,12 @@ void trackWithIonEffects
     if (SDDS_ionDensityOutput) {
       if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput++,
                             "t", tNow, "Pass", iPass, "Bunch", iBunch, "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
-                            "Cx", ionCentroid[0], "Cy", ionCentroid[1], NULL)) {
+                             "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", mTotTotal,
+#if USE_MPI
+                             "nMacroIonsMin", mTotMin, 
+                             "nMacroIonsMax", mTotMax, 
+#endif
+                             NULL)) {
          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
          exitElegant(1);
       }

@@ -95,7 +95,7 @@ long addBGGExpData(char *filename)
 
   im = nz = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
-    if (!SDDS_GetParameter(&SDDSin, "m", &m) || m<=1)
+    if (!SDDS_GetParameter(&SDDSin, "m", &m) || m<1)
       bombElegantVA("Problem with value of m for page %ld of file %s for BGGEXP %s #%ld\n", readCode, filename, tcontext.elementName, tcontext.elementOccurrence);
     if (readCode==1) {
       long iz;
