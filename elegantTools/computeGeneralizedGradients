@@ -9,14 +9,16 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-wiggler 1\]\nHarmonic 2 is quadrupole, 3 is octupole, etc.\nInput file should normally start and end in zero-field region outside magnet.\nUse the wiggler option if fields are for a *single period* of a wiggler or undulator.\n"
+set usage "usage: computeGeneralizedGradients -input <filename> -output <rootname> -mainHarmonic <number> -nHarmonics <number> \[-allHarmonics 1] \[-wiggler 1\]\nHarmonic 2 is quadrupole, 3 is octupole, etc.\nInput file should normally start and end in zero-field region outside magnet.\nUse the wiggler option if fields are for a *single period* of a wiggler or undulator.\nNormally, only allowed harmonics of the main harmonic are used, assuming that the main harmonic is the only designed-in harmonic.\nTo use all higher harmonics, use the -allHarmonics option.\n"
 set args $argv
 set input ""
 set output ""
 set mainHarmonic -1
 set nHarmonics 3
+set allHarmonics 0
 set wiggler 0
-if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler}] || ![string length $input] || ![string length $output] || \
+set flip 0
+if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler allHarmonics flip}] || ![string length $input] || ![string length $output] || \
     [expr $mainHarmonic<1] || [expr $nHarmonics<1]} {
     puts stderr "$usage"
     exit 1
@@ -34,11 +36,17 @@ set m0 $mainHarmonic
 set root $output 
 
 set pageList ""
-for {set n 0} {$n<$nHarmonics} {incr n} {
-    lappend pageList [expr $m0*(2*$n+1)+1]
+if $allHarmonics {
+    for {set n 0} {$n<$nHarmonics} {incr n} {
+        lappend pageList [expr $m0+$n+1]
+    }
+} else {
+    for {set n 0} {$n<$nHarmonics} {incr n} {
+        lappend pageList [expr $m0*(2*$n+1)+1]
+    }
 }
 
-# Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
+   # Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
 # each z value. 
 # Regroup so that each page is a different harmonic.
 exec sddssort $input -pipe=out -column=phi,incr \
@@ -53,6 +61,27 @@ if $wiggler {
     set base ave
 }
 
+# Figure out if data is symmetric or antisymmetric
+exec sddsregroup $input -pipe=out -newcolumn=z -newparameter=phi \
+    | sddssort -pipe -column=z,incr \
+    | tee ds1 \
+    | sddssort -pipe=in ds2 -column=z,decr
+set check [exec sddsxref ds1 ds2 -pipe=out -take=Br -rename=col,Br=BrFlip \
+               | sddsprocess -pipe \
+               "-define=col,check,Br sign BrFlip sign + n_rows /" \
+               -process=check,sum,checkSum \
+               | sddscollapse -pipe \
+               | sddsprocess -pipe -process=checkSum,ave,%sAve \
+               | sdds2stream -pipe -parameter=checkSumAve]
+if [expr $check<0.5] {
+    puts stdout "Data appears to be antisymmetric function of z"
+    set p1 Imag
+    set p2 Real
+} else {
+    set p1 Real
+    set p2 Imag
+}
+
 # Find normalized gradients for listed pages (harmonics):
 # Take FFT of BmR(z)
 # Reorganize so that the FFT is expressed over [-fMax, fMax]
@@ -61,7 +90,7 @@ if $wiggler {
 # Reorganize so that the IFFT is expressed over [-zMax, zMax]
 # Perform some test sums to compute Br(z,R) and Bz(z,R) at R=0.01m
 # Note: I'm(kR) is odd (even) if m is even (odd)
-exec sddsprocess $root.fft -pipe=out "-define=parameter,m,i_page 1 -,type=short"  \
+   exec sddsprocess $root.fft -pipe=out "-define=parameter,m,i_page 1 -,type=short"  \
     | sddsconvert -pipe -keeppages=[join $pageList ,] \
     | sddsprocess -pipe "-define=col,BmRz,ImagFFTBr chs" \
     | sddsfft -pipe -col=z,BmRz -full=unfolded -nowarning \
@@ -73,32 +102,32 @@ exec sddsprocess $root.fft -pipe=out "-define=parameter,m,i_page 1 -,type=short"
     "-define=parameter,R,$R,units=m" \
     "-define=column,k,f 2 * pi *" \
     "-define=col,kR,k R *" \
-    "-define=col,ImpkR,kR abs 1e-8 + m 1 - BesIn kR abs 1e-8 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 m 1 + pow : 1  $ * " \
-    "-define=col,dCms0,RealFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms2,RealFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms4,RealFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms6,RealFFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms8,RealFFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms10,RealFFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms12,RealFFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms14,RealFFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms16,RealFFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms0p,RealFFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms2p,RealFFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms4p,RealFFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms6p,RealFFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms8p,RealFFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms10p,RealFFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms12p,RealFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms14p,RealFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms16p,RealFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,ImpkR,kR abs 1e-12 + m 1 - BesIn kR abs 1e-12 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 m 1 + pow : 1  $ * " \
+    "-define=col,dCms0,${p1}FFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms2,${p1}FFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms4,${p1}FFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms6,${p1}FFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms8,${p1}FFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms10,${p1}FFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms12,${p1}FFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms14,${p1}FFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms16,${p1}FFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms0p,${p1}FFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms2p,${p1}FFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms4p,${p1}FFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms6p,${p1}FFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms8p,${p1}FFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms10p,${p1}FFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms12p,${p1}FFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms14p,${p1}FFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
+    "-define=col,dCms16p,${p1}FFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
     | sddsfft -pipe -column=f,dCms* -full=unfolded -nowarning \
     | sddsprocess -pipe \
     -process=f,max,zMax \
     "-define=parameter,dz,zMax n_rows 1 - /" \
     "-define=column,z,i_row n_rows 2 / < ? i_row : i_row n_rows - $ dz *,units=m" \
     | sddssort -pipe -column=z \
-    | sddsconvert -pipe -edit=column,*FFTdCms*,%/RealFFTdCms/Cnm/%/ImagFFTdCms/dCnm/%+p+/dz+ \
+    | sddsconvert -pipe -edit=column,*FFTdCms*,%/${p1}FFTdCms/Cnm/%/${p2}FFTdCms/dCnm/%+p+/dz+ \
     | sddsprocess -pipe=in $root.ggrad.full \
     -rpndef=$env(RPN_DEFNS),$alphaRpn \
     "-process=Cnm*,$base,%s$base" \
