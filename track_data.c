@@ -2902,7 +2902,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BRAT_PARAMS,     HAS_LENGTH,   sizeof(BRAT),  brat_param      },
     { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
-    { N_IONEFFECTS_PARAMS, NO_DICT_OUTPUT,     sizeof(IONEFFECTS),  ionEffects_param    },
+    { N_IONEFFECTS_PARAMS, NO_DICT_OUTPUT|MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES, sizeof(SLICE_POINT),    slice_point_param   }, 
 } ;
 

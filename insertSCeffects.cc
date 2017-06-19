@@ -429,8 +429,8 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   dmux = twiss0->betax / sc->sigmax / temp;
   dmuy = twiss0->betay / sc->sigmay / temp;
 #if USE_MPI
-  sc->sigmax = computeRmsCoordinate_p(part, 0, np, eptr);
-  sc->sigmay = computeRmsCoordinate_p(part, 2, np, eptr);
+  sc->sigmax = computeRmsCoordinate_p(part, 0, np, NULL, NULL, entity_description[eptr->type].flags);
+  sc->sigmay = computeRmsCoordinate_p(part, 2, np, NULL, NULL, entity_description[eptr->type].flags);
 #else
   sc->sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
   sc->sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
@@ -446,6 +446,7 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 }
 
 double computeRmsCoordinate(double **coord, long i1, long np, double *meanReturn, long *countReturn)
+/* Confusingly, this routine works fine in parallel, provided all processors except the master participate */
 {
   double vrms=0.0, xc=0.0;
   long i;
@@ -460,7 +461,7 @@ double computeRmsCoordinate(double **coord, long i1, long np, double *meanReturn
   }
 #if USE_MPI
   else {
-    if(isMaster)
+    if (isMaster)
       np = 0;
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
    if (!np_total)
@@ -506,17 +507,21 @@ double computeRmsCoordinate(double **coord, long i1, long np, double *meanReturn
 }
 
 #if USE_MPI
-/* We have this new function as we need treat the parallel an serial element separately */
-double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr)
+/* We have this new function as we need treat the parallel and serial element separately */
+double computeRmsCoordinate_p(double **coord, long i1, long np, double *centroid, long *npTotal, unsigned long classFlags)
 {
   double vrms=0.0, xc=0.0;
   long i, np_total;
-  unsigned long classFlags = 0;
 
-  classFlags = entity_description[eptr->type].flags;
+  if (centroid)
+    *centroid = 0;
+  if (npTotal)
+    *npTotal = 0;
 
   if (classFlags&UNIPROCESSOR) { /* serial element, only master works */
     MPI_Bcast(&np, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    if (npTotal)
+      *npTotal = np;
     if (!np)
       return(0.0);
 
@@ -527,6 +532,8 @@ double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *ep
       }
       xc  /= np;
     }
+    if (centroid)
+      *centroid = xc;
     /* Broadcast the xc from master to all the slaves */
     MPI_Bcast(&xc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     if (isMaster) {
@@ -541,9 +548,12 @@ double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *ep
   else { /* parallel element, only slaves works */
     double xc_sum=0.0, vrms_sum = 0.0;
 
-    if(isMaster)
+    if (isMaster)
       np = 0;
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (npTotal)
+      *npTotal = np_total;
+
     /* compute centroids */
     if (isSlave) {
       for (i=xc=0; i<np; i++) {
@@ -553,6 +563,8 @@ double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *ep
     /* Compute the sum of xc across all the processors */
     MPI_Allreduce (&xc, &xc_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     xc = xc_sum/np_total;
+    if (centroid)
+      *centroid = xc;
 
     if (isSlave) {
       for (i=vrms=0; i<np; i++) {
@@ -563,6 +575,6 @@ double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *ep
     MPI_Allreduce (&vrms, &vrms_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     vrms = vrms_sum/np_total;    
   }
-  return(sqrt(vrms));
+  return sqrt(vrms);
 }
 #endif

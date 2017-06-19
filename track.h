@@ -4178,7 +4178,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 double computeRmsCoordinate(double **coord, long i1, long np, double *mean, long *countReturn);
 #if USE_MPI
-double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr);
+double computeRmsCoordinate_p(double **coord, long i1, long np, double *centroid, long *npTotal, unsigned long classFlags);
 #endif
 
 void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
@@ -4298,9 +4298,9 @@ long applyElementRamps(RAMP_DATA *rampData, double pCentral, RUN *run, long iPas
 void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
 #endif
 
-void setupIonEffects(NAMELIST_TEXT *nltext, RUN *run);
+void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run);
 void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline);
-void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, CHARGE *charge);
+void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, long nPasses, CHARGE *charge);
 
 extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, double **final, double **error, 
 				 double *step_size, double *maximum_value, int n_points1, int n_points_total,

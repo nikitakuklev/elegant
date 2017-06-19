@@ -8,6 +8,9 @@
 #namelist ion_effects static
           STRING pressure_profile = NULL;
           STRING ion_properties = NULL;
+          STRING beam_output = NULL;
+          STRING ion_density_output = NULL;
+          STRING ion_coordinate_output = NULL;
           long grid_points_x = 0;
           long grid_points_y = 0;
           STRING field_calculation_method = NULL;

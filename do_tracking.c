@@ -1796,7 +1796,7 @@ long do_tracking(
 					charge);
 	      break;
             case T_IONEFFECTS:
-              trackWithIonEffects(coord, nToTrack, (IONEFFECTS*)eptr->p_elem, *P_central, i_pass, charge);
+              trackWithIonEffects(coord, nToTrack, (IONEFFECTS*)eptr->p_elem, *P_central, i_pass, n_passes, charge);
               nLeft = nToTrack;
               break;
 	    case T_CORGPIPE:

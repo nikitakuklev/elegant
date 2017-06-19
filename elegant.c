@@ -894,7 +894,7 @@ char **argv;
     case ION_EFFECTS:
       if (!run_setuped)
         bombElegant("run_setup must precede ion_effects namelist", NULL);
-      setupIonEffects(&namelist_text, &run_conditions);
+      setupIonEffects(&namelist_text, &run_control, &run_conditions);
       ionEffectsSeen = 1;
       break;
     case TRACK:
