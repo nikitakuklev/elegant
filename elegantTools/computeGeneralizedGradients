@@ -17,8 +17,7 @@ set mainHarmonic -1
 set nHarmonics 3
 set allHarmonics 0
 set wiggler 0
-set flip 0
-if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler allHarmonics flip}] || ![string length $input] || ![string length $output] || \
+if {[APSStrictParseArguments {input output mainHarmonic nHarmonics wiggler allHarmonics}] || ![string length $input] || ![string length $output] || \
     [expr $mainHarmonic<1] || [expr $nHarmonics<1]} {
     puts stderr "$usage"
     exit 1
@@ -74,10 +73,11 @@ set check [exec sddsxref ds1 ds2 -pipe=out -take=Br -rename=col,Br=BrFlip \
                | sddsprocess -pipe -process=checkSum,ave,%sAve \
                | sdds2stream -pipe -parameter=checkSumAve]
 if [expr $check<0.5] {
-    puts stdout "Data appears to be antisymmetric function of z"
-    set p1 Imag
+    puts stdout "Data appears to be antisymmetric function of z" 
+   set p1 Imag
     set p2 Real
 } else {
+    puts stdout "Data appears to be symmetric function of z"
     set p1 Real
     set p2 Imag
 }
