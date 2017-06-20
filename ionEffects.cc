@@ -669,15 +669,23 @@ void trackWithIonEffects
     /* Sum ion centroid and charge data over all nodes */
     long mTotMin, mTotMax;
     double qIonTotal, ionCentroidTotal[2];
-    MPI_Allreduce(&mTot, &mTotTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    /* Use buffers to perform reduce operations to improve efficiency */
+    double inBuffer[4], sumBuffer[4];
+    inBuffer[0] = mTot;
+    inBuffer[1] = qIon;
+    inBuffer[2] = ionCentroid[0];
+    inBuffer[3] = ionCentroid[1];
+    MPI_Allreduce(inBuffer, sumBuffer, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    mTotTotal = sumBuffer[0];
+    qIonTotal = sumBuffer[1];
+    ionCentroidTotal[0] = sumBuffer[2];
+    ionCentroidTotal[1] = sumBuffer[3];
     if (myid==0)
       mTot = LONG_MAX;
     MPI_Allreduce(&mTot, &mTotMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     if (myid==0)
       mTot = LONG_MIN;
     MPI_Allreduce(&mTot, &mTotMax, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
-    MPI_Allreduce(&qIon, &qIonTotal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(ionCentroid, ionCentroidTotal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     qIon = qIonTotal;
     if (qIon!=0) {
       ionCentroid[0] = ionCentroidTotal[0]/qIon;
