@@ -735,7 +735,8 @@ void trackWithIonEffects
 #endif
     if (SDDS_ionDensityOutput) {
       if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput++,
-                            "t", tNow, "Pass", iPass, "Bunch", iBunch, "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
+                            "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sStart, 
+			     "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
                              "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", mTotTotal,
 #if USE_MPI
                              "nMacroIonsMin", mTotMin, 
@@ -752,7 +753,7 @@ void trackWithIonEffects
 
     if (isSlave || !notSinglePart) {
       /*** Determine and apply kicks to beam from the total ion field */
-      if (qIon && ionSigma[0]>0 && ionSigma[1]>0) {
+      if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
           double kick[2];
           gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
