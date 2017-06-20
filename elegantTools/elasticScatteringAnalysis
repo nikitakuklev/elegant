@@ -126,11 +126,11 @@ foreach g $speciesList {
     lappend GList "-define=column,g$g,$g $PConv * kb_mks / $T / $Fg *,units=1/m" 
     set GSum "$GSum g$g +"
 }
-APSAddToTempFileList $tmpRoot.pres
+#APSAddToTempFileList $tmpRoot.pres
 eval exec sddsprocess $pressure $tmpRoot.pres $GList "{-define=col,G,$GSum,units=1/m}"
 
 # Ensure that twiss file is nicely ordered with no duplicate points
-APSAddToTempFileList $tmpRoot.twi $tmpRoot.twi1
+#APSAddToTempFileList $tmpRoot.twi $tmpRoot.twi1
 exec sddssort $twiss $tmpRoot.twi -col=s -unique
 exec removeBackDrifts -input $tmpRoot.twi -output $tmpRoot.twi1
 
@@ -185,8 +185,8 @@ foreach sLoc $sLocList sStart $sStartList sEnd $sEndList betax0 $betax0List beta
              "-define=column,weight,betax $betax0 / betay $betay0 / * sqrt" \
              -process=weight,gminteg,weightInteg,functionOf=s \
              | sdds2stream -pipe -parameter=weightInteg]
-    set GAve [exec sddsinterp $tmpRoot.pres -pipe=out -column=s,G -equispaced=0.001 \
-                  | sddsprocess -pipe -filter=col,s,$sStart,$sEnd \
+    set GAve [exec sddsinterp $tmpRoot.pres -pipe=out -column=s,G -equispaced=0.001,$sStart,$sEnd -above=wrap \
+                  | sddsprocess -pipe \
                   -process=G,gminteg,Ginteg,functionOf=s \
                   -process=s,spread,%sSpread \
                   "-define=parameter,GAve,Ginteg sSpread /" \
@@ -194,8 +194,10 @@ foreach sLoc $sLocList sStart $sStartList sEnd $sEndList betax0 $betax0List beta
     if $verbose {
         puts stderr "s:\[$sStart, $sEnd] : W=$W, <G>=$GAve"
     }
-    exec sddsprocess $tracking $tracking.proc[format %03d $index] \
+    exec sddsprocess $tracking $tracking.proc[format %06d $index] \
       -filter=col,s,$s0,$s1 \
+      -define=parameter,betax0,$betax0,units=m \
+      -define=parameter,betay0,$betay0,units=m \
       -define=parameter,dphi,$dphi -define=parameter,dtheta,$dtheta \
       -define=parameter,GAve,$GAve,units=1/m \
       -define=parameter,W,$W,units=m \
@@ -203,17 +205,20 @@ foreach sLoc $sLocList sStart $sStartList sEnd $sEndList betax0 $betax0List beta
       "-define=column,rate,theta sin theta 2 / sin 4 pow / dphi * dtheta * GAve * W * c_mks * $LFactor * $LTotal /,units=1/s" \
       "-process=rate,sum,rateSum" 
 
-    lappend trackingList $tracking.proc[format %03d $index] 
+    lappend trackingList $tracking.proc[format %06d $index] 
     incr index
 }
 
 if $verbose {
     puts stderr "generating $output"
 }
+eval exec sddscombine $trackingList -pipe=out \
+    | tee $output.full \
+    | sddscombine -pipe -merge \
+    | sddshist -pipe=in $output.his -data=sLost -weight=rate -bins=$nbins -norm=sum
+
 eval exec sddscombine $trackingList -collapse -pipe=out \
   | sddsprocess -pipe=in $output -process=rateSum,sum,rateTotal \
   "{-define=parameter,lifetime,rateTotal rec 3600 /,units=h}" 
 
-eval exec sddscombine $trackingList -pipe=out -merge \
-    | sddshist -pipe=in $output.his -data=sLost -weight=rate -bins=$nbins -norm=sum
-
+eval file delete $trackingList
