@@ -3123,6 +3123,7 @@ typedef struct {
   double xSpan, ySpan;
   long startPass, endPass, passInterval;
   /* internal parameters */
+  double sLocation;                /* location of the element */
   double sStart, sEnd;            /* coordinate range over which this element is modeling ions */
   double *pressure;               /* pressure for each species averaged over the effective length.
                                    * Indices line up with those used in the pressure input file.
