@@ -55,7 +55,7 @@ static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionCoordinateOutput = NULL;
 static double sStartFirst = -1;
 static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonDensityOutput;
-
+static IONEFFECTS *firstIonEffects = NULL; /* first in the lattice */
 static long leftIonCounter = 0;
 
 void closeIonEffectsOutputFiles() {
@@ -292,9 +292,12 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   }
 
   eptr = &(beamline->elem);
+  firstIonEffects = NULL;
   while (eptr) {
     if (eptr->type == T_IONEFFECTS) {
       ionEffects = (IONEFFECTS*)eptr->p_elem;
+      if (!firstIonEffects)
+        firstIonEffects = ionEffects;
       if (verbosity>10) 
         printf("IONEFFECTS element %s#%ld at s=%le m spans s:[%le, %le] m\n",
                eptr->name, eptr->occurence, eptr->end_pos, ionEffects->sStart, ionEffects->sEnd);
@@ -392,14 +395,14 @@ void trackWithIonEffects
     if (iPass==0 && ionEffects->sStart==sStartFirst) {
       iIonEffectsElement = 0;
       if (SDDS_beamOutput) {
-        if (!SDDS_StartPage(SDDS_beamOutput, nPasses*nIonEffectsElements*nBunches)) {
+        if (!SDDS_StartPage(SDDS_beamOutput, nPasses*(output_all_beam_locations?nIonEffectsElements:1)*nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
         iBeamOutput = 0;
       }
       if (SDDS_ionDensityOutput) {
-        if (!SDDS_StartPage(SDDS_ionDensityOutput, nPasses*nIonEffectsElements*nBunches)) {
+        if (!SDDS_StartPage(SDDS_ionDensityOutput, nPasses*(output_all_ion_locations?nIonEffectsElements:1)*nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
@@ -491,7 +494,8 @@ void trackWithIonEffects
     if (myid==0) {
 #endif
       if (SDDS_beamOutput) {
-        if (!SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
+        if ((output_all_beam_locations || ionEffects==firstIonEffects) &&
+            !SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
                                "t", tNow, "Pass", iPass,
                                "Bunch", iBunch, "qBunch", qBunch, "npBunch", npTotal,
                                "s", ionEffects->sStart,
@@ -736,7 +740,8 @@ void trackWithIonEffects
     if (myid==0) {
 #endif
     if (SDDS_ionDensityOutput) {
-      if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput++,
+      if ((output_all_ion_locations || ionEffects==firstIonEffects) &&
+          !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput++,
                             "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sStart, 
 			     "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
                              "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", mTotTotal,
