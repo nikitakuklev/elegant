@@ -398,8 +398,10 @@ long runElasticScattering(
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
       else
         memset(coord[ip], 0, sizeof(**coord)*6);
+      /* particle ID values for each processor are widely spaced, which leads
+       * to better load balance given how the scattering sites and angles are chosen
+       */
       coord[ip][6] = myid-1 + ip*nWorkingProcessors;
-      /* coord[ip][6] = (myid-1)*nEachProcessor + ip; */
       if (coord[ip][6]>=nTotal) {
         /* Don't track more buffer particles than needed */
         coord[ip][6] = -1;
