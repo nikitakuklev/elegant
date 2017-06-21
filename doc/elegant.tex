@@ -91,7 +91,10 @@ Historical change logs are appended to the end of this manual.
 \subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
-\item None.
+\item The \verb|elastic_scattering| command was added. It performs parallel tracking to determine the angular
+  acceptance at a series of s locations. The data is intended for use with the script {\tt elasticScatteringAnalysis},
+  which allows determination of the elastic gas scattering lifetime and loss distribution.
+  This command is presently only available in \verb|Pelegant|, due to the long runtime required.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -1735,6 +1738,66 @@ and \verb|SOLE|.
 	\verb|divisions| should be nonzero.
 \item \verb|clear| --- If nonzero, all prior division specifications are
 	deleted.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|elastic_scattering|}\end{center}
+%\end{latexonly}
+\subsection{elastic\_scattering \label{subsec:elasticscattering}}
+
+\begin{itemize}
+\item type: action command
+\item function: perform simulation of elastic scattering at multiple s locations, for
+  use in computing elastic gas scattering lifetime and loss distribution
+\item sequence: must follow \verb|run_control|.
+\item notes: 
+  \begin{itemize} 
+    \item Only available in \verb|Pelegant|.
+    \item Data may be postprocessed with the command \verb|elasticScatteringAnalysis|.
+    \end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+&elastic_scattering
+    STRING losses = NULL;
+    STRING output = NULL;
+    STRING log_file = NULL;
+    double theta_min = 0.001;
+    double theta_max = 0.010;
+    long n_theta = 11;
+    long n_phi = 37;
+    long twiss_scaling = 0;
+    double s_start = 0;
+    double s_end = DBL_MAX;
+    STRING include_name_pattern = NULL;
+    STRING include_type_pattern = NULL;
+    long verbosity = 1;        
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|losses| --- The (incomplete) name of an SDDS file to which the record of initial scattering location,
+  initial scattering angle, and loss coordinates will be written.
+\item \verb|output| --- The (incomplete) name of an SDDS file to which the final coordinates of all surviving particles
+  will be written.
+\item \verb|log_file| --- The (incomplete) name of an SDDS file to which statistical data will be written as the simulations
+  run. Users should check the \verb|MinParticles| and \verb|MaxParticles| columns as the simulation runs to ensure
+  reasonable load balance (e.g., within 10-20\%). If balance is poor, consider changing the values of \verb|n_phi| and
+  \verb|n_theta| slightly. The product of these values should not evenly divide the number of working cores (which is
+  one less than the total number of cores).
+\item \verb|theta_min| --- Minimum polar scattering angle in radians. Should be small enough that no particle scattered
+  by this angle are lost, regardless of the scattering location. See also \verb|twiss_scaling|.
+\item \verb|theta_max| --- Maximum polar scattering angle in radians. Should be large enough that no particle scattered
+  by this angle survives, regardless of scattering location. 
+\item \verb|n_theta| --- Number of polar scattering angle values on the range \verb|theta_min| to \verb|theta_max|.
+\item \verb|n_phi| --- Number of azimuthal scattering angles on the range $[0, \pi]$.
+\item \verb|twiss_scaling| --- If nonzero, then \verb|theta_min| is scaled by $\sqrt{(\beta_x(s) \beta_y(s))/(\beta_x(0) \beta_y(0))}$,
+  where $s$ is the location of the scattering location and $s=0$ is the start of the lattice.
+\item \verb|s_start|, \verb|s_end| --- Range of s location for simulated scattering sites.
+\item \verb|include_name_pattern| --- Wildcard-containing string to match to element names in selecting scattering sites.
+\item \verb|include_type_pattern| --- Wildcard-containing string to match to element types in selecting scattering sites.
+\item \verb|verbosity| --- Higher values may result in more verbose informational output.
 \end{itemize}
 
 %\begin{latexonly}
@@ -5095,7 +5158,11 @@ up-to-date than these manual pages.
   files that are quite slow to read and does not perform the correct computations
   for low-energy beams.
   (Program by M. Borland.)
-\item {\tt bremsstrahlungLifetime} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output.
+\item {\tt bremsstrahlungLifetime} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss parameter output,
+  assuming a constant gas pressure.
+  (Program by M. Borland.)
+\item {\tt bremsstrahlungLifetimeDetailed} --- Computes gas bremsstrahlung lifetime from local momentum acceptance and Twiss 
+  parameter output, using a user-supplied, s-dependent gas pressure.
   (Program by M. Borland.)
 \item {\tt computeCoherentFraction} --- Computes the coherent fraction for undulator radiation.
 \item {\tt computeGeneralizedGradients} --- Computes generalized gradients for use with the \verb|BGGEXP| element.
@@ -5111,8 +5178,15 @@ up-to-date than these manual pages.
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
  See also {\tt smoothDist6}.
   (Program by M. Borland.)
-
-\item {\tt elasticScatteringLifetime} --- Computes elastic gas scattering lifetime from dynamic acceptance and Twiss parameter output.
+\item {\tt elasticScatteringAnalysis} --- Computes elastic gas scattering lifetime and loss distribution from
+  multi-location tracking data, Twiss parameter output, and gas pressure distribution. Use with output of the
+  \verb|elastic_scattering| command in \verb|Pelegant|.
+  (Program by M. Borland.)
+\item {\tt elasticScatteringLifetime} --- Computes elastic gas scattering lifetime from single-location 
+  dynamic acceptance and Twiss parameter output, assuming a constant gas pressure.
+  (Program by M. Borland.)
+\item {\tt elasticScatteringLifetimeDetailed} --- Computes elastic gas scattering lifetime from single-location 
+  dynamic acceptance and Twiss parameter output, using a user-supplied, s-dependent gas pressure.
   (Program by M. Borland.)
 \item {\tt elegant2astra} --- This program translates {\tt elegant} phase space files into ASTRA \cite{ASTRA} format.
   (Program by M. Borland.)
