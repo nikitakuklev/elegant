@@ -575,10 +575,12 @@ void trackWithIonEffects
 #else
           nToAdd = ionEffects->macroIons;
 #endif
-          qToAdd = 3.21 * qBunch * ionEffects->pressure[index] *        \
-            ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / nToAdd;
-          
-          addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+          if (nToAdd) {
+            qToAdd = 3.21 * qBunch * ionEffects->pressure[index] *      \
+              ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
+            
+            addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+          }
         } else if ((index=ionProperties.sourceIonIndex[iSpecies])>=0) {
           /* This is a multiply-ionized molecule, so use source ion density.
            * Relevant quantities:
