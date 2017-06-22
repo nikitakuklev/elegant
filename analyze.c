@@ -966,6 +966,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   m_alloc(&Ms, 21, 21);
 
   nSlices0 = nSlices;
+
+  /* NB: CWIGGLER will be used in single-step mode, which is why this slicing ends up
+   * sub-dividing the periods 
+   */
   if (eptr->type==T_CWIGGLER)
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
   if (eptr->type==T_WIGGLER)
