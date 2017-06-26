@@ -1020,7 +1020,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 11
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 12
+#define N_BGGEXP_PARAMS 14
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 11
 #define N_IONEFFECTS_PARAMS 7
@@ -2858,6 +2858,7 @@ typedef struct {
   short maximum2n;         /* maximum value of 2*n that is included */
   short zInterval;         /* interval between z points used */
   short symplectic;        /* use symplectic integrator */
+  short synchRad, isr;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
@@ -3148,8 +3149,8 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND)
 #define IS_RADIATOR(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_CSRCSBEND || \
                            (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
-			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE ||	\
-			   (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR)
+			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
+                           (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -4015,7 +4016,7 @@ long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, do
 long binTimeDistribution(double *Itime, long *pbin, double tmin,
                          double dt, long nb, double *time, double **part, double Po, long np);
 
-long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted);
+long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2);
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
                      TWISS *twiss, RADIATION_INTEGRALS *radIntegrals,

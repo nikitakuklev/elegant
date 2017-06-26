@@ -156,12 +156,14 @@ long addBGGExpData(char *filename)
   return nBGGExpDataSets++;
 }
 
-long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted)
+long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
   long ip, ig, im, iz, m, igLimit, izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, x, y, xp, yp, delta, s, r, phi, denom;
   double gamma, step,  length, fieldLength;
+  TRACKING_CONTEXT tcontext;
+  double radCoef=0, isrCoef=0;
 
 #ifdef DEBUG
   static FILE *fpdebug = NULL;
@@ -185,10 +187,15 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     fprintf(fpdebug, "&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
+  if (bgg->synchRad) {
+    radCoef = ipow(particleCharge,4)/(6*PI*epsilon_o*ipow(c_mks,4)*ipow(particleMass,3));
+    isrCoef = sqrt(55/(24*sqrt(3))*particleRadius*hbar_mks*ipow(particleCharge, 3))/sqr(particleMass*c_mks);
+  }
+  if (sigmaDelta2)
+    *sigmaDelta2 = 0;
 
-  TRACKING_CONTEXT tcontext;
   getTrackingContext(&tcontext);
-  
+
   if (!bgg->initialized) {
     bgg->initialized = 1;
     if (!(bgg->filename) || !strlen(bgg->filename)) {
@@ -390,8 +397,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     }
   }  else { 
     /* Element body */
-    double B[3], p[3], dp[3], Bphi, Br;
+    double B[3], p[3], dp[3], Bphi, Br, B2Max;
+    double pOrig;
+
     for (ip=0; ip<np; ip++) {
+      B2Max = 0;
       x = part[ip][0];
       xp = part[ip][1];
       y = part[ip][2];
@@ -401,6 +411,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       
       /* compute momenta (x, y, z) */
       denom = sqrt(1 + sqr(xp) + sqr(yp));
+      pOrig = pCentral*(1+delta);
       p[2] = pCentral*(1+delta)/denom;
       p[0] = xp*p[2];
       p[1] = yp*p[2];
@@ -438,7 +449,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         dp[0] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
         dp[1] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
         dp[2] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
-        
+
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
                 part[ip][6], ds, x, y, iz*bggData->dz, 
@@ -450,6 +461,24 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         p[1] += dp[1];
         p[2] += dp[2];
         
+        if (bgg->synchRad) {
+          /* This is only valid for ultra-relatistic particles */
+          double pTotal0, pTotal1, B2, F;
+          pTotal0 = sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2]));
+          B2 = sqr(B[0])+sqr(B[1]);
+          if (B2>B2Max)
+            B2Max = B2;
+          pTotal1 = pTotal0-radCoef*sqr(pTotal0)*B2*ds;
+          F = isrCoef*sqr(pTotal0)*sqrt(ds)*pow(B2, 3./4.);
+          if (bgg->isr)
+            pTotal1 += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+          if (sigmaDelta2)
+            *sigmaDelta2 += sqr(F)/sqr(pCentral);
+          p[0] *= pTotal1/pTotal0;
+          p[1] *= pTotal1/pTotal0;
+          p[2] *= pTotal1/pTotal0;
+        }
+
         if (iz<izLast) {
           /* Drift forward */
           x += p[0]/p[2]*bggData->dz*bgg->zInterval;
@@ -469,9 +498,28 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       part[ip][2] = y;
       part[ip][3] = p[1]/p[2];
       part[ip][4] = s;
+      /*
+      printf("P: %le -> %le, change = %le, B2Max = %le\n",
+             pOrig,
+             sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2])),
+             sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2]))-pOrig,
+             B2Max);
+      */
+      if (bgg->synchRad) {
+        double gamma0, beta0, gamma1, p1, beta1;
+        gamma0 = sqrt(sqr(pCentral*(1+part[ip][5]))+1);
+        beta0 = pCentral*(1+part[ip][5])/gamma0;
+        p1 = sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2]));
+        gamma1 = sqrt(p1*p1+1);
+        beta1 = p1/gamma1;
+        part[ip][4] *= beta1/beta0;
+        part[ip][5] = p1/pCentral - 1;
+      }
     }
   }
 
+  if (sigmaDelta2 && np)
+    *sigmaDelta2 /= np;
 
   /* Do misalignments */
   if (bgg->tilt)

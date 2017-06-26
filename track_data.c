@@ -339,7 +339,7 @@ PARAMETER mult_param[N_MULT_PARAMS] = {
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&mult_example.factor), NULL, 1.0, 0, "factor by which to multiply strength"},
     {"ORDER", "", IS_SHORT, 0, (long)((char *)&mult_example.order), NULL, 0.0, 1, "multipole order"},
     {"N_KICKS", "", IS_SHORT, 0, (long)((char *)&mult_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&mult_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&mult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     };
 
 FMULT fmult_example;
@@ -352,7 +352,7 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, 0, (long)((char *)&fmult_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
     {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&fmult_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     };
@@ -391,8 +391,8 @@ PARAMETER hcor_param[N_HCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_SHORT, 0, (long)((char *)&hcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_SHORT, 0, (long)((char *)&hcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&hcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&hcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&hcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&hcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&hcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
@@ -407,8 +407,8 @@ PARAMETER vcor_param[N_VCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_SHORT, 0, (long)((char *)&vcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_SHORT, 0, (long)((char *)&vcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&vcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&vcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&vcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&vcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&vcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
@@ -966,14 +966,14 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"HSTEERING", "", IS_LONG, 0, (long)((char *)&ksext_example.xSteering), NULL, 0.0, 0, "use for horizontal correction?"},
     {"VSTEERING", "", IS_LONG, 0, (long)((char *)&ksext_example.ySteering), NULL, 0.0, 0, "use for vertical correction?"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
-    {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
@@ -990,12 +990,12 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&koct_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&koct_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&koct_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
-    {"ISR", "", IS_LONG, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&koct_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&koct_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
@@ -1022,7 +1022,7 @@ PARAMETER ksbend_param[N_KSBEND_PARAMS] = {
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&ksbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge_order), NULL, 0.0, 1, "edge matrix order"},
@@ -1050,14 +1050,14 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"HSTEERING", "", IS_LONG, 0, (long)((char *)&kquad_example.xSteering), NULL, 0.0, 0, "use for horizontal correction?"},
     {"VSTEERING", "", IS_LONG, 0, (long)((char *)&kquad_example.ySteering), NULL, 0.0, 0, "use for vertical correction?"},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
-    {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge1_effects), NULL, 0.0, 0, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2_effects), NULL, 0.0, 0, "include exit edge effects?"},
@@ -1110,8 +1110,8 @@ PARAMETER hvcor_param[N_HVCOR_PARAMS] = {
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&hvcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&hvcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&hvcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_LONG, 0, (long)((char *)&hvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&hvcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&hvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&hvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     };
 
@@ -1169,7 +1169,7 @@ PARAMETER nibend_param[N_NIBEND_PARAMS] = {
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&nibend_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy (for nonadaptive integration, used as the step-size)"},
     {"MODEL", "", IS_STRING, 0, (long)((char *)&nibend_example.model), DEFAULT_NIBEND_TYPE, 0.0, 0, "fringe model (hard-edge, linear, cubic-spline, tanh, quintic, enge1, enge3, enge5)"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&nibend_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&nibend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&nibend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ADJUST_BOUNDARY", "", IS_LONG, 0, (long)((char *)&nibend_example.adjustBoundary), NULL, 0.0, 1, "adjust fringe boundary position to make symmetric trajectory? (Not done if ADJUST_FIELD is nonzero.)"},
     {"ADJUST_FIELD", "", IS_LONG, 0, (long)((char *)&nibend_example.adjustField), NULL, 0.0, 0, "adjust central field strength to make symmetric trajectory?"},
     {"FUDGE_PATH_LENGTH", "", IS_LONG, 0, (long)((char *)&nibend_example.fudgePathLength), NULL, 0.0, 1, "fudge central path length to force it to equal the nominal length L?"},
@@ -1261,7 +1261,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
@@ -1296,7 +1296,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"G6", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.g6), NULL, 0.0, 0, "Fractional skew field error."},
     {"G7", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.g7), NULL, 0.0, 0, "Fractional skew field error."},
     {"G8", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.g8), NULL, 0.0, 0, "Fractional skew field error."},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&csbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"SQRT_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Ignored, kept for backward compatibility only."},
     {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
@@ -1336,7 +1336,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"LINEARIZE", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.useMatrix), NULL, 0.0, 0, "use linear matrix instead of symplectic integrator?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
@@ -1364,7 +1364,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B6", "1/M$a6$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K6 = B6/rho"},
     {"B7", "1/M$a7$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K7 = B7/rho"},
     {"B8", "1/M$a8$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K8 = B8/rho"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"CSR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.csr), NULL, 0.0, 1, "enable CSR computations?"},
     {"BLOCK_CSR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.csrBlock), NULL, 0.0, 0, "block CSR from entering CSRDRIFT?"},
@@ -2018,8 +2018,8 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"BX_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.BxFile), NULL, 0.0, 0, "Name of SDDS file with Bx harmonic data."},
   {"BY_SPLIT_POLE", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.BySplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for By?"},
   {"BX_SPLIT_POLE", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.BxSplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for Bx?"},
-  {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
-  {"ISR", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (scattering)?"},
+  {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "Include classical, single-particle synchrotron radiation?"},
+  {"ISR", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (quantum excitation)?"},
   {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
   {"SINUSOIDAL", "", IS_SHORT, 0, (long)((char *)&cwiggler_example.sinusoidal), NULL, 0.0, 0, "Ideal sinusoidal wiggler?  If non-zero, BX_FILE and BY_FILE are not used."},
   {"VERTICAL", "", IS_SHORT,  PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.vertical), NULL, 0.0, 0, "If SINUSOIDAL is non-zero, then setting this to non-zero gives a vertical wiggler.  Default is horizontal."},
@@ -2046,8 +2046,8 @@ PARAMETER apple_param[N_APPLE_PARAMS] = {
   {"SHIM_ON", "", IS_SHORT, 0, (long)((char *)&apple_example.shimOn), NULL, 0.0, 0, "Include shim correction"},
   {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&apple_example.Input), NULL, 0.0, 0, "Name of SDDS file with By harmonic data given at GAP0 and equal longitudinal phases."},
   {"SHIM_INPUT", " ", IS_STRING, 0, (long)((char *)&apple_example.shimInput), NULL, 0.0, 0, "Name of SDDS file with shim field integral harmonic data given at GAP0."},
-  {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&apple_example.sr), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
-  {"ISR", "", IS_SHORT, 0, (long)((char *)&apple_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (scattering)?"},
+  {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&apple_example.sr), NULL, 0.0, 0, "Include classical, single-particle synchrotron radiation?"},
+  {"ISR", "", IS_SHORT, 0, (long)((char *)&apple_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (quantum excitation)?"},
   {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&apple_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
   {"X0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.x0), NULL, 0.0, 0, "Offset of magnet row center in meter."},
   {"GAP0", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&apple_example.gap0), NULL, 0.0, 0, "Nominal magnetic gap."},
@@ -2452,7 +2452,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserTilt), NULL, 0.0, 0, "laser tilt"},
     {"LASER_M", "", IS_SHORT, 0, (long)((char *)&lsrMdltr_example.laserM), NULL, 0.0, 0, "laser horizontal mode number (<5)"},
     {"LASER_N", "", IS_SHORT, 0, (long)((char *)&lsrMdltr_example.laserN), NULL, 0.0, 0, "laser vertical mode number (<5)"},
-    {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&lsrMdltr_example.isr), NULL, 0.0, 0, "Include quantum excitation?"},
     {"HELICAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.helical), NULL, 0.0, 0, "If non-zero, simulate helical undulator."},
     {"TIME_PROFILE", NULL, IS_STRING, PARAM_XY_WAVEFORM, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser electric and magnetic fields."},
@@ -2547,9 +2547,9 @@ PARAMETER kquse_param[N_KQUSE_PARAMS] = {
     {"FSE1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse1), NULL, 0.0, 0, "fractional strength error for K1"},
     {"FSE2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse2), NULL, 0.0, 0, "fractional strength error for K2"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kquse_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&kquse_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&kquse_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&kquse_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&kquse_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&kquse_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&kquse_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"MATRIX_TRACKING", "", IS_SHORT, 0, (long)((char *)&kquse_example.matrixTracking), NULL, 0.0, 0, "For testing only."},
     };
@@ -2570,8 +2570,8 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
     {"PERIODS", "", IS_LONG, 0, (long)((char *)&ukickmap_example.periods), NULL, 0.0, 0, "Number of periods (for radiation integral computations only)."},
     {"KREF", "", IS_DOUBLE, 0, (long)((char *)&ukickmap_example.Kreference), NULL, 0.0, 0, "Reference value of undulator parameter. K=KREF*FIELD_FACTOR is used for radiation integral calculations only assuming period=L/PERIODS."},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     };
 
 FTABLE ftable_example;
@@ -2650,8 +2650,8 @@ PARAMETER ehcor_param[N_EHCOR_PARAMS] = {
     {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.calibration), NULL, 1.0, 0, "factor applied to obtain kick"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     {"STEERING", "", IS_SHORT, 0, (long)((char *)&ehcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ehcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&ehcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ehcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&ehcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
@@ -2664,8 +2664,8 @@ PARAMETER evcor_param[N_EVCOR_PARAMS] = {
     {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.calibration), NULL, 1.0, 0, "factor applied to obtain kick"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&evcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     {"STEERING", "", IS_SHORT, 0, (long)((char *)&evcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&evcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&evcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&evcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&evcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&evcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
@@ -2680,8 +2680,8 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
     {"VCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.ycalibration), NULL, 1.0, 0, "factor applied to obtain vertical kick"},
     {"LERAD", "", IS_DOUBLE, 0, (long)((char *)&ehvcor_example.lEffRad), NULL, 0.0, 0, "if L=0, use this length for radiation computations"},
     {"STEERING", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.steering), NULL, 0.0, 1, "use for steering?"},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.synchRad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehvcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     };
 
@@ -2731,6 +2731,8 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"MAXIMUM_2N", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.maximum2n), NULL, 0.0, -1, "data with 2*n greater than this is ignored"},
     {"Z_INTERVAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},
     {"SYMPLECTIC", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator"},
+    {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
+    {"ISR", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
 };  
 
 IONEFFECTS ionEffects_example;

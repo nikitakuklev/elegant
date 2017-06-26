@@ -711,6 +711,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
     ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
     break;
+  case T_BGGEXP:
+    ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
+    ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
+    ((BGGEXP*)eptr->p_elem)->isr = ((BGGEXP*)eptr->p_elem)->synchRad = 0;
+    trackBGGExpansion(coord, n_track, (BGGEXP*)eptr->p_elem, run->p_central, NULL, NULL);
+    ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
+    ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
+    break;
   case T_SCRIPT:
 #if USE_MPI
     if (myid==0) {
@@ -872,6 +880,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
     ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
     break;
+  case T_BGGEXP:
+    ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
+    ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
+    ((BGGEXP*)eptr->p_elem)->isr = ((BGGEXP*)eptr->p_elem)->synchRad = 0;
+    trackBGGExpansion(finalCoord, n_track, (BGGEXP*)eptr->p_elem, run->p_central, NULL, NULL);
+    ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
+    ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
+    break;
   case T_TWMTA:
   case T_MAPSOLENOID:
   case T_TWLA:
@@ -925,7 +941,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long sliceEtilted, long order)
 {
   CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig;
-  KQUAD kquad;  QUAD *quad; CWIGGLER cwig;
+  KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
   EHCOR ehcor; EVCOR evcor; EHVCOR ehvcor;
@@ -972,7 +988,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
    */
   if (eptr->type==T_CWIGGLER)
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
-  if (eptr->type==T_WIGGLER)
+  else if (eptr->type==T_WIGGLER)
     nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
   z = 0;
   
@@ -1296,6 +1312,15 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         length = cwig.length/nSlices;
       }
       break;
+    case T_BGGEXP:
+      if (slice==0) {
+        nSlices = 1;
+        memcpy(&bggexp, (BGGEXP*)eptr->p_elem, sizeof(BGGEXP));
+        bggexp.isr = 0;
+        elem.type = T_BGGEXP;
+        elem.p_elem = (void*)&bggexp;
+      }
+      break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
       printf("***        Seek professional help!\n");
@@ -1435,6 +1460,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     break;
   case T_CWIGGLER:
     GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)elem->p_elem, &sigmaDelta2, 1, z);
+    break;
+  case T_BGGEXP:
+    trackBGGExpansion(coord, n_track, (BGGEXP*)elem->p_elem, run->p_central, NULL, &sigmaDelta2);
     break;
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);

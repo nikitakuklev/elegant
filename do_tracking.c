@@ -1460,7 +1460,7 @@ long do_tracking(
               field_table_tracking(coord, nToTrack, ftable, *P_central, run);
               break;       
             case T_BGGEXP:
-              trackBGGExpansion(coord, nToTrack, (BGGEXP*)eptr->p_elem, *P_central, accepted);
+              trackBGGExpansion(coord, nToTrack, (BGGEXP*)eptr->p_elem, *P_central, accepted, NULL);
               break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
