@@ -476,6 +476,11 @@ void trackWithIonEffects
 #endif
     qBunch = npTotal*charge->macroParticleCharge;
 
+    if ((sigma[0] > 0.01) || (sigma[1] > 0.01)) {
+      printf("beam sigma too large: bunch %d, Pass %d, s=%f \n", iBunch, iPass, ionEffects->sLocation);
+    }
+
+
     if (verbosity>30) {
       printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
              npTotal, tNow, sigma[0], sigma[1], centroid[0], centroid[1], qBunch);
@@ -737,6 +742,12 @@ void trackWithIonEffects
     }
 #endif
 
+    if ((ionSigma[0] > 0.01) || (ionSigma[1] > 0.01)) {
+      //      printf("ion sigma too large");  
+      printf("ion sigma too large (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n", ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
+    }
+
+
 #if USE_MPI
     if (myid==0) {
 #endif
@@ -760,6 +771,15 @@ void trackWithIonEffects
 #endif
 
     if (isSlave || !notSinglePart) {
+
+      if (ionSigma[0]/ionSigma[1]>0.9 && ionSigma[0]/ionSigma[1] < 1.0) {
+	printf("ion sigx = sigy (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n",  ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
+	ionSigma[0] = 0.9 * ionSigma[1];
+      } else if (ionSigma[0]/ionSigma[1]>1.0 && ionSigma[0]/ionSigma[1] < 1.1) {
+	ionSigma[0] = 1.1 * ionSigma[1];
+	//	printf("ion sigx = sigy");
+      }
+
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
@@ -767,6 +787,11 @@ void trackWithIonEffects
           gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
           part[ip][1] += kick[0] / c_mks / Po;
           part[ip][3] += kick[1] / c_mks / Po; 
+
+	  //if (kick[0] > 1000) {
+	  //  printf("kick wrong");
+	  //}
+
         }
       }
 
@@ -984,7 +1009,7 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 
     C3 = exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy)));
 
-    Fc = Fc0 * (erf1 - C3*erf2);
+    Fc = -Fc0 * (erf1 - C3*erf2);
 
     //Fc = Fc0 * (complexErf(w1, &flag) -  exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy))) * complexErf(w2, &flag2));
 
