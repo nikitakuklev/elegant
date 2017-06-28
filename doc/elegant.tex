@@ -63,6 +63,8 @@ Historical change logs are appended to the end of this manual.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|IONEFFECTS| element, and the companion \verb|ion_effects| command were added. These allow simulation
+  of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
 \item The \verb|KSEXT| and \verb|SEXT| elements now support a skew-quad correction term. This was suggested by Z. Duan (IHEP).
 \item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
 \item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
@@ -2320,6 +2322,72 @@ included in the plane in question.
 \item Some users use \verb|matched_to_cell| in the \verb|bunched_beam| command. 
   This will erase SCMULT assignments along the beamline. In this case, issue another \verb|twiss_output|
   command just before tracking.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ion_effects|}\end{center}
+%\end{latexonly}
+\subsection{ion\_effects \label{subsec:ioneffects}}
+
+\begin{itemize}
+\item type: setup command.
+\item function: set up for modeling of residual gas ions.
+\item sequence: must follow \verb|run_setup|.
+\item Notes:
+  \begin{enumerate}
+  \item This feature is considered experimental and should be used with caution.
+  Feedback is welcome.
+  \item One or more \verb|IONEFFECTS| elements must be inserted in the lattice. This can be
+    done manually, or using the \verb|insert_elements| command.
+  \end{enumerate}
+\end{itemize}
+
+\begin{verbatim}
+&ion_effects
+          STRING ion_properties = NULL;
+          STRING pressure_profile = NULL;
+          STRING beam_output = NULL;
+          long beam_output_all_locations = 0;
+          STRING ion_density_output = NULL;
+          long ion_output_all_locations = 1;
+          STRING field_calculation_method = NULL;
+          long macro_ions = 0;
+          double x_span = 0;
+          double y_span = 0;
+          long verbosity = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|ion_properties| --- Name of an SDDS file giving properties of ions. Column names are
+  \begin{itemize}
+  \item \verb|IonName| --- String column giving the name of the ion.
+  \item \verb|Mass| --- Floating-point column giving the ion mass, in AMU.
+  \item \verb|ChargeState| --- Integer column giving the ion charge state (a positive integer).
+  \item \verb|SourceName| --- String column giving the name of the source gas for this ion.
+    In a future release, the source may also be another type of ion, to allow for multiple ionization.
+  \item \verb|CrossSection| --- Floating-point column giving the cross section for producing the ion from the source, in $m^2$.
+  \end{itemize}
+\item \verb|pressure_profile| --- Name of an SDDS file giving the s-dependent gas pressure for
+  various gas species. Column names will be matched to the entries in the \verb|SourceName| column of the
+  \verb|ion_properties| file.
+\item \verb|beam_output| --- Possibly incomplete name of an SDDS file to which beam data will be written.
+\item \verb|beam_output_all_locations| --- If nonzero, \verb|beam_output| includes data at the location of
+  all \verb|IONEFFECTS| elements.
+\item \verb|ion_density_output| --- Possibly incomplete name of an SDDS file to which ion density data will be written.
+\item \verb|ion_output_all_locations| --- If nonzero, \verb|ion_density_output| includes data at the location of
+  all \verb|IONEFFECTS| elements.
+\item \verb|field_calculation_method| --- Provided for future expansion. At present, the fields are computed on the
+  assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
+  for the ions.
+\item \verb|macro_ions| --- The number of macro ions to generate per bunch per turn. The macro ion charge is adjusted
+  according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
+  \verb|IONEFFECTS| elements.
+\item \verb|x_span|, \verb|y_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
+  Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
+  on individual \verb|IONEFFECTS| elements.
+\item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
 \end{itemize}
 
 %\begin{latexonly}
