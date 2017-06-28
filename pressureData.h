@@ -15,6 +15,7 @@ typedef struct {
   long nLocations;
   double *s;         /* s[j] is the location of the jth set of pressure samples */
   double **pressure; /* pressure[i][j] is the pressure of the ith species at the jth location */
+  double temperature; /* in degrees K */
 } PRESSURE_DATA;
 
 #ifdef __cplusplus

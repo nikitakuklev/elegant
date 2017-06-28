@@ -196,7 +196,7 @@ void readIonProperties(char *filename)
    * Mass          --- SDDS_FLOAT or SDDS_DOUBLE, in AMU
    * ChargeState   --- SDDS_LONG or SDDS_SHORT, ion charge state (positive integer)
    * SourceName    --- SDDS_STRING, Name of the source molecule for this ion, e.g., "H2O", "CO+"
-   * CrossSection  --- SDDS_FLOAT or SDDS_DOUBLE, Cross section for producing ion from source, in m^2 (m$a2$n)
+   * CrossSection  --- SDDS_FLOAT or SDDS_DOUBLE, Cross section for producing ion from source, in Mb (megabarns)
    */
 
   SDDS_DATASET SDDSin;
@@ -210,9 +210,10 @@ void readIonProperties(char *filename)
   if (!check_sdds_column(&SDDSin, "Mass", "AMU"))
     bombElegantVA("Column \"Mass\" is missing, not floating-point type, or does not have units of \"AMU\" in %s\n",
                   filename);
-  if (!check_sdds_column(&SDDSin, "CrossSection", "m$a2$n") &&
-      !check_sdds_column(&SDDSin, "CrossSection", "m^2"))
-    bombElegantVA("Column \"CrossSection\" is missing, not floating-point type, or does not have units of \"m$a2$n\" in %s\n",
+  if (!check_sdds_column(&SDDSin, "CrossSection", "Mb") &&
+      !check_sdds_column(&SDDSin, "CrossSection", "MBarns") && 
+      !check_sdds_column(&SDDSin, "CrossSection", "megabarns"))
+    bombElegantVA("Column \"CrossSection\" is missing, not floating-point type, or does not have units of megabarns (or Mbarns or Mb)",
                   filename);
 
   if (SDDS_ReadPage(&SDDSin)<=0) 
@@ -353,6 +354,7 @@ void trackWithIonEffects
   double centroid[2], sigma[2], tNow, qBunch;
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
+  double unitsFactor; /* converts Torr to 1/m^3 and mBarns to m^2 */
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -371,6 +373,8 @@ void trackWithIonEffects
       (ionEffects->passInterval>=1 && (iPass-ionEffects->startPass)%ionEffects->passInterval!=0))
     return;
 
+  /* converts Torr to 1/m^3 and mBarns to m^2 */
+  unitsFactor = 1e-22/(7.5006e-3*k_boltzmann_mks*pressureData.temperature);
     
   if (isSlave || !notSinglePart) {
     /* Determine which bunch each particle is in */
@@ -586,7 +590,7 @@ void trackWithIonEffects
           nToAdd = ionEffects->macroIons;
 #endif
           if (nToAdd) {
-            qToAdd = 3.21 * qBunch * ionEffects->pressure[index] *      \
+            qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] *      \
               ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
             
             addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);

@@ -23,7 +23,9 @@
 void readGasPressureData(char *filename, PRESSURE_DATA *pressureData)
 {
   /* Assumed file structure:
-   * Parameters: Gasses --- SDDS_STRING giving comma- or space-separated list of gas species, e.g., "H2O H2 N2 O2 CO2 CO CH4"
+   * Parameters: 
+   * Gasses --- SDDS_STRING giving comma- or space-separated list of gas species, e.g., "H2O H2 N2 O2 CO2 CO CH4"
+   * Temperature --- SDDS_FLOAT or SDDS_DOUBLE giving temperature in degrees K. Defaults to 293.
    * Columns:
    * s         --- SDDS_FLOAT or SDDS_DOUBLE giving location in the lattice
    * <gasName> --- SDDS_FLOAT or SDDS_DOUBLE giving pressure of <gasName> in Torr or nT
@@ -43,12 +45,34 @@ void readGasPressureData(char *filename, PRESSURE_DATA *pressureData)
     bombElegantVA("Column 's' is missing or does not have units of 'm' in %s", filename);
   if (SDDS_CheckParameter(&SDDSin, "Gasses", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
     bombElegantVA("Parameters \"Gasses\" is missing or not string type in %s", filename);
-  
+
   if (SDDS_ReadPage(&SDDSin)<=0) 
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   if (!SDDS_GetParameter(&SDDSin, "Gasses", &gasColumnList))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+  switch (SDDS_CheckParameter(&SDDSin, "Temperature", "K", SDDS_ANY_FLOATING_TYPE, NULL)) {
+  case SDDS_CHECK_OK:
+    if (!SDDS_GetParameterAsDouble(&SDDSin, "Temperature", &pressureData->temperature) ||
+        pressureData->temperature<=0) 
+      bombElegantVA("Problem reading 'Temperature' from %s. Check for valid value (got %le).\n", filename,
+                    pressureData->temperature);
+    break;
+  case SDDS_CHECK_NONEXISTENT:
+    pressureData->temperature = 273;
+    printf("Parameter 'Temperature' missing from %s, assuming 273 K\n", filename);
+    break;
+  case SDDS_CHECK_WRONGTYPE:
+    bombElegantVA("Parameter 'Temperature' in %s has wrong type. Expect SDDS_DOUBLE or SDDS_FLOAT.\n", filename);
+    break;
+  case SDDS_CHECK_WRONGUNITS:
+    bombElegantVA("Parameter 'Temperature' in %s has wrong units. Expect 'K'.\n", filename);
+    break;
+  default:
+    bombElegantVA("Unexpected value checking existence, units, and type for 'Temperature' in %s\n", filename);
+    break;
+  }
   
   pressureData->nGasses = 0;
   pressureData->gasName = NULL;
@@ -79,11 +103,12 @@ void readGasPressureData(char *filename, PRESSURE_DATA *pressureData)
     if (!(pressureData->pressure[i] = SDDS_GetColumnInDoubles(&SDDSin, pressureData->gasName[i]))) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
+    /* Convert to Torr */
     if (pressureMultiplier!=1) {
-      /* Convert to Torr */
       long j;
-      for (j=0; j<pressureData->nLocations; j++)
+      for (j=0; j<pressureData->nLocations; j++) {
         pressureData->pressure[i][j] *= pressureMultiplier;
+      }
     }
   }
 
