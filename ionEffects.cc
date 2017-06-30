@@ -512,9 +512,11 @@ void trackWithIonEffects
 #endif
     qBunch = npTotal*charge->macroParticleCharge;
 
+#if DEBUG
     if ((sigma[0] > 0.01) || (sigma[1] > 0.01)) {
       printf("beam sigma too large: bunch %ld, Pass %ld, s=%f \n", iBunch, iPass, ionEffects->sLocation);
     }
+#endif
 
 
     if (verbosity>30) {
@@ -861,10 +863,12 @@ void trackWithIonEffects
     }
 #endif
 
+#if DEBUG
     if ((ionSigma[0] > 0.01) || (ionSigma[1] > 0.01)) {
       //      printf("ion sigma too large");  
       printf("ion sigma too large (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n", ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
     }
+#endif
 
 
 #if USE_MPI
@@ -919,7 +923,9 @@ void trackWithIonEffects
     if (isSlave || !notSinglePart) {
 
       if (ionSigma[0]/ionSigma[1]>0.9 && ionSigma[0]/ionSigma[1] < 1.0) {
+#if DEBUG
 	printf("ion sigx = sigy (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n",  ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
+#endif
 	ionSigma[0] = 0.9 * ionSigma[1];
       } else if (ionSigma[0]/ionSigma[1]>1.0 && ionSigma[0]/ionSigma[1] < 1.1) {
 	ionSigma[0] = 1.1 * ionSigma[1];
