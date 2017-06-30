@@ -211,7 +211,7 @@ long loadModulationTable(double **t, double **value, char *file, char *timeColum
 long applyElementModulations(MODULATION_DATA *modData, double pCentral, double **coord, long np, RUN *run, long iPass)
 {
   long iMod, code, matricesUpdated, jMod;
-  short modulationValid = 0;
+  //short modulationValid = 0;
   double modulation, value, t, lastValue;
   long type, param;
   char *p_elem;
@@ -257,7 +257,7 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
                 t, modData->element[jMod]->name, entity_description[type].parameter[param].name);
         exitElegant(1);
       }
-      modulationValid = 1;
+      //modulationValid = 1;
     } else {
       push_num(t);
       modulation = rpn(modData->expression[iMod]);

@@ -27,8 +27,9 @@ void compute_amplification_factors(
                                    )
 {
 #include "amplif.h"
-  ELEMENT_LIST *eptr, *emax=NULL, *emaxu, *emaxc;
-  long type_code, iparam=0, iplane, n_part, i, j=0, nsum=0, n_kicks;
+  ELEMENT_LIST *eptr, *emax=NULL;
+  //ELEMENT_LIST *emaxu, *emaxc;
+  long type_code, iparam=0, iplane, n_part, i, nsum=0, n_kicks;
   double start[COORDINATES_PER_PARTICLE], p, max_pos, max_kick, max_Ac, max_Au, rms_pos, rms_kick, original_value;
   static double **one_part = NULL;
   static TRAJECTORY *traj = NULL, *trajc = NULL;
@@ -39,7 +40,7 @@ void compute_amplification_factors(
   static char s[256], description[256];
   double *Ac_vs_z, *Au_vs_z, *Acp_vs_z, *Aup_vs_z;
   CORMON_DATA *CM=NULL;
-  STEERING_LIST *SL=NULL;
+  //STEERING_LIST *SL=NULL;
   long changed;
   
   log_entry("compute_amplification_factors");
@@ -75,7 +76,7 @@ void compute_amplification_factors(
   n_kicks = 0;
   if (correct->mode!=-1) {
     CM = iplane==0?correct->CMx:correct->CMy;
-    SL = iplane==0?&correct->SLx:&correct->SLy;
+    //SL = iplane==0?&correct->SLx:&correct->SLy;
     /* array of RMS corrector values for each corrector */
     CijRMS = tmalloc(sizeof(*CijRMS)*(n_kicks=CM->ncor));
     for (i=0; i<n_kicks; i++)
@@ -457,8 +458,8 @@ void compute_amplification_factors(
   if (nsum) {
     max_Ac = 0;
     max_Au = 0;
-    emaxc = NULL;
-    emaxu = NULL;
+    //emaxc = NULL;
+    //emaxu = NULL;
     for (i=1; i<n_traj-1; i++) {
       if (!traj[i].elem) {
         if (fpuof)
@@ -479,11 +480,11 @@ void compute_amplification_factors(
                 Acp_vs_z[i], traj[i].elem->name, traj[i].elem->occurence);
       if (Ac_vs_z[i]>max_Ac) {
         max_Ac = Ac_vs_z[i];
-        emaxc = trajc[i].elem;
+        //emaxc = trajc[i].elem;
       }
       if (Au_vs_z[i]>max_Au) {
         max_Au = Au_vs_z[i];
-        emaxu = traj[i].elem;
+        //emaxu = traj[i].elem;
       }
     }
     /*
@@ -514,7 +515,7 @@ void compute_amplification_factors(
       CijRMS[i] = sqrt(CijRMS[i])/change;
       if (max_kick<CijRMS[i]) {
         max_kick=CijRMS[i];
-        j = i;
+        //j = i;
       }
       fprintf(fpkf, "%e %e %s %ld\n", CM->ucorr[i]->end_pos, CijRMS[i],
               CM->ucorr[i]->name, CM->ucorr[i]->occurence);

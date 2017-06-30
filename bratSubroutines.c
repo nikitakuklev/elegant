@@ -95,7 +95,8 @@ static long quiet=1;
 static long useFTABLE = 0;
 
 static short idealMode = 0, fieldMapDimension=2;
-static double idealB, idealChord, idealEdgeAngle;
+static double idealB;
+static double idealChord, idealEdgeAngle;
 
 static double fseLimit[2] = {-1, 1};
 static double dxLimit[2] = {-1, 1};
@@ -442,10 +443,11 @@ void BRAT_lorentz_integration(
   long misses[10], accmode[10];
   double accuracy[10], tiny[10];
   double hrec, hmax, dSds;
-  double s_start, s_end, exit_toler, ds, dx, dz;
+  double s_start, s_end, exit_toler, ds, dz;
   long int_return;
   double *w, *IF;
-  double xStart, zStart, slope, phi;
+  //double xStart, dx;
+  double zStart, slope, phi;
   
   global_delta = accelCoord[5];
   particle_inside = 0;
@@ -455,12 +457,12 @@ void BRAT_lorentz_integration(
   phi = atan(slope);
   if (idealMode) {
     dz = idealChord;
-    dx = slope*dz;
+    //dx = slope*dz;
   } else {
     dz = zf-zi;
-    dx = slope*dz;
+    //dx = slope*dz;
   }
-  xStart = xNomEntry - dx;
+  //xStart = xNomEntry - dx;
   zStart = zNomEntry - dz;
 
   /* Compute drift-back distance and apply to path length */
@@ -538,15 +540,15 @@ void BRAT_lorentz_integration(
 #endif
   } else {
     /* FTABLE mode */
+#ifdef FTABLE_WORKING
     double eomc;
     double **A, step;
     long  nKicks;
-    eomc = -particleCharge/particleMass/c_mks;
     nKicks = useFTABLE;
+    eomc = -particleCharge/particleMass/c_mks;
     step = (zf-zi)/nKicks;
     A = (double**)czarray_2d(sizeof(double), 3, 3);
 
-#ifdef FTABLE_WORKING
     for (ik=0; ik<nKicks; ik++) {
       /* 1. get particle's coordinates */
       coord = particle[ip];
@@ -819,11 +821,14 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
 {
   SDDS_TABLE SDDS_table;
   long idata, ix, iz, rows;
-  double x, z, B, xc, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck;
+  double x, z, B, *xd=NULL, *zd=NULL, *Bd=NULL, xCheck, zCheck;
   double *yd = NULL, *Bxd = NULL, *Byd = NULL, *Bzd = NULL;
   double Bmin, Bmax;
   long ix0, ix1, iz0, iz1;
   double dz0=0, dx0=0;
+#ifdef DEBUG
+  double xc;
+#endif
 
   if (!SDDS_InitializeInput(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
@@ -919,7 +924,9 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
       for (iz=0; iz<nz; iz++)
         Bnorm[ix][iz] = DBL_MAX;
     idata = 0;
+#ifdef DEBUG
     xc = xi;
+#endif
     Bmin = -(Bmax = -DBL_MAX);
     ix = 0;
     if (single_scan)
@@ -1155,7 +1162,8 @@ void BRAT_B_field(double *F, double *Qg)
     return;
   }
   if (arc_scan) {
-    double phi, s, R, dByds;
+    double phi, s, dByds;
+    //double R;
     long inStraight;
     OUTRANGE_CONTROL belowRange = {0.0,  OUTRANGE_SATURATE } ;
     OUTRANGE_CONTROL aboveRange = {0.0,  OUTRANGE_VALUE } ;
@@ -1169,7 +1177,7 @@ void BRAT_B_field(double *F, double *Qg)
       s = phi*rhoArc;
       inStraight = 0;
     } else {
-      R = sqrt(sqr(Q[0])+sqr(Q[1]));
+      //R = sqrt(sqr(Q[0])+sqr(Q[1]));
       s = rhoArc*((theta/2) + tan(phi-theta/2));
       inStraight = 1;
     }

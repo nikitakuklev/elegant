@@ -398,7 +398,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   }  else { 
     /* Element body */
     double B[3], p[3], dp[3], Bphi, Br, B2Max;
-    double pOrig;
+    //double pOrig;
 
     for (ip=0; ip<np; ip++) {
       B2Max = 0;
@@ -411,7 +411,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       
       /* compute momenta (x, y, z) */
       denom = sqrt(1 + sqr(xp) + sqr(yp));
-      pOrig = pCentral*(1+delta);
+      //pOrig = pCentral*(1+delta);
       p[2] = pCentral*(1+delta)/denom;
       p[0] = xp*p[2];
       p[1] = yp*p[2];

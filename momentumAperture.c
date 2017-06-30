@@ -318,7 +318,8 @@ long doMomentumApertureSearch(
                               )
 {    
   double **coord;
-  long nElem, iElem;
+  long nElem;
+  //long iElem;
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
   long side;
@@ -332,11 +333,12 @@ long doMomentumApertureSearch(
   double *sStart;
   double nominalTune[2], tune[2];
   char **ElementName, **ElementType;
-  long code, outputRow, jobCounter;
+  long code, outputRow;
   long processElements, skipElements, deltaSign, split, slot;
   char s[1000];
   unsigned long fiducial_flag_save;
 #if USE_MPI
+  long jobCounter;
 #if defined(DEBUG)
   FILE *fpdMpi = NULL;
   sprintf(s, "%s-debug-%02d", output, myid);
@@ -463,7 +465,7 @@ long doMomentumApertureSearch(
   lostParticles = (double**)czarray_2d(sizeof(double),1, COORDINATES_PER_PARTICLE+1);	 
  
   elem = elem0;
-  iElem = 0;
+  //iElem = 0;
   processElements = process_elements;
   skipElements = skip_elements;
   
@@ -498,7 +500,9 @@ long doMomentumApertureSearch(
   }
 
   outputRow = -1;
+#if USE_MPI
   jobCounter = -1;
+#endif
 
 #if USE_MPI
   verbosity = 0;  

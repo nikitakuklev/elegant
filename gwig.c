@@ -485,7 +485,8 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
 {
   int    i;
   double x, y, z;
-  double kx, ky, kz, tz, kw;
+  double kx, ky, kz, tz;
+  //double kw;
   double cx, sx, chx, shx;
   double cy, sy, chy, shy;
   double cz;
@@ -495,7 +496,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   y = Xvec[2];
   z = pWig->Zw;
   
-  kw   = 2e0*PI/(pWig->Lw);
+  //kw   = 2e0*PI/(pWig->Lw);
 
   B[0] = B[1] = 0;
 

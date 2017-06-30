@@ -21,8 +21,9 @@ static long alter_defined_values;
 
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune)
 {
-    VMATRIX *M;
-    ELEMENT_LIST *eptr, *elast;
+    //VMATRIX *M;
+    ELEMENT_LIST *eptr;
+    //ELEMENT_LIST *elast;
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
     long n_elem, last_n_elem;
@@ -74,13 +75,13 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
 
         eptr = beamline->elem_twiss = &(beamline->elem);
         n_elem = last_n_elem = beamline->n_elems;
-        elast = eptr;
+        //elast = eptr;
         while (eptr) {
             if (eptr->type==T_RECIRC) {
                 last_n_elem = n_elem;
                 beamline->elem_twiss = beamline->elem_recirc = eptr;
                 }
-            elast = eptr;
+            //elast = eptr;
             eptr = eptr->succ;
             n_elem --;
             }
@@ -91,7 +92,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (!tune->use_perturbed_matrix || tune->tunex<0 || tune->tuney<0) {
       printf("Computing periodic Twiss parameters.\n");
       fflush(stdout);
-      M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
+      //M = 
+      beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                     &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                     beamline->elem_twiss, NULL, run, &unstable, NULL, NULL);
       beamline->twiss0->betax  = beta_x;
@@ -241,7 +243,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   double beta_x, alpha_x, eta_x, etap_x;
   double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney;
   static long tunes_saved=0;
-  static double nux_orig, nuy_orig;
+  //static double nux_orig, nuy_orig;
   unsigned long unstable;
   double *K1ptr;
 
@@ -290,8 +292,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
   
   if (!tunes_saved) {
-    nux_orig = beamline->tune[0];
-    nuy_orig = beamline->tune[1];
+    //nux_orig = beamline->tune[0];
+    //nuy_orig = beamline->tune[1];
     tunes_saved = 1;
   }
 

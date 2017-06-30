@@ -454,7 +454,7 @@ typedef struct {
     MODULATION_DATA modulationData;
     RAMP_DATA rampData;
     char *trackingInterruptFile;
-    time_t *trackingInterruptFileMtime;
+    time_t trackingInterruptFileMtime;
     long n_passes_fiducial;      /* if >0, the number of times to go through for the fiducial particle */
 #if USE_MPI
     int n_processors;

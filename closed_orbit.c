@@ -575,8 +575,8 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
                                 double *deviation, long n_turns)
 {
   long nElems, iterationsLeft, i, iterationsDone;
-  double error=0, ds, last_dp, last_ds;
-  double lastError = 0;
+  double error=0, ds, last_dp;
+  //double lastError = 0, last_ds;
   double orbit0[6], orbit1[6];
   double startingPoint[6];
   double iterationFactor = 1.0;
@@ -600,7 +600,8 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 
   nElems = beamline->n_elems;
   iterationsLeft = clorb_iter/10+10;
-  last_ds = last_dp = sqrt(DBL_MAX/10);
+  //last_ds = last_dp = sqrt(DBL_MAX/10);
+  last_dp = sqrt(DBL_MAX/10);
   iterationsDone = 0;
   while (iterationsDone<iterationsLeft) {
 #ifdef DEBUG
@@ -641,7 +642,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 	    ds, dp);
     fflush(fpdeb);
 #endif
-    lastError = error;
+    //lastError = error;
     error = fabs(last_dp-dp);
 #if DEBUG
       printf("orbit error for iterationsDone=%ld, dp=%le is %le, ds=%le:\n", iterationsDone, dp, error, ds);
@@ -658,7 +659,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 #endif
       break;
     }
-    last_ds = ds;
+    //last_ds = ds;
     last_dp = dp;
     if (iterationsDone==0) {
       for (i=0; i<6; i++) 

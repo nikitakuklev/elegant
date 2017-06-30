@@ -166,6 +166,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   
   emit[0] = emit_x;
   emit[1] = emit_x*emittance_ratio;
+  emit[2] = 0;
 
   /* Count the number of elements from the recirc element to the end. */
   /* Also store the pointer to the recirc element. */

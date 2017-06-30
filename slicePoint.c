@@ -106,7 +106,7 @@ void dump_slice_analysis(SLICE_POINT *slicePoint, long step, long pass, long n_p
 {
   long i, iSlice;
   double *timeCoord = NULL, tMin, tMax;
-  double tc0, tc0Error, p=0.0;
+  double tc0, tc0Error;
   double emit[2], emitc[2];
   long Cx_index=0, Sx_index=0, ex_index=0;
   double t0, dt0, dt;

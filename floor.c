@@ -597,15 +597,16 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
                              double *XYZMin, double *XYZMax)
 {
   ELEMENT_LIST *elem, *last_elem;
-  double X, Y, Z, theta, phi, psi, s;
+  //double X, Y, Z;
+  double theta, phi, psi, s;
   MATRIX *V0, *V1;
   MATRIX *Theta, *Phi, *Psi, *W0, *W1, *temp;
   long i;
 
   elem = &(beamline->elem);
-  X = X0;
-  Y = Y0;
-  Z = Z0;
+  //X = X0;
+  //Y = Y0;
+  //Z = Z0;
   s = 0;
   
   m_alloc(&V0, 3, 1);

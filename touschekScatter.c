@@ -58,7 +58,7 @@ void TouschekEffect(RUN *run,
 {
   ELEMENT_LIST *eptr;
   long nElement;
-  double TSCATTER_Start, TSCATTER_End, sEndLine;
+  double TSCATTER_Start, TSCATTER_End=0, sEndLine=0;
 
   /* Check if there is TScatter element along beamline. */
   eptr = &(beamline->elem);

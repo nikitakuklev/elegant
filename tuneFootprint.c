@@ -59,7 +59,8 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
 void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
 {
   long id, id0, id1, id2, coord;
-  double delta0, delta1, delta2, nu0[2];
+  //double delta0;
+  double delta1, delta2, nu0[2];
   double nuMin, nuMax;
 
   /* Find dividing point between positive and negative delta */
@@ -69,7 +70,7 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       id0 = id;
       nu0[0] = deltaTfData[id].nu[0];
       nu0[1] = deltaTfData[id].nu[1];
-      delta0 = deltaTfData[id].delta;
+      //delta0 = deltaTfData[id].delta;
       break;
     }
   }
@@ -427,7 +428,7 @@ long doTuneFootprint(
   long ix, iy, ixy, idelta, turns;
   long my_ixy, my_idelta;
   static double **one_part;
-  double p, oldPercentage=0;
+  double p;
   long n_part, lost;
   XY_TF_DATA *xyTfData;
   DELTA_TF_DATA *deltaTfData;
@@ -439,6 +440,7 @@ long doTuneFootprint(
   FILE *fpdebug = NULL;
 #endif
 #if USE_MPI 
+  double oldPercentage=0;
   MPI_Status mpiStatus;
 #endif
 
@@ -691,7 +693,9 @@ long doTuneFootprint(
 	dy = (ymax-ymin)/(ny-1);
     }
     my_ixy = 0;
+#if USE_MPI 
     oldPercentage = 0;
+#endif
     for (ix=0; ix<nx; ix++) {
       if (quadratic_spacing) {
 	if (ix<nx/2) 

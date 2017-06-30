@@ -15,6 +15,7 @@
 
 #include "mdb.h"
 #include "track.h"
+#if USE_MPI
 #include "elasticScattering.h"
 
 static SDDS_DATASET SDDSsa;
@@ -22,7 +23,6 @@ static SDDS_DATASET SDDSout;
 static long fireOnPass = 1;
 static FILE *fp_log = NULL;
 
-#if USE_MPI
 void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, long n_processors, int myid);
 
 static double betax0, betay0;
@@ -148,8 +148,10 @@ void setupElasticScattering(
                                  long twissFlag
                                  )
 {
+#if USE_MPI
   char description[200];
-  
+#endif
+ 
 #if !USE_MPI
   bombElegant("elastic_scattering command is not available in serial elegant.", NULL);
 #endif

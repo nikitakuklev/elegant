@@ -36,7 +36,8 @@ static long verbosityLevel = 2;
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
 {
     VMATRIX *M;
-    ELEMENT_LIST *eptr, *elast;
+    ELEMENT_LIST *eptr;
+    //ELEMENT_LIST *elast;
 #include "chrom.h"
     unsigned long unstable;
     
@@ -98,11 +99,11 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
           beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
 
         eptr = beamline->elem_twiss = &(beamline->elem);
-        elast = eptr;
+        //elast = eptr;
         while (eptr) {
           if (eptr->type==T_RECIRC)
             beamline->elem_twiss = beamline->elem_recirc = eptr;
-          elast = eptr;
+          //elast = eptr;
           eptr = eptr->succ;
         }
         if (beamline->links) {

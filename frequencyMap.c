@@ -139,7 +139,8 @@ long doFrequencyMap(
   static double **one_part;
   double p;
   long n_part, badPoint;
-  double diffusion, diffusionRate;
+  double diffusion=0;
+  //double diffusionRate;
 #if USE_MPI
   double oldPercentage=0;
 #endif
@@ -250,7 +251,7 @@ long doFrequencyMap(
 		printf("Problem with particle %ld tune determination\n", ip);
               badPoint = 1;
               firstTune[0] = firstTune[1] = -1;
-              firstTune[1] = firstTune[1] = -1;
+              //firstTune[1] = firstTune[1] = -1;
               if (!full_grid_output)
                 continue;
 	    }
@@ -280,7 +281,7 @@ long doFrequencyMap(
                   if (verbosity && !USE_MPI)
                     printf("Problem with particle %ld tune determination\n", ip);
                   secondTune[0] = secondTune[1] = -1;
-                  secondTune[1] = secondTune[1] = -1;
+                  //secondTune[1] = secondTune[1] = -1;
                   diffusion = 0;
                   if (!full_grid_output) {
                     /* If the particle is lost, it will not show in the frequency map */ 

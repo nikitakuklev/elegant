@@ -113,7 +113,8 @@ long doChaosMap(
   short survived[3];
   double **trackingBuffer = NULL;
   double dx, dy, ddelta, x, y, delta;
-  long ix, iy, idelta, ip, turns;
+  long ix, iy, idelta, ip;
+  //long turns;
   static double **one_part;
   double p, dJx, dJy;
   long n_part;
@@ -191,7 +192,7 @@ long doChaosMap(
   else
     ddelta = 0;
   ip = 0;
-  turns = control->n_passes;
+  //turns = control->n_passes;
 
   trackingBuffer = (double**)czarray_2d(sizeof(**trackingBuffer), 3, COORDINATES_PER_PARTICLE);
   

@@ -100,6 +100,8 @@ static long usePerturbedMatrix = 0, fixedLengthMatrix = 0;
 double getMonitorWeight(ELEMENT_LIST *elem);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 double getCorrectorCalibration(ELEMENT_LIST *elem, long coord);
+void setup_bpm_output(char *filename, RUN *run);
+void dump_bpm_data(TRAJECTORY *traj, long n_elems, char *description, long step);
 
 #define UNIFORM_ERRORS 0
 #define GAUSSIAN_ERRORS 1
@@ -957,7 +959,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (!(flags&NO_OUTPUT_CORRECTION) && (flags&FINAL_CORRECTION) && 
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, sim_step);
+      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
     }
     if (starting_coord)
       for (i=0; i<6; i++)
@@ -1125,7 +1127,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (!(flags&NO_OUTPUT_CORRECTION) && !bombed && (flags&FINAL_CORRECTION) && 
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, sim_step);
+      dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
     }
     break;
   }
@@ -1147,20 +1149,21 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   long i_debug;
   FILE *fpdeb;
   char s[100];
+  double kick1;
 #endif
-  ELEMENT_LIST *corr, *start;
+  ELEMENT_LIST *corr;
   TRAJECTORY *traj0, *traj1;
   long kick_offset, i_corr, i_moni, i;
   long n_part;
-  double **one_part, p, p0, kick0, kick1, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
+  double **one_part, p, p0, kick0, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
   double conditionNumber;
   VMATRIX *save;
   long i_type;
 
-  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
-                                 &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, 
-				 &CM->pegged, &CM->weight, coord, SL, run, beamline, 0);
-
+  find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
+			 &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, 
+			 &CM->pegged, &CM->weight, coord, SL, run, beamline, 0);
+  
   if (CM->nmon<CM->ncor) {
     printf("*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
     printf("*** Correction may be unstable (use SV controls).\n");
@@ -1245,8 +1248,9 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     kick0 = *((double*)(corr->p_elem+kick_offset));
 
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
-    kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
+    *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 #ifdef DEBUG
+    kick1 = kick0 + corr_tweek;
     printf("corrector %s tweeked to %e (type=%ld, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
             i_type, kick_offset);
     fflush(stdout);
@@ -1283,7 +1287,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
 #if TWO_POINT_TRAJRESPONSE
     /* change the corrector by -corr_tweek and compute the new matrix for the corrector */
-    kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
+    *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
     if (beamline->links)
       assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
 #ifdef DEBUG
@@ -2156,19 +2160,22 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
 void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
                              unsigned long flags)
 {
-  ELEMENT_LIST *start;
   long i_corr, i_moni;
   double coef, htune, moniFactor, *corrFactor, *corrFactorFL, coefFL, W0=0.0;
   double conditionNumber;
   char memName[1024];
 
-  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
-                                 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
-
 #ifdef DEBUG
+  ELEMENT_LIST *start;
+  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
+				 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
   printf("finding twiss parameters beginning at %s.\n", start->name);
   fflush(stdout);
+#else
+  find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
+			 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 #endif
+
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
     if (!(flags&COMPUTE_RESPONSE_SILENT)) {
       printf("updating twiss parameters...");
@@ -2356,7 +2363,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 /* Compute orbit response matrix from closed orbit, rather than using beta functions etc */
 void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, unsigned long flags, CORRECTION *correct)
 {
-  ELEMENT_LIST *corr, *start;
+  ELEMENT_LIST *corr;
   TRAJECTORY *clorb0, *clorb1;
   long kick_offset, i_corr, i_moni, i;
   double kick0, corr_tweek;
@@ -2366,8 +2373,8 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   char memName[1024];
   double conditionNumber, W0=0.0;
 
-  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
-                                 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
+  find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
+			 &CM->kick_coef, &CM->sl_index, &CM->pegged, &CM->weight, coord, SL, run, beamline, 1);
 
   if (CM->ncor==0) {
     printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
@@ -2540,7 +2547,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   long iteration, kick_offset;
   long i_moni, i_corr, i, sl_index, i_pegged;
   double dp, x, y, reading;
-  double last_rms_pos, best_rms_pos, rms_pos, corr_fraction;
+  //double last_rms_pos;
+  double best_rms_pos, rms_pos, corr_fraction;
   double fraction, minFraction, param, change;
   MAT *Qo, *dK=NULL;
 
@@ -2622,7 +2630,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
 
     /* find readings at monitors and add in reading errors */
     i = 1;
-    last_rms_pos = rms_pos;
+    //last_rms_pos = rms_pos;
     if (best_rms_pos>rms_pos)
       best_rms_pos = rms_pos;
     rms_pos = 0;
