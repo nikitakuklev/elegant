@@ -52,12 +52,23 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
-static SDDS_DATASET *SDDS_ionCoordinateOutput = NULL;
+
 static double sStartFirst = -1;
 static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonDensityOutput;
 static IONEFFECTS *firstIonEffects = NULL; /* first in the lattice */
+#if USE_MPI
 static long leftIonCounter = 0;
+#endif
 
+char speciesNameBuffer[100];
+char *makeSpeciesName(const char *prefix, char *suffix)
+{
+  strcpy(speciesNameBuffer, prefix);
+  strcat(speciesNameBuffer, suffix);
+  return &speciesNameBuffer[0];
+}
+
+  
 void closeIonEffectsOutputFiles() {
   if (SDDS_beamOutput) {
     SDDS_Terminate(SDDS_beamOutput);
@@ -67,14 +78,11 @@ void closeIonEffectsOutputFiles() {
     SDDS_Terminate(SDDS_ionDensityOutput);
     SDDS_ionDensityOutput = NULL;
   }
-  if (SDDS_ionCoordinateOutput) {
-    SDDS_Terminate(SDDS_ionCoordinateOutput);
-    SDDS_ionCoordinateOutput = NULL;
-  }
 }
 
 void setUpIonEffectsOutputFiles(long nPasses) 
 {
+  long iSpecies;
   closeIonEffectsOutputFiles(); /* Shouldn't be needed, but won't hurt */
 
   if (beam_output) {
@@ -132,6 +140,32 @@ void setUpIonEffectsOutputFiles(long nPasses)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
+        if (ion_species_output) {
+          for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+            if (!SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("qIons_", ionProperties.ionName[iSpecies]),
+                                         "C", SDDS_DOUBLE) ||
+                !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("nMacroIons_", ionProperties.ionName[iSpecies]),
+                                         NULL, SDDS_LONG) ||
+                !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("Cx_", ionProperties.ionName[iSpecies]),
+                                         "m", SDDS_DOUBLE) ||
+                !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("Cy_", ionProperties.ionName[iSpecies]),
+                                         "m", SDDS_DOUBLE) ||
+                !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("Sx_", ionProperties.ionName[iSpecies]),
+                                         "m", SDDS_DOUBLE) ||
+                !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput,
+                                         makeSpeciesName("Sy_", ionProperties.ionName[iSpecies]),
+                                         "m", SDDS_DOUBLE) 
+                ) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              exitElegant(1);
+            }
+          }
+        }
 #if USE_MPI
         if (!SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIonsMin", NULL, SDDS_LONG) ||
           !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIonsMax", NULL, SDDS_LONG)) {
@@ -149,10 +183,6 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #endif
   }
   
-  if (ion_coordinate_output && !SDDS_ionCoordinateOutput) {
-    /* Need to do parallel IO from all workers */
-
-  }
 }
 
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
@@ -354,6 +384,8 @@ void trackWithIonEffects
   double centroid[2], sigma[2], tNow, qBunch;
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
+  double **speciesCentroid=NULL, *speciesCharge=NULL, **speciesSigma=NULL;
+  long *speciesCount=NULL;
   double unitsFactor; /* converts Torr to 1/m^3 and mBarns to m^2 */
 #if USE_MPI
   MPI_Status mpiStatus;
@@ -481,7 +513,7 @@ void trackWithIonEffects
     qBunch = npTotal*charge->macroParticleCharge;
 
     if ((sigma[0] > 0.01) || (sigma[1] > 0.01)) {
-      printf("beam sigma too large: bunch %d, Pass %d, s=%f \n", iBunch, iPass, ionEffects->sLocation);
+      printf("beam sigma too large: bunch %ld, Pass %ld, s=%f \n", iBunch, iPass, ionEffects->sLocation);
     }
 
 
@@ -659,10 +691,17 @@ void trackWithIonEffects
     ionSigma[1] = 0;
     qIon = 0;
     long mTot = 0;
+
+    if (ion_species_output && iBunch==0) {
+      speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
+      speciesSigma = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
+      speciesCharge = (double*)tmalloc(sizeof(*speciesCharge)*ionProperties.nSpecies);
+      speciesCount = (long*)tmalloc(sizeof(*speciesCount)*ionProperties.nSpecies);
+    }
     
     /*** Compute field due to ions */
     if (isSlave || !notSinglePart) {
-      /* Compute charge-weighted centroid */
+      /* Compute charge-weighted centroids */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
         /* Relevant quantities:
          * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
@@ -671,11 +710,30 @@ void trackWithIonEffects
          */
         
 	int jMacro = 0;
+        if (ion_species_output) {
+          speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
+          speciesCharge[iSpecies] = 0;
+          speciesCount[iSpecies] = 0;
+        }
 	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
+          if (ion_species_output) {
+            speciesCentroid[iSpecies][0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
+            speciesCentroid[iSpecies][1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
+            speciesCharge[iSpecies] += ionEffects->coordinate[iSpecies][jMacro][4];
+            speciesCount[iSpecies] += 1;
+          }
 	  ionCentroid[0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  ionCentroid[1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  qIon += ionEffects->coordinate[iSpecies][jMacro][4];
 	  mTot++;
+        }
+      }
+    } else {
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+        if (ion_species_output) {
+          speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
+          speciesCharge[iSpecies] = 0;
+          speciesCount[iSpecies] = 0;
         }
       }
     }
@@ -707,11 +765,40 @@ void trackWithIonEffects
       ionCentroid[0] = ionCentroidTotal[0]/qIon;
       ionCentroid[1] = ionCentroidTotal[1]/qIon;
     }
+    if (ion_species_output) {
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+        if (myid!=0) {
+          inBuffer[0] = speciesCentroid[iSpecies][0];
+          inBuffer[1] = speciesCentroid[iSpecies][1];
+          inBuffer[2] = speciesCharge[iSpecies];
+          inBuffer[3] = speciesCount[iSpecies];
+        } else {
+          inBuffer[0] = inBuffer[1] = inBuffer[2] = inBuffer[3] = 0;
+        }
+        MPI_Allreduce(inBuffer, sumBuffer, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        speciesCentroid[iSpecies][0] = sumBuffer[0];
+        speciesCentroid[iSpecies][1] = sumBuffer[1];
+        speciesCharge[iSpecies] = sumBuffer[2];
+        speciesCount[iSpecies] = sumBuffer[3];
+        if (speciesCharge[iSpecies]) {
+          speciesCentroid[iSpecies][0] /= speciesCharge[iSpecies];
+          speciesCentroid[iSpecies][1] /= speciesCharge[iSpecies];
+        }
+      }
+    }
 #else
     if (qIon) {
       ionCentroid[0] = ionCentroid[0]/qIon;
       ionCentroid[1] = ionCentroid[1]/qIon;
       mTotTotal = mTot;
+      if (ion_species_output) {
+        for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+          if (speciesCharge[iSpecies]) {
+            speciesCentroid[iSpecies][0] /= speciesCharge[iSpecies];
+            speciesCentroid[iSpecies][1] /= speciesCharge[iSpecies];
+          }
+        }
+      }
     }
 #endif
     
@@ -725,10 +812,21 @@ void trackWithIonEffects
          */
 
 	int jMacro = 0;
+        if (ion_species_output) 
+          speciesSigma[iSpecies][0] = speciesSigma[iSpecies][1] = 0;
 	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
 	  ionSigma[0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-ionCentroid[0])*ionEffects->coordinate[iSpecies][jMacro][4];
 	  ionSigma[1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-ionCentroid[1])*ionEffects->coordinate[iSpecies][jMacro][4];
+          if (ion_species_output) {
+            speciesSigma[iSpecies][0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-speciesCentroid[iSpecies][0])*ionEffects->coordinate[iSpecies][jMacro][4];
+            speciesSigma[iSpecies][1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-speciesCentroid[iSpecies][1])*ionEffects->coordinate[iSpecies][jMacro][4];
+          }
         }
+      }
+    } else {
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+        if (ion_species_output) 
+          speciesSigma[iSpecies][0] = speciesSigma[iSpecies][1] = 0;
       }
     }
     
@@ -738,11 +836,28 @@ void trackWithIonEffects
     if (qIon) {
       ionSigma[0] = sqrt(ionSigmaTotal[0]/qIon);
       ionSigma[1] = sqrt(ionSigmaTotal[1]/qIon);
-    } 
+    }
+    if (ion_species_output) {
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+        MPI_Allreduce(speciesSigma[iSpecies], ionSigmaTotal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if (speciesCharge[iSpecies]) {
+          speciesSigma[iSpecies][0] = sqrt(ionSigmaTotal[0]/speciesCharge[iSpecies]);
+          speciesSigma[iSpecies][1] = sqrt(ionSigmaTotal[1]/speciesCharge[iSpecies]);
+        }
+      }
+    }
 #else
     if (qIon) {
       ionSigma[0] = sqrt(ionSigma[0]/qIon);
       ionSigma[1] = sqrt(ionSigma[1]/qIon);
+    }
+    if (ion_species_output) {
+      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+        if (speciesCharge[iSpecies]) {
+          speciesSigma[iSpecies][0] = sqrt(speciesSigma[iSpecies][0]/speciesCharge[iSpecies]);
+          speciesSigma[iSpecies][1] = sqrt(speciesSigma[iSpecies][1]/speciesCharge[iSpecies]);
+        }
+      }
     }
 #endif
 
@@ -756,18 +871,45 @@ void trackWithIonEffects
     if (myid==0) {
 #endif
     if (SDDS_ionDensityOutput) {
-      if ((ion_output_all_locations || ionEffects==firstIonEffects) &&
-          !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput++,
-                             "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sLocation,
-			     "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
-                             "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", mTotTotal,
+      if (ion_output_all_locations || ionEffects==firstIonEffects) {
+        if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                               "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sLocation,
+                               "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
+                               "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", mTotTotal,
 #if USE_MPI
-                             "nMacroIonsMin", mTotMin, 
-                             "nMacroIonsMax", mTotMax, 
+                               "nMacroIonsMin", mTotMin, 
+                               "nMacroIonsMax", mTotMax, 
 #endif
-                             NULL)) {
-         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-         exitElegant(1);
+                               NULL)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+        if (ion_species_output) {
+          for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+            if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("qIons_", ionProperties.ionName[iSpecies]),
+                                   speciesCharge[iSpecies], NULL) ||
+                !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("nMacroIons_", ionProperties.ionName[iSpecies]),
+                                   speciesCount[iSpecies], NULL) ||
+                !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("Cx_", ionProperties.ionName[iSpecies]),
+                                   speciesCentroid[iSpecies][0], NULL) ||
+                !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("Cy_", ionProperties.ionName[iSpecies]),
+                                   speciesCentroid[iSpecies][1], NULL) ||
+                !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("Sx_", ionProperties.ionName[iSpecies]),
+                                   speciesSigma[iSpecies][0], NULL) ||
+                !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                                   makeSpeciesName("Sy_", ionProperties.ionName[iSpecies]),
+                                   speciesSigma[iSpecies][1], NULL)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              exitElegant(1);
+            }
+          }
+        }
+        iIonDensityOutput++;
       }
     }
 #if USE_MPI
@@ -930,7 +1072,15 @@ void trackWithIonEffects
     free_czarray_2d((void**)ipBunch, nBunches, np0);
   if (npBunch)
     free(npBunch);
-    
+  if (speciesCentroid)
+  if (speciesCentroid)
+    free_zarray_2d((void**)speciesCentroid, ionProperties.nSpecies, 2);
+  if (speciesSigma)
+    free_zarray_2d((void**)speciesSigma, ionProperties.nSpecies, 2);
+  if (speciesCharge)
+    free(speciesCharge);
+  if (speciesCount)
+    free(speciesCount);
 }
 
 void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double centroid[2], double sigma[2])

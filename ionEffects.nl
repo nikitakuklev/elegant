@@ -12,7 +12,7 @@
           long beam_output_all_locations = 0;
           STRING ion_density_output = NULL;
           long ion_output_all_locations = 1;
-          STRING ion_coordinate_output = NULL; 
+          long ion_species_output = 0;
           long grid_points_x = 0;
           long grid_points_y = 0;
           STRING field_calculation_method = NULL;
