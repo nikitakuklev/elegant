@@ -345,7 +345,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   double *func, path[6], path0[6], detR[2], length, sTotal;
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   double lastRI[6];
-  long n_mat_computed, i, j, plane, otherPlane, hasMatrix, hasPath;
+  long n_mat_computed, i, j, plane, hasMatrix, hasPath;
+  //long otherPlane;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
   VMATRIX *dispM1, *dispM2;  
@@ -618,7 +619,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       }
     }
     for (plane=0; plane<2; plane++) {
-      otherPlane = plane?0:1;
+      //otherPlane = plane?0:1;
       detR[plane] = C[plane]*Sp[plane] - Cp[plane]*S[plane];
       /* set up pointers to Twiss functions */
       func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
@@ -1999,7 +2000,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 {
   VMATRIX *M;
   double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
-  double chromx2, chromy2;
   double x_acc_z, y_acc_z;
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
@@ -2149,7 +2149,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   chromx = chromy = 0;
   dbetax = dbetay = 0;
   dalphax = dalphay = 0;
-  chromx2 = chromy2 = 0;
 
   for (i=0; i<N_TSWA; i++)
     for (j=0; j<N_TSWA; j++)
@@ -4094,11 +4093,12 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
   long i, is, iq, count, firstTime;
   char buffer[1024];
   ELEMENT_LIST *elemOrig;
-  double value, end_pos, start_pos;
+  double value;
+  //double end_pos, start_pos;
   double twissData[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
 
   elemOrig = elem;
-  start_pos = 0;
+  //start_pos = 0;
 
   for (i=0; i<twissAnalysisRequests; i++) {
     /* initialize statistics buffers and rpn memories */
@@ -4117,7 +4117,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
     twissAnalysisRequest[i].initialized = 1;
     
     count = 0;
-    end_pos = 0;
+    //end_pos = 0;
     while (elem) {
       if (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
               elem->end_pos>twissAnalysisRequest[i].sEnd) 
@@ -4145,12 +4145,15 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         }
       }
       count++;
+      /*
       if (count==1) {
-        if (elem->pred)
+        if (elem->pred) {
           start_pos = elem->pred->end_pos;
-        else
+        } else {
           start_pos = 0;
+        }
       }
+      */
       if (twiss_analysis_struct.verbosity>1 && firstTime) {
         printf((char*)"twiss analysis %s will include %s#%ld\n",
                 twissAnalysisRequest[i].tag,
@@ -4579,10 +4582,11 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   double two=2, three=3, four=4;
   ELEMDATA *ed = NULL;
   long nE=0, iE, jE, i, j;
-  double sqrt8, sqrt2, tilt;
+  //double sqrt8, sqrt2;
+  double tilt;
 
-  sqrt8 = sqrt((double)8);
-  sqrt2 = sqrt((double)2);
+  //sqrt8 = sqrt((double)8);
+  //sqrt2 = sqrt((double)2);
   ii = std::complex<double>(0,1);
 
   /* accumulate real and imaginary parts */

@@ -30,6 +30,11 @@ typedef struct {
 } STORED_MULTIPOLE_DATA;
 static STORED_MULTIPOLE_DATA *storedMultipoleData = NULL;
 static long nMultipoleDataSets = 0;
+void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
+					double *sum_Fx_return, double *sum_Fy_return,
+					double *xpow, double *ypow,
+					long order, double KnL, long skew);
+long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
 long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
                       MULTIPOLE_DATA *multData)
@@ -72,7 +77,7 @@ void copyMultipoleDataset(MULTIPOLE_DATA *multData, long index)
  
 void addMultipoleDatasetToStore(MULTIPOLE_DATA *multData, char *filename)
 {
-  printf("Adding file %s to multipole data store\n", filename, multData->filename);
+  printf("Adding file %s to multipole data store\n", filename);
   fflush(stdout);
   storedMultipoleData = SDDS_Realloc(storedMultipoleData, sizeof(*storedMultipoleData)*(nMultipoleDataSets+1));
   memcpy(&storedMultipoleData[nMultipoleDataSets].data, multData, sizeof(*multData));
@@ -315,8 +320,8 @@ long fmultipole_tracking(
                          double z_start
                          )
 {
-  double dummy;
-  double dzLoss;
+  //double dummy;
+  double dzLoss=0;
   long n_kicks;       /* number of kicks to split multipole into */
   long i_part, i_top, is_lost=0, i_order;
   double *coord;
@@ -423,7 +428,8 @@ long multipole_tracking(
     double drift;
     double *coef;
     double x, xp, y, yp, s, dp;
-    double ratio, rad_coef;
+    //double ratio;
+    double rad_coef;
     double beta0, beta1, p;
     static long maxOrder = -1;
     static double *xpow = NULL, *ypow = NULL;
@@ -673,7 +679,7 @@ long multipole_tracking2(
   long i_part, i_top, n_parts;
   double *coef, *coord;
   double drift;
-  double tilt, rad_coef, isr_coef, xkick, ykick, dzLoss;
+  double tilt, rad_coef, isr_coef, xkick, ykick, dzLoss=0;
   KQUAD *kquad = NULL;
   KSEXT *ksext;
   KQUSE *kquse;
@@ -685,7 +691,7 @@ long multipole_tracking2(
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
-  double K2L;
+  //double K2L;
   
 #ifdef HAVE_GPU
   if(getElementOnGpu()){

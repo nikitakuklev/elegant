@@ -2730,7 +2730,7 @@ void bombTracking(const char *error)
 }
 
 /* This version accepts a printf-style template and variable number of arguments to be printed */
-void bombElegantVA(const char *template, ...) 
+void bombElegantVA(char *template, ...) 
 {
   char *p;
   char c, *s;

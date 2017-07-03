@@ -68,7 +68,8 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   double tmin_part, tmax_part;
   double *buffer;
 #endif
-  long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
+  long ib, nb, nfreq, iReal, iImag, plane, first;
+  //long n_binned;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
   long ip, i_pass0;
@@ -217,10 +218,14 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
           posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
 
       /* make arrays of I(t)*x and I(t)*y */
-      n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, 
+      /*n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, 
                                                time, part, Po, np,
                                                ztransverse->dx, ztransverse->dy,
-                                               ztransverse->xDriveExponent, ztransverse->yDriveExponent);
+                                               ztransverse->xDriveExponent, ztransverse->yDriveExponent);*/
+      binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, 
+                                    time, part, Po, np,
+                                    ztransverse->dx, ztransverse->dy,
+                                    ztransverse->xDriveExponent, ztransverse->yDriveExponent);
       userFactor[0] = ztransverse->factor*ztransverse->xfactor*rampFactor;
       userFactor[1] = ztransverse->factor*ztransverse->yfactor*rampFactor;
 

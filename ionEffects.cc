@@ -24,7 +24,7 @@
 #define ION_FIELD_GAUSSIAN 0
 #define N_ION_FIELD_METHODS 1
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
-  "gaussian"
+  (char*)"gaussian"
 };
 
 static long ionFieldMethod = -1;
@@ -187,7 +187,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 {
-  cp_str(&field_calculation_method, "gaussian");
+  cp_str(&field_calculation_method, (char*)"gaussian");
 
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -208,7 +208,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
-    bombElegantVA("field_calculation_method=\"%s\" not recognized", field_calculation_method);
+    bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
 
   readGasPressureData(pressure_profile, &pressureData);
 
@@ -237,45 +237,45 @@ void readIonProperties(char *filename)
     printf("Problem opening ion properties data file %s\n", filename);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  if (!check_sdds_column(&SDDSin, "Mass", "AMU"))
-    bombElegantVA("Column \"Mass\" is missing, not floating-point type, or does not have units of \"AMU\" in %s\n",
+  if (!check_sdds_column(&SDDSin, (char*)"Mass", (char*)"AMU"))
+    bombElegantVA((char*)"Column \"Mass\" is missing, not floating-point type, or does not have units of \"AMU\" in %s\n",
                   filename);
-  if (!check_sdds_column(&SDDSin, "CrossSection", "Mb") &&
-      !check_sdds_column(&SDDSin, "CrossSection", "MBarns") && 
-      !check_sdds_column(&SDDSin, "CrossSection", "megabarns"))
-    bombElegantVA("Column \"CrossSection\" is missing, not floating-point type, or does not have units of megabarns (or Mbarns or Mb)",
+  if (!check_sdds_column(&SDDSin, (char*)"CrossSection", (char*)"Mb") &&
+      !check_sdds_column(&SDDSin, (char*)"CrossSection", (char*)"MBarns") && 
+      !check_sdds_column(&SDDSin, (char*)"CrossSection", (char*)"megabarns"))
+    bombElegantVA((char*)"Column \"CrossSection\" is missing, not floating-point type, or does not have units of megabarns (or Mbarns or Mb)",
                   filename);
 
   if (SDDS_ReadPage(&SDDSin)<=0) 
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   
   if ((ionProperties.nSpecies = SDDS_RowCount(&SDDSin))<=0)
-    bombElegantVA("Ion properties file %s appears to have no rows.\n", filename);
+    bombElegantVA((char*)"Ion properties file %s appears to have no rows.\n", filename);
 
-  if (!(ionProperties.ionName = (char**)SDDS_GetColumn(&SDDSin, "IonName")) ||
-      !(ionProperties.mass = SDDS_GetColumnInDoubles(&SDDSin, "Mass")) ||
-      !(ionProperties.chargeState = SDDS_GetColumnInDoubles(&SDDSin, "ChargeState")) ||
-      !(ionProperties.crossSection = SDDS_GetColumnInDoubles(&SDDSin, "CrossSection")) ||
-      !(sourceName = (char**)SDDS_GetColumn(&SDDSin, "SourceName")))
+  if (!(ionProperties.ionName = (char**)SDDS_GetColumn(&SDDSin, (char*)"IonName")) ||
+      !(ionProperties.mass = SDDS_GetColumnInDoubles(&SDDSin, (char*)"Mass")) ||
+      !(ionProperties.chargeState = SDDS_GetColumnInDoubles(&SDDSin, (char*)"ChargeState")) ||
+      !(ionProperties.crossSection = SDDS_GetColumnInDoubles(&SDDSin, (char*)"CrossSection")) ||
+      !(sourceName = (char**)SDDS_GetColumn(&SDDSin, (char*)"SourceName")))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   if (!(ionProperties.sourceGasIndex = (long*)tmalloc(sizeof(*(ionProperties.sourceGasIndex))*ionProperties.nSpecies)) ||
       !(ionProperties.sourceIonIndex = (long*)tmalloc(sizeof(*(ionProperties.sourceIonIndex))*ionProperties.nSpecies)))
-    bombElegantVA("Memory allocation failure allocating arrays for %ld ion species.\n", ionProperties.nSpecies);
+    bombElegantVA((char*)"Memory allocation failure allocating arrays for %ld ion species.\n", ionProperties.nSpecies);
 
   /* Figure out the source gas or source ion indices */
   for (i=0; i<ionProperties.nSpecies; i++) {
     ionProperties.sourceGasIndex[i] = ionProperties.sourceIonIndex[i] = -1;
     if (ionProperties.chargeState[i]<=0) 
-      bombElegantVA("Ion %s has non-positive charge state", ionProperties.ionName[i]);
+      bombElegantVA((char*)"Ion %s has non-positive charge state", ionProperties.ionName[i]);
     if (ionProperties.chargeState[i]==1) {
       if ((ionProperties.sourceGasIndex[i] = match_string(sourceName[i], pressureData.gasName, pressureData.nGasses, EXACT_MATCH))<0) {
-        bombElegantVA("Unable to find match to gas source \"%s\" for species \"%s\"", 
+        bombElegantVA((char*)"Unable to find match to gas source \"%s\" for species \"%s\"", 
                       sourceName[i], ionProperties.ionName[i]);
       }
     } else {
       if ((ionProperties.sourceIonIndex[i] = match_string(sourceName[i], ionProperties.ionName, ionProperties.nSpecies, EXACT_MATCH))<0) 
-        bombElegantVA("Unable to find match to ion source \"%s\" for species \"%s\"", 
+        bombElegantVA((char*)"Unable to find match to ion source \"%s\" for species \"%s\"", 
                       sourceName[i], ionProperties.ionName[i]);
     }
   }
@@ -740,7 +740,7 @@ void trackWithIonEffects
       }
     }
 
-    long mTotTotal;
+    long mTotTotal = 0;
 #if USE_MPI
     /* Sum ion centroid and charge data over all nodes */
     long mTotMin, mTotMax;
@@ -1021,11 +1021,11 @@ void trackWithIonEffects
       if (iIonEffectsElement==nIonEffectsElements) {
         if (SDDS_beamOutput && !SDDS_UpdatePage(SDDS_beamOutput, FLUSH_TABLE)) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          SDDS_Bomb("problem flushing data for ion_effects beam parameters output file");
+          SDDS_Bomb((char*)"problem flushing data for ion_effects beam parameters output file");
         }
         if (SDDS_ionDensityOutput && !SDDS_UpdatePage(SDDS_ionDensityOutput, FLUSH_TABLE)) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          SDDS_Bomb("problem flushing data for ion_effects ion density output file");
+          SDDS_Bomb((char*)"problem flushing data for ion_effects ion density output file");
         }
         iIonEffectsElement = 0;
       }

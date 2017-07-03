@@ -115,7 +115,7 @@ static double rexit_intercept;
 static double central_length, tolerance;
 
 /* prototypes and other information for NIBEND element */
-void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which_end);
+void nibend_coord_transform(double *q, double *coord, void *field, long which_end);
 double nibend_exit_function(double *qp, double *q, double s);
 void nibend_deriv_function(double *qp, double *q, double s);
 
@@ -184,12 +184,12 @@ static double sin_alpha1, sin_alpha2;
  */
 
 /* prototypes for NISEPT element */
-void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which_end);
+void nisept_coord_transform(double *q, double *coord, void *field, long which_end);
 double nisept_exit_function(double *qp, double *q, double s);
 void nisept_deriv_function(double *qp, double *q, double s);
 
 /* prototypes for BMAPXY element */
-void bmapxy_coord_transform(double *q, double *coord, BMAPXY *bmapxy, long which_end);
+void bmapxy_coord_transform(double *q, double *coord, void *field, long which_end);
 double bmapxy_exit_function(double *qp, double *q, double s);
 void bmapxy_deriv_function(double *qp, double *q, double s);
 void bmapxy_field_setup(BMAPXY *bmapxy);
@@ -197,7 +197,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy);
 /* prototypes for BMAPXYZ element */
 double bmapxyz_exit_function(double *qp, double *q, double s);
 void bmapxyz_deriv_function(double *qp, double *q, double s);
-void bmapxyz_coord_transform(double *q, double *coord, BMAPXYZ *bmapxyz, long which_end);
+void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_end);
 void bmapxyz_field_setup(BMAPXYZ *bmapxyz);
 long interpolate_bmapxyz(double *F0, double *F1, double *F2, BMAPXYZ *bmapxyz, double x, double y, double z);
 
@@ -869,12 +869,13 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 {
   long step;
   double h, hh;
-  double *q, *qp, *w, *wp;
+  double *q, *w, *wp;
+  //double *qp;
   double F[8];
 
   q = Qf;
   w = Qf+3;
-  qp = F;
+  //qp = F;
   wp = F+3;
 
   copy_doubles(Qf, Qi, 8);
@@ -938,7 +939,7 @@ double nibend_trajectory_error_fse(double fsep)
     return(coord[1]);
     }
 
-void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which_end)
+void nibend_coord_transform(double *q, double *coord, void *field, long which_end)
 {
     double dxds, dyds, dzds;
     double q0[3], dqds[3], dcoordEtilt[6];
@@ -946,6 +947,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
     double q0I, ds, alpha;
     long i;
     double dz, dx, dy;
+    NIBEND *nibend = field;
     
     if (which_end==-1) {
         /* do misalignment */
@@ -1077,8 +1079,8 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
 
 double nibend_exit_function(double *qp, double *q, double s)
 {
-    static NIBEND *nibend;
-    nibend = (NIBEND*)field_global;
+  //static NIBEND *nibend;
+  //nibend = (NIBEND*)field_global;
 
     /* returns positive if inside, negative if outside, exit fringe region */
     if (exit_slope!=DBL_MAX)
@@ -1091,12 +1093,12 @@ void nibend_deriv_function(double *qp, double *q, double s)
 {
   static double *w, *wp, F0, F1, F2;
   static double S, dq0, z, z2, z3, q22;
-  static NIBEND *nibend;
+  //static NIBEND *nibend;
   static double Fa_y, Fa_z, tanh_Fa_z, sech_Fa_z, cosh_Fa_z;
   static double sinh_Fa_z, sinh_3Fa_z, cosh_2Fa_z, cosh_4Fa_z;
   static double Fa_y_sech, tmp, tmp1;
   
-  nibend = (NIBEND*)field_global;
+  //nibend = (NIBEND*)field_global;
   n_deriv_calls++;
 
   w  = q+3;
@@ -1275,7 +1277,7 @@ double nisept_trajectory_error(double fsep)
     return(coord[1]);
     }
 
-void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which_end)
+void nisept_coord_transform(double *q, double *coord, void *field, long which_end)
 {
     double dxds, dyds, dzds;
     double q0[3], dqds[3];
@@ -1283,6 +1285,7 @@ void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which
     double sin_e2, cos_e2;
     double ds;
     long i;
+    NISEPT *nisept = field;
 
     if (which_end==-1) {
         if (nisept->negative_angle) {
@@ -1346,8 +1349,8 @@ void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which
 
 double nisept_exit_function(double *qp, double *q, double s)
 {
-    static NISEPT *nisept;
-    nisept = (NISEPT*)field_global;
+  //static NISEPT *nisept;
+  //nisept = (NISEPT*)field_global;
 
     /* returns positive if inside or before, negative if after */
     return(exit_intercept - q[0]);
@@ -1417,8 +1420,8 @@ void nisept_deriv_function(double *qp, double *q, double s)
 
 double bmapxy_exit_function(double *qp, double *q, double s)
 {
-  static BMAPXY *bmapxy;
-  bmapxy = (BMAPXY*)field_global;
+  //static BMAPXY *bmapxy;
+  //bmapxy = (BMAPXY*)field_global;
   
   /* returns positive if inside or before, negative if after */
   return(central_length-q[0]);
@@ -1499,10 +1502,11 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 }
 
  
-void bmapxy_coord_transform(double *q, double *coord, BMAPXY *bmapxy, long which_end)
+void bmapxy_coord_transform(double *q, double *coord, void *field, long which_end)
 {
   double dzds, *dqds;
-  
+  //BMAPXY *bmapxy = field;
+
   dqds = q+3;
   if (which_end==-1) {
     /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
@@ -1738,8 +1742,8 @@ void writeEngeFunctionToFile(char *filename)
 
 double bmapxyz_exit_function(double *qp, double *q, double s)
 {
-  static BMAPXYZ *bmapxyz;
-  bmapxyz = (BMAPXYZ*)field_global;
+  //static BMAPXYZ *bmapxyz;
+  //bmapxyz = (BMAPXYZ*)field_global;
   
   /* returns positive if inside or before, negative if after */
   return(central_length-q[0]);
@@ -1798,10 +1802,11 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
 }
 
  
-void bmapxyz_coord_transform(double *q, double *coord, BMAPXYZ *bmapxyz, long which_end)
+void bmapxyz_coord_transform(double *q, double *coord, void *field, long which_end)
 {
   double dzds, *dqds;
-  
+  //BMAPXYZ *bmapxyz = field;
+
   dqds = q+3;
   if (which_end==-1) {
     /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */

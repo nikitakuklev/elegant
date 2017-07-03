@@ -11,7 +11,7 @@
         STRING exclude = NULL;
         long disable = 0;
         long clear = 0;
-        STRING element_prefix = "MYSC";
+        STRING element_prefix = (char*)"MYSC";
         long skip = 0;
         long vertical = 0;
         long horizontal = 0;

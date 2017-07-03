@@ -221,7 +221,7 @@ void track_through_rfmode(
         if (rfmode->bunchInterval>0) {
           /* Use pseudo-bunched beam mode---only one bunch is really present */
         } else
-          bombElegantVA("RFMODE %s has invalid values for bunched_beam_mode (>1) and bunch_interval (<=0)\n", element_name);
+          bombElegantVA((char*)"RFMODE %s has invalid values for bunched_beam_mode (>1) and bunch_interval (<=0)\n", element_name);
       }
       
     }
@@ -638,7 +638,7 @@ void track_through_rfmode(
             mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_RFMODE;
             MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
 #else 
-            bombElegantVA("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
+            bombElegantVA((char*)"%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 #endif
           }
           V_sum = Vr_sum = Vi_sum = Q_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = 0;
@@ -1130,7 +1130,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 #endif
         if (!(rfmode->SDDSrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSrec)))) ||
             !SDDS_InitializeOutput(rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
-            SDDS_DefineParameter(rfmode->SDDSrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
+            SDDS_DefineParameter(rfmode->SDDSrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, (char*)SVN_VERSION)<0 ||
             SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Bunch", NULL, NULL, (char*)"Bunch number", NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSrec, (char*)"NumberOccupied", NULL, NULL, (char*)"Number of bins that are occupied", NULL, SDDS_LONG, 0)<0 ||
@@ -1159,7 +1159,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 #endif
         if (!(rfmode->SDDSfbrec=(SDDS_DATASET*)tmalloc(sizeof(*(rfmode->SDDSfbrec)))) ||
             !SDDS_InitializeOutput(rfmode->SDDSfbrec, SDDS_BINARY, 1, NULL, NULL, rfmode->feedbackRecordFile) ||
-            SDDS_DefineParameter(rfmode->SDDSfbrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0 ||
+            SDDS_DefineParameter(rfmode->SDDSfbrec, (char*)"SVNVersion", NULL, NULL, (char*)"SVN version number", NULL, SDDS_STRING, (char*)SVN_VERSION)<0 ||
             SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"t", NULL, (char*)"s", (char*)"Time", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(rfmode->SDDSfbrec, (char*)"fResonance", NULL, (char*)"Hz", (char*)"Cavity resonance frequency", NULL, SDDS_DOUBLE, 0)<0 ||
@@ -1184,10 +1184,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     if (rfmode->noiseData[i] && strlen(rfmode->noiseData[i])!=0) {
       if (!getTableFromSearchPath(&data, rfmode->noiseData[i], 1, 0)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          bombElegantVA("Problem reading RFMODE noise file %s\n", rfmode->noiseData[i]);
+          bombElegantVA((char*)"Problem reading RFMODE noise file %s\n", rfmode->noiseData[i]);
       }
       if (data.n_data<=1) 
-          bombElegantVA("RFMODE noise file %s has too little data\n", rfmode->noiseData[i]);
+        bombElegantVA((char*)"RFMODE noise file %s has too little data\n", rfmode->noiseData[i]);
       rfmode->tNoise[i] = data.c1;
       rfmode->fNoise[i] = data.c2;
       rfmode->nNoise[i] = data.n_data;
@@ -1273,7 +1273,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     /* Set up the generator and related data. */
     /* See T. Berenc, RF-TN-2015-001 */
     MATRIX *C;
-    double deltaOmega, decrement, sigma, QL, Tsample, k;
+    double deltaOmega, sigma, QL, k;
+    //double decrement, Tsample;
 
     rfmode->lambdaA = 2*(rfmode->beta+1)/rfmode->RaInternal;
     m_alloc(&rfmode->A, 2, 2);
@@ -1304,8 +1305,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     QL = rfmode->Q/(1+rfmode->beta);
     deltaOmega = PIx2*(rfmode->freq - rfmode->driveFrequency);
     sigma = PIx2*rfmode->freq/(2*QL);
-    Tsample = rfmode->updateInterval/rfmode->driveFrequency;
-    decrement = exp(-sigma*Tsample);
+    //Tsample = rfmode->updateInterval/rfmode->driveFrequency;
+    //decrement = exp(-sigma*Tsample);
     k = PIx2*rfmode->freq/4*(rfmode->RaInternal/rfmode->Q);
     m_alloc(&C, 2, 2);
     C->a[0][0] = C->a[1][1] = sigma/k;

@@ -1022,7 +1022,7 @@ extern char *entity_text[N_TYPES];
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 14
 #define N_BRANCH_PARAMS 4
-#define N_SLICE_POINT_PARAMS 11
+#define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -3615,7 +3615,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form);
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form);
 void bombElegant(const char *error, const char *usage);
 void bombTracking(const char *error);
-void bombElegantVA(const char *ptemplate, ...);
+void bombElegantVA(char *ptemplate, ...);
 void exitElegant(long status);
 void printMessageAndTime(FILE *fp, char *message);
 
@@ -4311,6 +4311,9 @@ extern int makeInitialParticleEnsemble(double ***initial, double *reference, dou
 				       double ***error, int n_points1, double *step);
 
 extern time_t get_mtime(char *filename);  
+
+  long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
+
 #ifdef __cplusplus
 }
 #endif

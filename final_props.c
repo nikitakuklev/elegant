@@ -398,10 +398,12 @@ long compute_final_properties
    long step, long steps, double charge)
 {
   register long i, j;
-  long i_data, index, offset;
+  long i_data, offset;
+  //long index;
   double dp_min, dp_max, Ddp=0;
   double p_sum, gamma_sum, p, sum, tc=0, tmin, tmax, dt=0, t, pAverage;
-  double **R, centroid[6];
+  double **R;
+  //double centroid[6];
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;
   static long percDataMax = 0;
@@ -444,14 +446,16 @@ long compute_final_properties
   if (sums->n_part)
 #endif 
   {
-    for (i=0; i<6; i++) 
-      centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i];
+    for (i=0; i<6; i++) {
+      //centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i];
+      data[i+F_CENTROID_OFFSET] = sums->centroid[i];
+    }
     for (i=0; i<6; i++)
       data[i+F_SIGMA_OFFSET   ] = sqrt(sums->sigma[i][i]);
     for (i=0; i<4; i++)
       data[i+F_MAXAMP_OFFSET] = sums->maxabs[i];
     offset = F_SIGMAT_OFFSET;
-    index = 0;
+    //index = 0;
     /* sigma matrix elements sij */
     for (i=0; i<6; i++) {
       /* skip the diagonal element */
@@ -1256,7 +1260,8 @@ double approximateBeamWidth_p(double fraction, double **part, long nPart, long i
 
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
 {
-  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
+  double C[6], S[6][6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
+  //double beamsize[6];
   long i, j, iPart;
   double sum;
 #if USE_MPI 
@@ -1291,8 +1296,8 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
   }
 #endif
 
-  for (i=0; i<6; i++)
-    beamsize[i] = sqrt(S[i][i]);
+  //for (i=0; i<6; i++)
+    //beamsize[i] = sqrt(S[i][i]);
 
   /* compute correlations with energy correlations removed */
   for (i=0; i<6; i++) 
@@ -1348,7 +1353,8 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
 
 void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles)
 {
-  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6];
+  double C[6], S[6][6], eta[6], Sbeta[6][6];
+  //double beamsize[6];
   long i, j, iPart;
   double sum;
 #if USE_MPI
@@ -1389,8 +1395,8 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
   }
 #endif
 
-  for (i=0; i<6; i++)
-    beamsize[i] = sqrt(S[i][i]);
+  //for (i=0; i<6; i++)
+  //beamsize[i] = sqrt(S[i][i]);
 
   /* compute correlations with energy offset */
   for (i=0; i<6; i++) 

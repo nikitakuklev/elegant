@@ -451,7 +451,8 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
   TRACKING_CONTEXT tContext;
 
   if (!rf_param->fiducial_seen) {
-    double t0, length, omega;
+    double t0, omega;
+    //double length;
 
     if (rf_param->phase_reference==0) {
       rf_param->phase_reference = unused_phase_reference();
@@ -459,7 +460,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
 #ifdef DEBUG
     fprintf(stderr, "Finding fiducial for RFDF, phase_reference=%ld\n", rf_param->phase_reference);
 #endif
-    length = rf_param->length;
+    //length = rf_param->length;
     omega = PIx2*rf_param->frequency;
     switch (get_phase_reference(&phase, rf_param->phase_reference)) {
     case REF_PHASE_RETURNED:

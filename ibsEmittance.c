@@ -284,7 +284,7 @@ int main( int argc, char **argv)
   double emitx0=0, emitx, emitxInput, emityInput, emity, coupling, sigmaz;
   double sigmaDelta0=0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
   double xGrowthRateInitial, yGrowthRateInitial, zGrowthRateInitial;
-  double emitxOld, sigmaDeltaOld;
+  //double emitxOld, sigmaDeltaOld;
   long method, converged;
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
@@ -774,8 +774,8 @@ int main( int argc, char **argv)
       if (verbosity > 1) {
         fprintf (stdout, "Starting values:\nemitx: %10.5g sigmaDelta %10.5g.\n", emitx, sigmaDelta);
       }
-      emitxOld = emitx;
-      sigmaDeltaOld = sigmaDelta;
+      //emitxOld = emitx;
+      //sigmaDeltaOld = sigmaDelta;
       xGuess = (double*) malloc(sizeof(double)*dimensions);
       dxGuess = (double*) malloc(sizeof(double)*dimensions);
       xLowerLimit = (double*) malloc(sizeof(double)*dimensions);
@@ -944,7 +944,8 @@ int main( int argc, char **argv)
 
 double IBSequations(double *x, long *invalid) {
   double emitx, sigmaDelta;
-  double pCentral0, emity, sigmaz, sigmaz0, particles, emitx0, 
+  //double pCentral0;
+  double emity, sigmaz, sigmaz0, particles, emitx0, 
   sigmaDelta0, taux, tauy, taudelta, coupling;
   long elements, superperiods, verbosity;
   double xGrowthRate, yGrowthRate, zGrowthRate;
@@ -952,7 +953,7 @@ double IBSequations(double *x, long *invalid) {
   
   emitx = x[0];
   sigmaDelta = x[1];
-  pCentral0 = x[2];
+  //pCentral0 = x[2];
   sigmaz0 = x[4];
   particles = x[5];
   emitx0 = x[6];

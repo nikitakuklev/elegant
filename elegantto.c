@@ -60,6 +60,8 @@ char *option[N_OPTIONS] = {
 #define COSY_OUTPUT 8
 #define MAD8_OUTPUT 9
 
+void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, char *ender_file);
+
 int main(int argc, char **argv)
 {
     LINE_LIST *beamline;

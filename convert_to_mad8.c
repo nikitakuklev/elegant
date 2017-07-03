@@ -155,7 +155,7 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
       strcpy(name, eptr->name);
       replace_chars(name, ":.", "cd");
       if (s[0] == 0) {
-        sprintf(s, "BL%04d: LINE=(%s", lcount++, name);
+        sprintf(s, "BL%04ld: LINE=(%s", lcount++, name);
       } else {
         strcat(s, ",");
         strcat(s, name);
@@ -179,9 +179,9 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
     s[0] = 0;
     for (count=1; count<lcount; count++) {
       if (count==1)
-        sprintf(s, "bl: line=(BL%04d", count);
+        sprintf(s, "bl: line=(BL%04ld", count);
       else
-        sprintf(s, "%s,BL%04d", s, count);
+        sprintf(s, "%s,BL%04ld", s, count);
     }
     strcat(s, ")");
     print_with_continuation(fp, s, 79);

@@ -27,6 +27,7 @@ void process_rename_request(char *s, char **name, long n_names);
 long find_parameter_offset(char *param_name, long elem_type);
 void resolveBranchPoints(LINE_LIST *lptr);
 void copyEdgeIndices(char *target, long targetType, char *source, long sourceType);
+long getAddStartFlag();
 
 /* elem: root of linked-list of ELEM structures 
  * This list contains the definitions of all elements as supplied in the
@@ -810,7 +811,7 @@ void free_elements(ELEMENT_LIST *elemlist)
         if (eptr->type==T_WATCH) {
 	  WATCH *wptr;
 	  if ((wptr = (WATCH*)eptr->p_elem)) {
-	    if (wptr->initialized && !SDDS_Terminate(&wptr->SDDS_table)) {
+	    if (wptr->initialized && !SDDS_Terminate(wptr->SDDS_table)) {
 	      SDDS_SetError("Problem terminate watch-point SDDS file (free_elements)");
 	      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 	    }
@@ -1128,7 +1129,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
               svalue = *(short *)(eptr->p_elem+parameter[j].offset);
               if (!suppress_defaults || svalue!=parameter[j].integer) {
                 /* value is not the default, so add to output */
-                sprintf(t, "%s=%ld", parameter[j].name, svalue);
+                sprintf(t, "%s=%d", parameter[j].name, svalue);
                 strcat(s, t);
                 if (j!=entity_description[eptr->type].n_params-1)
                   strcat(s, ",");
@@ -1675,7 +1676,6 @@ void copyEdgeIndices(char *target, long targetType, char *source, long sourceTyp
 void print_beamlines(FILE *fp)
 {
   LINE_LIST *lptr;
-  long j;
   INPUT_OBJECT *object;
   
   object = &inputObject;

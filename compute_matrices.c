@@ -450,7 +450,7 @@ VMATRIX *sextupole_matrix(double K2, double J1, double length, long maximum_orde
 {
     VMATRIX *M, *Medge1, *Medge2;
     VMATRIX *Mfringe, *Mtot;
-    double *C, **R, ***T, ****U;
+    double *C, **R, ***T=NULL, ****U=NULL;
     double temp, lf = 0;
     
     Medge1 = Medge2 = NULL;
@@ -1009,7 +1009,8 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
-    UKICKMAP *ukmap; SCRIPT *script; FTABLE *ftable;
+    UKICKMAP *ukmap; SCRIPT *script; 
+    //FTABLE *ftable;
     EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -1147,7 +1148,7 @@ VMATRIX *compute_matrix(
         }
 	break;
       case T_FTABLE:
-        ftable = ((FTABLE*)elem->p_elem);
+        //ftable = ((FTABLE*)elem->p_elem);
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
@@ -1982,9 +1983,10 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
 
     if (!useSRSModel) { 
       double p00s, sinPhi0, cosPhi0, cotPhi0,
-      cscPhi0, f1, sf1, f2, f3, cos2phi0, f4, f2s, f5, logf4, sf5,
+      cscPhi0, f1, sf1, f2, cos2phi0, f4, f2s, f5, logf4, sf5,
       dgMaxs, sqrt2, f5_1p5, cosPhi0s, sinPhi0s, lambdas, f6, logf6,
-      sinPhi0c, dgMaxc, f1_1p5, f7, f7s, PIs;
+        sinPhi0c, dgMaxc, f1_1p5, f7, f7s;
+      //double PIs, f3;
       double p00, dgMax, phi0, lambda, L;
 
       phi0 = phase*PI/180;
@@ -2004,7 +2006,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       f1 = 1+p00s;
       sf1 = sqrt(f1);
       f2 = sf1+dgMax*sinPhi0;
-      f3 = p00s+sf1;
+      //f3 = p00s+sf1;
       cos2phi0 = cos(2*phi0);
       f4 = p00+sf1;
       f2s = sqr(f2);
@@ -2024,7 +2026,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       f1_1p5 = pow(f1,1.5);
       f7 = p00s+2*dgMax*sf1*sinPhi0+dgMaxs*sinPhi0s;
       f7s = sqr(f7);
-      PIs = sqr(PI);
+      //PIs = sqr(PI);
 
       R[0][0] = R[2][2] = R[4][4] = 1;
       R[0][1] = R[2][3] = (L*p00*cscPhi0*(-logf4+logf6))/dgMax;

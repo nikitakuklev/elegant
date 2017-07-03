@@ -505,8 +505,8 @@ VMATRIX *corrector_matrix(
     }
 
     if (do_edges) {
-      double arc;
-      arc = length*kick/sin(kick);
+      //double arc;
+      //arc = length*kick/sin(kick);
       h = kick/length;
       Mtot =  tmalloc(sizeof(*Mtot));
       initialize_matrices(Mtot, Mtot->order=max_order);
@@ -553,7 +553,8 @@ VMATRIX *sbend_matrix(
                       )
 {
   double kx, cx, sx, kx2, kx4, kx6, cx2, cx3, cx4, sx2, sx3, sx4;
-  double ky, cy, sy, ky2, ky4, cy2, cy3, cy4, sy2, sy3, sy4;
+  double ky, cy, sy, ky2, ky4, cy2, cy3, sy2, sy3;
+  //double cy4, sy4;
   double h2, ha2;
   double e111, e122, e133, e144, e161, e166, e331, e342, e363;
   double i11111, i21111, i12121, i22121, i11211, i21211, i12221, i22221, i11611, i21611, i12621, i22621, i16611,
@@ -569,7 +570,8 @@ VMATRIX *sbend_matrix(
   double small3;
   double t0_2, t0_3, t0_4, t0_5, t0_6;
   long ky2_is_zero, kx2_is_zero;
-  double *C, **R, ***T, ****U;
+  double *C, **R, ***T;
+  //double ****U;
   VMATRIX *M;
 
   log_entry("sbend_matrix");
@@ -597,7 +599,7 @@ VMATRIX *sbend_matrix(
   C = M->C;
   R = M->R;
   T = M->T;
-  U = M->Q;
+  //U = M->Q;
   
   h2 = h*h;
   ha2 = ha*ha;
@@ -712,10 +714,10 @@ VMATRIX *sbend_matrix(
         ky4 = ky2*ky2;
         cy2 = cy*cy;
         cy3 = cy2*cy;
-        cy4 = cy2*cy2;
+        //cy4 = cy2*cy2;
         sy2 = sy*sy;
         sy3 = sy2*sy;
-        sy4 = sy2*sy2;
+        //sy4 = sy2*sy2;
 
         t0_2 = sqr(t0);
         t0_3 = t0_2*t0;

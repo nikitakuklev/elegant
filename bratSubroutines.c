@@ -52,7 +52,7 @@ static double fieldSign = 1;
 /* Bnorm is misnamed here, based on earlier versions of the program */
 static double **Bnorm, **dBnormdz, **dBnormdx;
 static double *BxNorm, *ByNorm, *BzNorm;
-static double Breference = 0;
+//static double Breference = 0;
 static double xi, xf, dx;
 static double yi, yf, dy;
 static double zi, zf, dz, z_outer;
@@ -95,7 +95,7 @@ static long quiet=1;
 static long useFTABLE = 0;
 
 static short idealMode = 0, fieldMapDimension=2;
-static double idealB;
+//static double idealB;
 static double idealChord, idealEdgeAngle;
 
 static double fseLimit[2] = {-1, 1};

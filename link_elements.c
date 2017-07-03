@@ -156,7 +156,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       int32_t duplic;
       if (!exclude || !strlen(exclude) || !wild_match(t_context->name, exclude)) {
         targetList = SDDS_Realloc(targetList, sizeof(*targetList)*(targets+1));
-        binaryInsert((void**)targetList, targets, t_context->name, strcmp, &duplic);
+        binaryInsert((void**)targetList, targets, t_context->name, (int (*)(const void *, const void *))strcmp, &duplic);
         if (!duplic)
           targets++;
       }

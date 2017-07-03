@@ -39,7 +39,8 @@ long track_through_matter(
   double K1, K2=0.0, sigmaTotal, probScatter=0.0, dgamma;
   double Xo, probBSScatter = 0, probERScatter=0;
   long nScatters=0, i_top, isLost;
-  long sections, sections0=1, impulseMode;
+  //long sections;
+  long sections0=1, impulseMode;
   double L1, prob, probBS, probER;  
   long multipleScattering = 0;
   long hitsMatter;
@@ -181,7 +182,7 @@ long track_through_matter(
         double F, theta, phi, zs, dxp, dyp;
         long is;
         ds = dgamma = 0;
-        sections = sections0;
+        //sections = sections0;
         for (is=0; is<sections0 && !isLost; is++) {
           if (random_2(1)<prob) {
             nScatters ++;

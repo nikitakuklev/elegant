@@ -217,7 +217,8 @@ long motion(
     double kscale, *P, Po, gamma;
     static double gamma0, P0[3];
     long n_steps;
-    double tol_factor, end_factor;
+    //double tol_factor;
+    double end_factor;
     double X=0.0, Y=0.0;
 
 #if !USE_MPI
@@ -259,7 +260,7 @@ long motion(
       xMotionCenterVar = rpn_create_mem((char*)"xMotionCenter", 0);
    
     for (i_part=0; i_part<=i_top; i_part++) {
-        tol_factor = 1;
+      //tol_factor = 1;
         end_factor = 1.5;
         coord = part[i_part];
         q[0] = coord[0]*kscale;
