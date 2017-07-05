@@ -470,7 +470,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             B2Max = B2;
           pTotal1 = pTotal0-radCoef*sqr(pTotal0)*B2*ds;
           F = isrCoef*sqr(pTotal0)*sqrt(ds)*pow(B2, 3./4.);
-          if (bgg->isr)
+          if (bgg->isr && np!=1)
             pTotal1 += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
           if (sigmaDelta2)
             *sigmaDelta2 += sqr(F)/sqr(pCentral);
