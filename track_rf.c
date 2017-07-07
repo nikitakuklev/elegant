@@ -562,8 +562,11 @@ void track_through_multipole_deflector(
   double dpx, dpy, dpz, phase;
   long ip, mode;
 
+  /*
+  This is always false
   if (rf_param->frequency==0) 
     bombElegant("MRFDF cannot have frequency=0", NULL);
+  */
   if (rf_param->factor==0)
     return;
     

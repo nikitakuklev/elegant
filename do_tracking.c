@@ -2134,12 +2134,14 @@ long do_tracking(
         bombElegant("problem with fiducialization. Seek expert help!", NULL);
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
+        /* this is always false
         if (!traj_vs_z[i_traj].centroid) {
           printf("error: the trajectory centroid array for %s is NULL (do_tracking)",
                   eptr->name);
           fflush(stdout);
           exitElegant(1);
         }
+        */
         traj_vs_z[i_traj].elem = eptr;
         if (!(traj_vs_z[i_traj].n_part=nLeft)) {
           for (i=0; i<6; i++)
@@ -2414,12 +2416,14 @@ long do_tracking(
         }
         if (i_pass==0 && traj_vs_z) {
           /* collect trajectory data--used mostly by trajectory correction routines */
+          /* This is always false
           if (!traj_vs_z[i_traj].centroid) {
             printf("error: the trajectory centroid array for %s is NULL (do_tracking)",
                     eptr->name);
             fflush(stdout);
             exitElegant(1);
           }
+          */
           traj_vs_z[i_traj].elem = eptr;
           traj_vs_z[i_traj].n_part = 0;
           for (i=0; i<6; i++)

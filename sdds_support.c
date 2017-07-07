@@ -1757,11 +1757,14 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
             abort();
             }
         beam = sums+i;
+        /*
+        This is always false
         if (!beam->centroid) {
             printf("beam->centroid is NULL, i=%ld (dump_centroid)\n", i);
             fflush(stdout);
             abort();
             }
+        */
         if (beam->n_part)
             for (j=0; j<6; j++) {
                 cent[j] = beam->centroid[j];
@@ -1868,12 +1871,15 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   occurence = 1;
   for (ie=0; ie<n_elements; ie++) {
     beam  = sums+ie;
+    /*
+      This is always false
     if (!beam->sigma) {
       printf("error: sigma element of BEAM_SUMS is undefined for element %ld (%s)\n",
               ie, name);
       fflush(stdout);
       exitElegant(1);
     }
+    */
     if (beam->n_part) {
       for (i=0; i<7; i++) {
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
