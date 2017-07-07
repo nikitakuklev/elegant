@@ -2733,6 +2733,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"SYMPLECTIC", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator"},
     {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
     {"ISR", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
+    {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&bggexp_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output. Use for debugging only!"},
 };  
 
 IONEFFECTS ionEffects_example;

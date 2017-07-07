@@ -38,3 +38,9 @@ In addition, the file must contain two floating-point parameters:
 \item {\bf z} --- The longitudinal coordinate, in meters. $z$ should extend from the zero-field region upstream of the magnet to 
   the zero-field region downstream of the magnet.
 \end{itemize}
+
+Synchrotron radiation can be included by setting \verb|SYNCH_RAD=1| for classical radiation only and
+also \verb|ISR=1| for incoherent (quantum) effects. 
+This will impact the results of \verb|moments_output| calculation as well as tracking.
+NB: the calculations of \verb|twiss_output|, including radiation integrals, are at this point not affected,
+nor is the setup of rf cavities for storage rings via the \verb|rf_setup| command.

@@ -1020,7 +1020,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 11
 #define N_BMAPXYZ_PARAMS 6
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 14
+#define N_BGGEXP_PARAMS 15
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 7
@@ -2859,9 +2859,12 @@ typedef struct {
   short zInterval;         /* interval between z points used */
   short symplectic;        /* use symplectic integrator */
   short synchRad, isr;
+  char *particleOutputFile;  
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
+  SDDS_DATASET *SDDSpo;
+  long poIndex[6];
 } BGGEXP;
 
 /* names and storage structure for CHARGE element */

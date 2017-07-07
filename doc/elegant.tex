@@ -38,7 +38,7 @@ at a high level.
 \section{Highlights of What's New in Version 33.1}
 
 Here is a summary of what's changed since release 33.0.
-Historical change logs are appended to the end of this manual.
+Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
@@ -46,16 +46,16 @@ Historical change logs are appended to the end of this manual.
 \item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
   used the same data file. This was fixed.
 \item The \verb|BGGEXP| element refused to run if $m=1$ (dipole) was the main multipole, which
-  prevented modeling wigglers. This was reported by forum user Ji\_Li and was fixed.
+  prevented modeling wigglers. This was reported by forum user \verb|Ji_Li| and was fixed.
 \item The \verb|RFDF| element had a bug in computing the energy-dependence of the time of flight,
   as reported by Daniel Marx. This was fixed. The missing phase reference feature was also implemented.
 \item Using the third-order matrix of the \verb|QUAD| element with \verb|RADIAL=1| would result in a crash.
-  This was fixed. Forum user meisal reported the bug.
+  This was fixed. Forum user \verb|meisal| reported the bug.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \verb|allow_missing_parameters|
+\item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \\ \verb|allow_missing_parameters|
   qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
 \item Fixed a bug in saving parameters when elements are subdivided: the lengths of certain elements were incorrect in
   the saved file.
@@ -65,22 +65,27 @@ Historical change logs are appended to the end of this manual.
 \begin{itemize}
 \item The \verb|IONEFFECTS| element, and the companion \verb|ion_effects| command were added. These allow simulation
   of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
-\item The \verb|KSEXT| and \verb|SEXT| elements now support a skew-quad correction term. This was suggested by Z. Duan (IHEP).
 \item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
-\item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
-  \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
-  The default behavior (exact square roots) is unchanged.
 \item The \verb|CSBEND| element now includes skew multipole errors up to eighth order. This involves newly-computed expressions for the
   fields in curvilinear coordinates, so slight numerical changes may be seen.
+\item The \verb|KSEXT| and \verb|SEXT| elements now support a skew-quad correction term. This was suggested by Z. Duan (IHEP).
+\item Synchrotron radiation effects were added to the \verb|BGGEXP| element, so that radiation effects from essentially 
+  arbitrary fields can be included in both tracking and \verb|moments_output| calculations. There are limitations as
+  described in the manual page.
 \item Improvements were made to memory management for numerous elements, chiefly \verb|CSBEND|, \verb|CSRCSBEND|,
   \verb|CWIGGLER|, \verb|FRFMODE|, \verb|FTRFMODE|, \verb|RFMODE|, \verb|SLICE|, \verb|TFBDRIVER|, \verb|TRFMODE|,
   \verb|ZTRANSVERSE|, and \verb|ZLONGIT|. This can dramatically decrease memory usage in some cases.
-\item The \verb|MATTER| element now has start- and end-pass controls.
 \item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements (used for turn-by-turn feedback) now have start- and end-pass controls.
+\item The \verb|MATTER| element now has start- and end-pass controls.
+\item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
+  \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
+  The default behavior (exact square roots) is unchanged.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item Added the \verb|elastic_scattering| command, which assists in computation of the elastic gas scattering
+  lifetime and the distribution of lost particles. This is only available in the parallel version.
 \item Added \verb|bpm_output| option to the \verb|correct| command, which provides optional output of beam position monitor
   readings after orbit or trajectory correction. This was suggested by V. Sajaev (APS).
 \item The \verb|twiss_output| command now records the location of the acceptance-limiting apertures in parameters
@@ -7070,7 +7075,7 @@ terminal input and terminal output, respectively.
 
 \newpage
 
-\section{Change Log}
+\section{Change Log\label{sect:changeLog}}
 
 \subsection{Highlights of What's New in Version 33.0, March 3, 2017}
 

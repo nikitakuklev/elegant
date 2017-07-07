@@ -197,11 +197,33 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   getTrackingContext(&tcontext);
 
   if (!bgg->initialized) {
+    char *outputFile;
     bgg->initialized = 1;
     if (!(bgg->filename) || !strlen(bgg->filename)) {
       bombElegantVA("No filename given for BGGEXP %s #%ld\n", tcontext.elementName, tcontext.elementOccurrence);
     }
     bgg->dataIndex = addBGGExpData(bgg->filename);
+#if !USE_MPI
+    if (bgg->particleOutputFile && !bgg->SDDSpo) {
+      bgg->SDDSpo = tmalloc(sizeof(*(bgg->SDDSpo)));
+      bgg->particleOutputFile = compose_filename(bgg->particleOutputFile, tcontext.rootname);
+      if (!SDDS_InitializeOutput(bgg->SDDSpo, SDDS_BINARY, 1, 
+                                 NULL, NULL, bgg->particleOutputFile) ||
+          0>SDDS_DefineParameter(bgg->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "particleID", NULL, SDDS_LONG) ||
+          !SDDS_DefineSimpleParameter(bgg->SDDSpo, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+          (bgg->poIndex[0]=SDDS_DefineColumn(bgg->SDDSpo, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+          (bgg->poIndex[1]=SDDS_DefineColumn(bgg->SDDSpo, "px", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[2]=SDDS_DefineColumn(bgg->SDDSpo, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+          (bgg->poIndex[3]=SDDS_DefineColumn(bgg->SDDSpo, "py", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[4]=SDDS_DefineColumn(bgg->SDDSpo, "z", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[5]=SDDS_DefineColumn(bgg->SDDSpo, "pz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          !SDDS_WriteLayout(bgg->SDDSpo)) {
+        SDDS_SetError("Problem setting up particle output file for BGGEXP");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+#endif
   }
   bggData = storedBGGExpData+bgg->dataIndex;
 
@@ -408,7 +430,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       yp = part[ip][3];
       s = part[ip][4];
       delta = part[ip][5];
-      
+
       /* compute momenta (x, y, z) */
       denom = sqrt(1 + sqr(xp) + sqr(yp));
       //pOrig = pCentral*(1+delta);
@@ -417,8 +439,32 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       p[1] = yp*p[2];
       gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
       
+#if !USE_MPI
+      if (bgg->SDDSpo) {
+        if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
+            !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
+          SDDS_SetError("Problem setting up particle output page for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+      }
+#endif
+
       /* Integrate through the magnet */
       for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
+#if !USE_MPI
+        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                               bgg->poIndex[0], x,
+                               bgg->poIndex[1], p[0],
+                               bgg->poIndex[2], y,
+                               bgg->poIndex[3], p[1],
+                               bgg->poIndex[4], iz*bgg->zInterval*bggData->dz,
+                               bgg->poIndex[5], p[2],
+                               -1)) {
+          SDDS_SetError("Problem setting particle output data for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+#endif
         r = sqrt(sqr(x)+sqr(y));
         phi = atan2(y, x);
         
@@ -493,6 +539,21 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         s += bggData->dz*(bggData->nz-1-iz)*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
       }
       
+#if !USE_MPI
+      if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                             bgg->poIndex[0], x,
+                             bgg->poIndex[1], p[0],
+                             bgg->poIndex[2], y,
+                             bgg->poIndex[3], p[1],
+                             bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
+                             bgg->poIndex[5], p[2],
+                             -1) ||
+          !SDDS_WritePage(bgg->SDDSpo)) {
+        SDDS_SetError("Problem setting particle output data for BGGEXP");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+#endif
+
       part[ip][0] = x;
       part[ip][1] = p[0]/p[2];
       part[ip][2] = y;
