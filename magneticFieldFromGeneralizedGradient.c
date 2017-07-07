@@ -419,7 +419,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     }
   }  else { 
     /* Element body */
-    double B[3], p[3], dp[3], Bphi, Br, B2Max;
+    double B[3], p[3], dp[3], Bphi, Br, B2Max, pErr[3];
     //double pOrig;
 
     for (ip=0; ip<np; ip++) {
@@ -438,7 +438,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       p[0] = xp*p[2];
       p[1] = yp*p[2];
       gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
-      
+      pErr[0] = pErr[1] = pErr[2] = 0;
+
 #if !USE_MPI
       if (bgg->SDDSpo) {
         if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
@@ -453,7 +454,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       /* Integrate through the magnet */
       for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
-        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+        if (bgg->SDDSpo &&
+            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], p[0],
                                bgg->poIndex[2], y,
@@ -495,18 +497,23 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         dp[0] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
         dp[1] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
         dp[2] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
-
+        
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
                 part[ip][6], ds, x, y, iz*bggData->dz, 
                 B[0], B[1], B[2], 
                 p[0], p[1], p[2], dp[0], dp[1], dp[2]);
 #endif
-        
+
+        p[0] = KahanPlus(p[0], dp[0], &pErr[0]);
+        p[1] = KahanPlus(p[1], dp[1], &pErr[1]);
+        p[2] = KahanPlus(p[2], dp[2], &pErr[2]);
+        /*
         p[0] += dp[0];
         p[1] += dp[1];
         p[2] += dp[2];
-        
+        */
+
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
           double pTotal0, pTotal1, B2, F;
@@ -540,17 +547,19 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
       
 #if !USE_MPI
-      if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
-                             bgg->poIndex[0], x,
-                             bgg->poIndex[1], p[0],
-                             bgg->poIndex[2], y,
-                             bgg->poIndex[3], p[1],
-                             bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
-                             bgg->poIndex[5], p[2],
-                             -1) ||
-          !SDDS_WritePage(bgg->SDDSpo)) {
-        SDDS_SetError("Problem setting particle output data for BGGEXP");
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      if (bgg->SDDSpo) {
+        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                               bgg->poIndex[0], x,
+                               bgg->poIndex[1], p[0],
+                               bgg->poIndex[2], y,
+                               bgg->poIndex[3], p[1],
+                               bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
+                               bgg->poIndex[5], p[2],
+                               -1) ||
+            !SDDS_WritePage(bgg->SDDSpo)) {
+          SDDS_SetError("Problem setting particle output data for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
       }
 #endif
 
