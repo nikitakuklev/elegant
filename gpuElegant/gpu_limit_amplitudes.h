@@ -26,6 +26,10 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
 long gpu_imposeApertureData(long np, double **accepted,
                             double z, double Po, APERTURE_DATA *apData);
 
+long gpu_elimit_amplitudes(double xmax, double ymax, long np, 
+                           double **accepted, double z, double Po, long extrapolate_z, 
+                           long openCode, long exponent, long yexponent);
+
 #ifdef __cplusplus
 }
 #endif

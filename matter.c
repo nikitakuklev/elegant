@@ -23,6 +23,7 @@
 #define BS_Y0 (1e-8)
 
 #ifdef HAVE_GPU
+#include <gpu_base.h>
 #include <gpu_matter.h>
 #endif
 
