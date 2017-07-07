@@ -270,10 +270,22 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     double Ax, dAx_dx, dAx_dy, Ay, dAy_dx, dAy_dy, dAz_dx, dAz_dy;
     double GenGrad_s, dGenGrad_s;
     double epsImplConverge = 1.e-14*1.0e-3;
+    double Bx, By, Bz;
 
     scaleA = -bgg->strength*particleCharge*particleRelSign/(pCentral*particleMass*c_mks);  /** [factor in parentheses of a = (q/p_0)*A] **/
     /* Element body */
     for (ip=0; ip<np; ip++) {
+#if !USE_MPI
+      if (bgg->SDDSpo) {
+        if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
+            !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
+          SDDS_SetError("Problem setting up particle output page for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+      }
+#endif
+
       x = part[ip][0];
       y = part[ip][2];
       delta = part[ip][5];
@@ -282,9 +294,27 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       py = part[ip][3]*(1.0 + delta)*denom;
       s = part[ip][4];
       delta_s = 0.0;
-      
+      Bx = By = Bz = 0;
+
       /* Integrate through the magnet */
       for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
+#if !USE_MPI
+        if (bgg->SDDSpo &&
+            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                               bgg->poIndex[0], x,
+                               bgg->poIndex[1], px,
+                               bgg->poIndex[2], y,
+                               bgg->poIndex[3], py,
+                               bgg->poIndex[4], iz*bgg->zInterval*bggData->dz,
+                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-sqr(px)-sqr(py)),
+                               bgg->poIndex[6], Bx,
+                               bgg->poIndex[7], By,
+                               bgg->poIndex[8], Bz,
+                               -1)) {
+          SDDS_SetError("Problem setting particle output data for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+#endif
         r = sqrt(sqr(x)+sqr(y));
         phi = atan2(y, x);
         cos_phi = cos(phi);
@@ -407,10 +437,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         py = pyNext;
         delta_s += step*bgg->zInterval*((1.0 + delta)*denom - 1.0);
 
-        if (bgg->synchRad) {
-          /* This is only valid for ultra-relatistic particles that radiate a small fraction of its energy in any step */
-	  /* It only uses Bx, By and ignores opening angle effects ~1/\gamma */
-          double deltaTemp, Bx, By, Bz, B2, F;
+        if (bgg->synchRad || bgg->SDDSpo) {
 	  ds = step*bgg->zInterval*(1.0 + delta)*denom;
 	  /* compute Bx, By */
 	  Bx = By = 0.0;
@@ -426,19 +453,24 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
               term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
               GenGrad_s = bggData->Cmns[im][ig][iz];
               /** Assume skew components Cmnc = 0 **/
-              Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*GenGrad_s;
-              By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*GenGrad_s;
+              Bx -= term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*GenGrad_s;
+              By -= term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*GenGrad_s;
             }
           }
-	  Bx = dAy_dx - dAx_dy;
-	  B2 = sqr(bgg->strength)*( sqr(Bx) + sqr(By) );
-	  deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
-          F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
-          if (bgg->isr && np!=1)
-            deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-          if (sigmaDelta2)
-            *sigmaDelta2 += sqr(F)/sqr(pCentral);
-	  delta = deltaTemp;
+          Bz = -dAy_dx + dAx_dy;
+          if (bgg->synchRad) {
+            double deltaTemp, B2, F;
+            /* This is only valid for ultra-relatistic particles that radiate a small fraction of its energy in any step */
+            /* It only uses Bx, By and ignores opening angle effects ~1/\gamma */
+            B2 = sqr(bgg->strength)*( sqr(Bx) + sqr(By) );
+            deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
+            F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
+            if (bgg->isr && np!=1)
+              deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+            if (sigmaDelta2)
+              *sigmaDelta2 += sqr(F)/sqr(pCentral);
+            delta = deltaTemp;
+          }
         }
 
         if (iz!=(bggData->nz-1))
@@ -451,6 +483,26 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       }
  
+#if !USE_MPI
+      if (bgg->SDDSpo) {
+        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+                               bgg->poIndex[0], x,
+                               bgg->poIndex[1], px,
+                               bgg->poIndex[2], y,
+                               bgg->poIndex[3], py,
+                               bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
+                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-sqr(px)-sqr(py)),
+                               bgg->poIndex[6], Bx,
+                               bgg->poIndex[7], By,
+                               bgg->poIndex[8], Bz,
+                               -1) ||
+            !SDDS_WritePage(bgg->SDDSpo)) {
+          SDDS_SetError("Problem setting particle output data for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+      }
+#endif
+
       part[ip][0] = x;
       denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
       denom = 1.0/sqrt(denom);
@@ -557,11 +609,6 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         p[0] = KahanPlus(p[0], dp[0], &pErr[0]);
         p[1] = KahanPlus(p[1], dp[1], &pErr[1]);
         p[2] = KahanPlus(p[2], dp[2], &pErr[2]);
-        /*
-        p[0] += dp[0];
-        p[1] += dp[1];
-        p[2] += dp[2];
-        */
 
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
