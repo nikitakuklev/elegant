@@ -160,8 +160,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 {
   long ip, ig, im, iz, m, igLimit, izLast;
   STORED_BGGEXP_DATA *bggData;
-  double ds, x, y, xp, yp, delta, s, r, phi, denom;
-  double gamma, step,  length, fieldLength;
+  double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
+  double gamma, betaz, step,  length, fieldLength;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
 
@@ -218,6 +218,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           (bgg->poIndex[3]=SDDS_DefineColumn(bgg->SDDSpo, "py", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[4]=SDDS_DefineColumn(bgg->SDDSpo, "z", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[5]=SDDS_DefineColumn(bgg->SDDSpo, "pz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[6]=SDDS_DefineColumn(bgg->SDDSpo, "Bx", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[7]=SDDS_DefineColumn(bgg->SDDSpo, "By", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[8]=SDDS_DefineColumn(bgg->SDDSpo, "Bz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           !SDDS_WriteLayout(bgg->SDDSpo)) {
         SDDS_SetError("Problem setting up particle output file for BGGEXP");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -452,6 +455,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 #endif
 
       /* Integrate through the magnet */
+      B[0] = B[1] = B[2] = 0;
       for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
         if (bgg->SDDSpo &&
@@ -462,6 +466,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[3], p[1],
                                bgg->poIndex[4], iz*bgg->zInterval*bggData->dz,
                                bgg->poIndex[5], p[2],
+                               bgg->poIndex[6], B[0],
+                               bgg->poIndex[7], B[1],
+                               bgg->poIndex[8], B[2],
                                -1)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -469,7 +476,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 #endif
         r = sqrt(sqr(x)+sqr(y));
         phi = atan2(y, x);
-        
+
         /* Compute fields */
         Br = Bphi = B[2] = 0;
         for (im=0; im<bggData->nm; im++) {
@@ -493,10 +500,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         B[2] *= bgg->strength;
         
         /* Apply kicks */
-        ds = step*bgg->zInterval*sqrt(1 + sqr(p[0]/p[2]) + sqr(p[1]/p[2]));
-        dp[0] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
-        dp[1] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
-        dp[2] = -particleCharge*particleRelSign*ds/(particleMass*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
+        betaz = p[2]/sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2])+1);
+        dz = bggData->dz*bgg->zInterval;
+        ds = dz*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
+        dp[0] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
+        dp[1] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
+        dp[2] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
         
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
@@ -555,6 +564,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                                bgg->poIndex[3], p[1],
                                bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
                                bgg->poIndex[5], p[2],
+                               bgg->poIndex[6], B[0],
+                               bgg->poIndex[7], B[1],
+                               bgg->poIndex[8], B[2],
                                -1) ||
             !SDDS_WritePage(bgg->SDDSpo)) {
           SDDS_SetError("Problem setting particle output data for BGGEXP");
