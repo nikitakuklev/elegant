@@ -617,7 +617,7 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
   }
 
   index = IC_TYPE+1;
-  for (i=0; i<6; i++, index)
+  for (i=0; i<6; i++)
     if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			   index++, M->C[i], -1)) {
       SDDS_SetError("Problem setting row values for SDDS matrix output (SDDS_set_matrices)");

@@ -118,7 +118,7 @@ void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char 
 
 void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *input, char *output, char **cmdBufferRet)
 {
-  char *cmdBuffer0, *cmdBuffer1;
+  char *cmdBuffer0, *cmdBuffer1=NULL;
   long i;
   char passString[20];
 

@@ -20,17 +20,17 @@ void seedElegantRandomNumbers(long iseed, unsigned long restart)
       bombElegant("seedElegantRandomNumbers called for restart but not initialized", NULL);
   } else {
     initialized = 1;
-    savedRandomNumberSeed[0] = FABS(iseed);
-    savedRandomNumberSeed[2] = FABS(iseed+4);
+    savedRandomNumberSeed[0] = labs(iseed);
+    savedRandomNumberSeed[2] = labs(iseed+4);
 #if (!USE_MPI)
-    savedRandomNumberSeed[1] = FABS(iseed+2);
-    savedRandomNumberSeed[3] = FABS(iseed+6);
+    savedRandomNumberSeed[1] = labs(iseed+2);
+    savedRandomNumberSeed[3] = labs(iseed+6);
 #else
     switch (mpiRandomizationMode) {
     case 2:
       /* Quadratic dependence of seed on processor ID */
-      savedRandomNumberSeed[1] = FABS(iseed+2*myid*myid  ); 
-      savedRandomNumberSeed[3] = FABS(iseed+2*myid*myid+4);
+      savedRandomNumberSeed[1] = labs(iseed+2*myid*myid  ); 
+      savedRandomNumberSeed[3] = labs(iseed+2*myid*myid+4);
       break;
     case 4:
       /* Use system generator to create modified seed for each processor */

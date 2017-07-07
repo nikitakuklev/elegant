@@ -689,7 +689,7 @@ char **argv;
       if (expand_for)
         p_central = find_beam_p_central(expand_for);
       if (random_number_seed==0) {
-        random_number_seed = (long)time((time_t)0);
+        random_number_seed = (long)time(NULL);
         random_number_seed = 2*(random_number_seed/2) + 1;
         printf("clock-generated random_number_seed = %ld\n", random_number_seed);
         fflush(stdout);

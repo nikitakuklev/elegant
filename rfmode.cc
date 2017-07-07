@@ -53,7 +53,7 @@ void track_through_rfmode(
     long *ibParticle = NULL;          /* array to record which bucket each particle is in */
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-    long iBucket, nBuckets, np, effectiveBuckets, jBucket;
+    long iBucket, nBuckets=0, np, effectiveBuckets, jBucket;
     double tOffset;
     /*
     static FILE *fpdeb = NULL;

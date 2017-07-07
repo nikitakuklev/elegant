@@ -3515,7 +3515,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         is_lost = 1;
         continue;
       }
-      if (!allowResonanceCrossing && fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
+      if (!allowResonanceCrossing && labs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
 	if (ilmat->verbosity) {
         printf("particle with delta=%le crossed integer or half-integer resonance\n",
                 deltaPoP);

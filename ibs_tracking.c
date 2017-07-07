@@ -44,7 +44,7 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long max_np = 0, np;
-  long ip, iBucket, nBuckets;
+  long ip, iBucket, nBuckets=0;
   
   long *index=NULL, *count=NULL;
   long istart, iend, ipart, icoord, ihcoord, islice;

@@ -372,7 +372,7 @@ void trackWithIonEffects
  )
 {
   long ip, iSpecies, iIon;
-  long iBunch, nBunches;
+  long iBunch, nBunches=0;
   double *time0 = NULL;          /* array to record arrival time of each particle */
   double **part = NULL;          /* particle buffer for working bunch */
   double *time = NULL;           /* array to record arrival time of each particle in working bunch */

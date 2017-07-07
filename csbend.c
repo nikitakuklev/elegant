@@ -3152,7 +3152,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     }
     
     if (mode&CSRDRIFT_SALDIN54) {
-      long code;
+      long code=0;
       double f0 = 0;
       if (zTravel<=csrWake.xSaldin[csrWake.nSaldin-1]) 
         factor *= (f0=interp(csrWake.FdNorm, csrWake.xSaldin, csrWake.nSaldin, zTravel, 0, 1, &code));

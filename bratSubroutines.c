@@ -443,7 +443,7 @@ void BRAT_lorentz_integration(
   long misses[10], accmode[10];
   double accuracy[10], tiny[10];
   double hrec, hmax, dSds;
-  double s_start, s_end, exit_toler, ds, dz;
+  double s_start=0, s_end, exit_toler, ds, dz;
   long int_return;
   double *w, *IF;
   //double xStart, dx;

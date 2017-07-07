@@ -214,7 +214,7 @@ long doChaosMap(
             memcpy(trackingBuffer[0], startingCoord, sizeof(*startingCoord)*6);
             trackingBuffer[0][6] = 1;
             p = run->p_central;
-            memset(survived, 0, 4*sizeof(*survived));
+            memset(survived, 0, 3*sizeof(*survived));
             if ((survived[0]=do_tracking(NULL, trackingBuffer, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                                          NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
                                          NULL, NULL, NULL, NULL, NULL))) {
