@@ -72,6 +72,13 @@ int f2c_dgemm(char* transA, char* transB, integer* M, integer* N, integer* K,
 #endif
 #ifdef LAPACK
 #include "f2c.h"
+int dgetrf_(integer *m, integer *n, doublereal *a, integer * lda, integer *ipiv, integer *info);
+int dgemm_(char *transa, char *transb, integer *m, integer *n, integer *k, doublereal *alpha, 
+           doublereal *a, integer *lda, doublereal *b, integer *ldb, doublereal *beta, 
+           doublereal *c, integer *ldc);
+int dgesvd_(char *jobu, char *jobvt, integer *m, integer *n, doublereal *a, integer *lda, 
+            doublereal *s, doublereal *u, integer *ldu, doublereal *vt, integer *ldvt, 
+            doublereal *work, integer *lwork, integer *info);
 #endif
 #ifdef ESSL
 #include "essl.h"
@@ -366,9 +373,15 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2)
          new_mat->m, new_mat->n, kk, alpha, mat1->base,
          lda, mat2->base, ldb, beta, new_mat->base, new_mat->m);
 #else
+#if defined(LAPACK)
+  dgemm_("N", "N",
+         (integer*)(&new_mat->m), (integer*)(&new_mat->n), &kk, &alpha, mat1->base,
+         &lda, mat2->base, &ldb, &beta, new_mat->base, (integer*)(&new_mat->m));
+#else
   dgemm_("N", "N",
          &new_mat->m, &new_mat->n, &kk, &alpha, mat1->base,
          &lda, mat2->base, &ldb, &beta, new_mat->base, &new_mat->m);
+#endif
 #endif
 #endif
 #endif
@@ -426,8 +439,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
     SDDS_Bomb("Invalid matrix provided for invert (matrix_invert)!");
   n = A->n;
   m = A->m;
-  if (deletedVectors) /* Should this be "deleteVectors" ? */
-    deletedVectors[0] = '\0';
+  deletedVectors[0] = '\0';
   if (S_Vec)
     SValue = *S_Vec;
   if (S_Vec_used)
@@ -553,7 +565,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
   /*4) remove SV of user-selected vectors -
     delete vector given in the -deleteVectors option
     by setting the inverse singular values to 0*/
-  if (deleteVector && deletedVectors) {
+  if (deleteVector) {
     for (i=0;i<deleteVectors;i++) {
       if (0<=deleteVector[i] && deleteVector[i]<n) {
         if (firstdelete)
@@ -604,9 +616,15 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
          U->m, V->n, kk, alpha, U->base,
          lda, V->base, ldb, beta, Invt->base, U->m);
 #else
+#if defined(LAPACK)
+  dgemm_("N", "N",
+         (integer*)(&U->m), (integer*)(&V->n), (integer*)(&kk), &alpha, U->base,
+         &lda, V->base, (integer*)(&ldb), &beta, Invt->base, (integer*)(&U->m));
+#else
   dgemm_("N", "N",
          &U->m, &V->n, &kk, &alpha, U->base,
          &lda, V->base, &ldb, &beta, Invt->base, &U->m);
+#endif
 #endif
 #endif
   matrix_free(V);

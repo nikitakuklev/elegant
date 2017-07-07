@@ -197,7 +197,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   getTrackingContext(&tcontext);
 
   if (!bgg->initialized) {
-    char *outputFile;
+    //char *outputFile;
     bgg->initialized = 1;
     if (!(bgg->filename) || !strlen(bgg->filename)) {
       bombElegantVA("No filename given for BGGEXP %s #%ld\n", tcontext.elementName, tcontext.elementOccurrence);
