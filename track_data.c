@@ -2730,7 +2730,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"MAXIMUM_M", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.mMaximum), NULL, 0.0, -1, "data with m greater than this is ignored"},
     {"MAXIMUM_2N", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.maximum2n), NULL, 0.0, -1, "data with 2*n greater than this is ignored"},
     {"Z_INTERVAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},
-    {"SYMPLECTIC", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator"},
+    {"SYMPLECTIC", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator. At minimum, should always be used to validate the sufficiency of the non-symplectic integrator."},
     {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
     {"ISR", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
     {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&bggexp_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output. Use for debugging only!"},

@@ -453,16 +453,18 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
               term  = ipow(-1, ig)*mfact*ipow(r, 2*ig+m-1)/(ipow(4, ig)*factorial(ig)*factorial(ig+m));
               GenGrad_s = bggData->Cmns[im][ig][iz];
               /** Assume skew components Cmnc = 0 **/
-              Bx -= term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*GenGrad_s;
-              By -= term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*GenGrad_s;
+              Bx += term*( (2*ig+m)*cos_phi*sin_mphi - m*sin_phi*cos_mphi )*GenGrad_s;
+              By += term*( (2*ig+m)*sin_phi*sin_mphi + m*cos_phi*cos_mphi )*GenGrad_s;
             }
           }
-          Bz = -dAy_dx + dAx_dy;
+          Bx *= bgg->strength;
+          By *= bgg->strength;
+          Bz = bgg->strength*(dAy_dx - dAx_dy);
           if (bgg->synchRad) {
             double deltaTemp, B2, F;
             /* This is only valid for ultra-relatistic particles that radiate a small fraction of its energy in any step */
             /* It only uses Bx, By and ignores opening angle effects ~1/\gamma */
-            B2 = sqr(bgg->strength)*( sqr(Bx) + sqr(By) );
+            B2 = sqr(Bx) + sqr(By);
             deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
             F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
             if (bgg->isr && np!=1)
