@@ -2864,7 +2864,7 @@ typedef struct {
   short initialized;
   long dataIndex;
   SDDS_DATASET *SDDSpo;
-  long poIndex[6];
+  long poIndex[9];
 } BGGEXP;
 
 /* names and storage structure for CHARGE element */
