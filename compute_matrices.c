@@ -1154,6 +1154,12 @@ VMATRIX *compute_matrix(
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
         run->p_central = pSave;
         break;
+      case T_BGGEXP:
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        run->p_central = pSave;
+        break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
         bend->edgeFlags = determine_bend_flags(elem, bend->edge_effects[bend->e1Index], bend->edge_effects[bend->e2Index]);

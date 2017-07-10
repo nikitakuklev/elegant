@@ -158,7 +158,7 @@ long addBGGExpData(char *filename)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
-  long ip, ig, im, iz, m, igLimit, izLast;
+  long ip, ig, im, iz, irow, m, igLimit, izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
   double gamma, betaz, step,  length, fieldLength;
@@ -297,16 +297,16 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       Bx = By = Bz = 0;
 
       /* Integrate through the magnet */
-      for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
         if (bgg->SDDSpo &&
-            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
-                               bgg->poIndex[1], px,
+                               bgg->poIndex[1], px*pCentral,
                                bgg->poIndex[2], y,
-                               bgg->poIndex[3], py,
+                               bgg->poIndex[3], py*pCentral,
                                bgg->poIndex[4], iz*bgg->zInterval*bggData->dz,
-                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-sqr(px)-sqr(py)),
+                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(px)+sqr(py))*sqr(pCentral)),
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
@@ -487,13 +487,13 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
  
 #if !USE_MPI
       if (bgg->SDDSpo) {
-        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
-                               bgg->poIndex[1], px,
+                               bgg->poIndex[1], px*pCentral,
                                bgg->poIndex[2], y,
-                               bgg->poIndex[3], py,
+                               bgg->poIndex[3], py*pCentral,
                                bgg->poIndex[4], (bggData->nz-1)*bgg->zInterval*bggData->dz,
-                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-sqr(px)-sqr(py)),
+                               bgg->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(px)+sqr(py))*sqr(pCentral)),
                                bgg->poIndex[6], Bx,
                                bgg->poIndex[7], By,
                                bgg->poIndex[8], Bz,
@@ -517,7 +517,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   }  else { 
     /* Element body */
     double B[3], p[3], dp[3], Bphi, Br, B2Max, pErr[3];
-    //double pOrig;
+    double pOrig;
 
     for (ip=0; ip<np; ip++) {
       B2Max = 0;
@@ -530,8 +530,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* compute momenta (x, y, z) */
       denom = sqrt(1 + sqr(xp) + sqr(yp));
-      //pOrig = pCentral*(1+delta);
-      p[2] = pCentral*(1+delta)/denom;
+      pOrig = pCentral*(1+delta);
+      p[2] = pOrig/denom;
       p[0] = xp*p[2];
       p[1] = yp*p[2];
       gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
@@ -550,10 +550,10 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* Integrate through the magnet */
       B[0] = B[1] = B[2] = 0;
-      for (iz=0; iz<bggData->nz; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
         if (bgg->SDDSpo &&
-            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+            !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], p[0],
                                bgg->poIndex[2], y,
@@ -610,7 +610,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
         p[0] = KahanPlus(p[0], dp[0], &pErr[0]);
         p[1] = KahanPlus(p[1], dp[1], &pErr[1]);
-        p[2] = KahanPlus(p[2], dp[2], &pErr[2]);
+        p[2] = sqrt(sqr(pOrig)-sqr(p[0])-sqr(p[1]));
+        /* p[2] = KahanPlus(p[2], dp[2], &pErr[2]); */
 
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
@@ -646,7 +647,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       
 #if !USE_MPI
       if (bgg->SDDSpo) {
-        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iz,
+        if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], p[0],
                                bgg->poIndex[2], y,
