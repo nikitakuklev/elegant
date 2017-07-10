@@ -699,7 +699,7 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
   /* VR is right-hand side eigenvectors such that: VR^transp * M = lamdba * VR^transp
      VR[0 to 5] are real components of vector 1, VR[6 to 11] are imagenary components of vector 1 and so on.
      see description of procedure on the web */
-#if defined(SUNPERF) || defined(LAPACK) || defined(CLAPACK) || defined(ESSL)
+#if defined(SUNPERF) || defined(LAPACK) || defined(CLAPACK) || defined(ESSL) || defined(MKL)
   JOBVL = 'N';
   JOBVR = 'V';
   N = LDA = LDVR = MATDIM;

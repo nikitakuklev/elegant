@@ -297,49 +297,84 @@ ifeq (intrepid, $(findstring intrepid, $(HOSTNAME)))
 OP_SYS_LDLIBS += -L/gpfs/home/ywang/Lib -llapack -lblas -lgfortran 
 endif
 
+
+INTEL_MKL=0
+ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
+ INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
+  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = /clhome/asd_tools/intel/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
+  INTEL_MKL_INCLUDE = /clhome/asd_tools/intel/compilers_and_libraries_2016.1.150/linux/mkl/include/
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = /opt/intel/composer_xe_2015.1.133/mkl/lib/intel64
+  INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include/
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
+ ifneq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL = 1
+ endif
+endif
+ifeq ($(EPICS_HOST_ARCH),linux-x86)
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/ia32
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
+ INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ ifneq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL = 1
+ endif
+endif
+
+
 LAPACK = 0
-#Use LAPACK on Linux by default.
+#Use LAPACK on Linux if INTEL MKL is not found
 #This is available as an RPM package.
-ifeq ($(OS_CLASS),Linux)
-LAPACK = 1
+ifeq ($(INTEL_MKL), 0)
+ ifeq ($(OS_CLASS),Linux)
+  LAPACK = 1
+ endif
 endif
 #Use LAPACK on OSX by default.
 #This is available from the Accelerate framework
 ifeq ($(OS_CLASS),Darwin)
-LAPACK = 1
+ LAPACK = 1
 endif
 
 ESSL = 0
 ifeq (vesta, $(findstring vesta, $(HOSTNAME)))
-ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
-LAPACK = 1
-OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
-endif
-ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
-ESSL = 1
-LAPACK = 0
-OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
-endif
+ ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
+  LAPACK = 1
+  OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
+ endif
+ ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
+  ESSL = 1
+  LAPACK = 0
+  OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
+ endif
 endif
 
 ifeq (mira, $(findstring mira, $(HOSTNAME)))
-ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
-LAPACK = 1
-OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
-endif
-ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
-ESSL = 1
-LAPACK = 0
-OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
-endif
+ ifeq ($(EPICS_HOST_ARCH),linux-ppc64)
+  LAPACK = 1
+  OP_SYS_LDLIBS += -L/soft/libraries/alcf/current/gcc/LAPACK/lib -L/soft/libraries/alcf/current/gcc/BLAS/lib
+ endif
+ ifeq ($(EPICS_HOST_ARCH),linux-ppc64-xl)
+  ESSL = 1
+  LAPACK = 0
+  OP_SYS_LDLIBS += -L/soft/compilers/ibmcmp-may2013/xlmass/bg/7.3/bglib64 -lmass -L/soft/libraries/alcf/current/xl/LAPACK/lib -llapack -L/soft/libraries/essl/current/essl/5.1/lib64 -lesslbg -L/soft/compilers/ibmcmp-may2013/xlf/bg/14.1/bglib64 -lxlf90_r -lxlfmath
+ endif
 endif
 
 ifneq ($(ESSL), 0)
-USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
-USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
+ USR_CFLAGS += -DESSL -I/soft/libraries/essl/current/include 
+ USR_CPPFLAGS += -DESSL -I/soft/libraries/essl/current/include 
 endif
-
-
 
 
 CLAPACK = 0
@@ -347,141 +382,139 @@ CLAPACK = 0
 #This may make it harder for outside users to compile elegant but they
 #can always turn if off if they want
 ifdef WIN32
-CLAPACK = $(words $(notdir $(wildcard c:/CLAPACK/include/clapack.h)))
+ CLAPACK = $(words $(notdir $(wildcard c:/CLAPACK/include/clapack.h)))
 endif
+
 
 SUNPERF = 0
 ifeq ($(OS_CLASS),solaris)
-ifneq ($(ANSI),GCC)
-ifneq ($(GNU),YES)
-ifneq ($(EPICS_HOST_ARCH),solaris-x86)
-ifneq ($(EPICS_HOST_ARCH),solaris-x86_64)
-SUNPERF = $(words $(notdir $(wildcard /opt/SUNWspro/prod/include/cc/sunperf.h)))
-endif
-endif
-endif
-endif
+ ifneq ($(ANSI),GCC)
+  ifneq ($(GNU),YES)
+   ifneq ($(EPICS_HOST_ARCH),solaris-x86)
+    ifneq ($(EPICS_HOST_ARCH),solaris-x86_64)
+     SUNPERF = $(words $(notdir $(wildcard /opt/SUNWspro/prod/include/cc/sunperf.h)))
+    endif
+   endif
+  endif
+ endif
 endif
 
 ifneq ($(SUNPERF), 0)
-USR_CFLAGS += -DSUNPERF -dalign
-USR_CPPFLAGS += -DSUNPERF -dalign
-OP_SYS_LDLIBS += -xlic_lib=sunperf
-else #ifneq ($(SUNPERF), 0)
-ifneq ($(LAPACK), 0)
-USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
-USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
-ifeq ($(OS_CLASS),Linux)
-ifneq (cori, $(findstring cori, $(HOSTNAME)))
-ifneq (edison, $(findstring edison, $(HOSTNAME)))
-SYS_PROD_LIBS_Linux += lapack blas
-endif
-endif
-
-GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.* /usr/lib/i386-linux-gnu/libgfortran.* /usr/lib/x86_64-linux-gnu/libgfortran.* )))
-ifeq ($(GFORTRAN), 0)
-SYS_PROD_LIBS_Linux += g2c
+ USR_CFLAGS += -DSUNPERF -dalign
+ USR_CPPFLAGS += -DSUNPERF -dalign
+ OP_SYS_LDLIBS += -xlic_lib=sunperf
 else
-gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}' | head -1)
-gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
-ifeq ($(gcc-version),$(gfortran-version))
-ifneq (cori,$(findstring cori, $(HOSTNAME)))
-ifneq (edison,$(findstring edison, $(HOSTNAME)))
-SYS_PROD_LIBS_Linux += gfortran
-endif
-endif
-else
-  ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
-  ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
-  ifneq (mira,$(findstring mira, $(HOSTNAME)))
-  ifneq (blogin,$(findstring blogin, $(HOSTNAME)))
-    SYS_PROD_LIBS_Linux += g2c
-  endif
-  endif
-  endif
-  endif
-endif
-endif
-#gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
-#SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -lt "20050722" ]; then echo "g2c" ; else echo "" ; fi;)
-#SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -gt "20051200" ]; then echo "gfortran" ; else echo "" ; fi;)
-endif #ifeq ($(OS_CLASS),Linux)
-ifeq ($(OS_CLASS),solaris)
-OPT_CFLAGS_YES=
-OPT_CPPFLAGS_YES=
-USR_CFLAGS += -dalign -xtarget=ultra
-USR_CPPFLAGS += -dalign -xtarget=ultra
-OP_SYS_LDLIBS += -L/usr/local/oag/lib -llapack -lblas -lF77
-endif #ifeq ($(OS_CLASS),solaris)
-endif #ifneq ($(LAPACK), 0)
-endif #ifneq ($(SUNPERF), 0)
-
-ifneq ($(CLAPACK), 0)
-  ifdef WIN32
-    USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
-    USR_LDFLAGS += /nodefaultlib:libcmt $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/clapack.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/BLAS.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/libf2c.lib
-    #USR_LIBS += clapack
-  else
-    ifeq ($(OS_CLASS),solaris)
-        # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
-        USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
-        USR_LIBS += lapack cblaswr cblas atlas F77 I77 
-#        USR_LIBS += lapack ptcblas ptf77blas  atlas 
-#        OP_SYS_LDLIBS += -lgfortran
-    else
-        # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
-        USR_CPPFLAGS += -DCLAPACK  -I$(ATLAS_INCLUDE)
-        USR_LIBS += lapack ptcblas ptf77blas  atlas 
-#        OP_SYS_LDLIBS += -lgfortran
+ ifneq ($(LAPACK), 0)
+  USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
+  USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
+  ifeq ($(OS_CLASS),Linux)
+   ifneq (cori, $(findstring cori, $(HOSTNAME)))
+    ifneq (edison, $(findstring edison, $(HOSTNAME)))
+     SYS_PROD_LIBS_Linux += lapack blas
+    endif
+   endif
+   gcc-version = $(shell $(CC) -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}' | head -1)
+   gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
+   ifeq ($(gcc-version),$(gfortran-version))
+    ifneq (cori,$(findstring cori, $(HOSTNAME)))
+     ifneq (edison,$(findstring edison, $(HOSTNAME)))
+      SYS_PROD_LIBS_Linux += gfortran
+     endif
+    endif
+   else
+    ifneq (intrepid,$(findstring intrepid, $(HOSTNAME)))
+     ifneq (vesta,$(findstring vesta, $(HOSTNAME)))
+      ifneq (mira,$(findstring mira, $(HOSTNAME)))
+       ifneq (blogin,$(findstring blogin, $(HOSTNAME)))
+        SYS_PROD_LIBS_Linux += g2c
+       endif
       endif
+     endif
+    endif
+   endif 
+  endif #ifeq ($(OS_CLASS),Linux)
+  ifeq ($(OS_CLASS),solaris)
+   OPT_CFLAGS_YES=
+   OPT_CPPFLAGS_YES=
+   USR_CFLAGS += -dalign -xtarget=ultra
+   USR_CPPFLAGS += -dalign -xtarget=ultra
+   OP_SYS_LDLIBS += -L/usr/local/oag/lib -llapack -lblas -lF77
+  endif #ifeq ($(OS_CLASS),solaris)
+ endif #ifneq ($(LAPACK), 0)
+endif
+
+ifneq ($(INTEL_MKL), 0)
+ ifeq (cori, $(findstring cori, $(HOSTNAME)))
+  USR_CPPFLAGS += -DMKL -mkl
+  OP_SYS_LDLIBS += -mkl
+ else
+  ifeq (edison, $(findstring edison, $(HOSTNAME)))
+   USR_CPPFLAGS += -DMKL -mkl
+   OP_SYS_LDLIBS += -mkl
+  else
+   USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+   OP_SYS_LDLIBS += -L$(INTEL_MKL_LIB) -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+
+   #USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+   #OP_SYS_LDLIBS += -Wl,--start-group $(INTEL_MKL_LIB)/libmkl_intel_lp64.a $(INTEL_MKL_LIB)/libmkl_core.a $(INTEL_MKL_LIB)/libmkl_gnu_thread.a -Wl,--end-group -Wl,-rpath,$(INTEL_MKL_LIB)/../../../compiler/lib/intel64 -L$(INTEL_MKL_LIB)/../../../compiler/lib/intel64 -liomp5 -ldl
   endif
-else 
+ endif
+else
+ # section on CLAPACK
+ ifneq ($(CLAPACK), 0)
+  ifdef WIN32
+   USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
+   USR_LDFLAGS += /nodefaultlib:libcmt $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/clapack.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/BLAS.lib $(CLAPACK_LIB)/$(EPICS_HOST_ARCH)/libf2c.lib
+  else
+   ifeq ($(OS_CLASS),solaris)
+    # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
+    USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
+    USR_LIBS += lapack cblaswr cblas atlas F77 I77 
+    lapack_DIR = $(CLAPACK_LIB)
+    cblaswr_DIR = $(CLAPACK_LIB)
+    atlas_DIR = $(ATLAS_LIB)
+    cblas_DIR = $(ATLAS_LIB)
+    F77_DIR = $(F2C_LIB)
+    I77_DIR = $(F2C_LIB)
+   else
+    # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
+    USR_CPPFLAGS += -DCLAPACK -I$(ATLAS_INCLUDE)
+    USR_LIBS += lapack ptcblas ptf77blas atlas 
+    #USR_LIBS += lapack cblas f77blas atlas 
+    lapack_DIR = $(ATLAS_LIB)
+    ptcblas_DIR = $(ATLAS_LIB)
+    ptf77blas_DIR = $(ATLAS_LIB)
+    atlas_DIR = $(ATLAS_LIB)
+    cblas_DIR = $(ATLAS_LIB)
+    f77blas_DIR = $(ATLAS_LIB)
+   endif
+  endif
+ else 
   # section on LAPACK
   ifneq ($(LAPACK), 0)
-    ifdef WIN32
-      USR_CPPFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
-      USR_LIBS += lapack
-    else
-      # there is no lapack header file
-ifneq (cori, $(findstring cori, $(HOSTNAME)))
-ifneq (edison, $(findstring edison, $(HOSTNAME)))
+   ifdef WIN32
+    USR_CPPFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
+    USR_LIBS += lapack
+   else
+    # there is no lapack header file
+    ifneq (cori, $(findstring cori, $(HOSTNAME)))
+     ifneq (edison, $(findstring edison, $(HOSTNAME)))
       OP_SYS_LDLIBS += -llapack -lblas 
-endif
-endif
-#	-lgfortran
-      USR_CPPFLAGS += -DLAPACK 
+     endif
     endif
+    USR_CPPFLAGS += -DLAPACK 
+   endif
   else
-    # SUNPERF choice is placed last since it may be set to 1
-    # because of the existence of the library.
-    ifneq ($(SUNPERF), 0)
-      USR_CPPFLAGS += -DSUNPERF
-      OP_SYS_LDLIBS += -xlic_lib=sunperf -lsunperf
-      OP_SYS_LDFLAGS = $(COMPILER_LDFLAGS) -z combreloc -z lazyload
-    endif
+   # SUNPERF choice is placed last since it may be set to 1
+   # because of the existence of the library.
+   ifneq ($(SUNPERF), 0)
+    USR_CPPFLAGS += -DSUNPERF
+    OP_SYS_LDLIBS += -xlic_lib=sunperf -lsunperf
+    OP_SYS_LDFLAGS = $(COMPILER_LDFLAGS) -z combreloc -z lazyload
+   endif
   endif
+ endif
 endif
-
-
-# if LAPACK macro is set, then the lapack lib is found in the 
-# standard /usr/lib
-ifneq ($(CLAPACK), 0)
-ifeq ($(OS_CLASS),solaris)
-lapack_DIR = $(CLAPACK_LIB)
-cblaswr_DIR = $(CLAPACK_LIB)
-else
-lapack_DIR = $(ATLAS_LIB)
-endif
-endif
-
-clapack_DIR = $(CLAPACK_LIB)
-cblas_DIR = $(ATLAS_LIB)
-ptcblas_DIR = $(ATLAS_LIB)
-f77blas_DIR = $(ATLAS_LIB)
-ptf77blas_DIR = $(ATLAS_LIB)
-atlas_DIR = $(ATLAS_LIB)
-F77_DIR = $(F2C_LIB)
-I77_DIR = $(F2C_LIB)
 
 SDDSmpi_DIR = $(EPICS_EXTENSIONS_LIB)
 SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
@@ -493,7 +526,6 @@ mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
-#fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 pgapack_DIR = $(EPICS_EXTENSIONS_LIB)
 lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 
