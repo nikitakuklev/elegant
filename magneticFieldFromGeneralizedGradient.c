@@ -599,7 +599,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         ds = dz*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
         dp[0] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
         dp[1] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
-        dp[2] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
+        // dp[2] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
         
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
@@ -608,10 +608,10 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                 p[0], p[1], p[2], dp[0], dp[1], dp[2]);
 #endif
 
+        pOrig = sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2])); /* recompute this in case it changes due to SR */
         p[0] = KahanPlus(p[0], dp[0], &pErr[0]);
         p[1] = KahanPlus(p[1], dp[1], &pErr[1]);
-        p[2] = sqrt(sqr(pOrig)-sqr(p[0])-sqr(p[1]));
-        /* p[2] = KahanPlus(p[2], dp[2], &pErr[2]); */
+        p[2] = sqrt(sqr(pOrig)-sqr(p[0])-sqr(p[1])); /* ensures no fictitious changes in total momentum */
 
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
