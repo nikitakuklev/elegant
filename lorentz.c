@@ -93,7 +93,7 @@ static double (*exit_function)(double *qp, double *q, double s);
 static void (*deriv_function)(double *qp, double *q, double s);
 
 /* parameters of element needed for integration--set by lorentz_setup */
-static double S0, P0, one_plus_fse, rad_coef;
+static double S0, P0, one_plus_fse, rad_coef, isr_coef;
 static double offset, s_offset;
 static double x_correction;
 static double fse_opt;
@@ -794,6 +794,13 @@ void lorentz_setup(
 	      bombElegant("Specify filename for BMXYZ", NULL);
             if (!bmapxyz->points)
               bmapxyz_field_setup(bmapxyz);
+            rad_coef = isr_coef = 0;
+            if (bmapxyz->synchRad) {
+              rad_coef = sqr(particleCharge/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*particleMass);
+              if (bmapxyz->isr) {
+                isr_coef = 0;
+              }
+            }
             break;
           default:
             bombElegant("invalid field type (lortenz_setup)", NULL);
@@ -1794,6 +1801,9 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
           wp[ix] *= -particleCharge*particleRelSign/(particleMass*c_mks*P0);
       }
     }
+
+  if (rad_coef)
+    qp[7] = -rad_coef*pow4(1+q[7])*(sqr(wp[0]) + sqr(wp[1]) + sqr(wp[2]));
 
 #ifdef DEBUG
     fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
