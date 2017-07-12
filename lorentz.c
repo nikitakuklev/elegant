@@ -93,7 +93,7 @@ static double (*exit_function)(double *qp, double *q, double s);
 static void (*deriv_function)(double *qp, double *q, double s);
 
 /* parameters of element needed for integration--set by lorentz_setup */
-static double S0, P0, one_plus_fse, rad_coef, isr_coef;
+static double S0, P0, one_plus_fse, rad_coef;
 static double offset, s_offset;
 static double x_correction;
 static double fse_opt;
@@ -794,13 +794,9 @@ void lorentz_setup(
 	      bombElegant("Specify filename for BMXYZ", NULL);
             if (!bmapxyz->points)
               bmapxyz_field_setup(bmapxyz);
-            rad_coef = isr_coef = 0;
-            if (bmapxyz->synchRad) {
+            rad_coef = 0;
+            if (bmapxyz->synchRad) 
               rad_coef = sqr(particleCharge/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*particleMass);
-              if (bmapxyz->isr) {
-                isr_coef = 0;
-              }
-            }
             break;
           default:
             bombElegant("invalid field type (lortenz_setup)", NULL);
