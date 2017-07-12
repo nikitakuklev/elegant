@@ -124,6 +124,8 @@ Users are encouraged to test results against the serial or parallel versions.
 \item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
   for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
   This was reported by forum user Ji\_Li and has been fixed.
+\item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
+  support filters with up to 30 terms.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -6745,7 +6747,7 @@ The beamline used for the computations must include a \verb|TFBDRIVER| and
     change_defined_values = 1
 &end
 \end{verbatim}
-\item {\tt -terms } --- Number of terms in the filter, between 1 and 15, inclusive.
+\item {\tt -terms } --- Number of terms in the filter, between 1 and 30, inclusive.
 \end{itemize}
 
 \item {\bf author:} M. Borland, ANL/APS.
