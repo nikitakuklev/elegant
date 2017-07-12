@@ -45,7 +45,7 @@ if $allHarmonics {
     }
 }
 
-   # Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
+# Take FFT of Br vs normalized angle ("arc"), where data is assumed to be on separate pages for
 # each z value. 
 # Regroup so that each page is a different harmonic.
 exec sddssort $input -pipe=out -column=phi,incr \
@@ -60,14 +60,16 @@ if $wiggler {
     set base ave
 }
 
+set tmpRoot /tmp/[APSTmpString]
+APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
 # Figure out if data is symmetric or antisymmetric
 exec sddsregroup $input -pipe=out -newcolumn=z -newparameter=phi \
     | sddssort -pipe -column=z,incr \
-    | tee ds1 \
-    | sddssort -pipe=in ds2 -column=z,decr
-set check [exec sddsxref ds1 ds2 -pipe=out -take=Br -rename=col,Br=BrFlip \
+    | tee $tmpRoot.1 \
+    | sddssort -pipe=in $tmpRoot.2 -column=z,decr
+set check [exec sddsxref $tmpRoot.1 $tmpRoot.2 -pipe=out -take=Br -rename=col,Br=BrFlip \
                | sddsprocess -pipe \
-               "-define=col,check,Br sign BrFlip sign + n_rows /" \
+               "-define=col,check,Br sign BrFlip sign * n_rows /" \
                -process=check,sum,checkSum \
                | sddscollapse -pipe \
                | sddsprocess -pipe -process=checkSum,ave,%sAve \
