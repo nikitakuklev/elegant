@@ -36,8 +36,8 @@ set plane [string tolower $plane]
 if [lsearch -exact [list x y] $plane]==-1 {
     return -code error "invalid plane: use x or y"
 }
-if {[expr $terms<1] || [expr $terms>15]} {
-    return -code error "terms:[1, 15] not satisfied"
+if {[expr $terms<1] || [expr $terms>30]} {
+    return -code error "terms:[1, 30] not satisfied"
 }
 
 set tmpRoot /tmp/[APSTmpString]
