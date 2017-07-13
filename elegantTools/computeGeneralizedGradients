@@ -74,15 +74,6 @@ set check [exec sddsxref $tmpRoot.1 $tmpRoot.2 -pipe=out -take=Br -rename=col,Br
                | sddscollapse -pipe \
                | sddsprocess -pipe -process=checkSum,ave,%sAve \
                | sdds2stream -pipe -parameter=checkSumAve]
-if [expr $check<0.5] {
-    puts stdout "Data appears to be antisymmetric function of z" 
-   set p1 Imag
-    set p2 Real
-} else {
-    puts stdout "Data appears to be symmetric function of z"
-    set p1 Real
-    set p2 Imag
-}
 
 # Find normalized gradients for listed pages (harmonics):
 # Take FFT of BmR(z)
@@ -105,31 +96,50 @@ if [expr $check<0.5] {
     "-define=column,k,f 2 * pi *" \
     "-define=col,kR,k R *" \
     "-define=col,ImpkR,kR abs 1e-12 + m 1 - BesIn kR abs 1e-12 + m 1 + BesIn + 2 / kR 0 < pop pop ? -1 m 1 + pow : 1  $ * " \
-    "-define=col,dCms0,${p1}FFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms2,${p1}FFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms4,${p1}FFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms6,${p1}FFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms8,${p1}FFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms10,${p1}FFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms12,${p1}FFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms14,${p1}FFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms16,${p1}FFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms0p,${p1}FFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms2p,${p1}FFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms4p,${p1}FFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms6p,${p1}FFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms8p,${p1}FFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms10p,${p1}FFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms12p,${p1}FFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms14p,${p1}FFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows *" \
-    "-define=col,dCms16p,${p1}FFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows *" \
-    | sddsfft -pipe -column=f,dCms* -full=unfolded -nowarning \
+    "-define=col,RealdCms0,RealFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms2,RealFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms4,RealFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms6,RealFFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms8,RealFFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms10,RealFFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms12,RealFFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms14,RealFFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,RealdCms16,RealFFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * " \
+    "-define=col,ImagdCms0,ImagFFTBmRz k m 1 - pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms2,ImagFFTBmRz k m 1 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms4,ImagFFTBmRz k m 3 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms6,ImagFFTBmRz k m 5 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms8,ImagFFTBmRz k m 7 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms10,ImagFFTBmRz k m 9 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms12,ImagFFTBmRz k m 11 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms14,ImagFFTBmRz k m 13 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms16,ImagFFTBmRz k m 15 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms0p,ImagFFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms2p,ImagFFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms4p,ImagFFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms6p,ImagFFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms8p,ImagFFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms10p,ImagFFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms12p,ImagFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms14p,ImagFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,RealdCms16p,ImagFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms0p,RealFFTBmRz k m 0 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms2p,RealFFTBmRz k m 2 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms4p,RealFFTBmRz k m 4 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms6p,RealFFTBmRz k m 6 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms8p,RealFFTBmRz k m 8 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms10p,RealFFTBmRz k m 10 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms12p,RealFFTBmRz k m 12 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms14p,RealFFTBmRz k m 14 + pow * ImpkR / -1 * 2 m pow / m fact / n_rows * -1 *" \
+    "-define=col,ImagdCms16p,RealFFTBmRz k m 16 + pow * ImpkR / +1 * 2 m pow / m fact / n_rows * -1 *" \
+    | sddsfft -pipe -column=f,dCms* -complexInput=unfolded -full=unfolded -nowarning \
     | sddsprocess -pipe \
     -process=f,max,zMax \
     "-define=parameter,dz,zMax n_rows 1 - /" \
     "-define=column,z,i_row n_rows 2 / < ? i_row : i_row n_rows - $ dz *,units=m" \
     | sddssort -pipe -column=z \
-    | sddsconvert -pipe -edit=column,*FFTdCms*,%/${p1}FFTdCms/Cnm/%/${p2}FFTdCms/dCnm/%+p+/dz+ \
+    | sddsconvert -pipe -edit=column,RealFFTdCms*p,%/RealFFTdCms/dCnm/%+p+/dz+ \
+       -edit=column,RealFFTdCms*,%/RealFFTdCms/Cnm/ \
     | sddsprocess -pipe=in $root.ggrad.full \
     -rpndef=$env(RPN_DEFNS),$alphaRpn \
     "-process=Cnm*,$base,%s$base" \
@@ -143,7 +153,7 @@ if [expr $check<0.5] {
     "-define=col,Br12,Cnm12 6  m alphalm * R m 11 + pow * pi 4 / m * sin * Br10 +" \
     "-define=col,Br14,Cnm14 7  m alphalm * R m 13 + pow * pi 4 / m * sin * Br12 +" \
     "-define=col,Br16,Cnm16 8  m alphalm * R m 15 + pow * pi 4 / m * sin * Br14 +" \
-    "-define=col,Br,Br16 chs" \
+    "-define=col,Br,Br16" \
     "-define=col,Bz0,dCnm0/dz 0 m betalm * R m 0 + pow * pi 4 / m * sin *" \
     "-define=col,Bz2,dCnm2/dz 1 m betalm * R m 2 + pow * pi 4 / m * sin * Bz0 +" \
     "-define=col,Bz4,dCnm4/dz 2 m betalm * R m 4 + pow * pi 4 / m * sin * Bz2 +" \
@@ -153,7 +163,7 @@ if [expr $check<0.5] {
     "-define=col,Bz12,dCnm12/dz 6 m betalm * R m 12 + pow * pi 4 / m * sin * Bz10 +" \
     "-define=col,Bz14,dCnm14/dz 7 m betalm * R m 14 + pow * pi 4 / m * sin * Bz12 +" \
     "-define=col,Bz16,dCnm16/dz 8 m betalm * R m 16 + pow * pi 4 / m * sin * Bz14 +" \
-    "-define=col,Bz,Bz16 chs"
+    "-define=col,Bz,Bz16"
 
 # Extract only the data needed for use with elegant's BGGEXP element
 exec sddsconvert $root.ggrad.full $root.ggrad \
@@ -168,7 +178,8 @@ exec sddsprocess $input -pipe=out -filter=col,phi,[expr $pi/4.1],[expr $pi/3.9] 
     | sddsexpand -pipe | sddscollapse -pipe=in $root.ref
 
 # Compare original data and reconstructed data
-exec sddsplot -graph=line,vary -col=z,Br $root.ref -col=z,BrSum -factor=ym=-1 $root.ggrad.env -end \
-    -col=z,Bz $root.ref -col=z,BzSum -factor=ym=-1 $root.ggrad.env &
+exec sddsplot -graph=line,vary \
+    -col=z,Br $root.ref -col=z,BrSum $root.ggrad.env -end \
+    -col=z,Bz $root.ref -col=z,BzSum $root.ggrad.env &
 
 
