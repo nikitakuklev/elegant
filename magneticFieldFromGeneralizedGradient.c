@@ -218,9 +218,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           (bgg->poIndex[3]=SDDS_DefineColumn(bgg->SDDSpo, "py", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[4]=SDDS_DefineColumn(bgg->SDDSpo, "z", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           (bgg->poIndex[5]=SDDS_DefineColumn(bgg->SDDSpo, "pz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-          (bgg->poIndex[6]=SDDS_DefineColumn(bgg->SDDSpo, "Bx", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-          (bgg->poIndex[7]=SDDS_DefineColumn(bgg->SDDSpo, "By", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-          (bgg->poIndex[8]=SDDS_DefineColumn(bgg->SDDSpo, "Bz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[6]=SDDS_DefineColumn(bgg->SDDSpo, "Bx", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[7]=SDDS_DefineColumn(bgg->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (bgg->poIndex[8]=SDDS_DefineColumn(bgg->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
           !SDDS_WriteLayout(bgg->SDDSpo)) {
         SDDS_SetError("Problem setting up particle output file for BGGEXP");
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
