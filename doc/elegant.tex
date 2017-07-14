@@ -80,6 +80,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
   \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
   The default behavior (exact square roots) is unchanged.
+\item The \verb|BMXYZ| element now has the option for classical synchrotron radiation.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -2344,7 +2345,7 @@ included in the plane in question.
 \item Notes:
   \begin{enumerate}
   \item This feature is considered experimental and should be used with caution.
-  Feedback is welcome.
+    Feedback is welcome.
   \item One or more \verb|IONEFFECTS| elements must be inserted in the lattice. This can be
     done manually, or using the \verb|insert_elements| command.
   \end{enumerate}
