@@ -127,6 +127,7 @@ Users are encouraged to test results against the serial or parallel versions.
   This was reported by forum user Ji\_Li and has been fixed.
 \item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
   support filters with up to 30 terms.
+\item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5294,6 +5295,9 @@ up-to-date than these manual pages.
   (Program by M. Borland.)
 \item {\tt ionTrapping} --- Uses lattice function data from {\tt elegant} to compute ion trapping condition in
   a ring. (Program by M. Borland.)
+\item {\tt LFBFirSetup} --- This script prepares data that can be used to configure turn-by-turn longitudinal feedback using
+  \verb|TFBDRIVER| and \verb|TFBPICKUP| elements.
+  (Program by M. Borland.)
 \item {\tt longitCalcs} --- Performs calculations of longitudinal dynamics parameters in storage rings,
   using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
   bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
