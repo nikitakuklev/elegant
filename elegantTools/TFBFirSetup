@@ -96,7 +96,7 @@ exec sddsxref $output.akbk $output.w2 -pipe=out -leave=* -transfer=parameter,w* 
     "-print=column,ElementName,$driver" \
     -process=ParameterValue,sum,anSum
 
-exec sddssequence -pipe=out -define=index,type=short -sequence=begin=0,end=14,delta=1 \
+exec sddssequence -pipe=out -define=index,type=short -sequence=begin=0,end=29,delta=1 \
     | sddsprocess -pipe=in $output.2 \
     "-print=column,ElementName,$pickup" \
     "-print=column,ElementParameter,A%hd,index" \
