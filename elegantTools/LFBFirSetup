@@ -9,16 +9,17 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage {usage: LFBFirSetup -twiss <filename> -harmonic <number>(1296) -voltage <MV>(9.0) -terms <number>(30) -interval <turns>(1) -name <string> -output <filename>}
+set usage {usage: LFBFirSetup -twiss <filename> -harmonic <number>(1296) -voltage <MV>(9.0) -terms <number>(30) -interval <turns>(1) -driver <name> -pickup <name> -output <filename>}
 set twiss ""
 set harmonic 1296
 set voltage 9.0
 set output ""
-set name ""
+set driver ""
+set pickup ""
 set terms 30
 set interval 1
 set args $argv
-if {[APSStrictParseArguments {twiss harmonic voltage name output terms interval}] || ![string length $twiss] || ![string length $output] || ![string length $name]} {
+if {[APSStrictParseArguments {twiss harmonic voltage driver pickup output terms interval}] || ![string length $twiss] || ![string length $output] || ![string length $driver] || ![string length $pickup] || [expr $terms>30]} {
     return -code error "$usage"
 }
 
@@ -61,21 +62,33 @@ exec sddssequence -pipe=out -define=m,type=long -sequence=begin=0,n=$terms,delta
      | sddsprocess -pipe=in $output.1 \
      "-define=parameter,mus,$mus" \
      "-define=parameter,denominator,$sum2" \
-     "-print=column,ElementName,${name}DRIVER" \
+     "-print=column,ElementName,$driver" \
      "-print=column,ElementParameter,A%ld,m" \
      "-define=column,ParameterValue,m 0 == ? $sum1 : m $interval * mus * sin chs $ denominator /"
 
 exec sddsmakedataset $output.2 \
-     -column=ElementName,type=string -data=${name}DRIVER,${name}PICKUP \
+     -column=ElementName,type=string -data=$driver,$pickup \
      -column=ElementParameter,type=string -data=UPDATE_INTERVAL,REFERENCE_FREQUENCY \
      -column=ParameterValue,type=double -data=$interval,$frf \
      -column=m,type=long -data=-1,-1
 
 exec sddssequence -pipe=out -define=m,type=long -seq=begin=0,end=29,delta=1 \
     | sddsprocess -pipe=in $output.3 \
-    "-print=column,ElementName,${name}PICKUP" \
+    "-print=column,ElementName,$pickup" \
     "-print=column,ElementParameter,A%ld,m"  \
     "-define=column,ParameterValue,i_row 0 == ? 1 : 0 $ " 
 
-exec sddscombine $output.1 $output.2 $output.3 -merge $output
-file delete $output.1 $output.2 $output.3
+if $terms!=30 {
+    exec sddssequence -pipe=out -define=m,type=long -seq=begin=$terms,end=29,delta=1 \
+      | sddsprocess -pipe=in $output.4 \
+      "-print=column,ElementName,$driver" \
+      "-print=column,ElementParameter,A%ld,m"  \
+      "-define=column,ParameterValue,0"
+    exec sddscombine $output.1 $output.2 $output.3 $output.4 -merge $output
+    file delete $output.1 $output.2 $output.3 $output.4
+} else {
+    exec sddscombine $output.1 $output.2 $output.3 -merge $output
+    file delete $output.1 $output.2 $output.3
+}
+
+
