@@ -1018,7 +1018,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 9
 #define N_EVCOR_PARAMS 9
 #define N_EHVCOR_PARAMS 11
-#define N_BMAPXYZ_PARAMS 7
+#define N_BMAPXYZ_PARAMS 8
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 15
 #define N_BRANCH_PARAMS 4
@@ -2820,7 +2820,7 @@ extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
 typedef struct {
   double length, fieldLength, strength, accuracy;
   char *method, *filename;
-  short synchRad;
+  short synchRad, checkFields;
   /* these are set by the program when the file is read */
   long points, nx, ny, nz, BGiven;
   double *Fx, *Fy, *Fz;

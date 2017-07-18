@@ -1951,6 +1951,73 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   bmapxyz->Fx = Fx;
   bmapxyz->Fy = Fy;
   bmapxyz->Fz = Fz;
+
+  if (bmapxyz->checkFields) {
+    /* compute the maximum values of |div B| and |curl B| */
+    double divB, curlB[3], magCurlB, maxDivB, maxCurlB;
+    double B, maxB, maxDxyz;
+    long ix, iy, iz;
+    maxDivB = maxCurlB = maxB = 0;
+    printf("Checking divergence and curl of fields...\n");
+    fflush(stdout);
+    for (ix=1; ix<bmapxyz->nx-1; ix++) {
+      for (iy=1; iy<bmapxyz->ny-1; iy++) {
+        for (iz=1; iz<bmapxyz->nz-1; iz++) {
+          B = sqrt(sqr(bmapxyz->Fx[ix + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny]) +
+                   sqr(bmapxyz->Fy[ix + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny]) +
+                   sqr(bmapxyz->Fz[ix + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny]) );
+          if (B>maxB)
+            maxB = B;
+          /* compute divergence */
+          divB = fabs(
+                      (bmapxyz->Fx[ix+1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+                       bmapxyz->Fx[ix-1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dx) 
+                      + 
+                      (bmapxyz->Fy[ix + (iy+1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+                       bmapxyz->Fy[ix + (iy-1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dy)
+                      + 
+                      (bmapxyz->Fz[ix + iy*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny] -
+                       bmapxyz->Fz[ix + iy*bmapxyz->nx + (iz-1)*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dz)
+                      );
+          if (divB>maxDivB)
+            maxDivB = divB;
+          /* compute curl */
+          curlB[0] = 
+            (bmapxyz->Fz[ix + (iy+1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fz[ix + (iy-1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dy)
+            -
+            (bmapxyz->Fy[ix + iy*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fy[ix + iy*bmapxyz->nx + (iz-1)*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dz);
+          curlB[1] = 
+            (bmapxyz->Fx[ix + iy*bmapxyz->nx + (iz+1)*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fx[ix + iy*bmapxyz->nx + (iz-1)*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dz)
+            -
+            (bmapxyz->Fz[ix+1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fz[ix-1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dx);
+          curlB[2] = 
+            (bmapxyz->Fy[ix+1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fy[ix-1 + iy*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dx)
+            -
+            (bmapxyz->Fx[ix + (iy+1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny] -
+             bmapxyz->Fx[ix + (iy-1)*bmapxyz->nx + iz*bmapxyz->nx*bmapxyz->ny])/(2*bmapxyz->dy);
+          magCurlB = sqrt(sqr(curlB[0])+sqr(curlB[1])+sqr(curlB[2]));
+          if (magCurlB>maxCurlB)
+            maxCurlB = magCurlB;
+        }
+      }
+    }
+    maxDxyz = bmapxyz->dz;
+    if (bmapxyz->dy>maxDxyz)
+      maxDxyz = bmapxyz->dy;
+    if (bmapxyz->dz>maxDxyz)
+      maxDxyz = bmapxyz->dz;
+    printf("Maximum |div B|: %le T/m\n", maxDivB);
+    printf("Maximum |div B|/max|B|*max(dx,dy,dz): %le\n", maxDivB/maxB*maxDxyz);
+    printf("Maximum |curl B|: %le T/m\n", maxCurlB);
+    printf("Maximum |curl B|/max|B|*max(dx,dy,dz): %le\n", maxCurlB/maxB*maxDxyz);
+    fflush(stdout);
+  }
+
 }
 
 long interpolate_bmapxyz(double *F0, double *F1, double *F2,

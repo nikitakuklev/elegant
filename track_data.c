@@ -2694,6 +2694,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
     {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"CHECK_FIELDS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.checkFields), NULL, 0.0, 0, "check fields by computing divB and curlB errors?"},
 };  
 
 BRAT brat_example;
