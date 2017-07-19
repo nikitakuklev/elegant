@@ -15,8 +15,10 @@
 void link_date(void)
 {
 #if USE_MPI
+#ifdef MPI_MAX_LIBRARY_VERSION_STRING
   int len;
   char mpi_lib_ver[MPI_MAX_LIBRARY_VERSION_STRING];
+#endif
 #endif
 #ifdef SVN_VERSION
     printf("Link date: %s %s, SVN revision: %s\n", __DATE__, __TIME__, SVN_VERSION);
@@ -25,8 +27,10 @@ void link_date(void)
 #endif
 
 #if USE_MPI
+#ifdef MPI_MAX_LIBRARY_VERSION_STRING
     MPI_Get_library_version(mpi_lib_ver, &len);
     printf("MPI library version: %s\n", mpi_lib_ver);
+#endif
 #endif
 fflush(stdout);
     }
