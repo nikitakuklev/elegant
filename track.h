@@ -1018,9 +1018,9 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 9
 #define N_EVCOR_PARAMS 9
 #define N_EHVCOR_PARAMS 11
-#define N_BMAPXYZ_PARAMS 8
+#define N_BMAPXYZ_PARAMS 9
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 15
+#define N_BGGEXP_PARAMS 17
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 7
@@ -2821,12 +2821,16 @@ typedef struct {
   double length, fieldLength, strength, accuracy;
   char *method, *filename;
   short synchRad, checkFields;
+  char *particleOutputFile;
   /* these are set by the program when the file is read */
   long points, nx, ny, nz, BGiven;
   double *Fx, *Fy, *Fz;
   double xmin, xmax, dx;
   double ymin, ymax, dy;
   double zmin, zmax, dz;
+  SDDS_DATASET *SDDSpo;
+  long poIndex[9];
+  long poRow, poRows;
 } BMAPXYZ;
 
 extern PARAMETER brat_param[N_BRAT_PARAMS];
@@ -2855,6 +2859,7 @@ typedef struct {
   double strength;        /* multiply fields by a factor */
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
+  double Bx, By;          /* stray field */
   short mMaximum;          /* maximum value of m that is included */
   short maximum2n;         /* maximum value of 2*n that is included */
   short zInterval;         /* interval between z points used */

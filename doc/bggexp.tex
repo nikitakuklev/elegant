@@ -47,8 +47,15 @@ Important notes and limitations:
 \begin{enumerate}
 \item The calculations of \verb|twiss_output|, including radiation integrals, are at this point not affected,
 nor is the setup of rf cavities for storage rings via the \verb|rf_setup| command.
-\item The symplectic integrator, in addition to being symplectic, is more accurate than the non-symplectic integrator.
+\item The symplectic integrator, in addition to being symplectic, is typically more accurate than the non-symplectic integrator.
   It is also considerably slower.
   However, at minimum, users should use the symplectic integrator to verify that the accuracy of the non-symplectic integrator
   is adequate.
+\item The \verb|BX| and \verb|BY| parameters allow imposing uniform horizontal and vertical magnetic fields 
+  on the device.
+  This can be helpful if the terminal trajectory deviates from the expected value, e.g., an on-axis particle  
+  ends up off-axis. This may happen if the device has
+  a dipolar field that is truncated at the ends before it has decayed sufficiently.
+  Note that these values are multiplied by the \verb|STRENGTH| factor before being applied to the beam.
 \end{enumerate}
+

@@ -2695,6 +2695,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"CHECK_FIELDS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.checkFields), NULL, 0.0, 0, "check fields by computing divB and curlB errors?"},
+    {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
 };  
 
 BRAT brat_example;
@@ -2729,6 +2730,8 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"BX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.Bx), NULL, 0.0, 0, "add BX*STRENGTH to Bx field"},
+    {"BY", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.By), NULL, 0.0, 0, "add BY*STRENGTH to By field"},
     {"MAXIMUM_M", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.mMaximum), NULL, 0.0, -1, "data with m greater than this is ignored"},
     {"MAXIMUM_2N", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.maximum2n), NULL, 0.0, -1, "data with 2*n greater than this is ignored"},
     {"Z_INTERVAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},

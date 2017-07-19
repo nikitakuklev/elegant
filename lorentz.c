@@ -306,6 +306,15 @@ long lorentz(
             i_top--;
             i_part--;
             }
+        if (field_type==T_BMAPXYZ) {
+          BMAPXYZ *bmxyz;
+          bmxyz = (BMAPXYZ*)field;
+          if (bmxyz->SDDSpo && !SDDS_WritePage(bmxyz->SDDSpo)) {
+            SDDS_SetError("Problem writing page in particle output file for BMXYZ");
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+          }
+          bmxyz->poRow = 0;
+        }
       }
 
     lorentz_terminate(field, field_type, part, n_part, P_central);
@@ -797,6 +806,33 @@ void lorentz_setup(
             rad_coef = 0;
             if (bmapxyz->synchRad) 
               rad_coef = sqr(particleCharge/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*particleMass);
+#if !USE_MPI
+            if (bmapxyz->particleOutputFile && !(bmapxyz->SDDSpo)) {
+              TRACKING_CONTEXT tcontext;
+              getTrackingContext(&tcontext);
+              bmapxyz->SDDSpo = tmalloc(sizeof(*(bmapxyz->SDDSpo)));
+              bmapxyz->poRow = 0;
+              bmapxyz->particleOutputFile = compose_filename(bmapxyz->particleOutputFile, tcontext.rootname);
+              if (!SDDS_InitializeOutput(bmapxyz->SDDSpo, SDDS_BINARY, 1, 
+                                         NULL, NULL, bmapxyz->particleOutputFile) ||
+                  0>SDDS_DefineParameter(bmapxyz->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+                  !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "particleID", NULL, SDDS_LONG) ||
+                  !SDDS_DefineSimpleParameter(bmapxyz->SDDSpo, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+                  (bmapxyz->poIndex[0]=SDDS_DefineColumn(bmapxyz->SDDSpo, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+                  (bmapxyz->poIndex[1]=SDDS_DefineColumn(bmapxyz->SDDSpo, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+                  (bmapxyz->poIndex[2]=SDDS_DefineColumn(bmapxyz->SDDSpo, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+                  (bmapxyz->poIndex[3]=SDDS_DefineColumn(bmapxyz->SDDSpo, "py", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+                  (bmapxyz->poIndex[4]=SDDS_DefineColumn(bmapxyz->SDDSpo, "z", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                  (bmapxyz->poIndex[5]=SDDS_DefineColumn(bmapxyz->SDDSpo, "pz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                  (bmapxyz->poIndex[6]=SDDS_DefineColumn(bmapxyz->SDDSpo, "Bx", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                  (bmapxyz->poIndex[7]=SDDS_DefineColumn(bmapxyz->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                  (bmapxyz->poIndex[8]=SDDS_DefineColumn(bmapxyz->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                  !SDDS_WriteLayout(bmapxyz->SDDSpo)) {
+                SDDS_SetError("Problem setting up particle output file for BMXYZ");
+                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+              }
+            }
+#endif
             break;
           default:
             bombElegant("invalid field type (lortenz_setup)", NULL);
@@ -816,17 +852,28 @@ void lorentz_terminate(
     )
 {
     NIBEND *nibend;
-
+    BMAPXYZ *bmxyz;
+    
     switch (field_type) {
-        case T_NIBEND:
-            nibend = (NIBEND*)field;
-            nibend->angle *= nibend->angleSign;
-            nibend->e[nibend->e1Index]    *= nibend->angleSign;
-            nibend->e[nibend->e2Index]    *= nibend->angleSign;
-            break;
-          default:
-            break;
-          }
+    case T_NIBEND:
+      nibend = (NIBEND*)field;
+      nibend->angle *= nibend->angleSign;
+      nibend->e[nibend->e1Index]    *= nibend->angleSign;
+      nibend->e[nibend->e2Index]    *= nibend->angleSign;
+      break;
+    case T_BMAPXYZ:
+      bmxyz = (BMAPXYZ*)field;
+      if (bmxyz->SDDSpo) {
+        if (!SDDS_Terminate(bmxyz->SDDSpo)) {
+          SDDS_SetError("Problem closing particle output file for BMXYZ");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+        free(bmxyz->SDDSpo);
+        bmxyz->SDDSpo = NULL;
+      }
+    default:
+      break;
+    }
     if (s_offset)
       exactDrift(part, np, s_offset);
   }
@@ -1800,6 +1847,36 @@ void bmapxyz_deriv_function(double *qp, double *q, double s)
 
   if (rad_coef)
     qp[7] = -rad_coef*pow4(1+q[7])*(sqr(wp[0]) + sqr(wp[1]) + sqr(wp[2]));
+
+#if !USE_MPI
+  if (bmapxyz->SDDSpo) {
+    if (bmapxyz->poRow==0 &&
+        !SDDS_StartPage(bmapxyz->SDDSpo, bmapxyz->poRows=1000)) {
+      SDDS_SetError("Problem setting up particle output page for BMXYZ");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (bmapxyz->poRow>=bmapxyz->poRows && 
+        !SDDS_LengthenTable(bmapxyz->SDDSpo, (bmapxyz->poRows+=1000))) {
+      SDDS_SetError("Problem lenthening particle output table for BMXYZ");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (!SDDS_SetRowValues(bmapxyz->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
+                           bmapxyz->poRow++,
+                           bmapxyz->poIndex[0], q[1],
+                           bmapxyz->poIndex[1], qp[1],
+                           bmapxyz->poIndex[2], q[2],
+                           bmapxyz->poIndex[3], qp[2],
+                           bmapxyz->poIndex[4], q[0],
+                           bmapxyz->poIndex[5], qp[0],
+                           bmapxyz->poIndex[6], F1,
+                           bmapxyz->poIndex[7], F2,
+                           bmapxyz->poIndex[8], F0,
+                           -1)) {
+      SDDS_SetError("Problem setting rows in particle output file for BMXYZ");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+  }
+#endif
 
 #ifdef DEBUG
     fprintf(fp_field, "%21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);

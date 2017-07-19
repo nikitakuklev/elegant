@@ -82,6 +82,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   The default behavior (exact square roots) is unchanged.
 \item The \verb|BMXYZ| element now has the option for classical synchrotron radiation. It can also check the
   divergence and curl of the fields to assess the quality of the field solution.
+\item Added the \verb|BX| and \verb|BY| parameters to the \verb|BGGEXP| element, to allow imposing a uniform ``external''
+  magnetic field. R. Lindberg (APS) suggested this as a solution to problems that may occur when the generalized 
+  gradient expansion is used for a dipolar field (e.g., a wiggler) but the fields at the ends do not decay sufficiently
+  close to zero.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -5499,7 +5503,8 @@ for use with {\tt elegant}'s \verb|BGGEXP| element.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-computeGeneralizedGradients -input {\em filename} -output {\em rootname} -mainHarmonic {\em integer} -nHarmonics {\em integer}
+computeGeneralizedGradients -input {\em filename} -output {\em rootname} -mainHarmonic {\em integer} -nHarmonics {\em integer} 
+\[-allHarmonics 1\] [-onePeriod 1\]
 }\end{flushleft}
 
 \item {\bf switches:}
@@ -5510,18 +5515,23 @@ Tesla. Each page should have the same number of rows $n$.
 The \verb|phi| values are assumed to be equispaced starting at 0 and ending at $2\pi (1-1/n)$.
 The pages are labeled by the parameter \verb|z|, which gives the longitudinal coordinate in meters for the data on that page.
 These \verb|z| values are assumed to be equispaced and to cover the entire length of the magnet, starting and ending well outside
-the magnet. (For periodic systems, the \verb|wiggler| option may be appropriate. See below.)
+the magnet. (For periodic systems, the \verb|onePeriod| option may be appropriate. See below.)
 Finally, a parameter \verb|R| must exist that gives the radius in meters for the \verb|Br| values.
 
 \item \verb|output| --- Give the root name for the output files. The main output file, which has extension \verb|ggrad|
  and is used directly with the \verb|BGGEXP| element, will contain the generalized gradients for the normal (non-skew)
  components of the magnetic field. Each page corresponds to a different harmonic.
 
-\item \verb|mainHarmonic| --- The main harmonic of the field, where 2 is quadrupole, 3 is sextupole, etc.
+\item \verb|mainHarmonic| --- The main harmonic of the field, where 2 is quadrupole, 3 is sextupole, etc. For fields with
+  several designed-in harmonics, use the lowest, and see the entry for \verb|allHarmonics|.
 
 \item \verb|nHarmonics| --- The number of harmonics to include.
 
-\item \verb|wiggler| --- If non-zero, the fields are assumed to cover a {\em single period} of a periodic wiggler or
+\item \verb|allHarmonics| --- Normally, only allowed harmonics of the main harmonic are included. However, if the magnet
+  has several main harmonics (e.g., a combined-function quadrupole and sextupole), this may be inappropriate. In that
+  case, use this option to force use of all harmonics greater than the given main harmonic.
+
+\item \verb|onePeriod| --- If non-zero, the fields are assumed to cover a {\em single period}, e.g., of a periodic wiggler or
   undulator. 
 \end{itemize}
 

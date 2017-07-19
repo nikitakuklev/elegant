@@ -440,7 +440,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         if (bgg->synchRad || bgg->SDDSpo) {
 	  ds = step*bgg->zInterval*(1.0 + delta)*denom;
 	  /* compute Bx, By */
-	  Bx = By = 0.0;
+	  Bx = bgg->Bx;
+          By = bgg->By;
           for (im=0; im<bggData->nm; im++) {
             double mfact, term, sin_mphi, cos_mphi;
             m = bggData->m[im];
@@ -589,8 +590,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             Bphi += m*term*cos_mphi;
           }
         }
-        B[0] = (Br*cos(phi) - Bphi*sin(phi))*bgg->strength;
-        B[1] = (Br*sin(phi) + Bphi*cos(phi))*bgg->strength;
+        B[0] = (bgg->Bx + (Br*cos(phi) - Bphi*sin(phi)))*bgg->strength;
+        B[1] = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
         B[2] *= bgg->strength;
         
         /* Apply kicks */
