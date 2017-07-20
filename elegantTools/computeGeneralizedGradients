@@ -60,21 +60,6 @@ if $onePeriod {
     set base ave
 }
 
-set tmpRoot /tmp/[APSTmpString]
-APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
-# Figure out if data is symmetric or antisymmetric
-exec sddsregroup $input -pipe=out -newcolumn=z -newparameter=phi \
-    | sddssort -pipe -column=z,incr \
-    | tee $tmpRoot.1 \
-    | sddssort -pipe=in $tmpRoot.2 -column=z,decr
-set check [exec sddsxref $tmpRoot.1 $tmpRoot.2 -pipe=out -take=Br -rename=col,Br=BrFlip \
-               | sddsprocess -pipe \
-               "-define=col,check,Br sign BrFlip sign * n_rows /" \
-               -process=check,sum,checkSum \
-               | sddscollapse -pipe \
-               | sddsprocess -pipe -process=checkSum,ave,%sAve \
-               | sdds2stream -pipe -parameter=checkSumAve]
-
 # Find normalized gradients for listed pages (harmonics):
 # Take FFT of BmR(z)
 # Reorganize so that the FFT is expressed over [-fMax, fMax]
