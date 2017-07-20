@@ -1317,7 +1317,14 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
             }
         if (other->type==T_MARK || other->type==T_WATCH)
             other = other->pred;
-        else 
+        else if (other->type==T_LSCDRIFT) {
+          LSCDRIFT *lsc;
+          lsc = (LSCDRIFT*)other->p_elem;
+          if (lsc->length==0)
+            other = other->pred;
+          else 
+            break;
+        } else
             break;
         } 
     other = elem->succ;
@@ -1328,9 +1335,16 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
             }
         if (other->type==T_MARK || other->type==T_WATCH)
             other = other->succ;
-        else
+        else if (other->type==T_LSCDRIFT) {
+          LSCDRIFT *lsc;
+          lsc = (LSCDRIFT*)other->p_elem;
+          if (lsc->length==0)
+            other = other->succ;
+          else 
             break;
-        } 
+        } else
+            break;
+    }
     if (edge1_effects && !(bend_flags&SAME_BEND_PRECEDES))
         bend_flags |= BEND_EDGE1_EFFECTS;
     if (edge2_effects && !(bend_flags&SAME_BEND_FOLLOWS))

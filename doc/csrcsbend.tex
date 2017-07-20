@@ -27,9 +27,11 @@ orders in momentum offset. Please see the manual page for {\tt CSBEND}
 for more details about features not related to CSR.
 
 {\bf Splitting dipoles}: 
-For versions 19.X and ealier splitting dipoles is {\em not} recommended for {\tt
-CSRCSBEND} because the coherent synchrotron radiation computations
-start over at the beginning of each piece.  This is only acceptable
-when using \verb|STEADY_STATE=1|.  This was changed in version 20, so that
-for this and later versions splitting will work correctly with all CSR modes.
+Splitting dipoles with continuation of CSR effects is possible provided the dipole sections (all of which must have the
+same name) are either consecutive or separated only by \verb|MARK|, \verb|WATCH|, or \verb|LSCDRIFT| elements.
+The \verb|LSCDRIFT| elements must have \verb|L=0| and should have \verb|LEFFECTIVE| set to the length of the upstream
+dipole segment.
+This allows simulating LSC and CSR within a single dipole.
+
+
 
