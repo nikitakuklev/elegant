@@ -360,8 +360,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         }
         Ax = x*r*Ax;
         Ay = y*r*Ay;
-        dAz_dx = dAz_dx - bgg->By;
-	dAz_dy = dAz_dx + bgg->Bx;
+	dAz_dx = dAz_dx - bgg->By;
+	dAz_dy = dAz_dy + bgg->Bx;
 
         /** Start with first order guess for the 'Next' coordinates **/
         ux = px - scaleA*Ax;
@@ -418,10 +418,10 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
               dAz_dy +=-(2*ig+m)*term*( (2*ig+m)*sin_phi*cos_mphi - m*cos_phi*sin_mphi )*GenGrad_s;
             }
           }
-          Ax = xMid*r*Ax;
-          Ay = yMid*r*Ay;
+	  Ax = xMid*r*Ax;
+	  Ay = yMid*r*Ay;
 	  dAz_dx = dAz_dx - bgg->By;
-	  dAz_dy = dAz_dx + bgg->Bx;
+	  dAz_dy = dAz_dy + bgg->Bx;
           
           /** Update coordinates **/
           ux = 0.5*(px + pxLoop) - scaleA*Ax;
@@ -479,7 +479,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             if (bgg->isr && np!=1)
               deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
             if (sigmaDelta2)
-              *sigmaDelta2 += sqr(F)/sqr(pCentral);
+              *sigmaDelta2 += sqr(F)/pCentral;
             delta = deltaTemp;
           }
         }
