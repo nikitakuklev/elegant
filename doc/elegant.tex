@@ -83,9 +83,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|BMXYZ| element now has the option for classical synchrotron radiation. It can also check the
   divergence and curl of the fields to assess the quality of the field solution.
 \item Added the \verb|BX| and \verb|BY| parameters to the \verb|BGGEXP| element, to allow imposing a uniform ``external''
-  magnetic field. R. Lindberg (APS) suggested this as a solution to problems that may occur when the generalized 
-  gradient expansion is used for a dipolar field (e.g., a wiggler) but the fields at the ends do not decay sufficiently
-  close to zero.
+  magnetic field. 
 \item It is now possible to interleave zero-length \verb|LSCDRIFT| elements with \verb|CSRCSBEND| elements with
   CSR fields building up through the successive \verb|CSRCSBEND| elements. This was added following a related
   forum post by Aaron Fetterman.
@@ -132,7 +130,7 @@ Users are encouraged to test results against the serial or parallel versions.
   suggested by forum post by user jan.
 \item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
   for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
-  This was reported by forum user Ji\_Li and has been fixed.
+  This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
 \item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
   support filters with up to 30 terms.
 \item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
@@ -5536,7 +5534,7 @@ Finally, a parameter \verb|R| must exist that gives the radius in meters for the
 
 \end{itemize}
 
-\item {\bf authors:} M. Borland (ANL/APS).
+\item {\bf authors:} M. Borland, R. Lindberg (ANL/APS).
 \end{itemize}
 
 %\begin{latexonly}
