@@ -123,6 +123,9 @@ Users are encouraged to test results against the serial or parallel versions.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
+\item The program \verb|sddsmatchmoments| was added. It allows generating a particle distribution to match the
+  moments from the \verb|moments_output| command.
+\item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
 \item \verb|touschekLifetime| can now use data from the \verb|SLICE| element in {\tt elegant} for slice-based lifetime computations.
 \item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
   improves the appearance of plots and is needed for certain types of analysis.
@@ -133,7 +136,6 @@ Users are encouraged to test results against the serial or parallel versions.
   This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
 \item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
   support filters with up to 30 terms.
-\item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -2894,6 +2896,10 @@ an rf frequency offset.
 closed orbit self-consistently when the bending radius is small.  To address this, the \verb|n_slices| parameter is set to 1 for
 tilted bending magnets when \verb|slice_etilted=0|. This reduces the accuracy of the calculations.
 {\bf Users are strongly advised to check that this is acceptable.} 
+\item The program \verb|sddsmatchmoments| is available to transform a particle distribution so that its 6x6 beam moments
+  match those given in a \verb|moments_output| output filename. 
+  In addition, the \verb|bunched_beam| command provides a similar capability for generating a distribution from computed
+  moments.
 \end{itemize}
 
 %\begin{latexonly}
@@ -5350,6 +5356,8 @@ up-to-date than these manual pages.
  (Program by H. Shang, M. Borland.)
 \item {\tt sddsfluxcurve} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator flux tuning curves.  (Program by M. Borland, H. Shang, R. Dejus.)
+\item {\tt sddsmatchmoments} --- Transforms a beam of macro-particles to match a given set of 
+  6x6 beam moments, where the moments are stored in an output file from \verb|moments_output|.
 \item {\tt sddsmatchtwiss} --- Transforms a beam of macro-particles to match to given beta
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
