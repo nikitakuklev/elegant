@@ -296,7 +296,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       delta_s = 0.0;
       Bx = By = Bz = 0;
 
-      /* Integrate through the magnet */
+      /* Drift particles back 1/2 step to prepare for implicit midpoint rule integration */
+      x -= 0.5*step*bgg->zInterval*part[ip][1];
+      y -= 0.5*step*bgg->zInterval*part[ip][2];
+      s -= 0.5*step*bgg->zInterval/denom;
+     /* Integrate through the magnet */
       for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
         if (bgg->SDDSpo &&
@@ -356,7 +360,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         }
         Ax = x*r*Ax;
         Ay = y*r*Ay;
-        
+        dAz_dx = dAz_dx - bgg->By;
+	dAz_dy = dAz_dx + bgg->Bx;
+
         /** Start with first order guess for the 'Next' coordinates **/
         ux = px - scaleA*Ax;
         uy = py - scaleA*Ay;
@@ -414,6 +420,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           }
           Ax = xMid*r*Ax;
           Ay = yMid*r*Ay;
+	  dAz_dx = dAz_dx - bgg->By;
+	  dAz_dy = dAz_dx + bgg->Bx;
           
           /** Update coordinates **/
           ux = 0.5*(px + pxLoop) - scaleA*Ax;
@@ -484,6 +492,20 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                 iz*bggData->dz, x, y, px, py, s, dAz_dy, dAz_dx, iImpLoop);
 #endif
 
+      }
+      /* Drift particles back 1/2 step to end on last magnet grid point used */
+      denom = (1.0 + delta)*(1.0 + delta) - ux*ux - uy*uy;
+      denom = 1.0/sqrt(denom);
+      x -= 0.5*step*bgg->zInterval*ux*denom;
+      y -= 0.5*step*bgg->zInterval*uy*denom;
+      s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
+      denom = (1.0 + delta)*(1.0 + delta) - ux*ux - uy*uy;
+      denom = 1.0/sqrt(denom);
+      if (iz<bggData->nz) {
+        /* Drift forward */
+	x += bggData->dz*(bggData->nz-1-(iz-1))*ux*denom;
+	y += bggData->dz*(bggData->nz-1-(iz-1))*uy*denom;
+	s += bggData->dz*(bggData->nz-1-(iz-1))*(1.0 + delta)*denom;
       }
  
 #if !USE_MPI
@@ -643,7 +665,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         /* Drift forward */
         x += p[0]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
         y += p[1]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
-        s += bggData->dz*(bggData->nz-1-iz)*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
+        s += bggData->dz*(bggData->nz-1-(iz-1))*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
       }
       
 #if !USE_MPI
