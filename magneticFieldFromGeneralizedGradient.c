@@ -298,7 +298,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* Drift particles back 1/2 step to prepare for implicit midpoint rule integration */
       x -= 0.5*step*bgg->zInterval*part[ip][1];
-      y -= 0.5*step*bgg->zInterval*part[ip][2];
+      y -= 0.5*step*bgg->zInterval*part[ip][3];
       s -= 0.5*step*bgg->zInterval/denom;
      /* Integrate through the magnet */
       for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
