@@ -323,6 +323,11 @@ ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
   INTEL_MKL_INCLUDE = /opt/intel/composer_xe_2015.1.133/mkl/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = $(MKLROOT)/lib/intel64
+  INTEL_MKL_INCLUDE = $(MKLROOT)/include/
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
  ifneq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL = 1
  endif
