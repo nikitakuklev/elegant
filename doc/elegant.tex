@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 33.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 33.1.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,7 +35,7 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 33.1}
+\section{Highlights of What's New in Version 33.1.1}
 
 Here is a summary of what's changed since release 33.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
@@ -63,7 +63,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|IONEFFECTS| element, and the companion \verb|ion_effects| command were added. These allow simulation
+\item The \verb|IONEFFECTS| element and the companion \verb|ion_effects| command were added. These allow simulation
   of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
 \item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
 \item The \verb|CSBEND| element now includes skew multipole errors up to eighth order. This involves newly-computed expressions for the
@@ -123,6 +123,9 @@ Users are encouraged to test results against the serial or parallel versions.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
+\item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
+  for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
+  This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
 \item The program \verb|sddsmatchmoments| was added. It allows generating a particle distribution to match the
   moments from the \verb|moments_output| command.
 \item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
@@ -130,10 +133,7 @@ Users are encouraged to test results against the serial or parallel versions.
 \item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
   improves the appearance of plots and is needed for certain types of analysis.
 \item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
-  suggested by forum post by user jan.
-\item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
-  for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
-  This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
+  suggested by forum user \verb|jan|.
 \item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
   support filters with up to 30 terms.
 \end{itemize}
