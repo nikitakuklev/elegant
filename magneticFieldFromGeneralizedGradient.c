@@ -265,7 +265,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   if (bgg->symplectic) {
     long iImpLoop;
     double xMid, yMid,xNext, yNext, xLoop, yLoop, delta_s;
-    double px, py, pxNext, pyNext, pxLoop, pyLoop, ux, uy;
+    double px, py, pxNext, pyNext, pxLoop, pyLoop, ux=0, uy=0;
     double delta, r, phi, denom, scaleA, sin_phi, cos_phi;
     double Ax, dAx_dx, dAx_dy, Ay, dAy_dx, dAy_dy, dAz_dx, dAz_dy;
     double GenGrad_s, dGenGrad_s;
