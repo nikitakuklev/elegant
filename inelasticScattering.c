@@ -33,28 +33,22 @@ MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
 long nMomAp = 0;
-double *sMomAp = NULL, *deltaNeg = NULL, *deltaPos = NULL;
+double *sMomAp = NULL, *deltaNeg = NULL;
 
-double computeScatteringDelta(long idelta, long iside, double s)
+double computeScatteringDelta(long idelta, double s)
 {
   long is;
 
   if (nMomAp>=2) {
     for (is=0; is<nMomAp; is++) {
       if (sMomAp[is]==s) {
-        if (iside)
-          delta_min = -deltaNeg[is];
-        else 
-          delta_min =  deltaPos[is];
+        delta_min = -deltaNeg[is];
         break;
       }
       if (sMomAp[is]>s) {
         if (is==0)
           bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
-        if (iside)
-          delta_min = -(deltaNeg[is-1] + (deltaNeg[is]-deltaNeg[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]));
-        else 
-          delta_min =   deltaPos[is-1] + (deltaPos[is]-deltaPos[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]);
+        delta_min = -(deltaNeg[is-1] + (deltaNeg[is]-deltaNeg[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]));
         break;
       }
     }
@@ -65,10 +59,10 @@ double computeScatteringDelta(long idelta, long iside, double s)
   }
 
   if (delta_min>=delta_max) {
-    bombElegantVA("|delta_min| >= |delta_max| for s=%le m, %s side", s, iside?"negative":"positive");
+    bombElegantVA("|delta_min| >= |delta_max| for s=%le m", s);
   }
 
-  return (idelta*((delta_max-delta_min)/n_delta) + delta_min)*(iside ? -1 : 1);
+  return -(idelta*((delta_max-delta_min)/n_delta) + delta_min);
 }
 
 void readMomentumAperture(char *momApFile) 
@@ -81,15 +75,13 @@ void readMomentumAperture(char *momApFile)
     exitElegant(1);
   }
   if (SDDS_CheckColumn(&SDDSma, "s", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSma, "deltaNegative", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSma, "deltaPositive", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
-    SDDS_Bomb((char*)"invalid/missing columns in momentum aperture file: expect s (m), deltaNegative, deltaPositive");
+      SDDS_CheckColumn(&SDDSma, "deltaNegative", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
+    SDDS_Bomb((char*)"invalid/missing columns in momentum aperture file: expect s (m) and deltaNegative");
 
   if ((nMomAp=SDDS_RowCount(&SDDSma))<2)
     bombElegantVA("Page 1 of %s has only %ld rows",  momApFile, nMomAp);
   if (!(sMomAp=SDDS_GetColumnInDoubles(&SDDSma, "s")) ||
-      !(deltaNeg=SDDS_GetColumnInDoubles(&SDDSma, "deltaNegative")) ||
-      !(deltaPos=SDDS_GetColumnInDoubles(&SDDSma, "deltaPositive")) ) {
+      !(deltaNeg=SDDS_GetColumnInDoubles(&SDDSma, "deltaNegative"))) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }
@@ -136,17 +128,15 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
 #endif
         continue;
       }
-      if (particleID/(2*n_delta)!=ie) {
+      if (particleID/n_delta!=ie) {
 #if MPI_DEBUG
         printf("not my problem, skipping\n");
         fflush(stdout);
 #endif
         continue;
       }
-      id = particleID%(2*n_delta);
-      iside = id/n_delta;
-      idelta = id%n_delta;
-      coord[ip][5] += computeScatteringDelta(idelta, iside, eptr->end_pos);
+      idelta = particleID%n_delta;
+      coord[ip][5] += computeScatteringDelta(idelta, eptr->end_pos);
       nKicksMade++;
     }
 #if MPI_DEBUG
@@ -308,7 +298,7 @@ long runInelasticScattering(
   
   elem = &(beamline->elem);
 
-  /* determine how man_phi elements will be tracked */
+  /* determine how many elements will be tracked */
   elem0 = NULL;
   nElem = 0;
   elementArray = NULL;
@@ -333,10 +323,10 @@ long runInelasticScattering(
   }
     
   nElem = nElements;
-  nTotal = nElem*n_delta*2;
+  nTotal = nElem*n_delta;
   if (nTotal%nWorkingProcessors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (2*n_delta=%ld, nElem=%ld)\n",
-           nWorkingProcessors, 2*n_delta, nElem);
+    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_delta=%ld, nElem=%ld)\n",
+           nWorkingProcessors, n_delta, nElem);
     fflush(stdout);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
@@ -344,8 +334,8 @@ long runInelasticScattering(
   }
   
   if (myid==0 || mpiDebug) {
-    printf("nTotal = %ld, nWorkingProcessors = %ld, 2*n_delta = %ld, nElements = %ld, nEachProcessor = %ld\n",
-           nTotal, nWorkingProcessors, 2*n_delta, nElements, nEachProcessor);
+    printf("nTotal = %ld, nWorkingProcessors = %ld, n_delta = %ld, nElements = %ld, nEachProcessor = %ld\n",
+           nTotal, nWorkingProcessors, n_delta, nElements, nEachProcessor);
     fflush(stdout);
   }
   
@@ -540,11 +530,9 @@ long runInelasticScattering(
       
       /* Figure out (iside, idelta, ie) */
       particleID = lostParticles[ip][6];
-      id = particleID%(2*n_delta);
-      ie = particleID/(2*n_delta);
-      iside = id/n_delta;
-      idelta = id%n_delta;
-      delta = computeScatteringDelta(idelta, iside, elementArray[ie]->end_pos);
+      ie = particleID/n_delta;
+      idelta = particleID%n_delta;
+      delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos);
       if (idelta==0)
         badDeltaMin ++;
       if (idelta==(n_delta-1))
