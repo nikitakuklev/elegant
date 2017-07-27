@@ -2174,6 +2174,71 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 
 %\begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|inelastic_scattering|}\end{center}
+%\end{latexonly}
+\subsection{inelastic\_scattering \label{subsec:inelasticscattering}}
+
+\begin{itemize}
+\item type: action command
+\item function: perform simulation of inelastic scattering at multiple s locations, for
+  use in computing inelastic gas scattering lifetime and loss distribution
+\item sequence: must follow \verb|run_control|.
+\item notes: 
+  \begin{itemize} 
+    \item Only available in \verb|Pelegant|.
+    \item Data may be postprocessed with the command \verb|inelasticScatteringAnalysis|.
+    \end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+&inelastic_scattering
+    STRING losses = NULL;
+    STRING output = NULL;
+    STRING log_file = NULL;
+    double delta_min = 0.001;
+    STRING momentum_aperture = NULL;
+    double momentum_aperture_scale = 0.95;
+    double delta_max = 0.100;
+    long n_delta = 101;
+    double s_start = 0;
+    double s_end = DBL_MAX;
+    STRING include_name_pattern = NULL;
+    STRING include_type_pattern = NULL;
+    long verbosity = 1;        
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|losses| --- The (incomplete) name of an SDDS file to which the record of initial scattering location,
+  initial scattering angle, and loss coordinates will be written.
+\item \verb|output| --- The (incomplete) name of an SDDS file to which the final coordinates of all surviving particles
+  will be written.
+\item \verb|log_file| --- The (incomplete) name of an SDDS file to which statistical data will be written as the simulations
+  run. Users should check the \verb|MinParticles| and \verb|MaxParticles| columns as the simulation runs to ensure
+  reasonable load balance (e.g., within 10-20\%). If balance is poor, consider changing the value of \verb|n_delta|
+  slightly. 
+\item \verb|delta_min| --- Minimum absolute value of $\delta$ from scattering.  Should be small enough that no particle scattered
+  by this $\pm$ this value is lost, regardless of the scattering location. 
+\item \verb|delta_max| --- Maximum absolute value of $\delta$ from scattering. Should be large enough that no particle scattered
+  by $\pm$ this value survives, regardless of scattering location. 
+\item \verb|n_delta| --- Number of $\delta$ scattering angle values on the range \verb|delta_min| to \verb|delta_max|.
+  The same number will be scattered in the range -\verb|delta_min| to -\verb|delta_max|.
+\item \verb|momentum_aperture|, \verb|momentum_aperture_scale| --- If given, names a file giving the momentum aperture vs s, which
+  is interpolated at the scattering locations to obtain the local momentum aperture.
+  Such a file may be obtained from running the \verb|momentum_aperture| command. The \verb|deltaNegative| column will be 
+  used in place of \verb|delta_min| for negative-side scatters, while the \verb|deltaPositive| column will be used for
+  used in place of \verb|delta_min| for positive-side scatters.
+  The \verb|delta_min| values thus obtained are multiplied by \verb|momentum_aperture_scale|, so there is some assurance
+  that the minimally-scattered particles will survive. This ensures that the results are valid for computation of 
+  loss rates, for example.
+\item \verb|s_start|, \verb|s_end| --- Range of s location for simulated scattering sites.
+\item \verb|include_name_pattern| --- Wildcard-containing string to match to element names in selecting scattering sites.
+\item \verb|include_type_pattern| --- Wildcard-containing string to match to element types in selecting scattering sites.
+\item \verb|verbosity| --- Higher values may result in more verbose informational output.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|insert_elements|}\end{center}
 %\end{latexonly}
 \subsection{insert\_elements \label{subsec:insertelements}}
