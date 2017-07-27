@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 33.1.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 33.2\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,80 +35,37 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 33.1.1}
+\section{Highlights of What's New in Version 33.2}
 
-Here is a summary of what's changed since release 33.0.
+Here is a summary of what's changed since release 33.1.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
-  used the same data file. This was fixed.
-\item The \verb|BGGEXP| element refused to run if $m=1$ (dipole) was the main multipole, which
-  prevented modeling wigglers. This was reported by forum user \verb|Ji_Li| and was fixed.
-\item The \verb|RFDF| element had a bug in computing the energy-dependence of the time of flight,
-  as reported by Daniel Marx. This was fixed. The missing phase reference feature was also implemented.
-\item Using the third-order matrix of the \verb|QUAD| element with \verb|RADIAL=1| would result in a crash.
-  This was fixed. Forum user \verb|meisal| reported the bug.
+\item None
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \\ \verb|allow_missing_parameters|
-  qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
-\item Fixed a bug in saving parameters when elements are subdivided: the lengths of certain elements were incorrect in
-  the saved file.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|IONEFFECTS| element and the companion \verb|ion_effects| command were added. These allow simulation
-  of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
-\item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
-\item The \verb|CSBEND| element now includes skew multipole errors up to eighth order. This involves newly-computed expressions for the
-  fields in curvilinear coordinates, so slight numerical changes may be seen.
-\item The \verb|KSEXT| and \verb|SEXT| elements now support a skew-quad correction term. This was suggested by Z. Duan (IHEP).
-\item Synchrotron radiation effects were added to the \verb|BGGEXP| element, so that radiation effects from essentially 
-  arbitrary fields can be included in both tracking and \verb|moments_output| calculations. There are limitations as
-  described in the manual page.
-\item Improvements were made to memory management for numerous elements, chiefly \verb|CSBEND|, \verb|CSRCSBEND|,
-  \verb|CWIGGLER|, \verb|FRFMODE|, \verb|FTRFMODE|, \verb|RFMODE|, \verb|SLICE|, \verb|TFBDRIVER|, \verb|TRFMODE|,
-  \verb|ZTRANSVERSE|, and \verb|ZLONGIT|. This can dramatically decrease memory usage in some cases.
-\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements (used for turn-by-turn feedback) now have start- and end-pass controls.
-\item The \verb|MATTER| element now has start- and end-pass controls.
-\item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
-  \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
-  The default behavior (exact square roots) is unchanged.
-\item The \verb|BMXYZ| element now has the option for classical synchrotron radiation. It can also check the
-  divergence and curl of the fields to assess the quality of the field solution.
-\item Added the \verb|BX| and \verb|BY| parameters to the \verb|BGGEXP| element, to allow imposing a uniform ``external''
-  magnetic field. 
-\item It is now possible to interleave zero-length \verb|LSCDRIFT| elements with \verb|CSRCSBEND| elements with
-  CSR fields building up through the successive \verb|CSRCSBEND| elements. This was added following a related
-  forum post by Aaron Fetterman.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|elastic_scattering| command, which assists in computation of the elastic gas scattering
-  lifetime and the distribution of lost particles. This is only available in the parallel version.
-\item Added \verb|bpm_output| option to the \verb|correct| command, which provides optional output of beam position monitor
-  readings after orbit or trajectory correction. This was suggested by V. Sajaev (APS).
-\item The \verb|twiss_output| command now records the location of the acceptance-limiting apertures in parameters
-  \verb|AxLocation| and \verb|AyLocation|.
-\item The \verb|track| command has a new field, \verb|interrupt_file|, which gives the name of a file to monitor
-  as a semaphore to interrupt the tracking. If the file is created or updated during tracking, then tracking will
-  terminate on completion of the next pass.
+\item None
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
-\item The \verb|elastic_scattering| command was added. It performs parallel tracking to determine the angular
-  acceptance at a series of s locations. The data is intended for use with the script {\tt elasticScatteringAnalysis},
-  which allows determination of the elastic gas scattering lifetime and loss distribution.
-  This command is presently only available in \verb|Pelegant|, due to the long runtime required.
+\item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
+reported by Jonas Bj{\"o}rklund.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -123,19 +80,7 @@ Users are encouraged to test results against the serial or parallel versions.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
-  for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
-  This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
-\item The program \verb|sddsmatchmoments| was added. It allows generating a particle distribution to match the
-  moments from the \verb|moments_output| command.
-\item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
-\item \verb|touschekLifetime| can now use data from the \verb|SLICE| element in {\tt elegant} for slice-based lifetime computations.
-\item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
-  improves the appearance of plots and is needed for certain types of analysis.
-\item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
-  suggested by forum user \verb|jan|.
-\item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
-  support filters with up to 30 terms.
+\item None
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7101,6 +7046,109 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\section{Highlights of What's New in Version 33.1.1}
+
+Here is a summary of what's changed since release 33.0.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
+  used the same data file. This was fixed.
+\item The \verb|BGGEXP| element refused to run if $m=1$ (dipole) was the main multipole, which
+  prevented modeling wigglers. This was reported by forum user \verb|Ji_Li| and was fixed.
+\item The \verb|RFDF| element had a bug in computing the energy-dependence of the time of flight,
+  as reported by Daniel Marx. This was fixed. The missing phase reference feature was also implemented.
+\item Using the third-order matrix of the \verb|QUAD| element with \verb|RADIAL=1| would result in a crash.
+  This was fixed. Forum user \verb|meisal| reported the bug.
+\end{itemize}
+
+\subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \\ \verb|allow_missing_parameters|
+  qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
+\item Fixed a bug in saving parameters when elements are subdivided: the lengths of certain elements were incorrect in
+  the saved file.
+\end{itemize}
+
+\subsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|IONEFFECTS| element and the companion \verb|ion_effects| command were added. These allow simulation
+  of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
+\item Added \verb|SLICE| element to provide turn-by-turn slice analysis.
+\item The \verb|CSBEND| element now includes skew multipole errors up to eighth order. This involves newly-computed expressions for the
+  fields in curvilinear coordinates, so slight numerical changes may be seen.
+\item The \verb|KSEXT| and \verb|SEXT| elements now support a skew-quad correction term. This was suggested by Z. Duan (IHEP).
+\item Synchrotron radiation effects were added to the \verb|BGGEXP| element, so that radiation effects from essentially 
+  arbitrary fields can be included in both tracking and \verb|moments_output| calculations. There are limitations as
+  described in the manual page.
+\item Improvements were made to memory management for numerous elements, chiefly \verb|CSBEND|, \verb|CSRCSBEND|,
+  \verb|CWIGGLER|, \verb|FRFMODE|, \verb|FTRFMODE|, \verb|RFMODE|, \verb|SLICE|, \verb|TFBDRIVER|, \verb|TRFMODE|,
+  \verb|ZTRANSVERSE|, and \verb|ZLONGIT|. This can dramatically decrease memory usage in some cases.
+\item The \verb|TFBPICKUP| and \verb|TFBDRIVER| elements (used for turn-by-turn feedback) now have start- and end-pass controls.
+\item The \verb|MATTER| element now has start- and end-pass controls.
+\item To improve performance and simplify the code, the \verb|SQRT_ORDER| parameter on the \verb|CSBEND|, 
+  \verb|FMULT|, \verb|KOCT|, \verb|KQUAD|, \verb|KQUSE|, and \verb|KSEXT| elements is now nonfunctional.
+  The default behavior (exact square roots) is unchanged.
+\item The \verb|BMXYZ| element now has the option for classical synchrotron radiation. It can also check the
+  divergence and curl of the fields to assess the quality of the field solution.
+\item Added the \verb|BX| and \verb|BY| parameters to the \verb|BGGEXP| element, to allow imposing a uniform ``external''
+  magnetic field. 
+\item It is now possible to interleave zero-length \verb|LSCDRIFT| elements with \verb|CSRCSBEND| elements with
+  CSR fields building up through the successive \verb|CSRCSBEND| elements. This was added following a related
+  forum post by Aaron Fetterman.
+\end{itemize}
+
+\subsection{New and Modified Commands}
+\begin{itemize}
+\item Added the \verb|elastic_scattering| command, which assists in computation of the elastic gas scattering
+  lifetime and the distribution of lost particles. This is only available in the parallel version.
+\item Added \verb|bpm_output| option to the \verb|correct| command, which provides optional output of beam position monitor
+  readings after orbit or trajectory correction. This was suggested by V. Sajaev (APS).
+\item The \verb|twiss_output| command now records the location of the acceptance-limiting apertures in parameters
+  \verb|AxLocation| and \verb|AyLocation|.
+\item The \verb|track| command has a new field, \verb|interrupt_file|, which gives the name of a file to monitor
+  as a semaphore to interrupt the tracking. If the file is created or updated during tracking, then tracking will
+  terminate on completion of the next pass.
+\end{itemize}
+
+\subsection{Changes Specific to Parallel Version}
+
+\begin{itemize}
+\item The \verb|elastic_scattering| command was added. It performs parallel tracking to determine the angular
+  acceptance at a series of s locations. The data is intended for use with the script {\tt elasticScatteringAnalysis},
+  which allows determination of the elastic gas scattering lifetime and loss distribution.
+  This command is presently only available in \verb|Pelegant|, due to the long runtime required.
+\end{itemize}
+
+\subsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to test results against the serial or parallel versions.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
+  for odd multipole orders (e.g., dipole, sextupole, ...) or fields that are odd functions of z. 
+  This was reported by forum user Ji\_Li and has been fixed, with the assistance of R. Lindberg (APS).
+\item The program \verb|sddsmatchmoments| was added. It allows generating a particle distribution to match the
+  moments from the \verb|moments_output| command.
+\item The \verb|LFBFirSetup| script was added. It helps set up FIR filters for longitudinal turn-by-turn feedback.
+\item \verb|touschekLifetime| can now use data from the \verb|SLICE| element in {\tt elegant} for slice-based lifetime computations.
+\item The script \verb|removeBackDrifts| was added. It allows post-processing s-dependent files to remove negative drifts, which
+  improves the appearance of plots and is needed for certain types of analysis.
+\item The program \verb|sddsemitproc| now has the ability to specify the independent variable on the commandline. This was
+  suggested by forum user \verb|jan|.
+\item The \verb|TFBFirSetup| script, which helps set up FIR filters for transverse turn-by-turn feedback, can now
+  support filters with up to 30 terms.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 33.0, March 3, 2017}
 
