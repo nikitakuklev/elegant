@@ -1024,14 +1024,28 @@ void adjust_arrival_time_data(double **coord, long np, double Po, long center_t,
   if (flip_t) 
     for (ip=0; ip<np; ip++)
       coord[ip][4] *= -1;
-  
+
   if (center_t) {
     for (ip=tave=0; ip<np; ip++) {
       P = Po*(1+coord[ip][5]);
       beta = P/sqrt(sqr(P)+1);
       tave += coord[ip][4]/beta;
     }
+#if !SDDS_MPI_IO
     tave /= np;
+#else  
+    if (notSinglePart) {
+      if (isSlave) {
+	double total_sum; 
+	long total_particles;
+	MPI_Allreduce (&tave, &total_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
+	MPI_Allreduce (&np, &total_particles, 1, MPI_LONG, MPI_SUM, workers);
+	tave = total_sum/total_particles;
+      }
+    } else {
+      tave /= np;
+    }
+#endif
     for (ip=0; ip<np; ip++) {
       P = Po*(1+coord[ip][5]);
       beta = P/sqrt(sqr(P)+1);
