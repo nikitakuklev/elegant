@@ -2219,16 +2219,20 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   run. Users should check the \verb|MinParticles| and \verb|MaxParticles| columns as the simulation runs to ensure
   reasonable load balance (e.g., within 10-20\%). If balance is poor, consider changing the value of \verb|n_delta|
   slightly. 
-\item \verb|delta_min| --- Minimum absolute value of $\delta$ from scattering.  Should be small enough that no particle scattered
-  by -\verb|delta_min| is lost, regardless of the scattering location. 
-\item \verb|delta_max| --- Maximum absolute value of $\delta$ from scattering. Should be large enough that no particle scattered
-  by -\verb|delta_max| survives, regardless of scattering location. 
-\item \verb|n_delta| --- Number of $\delta$ scattering values on the range -\verb|delta_min| to -\verb|delta_max|.
+\item \verb|k_min| --- Minimum energy $k$ of the brehmsstrahlung photon as a fraction of the beam energy.
+  The electron has $\delta = -k$ after scattering.
+  \verb|k_min| should be small enough that no electron scattered by -\verb|k_min| is lost, 
+  regardless of the scattering location. 
+\item \verb|k_max| --- Maximum energy $k$ of the brehmsstrahlung photon as a fraction of the beam energy.
+  The electron has $\delta = -k$ after scattering.
+  \verb|k_max| should be large enough that no electron scattered by -\verb|k_max| survives,
+  regardless of the scattering location. 
+\item \verb|n_k| --- Number of scattering values on the range \verb|k_min| to \verb|k_max|.
 \item \verb|momentum_aperture|, \verb|momentum_aperture_scale| --- If given, names a file giving the momentum aperture vs s, which
   is interpolated at the scattering locations to obtain the local momentum aperture.
   Such a file may be obtained from running the \verb|momentum_aperture| command. The absolute values of the 
-  values in the \verb|deltaNegative| column will be used in place of \verb|delta_min|. 
-  The \verb|delta_min| values thus obtained are multiplied by \verb|momentum_aperture_scale|, so there is some assurance
+  values in the \verb|deltaNegative| column will be used in place of \verb|k_min|. 
+  The \verb|k_min| values thus obtained are multiplied by \verb|momentum_aperture_scale|, so there is some assurance
   that the minimally-scattered particles will survive. This ensures that the results are valid for computation of 
   loss rates, for example.
 \item \verb|s_start|, \verb|s_end| --- Range of s location for simulated scattering sites.

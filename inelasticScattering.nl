@@ -9,11 +9,11 @@
     STRING losses = NULL;
     STRING output = NULL;
     STRING log_file = NULL;
-    double delta_min = 0.001;
+    double k_min = 0.001;
     STRING momentum_aperture = NULL;
     double momentum_aperture_scale = 0.85;
-    double delta_max = 0.10;
-    long n_delta = 101;
+    double k_max = 0.10;
+    long n_k = 101;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;

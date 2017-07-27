@@ -42,27 +42,27 @@ double computeScatteringDelta(long idelta, double s)
   if (nMomAp>=2) {
     for (is=0; is<nMomAp; is++) {
       if (sMomAp[is]==s) {
-        delta_min = -deltaNeg[is];
+        k_min = -deltaNeg[is];
         break;
       }
       if (sMomAp[is]>s) {
         if (is==0)
           bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
-        delta_min = -(deltaNeg[is-1] + (deltaNeg[is]-deltaNeg[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]));
+        k_min = -(deltaNeg[is-1] + (deltaNeg[is]-deltaNeg[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]));
         break;
       }
     }
     if (is==nMomAp) {
       bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
     }
-    delta_min *= momentum_aperture_scale;
+    k_min *= momentum_aperture_scale;
   }
 
-  if (delta_min>=delta_max) {
-    bombElegantVA("|delta_min| >= |delta_max| for s=%le m", s);
+  if (k_min>=k_max) {
+    bombElegantVA("|k_min| >= |k_max| for s=%le m", s);
   }
 
-  return -(idelta*((delta_max-delta_min)/n_delta) + delta_min);
+  return -(idelta*((k_max-k_min)/n_k) + k_min);
 }
 
 void readMomentumAperture(char *momApFile) 
@@ -128,14 +128,14 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
 #endif
         continue;
       }
-      if (particleID/n_delta!=ie) {
+      if (particleID/n_k!=ie) {
 #if MPI_DEBUG
         printf("not my problem, skipping\n");
         fflush(stdout);
 #endif
         continue;
       }
-      idelta = particleID%n_delta;
+      idelta = particleID%n_k;
       coord[ip][5] += computeScatteringDelta(idelta, eptr->end_pos);
       nKicksMade++;
     }
@@ -176,8 +176,8 @@ void setupInelasticScattering(
   if (!losses)
     bombElegant("no losses filename specified", NULL);
   if (!momentum_aperture) {
-    if (delta_min >= delta_max)
-      bombElegant("delta_min >= delta_max and no momentum_aperture file given",  NULL);
+    if (k_min >= k_max)
+      bombElegant("k_min >= k_max and no momentum_aperture file given",  NULL);
   } else {
     if (momentum_aperture_scale<=0)
       bombElegant("momentum_aperture_scale<=0, which makes no sense",  NULL);
@@ -323,10 +323,10 @@ long runInelasticScattering(
   }
     
   nElem = nElements;
-  nTotal = nElem*n_delta;
+  nTotal = nElem*n_k;
   if (nTotal%nWorkingProcessors!=0) {
-    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_delta=%ld, nElem=%ld)\n",
-           nWorkingProcessors, n_delta, nElem);
+    printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (n_k=%ld, nElem=%ld)\n",
+           nWorkingProcessors, n_k, nElem);
     fflush(stdout);
     nEachProcessor =  (nTotal/nWorkingProcessors)+1;
   } else {
@@ -334,8 +334,8 @@ long runInelasticScattering(
   }
   
   if (myid==0 || mpiDebug) {
-    printf("nTotal = %ld, nWorkingProcessors = %ld, n_delta = %ld, nElements = %ld, nEachProcessor = %ld\n",
-           nTotal, nWorkingProcessors, n_delta, nElements, nEachProcessor);
+    printf("nTotal = %ld, nWorkingProcessors = %ld, n_k = %ld, nElements = %ld, nEachProcessor = %ld\n",
+           nTotal, nWorkingProcessors, n_k, nElements, nEachProcessor);
     fflush(stdout);
   }
   
@@ -530,12 +530,12 @@ long runInelasticScattering(
       
       /* Figure out (iside, idelta, ie) */
       particleID = lostParticles[ip][6];
-      ie = particleID/n_delta;
-      idelta = particleID%n_delta;
+      ie = particleID/n_k;
+      idelta = particleID%n_k;
       delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos);
       if (idelta==0)
         badDeltaMin ++;
-      if (idelta==(n_delta-1))
+      if (idelta==(n_k-1))
         nDeltaMax ++;
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
@@ -565,13 +565,13 @@ long runInelasticScattering(
     free_czarray_2d((void**)coord, 1, COORDINATES_PER_PARTICLE);
     free_czarray_2d((void**)lostParticles, nEachProcessor*nWorkingProcessors, COORDINATES_PER_PARTICLE+1);	 
     if (badDeltaMin) {
-      printf("*** Warning: in %ld cases, a particle that was on the inner ring (delta = delta_min) was lost.\n",
+      printf("*** Warning: in %ld cases, a particle that was on the inner ring (delta = k_min) was lost.\n",
              badDeltaMin);
-      printf("*** You should reduce delta_min and re-rerun.\n");
+      printf("*** You should reduce k_min and re-rerun.\n");
     }
     if (nDeltaMax!=nElements*2) {
       printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements*2-nDeltaMax);
-      printf("*** You should increase delta_max and re-rerun.\n");
+      printf("*** You should increase k_max and re-rerun.\n");
     }
   }
   else {
