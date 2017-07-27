@@ -169,7 +169,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define TUNE_FOOTPRINT 64
 #define ION_EFFECTS 65
 #define ELASTIC_SCATTERING 66
-#define N_COMMANDS      67
+#define INELASTIC_SCATTERING 67
+#define N_COMMANDS      68
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -184,7 +185,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint", "ion_effects", "elastic_scattering",
+    "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -254,7 +255,8 @@ char *description[N_COMMANDS] = {
     "chaos_map                        command to perform chaos map analysis",
     "tune_footprint                   command to perform tune footprint tracking",
     "ion_effects                      command to set up modeling of ion effects"
-    "elastic_scattering                   determine x', y' aperture from tracking as a function of position in the ring",
+    "elastic_scattering               determine x', y' aperture from tracking as a function of position in the ring",
+    "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -311,6 +313,9 @@ void finishCorrectionOutput();
 void setupElasticScattering(NAMELIST_TEXT *nltext, RUN *run, VARY *control, long twissFlag);
 long runElasticScattering(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 void finishElasticScattering();
+void setupInelasticScattering(NAMELIST_TEXT *nltext, RUN *run, VARY *control, long twissFlag);
+long runInelasticScattering(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
+void finishInelasticScattering();
 
 int main(argc, argv)
 int argc;
@@ -1386,6 +1391,7 @@ char **argv;
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
     case ELASTIC_SCATTERING:
+    case INELASTIC_SCATTERING:
     case CHAOS_MAP:
       switch (commandCode) {
       case FIND_APERTURE:
@@ -1400,6 +1406,9 @@ char **argv;
         break;
       case ELASTIC_SCATTERING:
         setupElasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
+        break;
+      case INELASTIC_SCATTERING:
+        setupInelasticScattering(&namelist_text, &run_conditions, &run_control, do_twiss_output||twiss_computed);
         break;
       case CHAOS_MAP:
         setupChaosMap(&namelist_text, &run_conditions, &run_control);
@@ -1519,6 +1528,10 @@ char **argv;
           runElasticScattering(&run_conditions, &run_control, &error_control, beamline, 
                            (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
+        case INELASTIC_SCATTERING:
+          runInelasticScattering(&run_conditions, &run_control, &error_control, beamline, 
+                           (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
+          break;
         case CHAOS_MAP:
           doChaosMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
           break;
@@ -1541,6 +1554,9 @@ char **argv;
         break;
       case ELASTIC_SCATTERING:
         finishElasticScattering();
+        break;
+      case INELASTIC_SCATTERING:
+        finishInelasticScattering();
         break;
       case CHAOS_MAP:
         finishChaosMap();
@@ -1575,6 +1591,9 @@ char **argv;
         break;
       case ELASTIC_SCATTERING:
 	printf("Finished elastic scattering.\n");
+        break;
+      case INELASTIC_SCATTERING:
+	printf("Finished inelastic scattering.\n");
         break;
       case CHAOS_MAP:
 	printf("Finished chaos map analysis.\n");

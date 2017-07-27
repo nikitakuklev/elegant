@@ -291,6 +291,11 @@ sliceAnalysis$(OBJ): sliceAnalysis.h
 sliceAnalysis.h: ../sliceAnalysis.nl
 	nlpp -suppressSummaryVariables ../sliceAnalysis.nl sliceAnalysis.h
 
+inelasticScattering$(OBJ): inelasticScattering.h
+
+inelasticScattering.h: ../inelasticScattering.nl
+	nlpp -suppressSummaryVariables ../inelasticScattering.nl inelasticScattering.h
+
 elasticScattering$(OBJ): elasticScattering.h
 
 elasticScattering.h: ../elasticScattering.nl
