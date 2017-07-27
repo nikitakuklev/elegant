@@ -58,7 +58,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None
+\item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
+  lifetime and the distribution of lost particles. This is only available in the parallel version.
 \end{itemize}
 
 \subsection{Changes Specific to Parallel Version}
@@ -66,6 +67,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
 reported by Jonas Bj{\"o}rklund.
+\item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
+  lifetime and the distribution of lost particles. This is only available in the parallel version.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}

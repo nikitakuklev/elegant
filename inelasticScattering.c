@@ -32,9 +32,71 @@ static long iElementName, iElementOccurence, iElementType, ideltaOrig, isOrig,
 MPI_Win lastPassWin;
 static long lastPassWorker=-1;
 
-double computeScatteringDelta(long idelta, long iside)
+long nMomAp = 0;
+double *sMomAp = NULL, *deltaNeg = NULL, *deltaPos = NULL;
+
+double computeScatteringDelta(long idelta, long iside, double s)
 {
+  long is;
+
+  if (nMomAp>=2) {
+    for (is=0; is<nMomAp; is++) {
+      if (sMomAp[is]==s) {
+        if (iside)
+          delta_min = -deltaNeg[is];
+        else 
+          delta_min =  deltaPos[is];
+        break;
+      }
+      if (sMomAp[is]>s) {
+        if (is==0)
+          bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
+        if (iside)
+          delta_min = -(deltaNeg[is-1] + (deltaNeg[is]-deltaNeg[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]));
+        else 
+          delta_min =   deltaPos[is-1] + (deltaPos[is]-deltaPos[is-1])/(sMomAp[is]-sMomAp[is-1])*(s-sMomAp[is-1]);
+        break;
+      }
+    }
+    if (is==nMomAp) {
+      bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
+    }
+    delta_min *= momentum_aperture_scale;
+  }
+
+  if (delta_min>=delta_max) {
+    bombElegantVA("|delta_min| >= |delta_max| for s=%le m, %s side", s, iside?"negative":"positive");
+  }
+
   return (idelta*((delta_max-delta_min)/n_delta) + delta_min)*(iside ? -1 : 1);
+}
+
+void readMomentumAperture(char *momApFile) 
+{
+  SDDS_DATASET SDDSma;
+  if (!fexists(momApFile))
+      bombElegantVA("%s does not exist",  momApFile);
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSma, momApFile) || !SDDS_ReadPage(&SDDSma)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exitElegant(1);
+  }
+  if (SDDS_CheckColumn(&SDDSma, "s", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSma, "deltaNegative", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSma, "deltaPositive", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
+    SDDS_Bomb((char*)"invalid/missing columns in momentum aperture file: expect s (m), deltaNegative, deltaPositive");
+
+  if ((nMomAp=SDDS_RowCount(&SDDSma))<2)
+    bombElegantVA("Page 1 of %s has only %ld rows",  momApFile, nMomAp);
+  if (!(sMomAp=SDDS_GetColumnInDoubles(&SDDSma, "s")) ||
+      !(deltaNeg=SDDS_GetColumnInDoubles(&SDDSma, "deltaNegative")) ||
+      !(deltaPos=SDDS_GetColumnInDoubles(&SDDSma, "deltaPositive")) ) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exitElegant(1);
+  }
+
+  if (SDDS_ReadPage(&SDDSma)>1)
+    printf("*** Warning: File %s has more than one page---only the first page is used.\n", momApFile);
+ 
 }
   
 static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral)
@@ -84,7 +146,7 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
       id = particleID%(2*n_delta);
       iside = id/n_delta;
       idelta = id%n_delta;
-      coord[ip][5] += computeScatteringDelta(idelta, iside);
+      coord[ip][5] += computeScatteringDelta(idelta, iside, eptr->end_pos);
       nKicksMade++;
     }
 #if MPI_DEBUG
@@ -123,8 +185,14 @@ void setupInelasticScattering(
   /* check for data errors */
   if (!losses)
     bombElegant("no losses filename specified", NULL);
-  if (delta_min >= delta_max)
-    bombElegant("delta_min >= delta_max",  NULL);
+  if (!momentum_aperture) {
+    if (delta_min >= delta_max)
+      bombElegant("delta_min >= delta_max and no momentum_aperture file given",  NULL);
+  } else {
+    if (momentum_aperture_scale<=0)
+      bombElegant("momentum_aperture_scale<=0, which makes no sense",  NULL);
+    
+  }
   if (s_start>=s_end)
     bombElegant("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
@@ -476,7 +544,7 @@ long runInelasticScattering(
       ie = particleID/(2*n_delta);
       iside = id/n_delta;
       idelta = id%n_delta;
-      delta = computeScatteringDelta(idelta, iside);
+      delta = computeScatteringDelta(idelta, iside, elementArray[ie]->end_pos);
       if (idelta==0)
         badDeltaMin ++;
       if (idelta==(n_delta-1))
