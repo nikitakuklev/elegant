@@ -182,10 +182,10 @@ void setupElasticScattering(
   nElements = 0;
 
   losses = compose_filename(losses, run->rootname);
-  sprintf(description, "Slope aperture search");
+  sprintf(description, "Elastic scattering tracking");
 
   if (myid==0) {
-    if (!SDDS_InitializeOutput(&SDDSsa, SDDS_BINARY, 1, description, "momentum aperture",  losses)) {
+    if (!SDDS_InitializeOutput(&SDDSsa, SDDS_BINARY, 1, description, "Elastic scattering aperture",  losses)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
