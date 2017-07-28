@@ -1,0 +1,262 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if [info exists $env(OAG_TOP_DIR)] {
+    set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+} else {
+    set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
+}
+
+APSStandardSetup
+
+set usage {usage: inelasticScatteringAnalysis -tracking <inputFile> -twiss <inputFile> -pressure <inputFile> -output <filename> [-binsize <m>(0.001)] [-verbose 1]}
+set tracking ""
+set twiss ""
+set pressure ""
+set output ""
+set verbose 0
+set binsize 0.001
+set args $argv
+if {[APSStrictParseArguments {tracking twiss pressure output nbins verbose}]} {
+    return -code error "$usage"
+}
+
+foreach arg {tracking twiss pressure output} isOutput {0 0 0 1} {
+    if ![string length [set $arg]] {
+        puts stderr "$usage"
+        exit 1
+    }
+    if $isOutput {
+        if [file exists [set $arg]] {
+            puts stderr "in use: [set $arg]"
+            exit 1
+        }
+    } else {
+        if ![file exists [set $arg]] {
+            puts stderr "not found: [set $arg]"
+            exit 1
+        }
+    }
+}
+
+
+set tmpRoot /tmp/[APSTmpString]
+
+# Set up arrays for known gasses
+# C(gas) = num. of Constituent atom types
+# Z(gas,n) = Z of nth constituent
+# S(gas,n) = num. of atoms of type n
+
+set C(H2) 1
+set Z(H2,1) 1
+set S(H2,1) 2
+
+set C(H2O) 2
+set Z(H2O,1) 1
+set S(H2O,1) 2
+set Z(H2O,2) 8
+set S(H2O,2) 1
+
+set C(CH4) 2
+set Z(CH4,1) 6
+set S(CH4,1) 1
+set Z(CH4,2) 1
+set S(CH4,2) 4
+
+set C(CO) 2
+set Z(CO,1) 6
+set S(CO,1) 1
+set Z(CO,2) 8
+set S(CO,2) 1
+
+set C(CO2) 2
+set Z(CO2,1) 6
+set S(CO2,1) 1
+set Z(CO2,2) 8
+set S(CO2,2) 2
+
+set C(N2) 1
+set Z(N2,1) 7
+set S(N2,1) 2
+
+proc Tsai_f {Z} {
+    set a [expr $Z/137.0]
+    set a2 [expr pow($a,2)]
+    return [expr $a2*(1./(1+$a2) + 0.20206 + $a2*(-0.0369+$a2*(0.0083-$a2*0.002)))]
+}
+
+proc Tsai_Lrad {Z} {
+    switch $Z {
+        1 {
+            return 5.31
+        }
+        2 {
+            return 4.79
+        }
+        3 {
+            return 4.74
+        }
+        4 {
+            return 4.71
+        }
+        default {
+            return [expr log(184.15/pow($Z, 1./3.))]
+        }
+    }
+}
+
+proc Tsai_Lradp {Z} {
+    switch $Z {
+        1 {
+            return 6.144
+        }
+        2 {
+            return 5.621
+        }
+        3 {
+            return 5.805
+        }
+        4 {
+            return 5.924
+        }
+        default {
+            return [expr log(1194./pow($Z, 2./3.))]
+        }
+    }
+}
+
+proc T1 {Z} {
+    return [expr $Z*$Z*([Tsai_Lrad $Z] - [Tsai_f $Z]) + $Z*[Tsai_Lradp $Z]]
+}
+
+proc T2 {Z} {
+    return [expr $Z*$Z+$Z]
+}
+
+set knownSpeciesList [array names C]
+
+set columnList [exec sddsquery -column $pressure]
+set speciesList ""
+foreach column $columnList {
+    if [lsearch -exact $knownSpeciesList $column]!=-1 {
+        lappend speciesList $column
+    } else {
+        if [string compare $column s]!=0 {
+            puts stderr "Warning: unexpected column \"$column\" in $pressureData"
+        }
+    }
+}
+
+if [llength $speciesList]==0 {
+    return -code error "no known gas species ([join $knownSpeciesList ,]) identified in list of columns: [join $columnList ,]"
+}
+
+# Check units of pressure values
+array set units [exec sddsquery -column $pressure -appendunits=bare]
+foreach species $speciesList {
+    if [lsearch -exact [list nT nTorr] $units($species)]==-1 {
+        return -code error "units for $species are not valid: $units($species); use nT or nTorr"
+    }
+}
+
+# Compute Ag and Bg factors for each species
+# Ag = 16*alpha*re^2*c/(3*L) Sum(a=1,Cg) S(g,a)*T1(Z(g,a))
+# Bg = 4*alpha*re^2*c/(9*L) Sum(a=1,Cg) S(g,a)*T2(Z(g,a)),
+set re 2.81794092e-15
+set c 2.99792458e+08
+set alpha [expr 1/137.038073869629898]
+set PConv [expr 133.3224*1e-9]
+set rateSumOpt "-define=column,rate,0 "
+set T [expr 20+273.15]
+set G1Sum 0
+set G2Sum 0
+foreach g $speciesList {
+    set Ag 0
+    set Bg 0
+    for {set a 1} {$a<=$C($g)} {incr a} {
+        set Ag [expr $Ag+$S($g,$a)*[T1 $Z($g,$a)]]
+        set Bg [expr $Bg+$S($g,$a)*[T2 $Z($g,$a)]]
+    }
+    set Ag [expr $Ag*16*$alpha*pow($re,2)*$c/3]
+    set Bg [expr $Bg*4**$alpha*pow($re,2)*$c/9]
+    lappend G1List "-define=column,g1$g,$g $PConv * kb_mks / $T / $Ag *,units=1/s" 
+    lappend G2List "-define=column,g2$g,$g $PConv * kb_mks / $T / $Bg *,units=1/s" 
+    set G1Sum "$G1Sum g1$g +"
+    set G2Sum "$G2Sum g2$g +"
+}
+APSAddToTempFileList $tmpRoot.pres $tmpRoot.presi
+eval exec sddsprocess $pressure $tmpRoot.pres $G1List $G2List \
+    "{-define=col,G1,$G1Sum,units=1/s}" "{-define=col,G2,$G2Sum,units=1/s}"
+
+# Ensure that twiss file is nicely ordered with no duplicate points
+APSAddToTempFileList $tmpRoot.twi $tmpRoot.twi1
+exec sddssort $twiss $tmpRoot.twi -col=s -unique
+exec removeBackDrifts -input $tmpRoot.twi -output $tmpRoot.twi1
+
+# Find unique scattering locations
+exec sddssort $tracking $tmpRoot.sloc -column=s -unique
+
+# Find endpoints surrounding each scattering point
+exec sddsprocess $tmpRoot.sloc $tmpRoot.endp \
+    "-define=col,sStart,i_row 0        == ? s : i_row 1 - &s \[ s + 2 / $,units=m" \
+    "-define=col,sEnd,i_row n_rows 1 - == ? s : i_row 1 + &s \[ s + 2 / $,units=m" 
+set sLocList [exec sdds2stream $tmpRoot.endp -column=s]    
+set sStartList [exec sdds2stream $tmpRoot.endp -column=sStart]
+set sEndList [exec sdds2stream $tmpRoot.endp -column=sEnd]
+
+set LTotal [exec sddsprocess $twiss -pipe=out -process=s,max,%sMax | sdds2stream -pipe -parameter=sMax]
+set LSim [expr [lindex $sEndList end]-[lindex $sStartList 0]]
+set LFactor [expr $LTotal/$LSim]
+if $verbose {
+    puts stderr "LSim=$LSim, LTotal=$LTotal"
+}
+
+set index 0
+foreach sLoc $sLocList sStart $sStartList sEnd $sEndList {
+    set s0 [expr $sLoc-1e-9]
+    set s1 [expr $sLoc+1e-9]
+    if $verbose {
+        puts stderr "** sScat=$sLoc, s:\[$sStart, $sEnd]\n"
+    }
+    
+    # Interpolate pressure with 1mm spacing so that integrals are not likely to be zero when
+    # only a single data point is in the interval
+    set dataList [exec sddsinterp $tmpRoot.pres -pipe=out -column=s,G1,G2 -equispaced=0.001,$sStart,$sEnd -above=wrap \
+                    | sddsprocess -pipe -process=G?,ave,%sAve \
+                    | sdds2stream -pipe -parameter=G1Ave,G2Ave]
+    set G1Ave [lindex $dataList 0]
+    set G2Ave [lindex $dataList 1]
+    if $verbose {
+        puts stderr "s:\[$sStart, $sEnd] : <G1>=$G1Ave, <G2>=$G2Ave"
+    }
+    exec sddsprocess $tracking $tracking.proc[format %06d $index] \
+      -filter=col,s,$s0,$s1 \
+      -define=parameter,G1Ave,$G1Ave -define=parameter,G2Ave,$G2Ave \
+      -process=s,ave,s \
+      "-define=column,k,delta abs" \
+      -process=k,spread,kSpread \
+      "-define=parameter,dk,kSpread n_rows 1 - /" \
+      "-define=parameter,L,$sEnd $sStart -,units=m" \
+      "-define=column,rate1,k rec 1 - 3 k * 4 / + dk * G1Ave * L *,units=1/s" \
+      "-define=column,rate2,k rec 1 - dk * G2Ave * L *,units=1/s" \
+      "-define=column,rate,rate1 rate2 +" \
+      "-process=rate,sum,rateSum" 
+
+    lappend trackingList $tracking.proc[format %06d $index] 
+    incr index
+}
+
+if $verbose {
+    puts stderr "generating $output"
+}
+eval exec sddscombine $trackingList -pipe=out \
+    | tee $output.full \
+    | sddscombine -pipe -merge \
+    | sddshist -pipe=in $output.his -data=sLost -weight=rate -size=$binsize -norm=sum -cdf
+
+eval exec sddscombine $trackingList -collapse -pipe=out \
+  | sddsprocess -pipe=in $output -process=rateSum,sum,rateTotal \
+  "{-define=parameter,lifetime,rateTotal rec 3600 /,units=h}" 
+
+eval file delete $trackingList
