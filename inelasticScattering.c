@@ -172,6 +172,8 @@ void setupInelasticScattering(
   if (processNamelist(&inelastic_scattering, nltext)==NAMELIST_ERROR)
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &inelastic_scattering);
+  if (momentum_aperture && strlen(momentum_aperture))
+    readMomentumAperture(momentum_aperture);
 
   if (run->concat_order!=0)
     bombElegant("at present, elastic_scattering is incompatible with concatenation", NULL);
