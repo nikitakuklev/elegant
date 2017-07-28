@@ -41,6 +41,8 @@ double computeScatteringDelta(long idelta, double s)
   double kinv, kinv_max, kinv_min;
 
   if (nMomAp>=2) {
+    if (momentum_aperture_periodicity>0)
+      s = fmod(s, momentum_aperture_periodicity);
     for (is=0; is<nMomAp; is++) {
       if (sMomAp[is]==s) {
         k_min = -deltaNeg[is];
@@ -54,7 +56,10 @@ double computeScatteringDelta(long idelta, double s)
       }
     }
     if (is==nMomAp) {
-      bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
+      if (momentum_aperture_periodicity) {
+        k_min = -(deltaNeg[is-1] + (deltaNeg[0]-deltaNeg[is-1])/(sMomAp[0]+momentum_aperture_periodicity-sMomAp[is-1])*(s-sMomAp[is-1]));
+      } else 
+        bombElegantVA("momentum aperture file doesn't cover the range of scattering locations, e.g., s=%le m", s);
     }
     k_min *= momentum_aperture_scale;
   }
@@ -539,9 +544,9 @@ long runInelasticScattering(
       ie = particleID/n_k;
       idelta = particleID%n_k;
       delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos);
-      if (idelta==0)
-        badDeltaMin ++;
       if (idelta==(n_k-1))
+        badDeltaMin ++;
+      if (idelta==0)
         nDeltaMax ++;
       if (!SDDS_SetRowValues(&SDDSsa, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iRow++,
                              iElementName, elementArray[ie]->name,
@@ -575,8 +580,8 @@ long runInelasticScattering(
              badDeltaMin);
       printf("*** You should reduce k_min and re-rerun.\n");
     }
-    if (nDeltaMax!=nElements*2)
-      printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements*2-nDeltaMax);
+    if (nDeltaMax!=nElements)
+      printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements-nDeltaMax);
   }
   else {
     free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
