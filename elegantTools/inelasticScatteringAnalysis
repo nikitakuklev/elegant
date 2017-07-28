@@ -179,7 +179,7 @@ foreach g $speciesList {
         set Bg [expr $Bg+$S($g,$a)*[T2 $Z($g,$a)]]
     }
     set Ag [expr $Ag*16*$alpha*pow($re,2)*$c/3]
-    set Bg [expr $Bg*4**$alpha*pow($re,2)*$c/9]
+    set Bg [expr $Bg* 4*$alpha*pow($re,2)*$c/9]
     lappend G1List "-define=column,g1$g,$g $PConv * kb_mks / $T / $Ag *,units=1/s" 
     lappend G2List "-define=column,g2$g,$g $PConv * kb_mks / $T / $Bg *,units=1/s" 
     set G1Sum "$G1Sum g1$g +"

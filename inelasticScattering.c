@@ -38,6 +38,7 @@ double *sMomAp = NULL, *deltaNeg = NULL;
 double computeScatteringDelta(long idelta, double s)
 {
   long is;
+  double kinv, kinv_max, kinv_min;
 
   if (nMomAp>=2) {
     for (is=0; is<nMomAp; is++) {
@@ -58,11 +59,14 @@ double computeScatteringDelta(long idelta, double s)
     k_min *= momentum_aperture_scale;
   }
 
-  if (k_min>=k_max) {
-    bombElegantVA("|k_min| >= |k_max| for s=%le m", s);
+  if (k_min>=1) {
+    bombElegantVA("|k_min| >= 1 for s=%le m", s);
   }
 
-  return -(idelta*((k_max-k_min)/n_k) + k_min);
+  kinv_max = 1/k_min;
+  kinv_min = 1;
+  kinv = (kinv_max-kinv_min)/n_k*idelta + kinv_min;
+  return -1/kinv;
 }
 
 void readMomentumAperture(char *momApFile) 
@@ -176,8 +180,8 @@ void setupInelasticScattering(
   if (!losses)
     bombElegant("no losses filename specified", NULL);
   if (!momentum_aperture) {
-    if (k_min >= k_max)
-      bombElegant("k_min >= k_max and no momentum_aperture file given",  NULL);
+    if (k_min >= 1)
+      bombElegant("k_min >= 1",  NULL);
   } else {
     if (momentum_aperture_scale<=0)
       bombElegant("momentum_aperture_scale<=0, which makes no sense",  NULL);
@@ -569,10 +573,8 @@ long runInelasticScattering(
              badDeltaMin);
       printf("*** You should reduce k_min and re-rerun.\n");
     }
-    if (nDeltaMax!=nElements*2) {
+    if (nDeltaMax!=nElements*2)
       printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements*2-nDeltaMax);
-      printf("*** You should increase k_max and re-rerun.\n");
-    }
   }
   else {
     free_czarray_2d((void**)coord, nEachProcessor, COORDINATES_PER_PARTICLE);
