@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ $# -ne 1 ] ; then
+    echo "Usage: ILMatrixSetup <rootname>"
+    exit 1
+fi
+
+sddsprocess $1.twi -pipe=out -process=s,max,sMax -process=*eta*,first,%s0 \
+            | sddscollapse -pipe \
+            | sddsconvert -pipe -delete=col,Stage,SVN* \
+            | sddstranspose -pipe -oldColumnNames=ColumnName \
+            | sddsconvert -pipe -rename=col,Column=ParameterValue \
+            | sddsxref ILMatrix.xref -nowarning -pipe -match=ColumnName -take=* \
+            | tee ILMatrix.param \
+            | sddsprintout -pipe -col
