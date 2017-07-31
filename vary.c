@@ -461,7 +461,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       _control->i_step++;
       step_incremented = 1;
     }
-    printf("tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
+    printf("tracking step %ld\n", _control->i_step);
     fflush(stdout);
     log_exit("vary_beamline.4");
     log_exit("vary_beamline");
