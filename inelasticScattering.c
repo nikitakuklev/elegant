@@ -70,7 +70,7 @@ double computeScatteringDelta(long idelta, double s)
 
   kinv_max = 1/k_min;
   kinv_min = 1;
-  kinv = (kinv_max-kinv_min)/n_k*idelta + kinv_min;
+  kinv = (kinv_max-kinv_min)/(n_k-1)*idelta + kinv_min;
   return -1/kinv;
 }
 
