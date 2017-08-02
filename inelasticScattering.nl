@@ -11,7 +11,7 @@
     STRING log_file = NULL;
     double k_min = 0.001;
     STRING momentum_aperture = NULL;
-    double momentum_aperture_scale = 0.85;
+    double momentum_aperture_scale = 0.95;
     double momentum_aperture_periodicity = 0;
     long n_k = 101;
     double s_start = 0;
