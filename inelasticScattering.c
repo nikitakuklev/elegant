@@ -578,7 +578,10 @@ long runInelasticScattering(
     if (badDeltaMin) {
       printf("*** Warning: in %ld cases, a particle that was on the inner ring (delta = k_min) was lost.\n",
              badDeltaMin);
-      printf("*** You should reduce k_min and re-rerun.\n");
+      if (momentum_aperture)
+	  printf("*** You should reduce momentum_aperture_scale and re-rerun.\n");
+      else
+	  printf("*** You should reduce k_min and re-rerun.\n");
     }
     if (nDeltaMax!=nElements)
       printf("*** Warning: %ld particles on the outer delta ring were not lost.\n", nElements-nDeltaMax);
