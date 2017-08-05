@@ -476,20 +476,20 @@ void trackWithIonEffects
           exitElegant(1);
 #endif
         }
-      }
       
-      if (np>max_np) {
-        if (part)
-          free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-        part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
-        time = (double*)trealloc(time, sizeof(*time)*np);
-        max_np = np;
-      }
-      if (np>0) {
-        for (ip=0; ip<np; ip++) {
-          time[ip] = time0[ipBunch[iBunch][ip]];
-          memcpy(part[ip], part0[ipBunch[iBunch][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
-        }
+	if (np>max_np) {
+	  if (part)
+	    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
+	  part = (double**)czarray_2d(sizeof(double), np, COORDINATES_PER_PARTICLE);
+	  time = (double*)trealloc(time, sizeof(*time)*np);
+	  max_np = np;
+	}
+	if (np>0) {
+	  for (ip=0; ip<np; ip++) {
+	    time[ip] = time0[ipBunch[iBunch][ip]];
+	    memcpy(part[ip], part0[ipBunch[iBunch][ip]], sizeof(double)*COORDINATES_PER_PARTICLE);
+	  }
+	}
       }
     }
 
@@ -1072,13 +1072,16 @@ void trackWithIonEffects
 
   if (time0) 
     free(time0);
+  if (time && time!=time0)
+    free(time);
+  if (part && part!=part0)
+    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (ibParticle) 
     free(ibParticle);
   if (ipBunch)
     free_czarray_2d((void**)ipBunch, nBunches, np0);
   if (npBunch)
     free(npBunch);
-  if (speciesCentroid)
   if (speciesCentroid)
     free_zarray_2d((void**)speciesCentroid, ionProperties.nSpecies, 2);
   if (speciesSigma)
