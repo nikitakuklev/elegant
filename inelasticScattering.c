@@ -27,7 +27,7 @@ void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, l
 
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
-static long iElementName, iElementOccurence, iElementType, ideltaOrig, isOrig,
+static long iElementName, iElementOccurence, iElementType, ideltaOrig, idkOrig, isOrig,
   ixLost, iyLost, ideltaLost, isLost;
 MPI_Win lastPassWin;
 static long lastPassWorker=-1;
@@ -35,7 +35,7 @@ static long lastPassWorker=-1;
 long nMomAp = 0;
 double *sMomAp = NULL, *deltaNeg = NULL;
 
-double computeScatteringDelta(long idelta, double s)
+double computeScatteringDelta(long idelta, double s, double *dk)
 {
   long is;
   double kinv, kinv_max, kinv_min;
@@ -71,6 +71,21 @@ double computeScatteringDelta(long idelta, double s)
   kinv_max = 1/k_min;
   kinv_min = 1;
   kinv = (kinv_max-kinv_min)/(n_k-1)*idelta + kinv_min;
+  if (dk) {
+    double kinv1, kinv2;
+    if (idelta==(n_k-1)) {
+      kinv1 = (kinv_max-kinv_min)/(n_k-1)*(idelta-1) + kinv_min;
+      *dk = fabs((1/kinv1 - 1/kinv)/2);
+    } else if (idelta==0) {
+      kinv1 = (kinv_max-kinv_min)/(n_k-1)*(idelta+1) + kinv_min;
+      *dk = fabs((1/kinv1 - 1/kinv)/2);
+    } else {
+      kinv1 = (kinv_max-kinv_min)/(n_k-1)*(idelta-1) + kinv_min;
+      kinv2 = (kinv_max-kinv_min)/(n_k-1)*(idelta+1) + kinv_min;
+      *dk = (fabs(1/kinv1-1/kinv)+fabs(1/kinv-1/kinv2))/2;
+    }
+  }
+
   return -1/kinv;
 }
 
@@ -145,7 +160,7 @@ static void deltaOffsetFunction(double **coord, long np, long pass, long i_elem,
         continue;
       }
       idelta = particleID%n_k;
-      coord[ip][5] += computeScatteringDelta(idelta, eptr->end_pos);
+      coord[ip][5] += computeScatteringDelta(idelta, eptr->end_pos, NULL);
       nKicksMade++;
     }
 #if MPI_DEBUG
@@ -217,6 +232,7 @@ void setupInelasticScattering(
         (iElementOccurence=SDDS_DefineColumn(&SDDSsa, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
         (isOrig=SDDS_DefineColumn(&SDDSsa, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ideltaOrig=SDDS_DefineColumn(&SDDSsa, "delta", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (idkOrig=SDDS_DefineColumn(&SDDSsa, "dk", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixLost=SDDS_DefineColumn(&SDDSsa, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iyLost=SDDS_DefineColumn(&SDDSsa, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ideltaLost=SDDS_DefineColumn(&SDDSsa, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -523,6 +539,7 @@ long runInelasticScattering(
     }
     
     for (ip=iRow=0; ip<nLost; ip++) {
+      double dk;
       if (verbosity>5) {
         printf("Processing ip=%ld, particleID=%ld\n", ip, (long)lostParticles[ip][6]);
         fflush(stdout);
@@ -543,7 +560,7 @@ long runInelasticScattering(
       particleID = lostParticles[ip][6];
       ie = particleID/n_k;
       idelta = particleID%n_k;
-      delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos);
+      delta = computeScatteringDelta(idelta, elementArray[ie]->end_pos, &dk);
       if (idelta==(n_k-1))
         badDeltaMin ++;
       if (idelta==0)
@@ -554,6 +571,7 @@ long runInelasticScattering(
                              iElementOccurence, elementArray[ie]->occurence, 
                              isOrig, elementArray[ie]->end_pos,
                              ideltaOrig, delta,
+                             idkOrig, dk,
                              ixLost, lostParticles[ip][0],
                              iyLost, lostParticles[ip][2],
                              ideltaLost, lostParticles[ip][5],
