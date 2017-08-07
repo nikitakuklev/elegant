@@ -43,17 +43,21 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None
+\item A bug in the \verb|IONEFFECTS| element was reported by J. Cavley (APS): when only one bunch was present,
+  the electron beam coordinates were zeroed out. 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item A bug in the \verb|ion_effects| command was reported by J. Cavley (APS): when only one bunch was present,
+  the electron beam coordinates were zeroed out. 
+\item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
+  reported by Jonas Bj{\"o}rklund. This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -62,19 +66,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   lifetime and the distribution of lost particles. This is only available in the parallel version.
 \end{itemize}
 
-\subsection{Changes Specific to Parallel Version}
-
-\begin{itemize}
-\item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
-reported by Jonas Bj{\"o}rklund.
-\item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
-  lifetime and the distribution of lost particles. This is only available in the parallel version.
-\end{itemize}
-
 \subsection{Changes Specific to the GPU Version}
 
 {\bf The GPU version continues to be an alpha release and contains bugs.}
-Users are encouraged to test results against the serial or parallel versions.
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
 
 \begin{itemize}
 \item None.
@@ -83,7 +78,8 @@ Users are encouraged to test results against the serial or parallel versions.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None
+\item Added the \verb|inelasticScatteringAnalysis| script, a companion to the \verb|inelastic_scattering| command in
+  \verb|Pelegant|. It allows computing the lifetime and local loss rates from inelastic gas scattering.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
