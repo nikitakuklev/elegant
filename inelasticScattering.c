@@ -27,7 +27,7 @@ void gatherLostParticles(double ***lostParticles, long *nLost, long nSurvived, l
 
 static long nElements;
 static ELEMENT_LIST **elementArray = NULL;
-static long iElementName, iElementOccurence, iElementType, ideltaOrig, idkOrig, isOrig,
+static long iElementName, iElementOccurence, iElementType, ideltaOrig, idkOrig, ikOrig, isOrig,
   ixLost, iyLost, ideltaLost, isLost;
 MPI_Win lastPassWin;
 static long lastPassWorker=-1;
@@ -232,6 +232,7 @@ void setupInelasticScattering(
         (iElementOccurence=SDDS_DefineColumn(&SDDSsa, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
         (isOrig=SDDS_DefineColumn(&SDDSsa, "s", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ideltaOrig=SDDS_DefineColumn(&SDDSsa, "delta", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (ikOrig=SDDS_DefineColumn(&SDDSsa, "ik", NULL, NULL, "k index (0 corresponds to k=kmin)", NULL, SDDS_DOUBLE, 0))<0 ||
         (idkOrig=SDDS_DefineColumn(&SDDSsa, "dk", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (ixLost=SDDS_DefineColumn(&SDDSsa, "xLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iyLost=SDDS_DefineColumn(&SDDSsa, "yLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -571,6 +572,7 @@ long runInelasticScattering(
                              iElementOccurence, elementArray[ie]->occurence, 
                              isOrig, elementArray[ie]->end_pos,
                              ideltaOrig, delta,
+			     ikOrig, n_k-1-idelta,
                              idkOrig, dk,
                              ixLost, lostParticles[ip][0],
                              iyLost, lostParticles[ip][2],
