@@ -8,9 +8,12 @@ extern "C" {
 double *expansion_coefficients(long n);
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
+				      double systematicMultFactor,
                                       MULTIPOLE_DATA *edgeMult,
                                       MULTIPOLE_DATA *randomMult,
+				      double randomMultFactor,
                                       MULTIPOLE_DATA *steeringMult,
+				      double steeringMultFactor,
                                       double KmL, long rootOrder);
 
 void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);

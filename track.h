@@ -944,9 +944,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 26
+#define N_KSEXT_PARAMS 29
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 43
+#define N_KQUAD_PARAMS 46
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1918,6 +1918,7 @@ typedef struct {
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
+    double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
     long integration_order, sqrtOrder, isr, isr1Particle;
     /* for internal use */
     long multipolesInitialized;
@@ -1972,6 +1973,7 @@ typedef struct {
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
+    double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
     long integration_order, sqrtOrder, isr, isr1Particle;
     long edge1_effects, edge2_effects;
     double lEffective;

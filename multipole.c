@@ -773,9 +773,12 @@ long multipole_tracking2(
     if (!kquad->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
                                        &(kquad->systematicMultipoleData),
+				       kquad->systematicMultipoleFactor,
                                        &(kquad->edgeMultipoleData),
                                        &(kquad->randomMultipoleData),
+				       kquad->randomMultipoleFactor,
                                        &(kquad->steeringMultipoleData),
+				       kquad->steeringMultipoleFactor,
                                        KnL, 1);
       kquad->totalMultipolesComputed = 1;
     }
@@ -832,9 +835,12 @@ long multipole_tracking2(
     if (!ksext->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
                                        &(ksext->systematicMultipoleData),
+				       ksext->systematicMultipoleFactor,
                                        &(ksext->edgeMultipoleData),
                                        &(ksext->randomMultipoleData),
+				       ksext->randomMultipoleFactor,
                                        &(ksext->steeringMultipoleData),
+				       ksext->steeringMultipoleFactor,
                                        KnL, 2);
       ksext->totalMultipolesComputed = 1;
     }
@@ -881,9 +887,12 @@ long multipole_tracking2(
     if (!koct->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
                                        &(koct->systematicMultipoleData),
+				       1.0,
                                        NULL,
                                        &(koct->randomMultipoleData),
+				       1.0,
                                        NULL,
+				       1.0,
                                        KnL, 3);
       koct->totalMultipolesComputed = 1;
     }
@@ -1611,9 +1620,12 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
 
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
+				      double systematicMultFactor,
                                       MULTIPOLE_DATA *edgeMult,
                                       MULTIPOLE_DATA *randomMult,
+				      double randomMultFactor,
                                       MULTIPOLE_DATA *steeringMult,
+				      double steeringMultFactor,
                                       double KmL, long rootOrder)
 {
   long i;
@@ -1691,9 +1703,9 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
    * of the magnet with strength KmL
    */
   if (systematicMult->orders)
-    sFactor = KmL/dfactorial(rootOrder)*ipow(systematicMult->referenceRadius, rootOrder);
+    sFactor = KmL/dfactorial(rootOrder)*ipow(systematicMult->referenceRadius, rootOrder)*systematicMultFactor;
   if (randomMult->orders)
-    rFactor = KmL/dfactorial(rootOrder)*ipow(randomMult->referenceRadius, rootOrder);
+    rFactor = KmL/dfactorial(rootOrder)*ipow(randomMult->referenceRadius, rootOrder)*randomMultFactor;
   for (i=0; i<totalMult->orders; i++) {
     totalMult->KnL[i] = totalMult->JnL[i] = 0;
     if (systematicMult->orders) {
@@ -1713,7 +1725,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
      * JnL = bn*n!/r^n*(KmL*r^m/m!), where m is the root order 
      * of the magnet with strength KmL
      */
-    sFactor = KmL/dfactorial(rootOrder)*ipow(edgeMult->referenceRadius, rootOrder);
+    sFactor = KmL/dfactorial(rootOrder)*ipow(edgeMult->referenceRadius, rootOrder)*systematicMultFactor;
     for (i=0; i<edgeMult->orders; i++) {
       edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
       edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];
@@ -1724,9 +1736,11 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     /* same for steering multipoles, but compute KnL/theta and JnL/theta (in this case m=0) */
     for (i=0; i<steeringMult->orders; i++) {
       steeringMult->KnL[i] = 
-        -1*steeringMult->an[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i]);
+        -1*steeringMult->an[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i])*
+	steeringMultFactor;
       steeringMult->JnL[i] = 
-        -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i]);
+        -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i])*
+	steeringMultFactor;
     }
   }
 

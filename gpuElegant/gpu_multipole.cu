@@ -651,9 +651,12 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (!kquad->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
                                        &(kquad->systematicMultipoleData),
+				       kquad->systematicMultipoleFactor,
                                        &(kquad->edgeMultipoleData),
                                        &(kquad->randomMultipoleData),
+				       kquad->randomMultipoleFactor,
                                        &(kquad->steeringMultipoleData),
+				       kquad->steeringMultipoleFactor,
                                        KnL, 1);
       kquad->totalMultipolesComputed = 1;
     }
@@ -710,9 +713,12 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (!ksext->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
                                        &(ksext->systematicMultipoleData),
+				       ksext->systematicMultipoleFactor,
                                        &(ksext->edgeMultipoleData),
                                        &(ksext->randomMultipoleData),
+				       ksext->randomMultipoleFactor,
                                        &(ksext->steeringMultipoleData),
+				       ksext->steeringMultipoleFactor,
                                        KnL, 2);
       ksext->totalMultipolesComputed = 1;
     }
@@ -759,9 +765,12 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     if (!koct->totalMultipolesComputed) {
       computeTotalErrorMultipoleFields(&(koct->totalMultipoleData),
                                        &(koct->systematicMultipoleData),
+				       1.0,
                                        NULL,
                                        &(koct->randomMultipoleData),
+				       1.0,
                                        NULL,
+				       1.0,
                                        KnL, 3);
       koct->totalMultipolesComputed = 1;
     }
