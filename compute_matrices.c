@@ -171,12 +171,17 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
   double Pref_input;
   long i, j, k;
   MATRIX *Ms;
-  
+#if USE_MPI
+  long notSinglePart_saved;
+  notSinglePart_saved = notSinglePart;
+  notSinglePart = 0;
+#endif
+
   if (!elem) {
     fputs("error: NULL element pointer passed to accumulateRadiationMatrices", stdout);
     abort();
   }
-  
+
   initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
   initialize_matrices(M2=tmalloc(sizeof(*M2)), order);
   initialize_matrices(Ml1=tmalloc(sizeof(*Ml1)), 1);
@@ -323,6 +328,9 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
     free_matrices(Ml2); tfree(Ml2); Ml2 = NULL;
   }
   m_free(&Ms);
+#if USE_MPI
+  notSinglePart = notSinglePart_saved;
+#endif
   return M1;
 }
 
