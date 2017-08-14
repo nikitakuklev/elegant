@@ -44,7 +44,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item A bug in the \verb|IONEFFECTS| element was reported by J. Cavley (APS): when only one bunch was present,
-  the electron beam coordinates were zeroed out. 
+  the electron beam coordinates were zeroed out.  
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -52,7 +52,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item A bug in the \verb|ion_effects| command was reported by J. Cavley (APS): when only one bunch was present,
   the electron beam coordinates were zeroed out. 
 \item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
-  reported by Jonas Bj{\"o}rklund. This was fixed.
+  reported by Jonas Bj{\"o}rklund. 
+\item The \verb|use_moments_output_values| qualifier of the \verb|bunched_beam| command did not work for the parallel
+  version. 
 \end{itemize}
 
 \subsection{New and Modified Elements}
