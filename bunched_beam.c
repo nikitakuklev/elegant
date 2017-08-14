@@ -449,7 +449,7 @@ long new_bunched_beam(
         fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
                                   y_beam_type, distribution_cutoff[1], centroid+2);
       }
-      printf("generating bunch %ld.%ld\n", control->i_step, control->i_vary);
+      printf("generating bunch %ld\n", control->i_step);
       fflush(stdout);
 #if USE_MPI
         if (firstIsFiducial && beamCounter==1) {
@@ -1322,6 +1322,9 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
   long ip, i, j;
   double Mm[6][6], ptemp[6];
   gsl_matrix *M;
+
+  if (np<=0)
+    return np;
 
   /* Generate gaussian-distributed, uncoupled particle coordinates */
   for (i=0; i<3; i++) {
