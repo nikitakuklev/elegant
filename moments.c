@@ -422,7 +422,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   for (i=0; i<6; i++) {
     long j;
     for (j=0; j<6; j++)
-      savedFinalMoments[i][j] = elast->sigmaMatrix->sigma[sigmaIndex3[i][j]];
+      savedFinalMoments[i][j] = beamline->elem.sigmaMatrix->sigma[sigmaIndex3[i][j]];
   }
 
   return 1;
@@ -865,15 +865,11 @@ long getMoments(double M[6][6], long matched0, long equilibrium0, long radiation
 {
   long i, j;
 
-  if (!momentsInitialized) {
-    printf("Error: moments calculation not initialized. Did you set output_at_each_step=1?\n");
-    return 0;
-  }
-  if (matched0!=matched || equilibrium0!=equilibrium || radiation0!=radiation) {
-    printf("Error: moments calculation not run with matched=%ld, equilibrium=%ld, and radiation=%ld\n",
-           matched0, equilibrium0, radiation0);
-    return 0;
-  }
+  if (!momentsInitialized)
+    bombElegant("Error: moments calculation not initialized. Did you set output_at_each_step=1?\n", NULL);
+  if (matched0!=matched || equilibrium0!=equilibrium || radiation0!=radiation)
+    bombElegantVA("Error: moments calculation not run with matched=%ld, equilibrium=%ld, and radiation=%ld\n",
+                  matched0, equilibrium0, radiation0);
 
   for (i=0; i<6; i++)
     for (j=0; j<6; j++)
