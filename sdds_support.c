@@ -1098,14 +1098,21 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #if SDDS_MPI_IO
     if (USE_MPI) {
       double p_sum_total, gamma_sum_total, sum_total, error_sum_total;
-      MPI_Allreduce (&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      double outBuffer[5], inBuffer[5];
+      inBuffer[0] = sum;
+      inBuffer[1] = error_sum;
+      inBuffer[2] = p_sum;
+      inBuffer[3] = gamma_sum;
+      inBuffer[4] = npCount;
+      MPI_Allreduce (&inBuffer[0], &outBuffer[0], 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      sum_total = outBuffer[0];
+      error_sum_total = outBuffer[1];
+      p_sum_total = outBuffer[2];
+      gamma_sum_total = outBuffer[3];
+      npCount_total = outBuffer[4];
 #ifdef USE_KAHAN
-      MPI_Allreduce (&error_sum, &error_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       sum_total += error_sum_total;
 #endif
-      MPI_Allreduce (&p_sum, &p_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce (&gamma_sum, &gamma_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);     
-      MPI_Allreduce (&npCount, &npCount_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if (npCount_total)
 	tc = sum_total/npCount_total;
       else
