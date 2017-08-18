@@ -1898,7 +1898,8 @@ The proper use of this command can be confusing.  A typical sequence will be as 
 \begin{itemize}
 \item type: setup/major action command.
 \item function: find the aperture in (x, y) space for an accelerator.
-\item can use parallel resources (\verb|Pelegant|)
+\item N.B.: can use parallel resources (\verb|Pelegant|). Recommend using n-line mode with \verb|nx|*\verb|n_splits|
+  greater than the number of cores (e.g., a factor of 10).
 \end{itemize}
 
 \begin{verbatim}
