@@ -70,6 +70,10 @@ else
     endif
   endif
 endif
+ifeq ($(EPICS_HOST_ARCH),linux-phi)
+  CC = $(MPI_PATH)mpicc -cc=icc -xMIC-AVX512  $(USER_MPI_FLAGS)   
+  CCC = $(MPI_PATH)mpicxx -cxx=icpc -xMIC-AVX512 $(USER_MPI_FLAGS)
+endif
     # memory debugging with totalview
     # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
     # SYS_PROD_LIBS_Linux += tvheap
@@ -299,6 +303,14 @@ endif
 
 
 INTEL_MKL=0
+ifeq ($(EPICS_HOST_ARCH),linux-phi)
+ INTEL_MKL_LIB = $(MKLROOT)/lib/intel64
+ INTEL_MKL_INCLUDE = $(MKLROOT)/include/
+ INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ ifneq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL = 1
+ endif
+endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
