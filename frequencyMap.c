@@ -271,6 +271,11 @@ long doFrequencyMap(
                 fflush(fpd);
               }
 #endif
+              secondTune[0] = firstTune[0];
+              secondTune[1] = firstTune[1];
+              secondAmplitude[0] = firstAmplitude[0];
+              secondAmplitude[1] = firstAmplitude[1];
+              diffusion = 0;
               if (!badPoint) {
                 memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
                 if (!computeTunesFromTracking(secondTune, secondAmplitude,
@@ -280,9 +285,6 @@ long doFrequencyMap(
                     secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                   if (verbosity && !USE_MPI)
                     printf("Problem with particle %ld tune determination\n", ip);
-                  secondTune[0] = secondTune[1] = -1;
-                  //secondTune[1] = secondTune[1] = -1;
-                  diffusion = 0;
                   if (!full_grid_output) {
                     /* If the particle is lost, it will not show in the frequency map */ 
                     if (SDDS_fmap.n_rows)
