@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas>\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
+set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas> \[-scale 0\] \nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
 set twiss ""
 set location ""
 set output ""
@@ -20,8 +20,9 @@ set St 0
 set nx 0
 set ny 0
 set nz 0
+set scale 0
 set args $argv
-if {[APSStrictParseArguments {twiss location particles pages output ex ey Sdelta St nx ny nz}] || ![string length $twiss] || ![string length $output]} {
+if {[APSStrictParseArguments {twiss scale location particles pages output ex ey Sdelta St nx ny nz}] || ![string length $twiss] || ![string length $output]} {
     return -code error "$usage"
 }
 if ![file exists $twiss] {
@@ -63,9 +64,8 @@ if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$parti
              | sddsprocess -pipe \
              "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
 	       -process=\[abcd\]*,stand,%sStDev,weight=particleID \
-	       "-redefine=col,%s,%s %sStDev /,select=a*" \
-	       "-redefine=col,%s,%s %sStDev /,select=b*" \
-	       "-redefine=col,%s,%s %sStDev /,select=\[cd\]" \
+	       "-redefine=col,%s,$scale 0 == ? 1 : %s %sStDev / $ %s *,select=\[ab\]*" \
+	       "-redefine=col,%s,$scale 0 == ? 1 : %s %sStDev / $ %s *,select=\[cd\]" \
              "-define=parameter,ex,$ex,units=m" \
              "-define=parameter,ey,$ey,units=m" \
              "-define=parameter,St,$St,units=s" \
