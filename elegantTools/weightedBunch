@@ -7,8 +7,9 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: weightedBunch -twiss <filename> -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas>\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
+set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas>\nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
 set twiss ""
+set location ""
 set output ""
 set particles 0
 set pages 1
@@ -20,7 +21,7 @@ set nx 0
 set ny 0
 set nz 0
 set args $argv
-if {[APSStrictParseArguments {twiss particles pages output ex ey Sdelta St nx ny nz}] || ![string length $twiss] || ![string length $output]} {
+if {[APSStrictParseArguments {twiss location particles pages output ex ey Sdelta St nx ny nz}] || ![string length $twiss] || ![string length $output]} {
     return -code error "$usage"
 }
 if ![file exists $twiss] {
@@ -39,8 +40,14 @@ foreach item {ex ey Sdelta St nx ny nz} {
 
 set tmpRoot [APSTmpString]
 APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
-exec sddsprocess $twiss $tmpRoot.1 -process=beta?,first,%s0 -process=eta*,first,%s0 \
-  -process=alpha?,first,%s0 -clip=1,0,invert
+if [string length $elementName] {
+    exec sddsprocess $twiss $tmpRoot.1 -match=col,ElementName=$elementName \
+        -process=beta?,first,%s0 -process=eta*,first,%s0 \
+        -process=alpha?,first,%s0 -clip=1,0,invert
+} else {
+    exec sddsprocess $twiss $tmpRoot.1 -process=beta?,first,%s0 -process=eta*,first,%s0 \
+        -process=alpha?,first,%s0 -clip=1,0,invert
+}
 
 exec sddssequence -pipe=out -define=z -sequence=begin=-1,end=1,n=1001 | sddsprocess -pipe=in $tmpRoot.2 -define=col,P,1
 
