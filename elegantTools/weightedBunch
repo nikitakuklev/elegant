@@ -40,8 +40,8 @@ foreach item {ex ey Sdelta St nx ny nz} {
 
 set tmpRoot [APSTmpString]
 APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
-if [string length $elementName] {
-    exec sddsprocess $twiss $tmpRoot.1 -match=col,ElementName=$elementName \
+if [string length $location] {
+    exec sddsprocess $twiss $tmpRoot.1 -match=col,ElementName=$location \
         -process=beta?,first,%s0 -process=eta*,first,%s0 \
         -process=alpha?,first,%s0 -clip=1,0,invert
 } else {
