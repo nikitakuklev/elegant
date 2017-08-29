@@ -43,6 +43,12 @@ W1: WATCH,FILENAME=''output.w1''
 only a single file would be produced, containing output from the last instance
 only.
 
-N.B.: confusion sometimes occurs about some of the quantities related
-to the {\tt s} coordinate in this file when in parameter mode.  Please
-see Section \ref{sec:longitCoord} above.
+Notes: 
+\begin{enumerate}
+\item Confusion sometimes occurs about some of the quantities related
+  to the {\tt s} coordinate in this file when in parameter mode.  Please
+  see Section \ref{sec:longitCoord} above.
+\item This element can adversely affect parallel efficiency. Use of the
+  \verb|START_PASS|, \verb|END_PASS|, \verb|INTERVAL|,  and \verb|FLUSH_INTERVAL|
+  options can help reduce the impact. Also, particle output is the most expensive, by far.
+\end{enumerate}
