@@ -894,7 +894,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     i = variables->n_variables;
     variables->varied_quan_value[i] = 0;   /* end-of-optimization indicator */
     control->i_step = 0;
-    optim_func_flags = FINAL_SUMS_ONLY + INHIBIT_FILE_OUTPUT + SILENT_RUNNING;
+    optim_func_flags = FINAL_SUMS_ONLY + INHIBIT_FILE_OUTPUT + SILENT_RUNNING + OPTIMIZING;
 
     if (!optimization_data->UDFcreated) {
         char UDFname[100];
