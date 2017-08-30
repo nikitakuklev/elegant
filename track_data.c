@@ -1243,8 +1243,8 @@ PARAMETER stray_param[N_STRAY_PARAMS] = {
 CSBEND csbend_example;
 /* canonically-integrated sector bending magnet physical parameters */
 PARAMETER csbend_param[N_CSBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csbend_example.angle), NULL, 0.0, 0, "bend angle"},
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"K3", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.k3), NULL, 0.0, 0, "geometric octupole strength"},
