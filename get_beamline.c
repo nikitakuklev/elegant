@@ -269,6 +269,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 ((DRIFT*)eptr->p_elem)->length = length;
                 */
             }
+            eptr->ignore = 0;
 	    if (ignoreElement(eptr->name, eptr->type)) {
 	      printf("Ignoring %s\n", eptr->name);
 	      eptr->ignore = 1;

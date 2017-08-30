@@ -243,6 +243,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
 
   log_entry("fill_elem");
   eptr->end_pos = eptr->flags = 0;
+  eptr->ignore = 0;
 
     if ((eptr->type = type)>=N_TYPES || type<=0) {
         printf("unknown element type %ld in fill_elem()\n", type);
