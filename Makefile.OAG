@@ -548,7 +548,7 @@ meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 pgapack_DIR = $(EPICS_EXTENSIONS_LIB)
 lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 
-elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
+elegant_SRCS = 	ignoreElements.c alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
 		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \
 		compute_centroids.c compute_matrices.c concat_beamline.c concat_mat.c counter.c \
 		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c \
@@ -573,7 +573,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 
-elegantto_SRCS = 	elegantto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c convert_to_mad8.c \
+elegantto_SRCS = ignoreElements.c elegantto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c convert_to_mad8.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
 		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
 		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \

@@ -269,6 +269,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 ((DRIFT*)eptr->p_elem)->length = length;
                 */
             }
+	    if (ignoreElement(eptr->name, eptr->type)) {
+	      printf("Ignoring %s\n", eptr->name);
+	      eptr->ignore = 1;
+	    }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
               printf("element %s conflicts with line with same name\n", eptr->name);
               exitElegant(1);

@@ -264,8 +264,7 @@ typedef struct element_list {
     char *part_of;     /* name of lowest-level line that this element is part of */
     struct element_list *pred, *succ;
     long divisions;    /* if element was subdivided, how many times */
-    short firstOfDivGroup;
-
+    short firstOfDivGroup, ignore;
     } ELEMENT_LIST;
 
 typedef struct {
@@ -3184,6 +3183,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define CLOSED_ORBIT_TRACKING    0x04000UL
 #define ALLOW_MPI_ABORT_TRACKING 0x08000UL
 #define RESET_RF_FOR_EACH_STEP   0x10000UL
+#define OPTIMIZING               0x20000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2
@@ -4179,6 +4179,11 @@ long elementTransmutation(char *name, long type) ;
 void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
                             LINE_LIST *beamline);
 
+void addIgnoreElementsSpec(char *name, char *type, char *exclude);
+void clearIgnoreElementsSpecs();
+long ignoreElement(char *name, long type);
+void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
+			    LINE_LIST *beamline);
 
 void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
 void addSCSpec(char *name, char *type, char *exclude);

@@ -70,6 +70,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
   lifetime and the distribution of lost particles. This is only available in the parallel version.
+\item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
+  in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}

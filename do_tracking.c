@@ -748,6 +748,10 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+      if (eptr->ignore && !(flags&(TEST_PARTICLES+CLOSED_ORBIT_TRACKING+OPTIMIZING))) {
+	eptr = eptr->succ;
+	continue;
+      }
 #ifdef DEBUG_CRASH 
       printMessageAndTime(stdout, "do_tracking checkpoint 1: ");
       printf("element %s#%ld, %ld particles\n", eptr->name, eptr->occurence, nToTrack);
@@ -1155,7 +1159,7 @@ long do_tracking(
                 bombElegantVA("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign. Specified value is %g\n", charge->charge);
 	      break;
 	    case T_MARK:
-	      if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
+	      if ((flags&OPTIMIZING) && ((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
 		/*
 		  if (beamline->flags&BEAMLINE_TWISS_WANTED) {
 		  if (!(beamline->flags&BEAMLINE_TWISS_DONE))

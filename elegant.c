@@ -170,7 +170,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define ION_EFFECTS 65
 #define ELASTIC_SCATTERING 66
 #define INELASTIC_SCATTERING 67
-#define N_COMMANDS      68
+#define IGNORE_ELEMENTS 68
+#define N_COMMANDS      69
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -185,7 +186,7 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering",
+    "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements"
   } ;
 
 char *description[N_COMMANDS] = {
@@ -257,6 +258,7 @@ char *description[N_COMMANDS] = {
     "ion_effects                      command to set up modeling of ion effects"
     "elastic_scattering               determine x', y' aperture from tracking as a function of position in the ring",
     "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
+    "ignore_elements                  declare that elements with certain names and types should be ignored in tracking"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1743,6 +1745,11 @@ char **argv;
       if (run_setuped)
         bombElegant("transmute_elements must precede run_setup", NULL);
       setupTransmuteElements(&namelist_text, &run_conditions, beamline);
+      break;
+    case IGNORE_ELEMENTS:
+      if (run_setuped)
+        bombElegant("ignore_elements must precede run_setup", NULL);
+      setupIgnoreElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:
       if (run_setuped)

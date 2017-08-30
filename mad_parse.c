@@ -390,6 +390,7 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
     eptr->matrix = NULL;
     eptr->flags = PARAMETERS_ARE_STATIC;
     eptr->type = elem->type;
+    eptr->ignore = elem->ignore;
     log_exit("copy_named_element");
     }
 
@@ -511,6 +512,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     e1->flags   = 0;
     e1->matrix  = NULL;
     e1->type    = e2->type;
+    e1->ignore  = e2->ignore;
     e1->p_elem  = tmalloc(entity_description[e1->type].structure_size);
     e1->p_elem0 = tmalloc(entity_description[e1->type].structure_size);
     copy_p_elem(e1->p_elem, e2->p_elem, e1->type);
