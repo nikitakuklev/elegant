@@ -2196,10 +2196,14 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.
-	\item This command is rarely needed, but can provide improved {\em parallel} performance in cases where large numbers
+	\item This command can provide improved {\em parallel} performance in cases where large numbers
           of non-transforming elements (e.g., \verb|MARK| or \verb|MONI| elements) exist in a beamline.
-          Using the \verb|show_element_timing| flag in \verb|run_setup| can allow determining if this 
+          (These elements can impact performance because \verb|elegant| checks particles against aperture
+          limits after {\em every} element.)
+          Using the \verb|show_element_timing| flag in \verb|run_setup| can help determine if this
           will help.
+        \item This command cannot be used if \verb|centroid| or \verb|sigma| output is requested in
+          \verb|run_setup|.
 	\end{itemize}
 \end{itemize}
 

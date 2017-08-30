@@ -1749,6 +1749,9 @@ char **argv;
     case IGNORE_ELEMENTS:
       if (run_setuped)
         bombElegant("ignore_elements must precede run_setup", NULL);
+      if ((run_conditions.sigma && strlen(run_conditions.sigma))
+          || (run_conditions.centroid && strlen(run_conditions.centroid)))
+        bombElegant("ignore_elements cannot be given if centroid or sigma is requested in run_setup", NULL);
       setupIgnoreElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:

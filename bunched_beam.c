@@ -673,7 +673,7 @@ long track_beam(
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING
-                         +RESET_RF_FOR_EACH_STEP))|
+                         +RESET_RF_FOR_EACH_STEP+OPTIMIZING))|
 		       ALLOW_MPI_ABORT_TRACKING,
                        firstIsFiducial && control->i_step==1 ? 1 : control->n_passes, 
                        0, &(output->sasefel), &(output->sliceAnalysis),
