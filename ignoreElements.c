@@ -18,6 +18,11 @@ typedef struct {
 static IGNORE_ELEMENT_SPEC *ignoreElementsSpec = NULL;
 static long ignoreElementsSpecs = 0;
 
+long countIgnoreElementsSpecs()
+{
+  return ignoreElementsSpecs;
+}
+
 void addIgnoreElementsSpec(char *name, char *type, char *exclude)
 {
   if (!(ignoreElementsSpec 

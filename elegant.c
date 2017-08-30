@@ -747,6 +747,13 @@ char **argv;
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 
+      if (countIgnoreElementsSpecs()!=0) {
+        if (run_conditions.centroid && strlen(run_conditions.centroid))
+          bombElegant("Can't request centroid output if ignore_elements command is in force", NULL);
+        if (run_conditions.sigma && strlen(run_conditions.sigma))
+          bombElegant("Can't request sigma output if ignore_elements command is in force", NULL);
+      }
+
       if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
         resetApertureData(&(run_conditions.apertureData)); 
 
@@ -1749,9 +1756,6 @@ char **argv;
     case IGNORE_ELEMENTS:
       if (run_setuped)
         bombElegant("ignore_elements must precede run_setup", NULL);
-      if ((run_conditions.sigma && strlen(run_conditions.sigma))
-          || (run_conditions.centroid && strlen(run_conditions.centroid)))
-        bombElegant("ignore_elements cannot be given if centroid or sigma is requested in run_setup", NULL);
       setupIgnoreElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:
