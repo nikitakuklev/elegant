@@ -59,6 +59,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   diffusion for particles that are lost.
 \item The \verb|parameters| output file from the \verb|run_setup| command incorrectly reported the length and angle
   of \verb|CSBEND| elements when element division was invoked. This was reported by V. Sajaev (APS).
+\item The \verb|amplification_factors| command now respects \verb|link_elements| commands.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -74,6 +75,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   lifetime and the distribution of lost particles. This is only available in the parallel version.
 \item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
   in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
+\item The \verb|link_elements| command can now create the source element name by editing the target name.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -2570,6 +2572,7 @@ during computations.
     STRING exclude = NULL;
     STRING item = NULL;
     STRING source = NULL;
+    STRING source_from_target_edit = NULL;
     STRING source_position = "before";
     STRING mode = "dynamic";
     STRING equation = NULL;
@@ -2586,6 +2589,9 @@ during computations.
  the element is excluded from the link.
 \item \verb|item| --- The parameter that will be modified.
 \item \verb|source| --- The name of the elements to be linked to.
+\item \verb|source_from_target_edit| --- If given and if \verb|source| is not given, 
+  an editing command to create the name of the elements to be linked to from the name of the target.
+  Uses the syntax of the {\tt editstring} program.
 \item \verb|source_position| --- May be one of ``first'', ``before'', ``after'', 
 ``adjacent'', ``nearest'', or ``same-occurrence''.
 \item \verb|mode| --- May be either ``dynamic'' or ``static''.  A dynamic link

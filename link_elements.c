@@ -84,6 +84,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     char **targetList;
     ELEMENT_LIST *t_context, *s_context, **eptr, *eptr1;
     double dz_min, dz;
+    char source_buffer[16384];
 #if DEBUG
     long i;
 #endif
@@ -120,8 +121,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         bombElegant("link target not named", NULL);
     if (!item)
         bombElegant("link item not named", NULL);
-    if (!source)
-        bombElegant("link source not named", NULL);
+    if (!source && !source_from_target_edit)
+        bombElegant("link source not named and source_from_target_edit not given", NULL);
     if (!equation)
         bombElegant("link equation not given", NULL);
     if (!source_position || (src_position_code=match_string(source_position, src_position_name, N_SRC_POSITIONS, 0))<0)
@@ -143,10 +144,20 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       fflush(stdout);
       exitElegant(1);
     }
-    if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
-      printf("error: cannot make link with source element %s--not in beamline\n", source);
-      fflush(stdout);
-      exitElegant(1);
+    if (source) {
+      if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
+        printf("error: cannot make link with source element %s--not in beamline\n", source);
+        fflush(stdout);
+        exitElegant(1);
+      }
+    } else {
+      strcpy(source_buffer, t_context->name);
+      edit_string(source_buffer, source_from_target_edit);
+      if (!(s_context=find_element(source_buffer, &s_context, &(beamline->elem)))) {
+        printf("error: cannot make link with source element %s--not in beamline\n", source_buffer);
+        fflush(stdout);
+        exitElegant(1);
+      }
     }
 
     targets = 0;
@@ -190,7 +201,13 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       /* copy the basic data */
       cp_str(links->target_name+n_links, target);
       cp_str(links->item+n_links, item);
-      cp_str(links->source_name+n_links, source);
+      if (source)
+        cp_str(links->source_name+n_links, source);
+      else {
+        strcpy(source_buffer, t_context->name);
+        edit_string(source_buffer, source_from_target_edit);
+        cp_str(links->source_name+n_links, source_buffer);
+      }
       cp_str(links->equation+n_links, equation);
       links->source_position[n_links] = src_position_code;
       links->flags[n_links] = link_mode_flag[mode_code];
@@ -254,9 +271,15 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       }
 
       /* make the list of pointers to sources */
+      if (source)
+        strcpy(source_buffer, source);
+      else {
+        strcpy(source_buffer, t_context->name);
+        edit_string(source_buffer, source_from_target_edit);
+      }
       if (iTarget) {
         s_context = NULL;
-        if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
+        if (!(s_context=find_element(source_buffer, &s_context, &(beamline->elem)))) {
           printf("error: cannot make link with source element %s--not in beamline\n", source);
           fflush(stdout);
           exitElegant(1);
@@ -268,7 +291,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         while (n_sources<n_targets) {
           eptr1 = NULL;
           s_context = NULL;
-          while (find_element(source, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
             if (s_context->occurence==links->target_elem[n_links][n_sources]->occurence) {
               eptr1 = s_context;
               break;
@@ -276,7 +299,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           }
           if (!eptr1) {
             printf("error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
+                    source_buffer, n_sources, target);
             fflush(stdout);
             exitElegant(1);
           }
@@ -289,7 +312,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           dz_min = DBL_MAX;
           eptr1 = NULL;
           s_context = NULL;
-          while (find_element(source, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
             if ((dz = fabs(s_context->end_pos-links->target_elem[n_links][n_sources]->end_pos))<dz_min) {
               eptr1 = s_context;
               dz_min = dz;
@@ -297,11 +320,15 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           }
           if (!eptr1) {
             printf("error: no %s element is found near the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
+                    source_buffer, n_sources, target);
             fflush(stdout);
             exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
+          if (source_from_target_edit) {
+            strcpy(source_buffer, t_context->name);
+            edit_string(source_buffer, source_from_target_edit);
+          }
         }
       }
       else if (src_position_code==SRC_POSITION_ADJACENT) {
@@ -318,17 +345,21 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           }
           if (!eptr1) {
             printf("error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
+                    source_buffer, n_sources, target);
             fflush(stdout);
             exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
+          if (source_from_target_edit) {
+            strcpy(source_buffer, t_context->name);
+            edit_string(source_buffer, source_from_target_edit);
+          }
         }
       }
       else if (src_position_code==SRC_POSITION_BEFORE) {
         if (links->target_elem[n_links][0]->end_pos<s_context->end_pos) {
           printf("error: there is no %s element before the first %s element--can't link as requested\n",
-                  source, target);
+                  source_buffer, target);
           fflush(stdout);
           exitElegant(1);
         }
@@ -345,27 +376,31 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
             }
             else
               break;
-          } while (find_element(source, &s_context, &(beamline->elem)));
+          } while (find_element(source_buffer, &s_context, &(beamline->elem)));
           if (!eptr1) {
             printf("error: no %s element is found before the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
+                    source_buffer, n_sources, target);
             fflush(stdout);
             exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
           s_context = eptr[n_sources-1];
+          if (source_from_target_edit) {
+            strcpy(source_buffer, t_context->name);
+            edit_string(source_buffer, source_from_target_edit);
+          }
         }
       }
       else if (src_position_code==SRC_POSITION_AFTER) {
         if (links->target_elem[n_links][0]->end_pos>=s_context->end_pos) {
           /* search for first source element after first target element */
-          while (find_element(source, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
             if (links->target_elem[n_links][0]->end_pos<s_context->end_pos)
               break;
           }
           if (!s_context) {
             printf("error: no %s element after the first %s element--can't link as requested\n",
-                    source, target);
+                    source_buffer, target);
             fflush(stdout);
             exitElegant(1);
           }
@@ -374,33 +409,41 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         n_sources = 1;
         while (n_sources<n_targets) {
           s_context = links->target_elem[n_links][n_sources-1];
-          while (find_element(source, &s_context, &(beamline->elem))) {
+          while (find_element(source_buffer, &s_context, &(beamline->elem))) {
             if (s_context->end_pos>links->target_elem[n_links][n_sources]->end_pos)
               break;
           }
           if (!s_context) {
             printf("error: no %s element is found after the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
+                    source_buffer, n_sources, target);
             fflush(stdout);
             exitElegant(1);
           }
           eptr[n_sources++] = s_context;
+          if (source_from_target_edit) {
+            strcpy(source_buffer, t_context->name);
+            edit_string(source_buffer, source_from_target_edit);
+          }
         }
       } else if (src_position_code==SRC_POSITION_FIRST) {
         n_sources = 0;
         while (n_sources<n_targets) {
           eptr1 = NULL;
           s_context = NULL;
-          if (find_element(source, &s_context, &(beamline->elem))) {
+          if (find_element(source_buffer, &s_context, &(beamline->elem))) {
               eptr1 = s_context;
           }
           if (!eptr1) {
             printf("error: no %s element--can't link %s as requested\n",
-                    source, target);
+                    source_buffer, target);
             fflush(stdout);
             exitElegant(1);
           }
           eptr[n_sources++] = eptr1;
+          if (source_from_target_edit) {
+            strcpy(source_buffer, t_context->name);
+            edit_string(source_buffer, source_from_target_edit);
+          }
         }
       }
       links->source_elem[n_links] = eptr;
@@ -426,7 +469,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 {
     long i_link, i_elem, i_item, matrices_changed;
     long elem_type, data_type, param;
-    double value;
+    double presentValue, value;
     ELEMENT_LIST **targ, **sour;
     char *p_elem;
     short lengthChanged = 0;
@@ -510,6 +553,22 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 
             rpn_clear();
             /* push original value onto stack */
+            presentValue = HUGE_VAL;
+            switch (data_type) {
+            case IS_DOUBLE:
+              presentValue = *((double*)(p_elem+entity_description[elem_type].parameter[param].offset));
+              break;
+            case IS_LONG:
+              presentValue = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
+              break;
+            case IS_SHORT:
+              presentValue = *((short*)(p_elem+entity_description[elem_type].parameter[param].offset));
+              break;
+            case IS_STRING:
+            default:
+              bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
+              exitElegant(1);
+            }
             if (verbosity>1)
                 printf("prior value is %.15g for %s#%ld.%s at z=%.15gm\n",
                         links->baseline_value[i_link][i_elem], 
@@ -523,41 +582,43 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
               value = links->maximum[i_link];
             if (value<links->minimum[i_link])
               value = links->minimum[i_link];
-            if (verbosity>0)
+            if (value!=presentValue) {
+              if (verbosity>0)
                 printf("asserting value %.15g for %s#%ld.%s at z=%.15gm\n",
-                    value, links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], targ[i_elem]->end_pos);
-                fflush(stdout);
-            if (entity_description[elem_type].flags&HAS_LENGTH && 
-                entity_description[elem_type].parameter[param].offset==0)
-              lengthChanged = 1;
-            switch (data_type) {
-                case IS_DOUBLE:
-                    *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
-                    break;
-                case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      nearestInteger(value);
-                    break;
-                case IS_SHORT:
-                    *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      nearestInteger(value);
-                    break;
-                case IS_STRING:
-                default:
-                    bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
-                    exitElegant(1);
-                }
-            if (flags&LINK_ELEMENT_DEFINITION) 
+                       value, links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], targ[i_elem]->end_pos);
+              fflush(stdout);
+              if (entity_description[elem_type].flags&HAS_LENGTH && 
+                  entity_description[elem_type].parameter[param].offset==0)
+                lengthChanged = 1;
+              switch (data_type) {
+              case IS_DOUBLE:
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
+                break;
+              case IS_LONG:
+                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                  nearestInteger(value);
+                break;
+              case IS_SHORT:
+                *((short*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                  nearestInteger(value);
+                break;
+              case IS_STRING:
+              default:
+                bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
+                exitElegant(1);
+              }
+              if (flags&LINK_ELEMENT_DEFINITION) 
                 change_defined_parameter_values(&targ[i_elem]->name, &param, &targ[i_elem]->type, &value, 1);
-            if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
+              if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
                 free_matrices(targ[i_elem]->matrix);
                 tfree(targ[i_elem]->matrix);
                 targ[i_elem]->matrix = NULL;
                 compute_matrix(targ[i_elem], run, NULL);
                 matrices_changed++;
-                }
+              }
             }
         }
+    }
 #if DEBUG
     print_line(stdout, beamline);
 #endif

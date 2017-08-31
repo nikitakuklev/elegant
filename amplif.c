@@ -42,7 +42,10 @@ void compute_amplification_factors(
   CORMON_DATA *CM=NULL;
   //STEERING_LIST *SL=NULL;
   long changed;
-  
+  ELEMENT_LINKS *links;
+
+  links = beamline->links;
+
   log_entry("compute_amplification_factors");
 
   if (!one_part)
@@ -305,6 +308,7 @@ void compute_amplification_factors(
       }
       compute_matrix(eptr, run, NULL);
     }
+    assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
 
     if (correct->mode!=-1) {
       if (!do_correction(correct, run, beamline, NULL, NULL, 0, INITIAL_CORRECTION+NO_OUTPUT_CORRECTION))
@@ -342,6 +346,7 @@ void compute_amplification_factors(
       }
       compute_matrix(eptr, run, NULL);
     }
+    assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
 
     /* put correctors back to zero */
     if (beamline->elem_recirc)

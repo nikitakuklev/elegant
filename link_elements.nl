@@ -16,6 +16,7 @@
     STRING exclude = NULL;
     STRING item = NULL;
     STRING source = NULL;
+    STRING source_from_target_edit = NULL;
     STRING source_position = NULL;
     STRING mode = NULL;
     STRING equation = NULL;
