@@ -7,7 +7,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 
 APSStandardSetup
 
-set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas> \[-scale 0\] \nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
+set usage "usage: weightedBunch -twiss <filename> \[-location <elementName>\] -output <filename> -particles <number> \[-pages <num>(1)\] -ex <meters> -ey <meters> -Sdelta <fraction> -St <seconds> -nx <num-sigmas> -ny <num-sigmas> -nz <num-sigmas> \[-scale 1\] \nCreates an input file for tracking in elegant with uniformly distributed particles assigned gaussian weights in the particleID column."
 set twiss ""
 set location ""
 set output ""
@@ -64,8 +64,8 @@ if [catch {exec sddssampledist $tmpRoot.2 -pipe=out -samples=[expr $pages*$parti
              | sddsprocess -pipe \
              "-define=column,particleID,a sqr ap sqr +  b sqr + bp sqr +  c sqr +  d sqr + -2 / exp 2 30 pow * 1 + ,type=long" \
 	       -process=\[abcd\]*,stand,%sStDev,weight=particleID \
-	       "-redefine=col,%s,$scale 0 == ? 1 : %s %sStDev / $ %s *,select=\[ab\]*" \
-	       "-redefine=col,%s,$scale 0 == ? 1 : %s %sStDev / $ %s *,select=\[cd\]" \
+	       "-redefine=col,%s,$scale 0 == ? 1 : 1 %sStDev / $ %s *,select=\[ab\]*" \
+	       "-redefine=col,%s,$scale 0 == ? 1 : 1 %sStDev / $ %s *,select=\[cd\]" \
              "-define=parameter,ex,$ex,units=m" \
              "-define=parameter,ey,$ey,units=m" \
              "-define=parameter,St,$St,units=s" \
