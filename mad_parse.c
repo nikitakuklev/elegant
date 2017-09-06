@@ -976,7 +976,7 @@ void parse_element(
       if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
         rpn_token = get_token(ptr);
         SDDS_UnescapeQuotes(rpn_token, '"');
-        *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
+        *((short*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
         if (rpn_check_error()) exitElegant(1);
         printf("computed value for %s.%s is %hd\n", 
                 eptr->name, parameter[i].name, 
