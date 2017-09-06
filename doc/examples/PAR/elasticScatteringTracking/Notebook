@@ -1,0 +1,55 @@
+Example of elastic scattering tracking and analysis.
+M. Borland (APS)
+
+===
+Files
+
+PARPressure2015-11-11.sdds
+        Pressure data for several species, provided by J. Carter (APS).
+parTrack.lte
+        Lattice file
+run1.ele
+        File to run elastic_scattering command
+
+===
+Sequence
+
+* Run Pelegant
+mpiexec -np 18 Pelegant run1.ele 
+
+Output files
+       run1.mag --- Magnet profile
+       run1.twi --- Twiss parameters
+       run1.eslog --- Elastic scattering log file
+       run1.eslos --- Elastic scattering los record file
+       run1.esout --- Elastic scattering output (residual electrons) file
+
+* Postprocess
+
+elasticScatteringAnalysis -tracking run1.eslos -twiss run1.twi -output run1.esanal -pressure PARPressure2015-11-11.sdds -verbose 1
+
+Output files
+       run1.esanal --- Main analysis file.
+                   Has lifetime and total scattering rate parameters.
+                   Also has total scattering rate from each scattering location
+       run1.esanal.full --- Full analysis output
+                   Has one page for each scattering location s, giving scattering coordinates (xp, yp, theta, phi),
+                   loss coordinates (xLost, yLost, deltaLost, sLost), and rate.
+       run1.esanal.his --- Histogram of loss rates vs sLost
+
+* Example plots and follow-on analysis
+  * Add column with the log of the rate, then plot scattering angles (xp, yp) for each scattering location, color-coded by rate.
+sddsprocess run1.esanal.full -define=col,logRate,"rate log"
+sddsplot -col=xp,yp run1.esanal.full -split=col=logRate,page -sep=page -order=temperature \
+         -graph=sym,vary=subtype,fill  -title=@s,edit="i/Scattering from s =/ei/m/"
+
+  * Plot lost distribution histogram and cumulative distribution function
+sddsplot -col=sLost,frequency run1.esanal.his 
+sddsplot -col=sLost,sLostCdf run1.esanal.his 
+
+  * Plot rate-weight transverse loss coordinates (we only look at yLost>=0 since tracking is only for phi>=0)
+sddscombine run1.esanal.full -pipe=out -merge \
+            | sddsprocess -pipe -filter=col,yLost,0,1 \
+            | sddshist2d -pipe=in xyHist.h2d -col=xLost,yLost -xparam=100 -yparam=50 -weight=rate
+sddscontour -shade xyHist.h2d -log=1e-12 
+
