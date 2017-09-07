@@ -1389,13 +1389,6 @@ char **argv;
       fflush(stdout);
       break;
     case TUNE_FOOTPRINT:
-      if (!run_setuped || !run_controled)
-        bombElegant("run_setup and run_control must precede tune_footprint namelist", NULL);
-      if (setupTuneFootprint(&namelist_text, &run_conditions, &run_control)) {
-        doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
-        outputTuneFootprint();
-      }
-      break;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
     case MOMENTUM_APERTURE:
@@ -1403,6 +1396,22 @@ char **argv;
     case INELASTIC_SCATTERING:
     case CHAOS_MAP:
       switch (commandCode) {
+        long code;
+      case TUNE_FOOTPRINT:
+        if (!run_setuped || !run_controled)
+          bombElegant("run_setup and run_control must precede tune_footprint namelist", NULL);
+        code = setupTuneFootprint(&namelist_text, &run_conditions, &run_control);
+        if (code==1) {
+          /* immediate output to files */
+          doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
+          outputTuneFootprint();
+          continue;
+        } else if (code==2) {
+          /* used by optimizer (or other), no output */
+          continue;
+        }
+          /* will compute footprint and output below */
+        break;
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
         if (do_find_aperture) continue;
@@ -1546,6 +1555,7 @@ char **argv;
           break;
         case TUNE_FOOTPRINT:
           doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
+          outputTuneFootprint();
           break;
         }
       }

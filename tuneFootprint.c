@@ -17,6 +17,9 @@
 #include "track.h"
 #include "tuneFootprint.h"
 
+static SDDS_DATASET sddsOut;
+static short fileInitialized = 1;
+
 typedef struct {
   short ix, iy, used;
   double diffusionRate, position[2], nu[2];
@@ -406,8 +409,20 @@ long setupTuneFootprint(
   if (xy_output)
     xy_output = compose_filename(xy_output, run->rootname);
 
+  if (fileInitialized)
+    SDDS_Terminate(&sddsOut);
+  fileInitialized = 0;
+
   tuneFootprintOn = 1;
-  return immediate;
+  if (immediate) {
+    if (!delta_output && !xy_output) 
+      bombElegant("You set immediate=1 but didn't give any output file names", NULL);
+    return 1;
+  }
+  if (!delta_output && !xy_output) {
+    return 2;
+  }
+  return 3;
 }
 
 /* Used to save results of last run for output after optimization */
@@ -891,7 +906,6 @@ void outputTuneFootprint()
 {
   /* Output previously-saved tune footprint data */
   /* For MPI, only the master writes */
-  SDDS_DATASET sddsOut;
   long id, ix, iy, iRow;
   
   if (!tuneFootprintOn)
@@ -901,13 +915,19 @@ void outputTuneFootprint()
 #if USE_MPI
     if (myid==0) {
 #endif
-      if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, delta_output) ||
-          SDDS_DefineColumn(&sddsOut, "delta", "$gd$r", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          !SDDS_WriteLayout(&sddsOut) ||
-          !SDDS_StartPage(&sddsOut, ndelta)) {
+      if (!fileInitialized) {
+        if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, delta_output) ||
+            SDDS_DefineColumn(&sddsOut, "delta", "$gd$r", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            !SDDS_WriteLayout(&sddsOut)) {
+        SDDS_SetError("Problem setting up chromatic tune footprint output file");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        fileInitialized = 1;
+      }
+      if (!SDDS_StartPage(&sddsOut, ndelta)) {
         SDDS_SetError("Problem setting up chromatic tune footprint output file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -925,7 +945,7 @@ void outputTuneFootprint()
         }
         iRow++;
       }
-      if (!SDDS_WriteTable(&sddsOut) || !SDDS_Terminate(&sddsOut)) {
+      if (!SDDS_WriteTable(&sddsOut)) {
           SDDS_SetError("Problem writing chromatic tune footprint output file");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -937,14 +957,20 @@ void outputTuneFootprint()
 #if USE_MPI
     if (myid==0) {
 #endif
-      if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, xy_output) ||
-          SDDS_DefineColumn(&sddsOut, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          !SDDS_WriteLayout(&sddsOut) ||
-          !SDDS_StartPage(&sddsOut, nx*ny)) {
+      if (!fileInitialized) {
+        if (!SDDS_InitializeOutput(&sddsOut, SDDS_BINARY, 0, NULL, NULL, xy_output) ||
+            SDDS_DefineColumn(&sddsOut, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            SDDS_DefineColumn(&sddsOut, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+            !SDDS_WriteLayout(&sddsOut)) {
+          SDDS_SetError("Problem setting up amplitude tune footprint output file");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        fileInitialized = 1;
+      }
+      if (!SDDS_StartPage(&sddsOut, nx*ny)) {
         SDDS_SetError("Problem setting up amplitude tune footprint output file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -966,7 +992,7 @@ void outputTuneFootprint()
           iRow++;
         }
       }
-      if (!SDDS_WriteTable(&sddsOut) || !SDDS_Terminate(&sddsOut)) {
+      if (!SDDS_WriteTable(&sddsOut)) {
           SDDS_SetError("Problem writing amplitude tune footprint output file");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
