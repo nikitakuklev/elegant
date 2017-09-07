@@ -399,16 +399,16 @@ long doMomentumApertureSearch(
 #else
   switch (output_mode) {
   case 1:
-    if ((2*nElem<n_processors) && (myid==0)) {
-      printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resources.\nThe effective number of elements is %ld. The number of processors is %d.\n", 
+    if ((2*nElem)%n_processors!=0 && (myid==0)) {
+      printf("Warning: for best parallel efficiency in output_mode=1, the number of tasks (twice the number of elements) divided by the number of processors should be an integer or slightly below an integer. \nThe number of tasks is %ld. The number of processors is %d.\n", 
              2*nElem, n_processors);
     }    
     break;
   case 2:
     break;
   default:
-    if (nElem<n_processors && (myid==0)) {
-      printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resources.\nThe number of elements is %ld. The number of processors is %d.\n",
+    if (nElem%n_processors!=0 && (myid==0)) {
+      printf("Warning: for best parallel efficiency in output_mode=2, the number of elements divided by the number of processors should be an integer or slightly below an integer. \nThe number of elements is %ld. The number of processors is %d.\n", 
              nElem, n_processors);
     }    
     break;
