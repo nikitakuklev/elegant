@@ -60,6 +60,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|parameters| output file from the \verb|run_setup| command incorrectly reported the length and angle
   of \verb|CSBEND| elements when element division was invoked. This was reported by V. Sajaev (APS).
 \item The \verb|amplification_factors| command now respects \verb|link_elements| commands.
+\item The \verb|tune_footprint| command now optionally runs in major action command mode. The inability to do so
+  was pointed out by Y.-P. Sun (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -4764,8 +4766,13 @@ where
   d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
 \end{equation}
 where $N$ is the number of turns tracked to determine each tune (equal to half of \verb|n_passes|).
-\item \verb|immediate| --- If nonzero, the calculations take place immediately, instead of only during optimization.
-  If you wish to compute Twiss parameters on a closed orbit or after other calculations, be sure to set this control to zero.
+\item \verb|immediate| --- If nonzero, the calculations take place immediately. If zero, then two modes are possible
+  \begin{itemize}
+    \item If you wish to compute parameters on a closed orbit or after other calculations, be sure to set this control to zero
+      and ask for an output file with \verb|xy_output| or \verb|delta_output|.
+    \item If you want to use this command to create quantities for optimization (see below), be sure to set this control to zero
+      and {\em do not} ask for an output file with \verb|xy_output| or \verb|delta_output|.
+  \end{itemize}
 \item \verb|filtered_output| --- If nonzero, output is only provided for particles inside the stable footprint.
 \item \verb|ignore_half_integer| --- If nonzero, half-integer resonances are ignored in determining the tune footprint.
 \end{itemize}
