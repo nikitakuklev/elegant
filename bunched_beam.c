@@ -40,8 +40,6 @@ void fill_longitudinal_structure(LONGITUDINAL *xlongit, double xsigma_dp,
                                  double xemit, double xbeta, double xalpha, double xchirp,
                                  long xbeam_type, double xcutoff,
                                  double *xcentroid);
-void makeBucketAssignments(BEAM *beam, double Po, double frequency);
-int comp_BucketNumbers(const void *coord1, const void *coord2);
 long generateBunchForMoments(double **particle, long np, long symmetrize, 
                              long *haltonID, long haltonOpt, double cutoff);
 
@@ -652,10 +650,6 @@ long track_beam(
 
   if (isSlave || !notSinglePart)
 #endif
-
-  if (control->bunch_frequency) {
-    makeBucketAssignments(beam, p_central, control->bunch_frequency);
-  }
 
 #ifdef DEBUG
 #if USE_MPI
@@ -1271,48 +1265,6 @@ char *brief_number(double x, char *buffer)
     return(buffer);
     }
 #endif
-
-void makeBucketAssignments(BEAM *beam, double Po, double frequency)
-{
-  double tmin, tmax, *time, offset;
-  long ip, bucket, buckets;
-
-  /* Find time coordinate limits for the beam */
-  time = tmalloc(sizeof(*time)*(beam->n_to_track));
-  computeTimeCoordinatesOnly(time, Po, beam->particle, beam->n_to_track);
-  find_min_max(&tmin, &tmax, time, beam->n_to_track);
-  /* Determine how many buckets we will span.  Assumes that the bunch length is << bucket spacing */
-  if ((buckets = (tmax-tmin)*frequency)>(MAX_BUCKETS-1)) {
-    printf("Error: Can't have more than %d buckets at present.", MAX_BUCKETS-1);
-    exitElegant(1);
-  }
-  /* Determine offset to the center of the first bucket. Assumes that the bunch length is << bucket spacing and that
-   * bunches have about the same length
-   */
-  offset = ((tmax-tmin)-buckets/frequency)/2;
-  tmin += offset;
-  for (ip=0; ip<beam->n_to_track; ip++) {
-    /* bucket numbers are 1 or greater */
-    bucket = (time[ip]-tmin)*frequency + 1.5;
-    beam->particle[ip][6] += bucket/(1.0*MAX_BUCKETS);
-  }
-  beam->bunchFrequency = frequency;
-  /* sort particles in bunch order */
-  qsort(beam->particle[0], beam->n_to_track, COORDINATES_PER_PARTICLE*sizeof(double), comp_BucketNumbers);
-}
-
-int comp_BucketNumbers(const void *coord1, const void *coord2)
-{
-  long b1, b2;
-  b1 = MAX_BUCKETS*(((double*) coord1)[6]-floor(((double*) coord1)[6]))+0.5;
-  b2 = MAX_BUCKETS*(((double*) coord2)[6]-floor(((double*) coord2)[6]))+0.5;
-  if (b1<b2)
-    return -1;
-  else if (b1>b2)
-    return  1;
-  else 
-    return 0;
-}
 
 #include "gsl/gsl_linalg.h"
 
