@@ -572,10 +572,10 @@ void gpu_accumulate_beam_sums(
       else     gpuReduceAddAsync(d_timeCoord, npCount, &centroid[i]);
 #else
       if (flags&BEAM_SUMS_EXACTEMIT && (i==1 || i==3))
-        gpuParticleKahanReductionAsync(npCount, &centroid[i], &errorCenn[i],
+        gpuParticleKahanReductionAsync(npCount, &centroid[i], &errorCen[i],
                                        gpuPZmult(d_pz, i));
       if (i<6) gpuKahanAsync(d_particles+particlePitch*i, &centroid[i],
-                             &errorCenn[i], npCount);
+                             &errorCen[i], npCount);
       else     gpuKahanAsync(d_timeCoord, &centroid[i], &errorCen[i], npCount);
 #endif
     }
@@ -751,8 +751,8 @@ void gpu_accumulate_beam_sums(
                   gpuSij(d_center, 0., d_center, 0.));
 	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
 	      gpuParticleKahanReductionAsync(npCount,
-		  &Sijn_p[index], &errorSign,
-                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
+		  &Sijn_p[index], &errorSig[index],
+                  gpuSijn(i, centroid[i], j, centroid[j], d_pz));
 #endif
           }
           else if (isMaster) {
@@ -776,7 +776,7 @@ void gpu_accumulate_beam_sums(
                   Add<double>());
 	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
 	      gpuParticleReductionAsync(npCount, &Sijnarr[i][j],
-		  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
+		  gpuSijn(i, centroid[i], j, centroid[j], d_pz));
 #else
             if (i<6 && j<6)
               gpuParticleKahanReductionAsync(npCount,
@@ -798,8 +798,8 @@ void gpu_accumulate_beam_sums(
                   gpuSij(d_center, 0., d_center, 0.));
 	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
 	      gpuParticleKahanReductionAsync(npCount,
-		  &Sijnarr[i][j], &errorSign,
-                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
+		  &Sijnarr[i][j], &errorSig[j],
+                  gpuSijn(i, centroid[i], j, centroid[j], d_pz));
 #endif
             }
           }
@@ -824,7 +824,7 @@ void gpu_accumulate_beam_sums(
                   Add<double>());
 	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
 	      gpuParticleReductionAsync(npCount, &Sijnarr[i][j],
-		  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
+		  gpuSijn(i, centroid[i], j, centroid[j], d_pz));
 #else
             if (i<6 && j<6)
               gpuParticleKahanReductionAsync(npCount,
@@ -846,8 +846,8 @@ void gpu_accumulate_beam_sums(
                   gpuSij(d_center, 0., d_center, 0.));
 	    if (flags&BEAM_SUMS_EXACTEMIT && i<4 && j<4)
 	      gpuParticleKahanReductionAsync(npCount,
-		  &Sijnarr[i][j], &errorSign,
-                  gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
+		  &Sijnarr[i][j], &errorSig[j],
+                  gpuSijn(i, centroid[i], j, centroid[j], d_pz));
 #endif
         }
       }

@@ -13,7 +13,7 @@ NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda/bin/nvcc /usr/local/
 OBJ = o
 endif
 
-MPI_INCLUDE = $(wildcard /usr/include/mpich-x86_64 )
+MPI_INCLUDE = $(wildcard /usr/include/mpich-3.2-x86_64 )
 
 
 OBJNAMES = gpu_base.$(OBJ) \

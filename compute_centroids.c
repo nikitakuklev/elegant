@@ -534,12 +534,13 @@ void accumulate_beam_sums1(
 #ifdef GPU_VERIFY
     BEAM_SUMS* gpusums = (BEAM_SUMS*) getGpuBeamSums(sums);
     startGpuTimer();
-    gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, startPID, endPID, flags);
+    gpu_accumulate_beam_sums(gpusums, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
     startCpuTimer();
     accumulate_beam_sums1(sums, coord, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
     compareReductionArrays(NULL, NULL, sums, "accumulate_beam_sums");
 #else 
-    gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
+    //gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, startPID, endPID, flags);
+    gpu_accumulate_beam_sums(sums, n_part, p_central, mp_charge, timeValue, tMin, tMax, startPID, endPID, flags);
 #endif /* GPU_VERIFY */
     return;
   }
