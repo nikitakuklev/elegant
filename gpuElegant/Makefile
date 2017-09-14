@@ -9,12 +9,17 @@ ifdef WIN32
 NVCC = nvcc
 OBJ = obj
 else
-NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc))
+NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc /soft/cudatoolkit/6.5.14/bin/nvcc))
 OBJ = o
 endif
 
-MPI_INCLUDE = $(wildcard /usr/include/mpich-3.2-x86_64 )
+MPI_INCLUDE = $(wildcard /usr/include/mpich-3.2-x86_64 /software/mvapich2-intel-psm-1.9.5/include )
 
+CUDA_HARDWARE=52
+#Check if we are on Blues
+ifeq (blogin, $(findstring blogin, $(HOSTNAME)))
+CUDA_HARDWARE=35
+endif
 
 OBJNAMES = gpu_base.$(OBJ) \
 	gpu_bin_time_distribution.$(OBJ) \
@@ -102,7 +107,7 @@ HNAMES = gpu_base.h \
 ifdef WIN32
 CFLAGS = -c -ccbin cl -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-Ox\",\"-DNDEBUG\",\"-MD\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 else
-CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_52,code=sm_52 -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
+CFLAGS = -c -ccbin /usr/bin/cc -m64 -DHAVE_CONFIG_H -DzLib -DHAVE_LAPACK -DLAPACK -DUSE_KAHAN -DIEEE_MATH -DMINIMIZE_MEMORY -DWL=32 -DRPN_SUPPORT -DUNIX -Dlinux -D_X86_64_ -DHAVE_GPU=1 -DUSE_GSL -D_FORCE_INLINES -Xcompiler ,\"-ansi\",\"-pipe\",\"-O3\",\"-DNDEBUG\",\"-msse2\" -Xcompiler ,\"-Wno-write-strings\" --fmad=true --Werror cross-execution-space-call -O3 --use_fast_math --generate-code arch=compute_$(CUDA_HARDWARE),code=sm_$(CUDA_HARDWARE) -DNVCC -I. -I.. -I$(EPICS_EXTENSIONS_INCLUDE) -I$(EPICS_EXTENSIONS)/src/SDDS/lzma
 endif
 
 #CFLAGS += -DCUDA_DEVICE_COUNT=<count>
@@ -210,15 +215,15 @@ mpi_gpu_verify.$(OBJ): gpu_verify.cu $(HCUNAMES) $(HNAMES)
 
 
 elegantto_gpu.$(OBJ): $(ELEGANTTOOBJNAMES)
-	$(NVCC) --gpu-architecture=sm_52 --device-link \
+	$(NVCC) --gpu-architecture=sm_$(CUDA_HARDWARE) --device-link \
 	        $(ELEGANTTOOBJNAMES) --output-file elegantto_gpu.$(OBJ) -lcudadevrt -lcudart
 
 elegant_gpu.$(OBJ): $(OBJNAMES)
-	$(NVCC) --generate-code arch=compute_52,code=sm_52 --device-link \
+	$(NVCC) --generate-code arch=compute_$(CUDA_HARDWARE),code=sm_$(CUDA_HARDWARE) --device-link \
 	        $(OBJNAMES) --output-file elegant_gpu.$(OBJ) -lcudadevrt -lcudart
 
 Pelegant_gpu.$(OBJ): $(MPIOBJNAMES)
-	$(NVCC) --gpu-architecture=sm_52 --device-link \
+	$(NVCC) --gpu-architecture=sm_$(CUDA_HARDWARE) --device-link \
 	        $(MPIOBJNAMES) --output-file Pelegant_gpu.$(OBJ) -lcudadevrt -lcudart
 
 
