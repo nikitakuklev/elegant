@@ -214,7 +214,10 @@ long do_tracking(
 #endif
   int needSort = 0;
   int lostSinceSeqMode = 0;
-  long old_nToTrack = 0, nParElements=0, nElements=0; 
+#ifdef CHECKFLAGS 
+  long old_nToTrack = 0;
+#endif
+  long nParElements=0, nElements=0; 
   int checkFlags;
   double my_wtime=0, start_wtime=0, end_wtime, nParPerElements=0, my_rate;
   double round = 0.5;
@@ -2530,8 +2533,10 @@ long do_tracking(
         if (run->load_balancing_on==-1)
           checkBalance(my_wtime, myid, n_processors, 1); /* Just to check and report, nothing done */
       }
+#ifdef CHECKFLAGS 
       if (myid==0)
 	old_nToTrack = nToTrack;
+#endif
     }
 #ifdef DEBUG_CRASH 
     printMessageAndTime(stdout, "do_tracking checkpoint 21\n");
@@ -4355,7 +4360,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
     *nLostCounts, current_nLost=0, nToTrack_total, nLost_total; 
  
 #ifdef HAVE_GPU
-  coord = forceParticlesToCpu("gatherParticles");
+  *coord = forceParticlesToCpu("gatherParticles");
 #endif
 
   MPI_Status status;

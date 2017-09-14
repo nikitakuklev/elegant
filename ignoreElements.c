@@ -77,7 +77,7 @@ long ignoreElement(char *name, long type)
 void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run, 
 			 LINE_LIST *beamline)
 {
-  long i, j;
+  long i;
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);

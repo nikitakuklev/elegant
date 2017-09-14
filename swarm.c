@@ -38,7 +38,7 @@ long swarmMin(
 {
   long local_populations = populationSize/n_processors;
   long remaining_populations = populationSize - n_processors*local_populations;
-  long i, j, isInvalid, updated = 0;
+  long i, j, isInvalid;
   static long best_index;
   static double best_result=DBL_MAX;
   double local_rand, result, xLow, xHigh, xDiff;
@@ -144,7 +144,6 @@ long swarmMin(
     if (result < best_result) {    /* Updates the best result on this processor */
       best_result = result;
       best_index = i;
-      updated = 1;	
     }
     
     if ((result < gsl_vector_get (local_best, i)) || !initialized) { /* Updates the best result for this agent */

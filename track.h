@@ -4179,6 +4179,8 @@ long elementTransmutation(char *name, long type) ;
 void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
                             LINE_LIST *beamline);
 
+void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run, 
+			 LINE_LIST *beamline);
 long countIgnoreElementsSpecs();
 void addIgnoreElementsSpec(char *name, char *type, char *exclude);
 void clearIgnoreElementsSpecs();

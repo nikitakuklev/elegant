@@ -437,7 +437,6 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   double *data = NULL;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
   long i, j, npNew, npTotal, npNewTotal, nameLength;
-  long k;
   double *pID = NULL;
 
 #if MPI_DEBUG

@@ -213,7 +213,9 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     static double temp[6];
 
 #ifdef HAVE_GPU
+#ifdef GPU_VERIFY
   char fname[20];
+#endif /* GPU_VERIFY */
   if (getElementOnGpu()) {
     startGpuTimer();
     gpu_track_particles(M, n_part);
