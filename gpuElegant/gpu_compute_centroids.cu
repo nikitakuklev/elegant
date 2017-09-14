@@ -521,7 +521,7 @@ void gpu_accumulate_beam_sums(
 
   if (timeValue != NULL) {
     fprintf(stderr, "timeValue in gpu_accumulate_beam_sums is not implemented yet\n");
-    exit;
+    exitElegant(1);
   }
   gpu_computeTimeCoordinates(n_part, d_timeCoord, p_central);
 

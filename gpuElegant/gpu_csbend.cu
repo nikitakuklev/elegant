@@ -2696,11 +2696,11 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
 
 void gpu_setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
 {
-  TRACKING_CONTEXT tc;
 #if USE_MPI
   SDDSphotons = NULL;
   return;
-#endif
+#else
+  TRACKING_CONTEXT tc;
   if (!csbend->photonOutputFile) {
     SDDSphotons = NULL;
     return;
@@ -2735,6 +2735,7 @@ void gpu_setUpCsbendPhotonOutputFile(CSBEND *csbend, char *rootname, long np)
   }
   photonRows = 0;
   SDDSphotons = csbend->SDDSphotons;
+#endif
 }
 
 void gpu_logPhoton(double Ep, double x, double xp, double y, double yp, double thetar, double thetaf, double rho)

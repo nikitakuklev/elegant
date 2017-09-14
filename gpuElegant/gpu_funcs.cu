@@ -381,9 +381,9 @@ void gpu_offset_beam(long nToTrack, MALIGN *offset, double P_central) {
   log_entry("offset_beam");
 
   if (offset->startPID>=0 && offset->startPID>offset->endPID)
-    bombElegantVA("Error: startPID (%ld) greater than endPID (%ld) for MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
+    bombElegantVA((char*)"Error: startPID (%ld) greater than endPID (%ld) for MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
   if ((offset->endPID>=0 && offset->startPID<0) || (offset->startPID>=0 && offset->endPID<0))
-    bombElegantVA("Error: Invalid startPID (%ld) and endPID (%ld) in MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
+    bombElegantVA((char*)"Error: Invalid startPID (%ld) and endPID (%ld) in MALIGN element (offset_beam)\n", offset->startPID, offset->endPID);
 
   allParticles = (offset->startPID==-1) && (offset->endPID==-1);
 
