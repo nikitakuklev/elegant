@@ -50,6 +50,9 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
 void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
+void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+		      double ionMass, double ionCharge);
+
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 
@@ -381,7 +384,7 @@ void trackWithIonEffects
   long *npBunch = NULL;          /* array to record how many particles are in each bunch */
   long np, npTotal, max_np = 0;
   /* properties of the electron beam */
-  double centroid[2], sigma[2], tNow, qBunch;
+  double centroid[2], sigma[2], tNow, qBunch, sigmatemp[2];
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
   double **speciesCentroid=NULL, *speciesCharge=NULL, **speciesSigma=NULL;
@@ -518,6 +521,19 @@ void trackWithIonEffects
     }
 #endif
 
+    // avoid divergence of beam kick when sigma_x ~= sigma_y
+    /*
+    if (sigma[0]/sigma[1]>0.9 && sigma[0]/sigma[1] < 1.0) {
+      sigmatemp[0] = 0.9 * sigma[1];
+      sigmatemp[1] = sigma[1];
+    } else if (sigma[0]/sigma[1]>1.0 && sigma[0]/sigma[1] < 1.1) {
+      sigmatemp[0] = 1.1 * sigma[1];
+      sigmatemp[1] = sigma[1];
+    } else {
+      sigmatemp[0] = sigma[0];
+      sigmatemp[1] = sigma[1];
+    }
+    */
 
     if (verbosity>30) {
       printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
@@ -609,23 +625,25 @@ void trackWithIonEffects
              nToAdd =  someFunctionOfPressure(ionEffects->pressure[index], ...);
           */
           /* Shouldn't there be some statistics here ? -- MB */
+
 #if USE_MPI
-          /* The macroIons parameter is the number for all processors, so we need to 
-           * apportion the ions among the working processors 
-           */
-          nToAdd = ionEffects->macroIons/(n_processors-1.0);
-          long nLeft = ionEffects->macroIons - nToAdd*(n_processors-1);
-          for (long iLeft=0; iLeft<nLeft; iLeft++) {
-            if (leftIonCounter%(n_processors-1)==(myid-1))
-              nToAdd ++;
-            leftIonCounter++; /* This counter will be the same on all processors */
-          }
+	  /* The macroIons parameter is the number for all processors, so we need to 
+	   * apportion the ions among the working processors 
+	   */
+	  nToAdd = ionEffects->macroIons/(n_processors-1.0);
+	  long nLeft = ionEffects->macroIons - nToAdd*(n_processors-1);
+	  for (long iLeft=0; iLeft<nLeft; iLeft++) {
+	    if (leftIonCounter%(n_processors-1)==(myid-1))
+	      nToAdd ++;
+	    leftIonCounter++; /* This counter will be the same on all processors */
+	  }
 #else
-          nToAdd = ionEffects->macroIons;
+	  nToAdd = ionEffects->macroIons;
 #endif
+
           if (nToAdd) {
-            qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] *      \
-              ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
+	    qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] * \
+	      ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
             
             addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
           }
@@ -642,6 +660,10 @@ void trackWithIonEffects
           bombElegant("Multiple ionization not implemented at this time", NULL);
         }
       }
+
+
+     
+
           
       /*** Determine and apply kicks from beam to ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -659,6 +681,18 @@ void trackWithIonEffects
         
 	ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
 	ionCharge = (double)ionProperties.chargeState[iSpecies];
+
+
+	double tempkick[2], maxkick[2], tempart[4];
+	tempart[0] = sigma[0] + centroid[0];
+	tempart[2] = 0;
+	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
+	maxkick[0] = 10*abs(tempkick[0]);
+	
+	tempart[2] = sigma[1] + centroid[1];
+	tempart[0] = 0;
+	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
+	maxkick[1] = 10*abs(tempkick[1]);
         
         for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
           /*
@@ -667,7 +701,11 @@ void trackWithIonEffects
           */
 	  coord = ionEffects->coordinate[iSpecies][iIon];
           
-	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+	  if ((sigma[1] > 0.99*sigma[0]) && (sigma[1] < 1.01*sigma[0])) {
+	    roundGaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+	  } else {
+	    gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+	  }
           
 #if DEBUG
 	  if (isnan(kick[0])) {
@@ -675,8 +713,10 @@ void trackWithIonEffects
 	  }
 #endif
 
-	  ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
-	  ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
+	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
+	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
+	    ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
+	  }
 
 	  //          ionEffects->coordinate[iSpecies][iIon][1] += 
           //  Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
@@ -922,6 +962,7 @@ void trackWithIonEffects
 
     if (isSlave || !notSinglePart) {
 
+      /*
       if (ionSigma[0]/ionSigma[1]>0.9 && ionSigma[0]/ionSigma[1] < 1.0) {
 #if DEBUG
 	printf("ion sigx = sigy (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n",  ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
@@ -931,16 +972,40 @@ void trackWithIonEffects
 	ionSigma[0] = 1.1 * ionSigma[1];
 	//	printf("ion sigx = sigy");
       }
+      */
+
+      double tempkick[2], maxkick[2], tempart[4];
+      tempart[0] = ionSigma[0] + ionCentroid[0];
+      tempart[2] = 0;
+      gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
+      maxkick[0] = 10*abs(tempkick[0]);
+
+      tempart[2] = ionSigma[1] + ionCentroid[1];
+      tempart[0] = 0;
+      gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
+      maxkick[1] = 10*abs(tempkick[1]);
+      
 
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
-          double kick[2];
-          gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
-          part[ip][1] += kick[0] / c_mks / Po;
-          part[ip][3] += kick[1] / c_mks / Po; 
+          double kick[2];	  
 
-	  //if (kick[0] > 1000) {
+	  if ((ionSigma[0] > 0.99*ionSigma[1]) && (ionSigma[0] < 1.01*ionSigma[1])) {
+	    roundGaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
+	  } else {
+	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
+	  }
+
+	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
+	    part[ip][1] += kick[0] / c_mks / Po;
+	    part[ip][3] += kick[1] / c_mks / Po; 
+	  } 
+	  // else {
+	  //  printf("bad kick");
+	  //}
+
+	  //if (abs(kick[1]) > 1e6) {
 	  //  printf("kick wrong");
 	  //}
 
@@ -1185,5 +1250,35 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
   kick[1] = -Fy / ionMass;
   
 
+
+}
+
+
+void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+		      double ionMass, double ionCharge) 
+{
+  // calculate beam kick on ion, assuming round Gaussian beam
+  double sx, sy, x, y, sig, r, C1, dp, theta;
+
+
+  kick[0] = 0;
+  kick[1] = 0;
+  //  return;
+  
+  sx = sigma[0];
+  sy = sigma[1];
+  sig = (sx + sy) / 2;
+
+  x = coord[0] - center[0];
+  y = coord[2] - center[1];
+  r = sqrt(sqr(x) + sqr(y));
+
+  C1 = 2 * c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
+
+  dp = C1 / r * (1 - exp(-sqr(r)/(2*sqr(sig))));
+
+  theta = atan2(y,x);
+  kick[0] = -dp * cos(theta) / ionMass;
+  kick[1] = -dp * sin(theta) / ionMass;
 
 }
