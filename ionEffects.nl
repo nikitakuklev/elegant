@@ -17,6 +17,7 @@
           long grid_points_y = 0;
           STRING field_calculation_method = NULL;
           long macro_ions = 0;
+          long generation_interval = 1;
           double x_span = 0;
           double y_span = 0;
           long verbosity = 0;

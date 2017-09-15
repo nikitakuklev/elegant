@@ -1022,7 +1022,7 @@ extern char *entity_text[N_TYPES];
 #define N_BGGEXP_PARAMS 17
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 12
-#define N_IONEFFECTS_PARAMS 7
+#define N_IONEFFECTS_PARAMS 8
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -3130,7 +3130,7 @@ extern PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS];
 
 typedef struct {
   long disable;
-  long macroIons;
+  long macroIons, generationInterval;
   double xSpan, ySpan;
   long startPass, endPass, passInterval;
   /* internal parameters */

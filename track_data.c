@@ -2749,13 +2749,14 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
 
 IONEFFECTS ionEffects_example;
 PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS] = {
-    {"DISABLE", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.disable), NULL, 0.0, 0, "If non-zero, turn off ion effects in the region covered by this element."},
-    {"MACRO_IONS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.macroIons), NULL, 0.0, 0, "If non-zero, overrides the default value set in the ion_effects command, giving the number of macro ions generated per bunch passage."},
-    {"X_SPAN", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.xSpan), NULL, 0.0, 0, "If non-zero, gives the region over which ions are kept."},
-    {"Y_SPAN", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.ySpan), NULL, 0.0, 0, "If non-zero, gives the region over which ions are kept."},
-    {"STARTPASS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.startPass), NULL, 0.0, 0, "If positive, gives the pass on which ion effects start."},
-    {"ENDPASS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.endPass), NULL, 0.0, -1, "If positive, gives the pass on which ion effects end."},
-    {"PASSINTERVAL", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ionEffects_example.passInterval), NULL, 0.0, 1, "Interval between ion effects modeling."},
+    {"DISABLE", "", IS_LONG, 0, (long)((char *)&ionEffects_example.disable), NULL, 0.0, 0, "If non-zero, turn off ion effects in the region covered by this element."},
+    {"MACRO_IONS", "", IS_LONG, 0, (long)((char *)&ionEffects_example.macroIons), NULL, 0.0, 0, "If positive, overrides the default value set in the ion_effects command, giving the number of macro ions generated per bunch passage."},
+    {"GENERATION_INTERVAL", "", IS_LONG, 0, (long)((char *)&ionEffects_example.generationInterval), NULL, 0.0, 0, "If positive, overrides the default value set in the ion_effects command, giving the number of macro ions generated per bunch passage."},
+    {"X_SPAN", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.xSpan), NULL, 0.0, 0, "If positive, gives the region over which ions are kept."},
+    {"Y_SPAN", "", IS_DOUBLE, 0, (long)((char *)&ionEffects_example.ySpan), NULL, 0.0, 0, "If positive, gives the region over which ions are kept."},
+    {"STARTPASS", "", IS_LONG, 0, (long)((char *)&ionEffects_example.startPass), NULL, 0.0, 0, "If positive, gives the pass on which ion effects start."},
+    {"ENDPASS", "", IS_LONG, 0, (long)((char *)&ionEffects_example.endPass), NULL, 0.0, -1, "If positive, gives the pass on which ion effects end."},
+    {"PASSINTERVAL", "", IS_LONG, 0, (long)((char *)&ionEffects_example.passInterval), NULL, 0.0, 1, "Interval between ion effects modeling."},
 
 };  
 

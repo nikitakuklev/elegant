@@ -200,6 +200,10 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
   if (echoNamelists) print_namelist(stdout, &ion_effects);
 
   /* Basic check of input values */
+  if (macro_ions<=0)
+    bombElegant("macro_ions must be positive", NULL);
+  if (generation_interval<=0)
+    bombElegant("generation_interval must be positive", NULL);
   if (!pressure_profile || !strlen(pressure_profile))
     bombElegant("pressure_profile undefined", NULL);
   if (!ion_properties || !strlen(ion_properties))
@@ -353,9 +357,14 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       ionEffects->coordinate = (double***)calloc(ionProperties.nSpecies, sizeof(*(ionEffects->coordinate)));
       ionEffects->nIons = (long*)calloc(ionProperties.nSpecies, sizeof(*(ionEffects->nIons)));
       ionEffects->t = 0;
-      ionEffects->macroIons = macro_ions;
-      ionEffects->xSpan = x_span;
-      ionEffects->ySpan = y_span;
+      if (ionEffects->macroIons<=0)
+        ionEffects->macroIons = macro_ions;
+      if (ionEffects->xSpan<=0)
+        ionEffects->xSpan = x_span;
+      if (ionEffects->ySpan<=0)
+        ionEffects->ySpan = y_span;
+      if (ionEffects->generationInterval<=0)
+        ionEffects->generationInterval = generation_interval;
     }
     eptr = eptr->succ;
   }
@@ -616,54 +625,52 @@ void trackWithIonEffects
       }
       */
       
-      /*** Generate ions */
-      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        long nToAdd = 0, index;
-	double qToAdd = 0;
-        if ((index=ionProperties.sourceGasIndex[iSpecies])>=0) {
-          /* this is a singly-ionized molecule, so use source gas 
-             nToAdd =  someFunctionOfPressure(ionEffects->pressure[index], ...);
-          */
-          /* Shouldn't there be some statistics here ? -- MB */
-
-#if USE_MPI
-	  /* The macroIons parameter is the number for all processors, so we need to 
-	   * apportion the ions among the working processors 
-	   */
-	  nToAdd = ionEffects->macroIons/(n_processors-1.0);
-	  long nLeft = ionEffects->macroIons - nToAdd*(n_processors-1);
-	  for (long iLeft=0; iLeft<nLeft; iLeft++) {
-	    if (leftIonCounter%(n_processors-1)==(myid-1))
-	      nToAdd ++;
-	    leftIonCounter++; /* This counter will be the same on all processors */
-	  }
-#else
-	  nToAdd = ionEffects->macroIons;
-#endif
-
-          if (nToAdd) {
-	    qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] * \
-	      ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
+      if ((iPass-ionEffects->startPass)%ionEffects->generationInterval==0) {
+        /*** Generate ions */
+        for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+          long nToAdd = 0, index;
+          double qToAdd = 0;
+          if ((index=ionProperties.sourceGasIndex[iSpecies])>=0) {
+            /* this is a singly-ionized molecule, so use source gas 
+               nToAdd =  someFunctionOfPressure(ionEffects->pressure[index], ...);
+            */
+            /* Shouldn't there be some statistics here ? -- MB */
             
-            addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+#if USE_MPI
+            /* The macroIons parameter is the number for all processors, so we need to 
+             * apportion the ions among the working processors 
+             */
+            nToAdd = ionEffects->macroIons/(n_processors-1.0);
+            long nLeft = ionEffects->macroIons - nToAdd*(n_processors-1);
+            for (long iLeft=0; iLeft<nLeft; iLeft++) {
+              if (leftIonCounter%(n_processors-1)==(myid-1))
+                nToAdd ++;
+              leftIonCounter++; /* This counter will be the same on all processors */
+            }
+#else
+            nToAdd = ionEffects->macroIons;
+#endif
+            
+            if (nToAdd) {
+              qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] * ionEffects->generationInterval * \
+                ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
+              
+              addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+            }
+          } else if ((index=ionProperties.sourceIonIndex[iSpecies])>=0) {
+            /* This is a multiply-ionized molecule, so use source ion density.
+             * Relevant quantities:
+             * ionEffects->nIons[index] --- Number of ions of the source species
+             * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
+             * ionProperties.crossSection[iSpecies] --- Cross section for producing new ion from the source ions
+             */
+            /* 
+               nToAdd = someFunctionOfExistingNumberOfIons(...); 
+            */
+            bombElegant("Multiple ionization not implemented at this time", NULL);
           }
-        } else if ((index=ionProperties.sourceIonIndex[iSpecies])>=0) {
-          /* This is a multiply-ionized molecule, so use source ion density.
-           * Relevant quantities:
-           * ionEffects->nIons[index] --- Number of ions of the source species
-           * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
-           * ionProperties.crossSection[iSpecies] --- Cross section for producing new ion from the source ions
-           */
-          /* 
-             nToAdd = someFunctionOfExistingNumberOfIons(...); 
-          */
-          bombElegant("Multiple ionization not implemented at this time", NULL);
         }
       }
-
-
-     
-
           
       /*** Determine and apply kicks from beam to ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
