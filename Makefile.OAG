@@ -607,13 +607,13 @@ Pelegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 OBJJ =obj
 else 
 OBJJ = o
-CUDART = $(words $(wildcard /usr/lib/x86_64-linux-gnu/libcudart.so /usr/lib64/libcudart.so))
+CUDART = $(words $(wildcard /usr/lib/x86_64-linux-gnu/libcudart.so /usr/lib64/libcudart.so ))
 ifneq ($(CUDART), 0)
 elegantto_SYS_LIBS += cudart curand
 elegant_SYS_LIBS += cudart curand
 Pelegant_SYS_LIBS += cudart curand
 else 
-CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-8.0/lib))
+CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-8.0/lib /soft/cudatoolkit/6.5.14/lib64 ))
 elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 Pelegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
