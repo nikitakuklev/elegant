@@ -78,6 +78,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
   in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
 \item The \verb|link_elements| command can now create the source element name by editing the target name.
+\item Added the \verb|generation_interval| parameter to the \verb|ion_effects| command to permit generation of
+  ions only every n$^{th}$ turn.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -2447,6 +2449,7 @@ included in the plane in question.
           long ion_output_all_locations = 1;
           STRING field_calculation_method = NULL;
           long macro_ions = 0;
+          long generation_interval = 1;
           double x_span = 0;
           double y_span = 0;
           long verbosity = 0;
@@ -2475,9 +2478,13 @@ included in the plane in question.
 \item \verb|field_calculation_method| --- Provided for future expansion. At present, the fields are computed on the
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
   for the ions.
-\item \verb|macro_ions| --- The number of macro ions to generate per bunch per turn. The macro ion charge is adjusted
+\item \verb|macro_ions| --- The number of macro ions to generate per bunch on each turn for which generation is done. 
+  The macro ion charge is adjusted
   according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
   \verb|IONEFFECTS| elements.
+\item \verb|generation_interval| --- The number of turns between generation of ions. The macro ion charge is adjusted
+  to account for this, so the effective ion charge after many turns is the same. May be overridden with the
+  \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements.
 \item \verb|x_span|, \verb|y_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
