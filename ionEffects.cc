@@ -625,7 +625,7 @@ void trackWithIonEffects
       }
       */
       
-      if ((iPass-ionEffects->startPass)%ionEffects->generationInterval==0) {
+      if ((iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
         /*** Generate ions */
         for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
           long nToAdd = 0, index;
