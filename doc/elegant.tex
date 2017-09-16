@@ -79,7 +79,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
 \item The \verb|link_elements| command can now create the source element name by editing the target name.
 \item Added the \verb|generation_interval| parameter to the \verb|ion_effects| command to permit generation of
-  ions only every n$^{th}$ turn.
+  ions only at every n$^{th}$ bunch.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -2482,9 +2482,11 @@ included in the plane in question.
   The macro ion charge is adjusted
   according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
   \verb|IONEFFECTS| elements.
-\item \verb|generation_interval| --- The number of turns between generation of ions. The macro ion charge is adjusted
+\item \verb|generation_interval| --- The number of bunches between generation of ions. The macro ion charge is adjusted
   to account for this, so the effective ion charge after many turns is the same. May be overridden with the
-  \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements.
+  \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements. The actual condition for generation of
+  ions is such that the generating bunches vary on each turn. This can be used to effectively reduce \verb|macro_ions|
+  below 1, to prevent generation of too many macro ions.
 \item \verb|x_span|, \verb|y_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
