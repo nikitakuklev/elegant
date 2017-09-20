@@ -1003,7 +1003,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 46
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 15
-#define N_UKICKMAP_PARAMS 13
+#define N_UKICKMAP_PARAMS 15
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
@@ -3095,11 +3095,11 @@ typedef struct {
 extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
 
 typedef struct {
-  double length, tilt, dx, dy, dz, fieldFactor, xyFactor;
+  double length, tilt, dx, dy, dz, fieldFactor, xyFactor, yaw;
   char *inputFile;
   long nKicks, periods;
   double Kreference;
-  short synchRad, isr;
+  short synchRad, isr, yawEnd;
   /* for internal use only */
   short initialized;
   long points, nx, ny;

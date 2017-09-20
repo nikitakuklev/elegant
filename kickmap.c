@@ -38,7 +38,7 @@ long trackUndulatorKickMap(
   double length, fieldFactor;
   double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta=0, deltaFactor, delta;
   double I1, I2, I3, I4, I5;
-  double sqrtI3, sqrtI5;
+  double sqrtI3, sqrtI5, dist, tan_yaw, yawOffset;
   
   length = map->length;
   fieldFactor = map->fieldFactor;
@@ -69,6 +69,12 @@ long trackUndulatorKickMap(
     rotateBeamCoordinates(particle, nParticles, map->tilt);
   
   iTop = nParticles-1;
+  dist = 0;
+  tan_yaw = tan(map->yaw);
+  if (fabs(map->yawEnd)>1)
+    bombElegant("YAW_END parameter must be -1, 0, or 1", NULL);
+  yawOffset = map->length/2*(map->yawEnd+1.0)*tan_yaw;
+
   for (ik=0; ik<nKicks; ik++) {
     sqrtI3 = sqrtI5 = 0;
     if (radCoef || sxpCoef) {
@@ -135,7 +141,8 @@ long trackUndulatorKickMap(
         /* 2. apply the kicks 
          * use interpolation to get dxpFactor and dypFactor 
          */
-        if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, coord[0], coord[2])) {
+        if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, 
+					 coord[0]-dist*tan_yaw+yawOffset, coord[2])) {
           /* particle is lost */
           swapParticles(particle[ip], particle[iTop]); 
           if (accepted)
@@ -168,6 +175,7 @@ long trackUndulatorKickMap(
         }
       }
     }
+    dist += length;
   }
   
 
