@@ -82,6 +82,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
   in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
 \item The \verb|link_elements| command can now create the source element name by editing the target name.
+\item The \verb|momentum_aperture| command now uses resources more efficiently for the parallel version when 
+  \verb|output_mode=2|. In particular, it honors the user-provided minimum $\delta$ values.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}

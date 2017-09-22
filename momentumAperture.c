@@ -23,6 +23,7 @@ static double momentumOffsetValue = 0;
 static long fireOnPass = 1;
 static double **turnByTurnCoord = NULL;
 static long turnsStored = 0;
+static long ideltaCutover;
 
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
@@ -104,7 +105,11 @@ static void momentumOffsetFunctionOmni(double **coord, long np, long pass, long 
       }
       if (id>nDelta) 
         bombElegant("invalid id value (>nDelta)", NULL);
-      mal.dp = delta_negative_limit + id*deltaStep;
+      if (id<ideltaCutover) {
+        mal.dp = delta_negative_limit + id*deltaStep;
+      } else {
+        mal.dp = delta_positive_start + (id-ideltaCutover)*deltaStep;
+      }
       offset_beam(coord+ip, 1, &mal, *pCentral);
 #ifdef DEBUG
 #if USE_MPI
@@ -408,8 +413,8 @@ long doMomentumApertureSearch(
     break;
   default:
     if (nElem%n_processors!=0 && (myid==0)) {
-      printf("Warning: for best parallel efficiency in output_mode=2, the number of elements divided by the number of processors should be an integer or slightly below an integer. \nThe number of elements is %ld. The number of processors is %d.\n", 
-             nElem, n_processors);
+      printf("Warning: for best parallel efficiency in output_mode=%ld, the number of elements divided by the number of processors should be an integer or slightly below an integer. \nThe number of elements is %ld. The number of processors is %d.\n", 
+             output_mode, nElem, n_processors);
     }    
     break;
   }
@@ -902,8 +907,9 @@ long multiparticleLocalMomentumAcceptance(
   }
   
   nElem = nElements;
-  nDelta = (delta_positive_limit-delta_negative_limit)/delta_step_size+1;
-  deltaStep = (delta_positive_limit-delta_negative_limit)/(nDelta-1);
+  nDelta = ((delta_positive_limit-delta_positive_start)+(delta_negative_start-delta_negative_limit))/delta_step_size+1;
+  deltaStep = ((delta_positive_limit-delta_positive_start)+(delta_negative_start-delta_negative_limit))/(nDelta-1);
+  ideltaCutover = (delta_negative_start-delta_negative_limit)/deltaStep + 0.5;
   nTotal = nElem*nDelta;
   if (nTotal%n_working_processors!=0) {
     printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
@@ -1051,7 +1057,11 @@ long multiparticleLocalMomentumAcceptance(
       }
       idelta = ((long)lostParticles[ip][6])%nDelta;
       ie = (lostParticles[ip][6]-idelta)/nDelta;
-      delta = delta_negative_limit + idelta * deltaStep;
+      if (idelta<ideltaCutover) {
+        delta = delta_negative_limit + idelta*deltaStep;
+      } else {
+        delta = delta_positive_start + (idelta-ideltaCutover)*deltaStep;
+      }
       if (delta>=0) {
         slot = 1;
         if (!loserFound[slot][ie] || delta<deltaLost[slot][ie]) {
