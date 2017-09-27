@@ -419,10 +419,12 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   if (SDDSMomentsInitialized && writeToFile)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run, eNatural);
 
-  for (i=0; i<6; i++) {
-    long j;
-    for (j=0; j<6; j++)
-      savedFinalMoments[i][j] = beamline->elem.sigmaMatrix->sigma[sigmaIndex3[i][j]];
+  if (beamline->elem.sigmaMatrix) {
+    for (i=0; i<6; i++) {
+      long j;
+      for (j=0; j<6; j++)
+        savedFinalMoments[i][j] = beamline->elem.sigmaMatrix->sigma[sigmaIndex3[i][j]];
+    }
   }
 
   return 1;
