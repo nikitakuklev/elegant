@@ -5184,7 +5184,7 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
        if ((aperture = position + offset - centroid)<0)
          aperture = 0;
      } else {
-       if ((aperture = centroid - (position + offset))<0)
+       if ((aperture = position - offset - centroid)<0)
          aperture = 0;
      }
      *apertureRet = aperture;
