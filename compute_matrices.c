@@ -1661,7 +1661,7 @@ char *fft_window_name[N_FFT_WINDOWS] = {
     "hanning", "parzen", "welch", "uniform",
     } ;
 
-void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName)
+void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass)
 {
     char *mode, *qualifier;
 
@@ -1692,6 +1692,9 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
     watch->initialized = 1;
     watch->count = 0;
     watch->flushSample = -1;
+    if (watch->start_pass<i_pass)
+      /* Need this for WATCH points on branches that don't get executed on pass 0 */
+      watch->start_pass = i_pass;
     }
 
 void set_up_histogram(HISTOGRAM *histogram, RUN *run, long occurence)

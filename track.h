@@ -3372,7 +3372,7 @@ extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCo
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long sliceEtilted, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
-extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);
+extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass);
 extern void set_up_slice_point(SLICE_POINT *slice, RUN *run, long occurence, char *previousElementName);
 void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lattice_file, char *caller, 
                           char *previousElementName);
