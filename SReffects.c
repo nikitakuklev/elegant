@@ -66,7 +66,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
       }
     } else {
       if (SReffects.eyRef==0 || SReffects.coupling!=0)  {
-        SReffects.exRef = SReffects.exRef/(1+SReffects.coupling);
+        SReffects.exRef = SReffects.exRef/(1+SReffects.coupling*SReffects.Jy/SReffects.Jx);
         SReffects.eyRef = SReffects.exRef*SReffects.coupling;
       }
     }
