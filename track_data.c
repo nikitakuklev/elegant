@@ -192,7 +192,8 @@ char *entity_text[N_TYPES] = {
     "A straight magnetic field element using generalized gradient expansion.",
     "Conditional branch instruction to jump to another part of the beamline",
     "Simulates ionization of residual gas and interaction with the beam.",
-    "Performs slice-by-slice analysis of the beam for output to a file."
+    "Performs slice-by-slice analysis of the beam for output to a file.",
+    "Simulates a semi-circular protuberance from one or both walls of the chamber."
     } ;
 
 QUAD quad_example;
