@@ -593,6 +593,11 @@ char **argv;
     }
   }
 
+#if defined(_WIN32)
+  /*Default number of allowed open files is 512, max allowed on windows is 2048*/
+  _setmaxstdio(1024);
+#endif
+
   if (pipeFlags&USE_STDIN) {
     if (inputfile)
       bombElegant("both -pipe=input and input file given", NULL);
