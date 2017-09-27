@@ -313,7 +313,10 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
       }
       break;
     case T_SCRAPER:
-      interpretScraperDirection((SCRAPER*)(eptr->p_elem));
+      ((SCRAPER*)(eptr->p_elem))->direction = interpretScraperDirection(((SCRAPER*)(eptr->p_elem))->insert_from);
+      break;
+    case T_SPEEDBUMP:
+      ((SPEEDBUMP*)(eptr->p_elem))->direction = interpretScraperDirection(((SPEEDBUMP*)(eptr->p_elem))->insertFrom);
       break;
     default:
       break;
@@ -1050,27 +1053,53 @@ void parse_pepper_pot(
     log_exit("parse_pepper_pot");
     }
 
-void interpretScraperDirection(SCRAPER *scraper)
+unsigned long interpretScraperDirection(char *insert_from) 
 {
-  if (scraper->insert_from) {
-    switch (toupper(scraper->insert_from[1])) {
+  char sign=0, plane=0;
+  unsigned long direction = 0;
+  if (insert_from) {
+    if (insert_from[0]=='+' || insert_from[0]=='-') {
+      sign = insert_from[0];
+      plane = insert_from[1];
+    } else
+      plane = insert_from[0];
+    switch (toupper(plane)) {
     case 'Y': case 'V':
-      scraper->direction = 1;
+      switch (sign) {
+      case '+':
+        direction = DIRECTION_PLUS_Y;
+        break;
+      case '-':
+        direction = DIRECTION_MINUS_Y;
+        break;
+      default:
+        direction = DIRECTION_Y;
+        break;
+      }
       break;
     case 'X': case 'H':
-      scraper->direction = 0;
+      switch (sign) {
+      case '+':
+        direction = DIRECTION_PLUS_X;
+        break;
+      case '-':
+        direction = DIRECTION_MINUS_X;
+        break;
+      default:
+        direction = DIRECTION_X;
+        break;
+      }
       break;
     default:
-      printf("Error: invalid scraper insert_from parameter: %s\n",
-              scraper->insert_from);
-      fflush(stdout);
-      bombElegant("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
       break;
     }
-    if (scraper->insert_from[0]=='-')
-      scraper->direction += 2;
-    scraper->insert_from = NULL;
   }
+  if (!direction) {
+    printf("**** Warning: invalid insert_from parameter: %s\n", insert_from ? insert_from : "NULL");
+    printf("insert_from axis letter is not one of x, h, y, or v\n");
+    fflush(stdout);
+  }
+  return direction;
 }
 
 void copy_p_elem(char *target, char *source, long type)
@@ -1123,6 +1152,12 @@ void copy_p_elem(char *target, char *source, long type)
   case T_CSRCSBEND:
     ((CSRCSBEND*)target)->e1Index = ((CSRCSBEND*)source)->e1Index;
     ((CSRCSBEND*)target)->e2Index = ((CSRCSBEND*)source)->e2Index;
+    break;
+  case T_SCRAPER:
+    ((SCRAPER*)target)->direction = ((SCRAPER*)source)->direction;
+    break;
+  case T_SPEEDBUMP:
+    ((SPEEDBUMP*)target)->direction = ((SPEEDBUMP*)source)->direction;
     break;
   case  T_PEPPOT:
     /* Need to modernize pepper-pot element to read data from SDDS file */

@@ -551,8 +551,10 @@ long beam_scraper(
                   )
 {
   double length, *ini;
-  long do_x, do_y, ip, itop;
-  double limit;
+  long do_x, do_y, ip, idir, hit;
+  long dsign[2] = {1, -1};
+  long dflag[2] = {0, 0};
+  MATTER matter;
 
 #ifdef HAVE_GPU
    if(getElementOnGpu()){
@@ -569,25 +571,24 @@ long beam_scraper(
 
   log_entry("beam_scraper");
 
-  if (scraper->direction<0 || scraper->direction>3)
-    return np;
-  
-  if (scraper->direction==0 || scraper->direction==2) {
-    do_x = scraper->direction==0 ? 1 : -1;
-    do_y = 0;
-    limit = scraper->position*do_x;
+  do_x = do_y = 0;
+  if (scraper->direction&DIRECTION_X) {
+    /* For now, x and +x are the same */
+    do_x = 1;
+    dflag[0] = scraper->direction&DIRECTION_PLUS_X ? 1 : 0;
+    dflag[1] = scraper->direction&DIRECTION_MINUS_X ? 1 : 0;
   }
-  else {
-    do_x = 0;
-    do_y = scraper->direction==1 ? 1 : -1;
-    limit = scraper->position*do_y;
-  }    
+  else if (scraper->direction&DIRECTION_Y) {
+    do_y = 1;
+    dflag[0] = scraper->direction&DIRECTION_PLUS_Y ? 1 : 0;
+    dflag[1] = scraper->direction&DIRECTION_MINUS_Y ? 1 : 0;
+  } else
+    return np;
 
   if (scraper->length && (scraper->Xo || scraper->Z)) {
     /* scraper has material properties that scatter beam and
      * absorb energy
      */
-    MATTER matter;
     matter.length = scraper->length;
     matter.lEffective = 0;
     matter.Xo = scraper->Xo;
@@ -605,12 +606,18 @@ long beam_scraper(
 
     for (ip=0; ip<np; ip++) {
       ini = initial[ip];
-      if ((do_x && do_x*(ini[0]-scraper->dx)>limit) ||
-          (do_y && do_y*(ini[2]-scraper->dy)>limit)) {
-        /* scatter and/or absorb energy */
-        if (!track_through_matter(&ini, 1, 0, &matter, Po, NULL, z))
-          ini[5] = -1;
-      } else {
+      hit = 0;
+      for (idir=0; idir<2 && !hit; idir++) {
+        if (!dflag[idir]) continue;
+        if ((do_x && dsign[idir]*(ini[0]-scraper->dx)>dsign[idir]*scraper->position) ||
+            (do_y && dsign[idir]*(ini[2]-scraper->dy)>dsign[idir]*scraper->position)) {
+          /* scatter and/or absorb energy */
+          hit = 1;
+          if (!track_through_matter(&ini, 1, 0, &matter, Po, NULL, z))
+            ini[5] = -1;
+        }
+      }
+      if (!hit) {
         ini[0] = ini[0] + ini[1]*scraper->length;
         ini[2] = ini[2] + ini[3]*scraper->length;
         ini[4] += scraper->length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
@@ -621,19 +628,22 @@ long beam_scraper(
   }
 
   /* come here for idealized scraper that just absorbs particles */
-  itop = np-1;
   for (ip=0; ip<np; ip++) {
     ini = initial[ip];
-    if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
-        (do_y && do_y*(ini[2]-scraper->dy) > limit) || ini[5]<=-1) {
-      swapParticles(initial[ip], initial[itop]);
-      if (accepted)
-        swapParticles(accepted[ip], accepted[itop]);
-      initial[itop][4] = z; /* record position of particle loss */
-      initial[itop][5] = Po*(1+initial[itop][5]);
-      --itop;
-      --ip;
-      --np;
+    hit = 0;
+    for (idir=0; idir<2 && !hit; idir++) {
+      if (!dflag[idir]) continue;
+      if ((do_x && dsign[idir]*(ini[0]-scraper->dx)>dsign[idir]*scraper->position) ||
+          (do_y && dsign[idir]*(ini[2]-scraper->dy)>dsign[idir]*scraper->position)) {
+        swapParticles(initial[ip], initial[np-1]);
+        if (accepted)
+          swapParticles(accepted[ip], accepted[np-1]);
+        initial[np-1][4] = z; /* record position of particle loss */
+        initial[np-1][5] = Po*(1+initial[np-1][5]);
+        --ip;
+        --np;
+        hit = 1;
+      }
     }
   }
   if (np==0 || (length=scraper->length)<=0) {
@@ -642,23 +652,38 @@ long beam_scraper(
   }
 
   z += length;
-  itop = np-1;
   for (ip=0; ip<np; ip++) {
     ini = initial[ip];
     ini[0] += length*ini[1];
     ini[2] += length*ini[3];
-    if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
-        (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
-      swapParticles(initial[ip], initial[itop]);
-      initial[itop][4] = z; /* record position of particle loss */
-      initial[itop][5] = Po*(1+initial[itop][5]);
-      if (accepted)
-        swapParticles(accepted[ip], accepted[itop]);
-      --itop;
-      --ip;
-      --np;
+    hit = 0;
+    for (idir=0; idir<2 && !hit; idir++) {
+      if (!dflag[idir]) continue;
+      if ((do_x && dsign[idir]*(ini[0]-scraper->dx)>dsign[idir]*scraper->position) ||
+          (do_y && dsign[idir]*(ini[2]-scraper->dy)>dsign[idir]*scraper->position)) {
+        double dz;
+        if (do_x) {
+          double dx;
+          dx = ini[0]-scraper->dx-scraper->position;
+          dz = dx/ini[1];
+        } else {
+          double dy;
+          dy = ini[2]-scraper->dy-scraper->position;
+          dz = dy/ini[3];
+        }
+        ini[4] = z-dz;
+        ini[0] -= ini[1]*dz;
+        ini[2] -= ini[3]*dz;
+        ini[5] = Po*(1+ini[5]);
+        swapParticles(initial[ip], initial[np-1]);
+        if (accepted)
+          swapParticles(accepted[ip], accepted[np-1]);
+        --ip;
+        --np;
+        hit = 1;
+      }
     }
-    else
+    if (!hit)
       ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
   }
   log_exit("beam_scraper");
@@ -1158,3 +1183,136 @@ long imposeApertureData(
   return(np);
 }
 
+long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
+                             double Po
+                             )
+{
+  double *ini, radius;
+  long iplane, ip, idir, hit;
+  long dsign[2] = {1, -1};
+  long dflag[2] = {0, 0};
+
+  iplane = 0;
+  if (speedbump->direction&DIRECTION_X) {
+    /* For now, x and +x are the same */
+    iplane = 0;
+    dflag[0] = speedbump->direction&DIRECTION_PLUS_X ? 1 : 0;
+    dflag[1] = speedbump->direction&DIRECTION_MINUS_X ? 1 : 0;
+  }
+  else if (speedbump->direction&DIRECTION_Y) {
+    iplane = 2;
+    dflag[0] = speedbump->direction&DIRECTION_PLUS_Y ? 1 : 0;
+    dflag[1] = speedbump->direction&DIRECTION_MINUS_Y ? 1 : 0;
+  } else
+    return np;
+
+  if (speedbump->chord<0 || speedbump->height<0)
+    bombElegant("SPEEDBUMP element needs non-negative CHORD and HEIGHT", NULL);
+
+  if ((speedbump->length/2-speedbump->chord/2+speedbump->dzCenter)<0)
+    bombElegant("SPEEDBUMP element is displaced too far upstream---the element, reduce the chord, or reduce |dzCenter|", NULL);
+  if ((speedbump->length/2+speedbump->chord/2-speedbump->dzCenter)<0)
+    bombElegant("SPEEDBUMP element is displaced too far downstream---lengthen the element, reduce the chord, or reduce |dzCenter|", NULL);
+
+  if (speedbump->chord==0 || speedbump->height==0)
+    radius = 0; /* doesn't matter */
+  else
+    radius = (sqr(speedbump->chord) + 4*sqr(speedbump->height))/(8*speedbump->height);
+
+  /* idealized speedbump that just absorbs particles */
+  for (ip=0; ip<np; ip++) {
+    double xi, yi;
+    ini = initial[ip];
+    hit = 0;
+    for (idir=0; idir<2 && !hit; idir++) {
+      /* Varaibles for circle-line intersection.
+       * See Circle-Line Intersection article on Wolfram MathWorld 
+       * x is the longitudinal coordinate, y is the transverse coordinate 
+       */
+      double x1, x2, y1, y2, dx, dy, dr, D, disc; 
+      double dxPlane, offset;
+      if (!dflag[idir]) continue;
+      offset = iplane==0 ? speedbump->dx : speedbump->dy;
+      /* 1. Check for intersection of the ray with the substrate plane */
+      dxPlane = -1; /* no hit */
+      hit = 0;
+      if (dsign[idir]*ini[iplane]>=(speedbump->position+speedbump->height+offset*dsign[idir])) {
+        /* hit the leading edge */
+        dxPlane = 0;
+      } else if (ini[iplane+1]) {
+        dxPlane = (dsign[idir]*(speedbump->position+speedbump->height+offset*dsign[idir])-ini[iplane])/ini[iplane+1];
+      }
+      if (radius) {
+        /* 2. Check for a hit on the bump */
+        x1 = -(speedbump->length/2 + speedbump->dzCenter);
+        dx = speedbump->length;
+        x2 = x1 + dx;
+        y1 = speedbump->position + radius + offset*dsign[idir] - dsign[idir]*ini[iplane];
+        dy = -speedbump->length*dsign[idir]*ini[iplane+1];
+        y2 = y1 + dy;
+        D = x1*y2 - x2*y1;
+        dr = sqrt(dx*dx + dy*dy);
+        if ((disc = sqr(radius*dr) - sqr(D))==0) {
+          /* tangent hit */
+          xi = D*dy/sqr(dr);
+          yi = -D*dx/sqr(dr);
+          hit += 4;
+          /* put into accelerator coordinates */
+          xi += speedbump->length/2 + speedbump->dzCenter;
+          yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
+        } else if (disc>0) {
+          /* secant line */
+          double xi1, xi2, yi1, yi2;
+          xi1 = (D*dy + SIGN(dy)*dx*sqrt(disc))/sqr(dr);
+          yi1 = (-D*dx + fabs(dy)*sqrt(disc))/sqr(dr);
+          xi2 = (D*dy - SIGN(dy)*dx*sqrt(disc))/sqr(dr);
+          yi2 = (-D*dx - fabs(dy)*sqrt(disc))/sqr(dr);
+          if (xi1<xi2) {
+            xi = xi1;
+            yi = yi1;
+          } else {
+            xi = xi2;
+            yi = yi2;
+          }
+          hit += 4;
+          xi += speedbump->length/2 + speedbump->dzCenter;
+          yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
+        }
+        if ((yi*dsign[idir])>=(speedbump->position+speedbump->height + offset*dsign[idir])) {
+          /* hit is below the plane of the substrate, doesn't count */
+          hit = 0;
+        }
+        if (hit && dxPlane>=0 && dxPlane<=speedbump->length && (xi>dxPlane || xi<0)) {
+          /* we hit the plane upstream of the bump */
+          xi = dxPlane;
+          yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
+          hit = 1;
+        }
+      }
+      if (!hit && dxPlane>=0 && dxPlane<=speedbump->length) {
+        /* we missed the bump but hit the plane downstream */
+        xi = dxPlane;
+        yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
+        hit = 1;
+      }
+    }
+    if (!hit) {
+      /* Particle survives */
+      ini[0] += speedbump->length*ini[1];
+      ini[2] += speedbump->length*ini[3];
+      ini[4] += speedbump->length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
+    } else {
+      swapParticles(initial[ip], initial[np-1]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[np-1]);
+      initial[np-1][iplane==0 ? 0 : 2] = yi;
+      initial[np-1][iplane==0 ? 2 : 0] += xi*initial[np-1][iplane==0 ? 3 : 1];
+      initial[np-1][4] = z+xi;
+      initial[np-1][5] = Po*(1+initial[np-1][5]);
+      --ip;
+      --np;
+    }
+  }
+
+  return(np);
+}

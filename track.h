@@ -896,7 +896,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BRANCH 117
 #define T_IONEFFECTS 118
 #define T_SLICE_POINT 119
-#define N_TYPES  120
+#define T_SPEEDBUMP 120
+#define N_TYPES  121
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -940,7 +941,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
-#define N_SCRAPER_PARAMS 15
+#define N_SCRAPER_PARAMS 14
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 29
@@ -1023,6 +1024,7 @@ extern char *entity_text[N_TYPES];
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
+#define N_SPEEDBUMP_PARAMS 8
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1837,17 +1839,14 @@ typedef struct {
   double position;
   double dx, dy;
   char *insert_from;          /* one of +x, -x, +y, -y --- replaces direction */
-  long direction;
-/* scraper 'direction' indicates the side from which the scraper comes in:
- *                       1
- *                       ^ y
- *                       |
- *                       |
- *          0    x  <----+-----  2      particles travel into page
- *                       |
- *                       | 
- *                       3
- */
+  /* internal only */
+  unsigned long direction;
+#define DIRECTION_PLUS_X 0x01
+#define DIRECTION_MINUS_X 0x02
+#define DIRECTION_X (DIRECTION_PLUS_X+DIRECTION_MINUS_X)
+#define DIRECTION_PLUS_Y 0x04
+#define DIRECTION_MINUS_Y 0x08
+#define DIRECTION_Y (DIRECTION_PLUS_Y+DIRECTION_MINUS_Y)
 } SCRAPER;
 
 /* names and storage structure for beam-centering parameters */
@@ -3147,6 +3146,16 @@ typedef struct {
 
 } IONEFFECTS ;
 
+/* names and storage structure for speed bump physical parameters */
+extern PARAMETER speedbump_param[N_SPEEDBUMP_PARAMS];
+
+typedef struct {
+  double length, chord, dzCenter, height, position, dx, dy;
+  char *insertFrom;
+  /* Internal parameters --- See SCRAPER element for the direction codes */
+  unsigned long direction;
+} SPEEDBUMP;
+
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 #define SAME_BEND_PRECEDES 1 
@@ -3671,7 +3680,7 @@ extern long remove_outlier_particles(double **initial, CLEAN *clean, long np,
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
     double P_central);
-void interpretScraperDirection(SCRAPER *scraper);
+unsigned long interpretScraperDirection(char *insertFrom);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
                                   double **accepted, double z, double Po);
 long removeInvalidParticles(double **coord, long np, double **accepted,

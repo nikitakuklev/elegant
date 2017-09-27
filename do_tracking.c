@@ -1264,6 +1264,11 @@ long do_tracking(
 		nLeft = beam_scraper(coord, (SCRAPER*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
 	      }
 	      break;
+	    case T_SPEEDBUMP:
+	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+		nLeft = track_through_speedbump(coord, (SPEEDBUMP*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+	      }
+	      break;
 	    case T_PFILTER:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
 		nLeft = track_through_pfilter(coord, (PFILTER*)eptr->p_elem, nToTrack, 

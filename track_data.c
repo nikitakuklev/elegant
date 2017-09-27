@@ -65,7 +65,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS", "SLICE",
+    "IONEFFECTS", "SLICE", "SPEEDBUMP",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -891,8 +891,7 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"POSITION", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.position), NULL, 0.0, 0, "position of edge"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, +y, -y)"},
-    {"DIRECTION", "", IS_LONG, 0, (long)((char *)&scraper_example.direction), NULL, 0.0, -1, "obsolete, use insert_from instead"},
+    {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, x, +y, -y, y)"},
     };
 
 CENTER center_example;
@@ -2779,6 +2778,20 @@ PARAMETER slice_point_param[N_SLICE_POINT_PARAMS] = {
     {"USE_DISCONNECT", "", IS_SHORT, 0, (long)((char *)&slice_point_example.useDisconnect), NULL, 0.0, 0, "If nonzero, files are disconnected between each write operation. May be useful for parallel operation.  Ignored otherwise."},
     } ;
 
+SPEEDBUMP speedbump_example;
+/* speed bump physical parameters */
+PARAMETER speedbump_param[N_SPEEDBUMP_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&speedbump_example.length), NULL, 0.0, 0, "insertion length"},
+    {"CHORD", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.chord), NULL, 0.0, 0, "z length of speed bump"},
+    {"DZCENTER", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.dzCenter), NULL, 0.0, 0, "z center displacement of speed bump relative to middle of object"},
+    {"HEIGHT", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.height), NULL, 0.0, 0, "height above the surrounding chamber"},
+    {"POSITION", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.position), NULL, 0.0, 0, "position of peak relative to ideal trajectory"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.dx), NULL, 0.0, 0, "horizontal misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&speedbump_example.dy), NULL, 0.0, 0, "vertical misalignment"},
+    {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&speedbump_example.insertFrom), NULL, 0.0, 0, "direction from which inserted (x, +x, -x, y, +y, -y)"},
+    };
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2921,6 +2934,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES, sizeof(SLICE_POINT),    slice_point_param   }, 
+    { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
 } ;
 
 void compute_offsets()

@@ -45,6 +45,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            double beta0, double alpha0, double gamma0, double eta0, double etap0, 
                            double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
                            double *coord, double pCentral);
+long determineScraperAperture(long plane, unsigned long direction, double position,
+                             double offset, double centroid, double *apertureRet);
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2340,6 +2342,7 @@ double find_acceptance(
   double other_centroid, a, b, a_tube, b_tube, aperture1;
   long aperture_set, elliptical_tube, tube_set;
   SCRAPER *scraper;
+  SPEEDBUMP *speedbump;
   ELEMENT_LIST *ap_elem;
 
   log_entry((char*)"find_acceptance");
@@ -2440,23 +2443,15 @@ double find_acceptance(
       break;
     case T_SCRAPER:
       scraper = (SCRAPER*)ap_elem->p_elem;
-      if (plane) {
-        if (scraper->direction==1 || scraper->direction==3) {
-          offset = scraper->dy;
-          aperture = scraper->position + offset - centroid;
-          if (scraper->direction==3)
-            aperture = -aperture;
-          aperture_set = 1;
-        }
-      } else {
-        if (scraper->direction==0 || scraper->direction==2) {
-          offset = scraper->dx;
-          aperture = scraper->position + offset - centroid;
-          if (scraper->direction==2)
-            aperture = -aperture;
-          aperture_set = 1;
-        }
-      }
+      aperture_set = determineScraperAperture(plane, scraper->direction,
+                                              scraper->position, plane ? scraper->dy : scraper->dx, centroid,
+                                              &aperture);
+      break;
+    case T_SPEEDBUMP:
+      speedbump = (SPEEDBUMP*)ap_elem->p_elem;
+      aperture_set = determineScraperAperture(plane, speedbump->direction,
+                                              speedbump->position, plane ? speedbump->dy : speedbump->dx, centroid,
+                                              &aperture);
       break;
     default:
       break;
@@ -5167,3 +5162,33 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
   }
 }
 
+ long determineScraperAperture(long plane, unsigned long direction, double position,
+                              double offset, double centroid, double *apertureRet)
+ {
+   double a1=COORD_LIMIT, a2=-COORD_LIMIT;
+   unsigned long flagPlus, flagMinus, flags;
+   double aperture;
+   long aperture_set = 0;
+
+   flagPlus = plane ? DIRECTION_PLUS_Y : DIRECTION_PLUS_X;
+   flagMinus = plane ? DIRECTION_MINUS_Y : DIRECTION_MINUS_X;
+   flags = flagPlus+flagMinus;
+   *apertureRet = 0;
+   if (direction&flags) {
+     if ((direction&flags)==flags) {
+       a1 = position + offset - centroid;
+       a2 = -position + offset - centroid;
+       if ((aperture = MIN(a1, a2))<0)
+         aperture = 0;
+     } else if (direction&flagPlus) {
+       if ((aperture = position + offset - centroid)<0)
+         aperture = 0;
+     } else {
+       if ((aperture = centroid - (position + offset))<0)
+         aperture = 0;
+     }
+     *apertureRet = aperture;
+     aperture_set = 1;
+   }
+   return aperture_set;
+ }
