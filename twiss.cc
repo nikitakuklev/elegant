@@ -5176,16 +5176,13 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
    *apertureRet = 0;
    if (direction&flags) {
      if ((direction&flags)==flags) {
-       a1 = position + offset - centroid;
-       a2 = -position + offset - centroid;
-       if ((aperture = MIN(a1, a2))<0)
-         aperture = 0;
+       a1 = fabs(position + offset - centroid);
+       a2 = fabs(-position + offset - centroid);
+       aperture = MIN(a1, a2);
      } else if (direction&flagPlus) {
-       if ((aperture = position + offset - centroid)<0)
-         aperture = 0;
+       aperture = fabs(position + offset - centroid);
      } else {
-       if ((aperture = position - offset - centroid)<0)
-         aperture = 0;
+       aperture = fabs(position - offset - centroid);
      }
      *apertureRet = aperture;
      aperture_set = 1;
