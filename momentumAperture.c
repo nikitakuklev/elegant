@@ -989,7 +989,8 @@ long multiparticleLocalMomentumAcceptance(
         memcpy(coord[ip], startingCoord, sizeof(**coord)*6);
       else
         memset(coord[ip], 0, sizeof(**coord)*6);
-      coord[ip][6] = (myid-1)*nEachProcessor + ip;
+      coord[ip][6] = myid-1 + ip*n_working_processors;
+      /* coord[ip][6] = (myid-1)*nEachProcessor + ip; */
       if (coord[ip][6]>=nTotal) {
         /* Don't track more buffer particles than needed */
         coord[ip][6] = -1;
