@@ -1,13 +1,13 @@
 #!/bin/bash 
 
 make clean 
-make -j 8 
+make -j 4
 cd O.linux-x86_64
 installBeta elegant
 cd ..
 
 make clean 
-make -j 8 Pelegant
+make -j 4 Pelegant
 cd O.linux-x86_64
 installBeta Pelegant
 cd ..
