@@ -51,7 +51,7 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mvapich2-2.2/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.2/bin/ ))
+    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mvapich2-2.3b/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.2/bin/ ))
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
   CC += $(USER_MPI_FLAGS)
