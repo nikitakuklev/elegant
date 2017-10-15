@@ -1221,7 +1221,7 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 
   /* idealized speedbump that just absorbs particles */
   for (ip=0; ip<np; ip++) {
-    double xi, yi;
+    double xi=0, yi=0;
     ini = initial[ip];
     hit = 0;
     for (idir=0; idir<2 && !hit; idir++) {
@@ -1252,45 +1252,47 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
         y2 = y1 + dy;
         D = x1*y2 - x2*y1;
         dr = sqrt(dx*dx + dy*dy);
-        if ((disc = sqr(radius*dr) - sqr(D))==0) {
-          /* tangent hit */
-          xi = D*dy/sqr(dr);
-          yi = -D*dx/sqr(dr);
-          hit += 4;
-          /* put into accelerator coordinates */
-          xi += speedbump->length/2 + speedbump->dzCenter;
-          yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
-        } else if (disc>0) {
-          /* secant line */
-          double xi1, xi2, yi1, yi2;
-          xi1 = (D*dy + SIGN(dy)*dx*sqrt(disc))/sqr(dr);
-          yi1 = (-D*dx + fabs(dy)*sqrt(disc))/sqr(dr);
-          xi2 = (D*dy - SIGN(dy)*dx*sqrt(disc))/sqr(dr);
-          yi2 = (-D*dx - fabs(dy)*sqrt(disc))/sqr(dr);
-          if (xi1<xi2) {
-            xi = xi1;
-            yi = yi1;
+        if ((disc = sqr(radius*dr) - sqr(D))>=0) {
+          if (disc==0) {
+            /* tangent hit */
+            xi = D*dy/sqr(dr);
+            yi = -D*dx/sqr(dr);
+            hit += 4;
+            /* put into accelerator coordinates */
+            xi += speedbump->length/2 + speedbump->dzCenter;
+            yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
           } else {
-            xi = xi2;
-            yi = yi2;
+            /* secant line */
+            double xi1, xi2, yi1, yi2;
+            xi1 = (D*dy + SIGN(dy)*dx*sqrt(disc))/sqr(dr);
+            yi1 = (-D*dx + fabs(dy)*sqrt(disc))/sqr(dr);
+            xi2 = (D*dy - SIGN(dy)*dx*sqrt(disc))/sqr(dr);
+            yi2 = (-D*dx - fabs(dy)*sqrt(disc))/sqr(dr);
+            if (xi1<xi2) {
+              xi = xi1;
+              yi = yi1;
+            } else {
+              xi = xi2;
+              yi = yi2;
+            }
+            hit += 4;
+            xi += speedbump->length/2 + speedbump->dzCenter;
+            yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
           }
-          hit += 4;
-          xi += speedbump->length/2 + speedbump->dzCenter;
-          yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
-        }
-        if ((yi*dsign[idir])>=(speedbump->position+speedbump->height + offset*dsign[idir])) {
-          /* hit is below the plane of the substrate, doesn't count */
-          hit = 0;
-        }
-        if (hit && dxPlane>=0 && dxPlane<=speedbump->length && (xi>dxPlane || xi<0)) {
-          /* we hit the plane upstream of the bump */
-          xi = dxPlane;
-          yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
-          hit = 1;
+          if ((yi*dsign[idir])>=(speedbump->position+speedbump->height + offset*dsign[idir])) {
+            /* hit is below the plane of the substrate, doesn't count */
+            hit = 0;
+          }
+          if (hit && dxPlane>=0 && dxPlane<=speedbump->length && (xi>dxPlane || xi<0)) {
+            /* we hit the plane upstream of the bump */
+            xi = dxPlane;
+            yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
+            hit = 1;
+          }
         }
       }
       if (!hit && dxPlane>=0 && dxPlane<=speedbump->length) {
-        /* we missed the bump but hit the plane downstream */
+        /* we missed the bump but hit the plane */
         xi = dxPlane;
         yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
         hit = 1;
