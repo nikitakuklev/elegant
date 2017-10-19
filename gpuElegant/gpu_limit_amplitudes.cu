@@ -584,7 +584,7 @@ long gpu_elimit_amplitudes(double xmax, double ymax, long np,
 
 class gpu_beam_scraper_kernel1{
 public:
-  double dx, dy, limit, length;
+  double dx, dy, position, length;
   double Nrad, L, theta_rms, prob, L1, K2, probBS, probER, Po, dGammaFactor, z0;
   int do_x, do_y, sections0, multipleScattering;
   unsigned int *d_sortIndex;
@@ -593,39 +593,47 @@ public:
   int energyDecay, nuclearBremsstrahlung, energyStraggle;
   int nSlots;
   double spacing,  width,  tilt,  center;
+  long *dflag;
 
-  gpu_beam_scraper_kernel1(int do_x, int do_y, double dx, double dy,
-    double limit, double length, int energyDecay, int nuclearBremsstrahlung,
+  gpu_beam_scraper_kernel1(int do_x, int do_y, double dx, double dy, double position,
+    double length, int energyDecay, int nuclearBremsstrahlung,
     int energyStraggle, int nSlots, double spacing, double width, double tilt,
     double center, int multipleScattering, double Nrad, double L,
     double theta_rms, int sections0, double prob, double L1, double K2,
     double probBS, double probER, double Po, double dGammaFactor, double z0,
-    unsigned int *d_sortIndex, curandState_t *d_state) :
-    do_x(do_x), do_y(do_y), dx(dx), dy(dy), limit(limit), length(length),
+    unsigned int *d_sortIndex, curandState_t *d_state, long *dflag) :
+    do_x(do_x), do_y(do_y), dx(dx), dy(dy), position(position), length(length),
     energyDecay(energyDecay), nuclearBremsstrahlung(nuclearBremsstrahlung),
     energyStraggle(energyStraggle), nSlots(nSlots), spacing(spacing), width(width),
     tilt(tilt), center(center), multipleScattering(multipleScattering),
     Nrad(Nrad), L(L), theta_rms(theta_rms), sections0(sections0),
     prob(prob), L1(L1), K2(K2), probBS(probBS), probER(probER), Po(Po),
     dGammaFactor(dGammaFactor), z0(z0), d_sortIndex(d_sortIndex),
-    d_state(d_state) {};
+    d_state(d_state), dflag(dflag) {};
 
   __device__ unsigned int operator()(gpuParticleAccessor& part){
     unsigned int tid = part.getParticleIndex();
+    unsigned int idir, hit;
+    int dsign[2] = {1, -1};
 
-    if ((do_x && do_x*(part[0]-dx)>limit) ||
-        (do_y && do_y*(part[2]-dy)>limit)) {
-      /* scatter and/or absorb energy */
-      //if (!track_through_matter(&part, 1, 0, &matter, Po, NULL, z))
-      if (!gpu_track_through_matter_dfunc(part, energyDecay,
-             nuclearBremsstrahlung, energyStraggle, nSlots, spacing,
-             width, tilt, center, multipleScattering,
-             Nrad, L, theta_rms, sections0, prob, L1, K2, probBS, probER,
-             Po, dGammaFactor, z0, d_sortIndex, d_state)) {
-        part[5] = -1;
-        return 0;
+    hit = 0;
+    for (idir=0; idir<2 && !hit; idir++) {
+      if (!dflag[idir]) continue;
+      if ((do_x && dsign[idir]*(part[0]-dx)>dsign[idir]*position) ||
+          (do_y && dsign[idir]*(part[2]-dy)>dsign[idir]*position)) {
+        /* scatter and/or absorb energy */
+        hit = 1;
+        if (!gpu_track_through_matter_dfunc(part, energyDecay,
+                                            nuclearBremsstrahlung, energyStraggle, nSlots, spacing,
+                                            width, tilt, center, multipleScattering,
+                                            Nrad, L, theta_rms, sections0, prob, L1, K2, probBS, probER,
+                                            Po, dGammaFactor, z0, d_sortIndex, d_state)) {
+          part[5] = -1;
+          return 0;
+        }
       }
-    } else {
+    }
+    if (!hit) {
       part[0] = part[0] + part[1]*length;
       part[2] = part[2] + part[3]*length;
       part[4] += length*sqrt(1+sqr(part[1])+sqr(part[3]));
@@ -637,22 +645,29 @@ public:
 class gpu_beam_scraper_kernel2{
 public:
   int do_x, do_y;
-  double dx, dy, limit, Po, z;
+  double dx, dy, position, Po, z;
   unsigned int *d_sortIndex;
-  gpu_beam_scraper_kernel2(int do_x, int do_y, double dx, double dy,
-    double limit, double Po, double z, unsigned int *d_sortIndex) :
-    do_x(do_x), do_y(do_y), dx(dx), dy(dy), limit(limit), Po(Po), z(z),
-    d_sortIndex(d_sortIndex) {};
+  long *dflag;
+  gpu_beam_scraper_kernel2(int do_x, int do_y, double dx, double dy, double position,
+    double Po, double z, unsigned int *d_sortIndex, long *dflag) :
+    do_x(do_x), do_y(do_y), dx(dx), dy(dy), position(position), Po(Po), z(z),
+    d_sortIndex(d_sortIndex), dflag(dflag) {};
 
   __device__ unsigned int operator()(gpuParticleAccessor& part){
     unsigned int tid = part.getParticleIndex();
+    unsigned int idir;
+    int dsign[2] = {1, -1};
 
-    if ((do_x && do_x*(part[0]-dx) > limit) ||
-        (do_y && do_y*(part[2]-dy) > limit) || part[5]<=-1) {
-      part[4] = z; /* record position of particle loss */
-      part[5] = Po*(1+part[5]);
-      d_sortIndex[tid] = tid + part.getParticlePitch();
-      return 0;
+
+    for (idir=0; idir<2; idir++) {
+      if (!dflag[idir]) continue;
+      if ((do_x && dsign[idir]*(part[0]-dx)>dsign[idir]*position) ||
+          (do_y && dsign[idir]*(part[2]-dy)>dsign[idir]*position)) {
+        part[4] = z; /* record position of particle loss */
+        part[5] = Po*(1+part[5]);
+        d_sortIndex[tid] = tid + part.getParticlePitch();
+        return 0;
+      }
     }
     d_sortIndex[tid] = tid;
     return 1;
@@ -662,28 +677,48 @@ public:
 class gpu_beam_scraper_kernel3{
 public:
   int do_x, do_y;
-  double dx, dy, limit, length, Po, z;
+  double dx, dy, position, length, Po, z;
   unsigned int *d_sortIndex;
-  gpu_beam_scraper_kernel3(int do_x, int do_y, double dx, double dy,
-    double limit, double Po, double z, unsigned int *d_sortIndex) : 
-    do_x(do_x), do_y(do_y), dx(dx), dy(dy), limit(limit), length(length), Po(Po), 
-    z(z), d_sortIndex(d_sortIndex) {};
+  long *dflag;
+  gpu_beam_scraper_kernel3(int do_x, int do_y, double dx, double dy, double position,
+    double Po, double z, unsigned int *d_sortIndex, long *dflag) : 
+    do_x(do_x), do_y(do_y), dx(dx), dy(dy), position(position), length(length), Po(Po), 
+    z(z), d_sortIndex(d_sortIndex), dflag(dflag) {};
 
   __device__ unsigned int operator()(gpuParticleAccessor& part){
     unsigned int tid = part.getParticleIndex();
+    unsigned int idir;
+    int dsign[2] = {1, -1};
 
     part[0] += length*part[1];
     part[2] += length*part[3];
-    if ((do_x && do_x*(part[0]-dx) > limit) ||
-        (do_y && do_y*(part[2]-dy) > limit) ) {
-      part[4] = z; /* record position of particle loss */
-      part[5] = Po*(1+part[5]);
-      d_sortIndex[tid] = tid + part.getParticlePitch();
-      return 0;
+
+    for (idir=0; idir<2; idir++) {
+      if (!dflag[idir]) continue;
+      if ((do_x && dsign[idir]*(part[0]-dx)>dsign[idir]*position) ||
+          (do_y && dsign[idir]*(part[2]-dy)>dsign[idir]*position)) {
+        double dzz;
+        if (do_x) {
+          double dxx;
+          dxx = part[0]-dx-position;
+          dzz = dxx/part[1];
+        } else {
+          double dyy;
+          dyy = part[2]-dy-position;
+          dzz = dyy/part[3];
+        }
+        part[4] = z-dzz;
+        part[0] -= part[1]*dzz;
+        part[2] -= part[3]*dzz;
+        part[5] = Po*(1+part[5]);
+        d_sortIndex[tid] = tid + part.getParticlePitch();
+        return 0;
+      }
     }
-    else
-      part[4] += length*sqrt(1+sqr(part[1])+sqr(part[3]));
+
+    part[4] += length*sqrt(1+sqr(part[1])+sqr(part[3]));
     return 1;
+
   }
 };
 
@@ -693,32 +728,34 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
                       double z, double Po) {
   double length;
   long do_x, do_y;
-  double limit;
+  long dflag[2] = {0, 0};
+  MATTER matter;
   struct GPUBASE* gpuBase = getGpuBase();
   unsigned int particlePitch = gpuBase->gpu_array_pitch;
   unsigned int* d_sortIndex = gpuBase->d_tempu_alpha;
- 
+
   log_entry("beam_scraper");
 
-  if (scraper->direction<0 || scraper->direction>3)
-    return np;
-  
-  if (scraper->direction==0 || scraper->direction==2) {
-    do_x = scraper->direction==0 ? 1 : -1;
-    do_y = 0;
-    limit = scraper->position*do_x;
+
+ do_x = do_y = 0;
+  if (scraper->direction&DIRECTION_X) {
+    /* For now, x and +x are the same */
+    do_x = 1;
+    dflag[0] = scraper->direction&DIRECTION_PLUS_X ? 1 : 0;
+    dflag[1] = scraper->direction&DIRECTION_MINUS_X ? 1 : 0;
   }
-  else {
-    do_x = 0;
-    do_y = scraper->direction==1 ? 1 : -1;
-    limit = scraper->position*do_y;
-  }    
+  else if (scraper->direction&DIRECTION_Y) {
+    do_y = 1;
+    dflag[0] = scraper->direction&DIRECTION_PLUS_Y ? 1 : 0;
+    dflag[1] = scraper->direction&DIRECTION_MINUS_Y ? 1 : 0;
+  } else {
+    return np;
+  }
 
   if (scraper->length && (scraper->Xo || scraper->Z)) {
     /* scraper has material properties that scatter beam and
      * absorb energy
      */
-    MATTER matter;
     matter.length = scraper->length;
     matter.lEffective = 0;
     matter.Xo = scraper->Xo;
@@ -759,11 +796,11 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
     double* d_gauss_rn =  gpuBase->d_temp_particles + particlePitch;
     curandState_t* d_state = (curandState_t*)gpu_get_rand_state(d_gauss_rn, np, random_2(0));
     np = killParticles(np, d_sortIndex, accepted,
-           gpu_beam_scraper_kernel1(do_x, do_y, scraper->dx, scraper->dy, limit,
+           gpu_beam_scraper_kernel1(do_x, do_y, scraper->dx, scraper->dy, scraper->position,
              scraper->length, matter.energyDecay, matter.nuclearBremsstrahlung,
              matter.energyStraggle, matter.nSlots, matter.spacing, matter.width,
              matter.tilt, matter.center, multipleScattering, Nrad, L, theta_rms, sections0,
-             prob, L1, K2, probBS, probER, Po, dGammaFactor, z, d_sortIndex, d_state));
+             prob, L1, K2, probBS, probER, Po, dGammaFactor, z, d_sortIndex, d_state, dflag));
     gpuErrorHandler("gpu_beam_scraper::gpu_beam_scraper_kernel1");
 
     log_exit("beam_scraper");
@@ -772,8 +809,8 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
 
   /* come here for idealized scraper that just absorbs particles */
   np = killParticles(np, d_sortIndex, accepted,
-         gpu_beam_scraper_kernel2(do_x, do_y, scraper->dx, scraper->dy, limit,
-           Po, z, d_sortIndex));
+         gpu_beam_scraper_kernel2(do_x, do_y, scraper->dx, scraper->dy, scraper->position,
+           Po, z, d_sortIndex, dflag));
   gpuErrorHandler("gpu_beam_scraper::gpu_beam_scraper_kernel2");
 
   if (np==0 || (length=scraper->length)<=0) {
@@ -784,8 +821,8 @@ long gpu_beam_scraper(SCRAPER *scraper, long np, double **accepted,
   z += length;
 
   np = killParticles(np, d_sortIndex, accepted,
-         gpu_beam_scraper_kernel3(do_x, do_y, scraper->dx, scraper->dy, limit,
-           Po, z, d_sortIndex));
+         gpu_beam_scraper_kernel3(do_x, do_y, scraper->dx, scraper->dy, scraper->position,
+           Po, z, d_sortIndex, dflag));
   gpuErrorHandler("gpu_beam_scraper::gpu_beam_scraper_kernel3");
 
   log_exit("beam_scraper");
