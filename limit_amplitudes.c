@@ -1187,8 +1187,8 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
                              double Po
                              )
 {
-  double *ini, radius;
-  long iplane, ip, idir, hit;
+  double *ini, radius, xiHit, yiHit;
+  long iplane, ip, idir, hit, phit;
   long dsign[2] = {1, -1};
   long dflag[2] = {0, 0};
 
@@ -1223,9 +1223,10 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
   for (ip=0; ip<np; ip++) {
     double xi=0, yi=0;
     ini = initial[ip];
-    hit = 0;
-    for (idir=0; idir<2 && !hit; idir++) {
-      /* Varaibles for circle-line intersection.
+    xiHit = yiHit = DBL_MAX; /* no hit */
+    phit = 0;
+    for (idir=0; idir<2; idir++) {
+      /* Variables for circle-line intersection.
        * See Circle-Line Intersection article on Wolfram MathWorld 
        * x is the longitudinal coordinate, y is the transverse coordinate 
        */
@@ -1233,16 +1234,23 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       double dxPlane, offset;
       if (!dflag[idir]) continue;
       offset = iplane==0 ? speedbump->dx : speedbump->dy;
-      /* 1. Check for intersection of the ray with the substrate plane */
-      dxPlane = -1; /* no hit */
       hit = 0;
+      /* 1. Check for intersection of the ray with the substrate plane upstream of the bump */
       if (dsign[idir]*ini[iplane]>=(speedbump->position+speedbump->height+offset*dsign[idir])) {
         /* hit the leading edge */
         dxPlane = 0;
+        xi = 0;
+        yi = ini[iplane];
+        hit = 1;
       } else if (ini[iplane+1]) {
         dxPlane = (dsign[idir]*(speedbump->position+speedbump->height+offset*dsign[idir])-ini[iplane])/ini[iplane+1];
+        if (dxPlane>=0 && dxPlane<=(speedbump->length/2 + speedbump->dzCenter - speedbump->chord/2)) {
+          hit = 1;
+          xi = dxPlane;
+          yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
+        }
       }
-      if (radius) {
+      if (!hit && radius) {
         /* 2. Check for a hit on the bump */
         x1 = -(speedbump->length/2 + speedbump->dzCenter);
         dx = speedbump->length;
@@ -1257,7 +1265,7 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
             /* tangent hit */
             xi = D*dy/sqr(dr);
             yi = -D*dx/sqr(dr);
-            hit += 4;
+            hit = 1;
             /* put into accelerator coordinates */
             xi += speedbump->length/2 + speedbump->dzCenter;
             yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
@@ -1275,30 +1283,25 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
               xi = xi2;
               yi = yi2;
             }
-            hit += 4;
+            hit = 1;
             xi += speedbump->length/2 + speedbump->dzCenter;
             yi = (yi - (speedbump->position + radius + offset*dsign[idir]))/(-dsign[idir]);
           }
-          if ((yi*dsign[idir])>=(speedbump->position+speedbump->height + offset*dsign[idir])) {
-            /* hit is below the plane of the substrate, doesn't count */
-            hit = 0;
-          }
-          if (hit && dxPlane>=0 && dxPlane<=speedbump->length && (xi>dxPlane || xi<0)) {
-            /* we hit the plane upstream of the bump */
-            xi = dxPlane;
-            yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
-            hit = 1;
-          }
+        }
+        if (!hit && dxPlane>=(speedbump->length/2+speedbump->dzCenter) && dxPlane<=speedbump->length) {
+          /* we missed the bump but hit the plane downstream */
+          xi = dxPlane;
+          yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
+          hit = 1;
         }
       }
-      if (!hit && dxPlane>=0 && dxPlane<=speedbump->length) {
-        /* we missed the bump but hit the plane */
-        xi = dxPlane;
-        yi = (speedbump->position+speedbump->height)*dsign[idir] + offset;
-        hit = 1;
+      if (hit && xi<xiHit) {
+        xiHit = xi;
+        yiHit = yi;
+        phit = 1;
       }
     }
-    if (!hit) {
+    if (!phit) {
       /* Particle survives */
       ini[0] += speedbump->length*ini[1];
       ini[2] += speedbump->length*ini[3];
@@ -1307,9 +1310,9 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       swapParticles(initial[ip], initial[np-1]);
       if (accepted)
         swapParticles(accepted[ip], accepted[np-1]);
-      initial[np-1][iplane==0 ? 0 : 2] = yi;
-      initial[np-1][iplane==0 ? 2 : 0] += xi*initial[np-1][iplane==0 ? 3 : 1];
-      initial[np-1][4] = z+xi;
+      initial[np-1][iplane==0 ? 0 : 2] = yiHit;
+      initial[np-1][iplane==0 ? 2 : 0] += xiHit*initial[np-1][iplane==0 ? 3 : 1];
+      initial[np-1][4] = z+xiHit;
       initial[np-1][5] = Po*(1+initial[np-1][5]);
       --ip;
       --np;
