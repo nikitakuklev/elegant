@@ -267,8 +267,9 @@ proc computeBunchShape {args} {
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
     global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency fractionalSpan
 
+    set outFile /tmp/[file tail $twiss].longit
     exec sddssequence -pipe=out -define=t,type=double,units=s -sequence=begin=[expr -$fractionalSpan*1e-6/$rfFrequency],end=[expr $fractionalSpan*1e-6/$rfFrequency],n=10000 \
-        | sddsprocess -pipe=in $twiss.longit \
+        | sddsprocess -pipe=in $outFile \
         "-define=param,C1,[expr $alphac*$cMKS*$voltage/($energy*$sMax1*$omegaRF)]" \
         "-define=param,alphac,$alphac" \
         "-define=param,Sdelta0,$Sdelta0" \
@@ -289,11 +290,11 @@ proc computeBunchShape {args} {
         "-redefine=col,rho,rho rhoInteg /" \
         -process=t,rms,tRms,weight=rho
 
-    set bunchDuration [exec sdds2stream -parameter=tRms $twiss.longit]
+    set bunchDuration [exec sdds2stream -parameter=tRms $outFile]
     set bunchLength [expr $bunchDuration*$cMKS]
 
     if $plot {
-        exec sddsplot -column=t,rho $twiss.longit -title=@tRms &
+        exec sddsplot -column=t,rho $outFile -title=@tRms &
     }
 }
 
