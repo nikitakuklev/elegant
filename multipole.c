@@ -406,6 +406,7 @@ long fmultipole_tracking(
     }
   }
 
+  /* Note that we undo misalignments for all particles, including lost particles */
   if (multipole->tilt)
     rotateBeamCoordinates(particle, n_part, -multipole->tilt);
   if (multipole->dx || multipole->dy || multipole->dz)

@@ -72,6 +72,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 {
   long i_part, i_top;
   double xkick, ykick, kick, tilt, length, *coord, rho0, theta0, rho, theta, alpha, arg;
+  double dx, dy, dz;
   MULTIPOLE_DATA *multData;
   long isr, sr;
   EHCOR *ehcor;
@@ -94,6 +95,9 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     tilt = ehcor->tilt;
     isr = ehcor->isr;
     sr = ehcor->synchRad;
+    dx = ehcor->dx;
+    dy = ehcor->dy;
+    dz = ehcor->dz;
     if (ehcor->steeringMultipoles && !ehcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(ehcor->steeringMultipoleData), ehcor->steeringMultipoles, 1);
     }
@@ -122,6 +126,9 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     tilt = evcor->tilt;
     isr = evcor->isr;
     sr = evcor->synchRad;
+    dx = evcor->dx;
+    dy = evcor->dy;
+    dz = evcor->dz;
     if (evcor->steeringMultipoles && !evcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(evcor->steeringMultipoleData), evcor->steeringMultipoles, 1);
     }
@@ -151,6 +158,9 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     tilt = ehvcor->tilt;
     isr = ehvcor->isr;
     sr = ehvcor->synchRad;
+    dx = ehvcor->dx;
+    dy = ehvcor->dy;
+    dz = ehvcor->dz;
     if (ehvcor->steeringMultipoles && !ehvcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(ehvcor->steeringMultipoleData), ehvcor->steeringMultipoles, 1);
     }
@@ -194,6 +204,11 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   if (isSlave || !notSinglePart) {
     i_top = n_part-1;
 
+    if (dx || dy || dz)
+      offsetBeamCoordinates(part, n_part, dx, dy, dz);
+    if (tilt)
+      rotateBeamCoordinates(part, n_part, tilt);
+
     /* Apply steering kicks */
     for (i_part=0; i_part<=i_top; i_part++) {
       lost = 0;
@@ -203,9 +218,6 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         abort();
       }
 
-      /* Rotate particle coordinates into frame such that bending is all in the "x" coordinates */
-      rotate_coordinates(coord, tilt);
-      
       if (multData && multData->orders)
         lost = !applySteeringMultipoleKicks(coord, theta0/2, 0.0, multData);
 
@@ -233,8 +245,6 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         }
       }
 
-      rotate_coordinates(coord, -tilt);
-
       if (lost) {
         swapParticles(part[i_part], part[i_top]);
         if (accepted) {
@@ -253,6 +263,12 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         i_part--;
       }
     }
+
+    /* Note that we undo misalignments for all particles, including lost particles */
+    if (tilt)
+      rotateBeamCoordinates(part, n_part, -tilt);
+    if (dx || dy || dz)
+      offsetBeamCoordinates(part, n_part, -dx, -dy, -dz);
   }
   
   if (sr)

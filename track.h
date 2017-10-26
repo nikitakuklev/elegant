@@ -1016,9 +1016,9 @@ extern char *entity_text[N_TYPES];
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 15
-#define N_EHCOR_PARAMS 10
-#define N_EVCOR_PARAMS 10
-#define N_EHVCOR_PARAMS 12
+#define N_EHCOR_PARAMS 13
+#define N_EVCOR_PARAMS 13
+#define N_EHVCOR_PARAMS 15
 #define N_BMAPXYZ_PARAMS 9
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 17
@@ -1229,7 +1229,7 @@ extern PARAMETER evcor_param[N_EVCOR_PARAMS] ;
 extern PARAMETER ehvcor_param[N_EHVCOR_PARAMS] ;
    
 typedef struct {
-    double length, kick, tilt, calibration;
+    double length, kick, tilt, dx, dy, dz, calibration;
     double lEffRad;
     short steering, synchRad, isr;
     char *steeringMultipoles, *randomMultipoles;
@@ -1241,7 +1241,7 @@ typedef struct {
     } EHCOR;
 
 typedef struct {
-    double length, kick, tilt, calibration;
+    double length, kick, tilt, dx, dy, dz, calibration;
     double lEffRad;
     short steering, synchRad, isr; 
     char *steeringMultipoles, *randomMultipoles;
@@ -1253,7 +1253,7 @@ typedef struct {
     } EVCOR;
 
 typedef struct {
-    double length, xkick, ykick, tilt, xcalibration, ycalibration;
+    double length, xkick, ykick, tilt, dx, dy, dz, xcalibration, ycalibration;
     double lEffRad;
     short steering, synchRad, isr;
     char *steeringMultipoles, *randomMultipoles;
