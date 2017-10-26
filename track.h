@@ -167,7 +167,8 @@ typedef struct {
   double referenceRadius;  
   char *filename;
   /* normal and skew terms */
-  double *an, *bn;         /* input values for normal and skew terms, respectively, for KQUAD, KSEXT, others */
+  double *an, *bn;         /* input values for normal and skew terms, respectively (note difference from common use!),
+			      for KQUAD, KSEXT, others */
   double *anMod, *bnMod;   /* computed values: anMod=an*n!/r^n, bnMod=bn*n!/r^n */
   double *KnL, *JnL;       /* provided as input for FMULT, but computed for KQUAD, KSEXT, etc. */
   short copy;              /* if non-zero, pointers are copies of another structure and shouldn't be freed or reallocated */
@@ -1015,9 +1016,9 @@ extern char *entity_text[N_TYPES];
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 15
-#define N_EHCOR_PARAMS 9
-#define N_EVCOR_PARAMS 9
-#define N_EHVCOR_PARAMS 11
+#define N_EHCOR_PARAMS 10
+#define N_EVCOR_PARAMS 10
+#define N_EHVCOR_PARAMS 12
 #define N_BMAPXYZ_PARAMS 9
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 17
@@ -1231,27 +1232,36 @@ typedef struct {
     double length, kick, tilt, calibration;
     double lEffRad;
     short steering, synchRad, isr;
-    char *steeringMultipoles;
+    char *steeringMultipoles, *randomMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
+    MULTIPOLE_DATA randomMultipoleData;
+    short multipolesRandomized;
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } EHCOR;
 
 typedef struct {
     double length, kick, tilt, calibration;
     double lEffRad;
     short steering, synchRad, isr; 
-    char *steeringMultipoles;
+    char *steeringMultipoles, *randomMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
+    MULTIPOLE_DATA randomMultipoleData;
+    short multipolesRandomized;
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } EVCOR;
 
 typedef struct {
     double length, xkick, ykick, tilt, xcalibration, ycalibration;
     double lEffRad;
     short steering, synchRad, isr;
-    char *steeringMultipoles;
+    char *steeringMultipoles, *randomMultipoles;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
+    MULTIPOLE_DATA randomMultipoleData;
+    short multipolesRandomized;
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
   } EHVCOR;
 
 /* names and storage structure for vertical corrector physical parameters */

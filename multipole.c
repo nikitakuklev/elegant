@@ -88,7 +88,9 @@ void addMultipoleDatasetToStore(MULTIPOLE_DATA *multData, char *filename)
 }
 
 void readErrorMultipoleData(MULTIPOLE_DATA *multData,
-                               char *multFile, long steering)
+                            char *multFile, 
+                            long steering /* 1 => systematic, 2 => random */
+                            )
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
@@ -131,7 +133,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
 
   bnCheck = SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
   skewCheck = SDDS_CheckColumn(&SDDSin, "skew", NULL, SDDS_ANY_FLOATING_TYPE, NULL) == SDDS_CHECK_OK;
-  if (!steering) {
+  if (steering!=1) {
     if (!bnCheck && !skewCheck) {
       printf("Problems with data in multipole file %s: neither \"bn\" nor \"skew\" column found\n", multFile);
       exitElegant(1);
@@ -142,10 +144,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     }
   } else {
     if (bnCheck || skewCheck) {
-      printf("*** Warning: Steering multipole file %s should not have bn or skew columns.\n",
+      printf("*** Warning: Steering multipole file %s has systematic bn or skew columns, which is ignored.\n",
             multFile);
-      printf("Use \"normal\" column to specify multipole content for a horizontal steerer.\n");
-      printf("Multipole content for vertical steerer is deduced from this.\n");
       fflush(stdout);
     }
   }
@@ -163,17 +163,24 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }
   if (!SDDS_GetParameterAsDouble(&SDDSin, "referenceRadius", &multData->referenceRadius) ||
       !(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
-      !(multData->an=SDDS_GetColumnInDoubles(&SDDSin, anCheck?"an":"normal")) || 
-      (!steering && !(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, bnCheck?"bn":"skew")))) {
+      !(multData->an=SDDS_GetColumnInDoubles(&SDDSin, anCheck?"an":"normal"))) {
     sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }    
-  if (steering &&
-      !(multData->bn=SDDS_Malloc(sizeof(*(multData->bn))*multData->orders))) {
-    printf("Memory allocation failure (readErrorMultipoleData)\n");
-    exitElegant(1);
+  if (steering!=1) {
+    if (!(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, bnCheck?"bn":"skew"))) {
+      sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
+      SDDS_SetError(buffer);
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+  } else {
+    if (!(multData->bn=calloc(multData->orders, sizeof(*(multData->bn))))) {
+      printf("Memory allocation failure (readErrorMultipoleData)\n");
+      exitElegant(1);
+    }
   }
   if (SDDS_ReadPage(&SDDSin)==2) {
     printf("Warning: multipole file %s has multiple pages, which are ignored\n",
@@ -181,11 +188,11 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
-  if (steering) {
+  if (steering==1) {
     long i, j;
     /* check for disallowed multipoles */
     for (i=0; i<multData->orders; i++) {
-      if (ODD(multData->order[i])) {
+      if (ODD(multData->order[i]) && (multData->an[i]!=0 || multData->bn[i]!=0)) {
         printf("Error: steering multipole file %s has disallowed odd orders.\n",
                 multFile);
         exitElegant(1);

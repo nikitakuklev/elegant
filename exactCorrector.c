@@ -16,6 +16,11 @@
 #include "mdb.h"
 #include "track.h"
 
+void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *steeringMult,
+					 MULTIPOLE_DATA *randomMult,
+					 MULTIPOLE_DATA *totalMult,
+					 char *name);
+
 int applySteeringMultipoleKicks(
                                 double *coord,
                                 double xkick,
@@ -91,7 +96,23 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     sr = ehcor->synchRad;
     if (ehcor->steeringMultipoles && !ehcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(ehcor->steeringMultipoleData), ehcor->steeringMultipoles, 1);
-      multData = &(ehcor->steeringMultipoleData);
+    }
+    multData = &(ehcor->steeringMultipoleData);
+    if (ehcor->randomMultipoles) {
+      if (!ehcor->randomMultipoleData.initialized) {
+	if (!ehcor->steeringMultipoles) 
+	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EHKICK %s\n", 
+			eptr->name);
+	readErrorMultipoleData(&(ehcor->randomMultipoleData), ehcor->randomMultipoles, 2);
+      }
+      if (!ehcor->multipolesRandomized) {
+	/* generate instance of random multipoles, sum to make total */
+	computeTotalSteeringMultipoleErrors(&(ehcor->steeringMultipoleData), 
+					    &(ehcor->randomMultipoleData), 
+					    &(ehcor->totalMultipoleData), eptr->name);
+	ehcor->multipolesRandomized = 1;
+      }
+      multData = &(ehcor->totalMultipoleData);
     }
     break;
   case T_EVCOR:
@@ -103,7 +124,23 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     sr = evcor->synchRad;
     if (evcor->steeringMultipoles && !evcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(evcor->steeringMultipoleData), evcor->steeringMultipoles, 1);
-      multData = &(evcor->steeringMultipoleData);
+    }
+    multData = &(evcor->steeringMultipoleData);
+    if (evcor->randomMultipoles) {
+      if (!evcor->randomMultipoleData.initialized) {
+	if (!evcor->steeringMultipoles) 
+	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EVKICK %s\n", 
+			eptr->name);
+	readErrorMultipoleData(&(evcor->randomMultipoleData), evcor->randomMultipoles, 2);
+      }
+      if (!evcor->multipolesRandomized) {
+	/* generate instance of random multipoles, sum to make total */
+	computeTotalSteeringMultipoleErrors(&(evcor->steeringMultipoleData), 
+					    &(evcor->randomMultipoleData), 
+					    &(evcor->totalMultipoleData), eptr->name);
+	evcor->multipolesRandomized = 1;
+      }
+      multData = &(evcor->totalMultipoleData);
     }
     break;
   case T_EHVCOR:
@@ -116,7 +153,23 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
     sr = ehvcor->synchRad;
     if (ehvcor->steeringMultipoles && !ehvcor->steeringMultipoleData.initialized) {
       readErrorMultipoleData(&(ehvcor->steeringMultipoleData), ehvcor->steeringMultipoles, 1);
-      multData = &(ehvcor->steeringMultipoleData);
+    }
+    multData = &(ehvcor->steeringMultipoleData);
+    if (ehvcor->randomMultipoles) {
+      if (!ehvcor->randomMultipoleData.initialized) {
+	if (!ehvcor->steeringMultipoles) 
+	  bombElegantVA("Error: must give STEERING_MULTIPOLES with RANDOM_MULTIPOLES for EKICK %s\n", 
+			eptr->name);
+	readErrorMultipoleData(&(ehvcor->randomMultipoleData), ehvcor->randomMultipoles, 2);
+      }
+      if (!ehvcor->multipolesRandomized) {
+	/* generate instance of random multipoles, sum to make total */
+	computeTotalSteeringMultipoleErrors(&(ehvcor->steeringMultipoleData), 
+					    &(ehvcor->randomMultipoleData), 
+					    &(ehvcor->totalMultipoleData), eptr->name);
+	ehvcor->multipolesRandomized = 1;
+      }
+      multData = &(ehvcor->totalMultipoleData);
     }
     break;
   default:
@@ -150,13 +203,13 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
         abort();
       }
 
+      /* Rotate particle coordinates into frame such that bending is all in the "x" coordinates */
       rotate_coordinates(coord, tilt);
       
       if (multData && multData->orders)
         lost = !applySteeringMultipoleKicks(coord, theta0/2, 0.0, multData);
 
       if (!lost) {
-        /* Rotate particle coordinates into frame such that bending is all in the "x" coordinates */
         if (rho0==0 || length==0) {
           coord[1] = tan(theta0/(1+coord[5]) + atan(coord[1]));
         } else {
@@ -208,3 +261,25 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   return i_top+1;
 }
 
+void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *systematicMult,
+					 MULTIPOLE_DATA *randomMult,
+					 MULTIPOLE_DATA *totalMult,
+					 char *name)
+{
+  long i;
+  if (!totalMult->initialized) {
+    totalMult->orders = systematicMult->orders;
+    totalMult->order = tmalloc(sizeof(*(totalMult->order))*totalMult->orders);
+    totalMult->KnL = tmalloc(sizeof(*(totalMult->KnL))*totalMult->orders);
+    totalMult->JnL = tmalloc(sizeof(*(totalMult->JnL))*totalMult->orders);
+    totalMult->initialized = 1;
+  }
+  for (i=0; i<systematicMult->orders; i++) {
+    if (systematicMult->order[i]!=randomMult->order[i])
+      bombElegantVA("Error: order mismatch for STEERING_MULTIPOLES and RANDOM_MULTIPOLES for EVKICK %s\n", 
+		    name);
+    totalMult->order[i] = randomMult->order[i];
+    totalMult->KnL[i] = systematicMult->KnL[i] + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->KnL[i];
+    totalMult->JnL[i] = systematicMult->JnL[i] + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->JnL[i];
+  }
+}

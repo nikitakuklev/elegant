@@ -1867,6 +1867,18 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
             if (includeRF)
               ((EMATRIX*)eptr->p_elem)->fiducialSeen = 0;
             break;
+          case T_EHCOR:
+            if (includeRandom) 
+              ((EHCOR*)eptr->p_elem)->multipolesRandomized = 0;
+            break;
+          case T_EVCOR:
+            if (includeRandom) 
+              ((EVCOR*)eptr->p_elem)->multipolesRandomized = 0;
+            break;
+          case T_EHVCOR:
+            if (includeRandom) 
+              ((EHVCOR*)eptr->p_elem)->multipolesRandomized = 0;
+            break;
           default:
             break;
             }

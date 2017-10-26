@@ -47,6 +47,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   the electron beam coordinates were zeroed out.  
 \item A bug in the \verb|WATCH| element caused \verb|elegant| to crash in \verb|centroid| and \verb|parameter|
   mode when the \verb|WATCH| element was in a beamline branch that did not get executed on the first pass.
+\item In multi-step runs, the \verb|STEERING_MULTIPOLES| input for the \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements
+  was ignored except on the first step.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
