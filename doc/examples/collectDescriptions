@@ -47,7 +47,7 @@ while {![eof $fdi]} {
         puts $fd "\\item \\verb|[lindex $pathList 0]| --- "
         copyFile $s
         set beginNeeded 1
-    }  else {
+    }  elseif [llength $pathList]==3 {
         if $beginNeeded {
             puts $fd "\\begin{itemize}"
             incr endNeeded 1
