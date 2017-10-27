@@ -49,10 +49,10 @@ long track_through_matter(
 #ifdef HAVE_GPU
    if(getElementOnGpu()){
       startGpuTimer();
-      ip = gpu_track_through_matter(np, matter, Po, accepted, z0);
+      ip = gpu_track_through_matter(np, iPass, matter, Po, accepted, z0);
 #ifdef GPU_VERIFY     
       startCpuTimer();
-      track_through_matter(part, np, matter, Po, accepted, z0);
+      track_through_matter(part, np, iPass, matter, Po, accepted, z0);
       compareGpuCpu(np, "track_through_matter");
 #endif /* GPU_VERIFY */
       return ip;

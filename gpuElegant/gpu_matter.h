@@ -12,7 +12,7 @@ void gpu_set_track_through_matter(long np, MATTER *matter, double Po,
        double *probBS, double *probER, double *dGammaFactor);
 
 /* full function */
-long gpu_track_through_matter(long np, MATTER *matter, double Po,
+  long gpu_track_through_matter(long np, long iPass, MATTER *matter, double Po,
                               double **accepted, double z0);
 
 #ifdef __cplusplus
