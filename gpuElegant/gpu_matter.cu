@@ -150,6 +150,7 @@ long gpu_track_through_matter(long np, long iPass, MATTER *matter, double Po,
   }
   else 
     return np;
+  L1 = L; /* mostly to suppress compiler warning. */
 
   gpu_set_track_through_matter(np, matter, Po, impulseMode, &multipleScattering, &Nrad, 
        &L, &theta_rms, &sections0, &prob, &L1, &K2, &probBS, &probER, &dGammaFactor);

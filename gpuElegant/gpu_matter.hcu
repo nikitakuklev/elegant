@@ -39,13 +39,13 @@ inline __device__ double gpu_solveBremsstrahlungCDF(double F)
 }
 
 inline __device__ unsigned int
-    gpu_track_through_matter_dfunc(gpuParticleAccessor& coord, 
-      int energyDecay, int nuclearBremsstrahlung, int energyStraggle,
-      int multipleScattering, int nSlots, double spacing, double width, double tilt, double center,
-      double Nrad, double L, double theta_rms,
-      int sections0, double prob, double L1, double K2, 
-      double probBS, double probER, double Po, double dGammaFactor, double z0,
-      unsigned int *d_sortIndex, curandState_t *d_state) {
+gpu_track_through_matter_dfunc(gpuParticleAccessor& coord, 
+                               int energyDecay, int nuclearBremsstrahlung, int energyStraggle,
+                               int multipleScattering, int nSlots, double spacing, double width, double tilt, double center,
+                               double Nrad, double L, double theta_rms,
+                               int sections0, double prob, double L1, double K2, 
+                               double probBS, double probER, double Po, double dGammaFactor, double z0,
+                               unsigned int *d_sortIndex, curandState_t *d_state) {
 
   double P, gamma, dgamma, beta, t, z1, z2, dx, dy, ds;
   unsigned int tid = coord.getParticleIndex();
@@ -130,8 +130,8 @@ inline __device__ unsigned int
         if (energyDecay || nuclearBremsstrahlung) {
           if (probBS!=0 && curand_uniform_double(state)<probBS) //random_2(1)<probBS)
             gamma -= gamma*gpu_solveBremsstrahlungCDF(curand_uniform_double(state));
-          if (probER!=0 && curand_uniform_double(state)<probER); //random_2(1)<probER)
-	  gamma -= BS_Y0/(1-curand_uniform_double(state)*(1-BS_Y0));
+          if (probER!=0 && curand_uniform_double(state)<probER) //random_2(1)<probER)
+	    gamma -= BS_Y0/(1-curand_uniform_double(state)*(1-BS_Y0));
           if (gamma<=1) {
             isLost = 1;
             break;
@@ -185,8 +185,8 @@ inline __device__ unsigned int
 
 extern "C" {
 
-double solveBremsstrahlungCDF(double F);
-extern double *lnyTable, *FTable;
+  double solveBremsstrahlungCDF(double F);
+  extern double *lnyTable, *FTable;
 
 } // extern C
 
