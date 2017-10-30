@@ -1197,7 +1197,8 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
         }
         s++; dpp++; dpm++; Name++; Type++; Occurence++;
         if (i++ > iTotal) {
-          bombElegant("Momentum aperture file ends earlier than required", NULL);
+          bombElegantVA("Momentum aperture file ends earlier than required---no data for %s#%ld at s=%lem\n",
+                        eptr->name, eptr->occurence, eptr->end_pos);
 	}
       }
       result++;
