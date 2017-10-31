@@ -681,8 +681,8 @@ endif
 
 
 elegantto_LIBS += $(GSLLIB)
-elegantto_SYS_LIBS += $(SYS_GSLLIB)
+elegantto_SYS_LIBS += $(SYS_GSLLIB) $(EXTRAGPULIBS)
 elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
-elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
+elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB) $(EXTRAGPULIBS)
 Pelegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
 Pelegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB) $(EXTRAMPILIBS)
