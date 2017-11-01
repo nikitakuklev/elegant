@@ -487,6 +487,10 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
 #endif
 
   /* dump the data to script input file */
+  if (script->verbosity>1) {
+    printf("Writing data to script input file %s\n",  input);
+    fflush(stdout);
+  }
   if (notSinglePart || (!notSinglePart&&isMaster)) {
 #if MPI_DEBUG
     printf("dumping data to the script input file %s\n", input);
@@ -526,6 +530,10 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   printf("dumped the data to the script input file\n");
   fflush(stdout);
 #endif
+  if (script->verbosity>2) {
+    printf("Done writing data to script input file %s\n",  input);
+    fflush(stdout);
+  }
 
   /* run the script */
   if (isMaster) /* This will be done on the master */
@@ -604,10 +612,15 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
       }
     }
   }
+  if (script->verbosity>2) {
+    printf("About to read file %s\n",  output);
+    fflush(stdout);
+  }
   
   if (SDDS_ReadPage(&SDDSin)!=1) {
     SDDS_SetError("Unable to read script output file");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    return 0;
   }
   npNew = SDDS_RowCount(&SDDSin);
 #if MPI_DEBUG
@@ -622,7 +635,7 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
     npNewTotal = npNew;
   } else
     MPI_Allreduce (&npNew, &npNewTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    
+  
   if (npNewTotal>npTotal)
     if (script->noNewParticles)
       bombElegantVA("The number of particles increased from %ld to %ld after the SCRIPT element, even though NO_NEW_PARTICLES=0.", 
@@ -631,6 +644,11 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   if (script->verbosity>0 && isMaster) {
     printf("%ld particles in script output file (was %ld)\n", npNewTotal, npTotal);
     fflush(stdout);
+  } else {
+#if MPI_DEBUG
+    printf("%ld particles in script output file (was %ld)\n", npNewTotal, npTotal);
+    fflush(stdout);
+#endif
   }
   
   pID = NULL;
@@ -680,17 +698,23 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
     fflush(stdout);
 #endif
   }
+  if (script->verbosity>3) {
+    printf("Arrays resized\n");
+    fflush(stdout);
+  }
 
   /* copy or create particle ID */
-  if (pID) {
-    /* The new particle IDs replace the pre-existing ones */
+  if (script->useParticleID) {
+    if (pID) {
+      /* The new particle IDs replace the pre-existing ones */
 #if MPI_DEBUG
-    printf("Copying particle ID data\n");
-    fflush(stdout);
+      printf("Copying particle ID data\n");
+      fflush(stdout);
 #endif
-    for (j=0; j<npNew; j++)
-      part[j][i] = pID[j];
-    pID = NULL;
+      for (j=0; j<npNew; j++)
+	part[j][i] = pID[j];
+      pID = NULL;
+    }
   } else {
     /* No particle ID data in the file, so generate some */
     if (isSlave && notSinglePart) {
@@ -719,6 +743,10 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
       }
     }
   }
+  if (script->verbosity>3) {
+    printf("Particle IDs (optionally) reset\n");
+    fflush(stdout);
+  }
 
   if ((!notSinglePart && isMaster) || notSinglePart) {
     if (charge) {
@@ -743,10 +771,18 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
       }
     }
   }
+  if (script->verbosity>3) {
+    printf("Charge value (optionally) set\n");
+    fflush(stdout);
+  }
 
   if (charge && notSinglePart) {
     MPI_Bcast(&(charge->charge), 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&charge->macroParticleCharge, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  }
+  if (script->verbosity>3) {
+    printf("Charge value broadcast\n");
+    fflush(stdout);
   }
 
   /* Close files */

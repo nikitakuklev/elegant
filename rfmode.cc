@@ -619,10 +619,12 @@ void track_through_rfmode(
             n_binned++;
           }
 #if USE_MPI && MPI_DEBUG
+	  /*
 	  printf("Histogram Ihist has %ld  particles, %ld binned particles, firstBin=%ld, lastBin=%ld\n",
 		 np, n_binned, firstBin, lastBin);
 	  for (ib=firstBin; ib<=lastBin; ib++) 
 	    printf("Ihist[%ld] = %ld\n", ib, Ihist[ib]);
+	  */
 #endif
 
           if (n_binned!=np) {
