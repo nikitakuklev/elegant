@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 34.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 34.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,68 +35,32 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://www.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 34.0}
+\section{Highlights of What's New in Version 34.1}
 
-Here is a summary of what's changed since release 33.1.1.
+Here is a summary of what's changed since release 34.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item A bug in the \verb|IONEFFECTS| element was reported by J. Cavley (APS): when only one bunch was present,
-  the electron beam coordinates were zeroed out.  
-\item A bug in the \verb|WATCH| element caused \verb|elegant| to crash in \verb|centroid| and \verb|parameter|
-  mode when the \verb|WATCH| element was in a beamline branch that did not get executed on the first pass.
-\item In multi-step runs, the \verb|STEERING_MULTIPOLES| input for the \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements
-  was ignored except on the first step.
+\item Restored the long-deprecated \verb|DIRECTION| parameter for the \verb|SCRAPER| element, as a convenience.
+\item Fixed a problem that caused the \verb|SCRIPT| element to sometimes hang up in \verb|Pelegant| if some processors 
+  did not have any particles after loading data from the script output file.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug in the \verb|ion_effects| command was reported by J. Cavley (APS): when only one bunch was present,
-  the electron beam coordinates were zeroed out. 
-\item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
-  reported by Jonas Bj{\"o}rklund. 
-\item The \verb|use_moments_output_values| qualifier of the \verb|bunched_beam| command did not work for the parallel
-  version. 
-\item The \verb|full_grid_output| mode of the \verb|frequency_map| command provided incorrect results for the
-  diffusion for particles that got lost.
-\item The \verb|parameters| output file from the \verb|run_setup| command incorrectly reported the length and angle
-  of \verb|CSBEND| elements when element division was invoked. This was reported by V. Sajaev (APS).
-\item The \verb|amplification_factors| command now respects \verb|link_elements| commands.
-\item The \verb|tune_footprint| command now optionally runs in major action command mode. The inability to do so
-  was pointed out by Y.-P. Sun (APS).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The long-deprecated \verb|DIRECTION| parameter of the \verb|SCRAPER| element has been removed; input files using the
-  \verb|SCRAPER| element will  need to be updated to remove this parameter and replace it with
-  equivalent \verb|INSERT_FROM| parameter.
-  One result is that the \verb|SCRAPER| element can now support two-sided scrapers.
-\item Added the \verb|SYSTEMATIC_MULTIPOLE_FACTOR|, \verb|RANDOM_MULTIPOLE_FACTOR|, and \verb|STEERING_MULTIPOLE_FACTOR|
-  parameters to the \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| elements. These allow multiplying each of the indicated 
-  higher multipole contributions by a factor.
-\item Added \verb|YAW| and \verb|YAW_END| parameters to \verb|UKICKMAP| element. It's useful in simulating canted insertion
-  devices.
-\item Added the \verb|SPEEDBUMP| element, which provides a new kind of aperture formed by a semi-circular bump 
-  protruding from one or both sides of the chamber.
-\item Added the \verb|DX|, \verb|DY|, and \verb|DZ| misalignment parameters to the \verb|EHKICK|, \verb|EVKICK|, and \verb|EKICK|
-  elements. Also added \verb|RANDOM_MULTIPOLES| parameter.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
-  lifetime and the distribution of lost particles. This is only available in the parallel version.
-\item Added the \verb|generation_interval| parameter to the \verb|ion_effects| command to permit generation of
-  ions only at every n$^{th}$ bunch. This was suggested by J. Calvey (APS).
-\item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
-  in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
-\item The \verb|link_elements| command can now create the source element name by editing the target name.
-\item The \verb|momentum_aperture| command now uses resources more efficiently for the parallel version when 
-  \verb|output_mode=2|. In particular, it honors the user-provided minimum $\delta$ values.
-  In addition, the domain decomposition was revised to better equalize the workload of the processors.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -111,8 +75,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item Added the \verb|inelasticScatteringAnalysis| script, a companion to the \verb|inelastic_scattering| command in
-  \verb|Pelegant|. It allows computing the lifetime and local loss rates from inelastic gas scattering.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7213,6 +7176,87 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\section{Highlights of What's New in Version 34.0}
+
+Here is a summary of what's changed since release 33.1.1.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item A bug in the \verb|IONEFFECTS| element was reported by J. Cavley (APS): when only one bunch was present,
+  the electron beam coordinates were zeroed out.  
+\item A bug in the \verb|WATCH| element caused \verb|elegant| to crash in \verb|centroid| and \verb|parameter|
+  mode when the \verb|WATCH| element was in a beamline branch that did not get executed on the first pass.
+\item In multi-step runs, the \verb|STEERING_MULTIPOLES| input for the \verb|EKICK|, \verb|EHKICK|, and \verb|EVKICK| elements
+  was ignored except on the first step.
+\end{itemize}
+
+\subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug in the \verb|ion_effects| command was reported by J. Cavley (APS): when only one bunch was present,
+  the electron beam coordinates were zeroed out. 
+\item The \verb|center_arrival_time| feature of \verb|sdds_beam| did not work correctly for the parallel version, as
+  reported by Jonas Bj{\"o}rklund. 
+\item The \verb|use_moments_output_values| qualifier of the \verb|bunched_beam| command did not work for the parallel
+  version. 
+\item The \verb|full_grid_output| mode of the \verb|frequency_map| command provided incorrect results for the
+  diffusion for particles that got lost.
+\item The \verb|parameters| output file from the \verb|run_setup| command incorrectly reported the length and angle
+  of \verb|CSBEND| elements when element division was invoked. This was reported by V. Sajaev (APS).
+\item The \verb|amplification_factors| command now respects \verb|link_elements| commands.
+\item The \verb|tune_footprint| command now optionally runs in major action command mode. The inability to do so
+  was pointed out by Y.-P. Sun (APS).
+\end{itemize}
+
+\subsection{New and Modified Elements}
+\begin{itemize}
+\item The long-deprecated \verb|DIRECTION| parameter of the \verb|SCRAPER| element has been removed; input files using the
+  \verb|SCRAPER| element will  need to be updated to remove this parameter and replace it with
+  equivalent \verb|INSERT_FROM| parameter.
+  One result is that the \verb|SCRAPER| element can now support two-sided scrapers.
+\item Added the \verb|SYSTEMATIC_MULTIPOLE_FACTOR|, \verb|RANDOM_MULTIPOLE_FACTOR|, and \verb|STEERING_MULTIPOLE_FACTOR|
+  parameters to the \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| elements. These allow multiplying each of the indicated 
+  higher multipole contributions by a factor.
+\item Added \verb|YAW| and \verb|YAW_END| parameters to \verb|UKICKMAP| element. It's useful in simulating canted insertion
+  devices.
+\item Added the \verb|SPEEDBUMP| element, which provides a new kind of aperture formed by a semi-circular bump 
+  protruding from one or both sides of the chamber.
+\item Added the \verb|DX|, \verb|DY|, and \verb|DZ| misalignment parameters to the \verb|EHKICK|, \verb|EVKICK|, and \verb|EKICK|
+  elements. Also added \verb|RANDOM_MULTIPOLES| parameter.
+\end{itemize}
+
+\subsection{New and Modified Commands}
+\begin{itemize}
+\item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
+  lifetime and the distribution of lost particles. This is only available in the parallel version.
+\item Added the \verb|generation_interval| parameter to the \verb|ion_effects| command to permit generation of
+  ions only at every n$^{th}$ bunch. This was suggested by J. Calvey (APS).
+\item Added the \verb|ignore_elements| command, which allows instructing \verb|elegant| to ignore specified elements
+  in tracking. This can reduce overhead from ``do-nothing'' elements like markers and monitors.
+\item The \verb|link_elements| command can now create the source element name by editing the target name.
+\item The \verb|momentum_aperture| command now uses resources more efficiently for the parallel version when 
+  \verb|output_mode=2|. In particular, it honors the user-provided minimum $\delta$ values.
+  In addition, the domain decomposition was revised to better equalize the workload of the processors.
+\end{itemize}
+
+\subsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item Added the \verb|inelasticScatteringAnalysis| script, a companion to the \verb|inelastic_scattering| command in
+  \verb|Pelegant|. It allows computing the lifetime and local loss rates from inelastic gas scattering.
+\end{itemize}
+
 
 \section{Highlights of What's New in Version 33.1.1}
 
