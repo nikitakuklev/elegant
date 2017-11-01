@@ -727,7 +727,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
       fflush(stdout);
 #endif
       transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 
-                              NULL, 0, 2, -1.0, 1);
+                              NULL, 0, 2, -1.0, 1, eptr->occurence);
     } else  {
 #if MPI_DEBUG
       printf("myid=%d in determineMatrix for SCRIPT\n", myid);
@@ -752,7 +752,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 #else
     /* Serial version */
     transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 
-                            NULL, 0, 2, -1, 0);
+                            NULL, 0, 2, -1, 0, eptr->occurence);
 #endif
     break;
   case T_TWMTA:

@@ -17,7 +17,7 @@
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
                              BEAM *beam, double **part, long np, 
                              char *mainRootname, long iPass, long driftOrder, double z,
-                             long forceSerial)
+                             long forceSerial, long occurence)
 {
   long doDrift;
   doDrift = 0;
@@ -56,18 +56,19 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         warned = 1;
       }
     }
-    return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z);
+    return transformBeamWithScript_p(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
   } else {
     if (myid!=0)
       printf("*** Warning: myid=%d in forced serial transformBeamWithScript\n", myid);
-    return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z);
+    return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
   }
 #else
-  return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z);
+  return transformBeamWithScript_s(script, pCentral, charge, beam, part, np, mainRootname, iPass, driftOrder, z, occurence);
 #endif
 }
 
-void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char **output0, long *nameLength0, char *mainRootname, long forceSerial)
+void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char **output0, long *nameLength0,
+			  char *mainRootname, long forceSerial, long pass, long occurence)
 {
   char *rootname=NULL, *input, *output=NULL;
   long nameLength;
@@ -99,8 +100,19 @@ void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char 
     if (!(rootname = tmpname(NULL)))
       bombElegant("problem generating temporary filename for script", NULL);
 #endif
-  } else 
-    rootname = compose_filename(script->rootname, mainRootname);
+  } else {
+    char *rootname2;
+    char buffer[100];
+    rootname = tmalloc(sizeof(*rootname)*(2*strlen(script->rootname)+100));
+    rootname2 = tmalloc(sizeof(*rootname)*(2*strlen(script->rootname)+100));
+    strcpy(rootname, script->rootname);
+    sprintf(buffer, "%06ld", pass);
+    replaceString(rootname2, rootname, "%p", buffer, 1, 0);
+    replaceString(rootname, rootname2, "%s", mainRootname, 1, 0);
+    sprintf(rootname2, rootname, occurence);
+    free(rootname);
+    rootname = rootname2;
+  }
   if (!rootname)
     bombElegant("problem generating temporary rootname for script", NULL);
   nameLength = (script->directory?strlen(script->directory):0) + \
@@ -116,11 +128,11 @@ void determineScriptNames(SCRIPT *script, char **rootname0, char **input0, char 
   *nameLength0 = nameLength;
 }
 
-void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *input, char *output, char **cmdBufferRet)
+void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *input, char *output, char **cmdBufferRet, long occurence)
 {
   char *cmdBuffer0, *cmdBuffer1=NULL;
   long i;
-  char passString[20];
+  char passString[20], occurenceString[20];
 
   /* prepare command */
   if (script->directory && strlen(script->directory)) {
@@ -145,9 +157,9 @@ void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *inpu
     bombElegant("memory allocation failure making command buffer for script", NULL);
   replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
   replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
- 
   replaceString(cmdBuffer0, cmdBuffer1, "%p", passString, 9, 0);
-  strcpy_ss(cmdBuffer1, cmdBuffer0);
+  sprintf(occurenceString, "%ld", occurence);
+  replaceString(cmdBuffer1, cmdBuffer0, "%c", occurenceString, 9, 0);
   
   /* substitute numerical parameters */
   for (i=0; i<10; i++) {
@@ -196,8 +208,9 @@ void prepareScriptCommand(SCRIPT *script, long iPass, char *rootname, char *inpu
 
 
 long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             BEAM *beam, double **part, long np, 
-                               char *mainRootname, long iPass, long driftOrder, double z)
+			       BEAM *beam, double **part, long np, 
+                               char *mainRootname, long iPass, long driftOrder, double z,
+			       long occurence)
 {
   char *rootname=NULL, *input, *output=NULL;
   char *cmdBuffer1=NULL;
@@ -208,9 +221,15 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   long k;
   double *pID = NULL;
 
-  determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 1);
+  if (np==0)
+    return 0;
 
-  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1);
+  determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 1, iPass, occurence);
+  if (script->verbosity>0) {
+    printf("SCRIPT rootname: %s\n", rootname);
+    fflush(stdout);
+  }
+  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence);
   if (script->verbosity>0) {
     printf("%s\n", cmdBuffer1);
     fflush(stdout);
@@ -274,6 +293,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   if (SDDS_ReadPage(&SDDSin)!=1) {
     SDDS_SetError("Unable to read script output file");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    return 0;
   }
   npNew = SDDS_RowCount(&SDDSin);
 
@@ -429,7 +449,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
 #if USE_MPI
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, 
                                BEAM *beam, double **part, long np, 
-                               char *mainRootname, long iPass, long driftOrder, double z)
+                               char *mainRootname, long iPass, long driftOrder, double z, long occurence)
 {
   char *rootname=NULL, *input, *output=NULL;
   char *cmdBuffer1=NULL;
@@ -450,10 +470,12 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
       return 0;
   } else
     npTotal = np;
+  if (npTotal==0)
+    return 0;
 
-  determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 0);
+  determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 0, iPass, occurence);
 
-  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1);
+  prepareScriptCommand(script, iPass, rootname, input, output, &cmdBuffer1, occurence);
   if (script->verbosity>0) {
     printf("%s\n", cmdBuffer1);
     fflush(stdout);

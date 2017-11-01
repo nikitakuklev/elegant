@@ -3461,12 +3461,13 @@ void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pas
 void setTrackingOmniWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, long i_elem, long n_elem, ELEMENT_LIST *eptr, double *pCentral));
 void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *nLost, double ***accepted, long n_processors, int myid, double *round);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, char *mainRootname, long iPass, long driftOrder, double z, long forceSerial);
+                             long np, char *mainRootname, long iPass, long driftOrder, double z, long forceSerial,
+			     long occurence);
 long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                              long np, char *mainRootname, long iPass, long driftOrder, double z);
+			       long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence);
 #ifdef USE_MPI
 long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                               long np, char *mainRootname, long iPass, long driftOrder, double z);
+                               long np, char *mainRootname, long iPass, long driftOrder, double z, long occurence);
 #endif
 void convertToCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
 void convertFromCanonicalCoordinates(double **coord, long np, double p0, long includeTimeCoordinate);
