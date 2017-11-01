@@ -942,7 +942,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
-#define N_SCRAPER_PARAMS 14
+#define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 29
@@ -1849,6 +1849,7 @@ typedef struct {
   double position;
   double dx, dy;
   char *insert_from;          /* one of +x, -x, +y, -y --- replaces direction */
+  long oldDirection;
   /* internal only */
   unsigned long direction;
 #define DIRECTION_PLUS_X 0x01
@@ -3691,7 +3692,7 @@ extern long remove_outlier_particles(double **initial, CLEAN *clean, long np,
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
     double P_central);
-unsigned long interpretScraperDirection(char *insertFrom);
+unsigned long interpretScraperDirection(char *insertFrom, long oldDir);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
                                   double **accepted, double z, double Po);
 long removeInvalidParticles(double **coord, long np, double **accepted,

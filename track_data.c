@@ -893,6 +893,7 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dy), NULL, 0.0, 0, "misalignment"},
     {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, x, +y, -y, y)"},
+    {"DIRECTION", "", IS_LONG, 0, (long)((char *)&scraper_example.oldDirection), NULL, 0.0, -1, "Deprecated. use INSERT_FROM."},
     };
 
 CENTER center_example;

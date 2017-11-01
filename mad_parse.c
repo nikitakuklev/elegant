@@ -313,10 +313,11 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
       }
       break;
     case T_SCRAPER:
-      ((SCRAPER*)(eptr->p_elem))->direction = interpretScraperDirection(((SCRAPER*)(eptr->p_elem))->insert_from);
+      ((SCRAPER*)(eptr->p_elem))->direction = interpretScraperDirection(((SCRAPER*)(eptr->p_elem))->insert_from,
+                                                                        ((SCRAPER*)(eptr->p_elem))->oldDirection);
       break;
     case T_SPEEDBUMP:
-      ((SPEEDBUMP*)(eptr->p_elem))->direction = interpretScraperDirection(((SPEEDBUMP*)(eptr->p_elem))->insertFrom);
+      ((SPEEDBUMP*)(eptr->p_elem))->direction = interpretScraperDirection(((SPEEDBUMP*)(eptr->p_elem))->insertFrom, -1);
       break;
     default:
       break;
@@ -1053,10 +1054,26 @@ void parse_pepper_pot(
     log_exit("parse_pepper_pot");
     }
 
-unsigned long interpretScraperDirection(char *insert_from) 
+unsigned long interpretScraperDirection(char *insert_from, long oldDirectionCode) 
 {
   char sign=0, plane=0;
   unsigned long direction = 0;
+  if (oldDirectionCode!=-1 && (!insert_from || strlen(insert_from)==0)) {
+    switch (oldDirectionCode) {
+    case 0:
+      return DIRECTION_PLUS_X;
+      break;
+    case 1:
+      return DIRECTION_PLUS_Y;
+      break;
+    case 2:
+      return DIRECTION_MINUS_X;
+      break;
+    case 3:
+      return DIRECTION_MINUS_Y;
+      break;
+    }
+  }
   if (insert_from) {
     if (insert_from[0]=='+' || insert_from[0]=='-') {
       sign = insert_from[0];

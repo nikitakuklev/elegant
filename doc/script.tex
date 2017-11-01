@@ -36,6 +36,19 @@ string may contain the following substitutable fields:
  are parameters of the element definition. 
 \end{enumerate}
 
+In some cases, one may wish to keep the input file delivered to the \verb|SCRIPT| as
+well as the output file returned by it. This is facilitated by using the \verb|ROOTNAME| 
+parameter, which allows specifying the rootname for these files, as well as the
+\verb|INPUT_EXTENSION| and \verb|OUTPUT_EXTENSION| parameters.
+The \verb|ROOTNAME| parameter may contain a simple string, but may also contain several
+sustainable fields:
+\begin{itemize}
+\item \verb|%s| --- The global rootname, which may be given by the \verb|rootname| parameter
+  in the \verb|run_setup| command.
+\item \verb|%p| --- The pass index.
+\item \verb|%ld| --- The occurence number of the element.
+\end{itemize}
+
 Here's an example of a {\tt SCRIPT} {\tt COMMAND}:
 \begin{flushleft}
 \begin{verbatim}
@@ -56,7 +69,7 @@ where for this example I've assumed {\tt NP0=1.5e-6} and {\tt SP0=''scraper''}.
 If you have a program (e.g., a FORTRAN program) that does not accept
 commandline arguments, you can easily wrap it in a Tcl/Tk simple script to
 handle this.  Alternatively, you can force {\tt elegant} to use specified 
-files for communicating with the script.  This is done using the {\tt ROOTNAME},
+files for communicating with such a script.  This is done using the {\tt ROOTNAME},
 {\tt INPUT\_EXTENSION}, and {\tt OUTPUT\_EXTENSION} parameters.
 So if your program was {\tt crass} and it expected its input (output) in files
 {\tt crass.in} ({\tt crass.out}), then you'd use
