@@ -267,7 +267,10 @@ proc computeBunchShape {args} {
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
     global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency fractionalSpan
 
-    set outFile /tmp/[file tail $twiss].longit
+    set outFile  $twiss.longit
+    if [catch {exec touch $outFile} result] {
+        set outFile /tmp/[file tail $twiss].longit
+    }
     exec sddssequence -pipe=out -define=t,type=double,units=s -sequence=begin=[expr -$fractionalSpan*1e-6/$rfFrequency],end=[expr $fractionalSpan*1e-6/$rfFrequency],n=10000 \
         | sddsprocess -pipe=in $outFile \
         "-define=param,C1,[expr $alphac*$cMKS*$voltage/($energy*$sMax1*$omegaRF)]" \
