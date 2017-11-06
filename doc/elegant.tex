@@ -7177,12 +7177,11 @@ terminal input and terminal output, respectively.
 
 \section{Change Log\label{sect:changeLog}}
 
-\section{Highlights of What's New in Version 34.0}
+\subsection{Highlights of What's New in Version 34.0}
 
 Here is a summary of what's changed since release 33.1.1.
-Historical change logs are collected in Section \ref{sect:changeLog}.
 
-\subsection{Bug Fixes for Elements}
+\subsubsection{Bug Fixes for Elements}
 
 \begin{itemize}
 \item A bug in the \verb|IONEFFECTS| element was reported by J. Cavley (APS): when only one bunch was present,
@@ -7193,7 +7192,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   was ignored except on the first step.
 \end{itemize}
 
-\subsection{Bug Fixes for Commands}
+\subsubsection{Bug Fixes for Commands}
 \begin{itemize}
 \item A bug in the \verb|ion_effects| command was reported by J. Cavley (APS): when only one bunch was present,
   the electron beam coordinates were zeroed out. 
@@ -7210,7 +7209,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   was pointed out by Y.-P. Sun (APS).
 \end{itemize}
 
-\subsection{New and Modified Elements}
+\subsubsection{New and Modified Elements}
 \begin{itemize}
 \item The long-deprecated \verb|DIRECTION| parameter of the \verb|SCRAPER| element has been removed; input files using the
   \verb|SCRAPER| element will  need to be updated to remove this parameter and replace it with
@@ -7227,7 +7226,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   elements. Also added \verb|RANDOM_MULTIPOLES| parameter.
 \end{itemize}
 
-\subsection{New and Modified Commands}
+\subsubsection{New and Modified Commands}
 \begin{itemize}
 \item Added the \verb|inelastic_scattering| command, which assists in computation of the inelastic gas scattering
   lifetime and the distribution of lost particles. This is only available in the parallel version.
@@ -7241,7 +7240,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   In addition, the domain decomposition was revised to better equalize the workload of the processors.
 \end{itemize}
 
-\subsection{Changes Specific to the GPU Version}
+\subsubsection{Changes Specific to the GPU Version}
 
 {\bf The GPU version continues to be an alpha release and contains bugs.}
 Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
@@ -7250,7 +7249,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \item None.
 \end{itemize}
 
-\subsection{Changes to Related Programs and Files}
+\subsubsection{Changes to Related Programs and Files}
 
 \begin{itemize}
 \item Added the \verb|inelasticScatteringAnalysis| script, a companion to the \verb|inelastic_scattering| command in
@@ -7258,12 +7257,11 @@ Users are encouraged to check results against the serial or parallel versions an
 \end{itemize}
 
 
-\section{Highlights of What's New in Version 33.1.1}
+\subsection{Highlights of What's New in Version 33.1.1}
 
 Here is a summary of what's changed since release 33.0.
-Historical change logs are collected in Section \ref{sect:changeLog}.
 
-\subsection{Bug Fixes for Elements}
+\subsubsection{Bug Fixes for Elements}
 
 \begin{itemize}
 \item The \verb|BGGEXP| element had a bug that prevented it from working when two elements
@@ -7276,7 +7274,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   This was fixed. Forum user \verb|meisal| reported the bug.
 \end{itemize}
 
-\subsection{Bug Fixes for Commands}
+\subsubsection{Bug Fixes for Commands}
 \begin{itemize}
 \item Fixed a bug in \verb|load_parameters| related to the \verb|allow_missing_elements| and \\ \verb|allow_missing_parameters|
   qualifiers. In runs with multiple \verb|load_parameters| commands, only the last values of these parameters were used.
@@ -7284,7 +7282,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   the saved file.
 \end{itemize}
 
-\subsection{New and Modified Elements}
+\subsubsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|IONEFFECTS| element and the companion \verb|ion_effects| command were added. These allow simulation
   of the interaction of the beam with residual gas ions. J. Calvey (ANL) did much of the work on these new features.
@@ -7312,7 +7310,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   forum post by Aaron Fetterman.
 \end{itemize}
 
-\subsection{New and Modified Commands}
+\subsubsection{New and Modified Commands}
 \begin{itemize}
 \item Added the \verb|elastic_scattering| command, which assists in computation of the elastic gas scattering
   lifetime and the distribution of lost particles. This is only available in the parallel version.
@@ -7325,7 +7323,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   terminate on completion of the next pass.
 \end{itemize}
 
-\subsection{Changes Specific to Parallel Version}
+\subsubsection{Changes Specific to Parallel Version}
 
 \begin{itemize}
 \item The \verb|elastic_scattering| command was added. It performs parallel tracking to determine the angular
@@ -7334,7 +7332,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   This command is presently only available in \verb|Pelegant|, due to the long runtime required.
 \end{itemize}
 
-\subsection{Changes Specific to the GPU Version}
+\subsubsection{Changes Specific to the GPU Version}
 
 {\bf The GPU version continues to be an alpha release and contains bugs.}
 Users are encouraged to test results against the serial or parallel versions.
@@ -7343,7 +7341,7 @@ Users are encouraged to test results against the serial or parallel versions.
 \item None.
 \end{itemize}
 
-\subsection{Changes to Related Programs and Files}
+\subsubsection{Changes to Related Programs and Files}
 
 \begin{itemize}
 \item The \verb|computeGeneralizedGradients| script (used to prepare data for the \verb|BGGEXP| element) did not work
