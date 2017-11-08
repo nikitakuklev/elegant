@@ -46,6 +46,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Restored the long-deprecated \verb|DIRECTION| parameter for the \verb|SCRAPER| element, as a convenience.
 \item Fixed a problem that caused the \verb|SCRIPT| element to sometimes hang up in \verb|Pelegant| if some processors 
   did not have any particles after loading data from the script output file.
+\item The \verb|UKICKMAP| element would sometimes fail to add synchrotron radiation effects during tracking even if asked; this would
+  happen, for example, if there was no \verb|twiss_output| or \verb|matrix_output| command.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}

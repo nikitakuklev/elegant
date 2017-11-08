@@ -32,9 +32,17 @@ a certain amount of sense to set \verb|N_KICKS| equal to $N_u$.
 for \verb|UKICKMAP| and can also include radiation effects in
 tracking.  This feature has limitations, namely, that the radiation
 integral computations assume the device is horizontally deflecting.
-However, in tracking, no such assumption is made.  N.B.: at present
-this element is {\em not} included in beam moments
-computations via the \verb|moments_output| command.
+However, in tracking, no such assumption is made.  
+To obtain synchrotron radiation integral effects (e.g., in output from \verb|twiss_output|), 
+the \verb|KREF| and \verb|PERIODS| parameters must be given.
+Care must be taken when using the \verb|FIELD_FACTOR| parameter in this case, particularly if
+it is adjusted to account for using a single-period kickmap multiple times.
+To obtain synchrotron radiation effects in tracking, the \verb|SYNCH_RAD| and/or \verb|ISR| flags
+must additionally be used.
+
+N.B.: at present this element is {\em not} included in beam moments
+computations via the \verb|moments_output| command (the \verb|CWIGGLER| element
+is an option for that).
 
 The \verb|YAW| and \verb|YAW_END| parameters can be used in the simulation of canted IDs.
 Normally, steering magnets are used to create an angle between the devices.
