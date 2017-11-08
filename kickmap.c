@@ -118,9 +118,14 @@ long trackUndulatorKickMap(
         alpha = 0;
       }
       I1 = I2 = I3 = I4 = I5 = 0;
-      AddWigglerRadiationIntegrals(map->length/map->periods, 2, map->radiusInternal,
-                                   0.0, 0.0, beta, alpha,
-                                   &I1, &I2, &I3, &I4, &I5);
+      if (map->periods && map->Kreference) {
+        double radius;
+        radius = 
+          sqrt(sqr(pRef)+1)*(map->length/map->periods)/(PIx2*map->Kreference*map->fieldFactor);
+        AddWigglerRadiationIntegrals(map->length/map->periods, 2, radius, 
+                                     0.0, 0.0, beta, alpha,
+                                     &I1, &I2, &I3, &I4, &I5);
+      }
       if (sxpCoef) {
         if (I3<0 || I5<0)
           bombElegant("I3 or I5 is negative in UKICKMAP", NULL);
