@@ -1070,9 +1070,9 @@ VMATRIX *compute_matrix(
 	  double period;
 	  /* poles = 2*(wiggler->poles/2)+1; */
 	  period = 2*(wiggler->length/wiggler->poles);
-	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
+	  wiggler->radiusInternal = elem->Pref_input*period/(PIx2*wiggler->K);
 	} else if (wiggler->B>0)
-	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)/(particleCharge/particleMass/c_mks)/wiggler->B;
+	  wiggler->radiusInternal = elem->Pref_input/(particleCharge/particleMass/c_mks)/wiggler->B;
 	else 
 	  wiggler->radiusInternal = wiggler->radius;
 	if (wiggler->radiusInternal==0) {
@@ -1136,7 +1136,7 @@ VMATRIX *compute_matrix(
           if (ukmap->periods<=0)
             bombElegant("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
           ukmap->radiusInternal = 
-            sqrt(sqr(elem->Pref_input)+1)*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
+            elem->Pref_input*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
         } else 
           ukmap->radiusInternal = -1;
         pSave = run->p_central;

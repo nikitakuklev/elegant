@@ -48,6 +48,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   did not have any particles after loading data from the script output file.
 \item The \verb|UKICKMAP| element would sometimes fail to add synchrotron radiation effects during tracking even if asked; this would
   happen, for example, if there was no \verb|twiss_output| or \verb|matrix_output| command.
+\item The \verb|WIGGLER|, \verb|UKICKMAP|, \verb|CWIGGLER|, and \verb|GFWIGGLER| elements had an inconsistency in radiation
+  integral computations, in that in some cases $gamma$ was used when $\beta\gamma$ was intended. The differences were very
+  small for any practical case.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
