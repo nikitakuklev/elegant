@@ -694,12 +694,12 @@ void trackWithIonEffects
 	tempart[0] = sigma[0] + centroid[0];
 	tempart[2] = 0;
 	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
-	maxkick[0] = 10*abs(tempkick[0]);
+	maxkick[0] = 2*abs(tempkick[0]);
 	
 	tempart[2] = sigma[1] + centroid[1];
 	tempart[0] = 0;
 	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
-	maxkick[1] = 10*abs(tempkick[1]);
+	maxkick[1] = 2*abs(tempkick[1]);
         
         for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
           /*
@@ -985,12 +985,12 @@ void trackWithIonEffects
       tempart[0] = ionSigma[0] + ionCentroid[0];
       tempart[2] = 0;
       gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
-      maxkick[0] = 10*abs(tempkick[0]);
+      maxkick[0] = 2*abs(tempkick[0]);
 
       tempart[2] = ionSigma[1] + ionCentroid[1];
       tempart[0] = 0;
       gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
-      maxkick[1] = 10*abs(tempkick[1]);
+      maxkick[1] = 2*abs(tempkick[1]);
       
 
       /*** Determine and apply kicks to beam from the total ion field */
@@ -1199,7 +1199,7 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 		      double ionMass, double ionCharge) 
 {
   // calculate beam kick on ion, assuming Gaussian beam
-  double sx, sy, x, y, sd, Fx, Fy, C1, C2, C3;
+  double sx, sy, x, y, sd, Fx, Fy, C1, C2, C3, ay;
   std::complex <double> Fc, w1, w2, Fc0, erf1, erf2;
   long flag, flag2;
 
@@ -1217,9 +1217,10 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
   C1 = c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
 
   if (sx > sy) {
+    ay = abs(y);
     sd = sqrt(2.0*(sqr(sx)-sqr(sy)));
-    w1 = std::complex <double> (x/sd, y/sd);
-    w2 = std::complex <double> (x/sd*sy/sx, y/sd*sx/sy);
+    w1 = std::complex <double> (x/sd, ay/sd);
+    w2 = std::complex <double> (x/sd*sy/sx, ay/sd*sx/sy);
 
     C2 = sqrt(2*PI / (sqr(sx)-sqr(sy)));
     C3 = exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy)));
@@ -1229,13 +1230,15 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 
     Fc = C1 * C2 * (erf1 - C3*erf2);
 
-    //    Fc = C1 * sqrt(2*PI / (sqr(sx)-sqr(sy))) *  (complexErf(w1, &flag) - 
-    //					  exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy))) * complexErf(w2, &flag2));
+    Fx = Fc.imag();
+    if (y > 0) Fy = Fc.real();
+    else Fy = -Fc.real();
+
 
   } else {
     sd = sqrt(2.0*(sqr(sy)-sqr(sx)));
-    w1 = std::complex <double> (y/sd, -x/sd);
-    w2 = std::complex <double> (y/sd*sx/sy, -x/sd*sy/sx);
+    w1 = std::complex <double> (y/sd, abs(x)/sd);
+    w2 = std::complex <double> (y/sd*sx/sy, abs(x)/sd*sy/sx);
 
     Fc0 = std::complex <double> (0, C1 * sqrt(2*PI / (sqr(sy)-sqr(sx))) );
 
@@ -1246,19 +1249,18 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 
     Fc = -Fc0 * (erf1 - C3*erf2);
 
-    //Fc = Fc0 * (complexErf(w1, &flag) -  exp(-sqr(x)/(2*sqr(sx))-sqr(y)/(2*sqr(sy))) * complexErf(w2, &flag2));
+    if (x > 0) Fx = -Fc.imag();
+    else Fx = Fc.imag();
+    
+    Fy = Fc.real();
 
   }
 
-  Fx = Fc.imag();
-  Fy = Fc.real();
-
   kick[0] = -Fx / ionMass;
   kick[1] = -Fy / ionMass;
-  
-
 
 }
+
 
 
 void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
