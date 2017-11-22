@@ -29,7 +29,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1+2)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define FINAL_PROPERTY_OTHER_PARAMETERS 1
 #define F_SIGMA_OFFSET 0
@@ -53,7 +53,7 @@ static double tmp_safe_sqrt;
 #define F_RMAT_OFFSET F_PERC_OFFSET+F_PERC_QUANS
 #define F_RMAT_QUANS 37
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
-#define F_STATS_QUANS 5
+#define F_STATS_QUANS 7
 #define F_N_OFFSET F_STATS_OFFSET+F_STATS_QUANS
 #define F_N_QUANS 2
 #if (F_N_QUANS+F_N_OFFSET)!=FINAL_PROPERTY_PARAMETERS
@@ -172,6 +172,8 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"R66", "&parameter name=R66, type=double, symbol=\"R$b66$n\", description=\"Transport matrix element from start of system\" &end"},
     {"detR", "&parameter name=detR, type=double, symbol=\"det R\", description=\"Determinant of transport matrix from start of system\" &end"},
     {"CPU", "&parameter name=CPU, type=double, units=s &end"},
+    {"ElapsedTime", "&parameter name=ElapsedTime, type=double, units=s &end"},
+    {"ElapsedCoreTime", "&parameter name=ElapsedCoreTime, type=double, units=s &end"},
 /* beginning of type=long parameters */
     {"MEM", "&parameter name=MEM, type=long, units=pages &end"},
     {"PF", "&parameter name=PF, type=long, units=pages &end"},
@@ -704,10 +706,22 @@ long compute_final_properties
   i_data = F_STATS_OFFSET;
 #if defined(UNIX) || defined(VAX_VMS)
   data[i_data++] = cpu_time()/100.0;
+  data[i_data++] = delapsed_time();
+#if USE_MPI
+  data[i_data++] = delapsed_time()*n_processors;
+#else
+  data[i_data++] = delapsed_time();
+#endif
   data[i_data++] = memory_count();
   data[i_data++] = page_faults();
 #else
   data[i_data++] = 0;
+  data[i_data++] = delapsed_time();
+#if USE_MPI
+  data[i_data++] = delapsed_time()*n_processors;
+#else
+  data[i_data++] = delapsed_time();
+#endif
   data[i_data++] = 0;
   data[i_data++] = 0;
 #endif
