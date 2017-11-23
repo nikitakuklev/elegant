@@ -2086,6 +2086,7 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"USE_PARTICLE_ID", "", IS_SHORT, 0, (long)((char *)&script_example.useParticleID), NULL, 0.0, 1, "If nonzero, then the output file will supply particle IDs. Otherwise, particles are renumbered."},
   {"NO_NEW_PARTICLES", "", IS_SHORT, 0, (long)((char *)&script_example.noNewParticles), NULL, 0.0, 1, "If nonzero, then no new particles will be added in the script output file."},
   {"DETERMINE_LOSSES_FROM_PID", "", IS_SHORT, 0, (long)((char *)&script_example.determineLossesFromParticleID), NULL, 0.0, 1, "If nonzero and if USE_PARTICLE_ID is nonzero, then particleID data from script output is used to determine which particles were lost."},
+  {"SOFT_FAILURE", "", IS_SHORT, 0, (long)((char *)&script_example.softFailure), NULL, 0.0, 1, "If output file does not exist or can't be read, consider all particles lost."},
   {"NP0", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[0]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np0"},
   {"NP1", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[1]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np1"},
   {"NP2", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[2]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np2"},

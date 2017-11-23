@@ -985,7 +985,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 22
 #define N_WIGGLER_PARAMS 10
-#define N_SCRIPT_PARAMS 37
+#define N_SCRIPT_PARAMS 38
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -2976,7 +2976,7 @@ typedef struct {
   long startPass, endPass, passInterval, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
   short keepFiles, driftMatrix;
-  short useParticleID, noNewParticles, determineLossesFromParticleID;
+  short useParticleID, noNewParticles, determineLossesFromParticleID, softFailure;
   double NP[10];
   char *SP[10];
 } SCRIPT;

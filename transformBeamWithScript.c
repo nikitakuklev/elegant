@@ -220,6 +220,7 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   long i, j, npNew, nameLength;
   long k;
   double *pID = NULL;
+  short failSoftly = 0;
 
   if (np==0)
     return 0;
@@ -265,44 +266,57 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   /* read the data from script output file */
-  if (!fexists(output)) 
-    SDDS_Bomb("unable to find script output file");
+  if (!fexists(output)) {
+    if (!script->softFailure)
+      SDDS_Bomb("unable to find script output file");
+    failSoftly = 1;
+  } 
   if (!SDDS_InitializeInput(&SDDSin, output)) {
-    SDDS_SetError("Unable to read script output file");
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    if (!script->softFailure) {
+      SDDS_SetError("Unable to read script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    failSoftly = 1;
   }
 
-  if (!check_sdds_column(&SDDSin, "x", "m") ||
-      !check_sdds_column(&SDDSin, "y", "m") ||
-      !check_sdds_column(&SDDSin, "xp", NULL) ||
-      !check_sdds_column(&SDDSin, "yp", NULL) ||
-      !check_sdds_column(&SDDSin, "p", "m$be$nc") ||
-      !check_sdds_column(&SDDSin, "t", "s")) {
-    if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
-        check_sdds_column(&SDDSin, "p", NULL)) {
-      printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
-      fflush(stdout);
-    } else {
-      printf(
-              "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
-      fflush(stdout);
-      exitElegant(1);
+  if (!failSoftly) {
+    if (!check_sdds_column(&SDDSin, "x", "m") ||
+	!check_sdds_column(&SDDSin, "y", "m") ||
+	!check_sdds_column(&SDDSin, "xp", NULL) ||
+	!check_sdds_column(&SDDSin, "yp", NULL) ||
+	!check_sdds_column(&SDDSin, "p", "m$be$nc") ||
+	!check_sdds_column(&SDDSin, "t", "s")) {
+      if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
+	  check_sdds_column(&SDDSin, "p", NULL)) {
+	printf("Warning: p has no units in script output file.  Expected m$be$nc\n");
+	fflush(stdout);
+      } else {
+	printf(
+	       "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
+	fflush(stdout);
+	exitElegant(1);
+      }
     }
+   
+    if (SDDS_ReadPage(&SDDSin)!=1) {
+      SDDS_SetError("Unable to read script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      return 0;
+    }
+    npNew = SDDS_RowCount(&SDDSin);
+  } else {
+    npNew = 0;
   }
- 
-  if (SDDS_ReadPage(&SDDSin)!=1) {
-    SDDS_SetError("Unable to read script output file");
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    return 0;
-  }
-  npNew = SDDS_RowCount(&SDDSin);
 
   if (npNew>np)
     if (script->noNewParticles)
       bombElegant("The number of particles increased after the SCRIPT element, even though NO_NEW_PARTICLES=0.", NULL);
 
   if (script->verbosity>0) {
-    printf("%ld particles in script output file (was %ld)\n", npNew, np);
+    if (failSoftly)
+      printf("Problem reading script output file---all particles considered lost (SOFT_FAILURE=1)\n");
+    else
+      printf("%ld particles in script output file (was %ld)\n", npNew, np);
     fflush(stdout);
   }
 
@@ -415,10 +429,12 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   /* Close files */
-  if (SDDS_ReadPage(&SDDSin)!=-1)
-    SDDS_Bomb("Script output file has multiple pages");
-  if (!SDDS_Terminate(&SDDSin))
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  if (!failSoftly) {
+    if (SDDS_ReadPage(&SDDSin)!=-1)
+      SDDS_Bomb("Script output file has multiple pages");
+    if (!SDDS_Terminate(&SDDSin))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
 
   if (script->verbosity) {
     printf("Done processing particle input file from script\n");
