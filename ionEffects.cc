@@ -625,6 +625,7 @@ void trackWithIonEffects
       }
       */
       
+      long miInterval = 100;
       if ((iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
         /*** Generate ions */
         for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -636,6 +637,7 @@ void trackWithIonEffects
             */
             /* Shouldn't there be some statistics here ? -- MB */
             
+
 #if USE_MPI
             /* The macroIons parameter is the number for all processors, so we need to 
              * apportion the ions among the working processors 
@@ -657,7 +659,8 @@ void trackWithIonEffects
               
               addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
             }
-          } else if ((index=ionProperties.sourceIonIndex[iSpecies])>=0) {
+          } else if (((index=ionProperties.sourceIonIndex[iSpecies])>=0) && \
+		     ((iPass-ionEffects->startPass+iBunch)%miInterval == 0)) {
             /* This is a multiply-ionized molecule, so use source ion density.
              * Relevant quantities:
              * ionEffects->nIons[index] --- Number of ions of the source species
@@ -667,10 +670,29 @@ void trackWithIonEffects
             /* 
                nToAdd = someFunctionOfExistingNumberOfIons(...); 
             */
-            bombElegant("Multiple ionization not implemented at this time", NULL);
+
+	    // Note: not parallelized!!
+	    double beamFact = 0, jx = 0, jy = 0, qTemp = 0;
+	    beamFact = miInterval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
+	    for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
+	      jx = ionEffects->coordinate[index][jMacro][0] - centroid[0];
+	      jy = ionEffects->coordinate[index][jMacro][2] - centroid[1];
+	      qTemp = beamFact * ionEffects->coordinate[index][jMacro][4] * ionProperties.crossSection[iSpecies] * \
+		exp(-sqr(jx) / (2*sqr(sigma[0])) - sqr(jy) / (2*sqr(sigma[1])));
+	      qToAdd += qTemp;
+	      ionEffects->coordinate[index][jMacro][4] -= qTemp;
+	    } 
+
+	    addIons(ionEffects, iSpecies, 1, qToAdd, centroid, sigma);
+
+            //bombElegant("Multiple ionization not implemented at this time", NULL);
           }
         }
       }
+
+
+     
+
           
       /*** Determine and apply kicks from beam to ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -708,11 +730,17 @@ void trackWithIonEffects
           */
 	  coord = ionEffects->coordinate[iSpecies][iIon];
           
+	  /*
 	  if ((sigma[1] > 0.99*sigma[0]) && (sigma[1] < 1.01*sigma[0])) {
 	    roundGaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
 	  } else {
 	    gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
 	  }
+	  */
+	  
+	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+
+
           
 #if DEBUG
 	  if (isnan(kick[0])) {
@@ -723,7 +751,7 @@ void trackWithIonEffects
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
 	    ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
-	  }
+	  } 
 
 	  //          ionEffects->coordinate[iSpecies][iIon][1] += 
           //  Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
@@ -998,17 +1026,21 @@ void trackWithIonEffects
         for (ip=0; ip<np; ip++) {
           double kick[2];	  
 
+	  /*
 	  if ((ionSigma[0] > 0.99*ionSigma[1]) && (ionSigma[0] < 1.01*ionSigma[1])) {
 	    roundGaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 	  } else {
 	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 	  }
+	  */
+
+	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    part[ip][1] += kick[0] / c_mks / Po;
 	    part[ip][3] += kick[1] / c_mks / Po; 
 	  } 
-	  // else {
+	  //else {
 	  //  printf("bad kick");
 	  //}
 
