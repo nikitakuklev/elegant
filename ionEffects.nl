@@ -18,6 +18,7 @@
           STRING field_calculation_method = NULL;
           long macro_ions = 0;
           long generation_interval = 1;
+          long multiple_ionization_interval = 100;
           double x_span = 0;
           double y_span = 0;
           long verbosity = 0;

@@ -625,7 +625,6 @@ void trackWithIonEffects
       }
       */
       
-      long miInterval = 100;
       if ((iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
         /*** Generate ions */
         for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -660,7 +659,7 @@ void trackWithIonEffects
               addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
             }
           } else if (((index=ionProperties.sourceIonIndex[iSpecies])>=0) && \
-		     ((iPass-ionEffects->startPass+iBunch)%miInterval == 0)) {
+		     ((iPass-ionEffects->startPass+iBunch)%multiple_ionization_interval == 0)) {
             /* This is a multiply-ionized molecule, so use source ion density.
              * Relevant quantities:
              * ionEffects->nIons[index] --- Number of ions of the source species
@@ -673,7 +672,7 @@ void trackWithIonEffects
 
 	    // Note: not parallelized!!
 	    double beamFact = 0, jx = 0, jy = 0, qTemp = 0;
-	    beamFact = miInterval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
+	    beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
 	    for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
 	      jx = ionEffects->coordinate[index][jMacro][0] - centroid[0];
 	      jy = ionEffects->coordinate[index][jMacro][2] - centroid[1];
