@@ -906,7 +906,7 @@ long doTuneFootprint(
   return 1;
 }
 
-void outputTuneFootprint() 
+void outputTuneFootprint(VARY *control) 
 {
   /* Output previously-saved tune footprint data */
   /* For MPI, only the master writes */
@@ -925,15 +925,30 @@ void outputTuneFootprint()
             SDDS_DefineColumn(&sddsOut_delta, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_delta, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_delta, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+	    SDDS_DefineParameter(&sddsOut_delta, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0 ||
+	    (control->n_elements_to_vary &&
+	     !SDDS_DefineSimpleParameters(&sddsOut_delta, control->n_elements_to_vary,
+					  control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE)) ||
             !SDDS_WriteLayout(&sddsOut_delta)) {
-        SDDS_SetError("Problem setting up chromatic tune footprint output file");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  SDDS_SetError("Problem setting up chromatic tune footprint output file");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
         deltaFileInitialized = 1;
       }
-      if (!SDDS_StartPage(&sddsOut_delta, ndelta)) {
+      if (!SDDS_StartPage(&sddsOut_delta, ndelta) ||
+	  !SDDS_SetParameters(&sddsOut_delta, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+			      control->i_step, -1)) {
         SDDS_SetError("Problem setting up chromatic tune footprint output file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (control->n_elements_to_vary) {
+	long ip;
+	for (ip=0; ip<control->n_elements_to_vary; ip++)
+	  if (!SDDS_SetParameters(&sddsOut_delta, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip+1,
+				  control->varied_quan_value[ip], -1)) {
+	    SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
       }
       for (id=iRow=0; id<ndelta; id++) {
         if (filtered_output && !allDeltaTfData[id].used)
@@ -968,15 +983,30 @@ void outputTuneFootprint()
             SDDS_DefineColumn(&sddsOut_xy, "nux", "$gn$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_xy, "nuy", "$gn$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(&sddsOut_xy, "diffusionRate", "log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+	    SDDS_DefineParameter(&sddsOut_xy, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0 ||
+	    (control->n_elements_to_vary &&
+	     !SDDS_DefineSimpleParameters(&sddsOut_xy, control->n_elements_to_vary,
+					  control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE)) ||
             !SDDS_WriteLayout(&sddsOut_xy)) {
           SDDS_SetError("Problem setting up amplitude tune footprint output file");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
         xyFileInitialized = 1;
       }
-      if (!SDDS_StartPage(&sddsOut_xy, nx*ny)) {
+      if (!SDDS_StartPage(&sddsOut_xy, nx*ny) ||
+	  !SDDS_SetParameters(&sddsOut_xy, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+			      control->i_step, -1)) {
         SDDS_SetError("Problem setting up amplitude tune footprint output file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (control->n_elements_to_vary) {
+	long ip;
+	for (ip=0; ip<control->n_elements_to_vary; ip++)
+	  if (!SDDS_SetParameters(&sddsOut_xy, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip+1,
+				  control->varied_quan_value[ip], -1)) {
+	    SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
       }
       for (ix=iRow=0; ix<nx; ix++) {
         for (iy=0; iy<ny; iy++) {
