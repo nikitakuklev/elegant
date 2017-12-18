@@ -466,7 +466,9 @@ void BRAT_lorentz_integration(
   zStart = zNomEntry - dz;
 
   /* Compute drift-back distance and apply to path length */
-  ds = (zStart-(zNomEntry+accelCoord[0]*sin(phi)))/(cos(phi+atan(accelCoord[1]))*cos(atan(accelCoord[3])));
+  /* ds = (zStart-(zNomEntry+accelCoord[0]*sin(phi)))/(cos(phi+atan(accelCoord[1]))*cos(atan(accelCoord[3]))); */
+  /* New expression from R. Lindberg */
+  ds = (zStart-(zNomEntry-accelCoord[0]*sin(phi)))*sqrt(1+sqr(accelCoord[1])+sqr(accelCoord[3]))/(cos(phi)-accelCoord[1]*sin(phi));
   accelCoord[4] += ds;
 
 #ifdef DEBUG
@@ -488,7 +490,7 @@ void BRAT_lorentz_integration(
   q[2] = accelCoord[2] + ds*w[2];
 
 #ifdef DEBUG
-  fprintf(stderr, "initial: q[0] = %e, q[1] = %e, q[2] = %e\n",
+  fprintf(stderr, "initial: q[0] = %21.15e, q[1] = %21.15e, q[2] = %21.15e\n",
           q[0], q[1], q[2]);
 #endif
 
@@ -535,7 +537,7 @@ void BRAT_lorentz_integration(
       break;
     }
 #ifdef DEBUG
-    fprintf(stderr, "final: q[0] = %e, q[1] = %e, q[2] = %e\n",
+    fprintf(stderr, "final: q[0] = %21.15e, q[1] = %21.15e, q[2] = %21.15e\n",
             q[0], q[1], q[2]);
 #endif
   } else {
