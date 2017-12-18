@@ -51,6 +51,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|WIGGLER|, \verb|UKICKMAP|, \verb|CWIGGLER|, and \verb|GFWIGGLER| elements had an inconsistency in radiation
   integral computations, in that in some cases $gamma$ was used when $\beta\gamma$ was intended. The differences were very
   small for any practical case.
+\item The \verb|BRAT| element and the \verb|abrat| commandline program for tracking particles through 3D field distributions
+  had an error in the initial coordinate transformation, discovered by R. Lindberg (APS). In practical use, the error seems
+  to have had a negligible effect on results.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
