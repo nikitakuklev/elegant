@@ -1416,7 +1416,7 @@ char **argv;
         if (code==1) {
           /* immediate output to files */
           doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
-          outputTuneFootprint();
+          outputTuneFootprint(&run_control);
           continue;
         } else if (code==2) {
           /* used by optimizer (or other), no output */
@@ -1567,7 +1567,7 @@ char **argv;
           break;
         case TUNE_FOOTPRINT:
           doTuneFootprint(&run_conditions, &run_control, starting_coord, beamline, NULL);
-          outputTuneFootprint();
+          outputTuneFootprint(&run_control);
           break;
         }
       }

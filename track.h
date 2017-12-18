@@ -3625,7 +3625,7 @@ long setupTuneFootprint(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doTuneFootprint(RUN *run, VARY *control, double *referenceCoord,
                      LINE_LIST *beamline, TUNE_FOOTPRINTS *tfOutput);
 void finishTuneFootprint();
-void outputTuneFootprint();
+void outputTuneFootprint(VARY *control);
 
 /* chaosMap.c */
 void setupChaosMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
