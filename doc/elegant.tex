@@ -64,6 +64,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|BMXYZ| element, which integrates particles through 3D magnetic field maps, now includes misalignment parameters.
+  Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
 \end{itemize}
 
 \subsection{New and Modified Commands}
