@@ -2710,6 +2710,10 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
 BMAPXYZ bmapxyz_example;
 PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "insertion length"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dxError), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dyError), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dzError), NULL, 0.0, 0, "misalignment"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
     {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},

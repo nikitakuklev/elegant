@@ -1019,7 +1019,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 13
 #define N_EVCOR_PARAMS 13
 #define N_EHVCOR_PARAMS 15
-#define N_BMAPXYZ_PARAMS 9
+#define N_BMAPXYZ_PARAMS 13
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 17
 #define N_BRANCH_PARAMS 4
@@ -2829,16 +2829,22 @@ typedef struct {
 extern PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS];
 
 typedef struct {
-  double length, fieldLength, strength, accuracy;
-  char *method, *filename;
-  short synchRad, checkFields;
-  char *particleOutputFile;
-  /* these are set by the program when the file is read */
-  long points, nx, ny, nz, BGiven;
-  double *Fx, *Fy, *Fz;
+  double *Fx, *Fy, *Fz; /* these are copies of pointers, potentially shared with other instances */
   double xmin, xmax, dx;
   double ymin, ymax, dy;
   double zmin, zmax, dz;
+  long nx, ny, nz, points, BGiven;
+} BMAPXYZ_DATA;
+
+typedef struct {
+  double length;
+  double dxError, dyError, dzError, tilt;
+  double fieldLength, strength, accuracy;
+  char *method, *filename;
+  short synchRad, checkFields;
+  char *particleOutputFile;
+  /* internal variables */
+  BMAPXYZ_DATA *data; 
   SDDS_DATASET *SDDSpo;
   long poIndex[9];
   long poRow, poRows;
