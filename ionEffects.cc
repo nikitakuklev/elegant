@@ -47,6 +47,8 @@ void readIonProperties(char *filename);
 
 void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, double centroid[2], double sigma[2]);
 
+void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y);
+
 void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
@@ -277,8 +279,10 @@ void readIonProperties(char *filename)
       bombElegantVA((char*)"Ion %s has non-positive charge state", ionProperties.ionName[i]);
     if (ionProperties.chargeState[i]==1) {
       if ((ionProperties.sourceGasIndex[i] = match_string(sourceName[i], pressureData.gasName, pressureData.nGasses, EXACT_MATCH))<0) {
-        bombElegantVA((char*)"Unable to find match to gas source \"%s\" for species \"%s\"", 
-                      sourceName[i], ionProperties.ionName[i]);
+	if ((ionProperties.sourceIonIndex[i] = match_string(sourceName[i], ionProperties.ionName, ionProperties.nSpecies, EXACT_MATCH))<0) {
+	  bombElegantVA((char*)"Unable to find match to gas source \"%s\" for species \"%s\"", 
+			sourceName[i], ionProperties.ionName[i]);
+	}
       }
     } else {
       if ((ionProperties.sourceIonIndex[i] = match_string(sourceName[i], ionProperties.ionName, ionProperties.nSpecies, EXACT_MATCH))<0) 
@@ -671,19 +675,33 @@ void trackWithIonEffects
             */
 
 	    // Note: not parallelized!!
-	    double beamFact = 0, jx = 0, jy = 0, qTemp = 0;
+	    double beamFact = 0, jx = 0, jy = 0, qTemp = 0, Pmi = 0, rnd = 0;
 	    beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
 	    for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
 	      jx = ionEffects->coordinate[index][jMacro][0] - centroid[0];
 	      jy = ionEffects->coordinate[index][jMacro][2] - centroid[1];
-	      qTemp = beamFact * ionEffects->coordinate[index][jMacro][4] * ionProperties.crossSection[iSpecies] * \
+	      Pmi = beamFact * ionProperties.crossSection[iSpecies] * \
 		exp(-sqr(jx) / (2*sqr(sigma[0])) - sqr(jy) / (2*sqr(sigma[1])));
-	      qToAdd += qTemp;
-	      ionEffects->coordinate[index][jMacro][4] -= qTemp;
+
+	      rnd = random_2(0);
+	      if (rnd < Pmi) { //multiple ionization occurs
+		double qToAdd, mx, my;
+		qToAdd = ionEffects->coordinate[index][jMacro][4];
+		mx = ionEffects->coordinate[index][jMacro][0];
+		my = ionEffects->coordinate[index][jMacro][2];
+		addIon_point(ionEffects, iSpecies, qToAdd, mx, my); //add multiply ionized ion
+		
+		//delete source ion
+		long k;
+                for (k=0; k<5; k++) {
+                  ionEffects->coordinate[index][jMacro][k] = ionEffects->coordinate[index][ionEffects->nIons[index]-1][k];
+		}
+		ionEffects->nIons[index] -= 1;
+		jMacro -= 1;
+              }
+              
 	    } 
-
-	    addIons(ionEffects, iSpecies, 1, qToAdd, centroid, sigma);
-
+	    
             //bombElegant("Multiple ionization not implemented at this time", NULL);
           }
         }
@@ -1222,6 +1240,32 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
   }
 
 
+  
+}
+
+
+void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y)
+{
+  long iNew;
+  
+  /* Allocate space for ion coordinates */
+  if (ionEffects->coordinate[iSpecies]==NULL)
+    ionEffects->coordinate[iSpecies] 
+      = (double**)czarray_2d(sizeof(**(ionEffects->coordinate[iSpecies])), 1, COORDINATES_PER_ION);
+  else
+    ionEffects->coordinate[iSpecies]
+      = (double**)resize_czarray_2d((void**)ionEffects->coordinate[iSpecies], 
+                                    sizeof(**(ionEffects->coordinate[iSpecies])), 
+                                    ionEffects->nIons[iSpecies]+1, COORDINATES_PER_ION);
+
+  iNew = ionEffects->nIons[iSpecies];
+  ionEffects->nIons[iSpecies] += 1;
+  ionEffects->coordinate[iSpecies][iNew][0] = x;
+  ionEffects->coordinate[iSpecies][iNew][1] = 0 ; /* initial x velocity */
+  ionEffects->coordinate[iSpecies][iNew][2] =  y;
+  ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
+  ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
+    
   
 }
 
