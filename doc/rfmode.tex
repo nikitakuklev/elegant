@@ -1,6 +1,11 @@
 This element simulates a beam-driven monopole mode cavity using the fundamental theorem of beam loading and phasor rotation.
 In addition, a generator-driven field may be included using a feedback system \cite{Berenc-IPAC15-MOPMA006}.
 
+Note on phase conventions: the phase convention for the \verb|PHASE_SETPOINT|  parameter of \verb|RFMODE| is the
+same as for the \verb|PHASE| parameter of \verb|RFCA|. However, in the output files from \verb|RFMODE|, i.e., the
+files requested with the \verb|RECORD| and \verb|FEEDBACK_RECORD| parameters, a different convention is used, which 
+differs by $-90$ degrees from the \verb|PHASE_SETPOINT|  parameter. 
+
 The feedback implementation uses either amplitude and phase feedback or else in-phase and quadrature feedback.
 It is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
 \verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| or else
