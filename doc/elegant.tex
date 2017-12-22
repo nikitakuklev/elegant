@@ -5372,6 +5372,10 @@ up-to-date than these manual pages.
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
         part of the SDDS toolkit.  See the SDDS toolkit
         manual for documentation. (Program by R. Soliday and M. Borland.)
+\item {\tt elegantto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
+        some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
+        PATPET, PATRICIA, TRANSPORT, XORBIT, and MAD8.  Will also generate an SDDS file containing lattice
+        data.  (Program by M. Borland.)
 \item {\tt haissinski} --- Computes the steady-state longitudinal distribution in
         an electron storage ring.  Requires as input a file containing the Twiss
         parameters around the ring, such as that provided by the \verb|twiss_output| command.
@@ -5399,10 +5403,6 @@ up-to-date than these manual pages.
   using output from \verb|elegant|'s \verb|twiss_output| command. Can also compute voltages for
   bunch lengthening and output these to a file that can be use with \verb|load_parameters|.
   (Program by M. Borland.)
-\item {\tt elegantto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
-        some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
-        PATPET, PATRICIA, TRANSPORT, XORBIT, and MAD8.  Will also generate an SDDS file containing lattice
-        data.  (Program by M. Borland.)
 \item {\tt makeSummedCsrZ} --- Computes the shielded or free-space steady-state CSR impedance for a ring
   composed of one or more types of dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
@@ -7459,7 +7459,7 @@ Tech-X corporation \cite{GPU1}, with further work by R. Soliday (APS).
 
 \begin{itemize}
 \item The program \verb|madto| was renamed \verb|elegantto|, to more accurately reflect what it does.
-  It will not translate \verb|elegant| lattice files into MAD8 format.
+  It will now translate \verb|elegant| lattice files into MAD8 format.
 \end{itemize}
 
 \subsection{Highlights of What's New in Version 32.0, 5 Jan. 2017}
