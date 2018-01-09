@@ -127,7 +127,9 @@ extern short mpiAbort;
 #define MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE 2
 #define MPI_ABORT_BUNCH_TOO_LONG_RFMODE 3
 #define MPI_ABORT_BUCKET_ASSIGNMENT_ERROR 4
-#define N_MPI_ABORT_TYPES 5
+#define MPI_ABORT_POINTER_ISSUE 5
+#define MPI_ABORT_BAD_PARTICLE_ID 6
+#define N_MPI_ABORT_TYPES 7
 extern char *mpiAbortDescription[N_MPI_ABORT_TYPES];
 void doMpiAbort(int code, char *format, ...);
 #endif

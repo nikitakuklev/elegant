@@ -2984,6 +2984,8 @@ char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
   "Bunch too long in ZTRANSVERSE element",
   "Bunch too long in RFMODE element",
   "Bucket assignment error",
+  "Error in particle pointer order",
+  "Non-positive particle ID value"
 };
 #endif
 

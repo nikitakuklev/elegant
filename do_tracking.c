@@ -83,12 +83,12 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack,
 int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass);
 balance checkBalance(double my_wtime, int myid, long n_processors, int verbose);
 #endif
+void checkBeamStructure(BEAM *beam);
 
 #ifdef SORT   
 int comp_IDs(const void *coord1, const void *coord2);
 #endif
 static TRACKING_CONTEXT trackingContext;
-
 
 double beta_from_delta(double p, double delta)
 {
@@ -751,6 +751,10 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
+#ifdef CHECK_BEAM_STRUCTURE
+      if (beam) 
+	checkBeamStructure(beam);
+#endif
       if (eptr->ignore && !(flags&(TEST_PARTICLES+CLOSED_ORBIT_TRACKING+OPTIMIZING))) {
 	eptr = eptr->succ;
 	continue;
@@ -5212,3 +5216,68 @@ void convertFromCanonicalCoordinates(double **coord, long np, double p0, long in
   }
 }
 
+void checkBeamStructure(BEAM *beam)
+{
+  long i;
+  char bad = 0;
+  if (beam->original && beam->n_saved) {
+    for (i=1; i<beam->n_original; i++) {
+      if (beam->original[i]<beam->original[i-1]) {
+	printf("Error in pointer order for i=%ld in beam->original\n", i);
+	bad = 1;
+      }
+    }
+  }
+  if (beam->particle) {
+    for (i=1; i<beam->n_particle; i++) {
+      if (beam->particle[i]<beam->particle[i-1]) {
+	printf("Error in pointer order for i=%ld in beam->particle\n", i);
+	bad = 1;
+      }
+    }
+  }
+  if (beam->accepted) {
+    for (i=1; i<beam->n_particle; i++) {
+      if (beam->accepted[i]<beam->accepted[i-1]) {
+	printf("Error in pointer order for i=%ld in beam->accepted\n", i);
+	bad = 1;
+      }
+    }
+  }
+  if (bad) {
+    fflush(stdout);
+#if USE_MPI
+    mpiAbort = MPI_ABORT_POINTER_ISSUE;
+    return;
+#else
+    exit(1);
+#endif
+  }
+
+  if (beam->particle) {
+    for (i=0; i<beam->n_particle; i++) {
+      if (beam->particle[i][COORDINATES_PER_PARTICLE-1]<=0) {
+	printf("Non-positive particleID %le for i=%ld in beam->particle\n", beam->particle[i][COORDINATES_PER_PARTICLE-1], i);
+	bad = 1;
+      }
+    }
+  }
+  if (beam->accepted) {
+    for (i=0; i<beam->n_particle; i++) {
+      if (beam->accepted[i][COORDINATES_PER_PARTICLE-1]<=0) {
+	printf("Non-positive particleID %le for i=%ld in beam->accepted\n", beam->particle[i][COORDINATES_PER_PARTICLE-1], i);
+	bad = 1;
+      }
+    }
+  }
+  if (bad) {
+    fflush(stdout);
+#if USE_MPI
+    mpiAbort = MPI_ABORT_BAD_PARTICLE_ID;
+    return;
+#else
+    exit(1);
+#endif
+  }
+  
+}
