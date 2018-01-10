@@ -58,7 +58,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The \verb|rf_setup| command could not handle $\alpha_c<0$, as discovered using files provided by P. Piot (FNAL).
+  This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -69,7 +70,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item During tracking, particles are no long checked against apertures after transitioning through zero-length elements that
+  don't modify the aperture. This improves performance in lattices with many \verb|MONI|, \verb|MARK|, and similar elements.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
