@@ -1102,6 +1102,7 @@ typedef struct {
 /* indicates that element will be done on all of the processors */
 #define MPALGORITHM (0x00004000UL|RUN_ZERO_PARTICLES)
 #define GPU_SUPPORT  0x00008000UL
+#define NO_APERTURE  0x00010000UL
 
 typedef struct {
     long n_params;

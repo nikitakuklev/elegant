@@ -5057,11 +5057,14 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
     }
   }
 
+  if (beamline->alpha[0]==0) 
+    bombElegant("alphac == 0. rf_setup can't handle this.", NULL);
+
   if (rf_setup_struct.bucket_half_height>0) {
     double F, E;
     
     E = sqrt(sqr(run->p_central)+1)*particleMassMV;
-    F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*beamline->alpha[0]*harmonic*E));
+    F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*fabs(beamline->alpha[0])*harmonic*E));
     q = (F+2)/2;
     voltage = (q=solveForOverVoltage(F,q))*beamline->radIntegrals.Uo*1e6/nRfca;
   } else if (rf_setup_struct.over_voltage)
@@ -5073,8 +5076,12 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
 
   phase = 0;
   if (voltage) {
-    phase = 180-asin(1/q)*180/PI;
+    if (beamline->alpha[0]>0) 
+      phase = 180-asin(1/q)*180/PI;
+    else
+      phase = asin(1/q)*180/PI;
     printf("Voltage per cavity is %21.15e V, phase is %21.15e deg\n\n", voltage, phase);
+    fflush(stdout);
     for (i=0; i<nRfca; i++) {
       rfca = (RFCA*)(rfcaElem[i]->p_elem);
       rfca->volt = voltage;
@@ -5091,7 +5098,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
   E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
   
-  if (Vdot<=0) {
+  if ((beamline->alpha[0]*Vdot)<=0) {
     nus = sqrt(beamline->alpha[0]/PIx2*(-Vdot/w0)/E);
     St0 = beamline->radIntegrals.sigmadelta*beamline->alpha[0]/(nus*w0);
     Sz0 = St0*c_mks;

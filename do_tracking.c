@@ -2086,7 +2086,7 @@ long do_tracking(
 	  active = 0;
 #endif
 	if ((!USE_MPI || !notSinglePart ) || (USE_MPI && active)) {
-	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) && !(classFlags&NO_APERTURE)) {
             if (x_max || y_max) {
               if (!elliptical) 
                 nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
