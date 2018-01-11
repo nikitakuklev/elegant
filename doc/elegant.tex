@@ -5108,6 +5108,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
     long offset_momentum_also = 1;
     long soft_failure = 1;
     long stop_tracking_particle_limit = -1;
+    long check_beam_structure = 0;
     STRING interrupt_file = "%s.interrupt";
 &end
 \end{verbatim}
@@ -5134,6 +5135,7 @@ steps.
 \item \verb|stop_tracking_particle_limit| --- If a non-negative is given, then
 {\tt elegant} will stop tracking when the number of particles falls below the
 given value.  It will be as if all the particles were lost.
+\item \verb|check_beam_structure| --- For debugging use only.
 \item \verb|interrupt_file| --- Gives the (possibly incomplete) name of a file to monitor
   as a semaphore to interrupt the tracking. If the file is created or updated during tracking, 
   then tracking will terminate on completion of the next pass.
