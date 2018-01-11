@@ -67,6 +67,7 @@
     long longitudinal_ring_only = 0;
     long ibs_only = 0;
     long stop_tracking_particle_limit = -1;
+    long check_beam_structure = 0;
     STRING interrupt_file = "%s.interrupt";
 #end
 

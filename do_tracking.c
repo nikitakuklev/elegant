@@ -751,10 +751,8 @@ long do_tracking(
 #endif
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
-#ifdef CHECK_BEAM_STRUCTURE
-      if (beam) 
+      if (run->checkBeamStructure && beam && !(flags&(TEST_PARTICLES+CLOSED_ORBIT_TRACKING+OPTIMIZING)))
 	checkBeamStructure(beam);
-#endif
       if (eptr->ignore && !(flags&(TEST_PARTICLES+CLOSED_ORBIT_TRACKING+OPTIMIZING))) {
 	eptr = eptr->succ;
 	continue;

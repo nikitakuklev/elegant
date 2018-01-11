@@ -940,6 +940,7 @@ char **argv;
           bombElegant(NULL, NULL);
         if (echoNamelists) print_namelist(stdout, &track);
         run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
+	run_conditions.checkBeamStructure = check_beam_structure;
         if (interrupt_file && strlen(interrupt_file)) {
           run_conditions.trackingInterruptFile = compose_filename(interrupt_file, rootname);
           run_conditions.trackingInterruptFileMtime = 0;
