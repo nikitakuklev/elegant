@@ -122,7 +122,6 @@ extern int min_value_location; /* The location (which processor) of the optimiza
 /* A flag used to specify if the output will be enabled for some special cases. E.g., simplex method in Pelegant */
 extern long enableOutput;
 /* used to abort MPI run in cases where master is not running the same code */
-extern short mpiAbort;
 #define MPI_ABORT_BUNCH_TOO_LONG_ZLONGIT 1
 #define MPI_ABORT_BUNCH_TOO_LONG_ZTRANSVERSE 2
 #define MPI_ABORT_BUNCH_TOO_LONG_RFMODE 3
@@ -133,6 +132,7 @@ extern short mpiAbort;
 extern char *mpiAbortDescription[N_MPI_ABORT_TYPES];
 void doMpiAbort(int code, char *format, ...);
 #endif
+extern short mpiAbort;
 
 #ifndef __cplusplus
 long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
@@ -448,7 +448,7 @@ typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
-    long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No;
+  long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
     long showElementTiming, monitorMemoryUsage;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;

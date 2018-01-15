@@ -1643,7 +1643,7 @@ static int comp_IDs1(const void **coord1, const void **coord2)
 void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
 			 long particles, long step)
 {
-    long i;
+  long i, badPID;
 #if SDDS_MPI_IO
     /* Open file here for parallel IO */
     if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
@@ -1668,13 +1668,30 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 	qsort(particle[0], particles, (COORDINATES_PER_PARTICLE+1)*sizeof(double), comp_IDs); 
       }
 #endif
-    for (i=0; i<particles; i++)
+    for (i=badPID=0; i<particles; i++) {
         if (!particle[i]) {
             printf("error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);
             fflush(stdout);
             abort();
             }
-
+	if (particle[i][6]<=0) {
+#if USE_MPI
+	  if (!badPID) 
+	    dup2(fd, fileno(stdout));
+#endif
+	  printf("particle %ld has bad PID: %ld\n", (long)particle[i][6]);
+	  badPID++;
+	}
+    }
+    if (badPID) {
+#if USE_MPI
+      printf("%ld particles with bad PID on processor %d\n", badPID, myid);
+#else
+      printf("%ld particles with bad PID\n", badPID);
+#endif
+      fflush(stdout);
+    }
+    
     if (!SDDS_StartTable(SDDS_table, particles)) {
         SDDS_SetError("Problem starting SDDS table (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
