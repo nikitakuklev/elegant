@@ -759,11 +759,11 @@ char **argv;
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 
-      if (countIgnoreElementsSpecs()!=0) {
+      if (countIgnoreElementsSpecs(0)!=0) {
         if (run_conditions.centroid && strlen(run_conditions.centroid))
-          bombElegant("Can't request centroid output if ignore_elements command is in force", NULL);
+          bombElegant("Can't request centroid output if ignore_elements command with completely=0 is in force", NULL);
         if (run_conditions.sigma && strlen(run_conditions.sigma))
-          bombElegant("Can't request sigma output if ignore_elements command is in force", NULL);
+          bombElegant("Can't request sigma output if ignore_elements command with completely=0 is in force", NULL);
       }
 
       if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)

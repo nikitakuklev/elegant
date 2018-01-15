@@ -13,17 +13,24 @@
 
 typedef struct {
   char *name, *type, *exclude;
+  long completely;
 } IGNORE_ELEMENT_SPEC;
 
 static IGNORE_ELEMENT_SPEC *ignoreElementsSpec = NULL;
 static long ignoreElementsSpecs = 0;
 
-long countIgnoreElementsSpecs()
+long countIgnoreElementsSpecs(long completely0)
 {
-  return ignoreElementsSpecs;
+  long count = 0;
+  long i;
+  for (i=0; i<ignoreElementsSpecs; i++) {
+    if (ignoreElementsSpec[i].completely==completely0) 
+      count++;
+  }
+  return count;
 }
 
-void addIgnoreElementsSpec(char *name, char *type, char *exclude)
+void addIgnoreElementsSpec(char *name, char *type, char *exclude, long completely0)
 {
   if (!(ignoreElementsSpec 
 	= SDDS_Realloc(ignoreElementsSpec,
@@ -32,6 +39,7 @@ void addIgnoreElementsSpec(char *name, char *type, char *exclude)
   ignoreElementsSpec[ignoreElementsSpecs].name = NULL;
   ignoreElementsSpec[ignoreElementsSpecs].type = NULL;
   ignoreElementsSpec[ignoreElementsSpecs].exclude = NULL;
+  ignoreElementsSpec[ignoreElementsSpecs].completely = completely0;
   if ((name &&
        !SDDS_CopyString(&ignoreElementsSpec[ignoreElementsSpecs].name, name)) ||
       (type &&
@@ -57,7 +65,7 @@ void clearIgnoreElementsSpecs()
   ignoreElementsSpec = NULL;
 }
 
-long ignoreElement(char *name, long type) 
+long ignoreElement(char *name, long type, long completelyOnly) 
 {
   long i;
   for (i=0; i<ignoreElementsSpecs; i++) {
@@ -66,6 +74,8 @@ long ignoreElement(char *name, long type)
     if (ignoreElementsSpec[i].name && !wild_match(name, ignoreElementsSpec[i].name))
       continue;
     if (ignoreElementsSpec[i].type && !wild_match(entity_name[type], ignoreElementsSpec[i].type))
+      continue;
+    if (ignoreElementsSpec[i].completely!=completelyOnly)
       continue;
     return 1;
   }
@@ -116,6 +126,6 @@ void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run,
       exclude = expand_ranges(exclude);
   }
   
-  addIgnoreElementsSpec(name, type, exclude);
+  addIgnoreElementsSpec(name, type, exclude, completely);
 }
 

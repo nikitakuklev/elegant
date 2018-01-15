@@ -270,9 +270,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 */
             }
             eptr->ignore = 0;
-	    if (ignoreElement(eptr->name, eptr->type)) {
-	      printf("Ignoring %s\n", eptr->name);
+	    if (ignoreElement(eptr->name, eptr->type, 0)) {
+	      printf("Ignoring %s in multi-particle tracking\n", eptr->name);
 	      eptr->ignore = 1;
+	    } else if (ignoreElement(eptr->name, eptr->type, 1)) {
+	      printf("Ignoring %s completely\n", eptr->name);
+	      eptr->ignore = 2;
 	    }
             if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
               printf("element %s conflicts with line with same name\n", eptr->name);
@@ -486,16 +489,32 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         if (!eptr->pred)
           bombElegant("Can not replace the first element in beamline", NULL);
         eptr = replace_element(eptr, eptr_del);
-      }
-      if (flag == -1) {
+        eptr = eptr->succ; 
+      } else if (flag == -1) {
         if (!eptr->pred)
           bombElegant("Can not remove the first element in beamline", NULL);
         eptr = rm_element(eptr);
         lptr->n_elems--;
-      } 
-      eptr = eptr->succ; 
+      } else
+        eptr = eptr->succ; 
     }
   } 
+
+  /* go through and remove completely ignored elements */
+  eptr = &(lptr->elem);
+  while (eptr) {
+    if (eptr->ignore==2) {
+      if (eptr->pred == NULL) {
+        printf("Warning: can't ignore the first element in the beamline (%s)\n", eptr->name);
+        eptr->ignore = 0;
+        eptr = eptr->succ;
+      } else {
+        eptr = rm_element(eptr);
+        lptr->n_elems --;
+      }
+    } else 
+      eptr = eptr->succ;
+  }
 
   if (echo) {
     printf("Beginning organization of lattice input data.\n");
@@ -1499,9 +1518,12 @@ void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
 /* remove element "elem" from the list */
 ELEMENT_LIST *rm_element(ELEMENT_LIST *elem) 		
 {
+  ELEMENT_LIST *eptr0;
+  eptr0 = elem;
   (elem->pred)->succ = elem->succ;
   if (elem->succ)
     (elem->succ)->pred = elem->pred;
+  free(eptr0); /* should be more careful here! */
   return (elem->pred);
 }
 

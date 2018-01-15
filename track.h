@@ -4211,12 +4211,11 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
 
 void setupIgnoreElements(NAMELIST_TEXT *nltext, RUN *run, 
 			 LINE_LIST *beamline);
-long countIgnoreElementsSpecs();
-void addIgnoreElementsSpec(char *name, char *type, char *exclude);
+long countIgnoreElementsSpecs(long completely);
+void addIgnoreElementsSpec(char *name, char *type, char *exclude, long completely0);
 void clearIgnoreElementsSpecs();
-long ignoreElement(char *name, long type);
-void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
-			    LINE_LIST *beamline);
+long ignoreElement(char *name, long type, long completelyOnly);
+void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
 void addSCSpec(char *name, char *type, char *exclude);
