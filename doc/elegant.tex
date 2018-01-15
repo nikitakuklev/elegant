@@ -58,7 +58,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|rf_setup| command could not handle $\alpha_c<0$, as discovered using files provided by P. Piot (FNAL).
+\item The \verb|rf_setup| command could not handle $\alpha_c<0$, as discovered using files provided by P. Piot (NIU/FNAL).
   This was fixed.
 \end{itemize}
 
@@ -2190,7 +2190,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \begin{itemize}
 \item type: setup command.
 \item function: causes specified elements to be ignored during tracking.
-\item Must be preceded by \verb|run_setup|.
+\item Must precede \verb|run_setup|.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.
@@ -4970,7 +4970,10 @@ The following first order resonant driving terms are implemented as defined in \
 Please note that the notation and meaning of the driving terms differs from those computed when \verb|compute_driving_terms=1|!
 \item \verb|local_dispersion| ---  Normally, {\tt elegant} will ignore acceleration in computing the
   dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
-  was the local fractional momentum deviation.  In a linac or other systems with rf elements, one might also be interested in the ``global'' dispersion
+  was the local fractional momentum deviation.  In a linear system, the local dispersion is related to the
+  beam moments by $\eta_x = \langle x \delta \rangle/\langle \delta^2 \rangle$.
+  In a linac or other systems with rf elements, one might also be interested 
+  in the ``global'' dispersion
   $\frac{\partial x}{\partial \delta_0}$, where $\delta_0$ is the energy deviation at the beginning of the system.
   In this case, set \verb|local_dispersion=0|.  Alternatively, one may look at the $R_{i6}$ elements of the matrix from 
   \verb|matrix_output|.
