@@ -1,0 +1,63 @@
+#!/bin/sh  
+# \
+exec oagtclsh "$0" "$@"
+
+if {![info exists env(OAG_TOP_DIR)] || [string length $env(OAG_TOP_DIR)]==0} {
+    set env(OAG_TOP_DIR) /usr/local
+}
+set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
+
+APSStandardSetup
+
+set usage {usage: generateCoresBeam -output <filename> -nPerBunch <number>(1000) -nBunches <number>(100) -cutoff <sigmas>(2) -dcutoff <dsigmas>(0.1)}
+set output ""
+set nBunches 100
+set nPerBunch 1000
+set cutoff 2
+set dcutoff 0.1
+set args $argv
+if {[APSStrictParseArguments {output nPerBunch nBunches cutoff dcutoff}] || ![string length $output]} {
+    return -code error "$usage"
+}
+
+if [file exists $output] {
+   return -code error "in use: $output"
+}
+
+set gamma [expr 6e3/0.51099906]
+set cutoff2 [expr $cutoff+$dcutoff]
+exec sddssequence -pipe=out -define=u -sequence=begin=$cutoff,end=$cutoff2,n=1000 \
+    | sddsprocess -pipe=in $output.df "-define=col,PDF,u sqr -2 / exp u *" 
+set pi [expr 4*atan(1)]
+
+exec sddsprocess booster.twi -pipe=out -match=col,ElementName=B2C9P1L \
+    | sddsexpand -pipe=in booster.twic
+
+exec sddssampledist -pipe=out \
+    -samples=[expr $nPerBunch*$nBunches] \
+    -column=indep=u,df=PDF,datafile=$output.df,output=ax \
+    -uniform=column=tx,min=0,max=[expr $pi*2] \
+    -column=indep=u,df=PDF,datafile=$output.df,output=ay \
+    -uniform=column=ty,min=0,max=[expr $pi*2] \
+    -column=indep=u,df=PDF,datafile=$output.df,output=az \
+    -uniform=column=tz,min=0,max=[expr $pi*2] \
+    | sddsxref booster.twic -pipe -leave=* -transfer=param,* \
+    | sddsprocess -pipe \
+    "-define=parameter,ex,60e-9,units=m" \
+    "-define=parameter,ey,16e-9,units=m" \
+    "-define=column,t,az tz cos * 100e-12 *,units=s" \
+    "-define=column,delta,az tz sin * 0.0012 *" \
+    "-define=column,p,delta 1 + $gamma *" \
+    "-define=column,w,ax tx cos * ex sqrt *" \
+    "-define=column,wp,ax tx sin * ex sqrt betax / *" \
+    "-define=column,x,w betax sqrt * delta etax * +,units=m" \
+    "-define=column,xp,wp betax sqrt * w alphax * betax sqrt / - delta etaxp * +" \
+    "-redefine=column,w,ay ty cos * ey sqrt *" \
+    "-redefine=column,wp,ay ty sin * ey sqrt betay / *" \
+    "-define=column,y,w betay sqrt * delta etay * +,units=m" \
+    "-define=column,yp,wp betay sqrt * w alphay * betay sqrt / - delta etayp * +" \
+    "-define=parameter,cutoff,$cutoff" \
+    "-define=parameter,dcutoff,$dcutoff" \
+    "-define=column,particleID,i_row 1 +,type=long" \
+    | sddsconvert -pipe -retai=param,cutoff* \
+    | sddsbreak -pipe=in $output -rowlimit=$nPerBunch 
