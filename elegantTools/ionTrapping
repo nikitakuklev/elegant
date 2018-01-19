@@ -58,7 +58,7 @@ exec sddssort $twiss -pipe=out -column=s -unique \
     "-define=parameter,ACH4,12.0107 1.00794 4 * +" \
     "-define=parameter,AH2O,1.00794 2 * 15.9994 +" \
     "-define=parameter,ACO,12.0107 15.9994 +" \
-    "-define=parameter,ACO2,12.0107 2 * 15.9994 +" \
+    "-define=parameter,ACO2,12.0107 15.9994 2 * +" \
     "-define=column,H2Trapped,Acrit AH2 > ? 0 : 1 $ " \
     "-define=column,CH4Trapped,Acrit ACH4 > ? 0 : 1 $ " \
     "-define=column,H2OTrapped,Acrit AH2O > ? 0 : 1 $ " \
