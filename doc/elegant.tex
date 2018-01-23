@@ -7114,6 +7114,71 @@ E.g., a positive $K_1$ value indicates a horizontally focusing quadrupole.
 
 \newpage
 \section{Element Dictionary}
+
+\subsection{Magnetic field and coordinate conventions}
+
+{\tt elegant} follows MAD \cite{MAD} in magnetic field and coordinate conventions.
+In particular, a right-handed coordinate system is used in which $z$ is along the beam
+direction, $x$ is to the left, and $y$ is up.
+
+There are many conventions for specifying magnetic fields in terms of a multipole expansion, which leads to
+potential confusion.
+In the convention established by MAD and followed by {\tt elegant}, positive normal multipole coefficients give positive $B_y$
+for $x>0$ and $y=0$. 
+Rotating a positive normal multipole with $N$ poles $\pi/N$ clockwise about the vector along
+the beam direction will convert it into a positive skew multipole.
+As a result, for a positive skew multipole, $B_y$ will be non-negative and $B_x$ will be negative 
+for $x>0$ along the line $\phi=\pi/N$.
+
+We can satisfy these conventions if we write the scalar potential as
+\begin{equation}\label{equ:potential}
+V = \sum_{n=1}^{\infty} \frac{i A_{n-1} - B_{n-1}}{n!} (x + i y)^n e^{-in\Delta\phi},
+\end{equation}
+where, as we'll see, $A_m$ are skew components and $B_m$ are normal components for
+a $2(m+1)$-pole.
+The coordinates $(x, y)$ are in a right-handed system with the longitudinal coordinate $z$.
+$\Delta\phi$ is the rotation angle of the magnet, where a clockwise rotation 
+about the nominal trajectory corresponds to $\Delta\phi>0$.
+The minus sign in $e^{-in\Delta\phi}$ is because we rotate the magnet while keeping the
+coordinate system fixed.
+
+The magnetic fields are 
+\begin{equation} \label{equ:ByFull}
+B_y = -\Im \frac{\partial V}{\partial y} =\Im \sum_{n=0}^\infty \frac{A_n + i B_n}{n!}(x+iy)^n e^{-i(n+1)\Delta\phi},
+\end{equation}
+and
+\begin{equation} \label{equ:BxFull}
+B_x = -\Im \frac{\partial V}{\partial x} =\Im \sum_{n=0}^\infty \frac{-iA_n + B_n}{n!}(x+iy)^n e^{-i(n+1)\Delta\phi},
+\end{equation}
+
+We can relate the coefficients to the $B_m$ quantities used in {\tt MAD} and {\tt elegant} by noting that
+for $\Delta\phi=0$
+\begin{equation}
+B_m = \left(\frac{\partial^m B_y}{\partial x^m}\right)_{x=y=0} 
+\end{equation}
+and
+\begin{equation}\label{equ:oddSign}
+A_m = -\left(\frac{\partial^m B_x}{\partial x^m}\right)_{x=y=0}
+\end{equation}
+Note the minus sign in the last equation, which differs from commonly asserted conventions.
+
+The quantities $K_m$ and $J_m$ are related to $B_m$ and $A_m$ by
+\begin{equation}
+K_m = \frac{B_m}{H}
+\end{equation}
+and
+\begin{equation}
+J_m = \frac{A_m}{H},
+\end{equation}
+where $H = p/q$ is the rigidty, $p=mc\beta\gamma$ is the momentum, and $q$ is the charge (with sign).
+
+Multipole errors are typically specified as fractions of the main field harmonic at a reference radius $R$,
+e.g., 
+\begin{equation}
+F_n  = \frac{K_n R^n / n!}{K_m R^m / m!},
+\end{equation}
+where $m$ is the main harmonic and $n$ is the error harmonic.
+
 \include{dictionary}
 
 \newpage
