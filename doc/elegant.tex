@@ -7090,8 +7090,10 @@ B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
 
 \subsection{Magnet Strength}
 
-Magnet strengths are frequently specified in terms of a series expansion.
-For normal multipoles and $y=0$, the expansion is \cite{MAD}
+There are many conventions for specifying magnetic fields in terms of a multipole, polynomial, or Taylor expansion, which leads to
+potential confusion.
+In elegant (as in MAD\cite{MAD}), magnet strengths are specified in terms of Taylor series.
+For normal multipoles and $y=0$, the expansion is
 \begin{equation}
 B_y(x,0)= \sum_{n=0}^\infty \frac{B_n x^n}{n!},
 \end{equation}
@@ -7100,30 +7102,11 @@ In general,
 \begin{equation}
 B_n = \left(\frac{\partial^n B_y}{\partial x^n}\right)_{x=y=0}.
 \end{equation}
-For electrons, the deflection from a thin element is
-\begin{equation}
-\theta(x,y=0) = \frac{1}{H} \int B(x,y=0) dl,
-\end{equation}
-where $H = B\rho = -p/e$ is the beam rigidity and $p=m_e c \beta\gamma$ is the momentum.
-The geometric strengths $K_n$ are defined as
-\begin{equation}
-K_n = \frac{B_n}{H}.
-\end{equation}
-By convention in {\tt elegant}, a positive $K_n$ value deflects a particle at $x>0$ toward $x=0$.
-E.g., a positive $K_1$ value indicates a horizontally focusing quadrupole.
+{\tt elegant} follows MAD \cite{MAD} in using a right-handed coordinate system $(x, y, z)$ 
+in which $z$ is along the beam direction, $x$ is to the left, and $y$ is up.
 
-\newpage
-\section{Element Dictionary}
-
-\subsection{Magnetic field and coordinate conventions}
-
-{\tt elegant} follows MAD \cite{MAD} in magnetic field and coordinate conventions.
-In particular, a right-handed coordinate system is used in which $z$ is along the beam
-direction, $x$ is to the left, and $y$ is up.
-
-There are many conventions for specifying magnetic fields in terms of a multipole expansion, which leads to
-potential confusion.
-In the convention established by MAD and followed by {\tt elegant}, positive normal multipole coefficients give positive $B_y$
+This expansion for the normal multipole terms can be related to a multipole expansion that includes both normal and skew components.
+In this convention, positive normal multipole coefficients give positive $B_y$
 for $x>0$ and $y=0$. 
 Rotating a positive normal multipole with $N$ poles $\pi/N$ clockwise about the vector along
 the beam direction will convert it into a positive skew multipole.
@@ -7162,22 +7145,27 @@ A_m = -\left(\frac{\partial^m B_x}{\partial x^m}\right)_{x=y=0}
 \end{equation}
 Note the minus sign in the last equation, which differs from commonly asserted conventions.
 
-The quantities $K_m$ and $J_m$ are related to $B_m$ and $A_m$ by
-\begin{equation}
-K_m = \frac{B_m}{H}
-\end{equation}
-and
-\begin{equation}
-J_m = \frac{A_m}{H},
-\end{equation}
-where $H = p/q$ is the rigidty, $p=mc\beta\gamma$ is the momentum, and $q$ is the charge (with sign).
-
 Multipole errors are typically specified as fractions of the main field harmonic at a reference radius $R$,
 e.g., 
 \begin{equation}
 F_n  = \frac{K_n R^n / n!}{K_m R^m / m!},
 \end{equation}
 where $m$ is the main harmonic and $n$ is the error harmonic.
+
+For electrons, the deflection from a thin element is
+\begin{equation}
+\theta(x,y=0) = \frac{1}{H} \int B(x,y=0) dl,
+\end{equation}
+where $H = B\rho = -p/e$ is the beam rigidity and $p=m_e c \beta\gamma$ is the momentum.
+The geometric strengths $K_n$ are defined as
+\begin{equation}
+K_n = \frac{B_n}{H}.
+\end{equation}
+By convention in {\tt elegant}, a positive $K_n$ value deflects a particle at $x>0$ toward $x=0$.
+E.g., a positive $K_1$ value indicates a horizontally focusing quadrupole.
+
+\newpage
+\section{Element Dictionary}
 
 \include{dictionary}
 
