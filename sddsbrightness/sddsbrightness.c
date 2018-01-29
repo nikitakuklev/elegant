@@ -147,8 +147,8 @@ errorFactors     Specify SDDS file and column for factors by which to multiply\n
 char *USAGE2="emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
-coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
-                 coupling*ex0/(1+coupling).\n\
+coupling         Partitions the natural emittance ex0 between x and y planes so that\n\
+                 ey/ex = coupling and ex+ey = ex0*(1+coupling)/(1+coupling*Jy/Jx).\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
 noSpectralBroadening\n\
                  Turns off the default inclusion of spectral broadening in\n\
@@ -165,7 +165,7 @@ method           choose method for calculating brightness \n\
 Computes on-axis brightness for an undulator centered on the end of the beamline\n\
 the Twiss parameters for which are in the input file.  You should generate the\n\
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
-Program by Michael Borland.  ANL(This is version 1.20, "__DATE__")\n";
+Program by Michael Borland.  ANL (This is version 1.21, "__DATE__")\n";
 
 void getErrorFactorData(double **errorFactor, long *errorFactors, char *filename, char *columnName);
 long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics);
@@ -820,10 +820,17 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
   if (*ex0<=0.0)
     SDDS_Bomb("ex0 should be greater than zero.");
   if (!ey0Exist) {
+    double Jx, Jy;
+    if (SDDS_CheckParameter(SDDSin, "Jx", NULL, SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK ||
+        SDDS_CheckParameter(SDDSin, "Jy", NULL, SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK ||
+        !SDDS_GetParameterAsDouble(SDDSin, "Jx", &Jx) ||
+        !SDDS_GetParameterAsDouble(SDDSin, "Jy", &Jy)) {
+      SDDS_Bomb("unable to get Jx and/or Jy parameter from input file");
+    }
     if (emitRatio==0 && coupling==0)
       SDDS_Bomb("No vertical emittance data in file: give -emittanceRatio or -coupling");
     if (coupling) {
-      *ex0 = *ex0/(1+coupling);
+      *ex0 = *ex0/(1+Jy*coupling/Jx);
       *ey0 = coupling*(*ex0);
     } else {
       *ey0 = *ex0*emitRatio;
