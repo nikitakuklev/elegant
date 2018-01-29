@@ -86,6 +86,8 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
+\item The program \verb|sddsbrightness| now correctly includes the effect of $J_x$ and $J_y$ on the x and y emittances
+  when the \verb|-coupling| option is used.
 \item Added the script \verb|parmela2elegant|, to convert PARMELA beam data (ASCII format) to a form
   acceptable by \verb|elegant|.
 \item Fixed error in the atomic mass of CO$_2$ in the script \verb|ionTrapping|.
@@ -6150,10 +6152,12 @@ and {\tt Brightness{\em i}}.
  one gets the average brightness.  
 \item {\tt -totalLength={\em meters}} --- The total length of the undulator, in meters.
 \item {\tt -periodLength={\em meters}} ---  The period length of the undulator, in meters.
-\item {\tt -emittanceRatio={\em value} | -coupling={\em value}} --- In the case of a twiss
+\item {\tt -emittanceRatio={\em value}}  | -coupling={\em value}} --- In the case of a twiss
  output file from {\tt elegant}, which does not contain the vertical emittance, one must
  supply one of these options.  If {\tt -emittanceRatio={\em R}} is given, $\epsilon_y = \epsilon_0*R$ 
- and $\epsilon_x = \epsilon_0$. If {\tt -coupling={\em k}} is given, $\epsilon_x = \epsilon_0/(1+k)$
+ and $\epsilon_x = \epsilon_0$; this isn't how things work physically, but is provided for historical
+ reasons.
+ If {\tt -coupling={\em k}} is given, $\epsilon_x = \epsilon_0/(1+Jy*k/Jx)$
  and $\epsilon_y = k*\epsilon_x$.  $\epsilon_0$ is the equilibrium emittance from the twiss output
  of {\tt elegant}.  
 
