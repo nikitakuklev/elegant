@@ -3712,6 +3712,9 @@ long interpolateApertureData(double z, APERTURE_DATA *apData,
 long imposeApertureData(double **coord, long np, double **accepted,
                         double z, double Po, APERTURE_DATA *apData);
 void resetApertureData(APERTURE_DATA *apData);
+long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
+                             double Po);
+
 
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);
