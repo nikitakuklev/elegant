@@ -66,10 +66,11 @@ settings of the \verb|EDGE_ORDER|, \verb|EDGE1_EFFECTS|, and \verb|EDGE2_EFFECTS
 \verb|EDGE1_EFFECTS| controls entrance edge effects while \verb|EDGE2_EFFECTS| controls exit edge effects,
 as follows:
 \begin{itemize}
-  \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}. {\bf Not recommended.}
+  \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}. 
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders.
-      \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders.
+      \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders. Not recommended for
+        applications where symplecticity matters.
     \end{itemize}              
   \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}. Note that there will be a
   trajectory offset when using this method that is particularly evident for small bending radii. Adjustment of the length and FSE 
@@ -79,7 +80,8 @@ as follows:
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
       {\bf Not recommended.}
-      \item \verb|EDGE_ORDER>=2| --- include all terms. {\bf Recommended.}
+      \item \verb|EDGE_ORDER>=2| --- include all terms. Recommended for applications where symplecticity and nonlinear dynamics
+        matter.
     \end{itemize}              
   \item Other: --- No edge effects.
 \end{itemize}

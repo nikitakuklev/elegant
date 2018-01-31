@@ -684,6 +684,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
+  case T_CRBEND:
+    ltmp1 = ((CRBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
+    ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
+    track_through_crbend(coord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+                         NULL, NULL, NULL, NULL);
+    ((CRBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
+   break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
     ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
@@ -829,7 +838,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order)
 {
   double **initialCoord, **finalCoord, **coordError;
-  long n_track, i, j;
+  long n_track, i, j, n_left;
   VMATRIX *M;
   double defaultStep[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
   double maximumValue[6];
@@ -842,16 +851,26 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     stepSize = defaultStep;
 
   n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
-  
+  n_left = n_track;
+
   switch (eptr->type) {
   case T_CSBEND:
     ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
     ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
     ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
-    track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
+    n_left = track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL);
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
+   break;
+  case T_CRBEND:
+    ltmp1 = ((CRBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
+    ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
+    n_left = track_through_crbend(finalCoord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+                         NULL, NULL, NULL, NULL);
+    ((CRBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
@@ -918,17 +937,69 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     exitElegant(1);
     break;
   }
-  
+  if (n_left!=n_track) {
+    bombElegantVA("lost particles when tracking to determine matrix for %s\n", eptr->name);
+  }
+
+  /*
+  if (1) {
+    FILE *fplog;
+    fplog = fopen("matrix.log", "w");
+    fprintf(fplog, "SDDS1\n");
+    fprintf(fplog, "&column name=x0 type=double &end\n");
+    fprintf(fplog, "&column name=x1 type=double &end\n");
+    fprintf(fplog, "&column name=xp0 type=double &end\n");
+    fprintf(fplog, "&column name=xp1 type=double &end\n");
+    fprintf(fplog, "&column name=y0 type=double &end\n");
+    fprintf(fplog, "&column name=y1 type=double &end\n");
+    fprintf(fplog, "&column name=yp0 type=double &end\n");
+    fprintf(fplog, "&column name=yp1 type=double &end\n");
+    fprintf(fplog, "&column name=s0 type=double &end\n");
+    fprintf(fplog, "&column name=s1 type=double &end\n");
+    fprintf(fplog, "&column name=delta0 type=double &end\n");
+    fprintf(fplog, "&column name=delta1 type=double &end\n");
+    fprintf(fplog, "&data mode=ascii no_row_counts=1 &end\n");
+    for (i=0; i<n_track; i++) {
+      for (j=0; j<6; j++)
+        fprintf(fplog, "%13.6le %13.6le ", initialCoord[i][j], finalCoord[i][j]);
+      fprintf(fplog, "\n");
+    }
+    fclose(fplog);
+  }
+  */
+
+  /* Set errors as fraction of the absolute maximum coordinate */
   for (i=0; i<6; i++) {
+    double min, max;
+    max = -(min = DBL_MAX);
     maximumValue[i] = -DBL_MAX;
     for (j=0; j<n_track; j++) {
+      if (max<finalCoord[j][i])
+        max = finalCoord[j][i];
+      if (min>finalCoord[j][i])
+        min = finalCoord[j][i];
       if (maximumValue[i]<initialCoord[j][i])
         maximumValue[i] = initialCoord[j][i];
     }
+    max = fabs(max);
+    min = fabs(min);
+    max = max>min ? max : min;
+    for (j=0; j<n_track; j++)
+      coordError[j][i] = max*accuracy_factor;
   }
   
   M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
+
+  /*
+  for (i=0; i<6; i++) {
+    printf("R[%ld]: ", i);
+    for (j=0; j<6; j++) {
+      printf("%le ", M->R[i][j]);
+    }
+    printf("\n");
+  }
+  */
 
   free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
