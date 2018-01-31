@@ -2278,15 +2278,16 @@ typedef struct {
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
     short referenceCorrection;
     /* for internal use only: */
-    long multipolesInitialized;
+    short fseOptimized;
+    double fseOffset;
+    double referenceData[4]; /* length, angle, K1, K2 */
+    short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edgeMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;
-    long totalMultipolesComputed;
+    short totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
-    short refTrajectoryChangeSet;
-    double refLength, refAngle, **refTrajectoryChange;
-    short refKicks;
+
     } CRBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */

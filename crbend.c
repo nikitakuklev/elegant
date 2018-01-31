@@ -16,6 +16,9 @@
 #include "track.h"
 #include "multipole.h"
 
+static CRBEND *crbendCopy;
+static double PoCopy;
+
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0);
 int integrate_kick_K012(double *coord, double dx, double dy, 
@@ -24,6 +27,7 @@ int integrate_kick_K012(double *coord, double dx, double dy,
                         long integration_order, long n_parts, double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+double crbend_trajectory_error_fse(double fseOffset);
 
 long track_through_crbend(
                           double **particle,   /* initial/final phase-space coordinates */
@@ -43,31 +47,53 @@ long track_through_crbend(
   long n_kicks, integ_order;
   long i_part, i_top;
   double *coef;
-  double tilt, rad_coef, isr_coef, dzLoss=0, multSign = 1;
+  double fse, tilt, rad_coef, isr_coef, dzLoss=0, multSign = 1;
   double rho0, arcLength, length, angle;
   MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   
   if (!particle)
-    bombTracking("particle array is null (crbend_tracking)");
+    bombTracking("particle array is null (track_through_crbend)");
+  
+  if (crbend->fseOptimized!=-1 && crbend->angle!=0) {
+    if (crbend->fseOptimized==0 ||
+        crbend->length!=crbend->referenceData[0] ||
+        crbend->angle!=crbend->referenceData[1] ||
+        crbend->K1!=crbend->referenceData[2] ||
+        crbend->K2!=crbend->referenceData[3]) {
+      double acc;
+      crbend->fseOptimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
+      crbendCopy = crbend;
+      PoCopy = Po;
+      crbend->fseOffset = zeroNewton(crbend_trajectory_error_fse, 0.0, 0.0, 1e-6, 100, fabs(1e-14*crbend->length/crbend->angle));
+      if (fabs(acc=crbend_trajectory_error_fse(crbend->fseOffset)) >= fabs(1e-14*crbend->length/crbend->angle))
+        bombElegantVA("failed to find FSE offset to center trajectory for CRBEND. Accuracy acheived was %le.", acc);
+      printf("Optimized FSE for CRBEND is %le\n", crbend->fseOffset);
+      crbend->fseOptimized = 1;
+    }
+  }
 
   rad_coef = isr_coef = 0;
 
   n_kicks = crbend->n_kicks;
   arcLength = crbend->length;
+  if (crbend->fseOptimized!=0)
+    fse = crbend->fse + crbend->fseOffset;
+  else 
+    fse = crbend->fse;
   if ((angle = crbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
-    K0L = (1+crbend->fse)/rho0*length;
+    K0L = (1+fse)/rho0*length;
   }
   else {
     rho0 = DBL_MAX;
     length = arcLength;
     K0L = 0;
   }
-  K1L = (1+crbend->fse)*crbend->K1*length;
-  K2L = (1+crbend->fse)*crbend->K2*length;
+  K1L = (1+fse)*crbend->K1*length;
+  K2L = (1+fse)*crbend->K2*length;
   if (angle<0) {
     K0L *= -1;
     K1L *= -1;
@@ -114,22 +140,29 @@ long track_through_crbend(
 
   if (multData && !multData->initialized)
     multData = NULL;
-  
+
+  if (crbend->fseOptimized==-1) {
+    /* Ignore multipole errors during FSE optimization */
+    multData = NULL;
+    edgeMultData = NULL;
+  }
+
   if (n_kicks<=0)
     bombTracking("n_kicks<=0 in track_crbend()");
   if (integ_order!=2 && integ_order!=4) 
     bombTracking("multipole integration_order must be 2 or 4");
 
   if (!(coef = expansion_coefficients(0)))
-    bombTracking("expansion_coefficients(0) returned null pointer (crbend_tracking)");
+    bombTracking("expansion_coefficients(0) returned null pointer (track_through_crbend)");
   if (!(coef = expansion_coefficients(1)))
-    bombTracking("expansion_coefficients(1) returned null pointer (crbend_tracking)");
+    bombTracking("expansion_coefficients(1) returned null pointer (track_through_crbend)");
   if (!(coef = expansion_coefficients(2)))
-    bombTracking("expansion_coefficients(2) returned null pointer (crbend_tracking)");
+    bombTracking("expansion_coefficients(2) returned null pointer (track_through_crbend)");
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
-  printf("Need to implement misalignments in crbend_tracking\n");
+  if (crbend->fseOptimized!=-1)
+    printf("Need to implement misalignments in track_through_crbend\n");
   /*
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
@@ -146,8 +179,8 @@ long track_through_crbend(
     *sigmaDelta2 = 0;
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
-    if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, integ_order, n_kicks, length, 
-                            multData, edgeMultData, &apertureData, &dzLoss, sigmaDelta2)) {
+    if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, 
+                             integ_order, n_kicks, length, multData, edgeMultData, &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -169,7 +202,8 @@ long track_through_crbend(
     switchRbendPlane(particle, n_part, fabs(angle/2), Po);
   }
 
-  printf("Need to implement misalignments in crbend_tracking\n");
+  if (crbend->fseOptimized!=-1)
+    printf("Need to implement misalignments in track_through_crbend\n");
   /*
   if (tilt)
     rotateBeamCoordinates(particle, n_part, -tilt);
@@ -189,7 +223,7 @@ long track_through_crbend(
     free(multData);
   }
 
-  log_exit("crbend_tracking");
+  log_exit("track_through_crbend");
   return(i_top+1);
 }
 
@@ -451,4 +485,17 @@ void verticalRbendFringe(double **particle, long n_part, double alpha, double rh
   C = sin(alpha)/rho0;
   for (i=0; i<n_part; i++) 
     particle[i][3] -= particle[i][2]*C/(1+particle[i][5]);
+}
+
+double crbend_trajectory_error_fse(double fseOffset)
+{
+  crbendCopy->fseOffset = fseOffset;
+  static double **particle = NULL;
+  if (!particle) 
+    particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
+  memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+  if (!track_through_crbend(particle, 1, crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL)) {
+    return 1;
+  }
+  return particle[0][0];
 }
