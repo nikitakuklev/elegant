@@ -67,6 +67,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|CRBEND| element, which integrates symplectically through a straight rectangular gradient bending magnet, was added.
 \item The \verb|BMXYZ| element, which integrates particles through 3D magnetic field maps, now includes misalignment parameters.
   Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
+\item The \verb|EHKICK|, \verb|EVKICK|, and \verb|EHVKICK| elements now include the \verb|RANDOM_MULTIPOLE_FACTOR| and 
+  \verb|SYSTEMATIC_MULTIPOLE_FACTOR| parameters.
 \end{itemize}
 
 \subsection{New and Modified Commands}
