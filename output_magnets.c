@@ -19,7 +19,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 {
     ELEMENT_LIST *eptr;
     QUAD  *qptr; BEND  *bptr; KQUSE *kqsptr;
-    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CSRCSBEND *csrbptr;
+    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CRBEND *crbptr; CSRCSBEND *csrbptr;
     long iPhase;
     double start, end, dz, value;
     //double total_length;
@@ -213,6 +213,21 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                             eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end, 
                             eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
                 else if (cbptr->angle<0) 
+                    fprintf(fpm, 
+                        "\"%s\" %s %e -.33333333\n\"%s\" %s %e -.33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
+                            eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end, 
+                            eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
+                start = end;
+                break;
+            case T_CRBEND:
+                crbptr = (CSBEND*)eptr->p_elem;
+                end  = start+crbptr->length;
+                if (crbptr->angle>0)
+                    fprintf(fpm, 
+                        "\"%s\" %s %e .33333333\n\"%s\" %s %e .33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
+                            eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end, 
+                            eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
+                else if (crbptr->angle<0) 
                     fprintf(fpm, 
                         "\"%s\" %s %e -.33333333\n\"%s\" %s %e -.33333333\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e  0\n\"%s\" %s %e 0\n",
                             eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end, eptr->name, entity_name[eptr->type], end, 

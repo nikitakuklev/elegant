@@ -65,7 +65,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS", "SLICE", "SPEEDBUMP",
+    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CRBEND",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -194,6 +194,7 @@ char *entity_text[N_TYPES] = {
     "Simulates ionization of residual gas and interaction with the beam.",
     "Performs slice-by-slice analysis of the beam for output to a file.",
     "Simulates a semi-circular protuberance from one or both walls of the chamber."
+    "A canonical kick rectangular dipole magnet, assumed to have multipoles defined in Cartesian coordinates."
     } ;
 
 QUAD quad_example;
@@ -966,7 +967,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"VCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.yKickCalibration), NULL, 1.0, 0, "calibration factor for vertical correction kick"},
     {"HSTEERING", "", IS_LONG, 0, (long)((char *)&ksext_example.xSteering), NULL, 0.0, 0, "use for horizontal correction?"},
     {"VSTEERING", "", IS_LONG, 0, (long)((char *)&ksext_example.ySteering), NULL, 0.0, 0, "use for vertical correction?"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
@@ -993,7 +994,7 @@ PARAMETER koct_param[N_KOCT_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&koct_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&koct_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&koct_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&koct_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
@@ -1053,7 +1054,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"VCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.yKickCalibration), NULL, 1.0, 0, "calibration factor for vertical correction kick"},
     {"HSTEERING", "", IS_LONG, 0, (long)((char *)&kquad_example.xSteering), NULL, 0.0, 0, "use for horizontal correction?"},
     {"VSTEERING", "", IS_LONG, 0, (long)((char *)&kquad_example.ySteering), NULL, 0.0, 0, "use for vertical correction?"},
-    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks (rounded up to next multipole of 4 if INTEGRATION_ORDER=4)"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
@@ -2811,6 +2812,41 @@ PARAMETER speedbump_param[N_SPEEDBUMP_PARAMS] = {
     };
 
 
+CRBEND crbend_example;
+/* canonically-integrated rectangular bending magnet physical parameters */
+PARAMETER crbend_param[N_CRBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.h[0]), NULL, 0.0, 0, "entrance pole-face curvature"},
+    {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.h[1]), NULL, 0.0, 0, "exit pole-face curvature"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&crbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&crbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
+    {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&crbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
+    {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&crbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&crbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
+    {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
+    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
+    {"SYSTEMATIC_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.systematicMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply systematic and edge multipoles"},
+    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&crbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
+    {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&crbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
+    {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&crbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
+    {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&crbend_example.referenceCorrection), NULL, 0.0, 0, "If nonzero, reference trajectory is subtracted from particle trajectories to compensate for inaccuracy in integration."},
+    };
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2954,6 +2990,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
+    { N_CRBEND_PARAMS, MAT_LEN_NCAT|NO_DICT_OUTPUT, sizeof(CRBEND),    crbend_param   }, 
 } ;
 
 void compute_offsets()

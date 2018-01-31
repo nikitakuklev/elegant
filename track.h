@@ -900,7 +900,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_IONEFFECTS 118
 #define T_SLICE_POINT 119
 #define T_SPEEDBUMP 120
-#define N_TYPES  121
+#define T_CRBEND 121
+#define N_TYPES  122
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1028,6 +1029,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
+#define N_CRBEND_PARAMS 30
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2256,6 +2258,36 @@ typedef struct {
     SDDS_DATASET *SDDSphotons;
     short e1Index, e2Index;
     } CSBEND;
+
+/* names and storage structure for canonically-integrated rectangular bending magnet physical parameters */
+extern PARAMETER crbend_param[N_CRBEND_PARAMS];
+
+typedef struct {
+    double length, angle;
+    double K1, K2;
+    double tilt;
+    double h[2], hgap, fint;
+    double dx, dy, dz;
+    double fse;     /* Fractional Strength Error */
+    double etilt;   /* error tilt angle */
+    long n_kicks;
+    short edge_effects[2], edge_order;
+    short integration_order;
+    char *systematic_multipoles, *edge_multipoles, *random_multipoles;
+    double systematicMultipoleFactor, randomMultipoleFactor;
+    short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
+    short referenceCorrection;
+    /* for internal use only: */
+    long multipolesInitialized;
+    MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA edgeMultipoleData; 
+    MULTIPOLE_DATA randomMultipoleData;
+    long totalMultipolesComputed;
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
+    short refTrajectoryChangeSet;
+    double refLength, refAngle, **refTrajectoryChange;
+    short refKicks;
+    } CRBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
 extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
@@ -4083,6 +4115,10 @@ long reset_driftCSR();
 long applyLowPassFilter(double *histogram, long bins, double start, double end);
 long applyLHPassFilters(double *histogram, long bins, double startHP, double endHP,
 			double startLP, double endLP, long clipNegative);
+
+long track_through_crbend(double **particle, long n_part, CRBEND *crbend, double Po,
+                          double **accepted, double z_start, double *sigmaDelta2, char *rootname,
+                          MAXAMP *maxamp, APERTURE_DATA *apFileData);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

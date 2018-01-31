@@ -2781,6 +2781,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   KSBEND *kbptr;
   CSBEND *cbptr;
   CSRCSBEND *csrbptr;
+  CRBEND *crbptr;
   QUAD *qptr;
   KQUAD *qptrk;
   SEXT *sptr;
@@ -2975,6 +2976,13 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       E1 = cbptr->e[cbptr->e1Index]*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
       E2 = cbptr->e[cbptr->e2Index]*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = cbptr->k1;
+    } else if (elem->type==T_CRBEND) {
+      crbptr = (CRBEND*)(elem->p_elem);
+      length = crbptr->length;
+      angle = crbptr->angle;
+      E1 = crbptr->angle/2;
+      E2 = crbptr->angle/2;
+      K1 = crbptr->K1;
     } else if (elem->type==T_CSRCSBEND) {
       csrbptr = (CSRCSBEND*)(elem->p_elem);
       length = csrbptr->length;
@@ -4434,6 +4442,13 @@ void computeSDrivingTerms(LINE_LIST *beamline)
         k2 = ((CSBEND*)src_ptr->p_elem)->k2 *
              ((CSBEND*)src_ptr->p_elem)->length;
         break;
+      case T_CRBEND:
+        tilt = ((CRBEND*)src_ptr->p_elem)->tilt;
+        j1 = -((CRBEND*)src_ptr->p_elem)->K1 *
+             ((CRBEND*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((CRBEND*)src_ptr->p_elem)->K2 *
+             ((CRBEND*)src_ptr->p_elem)->length;
+        break;
       case T_CSRCSBEND:
         tilt = ((CSRCSBEND*)src_ptr->p_elem)->tilt;
         j1 = -((CSRCSBEND*)src_ptr->p_elem)->k1 *
@@ -4630,6 +4645,10 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
     case T_CSBEND:
       b2L = ((CSBEND*)eptr1->p_elem)->k1 * ((CSBEND*)eptr1->p_elem)->length;
       b3L = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_CRBEND:
+      b2L = ((CRBEND*)eptr1->p_elem)->K1 * ((CRBEND*)eptr1->p_elem)->length;
+      b3L = ((CRBEND*)eptr1->p_elem)->K2 * ((CRBEND*)eptr1->p_elem)->length/2;
       break;
     case T_CSRCSBEND:
       b2L = ((CSRCSBEND*)eptr1->p_elem)->k1 * ((CSRCSBEND*)eptr1->p_elem)->length;

@@ -1011,7 +1011,7 @@ VMATRIX *compute_matrix(
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
     MULT *mult;
-    SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
+    SAMPLE *sample; STRAY *stray; CSBEND *csbend; CRBEND *crbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
@@ -1474,6 +1474,12 @@ VMATRIX *compute_matrix(
             misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, csbend->angle);
           }
         }
+        break;
+      case T_CRBEND:
+        crbend = (CRBEND*)elem->p_elem;
+        if (crbend->n_kicks<1)
+            bombElegant("n_kicks must be > 0 for CRBEND element", NULL);
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, run->default_order);
         break;
       case T_CSRCSBEND:
         csrcsbend = (CSRCSBEND*)elem->p_elem;
