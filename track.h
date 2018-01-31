@@ -1019,9 +1019,9 @@ extern char *entity_text[N_TYPES];
 #define N_MRFDF_PARAMS 23
 #define N_CORGPIPE_PARAMS 15
 #define N_LRWAKE_PARAMS 15
-#define N_EHCOR_PARAMS 13
-#define N_EVCOR_PARAMS 13
-#define N_EHVCOR_PARAMS 15
+#define N_EHCOR_PARAMS 15
+#define N_EVCOR_PARAMS 15
+#define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 13
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 17
@@ -1238,6 +1238,7 @@ typedef struct {
     double lEffRad;
     short steering, synchRad, isr;
     char *steeringMultipoles, *randomMultipoles;
+    double randomMultipoleFactor, steeringMultipoleFactor;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
     MULTIPOLE_DATA randomMultipoleData;
@@ -1250,6 +1251,7 @@ typedef struct {
     double lEffRad;
     short steering, synchRad, isr; 
     char *steeringMultipoles, *randomMultipoles;
+    double randomMultipoleFactor, steeringMultipoleFactor;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
     MULTIPOLE_DATA randomMultipoleData;
@@ -1262,6 +1264,7 @@ typedef struct {
     double lEffRad;
     short steering, synchRad, isr;
     char *steeringMultipoles, *randomMultipoles;
+    double randomMultipoleFactor, steeringMultipoleFactor;
     /* for internal use */
     MULTIPOLE_DATA steeringMultipoleData;
     MULTIPOLE_DATA randomMultipoleData;

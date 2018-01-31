@@ -2668,6 +2668,8 @@ PARAMETER ehcor_param[N_EHCOR_PARAMS] = {
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ehcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for systematic multipole content of steering kicks"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehcor_example.randomMultipoles), NULL, 0.0, 0, "input file for random multipoles content of steering kicks"},
+    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"STEERING_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehcor_example.steeringMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply steering multipoles"},
     };
 
 EVCOR evcor_example;
@@ -2686,6 +2688,8 @@ PARAMETER evcor_param[N_EVCOR_PARAMS] = {
     {"ISR", "", IS_SHORT, 0, (long)((char *)&evcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&evcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for systematic multipole content of steering kicks"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&evcor_example.randomMultipoles), NULL, 0.0, 0, "input file for random multipoles content of steering kicks"},
+    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"STEERING_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&evcor_example.steeringMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply steering multipoles"},
     };
 
 EHVCOR ehvcor_example;
@@ -2706,6 +2710,8 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ehvcor_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehvcor_example.steeringMultipoles), NULL, 0.0, 0, "input file for systematic multipole content of steering kicks"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ehvcor_example.randomMultipoles), NULL, 0.0, 0, "input file for random multipoles content of steering kicks"},
+    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"STEERING_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ehvcor_example.steeringMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply steering multipoles"},
     };
 
 BMAPXYZ bmapxyz_example;

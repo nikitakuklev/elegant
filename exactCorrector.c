@@ -16,8 +16,8 @@
 #include "mdb.h"
 #include "track.h"
 
-void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *steeringMult,
-					 MULTIPOLE_DATA *randomMult,
+void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *steeringMult, double sysFactor,
+					 MULTIPOLE_DATA *randomMult, double ranFactor,
 					 MULTIPOLE_DATA *totalMult,
 					 char *name);
 
@@ -111,8 +111,8 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
       }
       if (!ehcor->multipolesRandomized) {
 	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(ehcor->steeringMultipoleData), 
-					    &(ehcor->randomMultipoleData), 
+	computeTotalSteeringMultipoleErrors(&(ehcor->steeringMultipoleData), ehcor->steeringMultipoleFactor,
+					    &(ehcor->randomMultipoleData), ehcor->randomMultipoleFactor,
 					    &(ehcor->totalMultipoleData), eptr->name);
 	ehcor->multipolesRandomized = 1;
       }
@@ -142,8 +142,8 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
       }
       if (!evcor->multipolesRandomized) {
 	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(evcor->steeringMultipoleData), 
-					    &(evcor->randomMultipoleData), 
+	computeTotalSteeringMultipoleErrors(&(evcor->steeringMultipoleData), evcor->steeringMultipoleFactor,
+					    &(evcor->randomMultipoleData), evcor->randomMultipoleFactor,
 					    &(evcor->totalMultipoleData), eptr->name);
 	evcor->multipolesRandomized = 1;
       }
@@ -174,8 +174,8 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
       }
       if (!ehvcor->multipolesRandomized) {
 	/* generate instance of random multipoles, sum to make total */
-	computeTotalSteeringMultipoleErrors(&(ehvcor->steeringMultipoleData), 
-					    &(ehvcor->randomMultipoleData), 
+	computeTotalSteeringMultipoleErrors(&(ehvcor->steeringMultipoleData), ehvcor->steeringMultipoleFactor,
+					    &(ehvcor->randomMultipoleData), ehvcor->randomMultipoleFactor,
 					    &(ehvcor->totalMultipoleData), eptr->name);
 	ehvcor->multipolesRandomized = 1;
       }
@@ -277,8 +277,8 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   return i_top+1;
 }
 
-void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *systematicMult,
-					 MULTIPOLE_DATA *randomMult,
+void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *systematicMult, double sysFactor,
+					 MULTIPOLE_DATA *randomMult, double ranFactor,
 					 MULTIPOLE_DATA *totalMult,
 					 char *name)
 {
@@ -295,7 +295,9 @@ void computeTotalSteeringMultipoleErrors(MULTIPOLE_DATA *systematicMult,
       bombElegantVA("Error: order mismatch for STEERING_MULTIPOLES and RANDOM_MULTIPOLES for EVKICK %s\n", 
 		    name);
     totalMult->order[i] = randomMult->order[i];
-    totalMult->KnL[i] = systematicMult->KnL[i] + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->KnL[i];
-    totalMult->JnL[i] = systematicMult->JnL[i] + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->JnL[i];
+    totalMult->KnL[i] = systematicMult->KnL[i]*sysFactor 
+      + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->KnL[i]*ranFactor;
+    totalMult->JnL[i] = systematicMult->JnL[i]*sysFactor
+      + gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant)*randomMult->JnL[i]*ranFactor;
   }
 }
