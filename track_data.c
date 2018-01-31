@@ -2839,12 +2839,12 @@ PARAMETER crbend_param[N_CRBEND_PARAMS] = {
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"SYSTEMATIC_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.systematicMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply systematic and edge multipoles"},
     {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"REFERENCE_ORDER", "", IS_SHORT, 0, (long)((char *)&crbend_example.referenceOrder), NULL, 0.0, 0, "Reference order for multipole errors."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&crbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&crbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&crbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
-    {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&crbend_example.referenceCorrection), NULL, 0.0, 0, "If nonzero, reference trajectory is subtracted from particle trajectories to compensate for inaccuracy in integration."},
     };
 
 /* array of parameter structures */

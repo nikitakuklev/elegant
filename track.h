@@ -2275,8 +2275,8 @@ typedef struct {
     short integration_order;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
+    short referenceOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short referenceCorrection;
     /* for internal use only: */
     short fseOptimized;
     double fseOffset;

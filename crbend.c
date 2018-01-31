@@ -52,7 +52,8 @@ long track_through_crbend(
   MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
-  
+  double referenceKnL;
+
   if (!particle)
     bombTracking("particle array is null (track_through_crbend)");
   
@@ -94,6 +95,16 @@ long track_through_crbend(
   }
   K1L = (1+fse)*crbend->K1*length;
   K2L = (1+fse)*crbend->K2*length;
+  if (crbend->systematic_multipoles || crbend->edge_multipoles || crbend->random_multipoles) {
+    if (crbend->referenceOrder==0 && (referenceKnL=K0L)==0)
+        bombElegant("REFERENCE_ORDER=0 but CRBEND angle is zero", NULL);
+    if (crbend->referenceOrder==1 && (referenceKnL=K1L)==0)
+      bombElegant("REFERENCE_ORDER=1 but CRBEND K1 is zero", NULL);
+    if (crbend->referenceOrder==2 && (referenceKnL=K2L)==0)
+      bombElegant("REFERENCE_ORDER=2 but CRBEND K2 is zero", NULL);
+    if (crbend->referenceOrder<0 || crbend->referenceOrder>2)
+      bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CRBEND", NULL);
+  }
   if (angle<0) {
     K0L *= -1;
     K1L *= -1;
@@ -118,12 +129,9 @@ long track_through_crbend(
   }
   if (!crbend->multipolesInitialized) {
     /* read the data files for the error multipoles */
-    readErrorMultipoleData(&(crbend->systematicMultipoleData),
-                           crbend->systematic_multipoles, 0);
-    readErrorMultipoleData(&(crbend->edgeMultipoleData),
-                           crbend->edge_multipoles, 0);
-    readErrorMultipoleData(&(crbend->randomMultipoleData),
-                           crbend->random_multipoles, 0);
+    readErrorMultipoleData(&(crbend->systematicMultipoleData), crbend->systematic_multipoles, 0);
+    readErrorMultipoleData(&(crbend->edgeMultipoleData), crbend->edge_multipoles, 0);
+    readErrorMultipoleData(&(crbend->randomMultipoleData), crbend->random_multipoles, 0);
     crbend->multipolesInitialized = 1;
   }
   if (!crbend->totalMultipolesComputed) {
@@ -132,7 +140,7 @@ long track_through_crbend(
                                      &(crbend->edgeMultipoleData),
                                      &(crbend->randomMultipoleData), multSign*crbend->randomMultipoleFactor,
                                      NULL, 0.0,
-                                     K0L, 1);
+                                     referenceKnL, crbend->referenceOrder);
     crbend->totalMultipolesComputed = 1;
   }
   multData = &(crbend->totalMultipoleData);
@@ -180,7 +188,8 @@ long track_through_crbend(
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, 
-                             integ_order, n_kicks, length, multData, edgeMultData, &apertureData, &dzLoss, sigmaDelta2)) {
+                             integ_order, n_kicks, length, multData, edgeMultData, 
+                             &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);

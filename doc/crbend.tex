@@ -1,0 +1,55 @@
+This element provides a symplectic {\em rectangular} bending magnet with the exact
+Hamiltonian.  The magnet not only has rectangular ends, but the
+quadrupole, sextupole, and other multipole terms are defined in Cartesian coordinates.
+This is quite different from \verb|CSBEND|, where the edge angles are user-defined and
+where the field expansion is in curvilinear coordinates.
+Strictly speaking, \verb|CSBEND| is only valid when the dipole is built with curved,
+beam-following poles.
+
+Integration of particles in \verb|CRBEND| is very similar to what's done for
+\verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT|. 
+The only real difference is that coordinate transformations are performed at the
+entrance and exit to orient the incoming central trajectory to the straight magnet axis.
+In addition, the fractional strength error is adjusted to ensure that the 
+outgoing central trajectory is correct.
+
+{\bf Edge angles and edge effects} 
+
+The edge angle treatment in \verb|CRBEND| is very simple, consisting of a 
+vertical focusing effect with momentum dependence to all orders.
+The user may also specify edge multipoles using the \verb|EDGE_MULTIPOLE| parameter.
+
+{\bf Multipole errors}
+
+Multipole errors are specified for the body and edge in the same fashion as for the
+\verb|KQUAD| element.
+The reference is the dipole field by default, but this may be changed using the
+\verb|REFERENCE_ORDER| parameter.
+
+{\bf Radiation effects}
+
+Incoherent synchrotron radiation, when requested with {\tt ISR=1},
+normally uses gaussian distributions for the excitation of the electrons.
+Setting {\tt USE\_RAD\_DIST=1} invokes a more sophisticated algorithm that
+uses correct statistics for the photon energy and number distributions.
+In addition, if {\tt USE\_RAD\_DIST=1} one may also set {\tt ADD\_OPENING\_ANGLE=1},
+which includes the photon angular distribution when computing the effect on 
+the emitting electron.  
+
+{\bf Adding errors}
+
+When adding errors, care should be taken to choose the right
+parameters.  The \verb|FSE| and \verb|ETILT| parameters are used for
+assigning errors to the strength and alignment relative to the ideal
+values given by \verb|ANGLE| and \verb|TILT|.  One can also assign 
+errors to \verb|ANGLE| and \verb|TILT|, but this has a different meaning:
+in this case, one is assigning errors to the survey itself.  The reference
+beam path changes, so there is no orbit/trajectory error. The most common
+thing is to assign errors to \verb|FSE| and \verb|ETILT|.  Note that when
+adding errors to \verb|FSE|, the error is assumed to come from the power
+supply, which means that multipole strengths also change.
+
+{\bf Splitting dipoles}
+
+The \verb|CRBEND| element does not support splitting.
+
