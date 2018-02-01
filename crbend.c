@@ -40,12 +40,14 @@ long track_through_crbend(
                           double Po,
                           double **accepted,
                           double z_start,
-                          double *sigmaDelta2,
+                          double *sigmaDelta2, /* use for accumulation of energy spread for radiation matrix computation */
                           char *rootname,
                           MAXAMP *maxamp,
                           APERTURE_DATA *apFileData,
                           /* If iPart non-negative, we do one step. The caller is responsible 
-                           * for handling the coordinates appropriately outside this routine. */
+                           * for handling the coordinates appropriately outside this routine. 
+                           * The element must have been previously optimized to determine FSE and X offsets.
+                           */
                           long iPart
                           )
 {
@@ -269,12 +271,21 @@ long track_through_crbend(
 /* beta is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
-int integrate_kick_K012(double *coord, double dx, double dy, 
-                        double Po, double rad_coef, double isr_coef,
-                        double K0L, double K1L, double K2L,
-                        long integration_order, long n_parts, long iPart, double drift,
-                        MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
-                        MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2)
+int integrate_kick_K012(double *coord, /* coordinates of the particle */
+                        double dx, double dy,  /* misalignments, needed for aperture checks */
+                        double Po, double rad_coef, double isr_coef, /* radiation effects */
+                        double K0L, double K1L, double K2L, /* strength parameters for full magnet */
+                        long integration_order, /* 2 or 4 */
+                        long n_parts, /* N_KICKS */
+                        long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
+                                       * This is needed to allow propagation of the radiation matrix.
+                                       */
+                        double drift, /* length of the full element */
+                        MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, /* error multipoles */
+                        MULT_APERTURE_DATA *apData,  /* aperture */
+                        double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
+                        double *sigmaDelta2  /* accumulate the energy spread increase for propagation of radiation matrix */
+                        )
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
