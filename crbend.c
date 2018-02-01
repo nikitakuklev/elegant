@@ -18,6 +18,10 @@
 
 static CRBEND crbendCopy;
 static double PoCopy, xMax, xError, xpError;
+#ifdef DEBUG
+static short logHamiltonian = 0;
+static FILE *fpHam = NULL;
+#endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0);
@@ -91,6 +95,18 @@ long track_through_crbend(
       crbend->optimized = 1;
     }
   }
+
+#ifdef DEBUG
+  if (crbend->optimized!=-1) {
+    logHamiltonian = 1;
+    fpHam = fopen("crbend.sdds", "w");
+    fprintf(fpHam, "SDDS1\n&column name=z type=double units=m &end\n");
+    fprintf(fpHam, "&column name=x type=double units=m &end\n");
+    fprintf(fpHam, "&column name=y type=double units=m &end\n");
+    fprintf(fpHam, "&column name=dH type=double &end\n");
+    fprintf(fpHam, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+#endif
 
   rad_coef = isr_coef = 0;
 
@@ -333,6 +349,21 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   xMax = xMin = x0 = x;
   xp0 = xp;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
+#ifdef DEBUG
+    double H0;
+    if (logHamiltonian && fpHam) {
+      double H;
+      H = -sqrt(ipow(1+dp, 2)-qx*qx-qy*qy) +
+        K0L/drift*x +
+        K1L/(2*drift)*(x*x - y*y) +
+        K2L/(6*drift)*(ipow(x, 3) - 3*x*y*y);
+      if (i_kick==0) 
+        H0 = H;
+      fprintf(fpHam, "%e %e %e %e\n", i_kick*drift, x, y, H-H0);
+      if (i_kick==n_parts)
+        fputs("\n", fpHam);
+    }
+#endif
     if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
       coord[0] = x;
       coord[2] = y;
