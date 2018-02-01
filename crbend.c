@@ -17,7 +17,7 @@
 #include "multipole.h"
 
 static CRBEND *crbendCopy;
-static double PoCopy;
+static double PoCopy, xMax, xError, xpError;
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0);
@@ -27,7 +27,7 @@ int integrate_kick_K012(double *coord, double dx, double dy,
                         long integration_order, long n_parts, double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
-double crbend_trajectory_error_fse(double fseOffset);
+double crbend_trajectory_error(double *value, long *invalid);
 
 long track_through_crbend(
                           double **particle,   /* initial/final phase-space coordinates */
@@ -57,21 +57,35 @@ long track_through_crbend(
   if (!particle)
     bombTracking("particle array is null (track_through_crbend)");
   
-  if (crbend->fseOptimized!=-1 && crbend->angle!=0) {
-    if (crbend->fseOptimized==0 ||
+  if (crbend->optimized!=-1 && crbend->angle!=0) {
+    if (crbend->optimized==0 ||
         crbend->length!=crbend->referenceData[0] ||
         crbend->angle!=crbend->referenceData[1] ||
         crbend->K1!=crbend->referenceData[2] ||
         crbend->K2!=crbend->referenceData[3]) {
       double acc;
-      crbend->fseOptimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
+      double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
+      crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
       crbendCopy = crbend;
       PoCopy = Po;
-      crbend->fseOffset = zeroNewton(crbend_trajectory_error_fse, 0.0, 0.0, 1e-6, 100, fabs(1e-14*crbend->length/crbend->angle));
-      if (fabs(acc=crbend_trajectory_error_fse(crbend->fseOffset)) >= fabs(1e-14*crbend->length/crbend->angle))
-        bombElegantVA("failed to find FSE offset to center trajectory for CRBEND. Accuracy acheived was %le.", acc);
-      printf("Optimized FSE for CRBEND is %le\n", crbend->fseOffset);
-      crbend->fseOptimized = 1;
+      startValue[0] = startValue[1] = 0;
+      stepSize[0] = 1e-3; /* FSE */
+      stepSize[1] = 1e-4; /* X */
+      lowerLimit[0] = lowerLimit[1] = -1;
+      upperLimit[0] = upperLimit[1] = 1;
+      if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, NULL, 2, 
+                     fabs(1e-14*crbend->length/crbend->angle), fabs(1e-16*crbend->length/crbend->angle),
+                     crbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+        bombElegantVA("failed to find FSE and x offset to center trajectory for crbend. accuracy acheived was %le.", acc);
+      }
+      crbend->fseOffset = startValue[0];
+      crbend->dxOffset = startValue[1];
+      crbend->referenceData[0] = crbend->length;
+      crbend->referenceData[1] = crbend->angle;
+      crbend->referenceData[2] = crbend->K1;
+      crbend->referenceData[3] = crbend->K2;
+      printf("CRBEND optimized FSE=%le, x=%le, accuracy=%le\n", crbend->fseOffset, crbend->dxOffset, acc);
+      crbend->optimized = 1;
     }
   }
 
@@ -79,7 +93,7 @@ long track_through_crbend(
 
   n_kicks = crbend->n_kicks;
   arcLength = crbend->length;
-  if (crbend->fseOptimized!=0)
+  if (crbend->optimized!=0)
     fse = crbend->fse + crbend->fseOffset;
   else 
     fse = crbend->fse;
@@ -97,7 +111,7 @@ long track_through_crbend(
   K2L = (1+fse)*crbend->K2*length;
   if (crbend->systematic_multipoles || crbend->edge_multipoles || crbend->random_multipoles) {
     if (crbend->referenceOrder==0 && (referenceKnL=K0L)==0)
-        bombElegant("REFERENCE_ORDER=0 but CRBEND angle is zero", NULL);
+        bombElegant("REFERENCE_ORDER=0 but CRBEND ANGLE is zero", NULL);
     if (crbend->referenceOrder==1 && (referenceKnL=K1L)==0)
       bombElegant("REFERENCE_ORDER=1 but CRBEND K1 is zero", NULL);
     if (crbend->referenceOrder==2 && (referenceKnL=K2L)==0)
@@ -112,17 +126,13 @@ long track_through_crbend(
     multSign = -1;
     rotateBeamCoordinates(particle, n_part, PI);
   }
-  tilt = crbend->tilt;
-  dx = crbend->dx;
-  dy = crbend->dy;
-  dz = crbend->dz;
 
   integ_order = crbend->integration_order;
   if (crbend->synch_rad)
     rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
   isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
   if (!crbend->isr || (crbend->isr1Particle==0 && n_part==1))
-    /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
+    /* minus sign indicates we accumulate into sigmadelta^2 only, don't perturb particles */
     isr_coef *= -1;
   if (crbend->length<1e-6 && (crbend->isr || crbend->synch_rad)) {
     rad_coef = isr_coef = 0;  /* avoid unphysical results */
@@ -149,10 +159,12 @@ long track_through_crbend(
   if (multData && !multData->initialized)
     multData = NULL;
 
-  if (crbend->fseOptimized==-1) {
-    /* Ignore multipole errors during FSE optimization */
+  if (crbend->optimized==-1) {
+    /* ignore multipole errors during fse optimization */
     multData = NULL;
     edgeMultData = NULL;
+    isr_coef = 0;
+    rad_coef = 0;
   }
 
   if (n_kicks<=0)
@@ -161,27 +173,28 @@ long track_through_crbend(
     bombTracking("multipole integration_order must be 2 or 4");
 
   if (!(coef = expansion_coefficients(0)))
-    bombTracking("expansion_coefficients(0) returned null pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(0) returned NULL pointer (track_through_crbend)");
   if (!(coef = expansion_coefficients(1)))
-    bombTracking("expansion_coefficients(1) returned null pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(1) returned NULL pointer (track_through_crbend)");
   if (!(coef = expansion_coefficients(2)))
-    bombTracking("expansion_coefficients(2) returned null pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_crbend)");
+
+  tilt = crbend->tilt;
+  dx = crbend->dx + (crbend->optimized ? crbend->dxOffset : 0);
+  dy = crbend->dy;
+  dz = crbend->dz;
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
-
-  if (crbend->fseOptimized!=-1)
-    printf("Need to implement misalignments in track_through_crbend\n");
-  /*
-  if (dx || dy || dz)
-    offsetBeamCoordinates(particle, n_part, dx, dy, dz);
-  if (tilt)
-    rotateBeamCoordinates(particle, n_part, tilt);
-  */
 
   if (angle!=0) {
     switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
   }
+
+  if (dx || dy || dz)
+    offsetBeamCoordinates(particle, n_part, dx, dy, dz);
+  if (tilt)
+    rotateBeamCoordinates(particle, n_part, tilt);
 
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
@@ -206,22 +219,19 @@ long track_through_crbend(
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
 
-  if (angle!=0) {
-    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
-    switchRbendPlane(particle, n_part, fabs(angle/2), Po);
-  }
-
-  if (crbend->fseOptimized!=-1)
-    printf("Need to implement misalignments in track_through_crbend\n");
-  /*
   if (tilt)
     rotateBeamCoordinates(particle, n_part, -tilt);
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
-  */
+  if (crbend->optimized!=-1) {
+    if (angle!=0) {
+      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
+      switchRbendPlane(particle, n_part, fabs(angle/2), Po);
+    }
+  }
 
   if (angle<0)
-    /* Note that we use n_part here so lost particles get rotated back as well */
+    /* note that we use n_part here so lost particles get rotated back as well */
     rotateBeamCoordinates(particle, n_part, -PI);
 
   if (freeMultData && !multData->copy) {
@@ -237,7 +247,7 @@ long track_through_crbend(
 }
 
 
-/* BETA is 2^(1/3) */
+/* beta is 2^(1/3) */
 #define BETA 1.25992104989487316477
 
 int integrate_kick_K012(double *coord, double dx, double dy, 
@@ -249,7 +259,8 @@ int integrate_kick_K012(double *coord, double dx, double dy,
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
-  long i_kick, step, steps, imult;
+  double xMin, x0, xp0;
+  long i_kick, step, steps, iMult;
   double dsh;
   long maxOrder;
   double *xpow, *ypow;
@@ -281,13 +292,13 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   p = Po*(1+dp);
   beta0 = p/sqrt(sqr(p)+1);
 
-#if defined(IEEE_MATH)
+#if defined(ieee_math)
   if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
     return 0;
   }
 #endif
-  if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
-      FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
+      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
     return 0;
   }
 
@@ -302,16 +313,16 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   if (edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (imult=0; imult<edgeMultData->orders; imult++) {
+    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->KnL[imult], 0);
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->KnL[iMult], 0);
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->JnL[imult], 1);
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->JnL[iMult], 1);
     }
   }
-  /* We must do this to avoid numerical precision issues that may subtly change the results
+  /* we must do this to avoid numerical precision issues that may subtly change the results
    * when edge multipoles are enabled to disabled
    */
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
@@ -324,6 +335,8 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   yp = qy/denom;
 
   *dzLoss = 0;
+  xMax = xMin = x0 = x;
+  xp0 = xp;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
       coord[0] = x;
@@ -338,6 +351,10 @@ int integrate_kick_K012(double *coord, double dx, double dy,
         s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
         *dzLoss += dsh;
       }
+      if (x>xMax)
+        xMax = x;
+      if (x<xMin)
+        xMin = x;
 
       if (!kickFrac[step])
         break;
@@ -357,17 +374,17 @@ int integrate_kick_K012(double *coord, double dx, double dy,
 
       if (multData) {
         /* do kicks for spurious multipoles */
-        for (imult=0; imult<multData->orders; imult++) {
-          if (multData->KnL && multData->KnL[imult]) {
+        for (iMult=0; iMult<multData->orders; iMult++) {
+          if (multData->KnL && multData->KnL[iMult]) {
             apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[imult], 
-                                            multData->KnL[imult]*kickFrac[step]/n_parts,
+                                            multData->order[iMult], 
+                                            multData->KnL[iMult]*kickFrac[step]/n_parts,
                                             0);
           }
-          if (multData->JnL && multData->JnL[imult]) {
+          if (multData->JnL && multData->JnL[iMult]) {
             apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                            multData->order[imult], 
-                                            multData->JnL[imult]*kickFrac[step]/n_parts,
+                                            multData->order[iMult], 
+                                            multData->JnL[iMult]*kickFrac[step]/n_parts,
                                             1);
           }
         }
@@ -380,18 +397,18 @@ int integrate_kick_K012(double *coord, double dx, double dy,
       xp = qx/(denom=sqrt(denom));
       yp = qy/denom;
       if ((rad_coef || isr_coef) && drift) {
-	double deltaFactor, F2, dsFactor, dsISRFactor;
+	double deltaFactor, F2, dsFactor, dsIsrFactor;
         qx /= (1+dp);
         qy /= (1+dp);
 	deltaFactor = sqr(1+dp);
 	F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(K0L/drift);
 	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
-	dsISRFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
+	dsIsrFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
 	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
 	if (rad_coef)
 	  dp -= rad_coef*deltaFactor*F2*dsFactor;
 	if (isr_coef>0)
-	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsIsrFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
         if (sigmaDelta2)
           *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
         qx *= (1+dp);
@@ -399,7 +416,13 @@ int integrate_kick_K012(double *coord, double dx, double dy,
       }
     }
   }
-  
+  xError = fabs(x - x0) + fabs(x + xMax);
+  xpError =  fabs(xp0+xp);
+  /*
+  printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
+  printf("xp init, fin = %le, %le\n", xp0, xp);
+  */
+
   if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
     coord[0] = x;
     coord[2] = y;
@@ -409,13 +432,13 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   if (edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (imult=0; imult<edgeMultData->orders; imult++) {
+    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->KnL[imult], 0);
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->KnL[iMult], 0);
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[imult], 
-                                      edgeMultData->JnL[imult], 1);
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->JnL[iMult], 1);
     }
   }
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
@@ -443,21 +466,21 @@ int integrate_kick_K012(double *coord, double dx, double dy,
     coord[4] += s;
   coord[5] = dp;
 
-#if defined(IEEE_MATH)
+#if defined(ieee_math)
   if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
     return 0;
   }
 #endif
-  if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
-      FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
+      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
     return 0;
   }
   return 1;
 }
 
-void switchRbendPlane(double **particle, long n_part, double alpha, double Po)
-/* Transforms the reference plane to one that is at an angle alpha relative to the
- * initial plane. Use alpha>0 at the entrance to an RBEND, alpha<0 at the exit.
+void switchRbendPlane(double **particle, long n_part, double alpha, double po)
+/* transforms the reference plane to one that is at an angle alpha relative to the
+ * initial plane. use alpha>0 at the entrance to an rbend, alpha<0 at the exit.
  * alpha = theta/2, where theta is the total bend angle.
  */
 {
@@ -490,21 +513,36 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double Po)
 void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0)
 {
   long i;
-  double C;
-  C = sin(alpha)/rho0;
+  double c;
+  c = sin(alpha)/rho0;
   for (i=0; i<n_part; i++) 
-    particle[i][3] -= particle[i][2]*C/(1+particle[i][5]);
+    particle[i][3] -= particle[i][2]*c/(1+particle[i][5]);
 }
 
-double crbend_trajectory_error_fse(double fseOffset)
+double crbend_trajectory_error(double *value, long *invalid)
 {
-  crbendCopy->fseOffset = fseOffset;
   static double **particle = NULL;
+  double result;
+
+  *invalid = 0;
+  if ((crbendCopy->fseOffset = value[0])>=1 || value[0]<=-1) {
+    *invalid = 1;
+    return DBL_MAX;
+  }
+  if (value[1]>=1 || value[1]<=-1) {
+    *invalid = 1;
+    return DBL_MAX;
+  }
   if (!particle) 
     particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+  crbendCopy->dxOffset = value[1];
+  /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
   if (!track_through_crbend(particle, 1, crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL)) {
-    return 1;
+    *invalid = 1;
+    return DBL_MAX;
   }
-  return particle[0][0];
+  result = xError + xpError/fabs(crbendCopy->angle);
+  /* printf("particle[0][0] = %le, particle[0][1] = %le, result = %le\n", particle[0][0], particle[0][1], result); */
+  return result;
 }

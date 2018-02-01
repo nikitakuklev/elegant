@@ -2281,8 +2281,8 @@ typedef struct {
     short referenceOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
     /* for internal use only: */
-    short fseOptimized;
-    double fseOffset;
+    short optimized;
+    double fseOffset, dxOffset;
     double referenceData[4]; /* length, angle, K1, K2 */
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
