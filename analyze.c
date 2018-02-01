@@ -1011,7 +1011,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long sliceEtilted, long order)
 {
-  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig;
+  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CRBEND crbend;
   KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
@@ -1091,6 +1091,16 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
+      break;
+    case T_CRBEND:
+      memcpy(&crbend, (CRBEND*)eptr->p_elem, sizeof(CRBEND));
+      nSlices = 1; /* necessary because of the way the entrance coordinates would chnage if we sliced this element */
+      crbend.isr = 0;
+      if ((crbend.n_kicks = fabs(crbend.angle/0.0005) + 1)<100)
+        crbend.n_kicks = 100;
+      crbend.optimized = 0;
+      elem.type = T_CRBEND;
+      elem.p_elem = (void*)&crbend;
       break;
     case T_SBEN:
       if (slice!=0)
@@ -1456,6 +1466,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation, double *z)
 {
   CSBEND *csbend;
+  CRBEND *crbend;
   KQUAD *kquad;
   KSEXT *ksext;
   double **coord, pCentral;
@@ -1491,6 +1502,10 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname, NULL, NULL);
+    break;
+  case T_CRBEND:
+    crbend = (CRBEND*)elem->p_elem;
+    track_through_crbend(coord, n_track, crbend, run->p_central, NULL, elem->end_pos-crbend->length, &sigmaDelta2, run->rootname, NULL, NULL);
     break;
   case T_SBEN:
     track_particles(coord, elem->matrix, coord, n_track);

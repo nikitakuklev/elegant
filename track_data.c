@@ -2992,7 +2992,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
-    { N_CRBEND_PARAMS, MAT_LEN_NCAT|NO_DICT_OUTPUT, sizeof(CRBEND),    crbend_param   }, 
+    { N_CRBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(CRBEND),    crbend_param   }, 
 } ;
 
 void compute_offsets()
