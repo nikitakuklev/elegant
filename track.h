@@ -1029,7 +1029,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CRBEND_PARAMS 30
+#define N_CRBEND_PARAMS 26
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2269,7 +2269,6 @@ typedef struct {
     double length, angle;
     double K1, K2;
     double tilt;
-    double h[2], hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */

@@ -16,7 +16,7 @@
 #include "track.h"
 #include "multipole.h"
 
-static CRBEND *crbendCopy;
+static CRBEND crbendCopy;
 static double PoCopy, xMax, xError, xpError;
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
@@ -52,7 +52,7 @@ long track_through_crbend(
   MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
-  double referenceKnL;
+  double referenceKnL = 0;
 
   if (!particle)
     bombTracking("particle array is null (track_through_crbend)");
@@ -66,7 +66,10 @@ long track_through_crbend(
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
-      crbendCopy = crbend;
+      memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
+      crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
+        crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = 0;
+      crbendCopy.systematic_multipoles = crbendCopy.edge_multipoles = crbendCopy.random_multipoles = NULL;
       PoCopy = Po;
       startValue[0] = startValue[1] = 0;
       stepSize[0] = 1e-3; /* FSE */
@@ -158,14 +161,6 @@ long track_through_crbend(
 
   if (multData && !multData->initialized)
     multData = NULL;
-
-  if (crbend->optimized==-1) {
-    /* ignore multipole errors during fse optimization */
-    multData = NULL;
-    edgeMultData = NULL;
-    isr_coef = 0;
-    rad_coef = 0;
-  }
 
   if (n_kicks<=0)
     bombTracking("n_kicks<=0 in track_crbend()");
@@ -525,7 +520,7 @@ double crbend_trajectory_error(double *value, long *invalid)
   double result;
 
   *invalid = 0;
-  if ((crbendCopy->fseOffset = value[0])>=1 || value[0]<=-1) {
+  if ((crbendCopy.fseOffset = value[0])>=1 || value[0]<=-1) {
     *invalid = 1;
     return DBL_MAX;
   }
@@ -536,13 +531,13 @@ double crbend_trajectory_error(double *value, long *invalid)
   if (!particle) 
     particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
-  crbendCopy->dxOffset = value[1];
+  crbendCopy.dxOffset = value[1];
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
-  if (!track_through_crbend(particle, 1, crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL)) {
+  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL)) {
     *invalid = 1;
     return DBL_MAX;
   }
-  result = xError + xpError/fabs(crbendCopy->angle);
+  result = xError + xpError/fabs(crbendCopy.angle);
   /* printf("particle[0][0] = %le, particle[0][1] = %le, result = %le\n", particle[0][0], particle[0][1], result); */
   return result;
 }
