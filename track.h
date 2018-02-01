@@ -3427,7 +3427,7 @@ extern void reportMatrixComputationTiming();
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long sliceEtilted, long order);
-extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z);
+extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long ignoreRadiation, double *z, long iSlice);
 extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName, long i_pass);
 extern void set_up_slice_point(SLICE_POINT *slice, RUN *run, long occurence, char *previousElementName);
 void SDDS_SlicePointSetup(SLICE_POINT *slicePoint, char *command_file, char *lattice_file, char *caller, 
@@ -4122,7 +4122,7 @@ long applyLHPassFilters(double *histogram, long bins, double startHP, double end
 
 long track_through_crbend(double **particle, long n_part, CRBEND *crbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
-                          MAXAMP *maxamp, APERTURE_DATA *apFileData);
+                          MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

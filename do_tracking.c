@@ -1626,7 +1626,7 @@ long do_tracking(
 		((CRBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_crbend(coord, nToTrack, (CRBEND*)eptr->p_elem, *P_central, accepted, 
-                                   last_z, NULL, run->rootname, maxamp, &(run->apertureData));
+                                           last_z, NULL, run->rootname, maxamp, &(run->apertureData), -1);
 	      if (flags&TEST_PARTICLES)
 		((CRBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;

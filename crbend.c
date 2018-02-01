@@ -28,7 +28,7 @@ void verticalRbendFringe(double **particle, long n_part, double alpha, double rh
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
-                        long integration_order, long n_parts, double drift,
+                        long integration_order, long n_parts, long iPart, double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 double crbend_trajectory_error(double *value, long *invalid);
@@ -43,7 +43,10 @@ long track_through_crbend(
                           double *sigmaDelta2,
                           char *rootname,
                           MAXAMP *maxamp,
-                          APERTURE_DATA *apFileData
+                          APERTURE_DATA *apFileData,
+                          /* If iPart non-negative, we do one step. The caller is responsible 
+                           * for handling the coordinates appropriately outside this routine. */
+                          long iPart
                           )
 {
   double K0L, K1L, K2L;
@@ -60,7 +63,10 @@ long track_through_crbend(
 
   if (!particle)
     bombTracking("particle array is null (track_through_crbend)");
-  
+
+  if (iPart>=0 && crbend->optimized!=1)
+    bombTracking("Programming error: oneStep mode invoked for unoptimized CRBEND.");
+
   if (crbend->optimized!=-1 && crbend->angle!=0) {
     if (crbend->optimized==0 ||
         crbend->length!=crbend->referenceData[0] ||
@@ -69,6 +75,8 @@ long track_through_crbend(
         crbend->K2!=crbend->referenceData[3]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
+      if (iPart>=0)
+        bombTracking("Programming error: oneStep mode is incompatible with optmization for CRBEND.");
       crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
       memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
       crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
@@ -197,7 +205,7 @@ long track_through_crbend(
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
-  if (angle!=0) {
+  if (angle!=0 && iPart<=0) {
     switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
   }
@@ -212,7 +220,7 @@ long track_through_crbend(
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, 
-                             integ_order, n_kicks, length, multData, edgeMultData, 
+                             integ_order, n_kicks, iPart, length, multData, edgeMultData, 
                              &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -234,8 +242,8 @@ long track_through_crbend(
     rotateBeamCoordinates(particle, n_part, -tilt);
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
-  if (crbend->optimized!=-1) {
-    if (angle!=0) {
+  if (crbend->optimized!=-1) { /* don't think this test is needed */
+    if (angle!=0 && (iPart<0 || iPart==(crbend->n_kicks-1))) {
       verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
       switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     }
@@ -264,7 +272,7 @@ long track_through_crbend(
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
-                        long integration_order, long n_parts, double drift,
+                        long integration_order, long n_parts, long iPart, double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2)
 {
@@ -321,7 +329,7 @@ int integrate_kick_K012(double *coord, double dx, double dy,
   xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
   ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
 
-  if (edgeMultData && edgeMultData->orders) {
+  if (iPart<=0 && edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
     for (iMult=0; iMult<edgeMultData->orders; iMult++) {
@@ -441,6 +449,8 @@ int integrate_kick_K012(double *coord, double dx, double dy,
         qy *= (1+dp);
       }
     }
+    if (iPart>=0)
+      break;
   }
   xError = fabs(x - x0) + fabs(x + xMax);
   xpError =  fabs(xp0+xp);
@@ -455,7 +465,7 @@ int integrate_kick_K012(double *coord, double dx, double dy,
     return 0;
   }
   
-  if (edgeMultData && edgeMultData->orders) {
+  if ((iPart<0 || iPart==n_parts) && edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
     for (iMult=0; iMult<edgeMultData->orders; iMult++) {
@@ -564,7 +574,7 @@ double crbend_trajectory_error(double *value, long *invalid)
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
   crbendCopy.dxOffset = value[1];
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
-  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL)) {
+  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }

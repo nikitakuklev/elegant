@@ -689,7 +689,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
     ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_crbend(coord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL);
+                         NULL, NULL, NULL, NULL, -1);
     ((CRBEND*)eptr->p_elem)->isr = ltmp1;
     ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -868,7 +868,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
     ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
     n_left = track_through_crbend(finalCoord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL);
+                                  NULL, NULL, NULL, NULL, -1);
     ((CRBEND*)eptr->p_elem)->isr = ltmp1;
     ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -1078,7 +1078,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       }
       csbend.isr = 0;
       csbend.angle /= nSlices;
-      length = csbend.length /= nSlices;
+      length = (csbend.length /= nSlices);
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       csbend.refTrajectoryChangeSet = 0;
       csbend.refLength = 0;
@@ -1093,14 +1093,13 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       elem.p_elem = (void*)&csbend;
       break;
     case T_CRBEND:
-      memcpy(&crbend, (CRBEND*)eptr->p_elem, sizeof(CRBEND));
-      nSlices = 1; /* necessary because of the way the entrance coordinates would chnage if we sliced this element */
-      crbend.isr = 0;
-      if ((crbend.n_kicks = fabs(crbend.angle/0.0005) + 1)<100)
-        crbend.n_kicks = 100;
-      crbend.optimized = 0;
-      elem.type = T_CRBEND;
-      elem.p_elem = (void*)&crbend;
+      if (slice==0) {
+        memcpy(&crbend, (CRBEND*)eptr->p_elem, sizeof(CRBEND));
+        crbend.isr = 0;
+        crbend.n_kicks = nSlices;
+        elem.type = T_CRBEND;
+        elem.p_elem = (void*)&crbend;
+      }
       break;
     case T_SBEN:
       if (slice!=0)
@@ -1410,7 +1409,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     }
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
-    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation, &z); 
+    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2, ignoreRadiation, &z, slice); 
     Ml1->C[1] += post_xkick;
     Ml1->C[3] += post_ykick;
     /* printf("z = %le ", z);
@@ -1463,7 +1462,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
 }
 
 
-void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation, double *z)
+void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D, long ignoreRadiation, double *z,
+                               long iSlice)
 {
   CSBEND *csbend;
   CRBEND *crbend;
@@ -1505,7 +1505,8 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     break;
   case T_CRBEND:
     crbend = (CRBEND*)elem->p_elem;
-    track_through_crbend(coord, n_track, crbend, run->p_central, NULL, elem->end_pos-crbend->length, &sigmaDelta2, run->rootname, NULL, NULL);
+    track_through_crbend(coord, n_track, crbend, run->p_central, NULL, elem->end_pos-crbend->length, &sigmaDelta2, 
+                         run->rootname, NULL, NULL, iSlice);
     break;
   case T_SBEN:
     track_particles(coord, elem->matrix, coord, n_track);
