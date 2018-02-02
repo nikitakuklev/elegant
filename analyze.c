@@ -689,7 +689,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
     ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
     track_through_crbend(coord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL, -1);
+                         NULL, NULL, NULL, NULL, -1, -1);
     ((CRBEND*)eptr->p_elem)->isr = ltmp1;
     ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -868,7 +868,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
     ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
     n_left = track_through_crbend(finalCoord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
-                                  NULL, NULL, NULL, NULL, -1);
+                                  NULL, NULL, NULL, NULL, -1, -1);
     ((CRBEND*)eptr->p_elem)->isr = ltmp1;
     ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
@@ -1506,7 +1506,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CRBEND:
     crbend = (CRBEND*)elem->p_elem;
     track_through_crbend(coord, n_track, crbend, run->p_central, NULL, elem->end_pos-crbend->length, &sigmaDelta2, 
-                         run->rootname, NULL, NULL, iSlice);
+                         run->rootname, NULL, NULL, iSlice, -1);
     break;
   case T_SBEN:
     track_particles(coord, elem->matrix, coord, n_track);

@@ -4122,7 +4122,10 @@ long applyLHPassFilters(double *histogram, long bins, double startHP, double end
 
 long track_through_crbend(double **particle, long n_part, CRBEND *crbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
-                          MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice);
+                          MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
+void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
+                                 double eta0, double etap0, double beta0, double alpha0,
+                                 double *I1, double *I2, double *I3, double *I4, double *I5);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

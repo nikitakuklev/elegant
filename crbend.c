@@ -1,4 +1,4 @@
-/*************************************************************************\
+/************************************************************************* \
 * Copyright (c) 2018 The University of Chicago, as Operator of Argonne
 * National Laboratory.
 * Copyright (c) 2018 The Regents of the University of California, as
@@ -17,7 +17,7 @@
 #include "multipole.h"
 
 static CRBEND crbendCopy;
-static double PoCopy, xMax, xError, xpError;
+static double PoCopy, xMax, xError, xpError, lastRho, lastX, lastXp;
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
@@ -28,7 +28,8 @@ void verticalRbendFringe(double **particle, long n_part, double alpha, double rh
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
-                        long integration_order, long n_parts, long iPart, double drift,
+                        long integration_order, long n_parts, long iPart, long iFinalSlice,
+                        double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 double crbend_trajectory_error(double *value, long *invalid);
@@ -48,7 +49,12 @@ long track_through_crbend(
                            * for handling the coordinates appropriately outside this routine. 
                            * The element must have been previously optimized to determine FSE and X offsets.
                            */
-                          long iPart
+                          long iPart,
+                          /* If iFinalSlice is positive, we terminate integration inside the magnet. The caller is responsible 
+                           * for handling the coordinates appropriately outside this routine. 
+                           * The element must have been previously optimized to determine FSE and X offsets.
+                           */
+                          long iFinalSlice
                           )
 {
   double K0L, K1L, K2L;
@@ -56,7 +62,7 @@ long track_through_crbend(
   long n_kicks, integ_order;
   long i_part, i_top;
   double *coef;
-  double fse, tilt, rad_coef, isr_coef, dzLoss=0, multSign = 1;
+  double fse, tilt, rad_coef, isr_coef, dzLoss=0;
   double rho0, arcLength, length, angle;
   MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
@@ -67,7 +73,11 @@ long track_through_crbend(
     bombTracking("particle array is null (track_through_crbend)");
 
   if (iPart>=0 && crbend->optimized!=1)
-    bombTracking("Programming error: oneStep mode invoked for unoptimized CRBEND.");
+    bombTracking("Programming error: one-step mode invoked for unoptimized CRBEND.");
+  if (iFinalSlice>0 && iPart>=0)
+    bombTracking("Programming error: partial integration mode and one-step mode invoked together for CRBEND.");
+  if (iFinalSlice>0 && crbend->optimized!=1)
+    bombTracking("Programming error: partial integration mode invoked for unoptimized CRBEND.");
 
   if (crbend->optimized!=-1 && crbend->angle!=0) {
     if (crbend->optimized==0 ||
@@ -126,16 +136,14 @@ long track_through_crbend(
     fse = crbend->fse + crbend->fseOffset;
   else 
     fse = crbend->fse;
+  K0L = length = rho0 = 0; /* prevent compiler warnings */
   if ((angle = crbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
     K0L = (1+fse)/rho0*length;
   }
-  else {
-    rho0 = DBL_MAX;
-    length = arcLength;
-    K0L = 0;
-  }
+  else
+    bombTracking("Can't have zero ANGLE for CRBEND.");
   K1L = (1+fse)*crbend->K1*length;
   K2L = (1+fse)*crbend->K2*length;
   if (crbend->systematic_multipoles || crbend->edge_multipoles || crbend->random_multipoles) {
@@ -150,9 +158,7 @@ long track_through_crbend(
   }
   if (angle<0) {
     K0L *= -1;
-    K1L *= -1;
     K2L *= -1;
-    multSign = -1;
     rotateBeamCoordinates(particle, n_part, PI);
   }
 
@@ -175,9 +181,9 @@ long track_through_crbend(
   }
   if (!crbend->totalMultipolesComputed) {
     computeTotalErrorMultipoleFields(&(crbend->totalMultipoleData),
-                                     &(crbend->systematicMultipoleData), multSign*crbend->systematicMultipoleFactor, 
+                                     &(crbend->systematicMultipoleData), crbend->systematicMultipoleFactor, 
                                      &(crbend->edgeMultipoleData),
-                                     &(crbend->randomMultipoleData), multSign*crbend->randomMultipoleFactor,
+                                     &(crbend->randomMultipoleData), crbend->randomMultipoleFactor,
                                      NULL, 0.0,
                                      referenceKnL, crbend->referenceOrder);
     crbend->totalMultipolesComputed = 1;
@@ -222,7 +228,7 @@ long track_through_crbend(
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, 
-                             integ_order, n_kicks, iPart, length, multData, edgeMultData, 
+                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edgeMultData, 
                              &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -245,7 +251,7 @@ long track_through_crbend(
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
   if (crbend->optimized!=-1) { /* don't think this test is needed */
-    if (angle!=0 && (iPart<0 || iPart==(crbend->n_kicks-1))) {
+    if (angle!=0 && (iPart<0 || iPart==(crbend->n_kicks-1)) && iFinalSlice<=0) { 
       verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
       switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     }
@@ -263,6 +269,12 @@ long track_through_crbend(
     free(multData);
   }
 
+  if (crbend->angle<0) {
+    lastRho *= -1;
+    lastX *= -1;
+    lastXp *= -1;
+  }
+
   log_exit("track_through_crbend");
   return(i_top+1);
 }
@@ -278,8 +290,9 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
                         long integration_order, /* 2 or 4 */
                         long n_parts, /* N_KICKS */
                         long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
-                                       * This is needed to allow propagation of the radiation matrix.
-                                       */
+                                       * This is needed to allow propagation of the radiation matrix. */
+                        long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
+                                           * interior matrix from tracking data. */
                         double drift, /* length of the full element */
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, /* error multipoles */
                         MULT_APERTURE_DATA *apData,  /* aperture */
@@ -367,7 +380,9 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   *dzLoss = 0;
   xMax = xMin = x0 = x;
   xp0 = xp;
-  for (i_kick=0; i_kick<n_parts; i_kick++) {
+  if (iFinalSlice<=0)
+    iFinalSlice = n_parts-1;
+  for (i_kick=0; i_kick<=iFinalSlice; i_kick++) {
 #ifdef DEBUG
     double H0;
     if (logHamiltonian && fpHam) {
@@ -441,6 +456,10 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
       }
       xp = qx/(denom=sqrt(denom));
       yp = qy/denom;
+      /* these three quantities are needed for radiation integrals */
+      lastRho = 1/(K0L/drift + x*(K1L/drift) + x*x*(K2L/drift)/2);
+      lastX = x;
+      lastXp = xp;
       if ((rad_coef || isr_coef) && drift) {
 	double deltaFactor, F2, dsFactor, dsIsrFactor;
         qx /= (1+dp);
@@ -476,7 +495,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
     return 0;
   }
   
-  if ((iPart<0 || iPart==n_parts) && edgeMultData && edgeMultData->orders) {
+  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
     for (iMult=0; iMult<edgeMultData->orders; iMult++) {
@@ -585,11 +604,188 @@ double crbend_trajectory_error(double *value, long *invalid)
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
   crbendCopy.dxOffset = value[1];
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
-  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1)) {
+  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
   result = xError + xpError/fabs(crbendCopy.angle);
   /* printf("particle[0][0] = %le, particle[0][1] = %le, result = %le\n", particle[0][0], particle[0][1], result); */
   return result;
+}
+
+VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoord, double pCentral, long iFinalSlice)
+/* This routine is used for getting the linear transport matrix from the start of the CRBEND to some interior slice.
+ * We need this to compute radiation integrals.
+ */
+{
+  double **coord;
+  long n_track, i, j;
+  VMATRIX *M;
+  double **R, *C;
+  double stepSize[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
+  long ltmp1, ltmp2;
+  double angle0[2];
+
+#if USE_MPI
+  long notSinglePart_saved = notSinglePart;
+
+  /* All the particles should do the same thing for this routine. */	
+  notSinglePart = 0;
+#endif
+   		 
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
+
+  n_track = 4*6+1;
+  for (j=0; j<COORDINATES_PER_PARTICLE; j++)
+    for (i=0; i<n_track; i++)
+      coord[i][j] = startingCoord ? startingCoord[j] : 0;
+
+  /* particles 0 and 1 are for d/dx */
+  coord[0][0] += stepSize[0] ;
+  coord[1][0] -= stepSize[0] ;
+  /* particles 2 and 3 are for d/dxp */
+  coord[2][1] += stepSize[1];
+  coord[3][1] -= stepSize[1];
+  /* particles 4 and 5 are for d/dy */
+  coord[4][2] += stepSize[2] ;
+  coord[5][2] -= stepSize[2] ;
+  /* particles 6 and 7 are for d/dyp */
+  coord[6][3] += stepSize[3] ;
+  coord[7][3] -= stepSize[3] ;
+  /* particles 8 and 9 are for d/ds */
+  coord[8][4] += stepSize[4] ;
+  coord[9][4] -= stepSize[4] ;
+  /* particles 10 and 11 are for d/delta */
+  coord[10][5] += stepSize[5];
+  coord[11][5] -= stepSize[5];
+
+  /* particles 12 and 13 are for d/dx */
+  coord[12][0] += 3*stepSize[0] ;
+  coord[13][0] -= 3*stepSize[0] ;
+  /* particles 14 and 15 are for d/dxp */
+  coord[14][1] += 3*stepSize[1];
+  coord[15][1] -= 3*stepSize[1];
+  /* particles 16 and 17 are for d/dy */
+  coord[16][2] += 3*stepSize[2] ;
+  coord[17][2] -= 3*stepSize[2] ;
+  /* particles 18 and 19 are for d/dyp */
+  coord[18][3] += 3*stepSize[3] ;
+  coord[19][3] -= 3*stepSize[3] ;
+  /* particles 20 and 21 are for d/ds */
+  coord[20][4] += 3*stepSize[4] ;
+  coord[21][4] -= 3*stepSize[4] ;
+  /* particles 22 and 23 are for d/delta */
+  coord[22][5] += 3*stepSize[5];
+  coord[23][5] -= 3*stepSize[5];
+  /* particle n_track-1 is the reference particle (coordinates set above) */
+
+  /* save radiation-related parameters */
+  ltmp1 = crbend->isr;
+  ltmp2 = crbend->synch_rad;
+
+  crbend->isr = crbend->synch_rad = 0;
+  track_through_crbend(coord, n_track, crbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
+
+  crbend->isr = ltmp1;
+  crbend->synch_rad = ltmp2;
+  
+  M = tmalloc(sizeof(*M));
+  M->order = 1;
+  initialize_matrices(M, M->order);
+  R = M->R;
+  C = M->C;
+
+  /* Rotate the coordinates into the local frame by assuming that the reference particle
+   * is on the reference trajectory. Not valid if errors are present, but not a bad approximation presumably.
+   */
+  for (j=0; j<2; j++)
+    angle0[j] = atan(coord[n_track-1][2*j+1]);
+  for (i=0; i<n_track; i++) {
+    for (j=0; j<2; j++)
+      coord[i][2*j] = coord[i][2*j] - coord[n_track-1][2*j];
+    for (j=0; j<2; j++)
+      coord[i][2*j+1] = tan(atan(coord[i][2*j+1])-angle0[j]);
+    coord[i][4] -= coord[n_track-1][4];
+  }
+  
+  for (i=0; i<6; i++) {
+    /* i indexes the dependent quantity */
+
+    /* Determine C[i] */
+    C[i] = coord[n_track-1][i];
+
+    /* Compute R[i][j] */
+    for (j=0; j<6; j++) {
+      /* j indexes the initial coordinate value */
+      R[i][j] = 
+        (27*(coord[2*j][i]-coord[2*j+1][i])-(coord[2*j+12][i]-coord[2*j+13][i]))/(48*stepSize[j]);
+    }
+  }
+
+  free_czarray_2d((void**)coord, 1+4*6, COORDINATES_PER_PARTICLE);
+
+#if USE_MPI
+  notSinglePart = notSinglePart_saved;
+#endif
+  return M;
+}
+
+void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
+                                 double eta0, double etap0, double beta0, double alpha0,
+                                 double *I1, double *I2, double *I3, double *I4, double *I5)
+{
+  long iSlice;
+  VMATRIX *M;
+  double gamma0, K1;
+  double eta1, beta1, alpha1, etap1;
+  double eta2, beta2, alpha2, etap2;
+  double C, S, Cp, Sp, ds, H1, H2;
+
+  if (crbend->tilt)
+    bombElegant("Can't add radiation integrals for tilted CRBEND\n", NULL);
+
+  gamma0 = (1-alpha0*alpha0)/beta0;
+
+  beta1 = beta0;
+  eta1 = eta0;
+  etap1 = etap0;
+  alpha1 = alpha0;
+  H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
+  ds = crbend->length/crbend->n_kicks; /* not really right... */
+  for (iSlice=1; iSlice<crbend->n_kicks; iSlice++) {
+    /* Determine matrix from start of element to exit of slice iSlice */
+    M = determinePartialCrbendLinearMatrix(crbend, startingCoord, pCentral, iSlice);
+    C = M->R[0][0];
+    Cp = M->R[1][0];
+    S = M->R[0][1];
+    Sp = M->R[1][1];
+
+    /* propagate lattice functions from start of element to exit of this slice */
+    beta2 = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0);
+    alpha2 = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
+    eta2 = C*eta0 + S*etap0 + M->R[0][5];
+    etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
+
+    /* Compute contributions to radiation integrals in this slice.
+     * lastRho is saved by the routine track_through_crbend(). Since determinePartialCrbendLinearMatrix()
+     * puts the reference particle first, it is appropriate to the central trajectory. 
+     */
+    *I1 += ds*(eta1+eta2)/2/lastRho;
+    *I2 += ds/sqr(lastRho);
+    *I3 += ds/ipow(fabs(lastRho), 3);
+    /* Compute effective K1 including the sextupole effect plus rotation.
+     * lastX and lastXp are saved by track_through_crbend().
+     */
+    K1 = (crbend->K1+(lastX-crbend->dxOffset)*crbend->K2)*cos(atan(lastXp));
+    *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
+    H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
+    *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;
+
+    /* Save lattice functions as values at start of next slice */
+    beta1 = beta2;
+    alpha1 = alpha2;
+    eta1 = eta2;
+    etap1 = etap2;
+    H1 = H2;
+  }
 }

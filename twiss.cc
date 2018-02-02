@@ -2769,8 +2769,7 @@ void compute_twiss_percentiles(LINE_LIST *beamline, TWISS *twiss_p99, TWISS *twi
 }
 
 
-void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
-                           ELEMENT_LIST *elem, 
+void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0, double eta0, double etap0, 
                            double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
                            double *coord, double pCentral)
@@ -2781,7 +2780,6 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   KSBEND *kbptr;
   CSBEND *cbptr;
   CSRCSBEND *csrbptr;
-  CRBEND *crbptr;
   QUAD *qptr;
   KQUAD *qptrk;
   SEXT *sptr;
@@ -2874,6 +2872,13 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       radIntegrals->RI[3] += I4*n_periods;
       radIntegrals->RI[4] += I5*n_periods;
     }
+  } else if (elem->type==T_CRBEND) {
+    double *startingCoord;
+    if (!elem->pred || !elem->pred->matrix)
+      startingCoord = NULL;
+    else
+      startingCoord = elem->pred->matrix->C;
+    addCrbendRadiationIntegrals((CRBEND*)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5);
   } else {
     MULT *mult = NULL;
     double KnMult = 0;
@@ -2976,13 +2981,6 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       E1 = cbptr->e[cbptr->e1Index]*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
       E2 = cbptr->e[cbptr->e2Index]*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = cbptr->k1;
-    } else if (elem->type==T_CRBEND) {
-      crbptr = (CRBEND*)(elem->p_elem);
-      length = crbptr->length;
-      angle = crbptr->angle;
-      E1 = crbptr->angle/2;
-      E2 = crbptr->angle/2;
-      K1 = crbptr->K1;
     } else if (elem->type==T_CSRCSBEND) {
       csrbptr = (CSRCSBEND*)(elem->p_elem);
       length = csrbptr->length;
