@@ -554,6 +554,7 @@ void do_transport_analysis(
     
     free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
     free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
+    free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
     free(data);
     free(offset);
     free(orbit_p);
@@ -1003,6 +1004,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
+  free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
 
   return M;
 }
@@ -1061,6 +1063,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
   else if (eptr->type==T_WIGGLER)
     nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
+  else if (eptr->type==T_CRBEND) {
+    if (nSlices > ((CRBEND*)eptr->p_elem)->n_kicks)
+      nSlices = ((CRBEND*)eptr->p_elem)->n_kicks;
+  }
   z = 0;
   
   elem.end_pos = eptr->end_pos;

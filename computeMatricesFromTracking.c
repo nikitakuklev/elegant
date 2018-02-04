@@ -201,6 +201,9 @@ VMATRIX *computeMatricesFromTracking(
   for (i=0; i<6; i++)
     if (n_fits[i])
       C[i] /= n_fits[i];
+  if (best_fit.coefficient) free(best_fit.coefficient);
+  if (best_fit.coefficient_error) free(best_fit.coefficient_error);
+  best_fit.coefficient = best_fit.coefficient_error = NULL;
 
 #if DEBUG1
   checkAssignedErrors(fpo_ma, initial, final, error, n_points_total);
@@ -226,6 +229,11 @@ VMATRIX *computeMatricesFromTracking(
       }
     }
   }
+  for (i=5; i>=0; i--)
+    for (j=5; j>=0; j--) {
+      free(saved_fit[i][j].coefficient);
+      free(saved_fit[i][j].coefficient_error);
+    }
   free_zarray_2d((void**)saved_fit, 6, 6);
 
 #if DEBUG1
@@ -486,6 +494,10 @@ VMATRIX *computeMatricesFromTracking(
       }
     }
   }
+  if (best_fit1.coefficient) free(best_fit1.coefficient);
+  if (best_fit2.coefficient) free(best_fit2.coefficient);
+  if (best_fit1.coefficient_error) free(best_fit1.coefficient_error);
+  if (best_fit2.coefficient_error) free(best_fit2.coefficient_error);
 
   /* Subtract Tijk, Qijkk and Qijjk terms (for j>k) from final vectors. */
   for (i=5; i>=0; i--) {
@@ -763,11 +775,11 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
       }
       best_fit->coefficient       = fit.coefficient;
       best_fit->coefficient_error = fit.coefficient_error;
+      fit.coefficient = NULL;
+      fit.coefficient_error = NULL;
       best_fit->order_of_fit      = order_of_fit;
-      fit.coefficient = tmalloc((2*highest_order_of_fit+1)*
-                                sizeof(*(fit.coefficient)));
-      fit.coefficient_error = tmalloc((2*highest_order_of_fit+1)*
-				      sizeof(*(fit.coefficient_error)));
+      fit.coefficient = tmalloc((2*highest_order_of_fit+1)*sizeof(*(fit.coefficient)));
+      fit.coefficient_error = tmalloc((2*highest_order_of_fit+1)*sizeof(*(fit.coefficient_error)));
     }
   } while (++order_of_fit<=highest_order_of_fit);
 
@@ -781,8 +793,6 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
   free(sigmay);
   free(fit.coefficient);
   free(fit.coefficient_error);
-  fit.coefficient = NULL;
-  fit.coefficient_error = NULL;
   return(best_fit->order_of_fit);
 }
 
@@ -790,7 +800,11 @@ void copyFit(FIT *target, FIT *source)
 {
   int i;
 
+  if (target->coefficient)
+    free(target->coefficient);
   target->coefficient  = array_1d(sizeof(*target->coefficient), 0, source->order_of_fit+1);
+  if (target->coefficient_error)
+    free(target->coefficient_error);
   target->coefficient_error 
     = array_1d(sizeof(*target->coefficient_error), 0, source->order_of_fit+1);
   target->order_of_fit = source->order_of_fit;

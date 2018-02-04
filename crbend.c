@@ -371,6 +371,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
     coord[0] = x;
     coord[2] = y;
+    free(xpow); free(ypow);
     return 0;
   }
   denom = sqrt(denom);
@@ -401,6 +402,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
     if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
       coord[0] = x;
       coord[2] = y;
+      free(xpow); free(ypow);
       return 0;
     }
     for (step=0; step<steps; step++) {
@@ -421,6 +423,8 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
 
       fillPowerArray(x, xpow, maxOrder);
       fillPowerArray(y, ypow, maxOrder);
+
+      sum_Fx = sum_Fy = 0;
 
       if (K0L)
         apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
@@ -452,6 +456,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
       if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
         coord[0] = x;
         coord[2] = y;
+        free(xpow); free(ypow);
         return 0;
       }
       xp = qx/(denom=sqrt(denom));
@@ -465,7 +470,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
         qx /= (1+dp);
         qy /= (1+dp);
 	deltaFactor = sqr(1+dp);
-	F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(K0L/drift);
+	F2 = (sqr(sum_Fy)+sqr(sum_Fx))/sqr(lastRho);
 	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
 	dsIsrFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
 	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
@@ -492,6 +497,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
     coord[0] = x;
     coord[2] = y;
+    free(xpow); free(ypow);
     return 0;
   }
   
@@ -510,6 +516,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
     coord[0] = x;
     coord[2] = y;
+    free(xpow); free(ypow);
     return 0;
   }
   denom = sqrt(denom);
@@ -636,7 +643,7 @@ VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoor
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
 
   n_track = 4*6+1;
-  for (j=0; j<COORDINATES_PER_PARTICLE; j++)
+  for (j=0; j<6; j++)
     for (i=0; i<n_track; i++)
       coord[i][j] = startingCoord ? startingCoord[j] : 0;
 
@@ -787,5 +794,7 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
     eta1 = eta2;
     etap1 = etap2;
     H1 = H2;
+    free_matrices(M);
+    free(M);
   }
 }

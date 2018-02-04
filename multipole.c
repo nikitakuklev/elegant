@@ -1160,6 +1160,8 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
 
+    sum_Fx = sum_Fy = 0;
+
     if (!radial)
       apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, order, KnL, 0);
     else
@@ -1396,6 +1398,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
       fillPowerArray(x, xpow, maxOrder);
       fillPowerArray(y, ypow, maxOrder);
 
+      sum_Fx = sum_Fy = 0;
+
       if (!radial)
 	apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
 					order, KnL*kickFrac[step], 0);
@@ -1539,10 +1543,6 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   double sum_Fx, sum_Fy;
   double *coef;
   
-  if (sum_Fx_return)
-    *sum_Fx_return = 0;
-  if (sum_Fy_return)
-    *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
 
   /* sum up the terms for the multipole expansion */
@@ -1566,9 +1566,9 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   *qx -= KnL*sum_Fy;
   *qy += KnL*sum_Fx;
   if (sum_Fx_return)
-    *sum_Fx_return = sum_Fx;
+    *sum_Fx_return += sum_Fx;
   if (sum_Fy_return)
-    *sum_Fy_return = sum_Fy;
+    *sum_Fy_return += sum_Fy;
 }
 
 void applyRadialCanonicalMultipoleKicks(double *qx, double *qy, 
