@@ -2876,7 +2876,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, ELEMEN
     double startingCoord[6]={0,0,0,0,0,0};
     if (elem->pred && elem->pred->matrix && elem->pred->matrix->C)
       memcpy(&startingCoord[0], elem->pred->matrix->C, sizeof(startingCoord[0])*6);
-    addCrbendRadiationIntegrals((CRBEND*)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5);
+    addCrbendRadiationIntegrals((CRBEND*)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5, elem);
     radIntegrals->RI[0] += I1;
     radIntegrals->RI[1] += I2;
     radIntegrals->RI[2] += I3;

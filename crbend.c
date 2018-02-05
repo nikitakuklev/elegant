@@ -382,8 +382,8 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   xMax = xMin = x0 = x;
   xp0 = xp;
   if (iFinalSlice<=0)
-    iFinalSlice = n_parts-1;
-  for (i_kick=0; i_kick<=iFinalSlice; i_kick++) {
+    iFinalSlice = n_parts;
+  for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
 #ifdef DEBUG
     double H0;
     if (logHamiltonian && fpHam) {
@@ -737,9 +737,10 @@ VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoor
   return M;
 }
 
+#define DEBUG 1
 void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
-                                 double *I1, double *I2, double *I3, double *I4, double *I5)
+                                 double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem)
 {
   long iSlice;
   VMATRIX *M;
@@ -747,7 +748,23 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
   double eta1, beta1, alpha1, etap1;
   double eta2, beta2, alpha2, etap2;
   double C, S, Cp, Sp, ds, H1, H2;
-
+#ifdef DEBUG
+  double s0;
+  static FILE *fpcr = NULL;
+  if (fpcr==NULL) {
+    fpcr = fopen("crbend-RI.sdds", "w");
+    fprintf(fpcr, "SDDS1\n&column name=s type=double units=m &end\n");
+    fprintf(fpcr, "&column name=betax type=double units=m &end\n");
+    fprintf(fpcr, "&column name=etax type=double units=m &end\n");
+    fprintf(fpcr, "&column name=etaxp type=double &end\n");
+    fprintf(fpcr, "&column name=alphax type=double &end\n");
+    fprintf(fpcr, "&column name=ElementName type=string &end\n");
+    fprintf(fpcr, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+  s0 = elem->end_pos - crbend->length;
+  fprintf(fpcr, "%le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
+#endif
+  
   if (crbend->tilt)
     bombElegant("Can't add radiation integrals for tilted CRBEND\n", NULL);
 
@@ -759,7 +776,7 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
   alpha1 = alpha0;
   H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
   ds = crbend->length/crbend->n_kicks; /* not really right... */
-  for (iSlice=1; iSlice<crbend->n_kicks; iSlice++) {
+  for (iSlice=1; iSlice<=crbend->n_kicks; iSlice++) {
     /* Determine matrix from start of element to exit of slice iSlice */
     M = determinePartialCrbendLinearMatrix(crbend, startingCoord, pCentral, iSlice);
     C = M->R[0][0];
@@ -772,6 +789,10 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
     alpha2 = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
     eta2 = C*eta0 + S*etap0 + M->R[0][5];
     etap2 = Cp*eta0 + Sp*etap0 + M->R[1][5];
+#ifdef DEBUG
+    s0 += ds;
+    fprintf(fpcr, "%le %le %le %le %le %s\n", s0, beta2, eta2, etap2, alpha2, elem->name);
+#endif
 
     /* Compute contributions to radiation integrals in this slice.
      * lastRho is saved by the routine track_through_crbend(). Since determinePartialCrbendLinearMatrix()
