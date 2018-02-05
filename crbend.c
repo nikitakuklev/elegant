@@ -737,7 +737,6 @@ VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoor
   return M;
 }
 
-#define DEBUG 1
 void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem)
@@ -768,7 +767,7 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
   if (crbend->tilt)
     bombElegant("Can't add radiation integrals for tilted CRBEND\n", NULL);
 
-  gamma0 = (1-alpha0*alpha0)/beta0;
+  gamma0 = (1+alpha0*alpha0)/beta0;
 
   beta1 = beta0;
   eta1 = eta0;
