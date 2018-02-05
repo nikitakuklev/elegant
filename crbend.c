@@ -80,39 +80,50 @@ long track_through_crbend(
     bombTracking("Programming error: partial integration mode invoked for unoptimized CRBEND.");
 
   if (crbend->optimized!=-1 && crbend->angle!=0) {
-    if (crbend->optimized==0 ||
+    if (crbend->optimized==0 || 
         crbend->length!=crbend->referenceData[0] ||
         crbend->angle!=crbend->referenceData[1] ||
         crbend->K1!=crbend->referenceData[2] ||
         crbend->K2!=crbend->referenceData[3]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
+      short disable[2] = {0, 0};
       if (iPart>=0)
         bombTracking("Programming error: oneStep mode is incompatible with optmization for CRBEND.");
-      crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
-      memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
-      crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
-        crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = 0;
-      crbendCopy.systematic_multipoles = crbendCopy.edge_multipoles = crbendCopy.random_multipoles = NULL;
-      PoCopy = Po;
-      startValue[0] = startValue[1] = 0;
-      stepSize[0] = 1e-3; /* FSE */
-      stepSize[1] = 1e-4; /* X */
-      lowerLimit[0] = lowerLimit[1] = -1;
-      upperLimit[0] = upperLimit[1] = 1;
-      if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, NULL, 2, 
-                     fabs(1e-14*crbend->length/crbend->angle), fabs(1e-16*crbend->length/crbend->angle),
-                     crbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
-        bombElegantVA("failed to find FSE and x offset to center trajectory for crbend. accuracy acheived was %le.", acc);
+      if (crbend->optimized) {
+          startValue[0] = crbend->fseOffset;
+          startValue[1] = crbend->dxOffset;
+          if (crbend->optimizeFseOnce)
+            disable[0] = 1;
+          if (crbend->optimizeDxOnce) 
+            disable[1] = 1;
+      } else
+        startValue[0] = startValue[1] = 0;
+      if (!disable[0] || !disable[1]) {
+        crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
+        memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
+        crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
+          crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = 0;
+        crbendCopy.systematic_multipoles = crbendCopy.edge_multipoles = crbendCopy.random_multipoles = NULL;
+        PoCopy = Po;
+        stepSize[0] = 1e-3; /* FSE */
+        stepSize[1] = 1e-4; /* X */
+        lowerLimit[0] = lowerLimit[1] = -1;
+        upperLimit[0] = upperLimit[1] = 1;
+        if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
+                       fabs(1e-14*crbend->length/crbend->angle), fabs(1e-16*crbend->length/crbend->angle),
+                       crbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+          bombElegantVA("failed to find FSE and x offset to center trajectory for crbend. accuracy acheived was %le.", acc);
+        }
+        crbend->fseOffset = startValue[0];
+        crbend->dxOffset = startValue[1];
+        crbend->referenceData[0] = crbend->length;
+        crbend->referenceData[1] = crbend->angle;
+        crbend->referenceData[2] = crbend->K1;
+        crbend->referenceData[3] = crbend->K2;
+        printf("CRBEND optimized FSE=%le, x=%le, accuracy=%le\n", crbend->fseOffset, crbend->dxOffset, acc);
+        crbend->optimized = 1;
       }
-      crbend->fseOffset = startValue[0];
-      crbend->dxOffset = startValue[1];
-      crbend->referenceData[0] = crbend->length;
-      crbend->referenceData[1] = crbend->angle;
-      crbend->referenceData[2] = crbend->K1;
-      crbend->referenceData[3] = crbend->K2;
-      printf("CRBEND optimized FSE=%le, x=%le, accuracy=%le\n", crbend->fseOffset, crbend->dxOffset, acc);
-      crbend->optimized = 1;
     }
   }
 

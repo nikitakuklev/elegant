@@ -2847,6 +2847,8 @@ PARAMETER crbend_param[N_CRBEND_PARAMS] = {
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&crbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&crbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
+    {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
+    {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
     };
 
 /* array of parameter structures */
