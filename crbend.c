@@ -806,7 +806,7 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
     K1 = (crbend->K1+(lastX-crbend->dxOffset)*crbend->K2)*cos(atan(lastXp));
     *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
     H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
-    *I5 += ds/ipow(lastRho, 3)*(H1+H2)/2;
+    *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;
 
     /* Save lattice functions as values at start of next slice */
     beta1 = beta2;
