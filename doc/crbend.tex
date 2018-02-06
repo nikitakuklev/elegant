@@ -1,4 +1,4 @@
-This element provides a symplectic {\em rectangular} bending magnet with the exact
+This element provides a symplectic straight-pole, rectangular bending magnet with the exact
 Hamiltonian.  The magnet not only has rectangular ends, but the
 quadrupole, sextupole, and other multipole terms are defined in Cartesian coordinates.
 This is quite different from \verb|CSBEND|, where the edge angles are user-defined and
@@ -12,6 +12,21 @@ The only real difference is that coordinate transformations are performed at the
 entrance and exit to orient the incoming central trajectory to the straight magnet axis.
 In addition, the fractional strength error is adjusted to ensure that the 
 outgoing central trajectory is correct.
+
+By default, two adjustments are made at start-up and whenever the length, angle, 
+gradient, or sextupole term change:
+\begin{enumerate}
+\item The fractional strength error is altered to ensure the correct deflecting angle. 
+      This is required because the bending field varies along the trajectory.
+      By default, this affects all field 
+      components together, per the usual convention in {\tt elegant}. To restrict
+      the strength change to the dipole term, set \verb|COMPENSATE_KN=1|.
+\item The transverse position is adjusted to center the trajectory in the magnet.
+      If the sagitta is $\sigma$ and \verb|ANGLE| is positive, the initial and final $x$ 
+      coordinates are $x=-\sigma/2$, while the center coordinate is $x=\sigma/2$.
+\end{enumerate}
+One can block the re-optimization of these parameters by setting 
+\verb|OPTIMIZE_FSE_ONCE| and \verb|OPTIMIZE_DX_ONCE| to 1.
 
 {\bf Edge angles and edge effects} 
 
@@ -52,4 +67,5 @@ supply, which means that multipole strengths also change.
 {\bf Splitting dipoles}
 
 The \verb|CRBEND| element does not support splitting.
-
+{\bf Important}: Users {\em should not} attempt to split \verb|CRBEND| elements by hand, since this
+will not result in the correct geometry entering and exiting the various parts.

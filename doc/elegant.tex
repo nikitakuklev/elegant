@@ -67,7 +67,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CRBEND| element, which integrates symplectically through a straight rectangular gradient bending magnet, was added.
+\item The \verb|CRBEND| element, which integrates symplectically through a straight rectangular combined-function bending 
+  magnet, was added.
 \item The \verb|BMXYZ| element, which integrates particles through 3D magnetic field maps, now includes misalignment parameters.
   Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
 \item The \verb|EHKICK|, \verb|EVKICK|, and \verb|EHVKICK| elements now include the \verb|RANDOM_MULTIPOLE_FACTOR| and 
@@ -5869,13 +5870,13 @@ ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=129
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 ibsEmittance {\em twissFile} {\em resultsFile}
- {-charge={\em nC}|-particles={\em value} }\{-coupling={\em value}|-emityInput={\em value}\}
+ {-charge={\em nC}|-particles={\em value} } {-coupling={\em value}|-emityInput={\em value}}
  [-emitInput={\em value}] [-deltaInput={\em value}]
  [-emit0={\em value}] [-delta0={\em value}]
  [-superperiods={\em value}] [-isRing=1|0]
- \{-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}\}
+ {-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}}
  [-energy={\em MeV}] 
- [\{-growthRatesOnly | -integrate=turns={\em number}[,stepSize={\em number}]\}]
+ [{-growthRatesOnly | -integrate=turns={\em number}[,stepSize={\em number}]}]
  [-noWarning] 
 }\end{flushleft}
 
@@ -6158,7 +6159,7 @@ and {\tt Brightness{\em i}}.
  one gets the average brightness.  
 \item {\tt -totalLength={\em meters}} --- The total length of the undulator, in meters.
 \item {\tt -periodLength={\em meters}} ---  The period length of the undulator, in meters.
-\item {\tt -emittanceRatio={\em value}}  | -coupling={\em value}} --- In the case of a twiss
+\item {\tt -emittanceRatio={\em value}  | -coupling={\em value}} --- In the case of a twiss
  output file from {\tt elegant}, which does not contain the vertical emittance, one must
  supply one of these options.  If {\tt -emittanceRatio={\em R}} is given, $\epsilon_y = \epsilon_0*R$ 
  and $\epsilon_x = \epsilon_0$; this isn't how things work physically, but is provided for historical
