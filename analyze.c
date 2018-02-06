@@ -615,7 +615,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   long n_track, i, j;
   VMATRIX *M;
   double **R, *C;
-  double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
+  double defaultStep[6] = {1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4};
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
  
@@ -841,7 +841,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double **initialCoord, **finalCoord, **coordError;
   long n_track, i, j, n_left;
   VMATRIX *M;
-  double defaultStep[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+  double defaultStep[6] = {1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4};
   double maximumValue[6];
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
@@ -1005,6 +1005,25 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
+
+  free_matrices_above_order(M, order);
+
+  /*
+  for (i=0; i<6; i++) {
+    if (fabs(M->C[i])<1e-10)
+      M->C[i] = 0;
+    for (j=0; j<6; j++) {
+      long k;
+      if (fabs(M->R[i][j])<1e-8)
+        M->R[i][j] = 0;
+      for (k=0; k<=j; k++) 
+        if (fabs(M->T[i][j][k])<1e-6)
+          M->T[i][j][k] = 0;
+    }
+  }
+  */
+
+  /* print_matrices(stdout, "Matrix from fitting:", M); */
 
   return M;
 }

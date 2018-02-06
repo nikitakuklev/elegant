@@ -1456,7 +1456,7 @@ VMATRIX *compute_matrix(
         if (csbend->length==0 && (csbend->use_bn || csbend->xReference)) 
           bombElegant("Can't compute matrix for CSBEND with L=0 and USE_BN!=0 or XREFERENCE!=0", NULL);
         if (csbend->trackingMatrix)
-          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, run->default_order);
+          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
         else {
           elem->matrix = bend_matrix(csbend->length, csbend->angle, csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], 
                       csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
@@ -1479,7 +1479,7 @@ VMATRIX *compute_matrix(
         crbend = (CRBEND*)elem->p_elem;
         if (crbend->n_kicks<1)
             bombElegant("n_kicks must be > 0 for CRBEND element", NULL);
-        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, run->default_order);
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
         break;
       case T_CSRCSBEND:
         csrcsbend = (CSRCSBEND*)elem->p_elem;

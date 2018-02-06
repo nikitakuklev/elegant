@@ -3803,6 +3803,7 @@ extern void null_matrices(VMATRIX *M, unsigned long flags);
 extern void track_particles(double **final, VMATRIX *M, double  **initial, long n_part);
 extern void free_matrices(VMATRIX *M);
 extern void free_nonlinear_matrices(VMATRIX *M);
+extern void free_matrices_above_order(VMATRIX *M, long order);
 extern void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M);
 extern long read_matrices(VMATRIX *M, FILE *fp);
 extern void filter_matrices(VMATRIX *M, double threshold);
