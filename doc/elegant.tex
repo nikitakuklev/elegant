@@ -54,6 +54,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|BRAT| element and the \verb|abrat| commandline program for tracking particles through 3D field distributions
   had an error in the initial coordinate transformation, discovered by R. Lindberg (APS). In practical use, the error seems
   to have had a negligible effect on results.
+\item Synchrotron radiation calculations for \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| had a bug that resulted in only
+  the last component being computed. For example, if steering or higher multipoles were included, those would override 
+  the effect of the main field.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
