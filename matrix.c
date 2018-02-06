@@ -515,18 +515,59 @@ void free_nonlinear_matrices(VMATRIX *M)
     log_exit("free_nonlinear_matrices");
     }
 
+void free_matrices_above_order(VMATRIX *M, long order)
+{
+    long i, j, k;
+    double **Qij;
+    double *C, **R;
+    double ***T;
+    double ****Q;
+    
+    set_matrix_pointers(&C, &R, &T, &Q, M);
+    if (M->order<order)
+      return;
+    
+    if (M->order==3 && order<3) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
+          Qij = Q[i][j];
+          for (k=0; k<=j; k++) {
+            tfree(*Qij++);
+          }
+          tfree(Q[i][j]); Q[i][j] = NULL;
+        }
+        tfree(Q[i]); Q[i] = NULL;
+      }
+      tfree(Q);
+      M->Q = NULL;
+      M->order = 2;
+    }
+
+    if (M->order==2 && order<2) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
+          tfree(T[i][j]); T[i][j] = NULL;
+        }
+        tfree(T[i]); T[i] = NULL;
+      }
+      tfree(T);
+      M->T = NULL;
+      M->order = 1;
+    }
+}
+
 void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M)
 {
     if (!M) {
         printf("error: NULL VMATRIX pointer\n");
         fflush(stdout);
         abort();
-        }
+    }
     *C = M->C;
     *R = M->R;
     *T = M->T;
     *Q = M->Q;
-    }
+}
 
 long read_matrices(VMATRIX *M, FILE *fp)
 {
