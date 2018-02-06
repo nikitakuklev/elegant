@@ -2821,7 +2821,7 @@ PARAMETER speedbump_param[N_SPEEDBUMP_PARAMS] = {
 CRBEND crbend_example;
 /* canonically-integrated rectangular bending magnet physical parameters */
 PARAMETER crbend_param[N_CRBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.length), NULL, 0.0, 0, "arc length (not chord length!)"},
     {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.angle), NULL, 0.0, 0, "bend angle"},
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K1), NULL, 0.0, 0, "geometric quadrupole strength"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K2), NULL, 0.0, 0, "geometric sextupole strength"},
