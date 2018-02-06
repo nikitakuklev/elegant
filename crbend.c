@@ -103,7 +103,7 @@ long track_through_crbend(
         crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
         memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
         crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
-          crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = 0;
+          crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = crbendCopy.KnDelta = 0;
         crbendCopy.systematic_multipoles = crbendCopy.edge_multipoles = crbendCopy.random_multipoles = NULL;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
@@ -117,6 +117,7 @@ long track_through_crbend(
         }
         crbend->fseOffset = startValue[0];
         crbend->dxOffset = startValue[1];
+        crbend->KnDelta = crbendCopy.KnDelta;
         crbend->referenceData[0] = crbend->length;
         crbend->referenceData[1] = crbend->angle;
         crbend->referenceData[2] = crbend->K1;
@@ -155,8 +156,8 @@ long track_through_crbend(
   }
   else
     bombTracking("Can't have zero ANGLE for CRBEND.");
-  K1L = (1+fse)*crbend->K1*length;
-  K2L = (1+fse)*crbend->K2*length;
+  K1L = (1+fse)*crbend->K1*length/(1-crbend->KnDelta);
+  K2L = (1+fse)*crbend->K2*length/(1-crbend->KnDelta);
   if (crbend->systematic_multipoles || crbend->edge_multipoles || crbend->random_multipoles) {
     if (crbend->referenceOrder==0 && (referenceKnL=K0L)==0)
         bombElegant("REFERENCE_ORDER=0 but CRBEND ANGLE is zero", NULL);
@@ -621,6 +622,8 @@ double crbend_trajectory_error(double *value, long *invalid)
     particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
   crbendCopy.dxOffset = value[1];
+  if (crbendCopy.compensateKn)
+    crbendCopy.KnDelta = -crbendCopy.fseOffset;
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
   if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;

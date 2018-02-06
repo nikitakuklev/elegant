@@ -2849,6 +2849,7 @@ PARAMETER crbend_param[N_CRBEND_PARAMS] = {
     {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&crbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
     {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
     {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
+    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&crbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
     };
 
 /* array of parameter structures */
