@@ -220,7 +220,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 start = end;
                 break;
             case T_CRBEND:
-                crbptr = (CSBEND*)eptr->p_elem;
+                crbptr = (CRBEND*)eptr->p_elem;
                 end  = start+crbptr->length;
                 if (crbptr->angle>0)
                     fprintf(fpm, 
