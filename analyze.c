@@ -848,12 +848,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nPoints1 = 5;
   long maxFitOrder = 4;
   /* We'll store some of the matrices to avoid recomputing them */
+  /*
 #define MAX_N_STORED_MATRICES 100
   static long nStoredMatrices = 0, iStoredMatrices = 0;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
 
-  /*
   if (storedElement==NULL) {
     storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
     storedMatrix = tmalloc(sizeof(*storedMatrix)*MAX_N_STORED_MATRICES);
