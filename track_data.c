@@ -2997,12 +2997,36 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
 
 void compute_offsets()
 {
-    long i, j;
-    for (i=0; i<N_TYPES; i++) {
-        for (j=entity_description[i].n_params-1; j>=0; j--)
-            entity_description[i].parameter[j].offset -= entity_description[i].parameter[0].offset;
-        }
+  long i, j, typeSize=0;
+  for (i=0; i<N_TYPES; i++) {
+    for (j=entity_description[i].n_params-1; j>=0; j--)
+      entity_description[i].parameter[j].offset -= entity_description[i].parameter[0].offset;
+    if ((j=entity_description[i].n_params-1)>=0) {
+      switch (entity_description[i].parameter[j].type) {
+      case IS_DOUBLE:
+	typeSize = sizeof(double);
+	break;
+      case IS_LONG:
+	typeSize = sizeof(long);
+	break;
+      case IS_SHORT:
+	typeSize = sizeof(short);
+	break;
+      case IS_STRING:
+	typeSize = sizeof(char*);
+	break;
+      default:
+	fprintf(stderr, "Error: invalid item type code %ld for %s parameter of %s\n",
+		entity_description[i].parameter[j].type, 
+		entity_description[i].parameter[j].name,
+		entity_name[i]);
+	exit(1);
+	break;
+      }
+      entity_description[i].user_structure_size = entity_description[i].parameter[j].offset + typeSize;
     }
+  }
+}
 
 
 /* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 

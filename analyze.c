@@ -847,6 +847,44 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double dgamma, dtmp1, dP[3];
   long nPoints1 = 5;
   long maxFitOrder = 4;
+  /* We'll store some of the matrices to avoid recomputing them */
+#define MAX_N_STORED_MATRICES 100
+  static long nStoredMatrices = 0, iStoredMatrices = 0;
+  static ELEMENT_LIST **storedElement=NULL;
+  static VMATRIX **storedMatrix=NULL;
+
+  /*
+  if (storedElement==NULL) {
+    storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
+    storedMatrix = tmalloc(sizeof(*storedMatrix)*MAX_N_STORED_MATRICES);
+  }
+
+  for (i=0; i<nStoredMatrices; i++) {
+    CRBEND *crbptr0, *crbptr1;
+    if (eptr->type==storedElement[i]->type && 
+	memcmp(storedElement[i]->p_elem, eptr->p_elem, entity_description[eptr->type].user_structure_size)==0) {
+      M = tmalloc(sizeof(*M));
+      copy_matrices(M, storedMatrix[i]);
+      switch (eptr->type) {
+      case T_CRBEND:
+	crbptr0 = (CRBEND*)storedElement[i]->p_elem;
+	crbptr1 = (CRBEND*)eptr->p_elem;
+	crbptr1->optimized = crbptr0->optimized;
+	crbptr1->fseOffset = crbptr0->fseOffset;
+	crbptr1->dxOffset = crbptr0->dxOffset;
+	crbptr1->KnDelta = crbptr0->KnDelta;
+	crbptr1->referenceData[0] = crbptr0->referenceData[0];
+	crbptr1->referenceData[1] = crbptr0->referenceData[1];
+	crbptr1->referenceData[2] = crbptr0->referenceData[2];
+	crbptr1->referenceData[3] = crbptr0->referenceData[3];
+	break;
+      default:
+	break;
+      }
+      return M;
+    }
+  }
+  */
 
   if (stepSize==NULL)
     stepSize = defaultStep;
@@ -991,6 +1029,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   
   M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
+
+  /*
+  storedElement[iStoredMatrices] = eptr;
+  storedMatrix[iStoredMatrices] = M;
+  if (nStoredMatrices<MAX_N_STORED_MATRICES) {
+    iStoredMatrices++;
+    nStoredMatrices++;
+  } else {
+    iStoredMatrices++;
+    if (iStoredMatrices==nStoredMatrices)
+      iStoredMatrices = 0;
+  }
+  */
 
   /*
   for (i=0; i<6; i++) {

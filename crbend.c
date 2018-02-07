@@ -88,6 +88,14 @@ long track_through_crbend(
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
+      /*
+      printf("Reoptimizing CRBEND due to changes: (optimized=%hd)\n", crbend->optimized);
+      printf("delta L: %le\n", crbend->length-crbend->referenceData[0]);
+      printf("delta ANGLE: %le\n", crbend->angle-crbend->referenceData[1]);
+      printf("delta K1: %le\n", crbend->K1-crbend->referenceData[2]);
+      printf("delta K2: %le\n", crbend->K2-crbend->referenceData[3]);
+      fflush(stdout);
+      */
       if (iPart>=0)
         bombTracking("Programming error: oneStep mode is incompatible with optmization for CRBEND.");
       if (crbend->optimized) {

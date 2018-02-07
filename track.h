@@ -1111,6 +1111,7 @@ typedef struct {
     unsigned long flags;
     long structure_size;      /* in bytes */
     PARAMETER *parameter;
+    long user_structure_size; /* in bytes, just the part of the structure that the user sets */
     } ELEMENT_DESCRIPTION;
 
 extern ELEMENT_DESCRIPTION entity_description[N_TYPES];
