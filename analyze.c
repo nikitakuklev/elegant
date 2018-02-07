@@ -615,7 +615,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   long n_track, i, j;
   VMATRIX *M;
   double **R, *C;
-  double defaultStep[6] = {1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4};
+  double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
  
