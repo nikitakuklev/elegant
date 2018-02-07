@@ -1029,7 +1029,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CRBEND_PARAMS 29
+#define N_CRBEND_PARAMS 26
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2273,7 +2273,6 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks;
-    short edge_effects[2], edge_order;
     short integration_order;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
