@@ -65,7 +65,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CRBEND",
+    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -2818,35 +2818,35 @@ PARAMETER speedbump_param[N_SPEEDBUMP_PARAMS] = {
     };
 
 
-CRBEND crbend_example;
+CCBEND ccbend_example;
 /* canonically-integrated rectangular bending magnet physical parameters */
-PARAMETER crbend_param[N_CRBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.length), NULL, 0.0, 0, "arc length (not chord length!)"},
-    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&crbend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K1), NULL, 0.0, 0, "geometric quadrupole strength"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.K2), NULL, 0.0, 0, "geometric sextupole strength"},
-    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&crbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&crbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
-    {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
-    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&crbend_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
-    {"SYSTEMATIC_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.systematicMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply systematic and edge multipoles"},
-    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&crbend_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
-    {"REFERENCE_ORDER", "", IS_SHORT, 0, (long)((char *)&crbend_example.referenceOrder), NULL, 0.0, 0, "Reference order for multipole errors."},
-    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&crbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
-    {"ISR", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
-    {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&crbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
-    {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&crbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
-    {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&crbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
-    {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
-    {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&crbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
-    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&crbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
+PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&ccbend_example.length), NULL, 0.0, 0, "arc length (not chord length!)"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&ccbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.K1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.K2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ccbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
+    {"EDGE_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.edge_multipoles), NULL, 0.0, 0, "input file for systematic edge multipoles"},
+    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ccbend_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
+    {"SYSTEMATIC_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.systematicMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply systematic and edge multipoles"},
+    {"RANDOM_MULTIPOLE_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.randomMultipoleFactor), NULL, 1.0, 0, "Factor by which to multiply random multipoles"},
+    {"REFERENCE_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.referenceOrder), NULL, 0.0, 0, "Reference order for multipole errors."},
+    {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ccbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&ccbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
+    {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&ccbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+    {"USE_RAD_DIST", "", IS_SHORT, 0, (long)((char *)&ccbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
+    {"ADD_OPENING_ANGLE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are added if USE_RAD_DIST is nonzero."},
+    {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
+    {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
+    {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
     };
 
 /* array of parameter structures */
@@ -2992,7 +2992,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
-    { N_CRBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(CRBEND),    crbend_param   }, 
+    { N_CCBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(CCBEND),    ccbend_param   }, 
 } ;
 
 void compute_offsets()

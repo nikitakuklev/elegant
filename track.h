@@ -900,7 +900,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_IONEFFECTS 118
 #define T_SLICE_POINT 119
 #define T_SPEEDBUMP 120
-#define T_CRBEND 121
+#define T_CCBEND 121
 #define N_TYPES  122
 
 extern char *entity_name[N_TYPES];
@@ -1029,7 +1029,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CRBEND_PARAMS 26
+#define N_CCBEND_PARAMS 26
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2264,7 +2264,7 @@ typedef struct {
     } CSBEND;
 
 /* names and storage structure for canonically-integrated rectangular bending magnet physical parameters */
-extern PARAMETER crbend_param[N_CRBEND_PARAMS];
+extern PARAMETER ccbend_param[N_CCBEND_PARAMS];
 
 typedef struct {
     double length, angle;
@@ -2290,7 +2290,7 @@ typedef struct {
     MULTIPOLE_DATA randomMultipoleData;
     short totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
-    } CRBEND;
+    } CCBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
 extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
@@ -3225,7 +3225,7 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
                            (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || \
 			   (type)==T_WIGGLER || (type)==T_CWIGGLER || (type)==T_APPLE || \
                            (type)==T_HCOR || (type)==T_VCOR || (type)==T_HVCOR || (type)==T_BGGEXP || \
-                           (type)==T_CRBEND)
+                           (type)==T_CCBEND)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -4121,10 +4121,10 @@ long applyLowPassFilter(double *histogram, long bins, double start, double end);
 long applyLHPassFilters(double *histogram, long bins, double startHP, double endHP,
 			double startLP, double endLP, long clipNegative);
 
-long track_through_crbend(double **particle, long n_part, CRBEND *crbend, double Po,
+long track_through_ccbend(double **particle, long n_part, CCBEND *ccbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
                           MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
-void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
+void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem);
 

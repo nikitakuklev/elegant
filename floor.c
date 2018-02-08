@@ -152,7 +152,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
       case T_KSBEND: 
       case T_CSBEND:
       case T_CSRCSBEND:
-      case T_CRBEND:
+      case T_CCBEND:
         n_points ++;
         break;
       case T_FTABLE:
@@ -249,7 +249,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 {
   double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
   long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha, is_mirror;
-  BEND *bend; KSBEND *ksbend; CSBEND *csbend; CRBEND *crbend; MALIGN *malign; CSRCSBEND *csrbend;
+  BEND *bend; KSBEND *ksbend; CSBEND *csbend; CCBEND *ccbend; MALIGN *malign; CSRCSBEND *csrbend;
   ROTATE *rotate; ALPH *alpha; FTABLE *ftable;
   char label[200];
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
@@ -302,12 +302,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       rho = (length=csbend->length)/angle;
       tilt = csbend->tilt;
       break;
-    case T_CRBEND:
+    case T_CCBEND:
       is_bend = 1;
-      crbend = (CRBEND*)elem->p_elem;
-      angle = crbend->angle;
-      rho = (length=crbend->length)/angle;
-      tilt = crbend->tilt;
+      ccbend = (CCBEND*)elem->p_elem;
+      angle = ccbend->angle;
+      rho = (length=ccbend->length)/angle;
+      tilt = ccbend->tilt;
       break;
     case T_CSRCSBEND:
       is_bend = 1;

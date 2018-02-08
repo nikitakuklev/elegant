@@ -685,14 +685,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
-  case T_CRBEND:
-    ltmp1 = ((CRBEND*)eptr->p_elem)->isr;
-    ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
-    ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
-    track_through_crbend(coord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+  case T_CCBEND:
+    ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
+    ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
+    track_through_ccbend(coord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL, -1, -1);
-    ((CRBEND*)eptr->p_elem)->isr = ltmp1;
-    ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
+    ((CCBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
@@ -860,15 +860,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   }
 
   for (i=0; i<nStoredMatrices; i++) {
-    CRBEND *crbptr0, *crbptr1;
+    CCBEND *crbptr0, *crbptr1;
     if (eptr->type==storedElement[i]->type && 
 	memcmp(storedElement[i]->p_elem, eptr->p_elem, entity_description[eptr->type].user_structure_size)==0) {
       M = tmalloc(sizeof(*M));
       copy_matrices(M, storedMatrix[i]);
       switch (eptr->type) {
-      case T_CRBEND:
-	crbptr0 = (CRBEND*)storedElement[i]->p_elem;
-	crbptr1 = (CRBEND*)eptr->p_elem;
+      case T_CCBEND:
+	crbptr0 = (CCBEND*)storedElement[i]->p_elem;
+	crbptr1 = (CCBEND*)eptr->p_elem;
 	crbptr1->optimized = crbptr0->optimized;
 	crbptr1->fseOffset = crbptr0->fseOffset;
 	crbptr1->dxOffset = crbptr0->dxOffset;
@@ -902,14 +902,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ((CSBEND*)eptr->p_elem)->isr = ltmp1;
     ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
-  case T_CRBEND:
-    ltmp1 = ((CRBEND*)eptr->p_elem)->isr;
-    ltmp2 = ((CRBEND*)eptr->p_elem)->synch_rad;
-    ((CRBEND*)eptr->p_elem)->isr = ((CRBEND*)eptr->p_elem)->synch_rad = 0;
-    n_left = track_through_crbend(finalCoord, n_track, (CRBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+  case T_CCBEND:
+    ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
+    ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
+    ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
+    n_left = track_through_ccbend(finalCoord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                                   NULL, NULL, NULL, NULL, -1, -1);
-    ((CRBEND*)eptr->p_elem)->isr = ltmp1;
-    ((CRBEND*)eptr->p_elem)->synch_rad = ltmp2;
+    ((CCBEND*)eptr->p_elem)->isr = ltmp1;
+    ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
    break;
   case T_CWIGGLER:
     ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
@@ -1083,7 +1083,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long sliceEtilted, long order)
 {
-  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CRBEND crbend;
+  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CCBEND ccbend;
   KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
@@ -1133,9 +1133,9 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     nSlices = ((CWIGGLER*)eptr->p_elem)->periods*((CWIGGLER*)eptr->p_elem)->stepsPerPeriod;
   else if (eptr->type==T_WIGGLER)
     nSlices *= (((WIGGLER*)eptr->p_elem)->poles/2);
-  else if (eptr->type==T_CRBEND) {
-    if (nSlices > ((CRBEND*)eptr->p_elem)->n_kicks)
-      nSlices = ((CRBEND*)eptr->p_elem)->n_kicks;
+  else if (eptr->type==T_CCBEND) {
+    if (nSlices > ((CCBEND*)eptr->p_elem)->n_kicks)
+      nSlices = ((CCBEND*)eptr->p_elem)->n_kicks;
   }
   z = 0;
   
@@ -1168,13 +1168,13 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
       break;
-    case T_CRBEND:
+    case T_CCBEND:
       if (slice==0) {
-        memcpy(&crbend, (CRBEND*)eptr->p_elem, sizeof(CRBEND));
-        crbend.isr = 0;
-        crbend.n_kicks = nSlices;
-        elem.type = T_CRBEND;
-        elem.p_elem = (void*)&crbend;
+        memcpy(&ccbend, (CCBEND*)eptr->p_elem, sizeof(CCBEND));
+        ccbend.isr = 0;
+        ccbend.n_kicks = nSlices;
+        elem.type = T_CCBEND;
+        elem.p_elem = (void*)&ccbend;
       }
       break;
     case T_SBEN:
@@ -1542,7 +1542,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
                                long iSlice)
 {
   CSBEND *csbend;
-  CRBEND *crbend;
+  CCBEND *ccbend;
   KQUAD *kquad;
   KSEXT *ksext;
   double **coord, pCentral;
@@ -1579,9 +1579,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     csbend = (CSBEND*)elem->p_elem;
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2, run->rootname, NULL, NULL);
     break;
-  case T_CRBEND:
-    crbend = (CRBEND*)elem->p_elem;
-    track_through_crbend(coord, n_track, crbend, run->p_central, NULL, elem->end_pos-crbend->length, &sigmaDelta2, 
+  case T_CCBEND:
+    ccbend = (CCBEND*)elem->p_elem;
+    track_through_ccbend(coord, n_track, ccbend, run->p_central, NULL, elem->end_pos-ccbend->length, &sigmaDelta2, 
                          run->rootname, NULL, NULL, iSlice, -1);
     break;
   case T_SBEN:

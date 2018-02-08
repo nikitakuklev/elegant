@@ -2872,11 +2872,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, ELEMEN
       radIntegrals->RI[3] += I4*n_periods;
       radIntegrals->RI[4] += I5*n_periods;
     }
-  } else if (elem->type==T_CRBEND) {
+  } else if (elem->type==T_CCBEND) {
     double startingCoord[6]={0,0,0,0,0,0};
     if (elem->pred && elem->pred->matrix && elem->pred->matrix->C)
       memcpy(&startingCoord[0], elem->pred->matrix->C, sizeof(startingCoord[0])*6);
-    addCrbendRadiationIntegrals((CRBEND*)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5, elem);
+    addCcbendRadiationIntegrals((CCBEND*)elem->p_elem, startingCoord, pCentral, eta0, etap0, beta0, alpha0, &I1, &I2, &I3, &I4, &I5, elem);
     radIntegrals->RI[0] += I1;
     radIntegrals->RI[1] += I2;
     radIntegrals->RI[2] += I3;
@@ -4443,12 +4443,12 @@ void computeSDrivingTerms(LINE_LIST *beamline)
         k2 = ((CSBEND*)src_ptr->p_elem)->k2 *
              ((CSBEND*)src_ptr->p_elem)->length;
         break;
-      case T_CRBEND:
-        tilt = ((CRBEND*)src_ptr->p_elem)->tilt;
-        j1 = -((CRBEND*)src_ptr->p_elem)->K1 *
-             ((CRBEND*)src_ptr->p_elem)->length * sin(2. * tilt);
-        k2 = ((CRBEND*)src_ptr->p_elem)->K2 *
-             ((CRBEND*)src_ptr->p_elem)->length;
+      case T_CCBEND:
+        tilt = ((CCBEND*)src_ptr->p_elem)->tilt;
+        j1 = -((CCBEND*)src_ptr->p_elem)->K1 *
+             ((CCBEND*)src_ptr->p_elem)->length * sin(2. * tilt);
+        k2 = ((CCBEND*)src_ptr->p_elem)->K2 *
+             ((CCBEND*)src_ptr->p_elem)->length;
         break;
       case T_CSRCSBEND:
         tilt = ((CSRCSBEND*)src_ptr->p_elem)->tilt;
@@ -4647,9 +4647,9 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       b2L = ((CSBEND*)eptr1->p_elem)->k1 * ((CSBEND*)eptr1->p_elem)->length;
       b3L = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
       break;
-    case T_CRBEND:
-      b2L = ((CRBEND*)eptr1->p_elem)->K1 * ((CRBEND*)eptr1->p_elem)->length;
-      b3L = ((CRBEND*)eptr1->p_elem)->K2 * ((CRBEND*)eptr1->p_elem)->length/2;
+    case T_CCBEND:
+      b2L = ((CCBEND*)eptr1->p_elem)->K1 * ((CCBEND*)eptr1->p_elem)->length;
+      b3L = ((CCBEND*)eptr1->p_elem)->K2 * ((CCBEND*)eptr1->p_elem)->length/2;
       break;
     case T_CSRCSBEND:
       b2L = ((CSRCSBEND*)eptr1->p_elem)->k1 * ((CSRCSBEND*)eptr1->p_elem)->length;

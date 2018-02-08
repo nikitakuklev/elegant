@@ -8,7 +8,7 @@
 \*************************************************************************/
 
 /* routine: crbend()
- * purpose: tracking through canonical rectangular bend
+ * purpose: tracking through canonical bend in cartesian coordinates
  * 
  * Michael Borland, 2018
  */
@@ -16,7 +16,7 @@
 #include "track.h"
 #include "multipole.h"
 
-static CRBEND crbendCopy;
+static CCBEND ccbendCopy;
 static double PoCopy, xMax, xError, xpError, lastRho, lastX, lastXp;
 #ifdef DEBUG
 static short logHamiltonian = 0;
@@ -32,12 +32,12 @@ int integrate_kick_K012(double *coord, double dx, double dy,
                         double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
-double crbend_trajectory_error(double *value, long *invalid);
+double ccbend_trajectory_error(double *value, long *invalid);
 
-long track_through_crbend(
+long track_through_ccbend(
                           double **particle,   /* initial/final phase-space coordinates */
                           long n_part,         /* number of particles */
-                          CRBEND *crbend,
+                          CCBEND *ccbend,
                           double Po,
                           double **accepted,
                           double z_start,
@@ -70,76 +70,76 @@ long track_through_crbend(
   double referenceKnL = 0;
 
   if (!particle)
-    bombTracking("particle array is null (track_through_crbend)");
+    bombTracking("particle array is null (track_through_ccbend)");
 
-  if (iPart>=0 && crbend->optimized!=1)
-    bombTracking("Programming error: one-step mode invoked for unoptimized CRBEND.");
+  if (iPart>=0 && ccbend->optimized!=1)
+    bombTracking("Programming error: one-step mode invoked for unoptimized CCBEND.");
   if (iFinalSlice>0 && iPart>=0)
-    bombTracking("Programming error: partial integration mode and one-step mode invoked together for CRBEND.");
-  if (iFinalSlice>0 && crbend->optimized!=1)
-    bombTracking("Programming error: partial integration mode invoked for unoptimized CRBEND.");
+    bombTracking("Programming error: partial integration mode and one-step mode invoked together for CCBEND.");
+  if (iFinalSlice>0 && ccbend->optimized!=1)
+    bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
 
-  if (crbend->optimized!=-1 && crbend->angle!=0) {
-    if (crbend->optimized==0 || 
-        crbend->length!=crbend->referenceData[0] ||
-        crbend->angle!=crbend->referenceData[1] ||
-        crbend->K1!=crbend->referenceData[2] ||
-        crbend->K2!=crbend->referenceData[3]) {
+  if (ccbend->optimized!=-1 && ccbend->angle!=0) {
+    if (ccbend->optimized==0 || 
+        ccbend->length!=ccbend->referenceData[0] ||
+        ccbend->angle!=ccbend->referenceData[1] ||
+        ccbend->K1!=ccbend->referenceData[2] ||
+        ccbend->K2!=ccbend->referenceData[3]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
       /*
-      printf("Reoptimizing CRBEND due to changes: (optimized=%hd)\n", crbend->optimized);
-      printf("delta L: %le\n", crbend->length-crbend->referenceData[0]);
-      printf("delta ANGLE: %le\n", crbend->angle-crbend->referenceData[1]);
-      printf("delta K1: %le\n", crbend->K1-crbend->referenceData[2]);
-      printf("delta K2: %le\n", crbend->K2-crbend->referenceData[3]);
+      printf("Reoptimizing CCBEND due to changes: (optimized=%hd)\n", ccbend->optimized);
+      printf("delta L: %le\n", ccbend->length-ccbend->referenceData[0]);
+      printf("delta ANGLE: %le\n", ccbend->angle-ccbend->referenceData[1]);
+      printf("delta K1: %le\n", ccbend->K1-ccbend->referenceData[2]);
+      printf("delta K2: %le\n", ccbend->K2-ccbend->referenceData[3]);
       fflush(stdout);
       */
       if (iPart>=0)
-        bombTracking("Programming error: oneStep mode is incompatible with optmization for CRBEND.");
-      if (crbend->optimized) {
-          startValue[0] = crbend->fseOffset;
-          startValue[1] = crbend->dxOffset;
-          if (crbend->optimizeFseOnce)
+        bombTracking("Programming error: oneStep mode is incompatible with optmization for CCBEND.");
+      if (ccbend->optimized) {
+          startValue[0] = ccbend->fseOffset;
+          startValue[1] = ccbend->dxOffset;
+          if (ccbend->optimizeFseOnce)
             disable[0] = 1;
-          if (crbend->optimizeDxOnce) 
+          if (ccbend->optimizeDxOnce) 
             disable[1] = 1;
       } else
         startValue[0] = startValue[1] = 0;
       if (!disable[0] || !disable[1]) {
-        crbend->optimized = -1; /* flag to indicate calls to track_through_crbend will be for FSE optimization */
-        memcpy(&crbendCopy, crbend, sizeof(crbendCopy));
-        crbendCopy.fse = crbendCopy.dx = crbendCopy.dy = crbendCopy.dz = crbendCopy.tilt = crbendCopy.etilt = 
-          crbendCopy.isr = crbendCopy.synch_rad = crbendCopy.isr1Particle = crbendCopy.KnDelta = 0;
-        crbendCopy.systematic_multipoles = crbendCopy.edge_multipoles = crbendCopy.random_multipoles = NULL;
+        ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
+        memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
+        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.tilt = ccbendCopy.etilt = 
+          ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
+        ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.random_multipoles = NULL;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
         lowerLimit[0] = lowerLimit[1] = -1;
         upperLimit[0] = upperLimit[1] = 1;
         if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
-                       fabs(1e-14*crbend->length/crbend->angle), fabs(1e-16*crbend->length/crbend->angle),
-                       crbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
-          bombElegantVA("failed to find FSE and x offset to center trajectory for crbend. accuracy acheived was %le.", acc);
+                       fabs(1e-14*ccbend->length/ccbend->angle), fabs(1e-16*ccbend->length/ccbend->angle),
+                       ccbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+          bombElegantVA("failed to find FSE and x offset to center trajectory for ccbend. accuracy acheived was %le.", acc);
         }
-        crbend->fseOffset = startValue[0];
-        crbend->dxOffset = startValue[1];
-        crbend->KnDelta = crbendCopy.KnDelta;
-        crbend->referenceData[0] = crbend->length;
-        crbend->referenceData[1] = crbend->angle;
-        crbend->referenceData[2] = crbend->K1;
-        crbend->referenceData[3] = crbend->K2;
-        printf("CRBEND optimized FSE=%le, x=%le, accuracy=%le\n", crbend->fseOffset, crbend->dxOffset, acc);
-        crbend->optimized = 1;
+        ccbend->fseOffset = startValue[0];
+        ccbend->dxOffset = startValue[1];
+        ccbend->KnDelta = ccbendCopy.KnDelta;
+        ccbend->referenceData[0] = ccbend->length;
+        ccbend->referenceData[1] = ccbend->angle;
+        ccbend->referenceData[2] = ccbend->K1;
+        ccbend->referenceData[3] = ccbend->K2;
+        printf("CCBEND optimized FSE=%le, x=%le, accuracy=%le\n", ccbend->fseOffset, ccbend->dxOffset, acc);
+        ccbend->optimized = 1;
       }
     }
   }
 
 #ifdef DEBUG
-  if (crbend->optimized!=-1) {
+  if (ccbend->optimized!=-1) {
     logHamiltonian = 1;
-    fpHam = fopen("crbend.sdds", "w");
+    fpHam = fopen("ccbend.sdds", "w");
     fprintf(fpHam, "SDDS1\n&column name=z type=double units=m &end\n");
     fprintf(fpHam, "&column name=x type=double units=m &end\n");
     fprintf(fpHam, "&column name=y type=double units=m &end\n");
@@ -150,31 +150,31 @@ long track_through_crbend(
 
   rad_coef = isr_coef = 0;
 
-  n_kicks = crbend->n_kicks;
-  arcLength = crbend->length;
-  if (crbend->optimized!=0)
-    fse = crbend->fse + crbend->fseOffset;
+  n_kicks = ccbend->n_kicks;
+  arcLength = ccbend->length;
+  if (ccbend->optimized!=0)
+    fse = ccbend->fse + ccbend->fseOffset;
   else 
-    fse = crbend->fse;
+    fse = ccbend->fse;
   K0L = length = rho0 = 0; /* prevent compiler warnings */
-  if ((angle = crbend->angle)!=0) {
+  if ((angle = ccbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
     K0L = (1+fse)/rho0*length;
   }
   else
-    bombTracking("Can't have zero ANGLE for CRBEND.");
-  K1L = (1+fse)*crbend->K1*length/(1-crbend->KnDelta);
-  K2L = (1+fse)*crbend->K2*length/(1-crbend->KnDelta);
-  if (crbend->systematic_multipoles || crbend->edge_multipoles || crbend->random_multipoles) {
-    if (crbend->referenceOrder==0 && (referenceKnL=K0L)==0)
-        bombElegant("REFERENCE_ORDER=0 but CRBEND ANGLE is zero", NULL);
-    if (crbend->referenceOrder==1 && (referenceKnL=K1L)==0)
-      bombElegant("REFERENCE_ORDER=1 but CRBEND K1 is zero", NULL);
-    if (crbend->referenceOrder==2 && (referenceKnL=K2L)==0)
-      bombElegant("REFERENCE_ORDER=2 but CRBEND K2 is zero", NULL);
-    if (crbend->referenceOrder<0 || crbend->referenceOrder>2)
-      bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CRBEND", NULL);
+    bombTracking("Can't have zero ANGLE for CCBEND.");
+  K1L = (1+fse)*ccbend->K1*length/(1-ccbend->KnDelta);
+  K2L = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
+  if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles) {
+    if (ccbend->referenceOrder==0 && (referenceKnL=K0L)==0)
+        bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
+    if (ccbend->referenceOrder==1 && (referenceKnL=K1L)==0)
+      bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
+    if (ccbend->referenceOrder==2 && (referenceKnL=K2L)==0)
+      bombElegant("REFERENCE_ORDER=2 but CCBEND K2 is zero", NULL);
+    if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
+      bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
   if (angle<0) {
     K0L *= -1;
@@ -182,54 +182,54 @@ long track_through_crbend(
     rotateBeamCoordinates(particle, n_part, PI);
   }
 
-  integ_order = crbend->integration_order;
-  if (crbend->synch_rad)
+  integ_order = ccbend->integration_order;
+  if (ccbend->synch_rad)
     rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
   isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
-  if (!crbend->isr || (crbend->isr1Particle==0 && n_part==1))
+  if (!ccbend->isr || (ccbend->isr1Particle==0 && n_part==1))
     /* minus sign indicates we accumulate into sigmadelta^2 only, don't perturb particles */
     isr_coef *= -1;
-  if (crbend->length<1e-6 && (crbend->isr || crbend->synch_rad)) {
+  if (ccbend->length<1e-6 && (ccbend->isr || ccbend->synch_rad)) {
     rad_coef = isr_coef = 0;  /* avoid unphysical results */
   }
-  if (!crbend->multipolesInitialized) {
+  if (!ccbend->multipolesInitialized) {
     /* read the data files for the error multipoles */
-    readErrorMultipoleData(&(crbend->systematicMultipoleData), crbend->systematic_multipoles, 0);
-    readErrorMultipoleData(&(crbend->edgeMultipoleData), crbend->edge_multipoles, 0);
-    readErrorMultipoleData(&(crbend->randomMultipoleData), crbend->random_multipoles, 0);
-    crbend->multipolesInitialized = 1;
+    readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
+    readErrorMultipoleData(&(ccbend->edgeMultipoleData), ccbend->edge_multipoles, 0);
+    readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
+    ccbend->multipolesInitialized = 1;
   }
-  if (!crbend->totalMultipolesComputed) {
-    computeTotalErrorMultipoleFields(&(crbend->totalMultipoleData),
-                                     &(crbend->systematicMultipoleData), crbend->systematicMultipoleFactor, 
-                                     &(crbend->edgeMultipoleData),
-                                     &(crbend->randomMultipoleData), crbend->randomMultipoleFactor,
+  if (!ccbend->totalMultipolesComputed) {
+    computeTotalErrorMultipoleFields(&(ccbend->totalMultipoleData),
+                                     &(ccbend->systematicMultipoleData), ccbend->systematicMultipoleFactor, 
+                                     &(ccbend->edgeMultipoleData),
+                                     &(ccbend->randomMultipoleData), ccbend->randomMultipoleFactor,
                                      NULL, 0.0,
-                                     referenceKnL, crbend->referenceOrder);
-    crbend->totalMultipolesComputed = 1;
+                                     referenceKnL, ccbend->referenceOrder);
+    ccbend->totalMultipolesComputed = 1;
   }
-  multData = &(crbend->totalMultipoleData);
-  edgeMultData = &(crbend->edgeMultipoleData);
+  multData = &(ccbend->totalMultipoleData);
+  edgeMultData = &(ccbend->edgeMultipoleData);
 
   if (multData && !multData->initialized)
     multData = NULL;
 
   if (n_kicks<=0)
-    bombTracking("n_kicks<=0 in track_crbend()");
+    bombTracking("n_kicks<=0 in track_ccbend()");
   if (integ_order!=2 && integ_order!=4) 
     bombTracking("multipole integration_order must be 2 or 4");
 
   if (!(coef = expansion_coefficients(0)))
-    bombTracking("expansion_coefficients(0) returned NULL pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(0) returned NULL pointer (track_through_ccbend)");
   if (!(coef = expansion_coefficients(1)))
-    bombTracking("expansion_coefficients(1) returned NULL pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(1) returned NULL pointer (track_through_ccbend)");
   if (!(coef = expansion_coefficients(2)))
-    bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_crbend)");
+    bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_ccbend)");
 
-  tilt = crbend->tilt;
-  dx = crbend->dx + (crbend->optimized ? crbend->dxOffset : 0);
-  dy = crbend->dy;
-  dz = crbend->dz;
+  tilt = ccbend->tilt;
+  dx = ccbend->dx + (ccbend->optimized ? ccbend->dxOffset : 0);
+  dy = ccbend->dy;
+  dz = ccbend->dz;
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
@@ -270,8 +270,8 @@ long track_through_crbend(
     rotateBeamCoordinates(particle, n_part, -tilt);
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
-  if (crbend->optimized!=-1) { /* don't think this test is needed */
-    if (angle!=0 && (iPart<0 || iPart==(crbend->n_kicks-1)) && iFinalSlice<=0) { 
+  if (ccbend->optimized!=-1) { /* don't think this test is needed */
+    if (angle!=0 && (iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) { 
       verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
       switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     }
@@ -289,13 +289,13 @@ long track_through_crbend(
     free(multData);
   }
 
-  if (crbend->angle<0) {
+  if (ccbend->angle<0) {
     lastRho *= -1;
     lastX *= -1;
     lastXp *= -1;
   }
 
-  log_exit("track_through_crbend");
+  log_exit("track_through_ccbend");
   return(i_top+1);
 }
 
@@ -612,13 +612,13 @@ void verticalRbendFringe(double **particle, long n_part, double alpha, double rh
     particle[i][3] -= particle[i][2]*c/(1+particle[i][5]);
 }
 
-double crbend_trajectory_error(double *value, long *invalid)
+double ccbend_trajectory_error(double *value, long *invalid)
 {
   static double **particle = NULL;
   double result;
 
   *invalid = 0;
-  if ((crbendCopy.fseOffset = value[0])>=1 || value[0]<=-1) {
+  if ((ccbendCopy.fseOffset = value[0])>=1 || value[0]<=-1) {
     *invalid = 1;
     return DBL_MAX;
   }
@@ -629,21 +629,21 @@ double crbend_trajectory_error(double *value, long *invalid)
   if (!particle) 
     particle = (double**)czarray_2d(sizeof(**particle), 1, COORDINATES_PER_PARTICLE);
   memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
-  crbendCopy.dxOffset = value[1];
-  if (crbendCopy.compensateKn)
-    crbendCopy.KnDelta = -crbendCopy.fseOffset;
+  ccbendCopy.dxOffset = value[1];
+  if (ccbendCopy.compensateKn)
+    ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
-  if (!track_through_crbend(particle, 1, &crbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
+  if (!track_through_ccbend(particle, 1, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
-  result = xError + xpError/fabs(crbendCopy.angle);
+  result = xError + xpError/fabs(ccbendCopy.angle);
   /* printf("particle[0][0] = %le, particle[0][1] = %le, result = %le\n", particle[0][0], particle[0][1], result); */
   return result;
 }
 
-VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoord, double pCentral, long iFinalSlice)
-/* This routine is used for getting the linear transport matrix from the start of the CRBEND to some interior slice.
+VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoord, double pCentral, long iFinalSlice)
+/* This routine is used for getting the linear transport matrix from the start of the CCBEND to some interior slice.
  * We need this to compute radiation integrals.
  */
 {
@@ -709,14 +709,14 @@ VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoor
   /* particle n_track-1 is the reference particle (coordinates set above) */
 
   /* save radiation-related parameters */
-  ltmp1 = crbend->isr;
-  ltmp2 = crbend->synch_rad;
+  ltmp1 = ccbend->isr;
+  ltmp2 = ccbend->synch_rad;
 
-  crbend->isr = crbend->synch_rad = 0;
-  track_through_crbend(coord, n_track, crbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
+  ccbend->isr = ccbend->synch_rad = 0;
+  track_through_ccbend(coord, n_track, ccbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
 
-  crbend->isr = ltmp1;
-  crbend->synch_rad = ltmp2;
+  ccbend->isr = ltmp1;
+  ccbend->synch_rad = ltmp2;
   
   M = tmalloc(sizeof(*M));
   M->order = 1;
@@ -759,7 +759,7 @@ VMATRIX *determinePartialCrbendLinearMatrix(CRBEND *crbend, double *startingCoor
   return M;
 }
 
-void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double pCentral,
+void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,
                                  double *I1, double *I2, double *I3, double *I4, double *I5, ELEMENT_LIST *elem)
 {
@@ -773,7 +773,7 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
   double s0;
   static FILE *fpcr = NULL;
   if (fpcr==NULL) {
-    fpcr = fopen("crbend-RI.sdds", "w");
+    fpcr = fopen("ccbend-RI.sdds", "w");
     fprintf(fpcr, "SDDS1\n&column name=s type=double units=m &end\n");
     fprintf(fpcr, "&column name=betax type=double units=m &end\n");
     fprintf(fpcr, "&column name=etax type=double units=m &end\n");
@@ -782,12 +782,12 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
     fprintf(fpcr, "&column name=ElementName type=string &end\n");
     fprintf(fpcr, "&data mode=ascii no_row_counts=1 &end\n");
   }
-  s0 = elem->end_pos - crbend->length;
+  s0 = elem->end_pos - ccbend->length;
   fprintf(fpcr, "%le %le %le %le %le %s\n", s0, beta0, eta0, etap0, alpha0, elem->name);
 #endif
   
-  if (crbend->tilt)
-    bombElegant("Can't add radiation integrals for tilted CRBEND\n", NULL);
+  if (ccbend->tilt)
+    bombElegant("Can't add radiation integrals for tilted CCBEND\n", NULL);
 
   gamma0 = (1+alpha0*alpha0)/beta0;
 
@@ -796,10 +796,10 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
   etap1 = etap0;
   alpha1 = alpha0;
   H1 = (eta1*eta1 + sqr(beta1*etap1 + alpha1*eta1))/beta1;
-  ds = crbend->length/crbend->n_kicks; /* not really right... */
-  for (iSlice=1; iSlice<=crbend->n_kicks; iSlice++) {
+  ds = ccbend->length/ccbend->n_kicks; /* not really right... */
+  for (iSlice=1; iSlice<=ccbend->n_kicks; iSlice++) {
     /* Determine matrix from start of element to exit of slice iSlice */
-    M = determinePartialCrbendLinearMatrix(crbend, startingCoord, pCentral, iSlice);
+    M = determinePartialCcbendLinearMatrix(ccbend, startingCoord, pCentral, iSlice);
     C = M->R[0][0];
     Cp = M->R[1][0];
     S = M->R[0][1];
@@ -816,16 +816,16 @@ void addCrbendRadiationIntegrals(CRBEND *crbend, double *startingCoord, double p
 #endif
 
     /* Compute contributions to radiation integrals in this slice.
-     * lastRho is saved by the routine track_through_crbend(). Since determinePartialCrbendLinearMatrix()
+     * lastRho is saved by the routine track_through_ccbend(). Since determinePartialCcbendLinearMatrix()
      * puts the reference particle first, it is appropriate to the central trajectory. 
      */
     *I1 += ds*(eta1+eta2)/2/lastRho;
     *I2 += ds/sqr(lastRho);
     *I3 += ds/ipow(fabs(lastRho), 3);
     /* Compute effective K1 including the sextupole effect plus rotation.
-     * lastX and lastXp are saved by track_through_crbend().
+     * lastX and lastXp are saved by track_through_ccbend().
      */
-    K1 = (crbend->K1+(lastX-crbend->dxOffset)*crbend->K2)*cos(atan(lastXp));
+    K1 = (ccbend->K1+(lastX-ccbend->dxOffset)*ccbend->K2)*cos(atan(lastXp));
     *I4 += ds*(eta1+eta2)/2*(1/ipow(lastRho, 3) + 2*K1/lastRho); 
     H2 = (eta2*eta2 + sqr(beta2*etap2 + alpha2*eta2))/beta2;
     *I5 += ds/ipow(fabs(lastRho), 3)*(H1+H2)/2;

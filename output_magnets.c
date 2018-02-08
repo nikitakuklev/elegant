@@ -19,7 +19,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 {
     ELEMENT_LIST *eptr;
     QUAD  *qptr; BEND  *bptr; KQUSE *kqsptr;
-    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CRBEND *crbptr; CSRCSBEND *csrbptr;
+    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CCBEND *crbptr; CSRCSBEND *csrbptr;
     long iPhase;
     double start, end, dz, value;
     //double total_length;
@@ -219,8 +219,8 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                             eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], start, eptr->name, entity_name[eptr->type], end);
                 start = end;
                 break;
-            case T_CRBEND:
-                crbptr = (CRBEND*)eptr->p_elem;
+            case T_CCBEND:
+                crbptr = (CCBEND*)eptr->p_elem;
                 end  = start+crbptr->length;
                 if (crbptr->angle>0)
                     fprintf(fpm, 
