@@ -557,7 +557,7 @@ lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 elegant_SRCS = 	ignoreElements.c alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
 		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \
 		compute_centroids.c compute_matrices.c concat_beamline.c concat_mat.c counter.c \
-		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c crbend.c \
+		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c ccbend.c \
 		do_tracking.c elegant.c error.c extend_list.c final_props.c find_elem.c floor.c \
 		generate_bunch.c get_beamline.c kicker.c kick_poly.c kick_sbend.c \
 		limit_amplitudes.c link_date.c link_elements.c load_parameters.c lorentz.c mad_parse.c \
