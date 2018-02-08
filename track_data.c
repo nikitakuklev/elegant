@@ -193,8 +193,8 @@ char *entity_text[N_TYPES] = {
     "Conditional branch instruction to jump to another part of the beamline",
     "Simulates ionization of residual gas and interaction with the beam.",
     "Performs slice-by-slice analysis of the beam for output to a file.",
-    "Simulates a semi-circular protuberance from one or both walls of the chamber."
-    "A canonical kick rectangular dipole magnet, assumed to have multipoles defined in Cartesian coordinates."
+    "Simulates a semi-circular protuberance from one or both walls of the chamber.",
+    "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates."
     } ;
 
 QUAD quad_example;
