@@ -192,6 +192,8 @@ public:
         return 0;
       }
       
+      sum_Fx = sum_Fy = 0;
+
       if (!radial)
         gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy,
             x, y, order, KnL, 0);
@@ -413,6 +415,8 @@ public:
   
         if (!kickFrac[step])
           break;
+
+        sum_Fx = sum_Fy = 0;
 
         if (!radial)
           gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
@@ -1004,10 +1008,7 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
     int order, double KnL, int skew) {
   int i;
   double sum_Fx, sum_Fy;
-  if (sum_Fx_return)
-    *sum_Fx_return = 0;
-  if (sum_Fy_return)
-    *sum_Fy_return = 0;
+
   /* sum up the terms for the multipole expansion */
   for (i=sum_Fx=sum_Fy=0; i<=order; i++) {
     if (ODD(i))
@@ -1023,9 +1024,9 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
   *qx -= KnL*sum_Fy;
   *qy += KnL*sum_Fx;
   if (sum_Fx_return)
-    *sum_Fx_return = sum_Fx;
+    *sum_Fx_return += sum_Fx;
   if (sum_Fy_return)
-    *sum_Fy_return = sum_Fy;
+    *sum_Fy_return += sum_Fy;
 }
 
 __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
