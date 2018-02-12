@@ -210,18 +210,19 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       
       Bmin = -(Bmax = -DBL_MAX);
       for (idata=0; idata<rows; idata++) {
-        if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) {
+        /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
           if (Byd[idata]>Bmax)
             Bmax = Byd[idata];
           if (Byd[idata]<Bmin)
             Bmin = Byd[idata];
-        }
+          /* } */
       }
       free(xd);
       free(yd);
       free(zd);
       if (Bmax==-DBL_MAX) {
-        fprintf(stderr, "BRAT file doesn't have valid Bmax value---verify that values with x=y=0 exist\n");
+        fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
+        fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
         exit(1);
       }
       if (fabs(Bmin)>fabs(Bmax))
@@ -1111,18 +1112,19 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
 
     Bmin = -(Bmax = -DBL_MAX);
     for (idata=0; idata<rows; idata++) {
-      if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) {
+      /* if (fabs(yd[idata])<dy/2 && fabs(xd[idata])<dx/2) { */
         if (Byd[idata]>Bmax)
           Bmax = Byd[idata];
         if (Byd[idata]<Bmin)
           Bmin = Byd[idata];
-      }
+        /* } */
     }
     free(xd);
     free(yd);
     free(zd);
     if (Bmax==-DBL_MAX) {
-      fprintf(stderr, "file doesn't have valid Bmax value---verify that values with x=y=0 exist\n");
+      fprintf(stderr, "BRAT file doesn't have valid Bmax value\n");
+      fprintf(stderr, "Bmax = %le, Bmin = %le\n", Bmax, Bmin);
       exit(1);
     }
     if (fabs(Bmin)>fabs(Bmax))
