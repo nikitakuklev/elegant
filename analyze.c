@@ -103,7 +103,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Substep", "&parameter name=Substep, type=long, description=\"Simulation substep\" &end"},
     } ;
 
-static long SDDS_analyze_initialized = 0;
+static long SDDS_analyze_initialized = 0, n_output_columns;
 static SDDS_TABLE SDDS_analyze;
 static FILE *fpPrintout = NULL;
 
@@ -139,7 +139,9 @@ void setup_transport_analysis(
       printf("warning: maximum printout_order is 3\n");
       printout_order = 3;
     }
-    
+
+    n_output_columns = N_ANALYSIS_COLUMNS + control->n_elements_to_vary + errcon->n_items;
+
 #if USE_MPI
       if (myid==0) {
 	/* In MPI mode, all output is handled by the master processor */
@@ -215,7 +217,7 @@ void do_transport_analysis(
     if (center_on_orbit && !orbit)
         bombElegant("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
 
-    data  = (double*)tmalloc(sizeof(*data)*SDDS_analyze.layout.n_columns);
+    data  = (double*)tmalloc(sizeof(*data)*n_output_columns);
     offset = (double*)tmalloc(sizeof(*offset)*6);
     m_alloc(&R , 6, 6);
     orbit_p = tmalloc(sizeof(*orbit_p)*6);
@@ -489,34 +491,36 @@ void do_transport_analysis(
     for (i=0 ; i<errcon->n_items; i++, index++)
         data[index] = errcon->error_value[i];
 
-    if (!SDDS_StartTable(&SDDS_analyze, 1)) {
+    if (SDDS_analyze_initialized) {
+      if (!SDDS_StartTable(&SDDS_analyze, 1)) {
         printf("Unable to start SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
-        }
-    if (!SDDS_SetParameters(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
+      }
+      if (!SDDS_SetParameters(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
                             IP_STEP, control->i_step, IP_SUBSTEP, control->i_vary, -1)) {
         SDDS_SetError("Unable to set SDDS parameter values (do_transport_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    for (i=0; i<SDDS_ColumnCount(&SDDS_analyze); i++)
+      }
+      for (i=0; i<SDDS_ColumnCount(&SDDS_analyze); i++)
         if (!SDDS_SetRowValues(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
                                i, data[i], -1)) {
-            printf("Unable to set SDDS column %s (do_transport_analysis)\n", 
-                    analysis_column[i].name);
-            fflush(stdout);
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            exitElegant(1);
-            }
-    if (!SDDS_WriteTable(&SDDS_analyze)) {
+          printf("Unable to set SDDS column %s (do_transport_analysis)\n", 
+                 analysis_column[i].name);
+          fflush(stdout);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+      if (!SDDS_WriteTable(&SDDS_analyze)) {
         printf("Unable to write SDDS table (do_transport_analysis)");
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exitElegant(1);
-        }
-    if (!inhibitFileSync)
-      SDDS_DoFSync(&SDDS_analyze);
+      }
+      if (!inhibitFileSync)
+        SDDS_DoFSync(&SDDS_analyze);
+    }
 
     if (fpPrintout)
       printMapAnalysisResults(fpPrintout, printout_order, M, &twiss, &chromDeriv, data);
@@ -599,14 +603,16 @@ void finish_transport_analysis(
     LINE_LIST *beamline
     )
 {
+  if (SDDS_analyze_initialized) {
     if (SDDS_IsActive(&SDDS_analyze) && !SDDS_Terminate(&SDDS_analyze)) {
-        SDDS_SetError("Problem terminating SDDS output (finish_transport_analysis)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }        
-    SDDS_analyze_initialized = 0;
-    if (fpPrintout)
-      fclose(fpPrintout);
-    }
+      SDDS_SetError("Problem terminating SDDS output (finish_transport_analysis)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }        
+  }
+  SDDS_analyze_initialized = 0;
+  if (fpPrintout)
+    fclose(fpPrintout);
+}
 
 
 VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize)

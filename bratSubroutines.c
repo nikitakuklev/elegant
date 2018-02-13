@@ -32,7 +32,7 @@ double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, doub
 void BRAT_setup_single_scan_field_data(char *input);
 double BRAT_exit_function(double *qp, double *q, double s);
 void BRAT_deriv_function(double *qp, double *q, double s);
-void BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData);
+void BRAT_lorentz_integration(double *accelCoord, double *q, long doStoreData, double *BMaxReturn);
 void BRAT_store_data(double *qp, double *q, double s, double exval);
 void BRAT_optimize_magnet(unsigned long flags);
 double refineAngle(double theta, double z0, double x0, double zv, double xv, 
@@ -47,6 +47,8 @@ static double fieldFactor = 1;
 static long zDuplicate = 0;
 static double rhoMax = 0;
 static double fieldSign = 1;
+static double BMaxOnTrajectory = -DBL_MAX;
+static double BSignOnTrajectory = 0;
 
 /* parameters for field calculation: */
 /* Bnorm is misnamed here, based on earlier versions of the program */
@@ -328,7 +330,7 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     for (ic=0; ic<6; ic++)
       accelCoord[ic] = part[ip][ic];
 
-    BRAT_lorentz_integration(accelCoord, q, 0);
+    BRAT_lorentz_integration(accelCoord, q, 0, NULL);
 
     for (ic=0; ic<6; ic++)
       part[ip][ic] = accelCoord[ic];
@@ -348,7 +350,7 @@ double BRAT_optim_function(double *param, long *invalid)
   dXOffset = param[1];
   dZOffset = param[2];
   magnetYaw = param[3];
-  BRAT_lorentz_integration(accelCoord, q, 0);
+  BRAT_lorentz_integration(accelCoord, q, 0, NULL);
   *invalid = 0;
   w = q+3;
   result = sqrt(sqr(accelCoord[0]) + sqr(accelCoord[1]));
@@ -419,6 +421,7 @@ void BRAT_optimize_magnet(unsigned long flags)
   dXOffset = x[1];
   dZOffset = x[2];
   magnetYaw = x[3];
+  BMaxOnTrajectory = -DBL_MAX;
   result = BRAT_optim_function(x, &dummy);
   if (!quiet) {
     printf("penalty function after optimization: %e\n", result);
@@ -436,7 +439,8 @@ static double global_delta;
 void BRAT_lorentz_integration(
                             double *accelCoord, 
                             double *q,   /* z, x, y, dz/dS, dx/dS, dy/dS, dF/dS */
-                            long doStoreData
+                            long doStoreData,
+                            double *BMaxReturn
                             )
 {
   long n_eq = 10;
@@ -449,7 +453,10 @@ void BRAT_lorentz_integration(
   double *w, *IF;
   //double xStart, dx;
   double zStart, slope, phi;
-  
+
+  BMaxOnTrajectory = -DBL_MAX;
+  BSignOnTrajectory = 0;
+
   global_delta = accelCoord[5];
   particle_inside = 0;
   n_stored = 0;
@@ -569,6 +576,10 @@ void BRAT_lorentz_integration(
       if (fpdebug) 
         fprintf(fpdebug, "%ld 0 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
+      if (BA>BMaxOnTrajectory) {
+        BMaxOnTrajectory = BA;
+        BSignOnTrajectory = SIGN(B[2]);
+      }
       /* 3. calculate the rotation matrix */
       A[0][0] = -(p[1]*B[2] - p[2]*B[1]);
       A[0][1] = -(p[2]*B[0] - p[0]*B[2]);
@@ -661,6 +672,10 @@ void BRAT_lorentz_integration(
   accelCoord[0] = (q[0]-zNomExit)/sin(phi);
   accelCoord[2] = q[2];
   accelCoord[4] += s_start+ds;
+
+  if (BMaxReturn)
+    *BMaxReturn = BMaxOnTrajectory*BSignOnTrajectory;
+
 #ifdef DEBUG
   fprintf(stderr, "final: x=%e, xp=%e, y=%e, yp=%e\n",
           accelCoord[0], accelCoord[1], accelCoord[2], accelCoord[3]);
@@ -684,10 +699,15 @@ double BRAT_exit_function(double *qp, double *q, double s)
 void BRAT_deriv_function(double *qp, double *q, double s)
 {
   double *F;
-  static double *w, *wp, factor;
+  static double *w, *wp, factor, BA;
 
   F = qp+6;
   BRAT_B_field(F, q);
+  BA = sqrt(F[0]*F[0] + F[1]*F[1] + F[2]*F[2]);
+  if (BA>BMaxOnTrajectory) {
+    BMaxOnTrajectory = BA;
+    BSignOnTrajectory = SIGN(F[2]);
+  }
   F[3] = (1-F[2])*F[2];
   w  = q+3;
   wp = qp+3;

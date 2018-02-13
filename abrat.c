@@ -457,7 +457,6 @@ int main(int argc, char **argv)
       Breference = BRAT_setup_arc_field_data(input, arcSName, arcFieldName, xCenter);
     } else {
       Breference = BRAT_setup_field_data(input, xCenter, zCenter);
-      if (!quiet) fprintf(stderr, "Breference = %le\n", Breference);
       zStart = zi-dz;
       if (zStart>zNomEntry) {
         fprintf(stderr, "zStart = %e, zNomEntry = %e\n",
@@ -486,6 +485,11 @@ int main(int argc, char **argv)
   
   if (optimizeFlags)
     BRAT_optimize_magnet(optimizeFlags);
+
+  accelCoord[0] = accelCoord[1] = accelCoord[2] = accelCoord[3] = accelCoord[4] = accelCoord[5] = 0;
+  BRAT_lorentz_integration(accelCoord, q, 1, &Breference);
+  rhoMax = rigidity/Breference;
+  if (!quiet) fprintf(stderr, "Breference = %le\n", Breference);
 
   if (fmap_output) {
     if (single_scan || arc_scan)
@@ -540,7 +544,7 @@ int main(int argc, char **argv)
       default:
         break;
       }
-      BRAT_lorentz_integration(accelCoord, q, 1);
+      BRAT_lorentz_integration(accelCoord, q, 1, NULL);
       if (!quiet) printf("\n");
       fflush(stdout);
       if (n_stored>0 && Z_stored[n_stored-1]<0)
@@ -626,7 +630,7 @@ int main(int argc, char **argv)
       accelCoord[3] = yp[iv];
       accelCoord[4] = 0;
       accelCoord[5] = (p[iv]-pCentral)/pCentral;
-      BRAT_lorentz_integration(accelCoord, q, 0);
+      BRAT_lorentz_integration(accelCoord, q, 0, NULL);
       x[iv] = accelCoord[0];
       xp[iv] = accelCoord[1];
       y[iv] = accelCoord[2];
