@@ -568,7 +568,6 @@ int main(int argc, char **argv)
             !SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, FZ_stored, n_stored, "BZ") ||
             !SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, FX_stored, n_stored, "BX") ||
             !SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, FY_stored, n_stored, "BY") ||
-            !SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, Fint_stored, n_stored, "Fint") ||
             !SDDS_SetParameters(&SDDS_output, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                                 "xf", accelCoord[0], "xpf", accelCoord[1],
                                 "yf", accelCoord[2], "ypf", accelCoord[3],
@@ -576,7 +575,6 @@ int main(int argc, char **argv)
                                 "dXDipole", dXOffset, "dZDipole", dZOffset,
                                 "YawDipole", magnetYaw,
                                 "BReference", Breference,
-                                "FINT", Fint_stored[n_stored-1], 
                                 (variable==-1?NULL:initial_variable_name[variable]), value, 
                                 NULL) ||
             !SDDS_WriteTable(&SDDS_output)) {
@@ -730,8 +728,6 @@ void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inp
                            NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineParameter(SDDS_output, "dZDipole", "", "m", "Displacement of dipole in Z",
                            NULL, SDDS_DOUBLE, NULL)<0 ||
-      SDDS_DefineParameter(SDDS_output, "FINT", "", NULL, "Final value of FINT integral", 
-                           NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineParameter(SDDS_output, "YawDipole", "", "rad", "Yaw of dipole",
                            NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineColumn(SDDS_output, "s", "s", "m", "Path length", NULL, SDDS_DOUBLE, 0)<0 ||
@@ -746,8 +742,7 @@ void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inp
       SDDS_DefineColumn(SDDS_output, "aY", "aY", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDS_output, "BZ", "BZ", "T", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDS_output, "BX", "BX", "T", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDS_output, "BY", "BY", "T", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(SDDS_output, "Fint", "Fint", "m", "Integral for FINT value", NULL, SDDS_DOUBLE, 0)<0) {
+      SDDS_DefineColumn(SDDS_output, "BY", "BY", "T", NULL, NULL, SDDS_DOUBLE, 0)<0) {
       SDDS_SetError("Problem setting up SDDS table for integration output");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
