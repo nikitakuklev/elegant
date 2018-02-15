@@ -1217,7 +1217,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   }
   
   if (beamline && beamline->name)
-    fprintf(fp, "USE,%s\n", beamline->name);
+    fprintf(fp, "USE,\"%s\"\n", beamline->name);
 
   fprintf(fp, "RETURN\n");
   fclose(fp);
