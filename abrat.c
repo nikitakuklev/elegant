@@ -716,6 +716,8 @@ void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inp
   if (!SDDS_InitializeOutput(SDDS_output, SDDS_BINARY, 1,s, "brat output", filename) ||
       SDDS_DefineParameter(SDDS_output, "theta", "$gQ$r", "degrees", "Total bending angle of magnet", NULL, 
                            SDDS_DOUBLE, (sprintf(s, "%.15e", theta), s))<0 ||
+      SDDS_DefineParameter(SDDS_output, "rigidity", "H", "T*m", "Rigidity of electron beam", NULL, 
+                           SDDS_DOUBLE, (sprintf(s, "%.15e", rigidity), s))<0 ||
       SDDS_DefineParameter(SDDS_output, "FSE", "$gr$r", "", "Optimal FSE", NULL, 
                            SDDS_DOUBLE, (sprintf(s, "%.15e", fse), s))<0 ||
       SDDS_DefineParameter(SDDS_output, "xf", "x$bf$n", "m", "Final x", NULL, SDDS_DOUBLE, NULL)<0 ||
