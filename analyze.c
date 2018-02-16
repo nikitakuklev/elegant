@@ -18,9 +18,7 @@
 #include "analyze.h"
 #include "matlib.h"
 
-#define CMATRIX_OFFSET 0
-#define RMATRIX_OFFSET CMATRIX_OFFSET+6
-#define X_BETA_OFFSET RMATRIX_OFFSET+36
+#define X_BETA_OFFSET 0
 #define Y_BETA_OFFSET X_BETA_OFFSET+6
 #define DETR_OFFSET Y_BETA_OFFSET+6
 #define X_ETA_OFFSET DETR_OFFSET+1
@@ -28,50 +26,9 @@
 #define CLORB_ETA_OFFSET Y_ETA_OFFSET+2
 #define N_ANALYSIS_COLUMNS CLORB_ETA_OFFSET+4
 
+long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order);
 
 SDDS_DEFINITION analysis_column[N_ANALYSIS_COLUMNS] = {
-    {"C1", "&column name=C1, units=m, symbol=\"C$b1$n\", type=double &end"},
-    {"C2", "&column name=C2, symbol=\"C$b2$n\", type=double &end"},
-    {"C3", "&column name=C3, units=m, symbol=\"C$b3$n\", type=double &end"},
-    {"C4", "&column name=C4, symbol=\"C$b4$n\", type=double &end"},
-    {"C5", "&column name=C5, units=m, symbol=\"C$b5$n\", type=double &end"},
-    {"C6", "&column name=C6, symbol=\"C$b6$n\", type=double &end"},
-    {"R11", "&column name=R11, symbol=\"R$b11$n\", type=double &end"},
-    {"R12", "&column name=R12, units=m, symbol=\"R$b12$n\", type=double &end"},
-    {"R13", "&column name=R13, symbol=\"R$b13$n\", type=double &end"},
-    {"R14", "&column name=R14, units=m, symbol=\"R$b14$n\", type=double &end"},
-    {"R15", "&column name=R15, symbol=\"R$b15$n\", type=double &end"},
-    {"R16", "&column name=R16, units=m, symbol=\"R$b16$n\", type=double &end"},
-    {"R21", "&column name=R21, units=1/m, symbol=\"R$b21$n\", type=double &end"},
-    {"R22", "&column name=R22, symbol=\"R$b22$n\", type=double &end"},
-    {"R23", "&column name=R23, units=1/m, symbol=\"R$b23$n\", type=double &end"},
-    {"R24", "&column name=R24, symbol=\"R$b24$n\", type=double &end"},
-    {"R25", "&column name=R25, units=1/m, symbol=\"R$b25$n\", type=double &end"},
-    {"R26", "&column name=R26, symbol=\"R$b26$n\", type=double &end"},
-    {"R31", "&column name=R31, symbol=\"R$b31$n\", type=double &end"},
-    {"R32", "&column name=R32, units=m, symbol=\"R$b32$n\", type=double &end"},
-    {"R33", "&column name=R33, symbol=\"R$b33$n\", type=double &end"},
-    {"R34", "&column name=R34, units=m, symbol=\"R$b34$n\", type=double &end"},
-    {"R35", "&column name=R35, symbol=\"R$b35$n\", type=double &end"},
-    {"R36", "&column name=R36, units=m, symbol=\"R$b36$n\", type=double &end"},
-    {"R41", "&column name=R41, units=1/m, symbol=\"R$b41$n\", type=double &end"},
-    {"R42", "&column name=R42, symbol=\"R$b42$n\", type=double &end"},
-    {"R43", "&column name=R43, units=1/m, symbol=\"R$b43$n\", type=double &end"},
-    {"R44", "&column name=R44, symbol=\"R$b44$n\", type=double &end"},
-    {"R45", "&column name=R45, units=1/m, symbol=\"R$b45$n\", type=double &end"},
-    {"R46", "&column name=R46, symbol=\"R$b46$n\", type=double &end"},
-    {"R51", "&column name=R51, symbol=\"R$b51$n\", type=double &end"},
-    {"R52", "&column name=R52, units=m, symbol=\"R$b52$n\", type=double &end"},
-    {"R53", "&column name=R53, symbol=\"R$b53$n\", type=double &end"},
-    {"R54", "&column name=R54, units=m, symbol=\"R$b54$n\", type=double &end"},
-    {"R55", "&column name=R55, symbol=\"R$b55$n\", type=double &end"},
-    {"R56", "&column name=R56, units=m, symbol=\"R$b56$n\", type=double &end"},
-    {"R61", "&column name=R61, units=1/m, symbol=\"R$b61$n\", type=double &end"},
-    {"R62", "&column name=R62, symbol=\"R$b62$n\", type=double &end"},
-    {"R63", "&column name=R63, units=1/m, symbol=\"R$b63$n\", type=double &end"},
-    {"R64", "&column name=R64, symbol=\"R$b64$n\", type=double &end"},
-    {"R65", "&column name=R65, units=1/m, symbol=\"R$b65$n\", type=double &end"},
-    {"R66", "&column name=R66, symbol=\"R$b66$n\", type=double &end"},
     {"betax", "&column name=betax, units=m, symbol=\"$gb$r$bx$n\", type=double &end"},
     {"alphax", "&column name=alphax, units=m, symbol=\"$gb$r$bx$n\", type=double &end"},
     {"nux", "&column name=nux, symbol=\"$gn$r$bx$n\", type=double &end"},
@@ -160,8 +117,6 @@ void setup_transport_analysis(
 			      run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
 			      analysis_column, N_ANALYSIS_COLUMNS, "setup_transport_analysis", 
 			      SDDS_EOS_NEWFILE);
-      SDDS_analyze_initialized = 1;
-      
       if (!SDDS_DefineSimpleColumns(&SDDS_analyze, control->n_elements_to_vary,
 				    control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE) ||
 	  !SDDS_DefineSimpleColumns(&SDDS_analyze, errcon->n_items, errcon->quan_name, errcon->quan_unit, 
@@ -169,6 +124,10 @@ void setup_transport_analysis(
         SDDS_SetError("Unable to define additional SDDS columns (setup_transport_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+
+      n_output_columns += addMatrixOutputColumns(&SDDS_analyze, output_order);
+
+      SDDS_analyze_initialized = 1;
       
       if (!SDDS_SaveLayout(&SDDS_analyze) || !SDDS_WriteLayout(&SDDS_analyze)) {
         SDDS_SetError("Unable to write SDDS layout for transport analysis");
@@ -435,12 +394,6 @@ void do_transport_analysis(
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
 				    maximumValue, 7, n_track, 8, verbosity>1?1:0);
     
-    for (i=0; i<6; i++) 
-      data[i+CMATRIX_OFFSET] = M->C[i];
-    for (i=k=0; i<6; i++)
-      for (j=0; j<6; j++, k++)
-	data[k+RMATRIX_OFFSET] = M->R[i][j];
-
     performChromaticAnalysisFromMap(M, &twiss, &chromDeriv);
 
     data[X_BETA_OFFSET  ] = twiss.betax;
@@ -490,6 +443,35 @@ void do_transport_analysis(
         data[index] = control->varied_quan_value[i];
     for (i=0 ; i<errcon->n_items; i++, index++)
         data[index] = errcon->error_value[i];
+
+    for (i=0; i<6; i++, index++) 
+      data[index] = M->C[i];
+    if (output_order>=1) {
+      for (i=0; i<6; i++)
+        for (j=0; j<6; j++, index++)
+          data[index] = M->R[i][j];
+      if (output_order>=2) {
+        for (i=0; i<6; i++) {
+          for (j=0; j<6; j++) {
+            for (k=0; k<=j; k++, index++) {
+              data[index] = M->T[i][j][k];
+            }
+          }
+        }
+        if (output_order>2) {
+          for (i=0; i<6; i++) {
+            for (j=0; j<6; j++) {
+              for (k=0; k<=j; k++) {
+                long l;
+                for (l=0; l<=k; l++, index++) {
+                  data[index] = M->Q[i][j][k][l];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     if (SDDS_analyze_initialized) {
       if (!SDDS_StartTable(&SDDS_analyze, 1)) {
@@ -1797,4 +1779,105 @@ void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M)
   }
 }
 
+long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order)
+{
+  char *unit[6] = {"m", "rad", "m", "rad", "m", "1"};
+  long n_numer, n_denom;
+  long i, j, k, l;
+  char *denom[4], *numer[4];
+  char s[100], t[100];
+  char buffer[SDDS_MAXLINE];
+  long nTotal;
 
+  for (i=0; i<6; i++) {
+    sprintf(buffer, "&column name=C%ld, symbol=\"C$b%ld$n\", type=double ", i+1, i+1);
+    if (SDDS_StringIsBlank(unit[i]))
+      strcpy_ss(t, " &end");
+    else
+      sprintf(t, "units=%s &end", unit[i]);
+    strcat(buffer, t);
+    if (!SDDS_ProcessColumnString(SDDSout, buffer, 0)) {
+      SDDS_SetError("Problem defining SDDS matrix output Rij columns (addMatrixOutputColumns)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+  nTotal += 6;
+
+  if (output_order>=1) {
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        sprintf(buffer, "&column name=R%ld%ld, symbol=\"R$b%ld%ld$n\", type=double ", i+1, j+1, i+1, j+1);
+        if (i==j)
+          strcpy_ss(t, " &end");
+        else
+          sprintf(t, "units=%s/%s &end", unit[i], unit[j]);
+        strcat(buffer, t);
+        if (!SDDS_ProcessColumnString(SDDSout, buffer, 0)) {
+          SDDS_SetError("Problem defining SDDS matrix output Rij columns (addMatrixOutputColumns)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
+    nTotal += 36;
+  }
+  if (output_order>=2) {
+    n_numer = 1;
+    n_denom = 2;
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        numer[0] = unit[i];
+        denom[0] = unit[j];
+        for (k=0; k<=j; k++) {
+          sprintf(buffer, "&column name=T%ld%ld%ld, symbol=\"T$b%ld%ld%ld$n\", type=double ",
+                  i+1, j+1, k+1, i+1, j+1, k+1);
+          numer[0] = unit[i];
+          denom[0] = unit[j];
+          denom[1] = unit[k];
+          simplify_units(s, numer, n_numer, denom, n_denom);
+          if (SDDS_StringIsBlank(s))
+            sprintf(t, " &end");
+          else
+            sprintf(t, "units=%s &end", s);
+          strcat(buffer, t);
+          if (!SDDS_ProcessColumnString(SDDSout, buffer, 0)) {
+            SDDS_SetError("Problem defining SDDS matrix output Tijk columns (addMatrixOutputColumns)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          nTotal ++;
+        }
+      }
+    }
+  }
+      
+  if (output_order>=3) {
+    n_numer = 1;
+    n_denom = 3;
+    for (i=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        for (k=0; k<=j; k++) {
+          for (l=0; l<=k; l++) {
+            sprintf(buffer, "&column name=U%ld%ld%ld%ld, symbol=\"U$b%ld%ld%ld%ld$n\", type=double ",
+                    i+1, j+1, k+1, l+1, i+1, j+1, k+1, l+1);
+            numer[0] = unit[i];
+            denom[0] = unit[j];
+            denom[1] = unit[k];
+            denom[2] = unit[l];
+            simplify_units(t, numer, n_numer, denom, n_denom);
+            if (SDDS_StringIsBlank(s))
+              sprintf(t, " &end");
+            else
+              sprintf(t, "units=%s &end", s);
+            strcat(buffer, t);
+            if (!SDDS_ProcessColumnString(SDDSout, buffer, 0)) {
+              SDDS_SetError("Problem defining SDDS matrix output Uijk columns (addMatrixOutputColumns)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+            nTotal ++;
+          }
+        }
+      }
+    }
+  }
+
+  return nTotal;
+}
