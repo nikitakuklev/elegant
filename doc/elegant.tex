@@ -80,6 +80,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item During tracking, particles are no long checked against apertures after transitioning through zero-length elements that
   don't modify the aperture. This improves performance in lattices with many \verb|MONI|, \verb|MARK|, and similar elements.
+\item The \verb|analyze_map| command can now output the matrix in SDDS format to second or third order, on request.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -893,7 +894,9 @@ Recommended value: ``\%s.kaf''.
 \begin{verbatim}
 &analyze_map
     STRING output = NULL;
+    long output_order = 1;
     STRING printout = NULL;
+    long printout_order = 2;
     double delta_x = 1e-6;
     double delta_xp = 1e-6;
     double delta_y = 1e-6;
@@ -904,7 +907,6 @@ Recommended value: ``\%s.kaf''.
     long center_on_orbit = 0;
     long verbosity = 0;
     long canonical_variables = 0;
-    long printout_order = 2;
     long periodic = 1;
     double beta_x = 1;
     double alpha_x = 0;
