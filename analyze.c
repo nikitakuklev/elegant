@@ -690,6 +690,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
+  case T_BRAT:
+    trackBRAT(coord, n_track, (BRAT*)eptr->p_elem, run->p_central, NULL);
+    break;
   case T_APPLE:
     ltmp1 = ((APPLE*)eptr->p_elem)->isr;
     ltmp2 = ((APPLE*)eptr->p_elem)->sr;
@@ -906,6 +909,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     GWigSymplecticPass(finalCoord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
     ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
+    break;
+  case T_BRAT:
+    n_left = trackBRAT(finalCoord, n_track, (BRAT*)eptr->p_elem, run->p_central, NULL);
     break;
   case T_APPLE:
     ltmp1 = ((APPLE*)eptr->p_elem)->isr;
