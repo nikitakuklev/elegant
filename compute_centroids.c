@@ -167,7 +167,7 @@ void compute_sigmas(
     double sum2[6], *part, value;
     long active = 1;
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
-  long n_total;
+  long n_total=0;
   double sum2_total[6];
 
   if (notSinglePart) {

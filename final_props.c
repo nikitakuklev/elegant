@@ -818,7 +818,7 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
 {
   double s11, s12, s22, x, xp, s11_local=0.0, s22_local=0.0, s12_local=0.0;
   double xc, xpc, xc_local=0.0, xpc_local=0.0;
-  long i, n_total;
+  long i, n_total=0;
   
   if (notSinglePart) {
     if (isMaster)
@@ -921,7 +921,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
     double tc, dpc, beta, P, tmp[2], tmp_total[2];
     long i, npCount, npCount_total;
     double *time = NULL;
-    long n_total;
+    long n_total=0;
 
     if (notSinglePart) {
       if (isMaster)

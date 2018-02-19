@@ -158,7 +158,8 @@ Program by Michael Borland.  ("__DATE__")\n";
 
 typedef struct {
   double beta, alpha, eta, etap, normEmittance, emittance;
-  uint32_t flags;
+  //uint32_t flags;
+  unsigned long flags;
   double R11, R12, R21, R22;
   double etaBeam, etapBeam;
   char *filename, *element;
@@ -176,7 +177,8 @@ typedef struct {
 
 typedef struct {
   double deltaStDev, tStDev, correlation, alpha, betaGamma, chirp;
-  uint32_t flags;
+  //uint32_t flags;
+  unsigned long flags;
   double R11, R12, R21, R22;
 #define DELTASTDEV_GIVEN  0x0001U
 #define TSTDEV_GIVEN      0x0002U
@@ -814,7 +816,8 @@ void SaveMatrix(SDDS_DATASET *save_matrix, PLANE_SPEC xSpec, PLANE_SPEC ySpec, Z
 long LoadMatrix(SDDS_DATASET *load_matrix, PLANE_SPEC *xSpec, PLANE_SPEC *ySpec, ZPLANE_SPEC *zSpec, long *xCompute,
 		long *yCompute, long *zCompute)
 {
-  uint32_t xFlag, yFlag, zFlag;
+  //uint32_t xFlag, yFlag, zFlag;
+  int32_t xFlag, yFlag, zFlag;
   long rows;
   double *m1=NULL, *m2=NULL;
   if (SDDS_ReadPage(load_matrix)<=0)
@@ -827,8 +830,10 @@ long LoadMatrix(SDDS_DATASET *load_matrix, PLANE_SPEC *xSpec, PLANE_SPEC *ySpec,
       !SDDS_GetParameterAsLong(load_matrix, "yMatrixFlag", &yFlag) ||
       !SDDS_GetParameterAsLong(load_matrix, "zMatrixFlag", &zFlag) ||
       !(m1=SDDS_GetColumnInDoubles(load_matrix, "m1")) ||
-      !(m2=SDDS_GetColumnInDoubles(load_matrix, "m2")))
+      !(m2=SDDS_GetColumnInDoubles(load_matrix, "m2"))) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    exit(1);
+  }
   if (xFlag) {
     xSpec->flags = xFlag;
     if (!SDDS_GetParameterAsDouble(load_matrix, "betax", &(xSpec->beta)) ||

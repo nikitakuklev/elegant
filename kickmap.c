@@ -71,7 +71,7 @@ long trackUndulatorKickMap(
   iTop = nParticles-1;
   dist = 0;
   tan_yaw = tan(map->yaw);
-  if (fabs(map->yawEnd)>1)
+  if (abs(map->yawEnd)>1)
     bombElegant("YAW_END parameter must be -1, 0, or 1", NULL);
   yawOffset = map->length/2*(map->yawEnd+1.0)*tan_yaw;
 

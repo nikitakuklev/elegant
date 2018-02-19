@@ -1793,7 +1793,7 @@ long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order)
   char *denom[4], *numer[4];
   char s[100], t[100];
   char buffer[SDDS_MAXLINE];
-  long nTotal;
+  long nTotal=0;
 
   for (i=0; i<6; i++) {
     sprintf(buffer, "&column name=C%ld, symbol=\"C$b%ld$n\", type=double ", i+1, i+1);

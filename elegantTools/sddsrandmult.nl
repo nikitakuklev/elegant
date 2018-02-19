@@ -6,7 +6,7 @@
 #include "namelist.h"
 
 #namelist perturbations static
-    STRING type = "quadrupole";
+    STRING type = (char*)"quadrupole";
     STRING name = NULL;
     STRING SDDS_output = NULL;
     STRING elegant_output = NULL;

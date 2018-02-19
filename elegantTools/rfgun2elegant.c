@@ -49,7 +49,7 @@ char *USAGE="rfgun2elegant inputfile outputfile [-multiplier=number] [-symmetriz
 [-seed=random_number_seed] [-sample_fraction=value] [-pmin=value]  [-verbose] [-drift=<meters>]\n\n\
 Program by Michael Borland.  (This is version 2, January 2010)";
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   SDDS_TABLE inTable, outTable;
   char *input, *output;

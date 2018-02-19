@@ -120,12 +120,12 @@ int main(int argc, char **argv)
                 if (m==0 && j>k)
                     continue;
  */
-                if (abs(k)+abs(j)>max_order || abs(k)+abs(j)<min_order)
+                if (labs(k)+labs(j)>max_order || labs(k)+labs(j)<min_order)
                     continue;
 /*                if (common_factor(m, k, j))
                     continue;
  */
-                order = abs(k)+abs(j);
+                order = labs(k)+labs(j);
                 if (k==0) {
                     /* vertical line */
                     if (j==0)
@@ -243,10 +243,10 @@ int nearly_equal(double x1, double y1, double x2, double y2)
 
 int common_factor(long m, long k, long j)
 {
-    long i, n, nd;
+    long i, n;
 
-    n = (abs(m)>abs(k)?abs(m):abs(k));
-    n = (abs(n)>abs(j)?abs(n):abs(j));
+    n = (labs(m)>labs(k)?labs(m):labs(k));
+    n = (labs(n)>labs(j)?labs(n):labs(j));
 
     for (i=2; i<=n; i++) {
         if (i*(k/i)-k)

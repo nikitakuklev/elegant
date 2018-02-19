@@ -535,7 +535,7 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 #else /* MPI */
   tmean = 0;
   if (!partOnMaster){
-    long np_total;
+    long np_total=0;
     double tmean_total;
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<np; ip++) {

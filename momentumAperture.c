@@ -23,7 +23,9 @@ static double momentumOffsetValue = 0;
 static long fireOnPass = 1;
 static double **turnByTurnCoord = NULL;
 static long turnsStored = 0;
+#if USE_MPI
 static long ideltaCutover;
+#endif
 
 #include "fftpackC.h"
 long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);

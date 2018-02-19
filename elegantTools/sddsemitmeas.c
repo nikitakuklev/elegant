@@ -446,7 +446,7 @@ int main(
 
   if (seed<0) {
     /* generate seed from system clock */
-    seed = (int)time((time_t)0);
+    seed = (int)time(NULL);
   }
   random_1(-seed);
 

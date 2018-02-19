@@ -714,7 +714,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   double p, t0, t0Error, t;
   long memoryUsed;
 #if SDDS_MPI_IO
-  long total_row, total_count;
+  long total_row=0, total_count;
 #endif
 
   log_entry("dump_watch_particles");
@@ -1679,7 +1679,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 	  if (!badPID) 
 	    dup2(fd, fileno(stdout));
 #endif
-	  printf("particle %ld has bad PID: %ld\n", (long)particle[i][6]);
+	  printf("particle %ld has bad PID: %ld\n", (long)particle[i][6], badPID);
 	  badPID++;
 	}
     }

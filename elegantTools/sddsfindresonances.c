@@ -364,7 +364,7 @@ int main(int argc, char **argv)
 	      signs = 2;
 	    else {
 	      signs = 1;
-	      multy = abs(multy);
+	      multy = labs(multy);
 	    }
 	  }
 	  for (sign=0; sign<signs; sign++) {

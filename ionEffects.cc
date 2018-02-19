@@ -397,7 +397,8 @@ void trackWithIonEffects
   long *npBunch = NULL;          /* array to record how many particles are in each bunch */
   long np, npTotal, max_np = 0;
   /* properties of the electron beam */
-  double centroid[2], sigma[2], tNow, qBunch, sigmatemp[2];
+  double centroid[2], sigma[2], tNow, qBunch;
+  //double sigmatemp[2];
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
   double **speciesCentroid=NULL, *speciesCharge=NULL, **speciesSigma=NULL;
@@ -675,7 +676,7 @@ void trackWithIonEffects
             */
 
 	    // Note: not parallelized!!
-	    double beamFact = 0, jx = 0, jy = 0, qTemp = 0, Pmi = 0, rnd = 0;
+	    double beamFact = 0, jx = 0, jy = 0, Pmi = 0, rnd = 0;
 	    beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
 	    for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
 	      jx = ionEffects->coordinate[index][jMacro][0] - centroid[0];

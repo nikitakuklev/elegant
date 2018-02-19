@@ -50,17 +50,17 @@ double sext_rhom[N_SEXT_ENTRIES] = {8.47e-2, 2.84e-1, 5.00e-1, 6.39e-1, 6.43e-1,
 #define INDEX_SEXT 1
 #define N_FUNDAMENTAL_TYPES 2
 char *type_name[N_FUNDAMENTAL_TYPES] = {
-    "quadrupole", "sextupole"
+  (char*)"quadrupole", (char*)"sextupole"
     } ;
 MULTIPOLE_COEFS coefs[N_FUNDAMENTAL_TYPES] = {
-    {"quadrupole", 2, quad_am, quad_bm, quad_rhom, N_QUAD_ENTRIES},
-    {"sextupole", 3, sext_am, sext_bm, sext_rhom, N_SEXT_ENTRIES},
-    } ;
+  {(char*)"quadrupole", 2, quad_am, quad_bm, quad_rhom, N_QUAD_ENTRIES},
+  {(char*)"sextupole", 3, sext_am, sext_bm, sext_rhom, N_SEXT_ENTRIES},
+} ;
 
 
 #define MULTI_PERT 0
 #define N_COMMANDS 1
-char *command[N_COMMANDS] = { "perturbations" };
+char *command[N_COMMANDS] = { (char*)"perturbations" };
 
 int main(int argc, char **argv)
 {
@@ -69,8 +69,8 @@ int main(int argc, char **argv)
   NAMELIST_TEXT namelist_text;
   
   if (argc!=2)
-    bomb(NULL, "randpert inputfile");
-  fpin = fopen_e(argv[1], "r", 0);
+    bomb(NULL, (char*)"randpert inputfile");
+  fpin = fopen_e(argv[1], (char*)"r", 0);
 
   while (get_namelist(s, 1024, fpin)) {
     scan_namelist(&namelist_text, s);
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
       do_perturbations(&namelist_text);
       break;
     default:
-      bomb("unknown namelist/command given", NULL);
+      bomb((char*)"unknown namelist/command given", NULL);
       break;
     }
   }
@@ -101,7 +101,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
 
   /* initialize variables */
   SDDS_output = elegant_output = kmult_output = name = NULL;
-  type = "quadrupole";
+  type = (char*)"quadrupole";
   bore_radius = 0.066;
   reference_radius = 0;
   effective_length = 0.23;
@@ -115,27 +115,27 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   print_namelist(stdout, &perturbations);
 
   if (n_cases<=0)
-    bomb("n_cases <= 0", NULL);
+    bomb((char*)"n_cases <= 0", NULL);
   if (bore_radius<=0)
-    bomb("bore_radius <= 0", NULL);
+    bomb((char*)"bore_radius <= 0", NULL);
   if (reference_radius<=0)
     reference_radius = bore_radius;
   if (!SDDS_output)
-    bomb("no output filename given", NULL);
+    bomb((char*)"no output filename given", NULL);
   if ((iN=match_string(type, type_name, N_FUNDAMENTAL_TYPES, 0))<0)
-    bomb("unknown magnet type", NULL);
+    bomb((char*)"unknown magnet type", NULL);
   if (n_harm<=0 || n_harm>coefs[iN].n)
     n_harm = coefs[iN].n;
-  random_1(abs(random_number_seed));
+  random_1(std::abs(random_number_seed));
   if (!name) {
     if (iN==INDEX_QUAD)
-      name = "qh";
+      name = (char*)"qh";
     else
-      name = "sh";
+      name = (char*)"sh";
   }
 
   /* set up output file */    
-  fpSDDS = fopen_e(SDDS_output, "w", 0);
+  fpSDDS = fopen_e(SDDS_output, (char*)"w", 0);
   fprintf(fpSDDS, "SDDS1\n");
   for (i=1; i<=n_harm; i++) 
     fprintf(fpSDDS, "&column name=f%ld, description=\"normal %ld-pole fractional error\", type=double &end\n", i-1, 2*i);
@@ -157,7 +157,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   fprintf(fpSDDS, "%ld\n", n_cases);
 
   if (kmult_output) {
-    fpKMULT = fopen_e(kmult_output, "w", 0);
+    fpKMULT = fopen_e(kmult_output, (char*)"w", 0);
     fprintf(fpKMULT, "SDDS1\n");
     fprintf(fpKMULT, "&parameter name=MagnetType, type=string, fixed_value=%s &end\n", type);
     fprintf(fpKMULT, "&parameter name=BoreRadius, type=double, fixed_value=%e, units=m &end\n", bore_radius);
@@ -176,7 +176,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   }
   
   if (elegant_output) {
-    fpElegant = fopen_e(elegant_output, "w", 0);
+    fpElegant = fopen_e(elegant_output, (char*)"w", 0);
     fprintf(fpElegant, "! elegant lattice and namelist input prepared by sddsrandmult\n");
     fprintf(fpElegant, "! for result of mechanical errors in %s magnets with R=%lgm and L=%lgm\n",
             coefs[iN].name, bore_radius, effective_length);
@@ -349,7 +349,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
       fprintf(fpElegant, "&error_element name=\"%ss*\", item=\"knl\", amplitude=1, type=\"plus_or_minus\" &end\n", name);
       break;
     default:
-      bomb("invalid value of iN encountered--programming error", NULL);
+      bomb((char*)"invalid value of iN encountered--programming error", NULL);
       break;
     }
   }
