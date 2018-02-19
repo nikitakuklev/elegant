@@ -24,7 +24,7 @@ static FILE *fpHam = NULL;
 #endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0);
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2);
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
@@ -235,7 +235,7 @@ long track_through_ccbend(
 
   if (angle!=0 && iPart<=0) {
     switchRbendPlane(particle, n_part, fabs(angle/2), Po);
-    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
+    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length);
   }
 
   if (dx || dy || dz)
@@ -272,7 +272,7 @@ long track_through_ccbend(
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
   if (ccbend->optimized!=-1) { /* don't think this test is needed */
     if (angle!=0 && (iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) { 
-      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0);
+      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length);
       switchRbendPlane(particle, n_part, fabs(angle/2), Po);
     }
   }
@@ -603,13 +603,19 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
   }
 }
 
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0)
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2)
 {
   long i;
-  double c;
+  double c, d, e;
   c = sin(alpha)/rho0;
-  for (i=0; i<n_part; i++) 
-    particle[i][3] -= particle[i][2]*c/(1+particle[i][5]);
+  d = sin(alpha)*K1;
+  e = sin(alpha)*K2/2;
+  for (i=0; i<n_part; i++) {
+    double x, y;
+    x = particle[i][0];
+    y = particle[i][2];
+    particle[i][3] -= y*(c + d*x + e*(x*x-y*y))/(1+particle[i][5]);
+  }
 }
 
 double ccbend_trajectory_error(double *value, long *invalid)
