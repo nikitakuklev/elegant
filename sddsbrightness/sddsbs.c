@@ -41,7 +41,7 @@ static char *option[N_OPTIONS] = {
   "electronBeam", "photonEnergy", "angle", "magnetField", "pipe", "nowarnings", "criticalenergy" };
 
 #define SPECTRA_MODES 2
-static char *spectra_options[SPECTRA_MODES]={"frequency", "spatial"};
+//static char *spectra_options[SPECTRA_MODES]={"frequency", "spatial"};
 
 char *USAGE="sddsbs <outputFile> [-pipe[=out]] [-nowarnings] \n\
      [-electronBeam=current=<value>(mA),energy=<value>(GeV)] \n\

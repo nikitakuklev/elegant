@@ -632,7 +632,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
   if (kx< EPSK || ky < EPSK) {
     k_magnet = kx + ky;
     gk = k_magnet*(ipow(k_magnet, 6) + 24.0 * ipow(k_magnet,4)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
-  } else if (abs(kx-ky)< EPSK) {
+  } else if (fabs(kx-ky)< EPSK) {
     k_magnet = kx;
     gk = 32.0/7.0*k_magnet/pow(1.0 + k_magnet*k_magnet, 3.5);
   }

@@ -221,7 +221,7 @@ int main(int argc, char **argv)
   char *Kfilename=NULL, *Kcolumn=NULL;
   double current, totalLength, periodLength, KStart, KEnd, coupling, emittanceRatio, dK=0, *Kvalue=NULL;
   int32_t KPoints;
-  long harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, ij, periods;
+  long harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
   double pCentral, ex0, ey0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
@@ -1124,7 +1124,7 @@ void Dejus_CalculateBrightness(double current,long nE,
         ekMax=i*ek+i*dep1/2.0;
         if (i==1) ekMin=ekMin-dep1;
         if (i> (ek/dep1)) {
-          fprintf(stderr,"Warning: overlapping range for initial peak search for harmonic %ld\n",i);
+          fprintf(stderr,"Warning: overlapping range for initial peak search for harmonic %d\n",i);
           exitLoop=1;
           ih++;
           break;

@@ -491,7 +491,7 @@ int getRefraction (int mode)
 {
   int     i, Z=0;
   float   energy_keV;
-  complex cosThetaIn, sinThetaIn, cosThetaOut, n, sAmpReflect, pAmpReflect;
+  complex double cosThetaIn, sinThetaIn, cosThetaOut, n, sAmpReflect, pAmpReflect;
   
   if (verbose > 3) { fprintf(stdout, "getRefraction: targetFormula = %s\n", targetFormula); }
   if (verbose > 2) { 
@@ -690,7 +690,7 @@ void SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, int mode, SDDS_DAT
     }
     SDDS_FreeStringArray(par, pars);
   }
-  if (verbose > 1 ) { fprintf(stdout, "cols %ld pars %ld\n", cols, pars); }
+  if (verbose > 1 ) { fprintf(stdout, "cols %d pars %d\n", cols, pars); }
   if (!SDDS_DefineSimpleParameter(SDDSout, "sddsxra_mode", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(SDDSout, "TargetMaterial", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleParameter(SDDSout, "TargetFormula", NULL, SDDS_STRING) ||

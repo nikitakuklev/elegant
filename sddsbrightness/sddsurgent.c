@@ -317,9 +317,9 @@ approximation for an ideal planar undulator or an ideal elliptical undulator (in
 
 int main(int argc, char **argv) {
   char *inputfile, *outputfile, *undulatorType, *description, *output, *method_str, *mode_str;
-  SDDS_DATASET sddsin, sddsout, *sddsout2=NULL, sddsout1;
+  SDDS_DATASET sddsout, *sddsout2=NULL, sddsout1;
   unsigned long pipeFlags=0,dummyFlags=0;
-  long i_arg, tmpFileUsed, i, j, special=0, mode_index=-1, nXP0, nYP0;
+  long i_arg, tmpFileUsed, i, special=0, mode_index=-1, nXP0, nYP0;
   long hUndulator = 1;
 
   SCANNED_ARG *s_arg;
@@ -1739,11 +1739,11 @@ void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARA
       error++;
     }
     
-    if (abs(mode)==6 && icalc==3) {
+    if (labs(mode)==6 && icalc==3) {
       fprintf(stderr, "In URGENT, mode=6 or mode=-6 (power density and integrated power calculation) is not available for method=3 (WalkerFinite method).");
       error++;
     }
-    if (undulator_param->itype==2 && (mode==3 || mode==5 || abs(mode)==6)) {
+    if (undulator_param->itype==2 && (mode==3 || mode==5 || labs(mode)==6)) {
       fprintf(stderr, "In URGENT, mode=3, 5, 6 or -6 is not available for canted undulator (itype=2, phase>0).\n");
       error++;
     }
@@ -1815,7 +1815,7 @@ void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARA
         error++;
       }
     } else {
-      if ((abs(mode)<5 && icalc!=3) || (abs(mode)!=6 && icalc==1)) {
+      if ((labs(mode)<5 && icalc!=3) || (labs(mode)!=6 && icalc==1)) {
         fprintf(stderr, "The rms x and y divergence  should not be zero for URGENT mode 1,2,3,4 icalc=1,2 or mode=+-6, and method=1 calculation.\n");
         error++;
       }
