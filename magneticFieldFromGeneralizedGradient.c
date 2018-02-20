@@ -626,13 +626,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       part[ip][5] = delta;
     }
   }  else { 
-    /* Element body */
+    /* Non-symplectic */
     double B[3], p[3], dp[3], Bphi, Br, B2Max, pErr[3];
     double pOrig;
     double Btemp[3];
     double xpTemp, ypTemp, xpNew, ypNew;
     double xTemp, yTemp, xNew, yNew, preFactorDz, deltaTemp;
-
     double magnet_s;
 
     for (ip=0; ip<np; ip++) {
