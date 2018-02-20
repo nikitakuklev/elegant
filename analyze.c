@@ -27,6 +27,7 @@
 #define N_ANALYSIS_COLUMNS CLORB_ETA_OFFSET+4
 
 long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order);
+long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2) ;
 
 SDDS_DEFINITION analysis_column[N_ANALYSIS_COLUMNS] = {
     {"betax", "&column name=betax, units=m, symbol=\"$gb$r$bx$n\", type=double &end"},
@@ -839,7 +840,6 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nPoints1 = 5;
   long maxFitOrder = 4;
   /* We'll store some of the matrices to avoid recomputing them */
-  /*
 #define MAX_N_STORED_MATRICES 100
   static long nStoredMatrices = 0, iStoredMatrices = 0;
   static ELEMENT_LIST **storedElement=NULL;
@@ -852,8 +852,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   for (i=0; i<nStoredMatrices; i++) {
     CCBEND *crbptr0, *crbptr1;
-    if (eptr->type==storedElement[i]->type && 
-	memcmp(storedElement[i]->p_elem, eptr->p_elem, entity_description[eptr->type].user_structure_size)==0) {
+    BRAT *brat0, *brat1;
+    short copied = 0;
+    if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0) {
       M = tmalloc(sizeof(*M));
       copy_matrices(M, storedMatrix[i]);
       switch (eptr->type) {
@@ -868,14 +869,26 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	crbptr1->referenceData[1] = crbptr0->referenceData[1];
 	crbptr1->referenceData[2] = crbptr0->referenceData[2];
 	crbptr1->referenceData[3] = crbptr0->referenceData[3];
+        copied = 1;
+        printf("Using stored matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
+        fflush(stdout);
 	break;
+      case T_BRAT:
+        brat0 = (BRAT*)storedElement[i]->p_elem;
+        brat1 = (BRAT*)eptr->p_elem;
+        brat1->initialized = brat0->initialized;
+        brat1->dataIndex = brat0->dataIndex;
+        copied = 1;
+        printf("Using stored matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
+        fflush(stdout);
+        break;
       default:
 	break;
       }
-      return M;
+      if (copied)
+        return M;
     }
   }
-  */
 
   if (stepSize==NULL)
     stepSize = defaultStep;
@@ -897,6 +910,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
     ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
     ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
+    printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
+    fflush(stdout);
     n_left = track_through_ccbend(finalCoord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                                   NULL, NULL, NULL, NULL, -1, -1);
     ((CCBEND*)eptr->p_elem)->isr = ltmp1;
@@ -911,6 +926,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
   case T_BRAT:
+    printf("Computing tracking-based matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
+    fflush(stdout);
     n_left = trackBRAT(finalCoord, n_track, (BRAT*)eptr->p_elem, run->p_central, NULL);
     break;
   case T_APPLE:
@@ -1024,18 +1041,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
-  /*
-  storedElement[iStoredMatrices] = eptr;
-  storedMatrix[iStoredMatrices] = M;
-  if (nStoredMatrices<MAX_N_STORED_MATRICES) {
-    iStoredMatrices++;
-    nStoredMatrices++;
-  } else {
-    iStoredMatrices++;
-    if (iStoredMatrices==nStoredMatrices)
-      iStoredMatrices = 0;
+  if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
+    printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+    storedElement[iStoredMatrices] = eptr;
+    storedMatrix[iStoredMatrices] = M;
+    if (nStoredMatrices<MAX_N_STORED_MATRICES) {
+      iStoredMatrices++;
+      nStoredMatrices++;
+    } else {
+      iStoredMatrices++;
+      if (iStoredMatrices==nStoredMatrices)
+        iStoredMatrices = 0;
+    }
   }
-  */
 
   /*
   for (i=0; i<6; i++) {
@@ -1886,4 +1904,57 @@ long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order)
   }
 
   return nTotal;
+}
+
+long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2) 
+{
+  long i;
+  double d1, d2;
+  long l1, l2;
+  short s1, s2;
+  char *cs1, *cs2;
+  if (e1->type!=e2->type)
+    return 1;
+  for (i=0; i<entity_description[e1->type].n_params; i++) {
+    switch (entity_description[e1->type].parameter[i].type) {
+    case IS_DOUBLE:
+      d1 = *((double*)((e1->p_elem)+entity_description[e1->type].parameter[i].offset));
+      d2 = *((double*)((e2->p_elem)+entity_description[e2->type].parameter[i].offset));
+      if (d1!=d2)
+        return d1<d2 ? -1 : 1 ;
+      break;
+    case IS_LONG:
+      l1 = *((long*)((e1->p_elem)+entity_description[e1->type].parameter[i].offset));
+      l2 = *((long*)((e2->p_elem)+entity_description[e2->type].parameter[i].offset));
+      if (l1!=l2)
+        return l1<l2 ? -1 : 1 ;
+      break;
+    case IS_SHORT:
+      s1 = *((short*)((e1->p_elem)+entity_description[e1->type].parameter[i].offset));
+      s2 = *((short*)((e2->p_elem)+entity_description[e2->type].parameter[i].offset));
+      if (s1!=s2)
+        return s1<s2 ? -1 : 1 ;
+      break;
+    case IS_STRING:
+      cs1 = *((char**)((e1->p_elem)+entity_description[e1->type].parameter[i].offset));
+      cs2 = *((char**)((e2->p_elem)+entity_description[e2->type].parameter[i].offset));
+      if (cs1!=cs2) {
+        if (!cs1)
+          return 1;
+        if (!cs2)
+          return -1;
+        if (l1=strcmp(cs1, cs2))
+          return l1;
+      }
+      break;
+    default:
+      fprintf(stderr, "Error: invalid item type code %ld for %s parameter of %s\n",
+              entity_description[e1->type].parameter[i].type, 
+              entity_description[e1->type].parameter[i].name,
+              entity_name[e1->type]);
+      exit(1);
+      break;
+    }
+  }
+  return 0;
 }

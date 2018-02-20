@@ -140,6 +140,9 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
     } else {
       /* read data from file */
       
+      printf("Reading BRAT field data from %s\n", brat->filename);
+      fflush(stdout);
+
       if (!SDDS_InitializeInput(&SDDS_table, brat->filename) || !SDDS_ReadPage(&SDDS_table)) {
         SDDS_SetError("Unable to read BRAT data file");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -265,7 +268,10 @@ long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **acc
       
       brat->dataIndex = nBrat3dData;
       nBrat3dData += 1;
+      printf("Done reading BRAT field data from %s\n", brat->filename);
+      fflush(stdout);
     }
+
     brat->initialized = 1;
   }
 
@@ -853,6 +859,9 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
   double xc;
 #endif
 
+  printf("Reading BRAT field data from %s\n", input);
+  fflush(stdout);
+
   if (!SDDS_InitializeInput(&SDDS_table, input) || !SDDS_ReadPage(&SDDS_table)) {
     SDDS_SetError("Unable to read data file");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1153,12 +1162,11 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
     ByNorm = Byd;
     BzNorm = Bzd;
     
-    if (!quiet) 
-      printf("3D field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
-              nx, ny, nz, dx, dy, dz,
-              xi, xf, yi, yf, zi, zf,
-              Bmin, Bmax
-              );
+    printf("3D field map data: nx=%ld, ny=%ld, nz=%ld\ndx=%e, dy=%e, dz=%e\nx:[%e, %e], y:[%e, %e], z:[%e, %e]\nBy:[%e, %e]\n",
+           nx, ny, nz, dx, dy, dz,
+           xi, xf, yi, yf, zi, zf,
+           Bmin, Bmax
+           );
   }
 
   return Bmax;
