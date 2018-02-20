@@ -1024,7 +1024,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHVCOR_PARAMS 17
 #define N_BMAPXYZ_PARAMS 13
 #define N_BRAT_PARAMS 17
-#define N_BGGEXP_PARAMS 17
+#define N_BGGEXP_PARAMS 24
 #define N_BRANCH_PARAMS 4
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
@@ -2921,6 +2921,11 @@ typedef struct {
   short symplectic;        /* use symplectic integrator */
   short synchRad, isr;
   char *particleOutputFile;  
+  short isBend;
+  double xVertex, zVertex;
+  double xEntry, zEntry;
+  double xExit, zExit;
+  double dxExpansion;
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;

@@ -9,6 +9,7 @@ typedef struct {
   double radius;       /* reference radius */
   long nz;             /* number of z points */
   double dz;           /* z spacing */
+  double zMin, zMax;   /* minimum and maximum z values */
   long nm;             /* number of values of m (angular harmonic) */
   long *m;             /* value of m */
   double nGradients;   /* number of gradient functions per m */
@@ -94,16 +95,23 @@ long addBGGExpData(char *filename)
   storedBGGExpData[nBGGExpDataSets].dCmns_dz = NULL;
 
   im = nz = 0;
+  storedBGGExpData[nBGGExpDataSets].zMin = DBL_MAX;
+  storedBGGExpData[nBGGExpDataSets].zMax = -DBL_MAX;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (!SDDS_GetParameter(&SDDSin, "m", &m) || m<1)
       bombElegantVA("Problem with value of m for page %ld of file %s for BGGEXP %s #%ld\n", readCode, filename, tcontext.elementName, tcontext.elementOccurrence);
     if (readCode==1) {
       long iz;
-      double dz0, dz, *z;
+      double dz0, dz, *z, zMin, zMax;
       if ((nz = SDDS_RowCount(&SDDSin))<=1)
         bombElegantVA("Too few z values in file %s for BGGEXP %s #%ld\n", filename, tcontext.elementName, tcontext.elementOccurrence);
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, "z")))
         bombElegantVA("Problem reading column z from %s for BGGEXP %s #%ld\n", buffer, filename, tcontext.elementName, tcontext.elementOccurrence);
+      find_min_max(&zMin, &zMax, z, nz);
+      if (zMin<storedBGGExpData[nBGGExpDataSets].zMin)
+        storedBGGExpData[nBGGExpDataSets].zMin = zMin;
+      if (zMax>storedBGGExpData[nBGGExpDataSets].zMax)
+        storedBGGExpData[nBGGExpDataSets].zMax = zMax;
       dz0 = z[1] - z[0];
       for (iz=1; iz<nz; iz++) {
         dz = z[iz] - z[iz-1];
@@ -161,9 +169,10 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   long ip, ig, im, iz, irow, m, igLimit, izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
-  double gamma, betaz, step,  length, fieldLength;
+  double gamma, betaz, step,  length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
+  double zMin, zMax, xVertex, zVertex, xEntry, zEntry, xExit, zExit;
 
 #ifdef DEBUG
   static FILE *fpdebug = NULL;
@@ -231,20 +240,38 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   bggData = storedBGGExpData+bgg->dataIndex;
 
   length = bgg->length; 
-  fieldLength = bgg->fieldLength;
-  if (fieldLength<0)
-    fieldLength = length;
   
-  step = bgg->fieldLength/(bggData->nz-1);
+  zMin = bggData->zMin;
+  zMax = bggData->zMax;
+  
+  if (bgg->isBend) {
+    xVertex = bgg->xVertex;
+    xEntry = bgg->xEntry;
+    xExit = bgg->xExit;
+    zVertex = bgg->zVertex;
+    zEntry = bgg->zEntry;
+    zExit = bgg->zExit;
+  } else {
+    xEntry = xExit = xVertex = 0;
+    zVertex = (zMax+zMin)/2;
+    zEntry = zVertex - length/2;
+    zExit = zVertex + length/2;
+    /*
+    printf("fieldLength = %le, z:[%le, %le]\n", fieldLength, zMin, zMax);
+    printf("vertex: (%le, %le)\n", zVertex, xVertex);
+    printf("entry: (%le, %le)\n", zEntry, xEntry);
+    printf("exit: (%le, %le)\n", zExit, xExit);
+    */
+  }
+
+  step = (zMax-zMin)/(bggData->nz-1);
+  /*
   if (fabs(step/bggData->dz-1)>1e-6) 
     bombElegantVA("Length mismatch for BGGEXP %s #%ld: %le vs %le\nlength=%le m, nz=%ld\n",
                   tcontext.elementName, tcontext.elementOccurrence, step, bggData->dz,
                   bgg->fieldLength, bggData->nz);
+  */
 
-  /* adjust for insertion length differing from field length */
-  if (length!=fieldLength)
-    exactDrift(part, np, (length-fieldLength)/2);
-  
   /* Do misalignments */
   if (bgg->dx || bgg->dy || bgg->dz)
     offsetBeamCoordinates(part, np, bgg->dx, bgg->dy, bgg->dz);
@@ -272,6 +299,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     double epsImplConverge = 1.e-14*1.0e-3;
     double Bx, By, Bz;
 
+    double magnet_s;
+
     scaleA = -bgg->strength*particleCharge*particleRelSign/(pCentral*particleMass*c_mks);  /** [factor in parentheses of a = (q/p_0)*A] **/
     /* Element body */
     for (ip=0; ip<np; ip++) {
@@ -286,20 +315,50 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
 #endif
 
-      x = part[ip][0];
-      y = part[ip][2];
+      /* Transform to canonical coordinates */
       delta = part[ip][5];
       denom = 1.0/sqrt(1.0 + part[ip][1]*part[ip][1] + part[ip][3]*part[ip][3]);
+      x = part[ip][0];
       px = part[ip][1]*(1.0 + delta)*denom;
+      y = part[ip][2];
       py = part[ip][3]*(1.0 + delta)*denom;
       s = part[ip][4];
       delta_s = 0.0;
       Bx = By = Bz = 0;
 
-      /* Drift particles back 1/2 step to prepare for implicit midpoint rule integration */
-      x -= 0.5*step*bgg->zInterval*part[ip][1];
-      y -= 0.5*step*bgg->zInterval*part[ip][3];
-      s -= 0.5*step*bgg->zInterval/denom;
+      /* Compute transformation from canonical accelerator coordinates -> magnet grid if bending magnet */
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
+      denom = 1.0/sqrt(denom);
+      if (bgg->isBend) {
+        phi = atan2(xVertex-xEntry, zVertex-zEntry);  /* angle of incoming x-plane w.r.t. magnet x */
+        sin_phi = sin(phi);
+        cos_phi = cos(phi);
+        magnet_s = x*sin_phi/( cos_phi - sin_phi*px*denom );
+      } else {
+        phi = sin_phi = magnet_s = 0;
+        cos_phi = 1;
+      }
+
+      x = (x + px*magnet_s*denom*denom)/cos_phi;
+      y = (y + py*magnet_s*denom*denom);
+      px = px*cos_phi + sin_phi/denom;
+      delta_s = (1 + delta)*magnet_s*denom;
+
+      x += xEntry + bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+
+      /* Drift backward from entrance plane to beginning of field map */
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
+      denom = 1.0/sqrt(denom);
+      x -= (zEntry - zMin)*px*denom;
+      y -= (zEntry - zMin)*py*denom;
+      s -= (zEntry - zMin)*(1.0 + delta)*denom;
+
+      /* Drift particles back 1/2 step from start of field map to prepare for implicit midpoint rule integration */
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
+      denom = 1.0/sqrt(denom);
+      x -= 0.5*step*bgg->zInterval*px*denom;
+      y -= 0.5*step*bgg->zInterval*py*denom;
+      s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
      /* Integrate through the magnet */
       for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
@@ -484,7 +543,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           }
         }
 
-        if (iz!=(bggData->nz-1))
+        if (iz!=(bggData->nz))
           s += step*bgg->zInterval;
 
 #ifdef DEBUG
@@ -494,17 +553,19 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       }
       /* Drift particles back 1/2 step to end on last magnet grid point used */
-      denom = (1.0 + delta)*(1.0 + delta) - ux*ux - uy*uy;
+      px = ux;  /* Assuming Ax -> 0 */
+      py = uy;  /* Assuming Ay -> 0 */
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
       denom = 1.0/sqrt(denom);
-      x -= 0.5*step*bgg->zInterval*ux*denom;
-      y -= 0.5*step*bgg->zInterval*uy*denom;
+      x -= 0.5*step*bgg->zInterval*px*denom;
+      y -= 0.5*step*bgg->zInterval*py*denom;
       s -= 0.5*step*bgg->zInterval*(1.0 + delta)*denom;
-      denom = (1.0 + delta)*(1.0 + delta) - ux*ux - uy*uy;
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
       denom = 1.0/sqrt(denom);
       if (iz<bggData->nz) {
         /* Drift forward */
-	x += bggData->dz*(bggData->nz-1-(iz-1))*ux*denom;
-	y += bggData->dz*(bggData->nz-1-(iz-1))*uy*denom;
+	x += bggData->dz*(bggData->nz-1-(iz-1))*px*denom;
+	y += bggData->dz*(bggData->nz-1-(iz-1))*py*denom;
 	s += bggData->dz*(bggData->nz-1-(iz-1))*(1.0 + delta)*denom;
       }
  
@@ -528,6 +589,33 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
 #endif
 
+      /* Drift backward from end of field map to exit plane */
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
+      denom = 1.0/sqrt(denom);
+      x -= (zMax - zExit)*px*denom;
+      y -= (zMax - zExit)*py*denom;
+      s -= (zMax - zExit)*(1.0 + delta)*denom;
+      x -= xExit + bgg->dxExpansion;  /* Shift x according to exit point & map shift */
+
+      /* Compute transformation from magnet grid -> accelerator coordinates if bending magnet */
+      if (bgg->isBend) {
+        phi = atan2(xVertex-xExit, zExit-zVertex);  /* angle of outgoing x-plane w.r.t. magnet x */
+        sin_phi = sin(phi);
+        cos_phi = cos(phi);
+      } else {
+        sin_phi = 0;
+        cos_phi = 1;
+      }
+      denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
+      denom = 1.0/sqrt(denom);
+      magnet_s = x*sin_phi/( cos_phi - sin_phi*px*denom );
+      
+      x = (x + px*magnet_s*denom*denom)/cos_phi;
+      y = (y + py*magnet_s*denom*denom);
+      px = px*cos_phi + sin_phi/denom;
+      delta_s += (1 + delta)*magnet_s*denom;
+
+      /* Update (non-canonical) particle coordinates */
       part[ip][0] = x;
       denom = (1.0 + delta)*(1.0 + delta) - px*px - py*py;
       denom = 1.0/sqrt(denom);
@@ -541,6 +629,11 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     /* Element body */
     double B[3], p[3], dp[3], Bphi, Br, B2Max, pErr[3];
     double pOrig;
+    double Btemp[3];
+    double xpTemp, ypTemp, xpNew, ypNew;
+    double xTemp, yTemp, xNew, yNew, preFactorDz, deltaTemp;
+
+    double magnet_s;
 
     for (ip=0; ip<np; ip++) {
       B2Max = 0;
@@ -550,6 +643,26 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       yp = part[ip][3];
       s = part[ip][4];
       delta = part[ip][5];
+
+      /* Compute transformation from accelerator coordinates */
+      if (bgg->isBend) {
+        phi = atan2(xVertex-xEntry, zVertex-zEntry);  /* angle of incoming x-plane w.r.t. magnet x */
+        magnet_s = x*sin(phi)/( cos(phi) - xp*sin(phi) );
+        x = (x + xp*magnet_s)/cos(phi);
+        y =  y + yp*magnet_s;
+        s += sqrt(1.0 + xp*xp + yp*yp)*magnet_s;
+        yp = yp/(cos(phi) - xp*sin(phi));
+        xp = (xp*cos(phi) + sin(phi))/(cos(phi) - xp*sin(phi));
+      } else {
+        phi = magnet_s = 0;
+      }
+
+      x += xEntry + bgg->dxExpansion; /* Shift x according to entrance point & map shift */
+
+      /* Drift backward from entrance plane to beginning of field map */
+      x -= (zEntry - zMin)*xp;
+      y -= (zEntry - zMin)*yp;
+      s -= (zEntry - zMin)*sqrt(1.0 + xp*xp + yp*yp);
 
       /* compute momenta (x, y, z) */
       denom = sqrt(1 + sqr(xp) + sqr(yp));
@@ -573,7 +686,12 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 
       /* Integrate through the magnet */
       B[0] = B[1] = B[2] = 0;
-      for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
+      for (iz=irow=0; iz<bggData->nz-1; iz+=bgg->zInterval) {
+	denom = sqrt(1 + sqr(xp) + sqr(yp));
+	p[2] = pCentral*(1+delta)/denom;
+	p[0] = xp*p[2];
+	p[1] = yp*p[2];
+	gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
 #if !USE_MPI
         if (bgg->SDDSpo &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
@@ -616,13 +734,61 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
         B[1] = (bgg->By + (Br*sin(phi) + Bphi*cos(phi)))*bgg->strength;
         B[2] *= bgg->strength;
         
-        /* Apply kicks */
-        betaz = p[2]/sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2])+1);
-        dz = bggData->dz*bgg->zInterval;
-        ds = dz*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
-        dp[0] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[1]*B[2] - p[2]*B[1]);
-        dp[1] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[2]*B[0] - p[0]*B[2]);
-        // dp[2] = -particleCharge*particleRelSign*dz/(particleMass*betaz*gamma*c_mks)*(p[0]*B[1] - p[1]*B[0]);
+	dz = bggData->dz*bgg->zInterval;
+	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
+	preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
+	/* Apply prediction step */
+	xTemp = x + dz*xp;
+	yTemp = y + dz*yp;
+	xpTemp = xp + preFactorDz*( (yp*B[2] - (1.0+xp*xp)*B[1]) + xp*yp*B[0] );
+	ypTemp = yp + preFactorDz*( ((1.0+yp*yp)*B[0] - xp*B[2]) - xp*yp*B[1] );
+	ds = dz*sqrt(1+sqr(xp)+sqr(yp));
+
+        r = sqrt(sqr(xTemp)+sqr(yTemp));
+        phi = atan2(yTemp, xTemp);
+
+        /* Compute fields at next z location */
+        Br = Bphi = B[2] = 0;
+        for (im=0; im<bggData->nm; im++) {
+          double mfact, term, sin_mphi, cos_mphi;
+          m = bggData->m[im];
+          if (bgg->mMaximum>0 && m>bgg->mMaximum)
+            continue;
+          mfact = dfactorial(m);
+          sin_mphi = sin(m*phi);
+          cos_mphi = cos(m*phi);
+          for (ig=0; ig<igLimit; ig++) {
+            term  = ipow(-1, ig)*mfact/(ipow(2, 2*ig)*factorial(ig)*factorial(ig+m))*ipow(r, 2*ig+m-1);
+            B[2] += term*bggData->dCmns_dz[im][ig][iz+1]*r*sin_mphi;
+            term *= bggData->Cmns[im][ig][iz+1];
+            Br   += term*(2*ig+m)*sin_mphi;
+            Bphi += m*term*cos_mphi;
+          }
+        }
+        B[0] = (Br*cos(phi) - Bphi*sin(phi))*bgg->strength;
+        B[1] = (Br*sin(phi) + Bphi*cos(phi))*bgg->strength;
+        B[2] *= bgg->strength;
+
+	dz = bggData->dz*bgg->zInterval;
+	preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
+	preFactorDz =  preFactorDz*sqrt(1.0 + xpTemp*xpTemp + ypTemp*ypTemp);
+	/* Apply correction step */
+	xNew = 0.5*(x + xTemp + dz*xpTemp);
+	yNew = 0.5*(y + yTemp + dz*ypTemp);
+	xpNew = 0.5*(xp + xpTemp + preFactorDz*( (ypTemp*B[2] - (1.0+xpTemp*xpTemp)*B[1]) + xpTemp*ypTemp*B[0] ));
+	ypNew = 0.5*(yp + ypTemp + preFactorDz*( ((1.0+ypTemp*ypTemp)*B[0] - xpTemp*B[2]) - xpTemp*ypTemp*B[1] ));
+	ds = 0.5*( ds + dz*sqrt(1+sqr(xpTemp)+sqr(ypTemp)) );
+
+	x = xNew;
+	y = yNew;
+	xp = xpNew;
+	yp = ypNew;
+	s += ds;
+
+	denom = sqrt(1 + sqr(xp) + sqr(yp));
+	p[2] = pCentral*(1+delta)/denom;
+	p[0] = xp*p[2];
+	p[1] = yp*p[2];
         
 #ifdef DEBUG
         fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
@@ -631,41 +797,26 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
                 p[0], p[1], p[2], dp[0], dp[1], dp[2]);
 #endif
 
-        pOrig = sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2])); /* recompute this in case it changes due to SR */
-        p[0] = KahanPlus(p[0], dp[0], &pErr[0]);
-        p[1] = KahanPlus(p[1], dp[1], &pErr[1]);
-        p[2] = sqrt(sqr(pOrig)-sqr(p[0])-sqr(p[1])); /* ensures no fictitious changes in total momentum */
-
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
           double pTotal0, pTotal1, B2, F;
-          pTotal0 = sqrt(sqr(p[0])+sqr(p[1])+sqr(p[2]));
           B2 = sqr(B[0])+sqr(B[1]);
           if (B2>B2Max)
             B2Max = B2;
-          pTotal1 = pTotal0-radCoef*sqr(pTotal0)*B2*ds;
-          F = isrCoef*sqr(pTotal0)*sqrt(ds)*pow(B2, 3./4.);
+	  deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
+          F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
           if (bgg->isr && np!=1)
-            pTotal1 += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+            deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
           if (sigmaDelta2)
-            *sigmaDelta2 += sqr(F)/sqr(pCentral);
-          p[0] *= pTotal1/pTotal0;
-          p[1] *= pTotal1/pTotal0;
-          p[2] *= pTotal1/pTotal0;
-        }
-
-        if (iz<izLast) {
-          /* Drift forward */
-          x += p[0]/p[2]*bggData->dz*bgg->zInterval;
-          y += p[1]/p[2]*bggData->dz*bgg->zInterval;
-          s += ds;
+            *sigmaDelta2 += sqr(F)/pCentral;
+	  delta = deltaTemp;
         }
       }
-      if (iz<bggData->nz) {
+      if (iz<bggData->nz-1) {
         /* Drift forward */
-        x += p[0]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
-        y += p[1]/p[2]*bggData->dz*(bggData->nz-1-(iz-1));
-        s += bggData->dz*(bggData->nz-1-(iz-1))*sqrt(1+sqr(p[0]/p[2])+sqr(p[1]/p[2]));
+        x += xp*bggData->dz*(bggData->nz-(iz-1));
+        y += yp*bggData->dz*(bggData->nz-(iz-1));
+        s += bggData->dz*(bggData->nz-(iz-1))*sqrt(1+sqr(xp)+sqr(yp));
       }
       
 #if !USE_MPI
@@ -688,10 +839,29 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
 #endif
 
+      /* Drift backward from end of field map to exit plane */
+      x -= (zMax - zExit)*xp;
+      y -= (zMax - zExit)*yp;
+      s -= (zMax - zExit)*sqrt(1.0 + xp*xp + yp*yp);
+      x -= xExit + bgg->dxExpansion;  /* Shift x according to exit point & map shift */
+     
+      /* Compute transformation from magnet grid -> accelerator coordinates if bending magnet */
+      if (bgg->isBend) {
+        phi = atan2(xVertex-xExit, zExit-zVertex);  /* angle of outgoing x-plane w.r.t. magnet x */
+        magnet_s = x*sin(phi)/( cos(phi) - xp*sin(phi) );
+        x = (x + xp*magnet_s)/cos(phi);
+        y =  y + yp*magnet_s;
+        s += sqrt(1.0 + xp*xp + yp*yp)*magnet_s;
+        yp = yp/(cos(phi) - xp*sin(phi));
+        xp = (xp*cos(phi) + sin(phi))/(cos(phi) - xp*sin(phi));
+      } else {
+        phi = magnet_s = 0;
+      }
+
       part[ip][0] = x;
-      part[ip][1] = p[0]/p[2];
+      part[ip][1] = xp; // p[0]/p[2];
       part[ip][2] = y;
-      part[ip][3] = p[1]/p[2];
+      part[ip][3] = yp; // p[1]/p[2];
       part[ip][4] = s;
       /*
       printf("P: %le -> %le, change = %le, B2Max = %le\n",
@@ -721,12 +891,6 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     rotateBeamCoordinates(part, np, -bgg->tilt);
   if (bgg->dx || bgg->dy || bgg->dz)
     offsetBeamCoordinates(part, np, -bgg->dx, -bgg->dy, -bgg->dz);
-
-  /* adjust for insertion length differing from field length */
-  length = bgg->length; 
-  fieldLength = bgg->fieldLength;
-  if (length!=fieldLength)
-    exactDrift(part, np, (length-fieldLength)/2);
 
 #ifdef DEBUG  
   fflush(fpdebug);
