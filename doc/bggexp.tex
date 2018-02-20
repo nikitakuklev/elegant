@@ -1,9 +1,7 @@
 This element simulates transport through a 3D magnetic field
 specified in terms of a generalized gradient expansion \cite{Venturini-NIMA427-387}.
 After reconstructing the field, it simply integrates the equations of motion
-based on the Lorentz force equation in cartesian coordinates.  It does not
-incorporate changes in the design trajectory resulting from the
-fields, so dipoles cannot be simulated with this element.
+based on the Lorentz force equation in cartesian coordinates.  
 
 The generalized gradients are provided in an SDDS file with the following floating-point columns:
 \begin{itemize}
@@ -59,3 +57,12 @@ nor is the setup of rf cavities for storage rings via the \verb|rf_setup| comman
   Note that these values are multiplied by the \verb|STRENGTH| factor before being applied to the beam.
 \end{enumerate}
 
+If \verb|IS_BEND| is non-zero, the magnet is assumed to be a bending magnet, in which case additional
+parameters are required.
+\begin{itemize}
+\item \verb|ZVERTEX|, \verb|XVERTEX| --- Coordinates of the vertex point in coordinate frame of the field data.
+  For a symmetric dipole, \verb|ZVERTEX| is typically zero, while \verb|XVERTEX| would be the displacement of
+  the vertex point from the cylinder axis.
+\item \verb|ZENTRY|, \verb|XENTRY| --- Coordinates of the nominal entry plane.
+\item \verb|ZEXIT|, \verb|XEXIT| --- Coordinates of the nominal exit plane.
+\end{itemize}
