@@ -538,7 +538,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
             if (bgg->isr && np!=1)
               deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
             if (sigmaDelta2)
-              *sigmaDelta2 += sqr(F)/pCentral;
+              *sigmaDelta2 += sqr(F);
             delta = deltaTemp;
           }
         }
@@ -807,7 +807,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           if (bgg->isr && np!=1)
             deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
           if (sigmaDelta2)
-            *sigmaDelta2 += sqr(F)/pCentral;
+            *sigmaDelta2 += sqr(F);
 	  delta = deltaTemp;
         }
       }
