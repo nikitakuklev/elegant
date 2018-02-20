@@ -76,6 +76,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
 \item The \verb|EHKICK|, \verb|EVKICK|, and \verb|EHVKICK| elements now include the \verb|RANDOM_MULTIPOLE_FACTOR| and 
   \verb|SYSTEMATIC_MULTIPOLE_FACTOR| parameters.
+\item The \verb|BGGEXP| element can now handle bending magnets. The non-symplectic integrator was replaced with 
+  a new method that is more accurate.
 \end{itemize}
 
 \subsection{New and Modified Commands}
