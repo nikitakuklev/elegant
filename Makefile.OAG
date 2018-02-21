@@ -601,7 +601,7 @@ endif
 
 ifeq ($(GPU),1)
 ifdef WIN32
-CUDA_LIBDIR = D:/Cuda9.0/lib/x64
+CUDA_LIBDIR = D:/Cuda9.1/lib/x64
 elegantto_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 elegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 Pelegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
