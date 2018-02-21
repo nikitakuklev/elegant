@@ -372,7 +372,7 @@ double gpu_computeTimeCoordinatesAndMean(long np, double* d_time,
   return tmean/np;
 #else /* USE_MPI */
   if (!partOnMaster){
-    long np_total;
+    long np_total=0;
     double tmean_total;
     if (isSlave || !notSinglePart) {
 #ifndef USE_KAHAN

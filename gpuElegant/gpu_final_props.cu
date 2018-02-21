@@ -155,7 +155,7 @@ void gpu_rms_emittance(unsigned int i1, unsigned int i2, unsigned int n,
 #if USE_MPI
 void gpu_rms_emittance_p(long i1, long i2, long n,
                          double* s11, double* s12, double* s22){
-  long n_total;
+  long n_total=0;
   
   if (notSinglePart) {
     if (isMaster)
