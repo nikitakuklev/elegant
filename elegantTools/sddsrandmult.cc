@@ -126,7 +126,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
     bomb((char*)"unknown magnet type", NULL);
   if (n_harm<=0 || n_harm>coefs[iN].n)
     n_harm = coefs[iN].n;
-  random_1(std::abs(random_number_seed));
+  random_1(labs(random_number_seed));
   if (!name) {
     if (iN==INDEX_QUAD)
       name = (char*)"qh";
