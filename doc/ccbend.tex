@@ -8,7 +8,7 @@ where the field expansion is in curvilinear coordinates.
 Strictly speaking, \verb|CSBEND| is only valid when the dipole is built with curved,
 beam-following poles.
 
-Integration of particles in \verb|CRBEND| is very similar to what's done for
+Integration of particles in \verb|CCBEND| is very similar to what's done for
 \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT|. 
 The only real difference is that coordinate transformations are performed at the
 entrance and exit to orient the incoming central trajectory to the straight magnet axis.
@@ -32,7 +32,7 @@ One can block the re-optimization of these parameters by setting
 
 {\bf Edge angles and edge effects} 
 
-The edge angle treatment in \verb|CRBEND| is relatively simple, consisting of a 
+The edge angle treatment in \verb|CCBEND| is relatively simple, consisting of a 
 vertical focusing effect with momentum dependence to all orders.
 Also included are edge pseudo-sextupoles (due to the body $K_1$ term) and
 pseudo-octupoles (due to the body $K_2$ term).
@@ -70,6 +70,14 @@ supply, which means that multipole strengths also change.
 
 {\bf Splitting dipoles}
 
-The \verb|CRBEND| element does not support splitting.
-{\bf Important}: Users {\em should not} attempt to split \verb|CRBEND| elements by hand, since this
+The \verb|CCBEND| element does not support splitting.
+{\bf Important}: Users {\em should not} attempt to split \verb|CCBEND| elements by hand, since this
 will not result in the correct geometry entering and exiting the various parts.
+
+{\bf Matrix generation}
+
+{\tt elegant} will use tracking to determine the transport matrix for \verb|CCBEND| elements, which 
+is needed for computation of twiss parameters and other operations.
+This can require some time, so {\tt elegant} will cache the matrices and re-use them for
+identical elements.
+
