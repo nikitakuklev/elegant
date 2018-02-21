@@ -854,7 +854,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     CCBEND *crbptr0, *crbptr1;
     BRAT *brat0, *brat1;
     short copied = 0;
-    if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0) {
+    if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
+        storedMatrix[i] && storedMatrix[i]->order>0) {
       M = tmalloc(sizeof(*M));
       copy_matrices(M, storedMatrix[i]);
       switch (eptr->type) {
@@ -1043,8 +1044,27 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
     printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
-    storedElement[iStoredMatrices] = eptr;
-    storedMatrix[iStoredMatrices] = M;
+    ELEMENT_LIST *eptrCopy;
+    VMATRIX *matrixCopy;
+
+    if (storedElement[iStoredMatrices]) {
+      free_elements(storedElement[iStoredMatrices]);
+      free(storedElement[iStoredMatrices]);
+      storedElement[iStoredMatrices] = NULL;
+    }
+    if (storedMatrix[iStoredMatrices]) {
+      free_matrices(storedMatrix[iStoredMatrices]);
+      free(storedMatrix[iStoredMatrices]);
+      storedMatrix[iStoredMatrices] = NULL;
+    }
+
+    eptrCopy = tmalloc(sizeof(*eptrCopy));
+    copy_element(eptrCopy, eptr, 0, 0, 0);
+    storedElement[iStoredMatrices] = eptrCopy;
+
+    matrixCopy = tmalloc(sizeof(*matrixCopy));
+    copy_matrices(matrixCopy, M);
+    storedMatrix[iStoredMatrices] = matrixCopy;
     if (nStoredMatrices<MAX_N_STORED_MATRICES) {
       iStoredMatrices++;
       nStoredMatrices++;
@@ -1943,7 +1963,7 @@ long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
           return 1;
         if (!cs2)
           return -1;
-        if (l1=strcmp(cs1, cs2))
+        if ((l1=strcmp(cs1, cs2)))
           return l1;
       }
       break;
