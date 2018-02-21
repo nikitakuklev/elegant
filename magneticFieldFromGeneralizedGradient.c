@@ -169,7 +169,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   long ip, ig, im, iz, irow, m, igLimit, izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
-  double gamma, betaz, step,  length;
+  double gamma, step,  length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
   double zMin, zMax, xVertex, zVertex, xEntry, zEntry, xExit, zExit;
@@ -627,9 +627,8 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     }
   }  else { 
     /* Non-symplectic */
-    double B[3], p[3], dp[3], Bphi, Br, B2Max, pErr[3];
+    double B[3], p[3], Bphi, Br, B2Max, pErr[3];
     double pOrig;
-    double Btemp[3];
     double xpTemp, ypTemp, xpNew, ypNew;
     double xTemp, yTemp, xNew, yNew, preFactorDz, deltaTemp;
     double magnet_s;
@@ -790,15 +789,15 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	p[1] = yp*p[2];
         
 #ifdef DEBUG
-        fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le %le %le %le\n", 
+        fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le\n", 
                 part[ip][6], ds, x, y, iz*bggData->dz, 
                 B[0], B[1], B[2], 
-                p[0], p[1], p[2], dp[0], dp[1], dp[2]);
+                p[0], p[1], p[2]);
 #endif
 
         if (bgg->synchRad) {
           /* This is only valid for ultra-relatistic particles */
-          double pTotal0, pTotal1, B2, F;
+          double B2, F;
           B2 = sqr(B[0])+sqr(B[1]);
           if (B2>B2Max)
             B2Max = B2;
