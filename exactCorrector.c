@@ -72,7 +72,7 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
 {
   long i_part, i_top;
   double xkick, ykick, kick, tilt, length, *coord, rho0, theta0, rho, theta, alpha, arg;
-  double dx, dy, dz;
+  double dx = 0, dy = 0, dz = 0;
   MULTIPOLE_DATA *multData;
   long isr, sr;
   EHCOR *ehcor;
