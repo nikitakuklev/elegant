@@ -2757,6 +2757,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   srGaussianLimit = SR_gaussian_limit;
   exactNormalizedEmittance = exact_normalized_emittance;
   inhibitRandomSeedPermutation(inhibit_seed_permutation);
+  shareTrackingBasedMatrices = share_tracking_based_matrices;
   if (log_file)
     freopen(log_file, "w", stdout);
   if (error_log_file)

@@ -86,6 +86,7 @@ extern long inhibitFileSync;
 extern long echoNamelists;
 extern long mpiRandomizationMode;
 extern long exactNormalizedEmittance;
+extern long shareTrackingBasedMatrices;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;

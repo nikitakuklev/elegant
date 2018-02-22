@@ -845,49 +845,53 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
 
-  if (storedElement==NULL) {
-    storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
-    storedMatrix = tmalloc(sizeof(*storedMatrix)*MAX_N_STORED_MATRICES);
-  }
-
-  for (i=0; i<nStoredMatrices; i++) {
-    CCBEND *crbptr0, *crbptr1;
-    BRAT *brat0, *brat1;
-    short copied = 0;
-    if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
-        storedMatrix[i] && storedMatrix[i]->order>0) {
-      M = tmalloc(sizeof(*M));
-      copy_matrices(M, storedMatrix[i]);
-      switch (eptr->type) {
-      case T_CCBEND:
-	crbptr0 = (CCBEND*)storedElement[i]->p_elem;
-	crbptr1 = (CCBEND*)eptr->p_elem;
-	crbptr1->optimized = crbptr0->optimized;
-	crbptr1->fseOffset = crbptr0->fseOffset;
-	crbptr1->dxOffset = crbptr0->dxOffset;
-	crbptr1->KnDelta = crbptr0->KnDelta;
-	crbptr1->referenceData[0] = crbptr0->referenceData[0];
-	crbptr1->referenceData[1] = crbptr0->referenceData[1];
-	crbptr1->referenceData[2] = crbptr0->referenceData[2];
-	crbptr1->referenceData[3] = crbptr0->referenceData[3];
-        copied = 1;
-        printf("Using stored matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
-        fflush(stdout);
-	break;
-      case T_BRAT:
-        brat0 = (BRAT*)storedElement[i]->p_elem;
-        brat1 = (BRAT*)eptr->p_elem;
-        brat1->initialized = brat0->initialized;
-        brat1->dataIndex = brat0->dataIndex;
-        copied = 1;
-        printf("Using stored matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
-        fflush(stdout);
-        break;
-      default:
-	break;
+  if (shareTrackingBasedMatrices) {
+    if (storedElement==NULL) {
+      storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
+      storedMatrix = tmalloc(sizeof(*storedMatrix)*MAX_N_STORED_MATRICES);
+    }
+    
+    for (i=0; i<nStoredMatrices; i++) {
+      CCBEND *crbptr0, *crbptr1;
+      BRAT *brat0, *brat1;
+      short copied = 0;
+      if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
+	  storedMatrix[i] && storedMatrix[i]->order>0) {
+	M = tmalloc(sizeof(*M));
+	copy_matrices(M, storedMatrix[i]);
+	switch (eptr->type) {
+	case T_CCBEND:
+	  crbptr0 = (CCBEND*)storedElement[i]->p_elem;
+	  crbptr1 = (CCBEND*)eptr->p_elem;
+	  crbptr1->optimized = crbptr0->optimized;
+	  crbptr1->fseOffset = crbptr0->fseOffset;
+	  crbptr1->dxOffset = crbptr0->dxOffset;
+	  crbptr1->KnDelta = crbptr0->KnDelta;
+	  crbptr1->referenceData[0] = crbptr0->referenceData[0];
+	  crbptr1->referenceData[1] = crbptr0->referenceData[1];
+	  crbptr1->referenceData[2] = crbptr0->referenceData[2];
+	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
+	  copied = 1;
+	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
+		 storedElement[i]->name, storedElement[i]->occurence);
+	  fflush(stdout);
+	  break;
+	case T_BRAT:
+	  brat0 = (BRAT*)storedElement[i]->p_elem;
+	  brat1 = (BRAT*)eptr->p_elem;
+	  brat1->initialized = brat0->initialized;
+	  brat1->dataIndex = brat0->dataIndex;
+	  copied = 1;
+	  printf("Using stored matrix for BRAT %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
+		 storedElement[i]->name, storedElement[i]->occurence);
+	  fflush(stdout);
+	  break;
+	default:
+	  break;
+	}
+	if (copied)
+	  return M;
       }
-      if (copied)
-        return M;
     }
   }
 
@@ -911,7 +915,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
     ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
     ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
-    printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
+    /* printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence); */
     fflush(stdout);
     n_left = track_through_ccbend(finalCoord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                                   NULL, NULL, NULL, NULL, -1, -1);
@@ -1042,48 +1046,53 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
-  if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
-    ELEMENT_LIST *eptrCopy;
-    VMATRIX *matrixCopy;
-
-    if (nStoredMatrices<MAX_N_STORED_MATRICES) {
-      iStoredMatrices++;
-      nStoredMatrices++;
-    } else {
-      iStoredMatrices++;
-      if (iStoredMatrices==nStoredMatrices)
-        iStoredMatrices = 0;
-    }
-
-    printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
-    fflush(stdout);
-
-    if (storedElement[iStoredMatrices]) {
-      fflush(stdout);
+  if (shareTrackingBasedMatrices) {
+    if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
+      ELEMENT_LIST *eptrCopy;
+      VMATRIX *matrixCopy;
+      
+      if (nStoredMatrices<MAX_N_STORED_MATRICES) {
+	iStoredMatrices++;
+	nStoredMatrices++;
+      } else {
+	iStoredMatrices++;
+	if (iStoredMatrices==nStoredMatrices)
+	  iStoredMatrices = 0;
+      }
+      
+      /* 
+	 printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+	 fflush(stdout);
+      */
+      
       if (storedElement[iStoredMatrices]) {
-	free_elements(storedElement[iStoredMatrices]);
+	fflush(stdout);
+	if (storedElement[iStoredMatrices]) {
+	  free_elements(storedElement[iStoredMatrices]);
+	}
+	storedElement[iStoredMatrices] = NULL;
       }
-      storedElement[iStoredMatrices] = NULL;
-    }
-    if (storedMatrix[iStoredMatrices]) {
-      fflush(stdout);
       if (storedMatrix[iStoredMatrices]) {
-	free_matrices(storedMatrix[iStoredMatrices]);
-	free(storedMatrix[iStoredMatrices]);
+	fflush(stdout);
+	if (storedMatrix[iStoredMatrices]) {
+	  free_matrices(storedMatrix[iStoredMatrices]);
+	  free(storedMatrix[iStoredMatrices]);
+	}
+	storedMatrix[iStoredMatrices] = NULL;
       }
-      storedMatrix[iStoredMatrices] = NULL;
+      
+      eptrCopy = tmalloc(sizeof(*eptrCopy));
+      copy_element(eptrCopy, eptr, 0, 0, 0);
+      storedElement[iStoredMatrices] = eptrCopy;
+      storedElement[iStoredMatrices]->pred = 
+	storedElement[iStoredMatrices]->succ = NULL;
+      storedElement[iStoredMatrices]->occurence = eptr->occurence;
+      
+      matrixCopy = tmalloc(sizeof(*matrixCopy));
+      copy_matrices(matrixCopy, M);
+      storedMatrix[iStoredMatrices] = matrixCopy;
+      fflush(stdout);
     }
-
-    eptrCopy = tmalloc(sizeof(*eptrCopy));
-    copy_element(eptrCopy, eptr, 0, 0, 0);
-    storedElement[iStoredMatrices] = eptrCopy;
-    storedElement[iStoredMatrices]->pred = 
-      storedElement[iStoredMatrices]->succ = NULL;
-
-    matrixCopy = tmalloc(sizeof(*matrixCopy));
-    copy_matrices(matrixCopy, M);
-    storedMatrix[iStoredMatrices] = matrixCopy;
-    fflush(stdout);
   }
 
   /*

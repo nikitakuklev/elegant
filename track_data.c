@@ -34,7 +34,7 @@ long inhibitFileSync = 0;
 long echoNamelists = 1;
 long mpiRandomizationMode = 3;
 long exactNormalizedEmittance = 0;
-
+long shareTrackingBasedMatrices = 1;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
