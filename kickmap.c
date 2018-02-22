@@ -77,6 +77,7 @@ long trackUndulatorKickMap(
 
   for (ik=0; ik<nKicks; ik++) {
     sqrtI3 = sqrtI5 = 0;
+    I1 = I2 = I3 = I4 = I5 = 0;
     if (radCoef || sxpCoef) {
       double S11, S12, S22, S16, S26, S66;
       double S11beta, S12beta, S22beta, emit;
@@ -117,7 +118,7 @@ long trackUndulatorKickMap(
         sqrtBeta = beta = 1;
         alpha = 0;
       }
-      I1 = I2 = I3 = I4 = I5 = 0;
+
       if (map->periods && map->Kreference) {
         double radius;
         radius = 
