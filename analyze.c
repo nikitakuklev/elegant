@@ -841,7 +841,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long maxFitOrder = 4;
   /* We'll store some of the matrices to avoid recomputing them */
 #define MAX_N_STORED_MATRICES 100
-  static long nStoredMatrices = 0, iStoredMatrices = 0;
+  static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
 
@@ -1043,28 +1043,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
   if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
-    printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
     ELEMENT_LIST *eptrCopy;
     VMATRIX *matrixCopy;
 
-    if (storedElement[iStoredMatrices]) {
-      free_elements(storedElement[iStoredMatrices]);
-      free(storedElement[iStoredMatrices]);
-      storedElement[iStoredMatrices] = NULL;
-    }
-    if (storedMatrix[iStoredMatrices]) {
-      free_matrices(storedMatrix[iStoredMatrices]);
-      free(storedMatrix[iStoredMatrices]);
-      storedMatrix[iStoredMatrices] = NULL;
-    }
-
-    eptrCopy = tmalloc(sizeof(*eptrCopy));
-    copy_element(eptrCopy, eptr, 0, 0, 0);
-    storedElement[iStoredMatrices] = eptrCopy;
-
-    matrixCopy = tmalloc(sizeof(*matrixCopy));
-    copy_matrices(matrixCopy, M);
-    storedMatrix[iStoredMatrices] = matrixCopy;
     if (nStoredMatrices<MAX_N_STORED_MATRICES) {
       iStoredMatrices++;
       nStoredMatrices++;
@@ -1073,6 +1054,36 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       if (iStoredMatrices==nStoredMatrices)
         iStoredMatrices = 0;
     }
+
+    printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+    fflush(stdout);
+
+    if (storedElement[iStoredMatrices]) {
+      fflush(stdout);
+      if (storedElement[iStoredMatrices]) {
+	free_elements(storedElement[iStoredMatrices]);
+      }
+      storedElement[iStoredMatrices] = NULL;
+    }
+    if (storedMatrix[iStoredMatrices]) {
+      fflush(stdout);
+      if (storedMatrix[iStoredMatrices]) {
+	free_matrices(storedMatrix[iStoredMatrices]);
+	free(storedMatrix[iStoredMatrices]);
+      }
+      storedMatrix[iStoredMatrices] = NULL;
+    }
+
+    eptrCopy = tmalloc(sizeof(*eptrCopy));
+    copy_element(eptrCopy, eptr, 0, 0, 0);
+    storedElement[iStoredMatrices] = eptrCopy;
+    storedElement[iStoredMatrices]->pred = 
+      storedElement[iStoredMatrices]->succ = NULL;
+
+    matrixCopy = tmalloc(sizeof(*matrixCopy));
+    copy_matrices(matrixCopy, M);
+    storedMatrix[iStoredMatrices] = matrixCopy;
+    fflush(stdout);
   }
 
   /*
