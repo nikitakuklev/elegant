@@ -1176,6 +1176,20 @@ void copy_p_elem(char *target, char *source, long type)
   case T_SPEEDBUMP:
     ((SPEEDBUMP*)target)->direction = ((SPEEDBUMP*)source)->direction;
     break;
+  case T_CCBEND:
+    ((CCBEND*)target)->optimized = ((CCBEND*)source)->optimized;
+    ((CCBEND*)target)->fseOffset = ((CCBEND*)source)->fseOffset;
+    ((CCBEND*)target)->dxOffset = ((CCBEND*)source)->dxOffset;
+    ((CCBEND*)target)->KnDelta = ((CCBEND*)source)->KnDelta;
+    ((CCBEND*)target)->referenceData[0] = ((CCBEND*)source)->referenceData[0];
+    ((CCBEND*)target)->referenceData[1] = ((CCBEND*)source)->referenceData[1];
+    ((CCBEND*)target)->referenceData[2] = ((CCBEND*)source)->referenceData[2];
+    ((CCBEND*)target)->referenceData[3] = ((CCBEND*)source)->referenceData[3];
+    break;
+  case T_BRAT:
+    ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
+    ((BRAT*)target)->dataIndex = ((BRAT*)source)->dataIndex;
+    break;
   case  T_PEPPOT:
     /* Need to modernize pepper-pot element to read data from SDDS file */
     pps = (PEPPOT*)source;
