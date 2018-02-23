@@ -37,6 +37,7 @@ double ccbend_trajectory_error(double *value, long *invalid);
 long track_through_ccbend(
                           double **particle,   /* initial/final phase-space coordinates */
                           long n_part,         /* number of particles */
+			  ELEMENT_LIST *eptr,
                           CCBEND *ccbend,
                           double Po,
                           double **accepted,
@@ -130,7 +131,8 @@ long track_through_ccbend(
         ccbend->referenceData[1] = ccbend->angle;
         ccbend->referenceData[2] = ccbend->K1;
         ccbend->referenceData[3] = ccbend->K2;
-        printf("CCBEND optimized FSE=%le, x=%le, accuracy=%le\n", ccbend->fseOffset, ccbend->dxOffset, acc);
+        printf("CCBEND %s#%ld optimized: FSE=%le, x=%le, accuracy=%le\n", 
+	       eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
         ccbend->optimized = 1;
       }
     }
@@ -639,7 +641,7 @@ double ccbend_trajectory_error(double *value, long *invalid)
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
-  if (!track_through_ccbend(particle, 1, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
+  if (!track_through_ccbend(particle, 1, NULL, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
@@ -719,7 +721,7 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
   ltmp2 = ccbend->synch_rad;
 
   ccbend->isr = ccbend->synch_rad = 0;
-  track_through_ccbend(coord, n_track, ccbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
+  track_through_ccbend(coord, n_track, NULL, ccbend, pCentral, NULL, 0.0, NULL, NULL, NULL, NULL, -1, iFinalSlice);
 
   ccbend->isr = ltmp1;
   ccbend->synch_rad = ltmp2;

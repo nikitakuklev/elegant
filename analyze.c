@@ -678,7 +678,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
     ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
     ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
-    track_through_ccbend(coord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+    track_through_ccbend(coord, n_track, eptr, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                          NULL, NULL, NULL, NULL, -1, -1);
     ((CCBEND*)eptr->p_elem)->isr = ltmp1;
     ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
@@ -917,7 +917,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
     /* printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence); */
     fflush(stdout);
-    n_left = track_through_ccbend(finalCoord, n_track, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+    n_left = track_through_ccbend(finalCoord, n_track, eptr, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                                   NULL, NULL, NULL, NULL, -1, -1);
     ((CCBEND*)eptr->p_elem)->isr = ltmp1;
     ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
@@ -1633,7 +1633,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     break;
   case T_CCBEND:
     ccbend = (CCBEND*)elem->p_elem;
-    track_through_ccbend(coord, n_track, ccbend, run->p_central, NULL, elem->end_pos-ccbend->length, &sigmaDelta2, 
+    track_through_ccbend(coord, n_track, elem, ccbend, run->p_central, NULL, elem->end_pos-ccbend->length, &sigmaDelta2, 
                          run->rootname, NULL, NULL, iSlice, -1);
     break;
   case T_SBEN:

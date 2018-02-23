@@ -4127,7 +4127,7 @@ long applyLowPassFilter(double *histogram, long bins, double start, double end);
 long applyLHPassFilters(double *histogram, long bins, double startHP, double endHP,
 			double startLP, double endLP, long clipNegative);
 
-long track_through_ccbend(double **particle, long n_part, CCBEND *ccbend, double Po,
+long track_through_ccbend(double **particle, long n_part, ELEMENT_LIST *eptr, CCBEND *ccbend, double Po,
                           double **accepted, double z_start, double *sigmaDelta2, char *rootname,
                           MAXAMP *maxamp, APERTURE_DATA *apFileData, long iSlice, long iFinalSlice);
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
