@@ -14,7 +14,7 @@
      long inhibit_seed_permutation = 0;
      STRING log_file = NULL;
      STRING error_log_file = NULL;
-     long share_tracking_based_matrices = 1;
+     long share_tracking_based_matrices = 0;
 #end
 
 #namelist run_setup static
