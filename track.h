@@ -1030,7 +1030,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 26
+#define N_CCBEND_PARAMS 27
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2280,7 +2280,7 @@ typedef struct {
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short optimizeDxOnce, optimizeFseOnce, compensateKn;
+    short optimizeDxOnce, optimizeFseOnce, compensateKn, verbose;
     /* for internal use only: */
     short optimized;
     double fseOffset, dxOffset, KnDelta;

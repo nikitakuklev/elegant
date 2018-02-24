@@ -131,8 +131,11 @@ long track_through_ccbend(
         ccbend->referenceData[1] = ccbend->angle;
         ccbend->referenceData[2] = ccbend->K1;
         ccbend->referenceData[3] = ccbend->K2;
-        printf("CCBEND %s#%ld optimized: FSE=%le, x=%le, accuracy=%le\n", 
-	       eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
+	if (ccbend->verbose) {
+	  printf("CCBEND %s#%ld optimized: FSE=%le, x=%le, accuracy=%le\n", 
+		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
+	  fflush(stdout);
+	}
         ccbend->optimized = 1;
       }
     }
