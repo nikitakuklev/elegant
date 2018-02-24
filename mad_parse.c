@@ -536,6 +536,14 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         rfca = (RFCA*)e1->p_elem;
         rfca->volt /= divisions;
       }
+      else if (e1->type==T_KQUAD) {
+        KQUAD *kqptr;
+        kqptr = (KQUAD*)e1->p_elem;
+        if (division==0)
+          kqptr->edge2_effects = 0;
+        if (division==(divisions-1))
+          kqptr->edge1_effects = 0;
+      }
       else if (IS_BEND(e1->type)) {
         BEND *bptr; CSBEND *csbptr;
         switch (e1->type) {
