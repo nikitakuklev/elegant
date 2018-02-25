@@ -506,9 +506,7 @@ long expand_phys(
 
 void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division, long divisions)
 {
-
     log_entry("copy_element");
-
     cp_str(&e1->name, e2->name);
     e1->group = NULL;
     if (e2->group)
@@ -526,6 +524,11 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     if (reverse && IS_BEND(e1->type))
       swapEdgeIndices(e1);
     e1->firstOfDivGroup = 0;
+    if (reverse && divisions<=1 && e1->type==T_KQUAD) {
+      KQUAD *kqptr;
+      kqptr = (KQUAD*)e1->p_elem;
+      SWAP_LONG(kqptr->edge1_effects, kqptr->edge2_effects);
+    }
     if (divisions>1) {
       if (division==0)
         e1->firstOfDivGroup = 1;
@@ -539,10 +542,12 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       else if (e1->type==T_KQUAD) {
         KQUAD *kqptr;
         kqptr = (KQUAD*)e1->p_elem;
-        if (division==0)
-          kqptr->edge2_effects = 0;
-        if (division==(divisions-1))
+        if (division!=0)
           kqptr->edge1_effects = 0;
+        if (division!=(divisions-1))
+          kqptr->edge2_effects = 0;
+        if (reverse) 
+          SWAP_LONG(kqptr->edge1_effects, kqptr->edge2_effects);
       }
       else if (IS_BEND(e1->type)) {
         BEND *bptr; CSBEND *csbptr;
