@@ -542,6 +542,14 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       else if (e1->type==T_KQUAD) {
         KQUAD *kqptr;
         kqptr = (KQUAD*)e1->p_elem;
+        if (kqptr->lEffective!=0) {
+          printf("Error: can't have non-zero LEFFECTIVE when dividing KQUAD elements\n");
+          exit(1);
+        }
+        if (kqptr->edge_multipoles) {
+          printf("Error: can't have EDGE_MULTIPOLES when dividing KQUAD elements\n");
+          exit(1);
+        }
         if (division!=0)
           kqptr->edge1_effects = 0;
         if (division!=(divisions-1))
