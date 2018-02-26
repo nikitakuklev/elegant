@@ -305,13 +305,9 @@ VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *f
 VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeIntM, double *fringeIntP)
 {
   VMATRIX *M1, *M2, *M;
-  if (inFringe==-1) {
-    M1 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntP, 1);
-    M2 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntM, 2);
-  } else {
-    M1 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntM, 1);
-    M2 = quadPartialFringeMatrix(NULL, K1, inFringe, fringeIntP, 2);
-  }
+  
+  M1 = quadPartialFringeMatrix(NULL, K1, -1, fringeIntP, 1);
+  M2 = quadPartialFringeMatrix(NULL, K1, -1, fringeIntM, 2);
 
   if (Mu) {
     M = Mu;
@@ -323,6 +319,11 @@ VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeI
   concat_matrices(M, M2, M1, 0);
   free_matrices(M1); free(M1);
   free_matrices(M2); free(M2);
+  if (inFringe!=-1) {
+    SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
+    SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
+  }
+
   return M;
 }
 
