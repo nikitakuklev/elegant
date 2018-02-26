@@ -59,6 +59,11 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Synchrotron radiation calculations for \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| had a bug that resulted in only
   the last component being computed. For example, if steering or higher multipoles were included, those would override 
   the effect of the main field.
+\item Previously, when the \verb|KQUAD| element was split (with the \verb|divide_elements| command or
+  \verb|element_divisions| in the \verb|run_setup| command), soft-edge effects would be replicated at the
+  interior boundaries. This was fixed.
+\item Soft-edge effects on the \verb|KQUAD| element were not exactly symmetric. This would, e.g., introduce a slight
+  asymmetry into an otherwise symmetric lattice. This has been fixed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -133,6 +138,9 @@ Users are encouraged to check results against the serial or parallel versions an
 \end{verbatim}
 \item The \verb|OUTPUT_FILE| feature of the \verb|TFBDRIVER| will produce a file with missing data at the end of
   the buffer if the \verb|OUTPUT_INTERVAL| parameter is not a divisor of the number of passes.
+\item When the \verb|KQUAD| element was split (with the \verb|divide_elements| command or
+  \verb|element_divisions|, any edge multipoles get evaluated at the interior boundaries. In addition, the
+  \verb|LEFFECTIVE| cannot be used.
 \end{itemize}
 
 \section{Credits}
