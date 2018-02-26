@@ -43,4 +43,7 @@ gasScatteringLifetimePresFile
 ILMatrixScan
         Set up ILMATRIX element, then scan the tune.
 
+accumulate
+        Simulate adding particles to an already-stored beam
+
 Examples by M. Borland, APS.
