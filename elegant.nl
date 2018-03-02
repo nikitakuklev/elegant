@@ -15,6 +15,7 @@
      STRING log_file = NULL;
      STRING error_log_file = NULL;
      long share_tracking_based_matrices = 0;
+     long usleep_mpi_io_kludge = 0;
 #end
 
 #namelist run_setup static
