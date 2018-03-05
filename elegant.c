@@ -2760,6 +2760,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   shareTrackingBasedMatrices = share_tracking_based_matrices;
 #if SDDS_MPI_IO
   SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
+  SDDS_MPI_SetFileSync(mpi_io_force_file_sync);
 #endif
   if (log_file)
     freopen(log_file, "w", stdout);
