@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 34.1.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 34.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,62 +35,39 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 34.1.0}
+\section{Highlights of What's New in Version 34.2.0}
 
-Here is a summary of what's changed since release 34.0.
+Here is a summary of what's changed since release 34.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Restored the long-deprecated \verb|DIRECTION| parameter for the \verb|SCRAPER| element, as a convenience.
-\item Fixed a problem that caused the \verb|SCRIPT| element to sometimes hang up in \verb|Pelegant| if some processors 
-  did not have any particles after loading data from the script output file.
-\item The \verb|UKICKMAP| element would sometimes fail to add synchrotron radiation effects during tracking even if asked; this would
-  happen, for example, if there was no \verb|twiss_output| or \verb|matrix_output| command.
-\item The \verb|WIGGLER|, \verb|UKICKMAP|, \verb|CWIGGLER|, and \verb|GFWIGGLER| elements had an inconsistency in radiation
-  integral computations, in that in some cases $gamma$ was used when $\beta\gamma$ was intended. The differences were very
-  small for any practical case.
-\item The \verb|BRAT| element and the \verb|abrat| commandline program for tracking particles through 3D field distributions
-  had an error in the initial coordinate transformation, discovered by R. Lindberg (APS). In practical use, the error seems
-  to have had a negligible effect on results.
-  Also, the element was treated as a drift for matrix computations; now, the matrix is determined by tracking (which can
-  be time-consuming).
-\item Synchrotron radiation calculations for \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| had a bug that resulted in only
-  the last component being computed. For example, if steering or higher multipoles were included, those would override 
-  the effect of the main field.
-\item Previously, when the \verb|KQUAD| element was split (with the \verb|divide_elements| command or
-  \verb|element_divisions| in the \verb|run_setup| command), soft-edge effects would be replicated at the
-  interior boundaries. This was fixed.
-\item Soft-edge effects on the \verb|KQUAD| element were not exactly symmetric. This would, e.g., introduce a slight
-  asymmetry into an otherwise symmetric lattice. This has been fixed.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|rf_setup| command could not handle $\alpha_c<0$, as discovered using files provided by P. Piot (NIU/FNAL).
-  This was fixed.
-\item The \verb|analyze_map| command would crash if SDDS output was not requested. This was fixed.
+\item The \verb|frequency_map| command was incorrectly computing the diffusion rate as 
+\begin{equation}
+  d_r = \frac{\log_{10} \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)}{N},
+\end{equation}
+instead of
+\begin{equation}
+  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
+\end{equation}
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CCBEND| element, which integrates symplectically in Cartesian coordinates
-  through a straight-pole combined-function bending magnet, was added.
-\item The \verb|BMXYZ| element, which integrates particles through straight-element 
-  3D magnetic field maps, now includes misalignment parameters.
-  Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
-\item The \verb|EHKICK|, \verb|EVKICK|, and \verb|EHVKICK| elements now include the \verb|RANDOM_MULTIPOLE_FACTOR| and 
-  \verb|SYSTEMATIC_MULTIPOLE_FACTOR| parameters.
-\item The \verb|BGGEXP| element can now handle bending magnets. The non-symplectic integrator was replaced with 
-  a new method that is more accurate. R. Lindberg (APS) did most of the work on this.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item During tracking, particles are no long checked against apertures after transitioning through zero-length elements that
-  don't modify the aperture. This improves performance in lattices with many \verb|MONI|, \verb|MARK|, and similar elements.
-\item The \verb|analyze_map| command can now output the matrix in SDDS format to second or third order, on request.
+\item The \verb|global_settings| command has two new fields, \verb|mpi_io_force_file_sync| and \verb|usleep_mpi_io_kludge|,
+  which can be used to solved MPI I/O problems that appear on some file systems. Z. Pan (LBNL) brought the problems to our
+  attention.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -2165,12 +2142,15 @@ Use of this feature results in a doubling of the number of turns tracked.
 &global_settings
     long inhibit_fsync = 0;
     long echo_namelists = 1;
+    long mpi_randomization_mode = 1;
+    long exact_normalized_emittance = 0;
     double SR_gaussian_limit = 3.0;
     long inhibit_seed_permutation = 0;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
-    long mpi_randomization_mode = 1;
-    long exact_normalized_emittance = 0;
+    long share_tracking_based_matrices = 0;
+    long mpi_io_force_file_sync = 0;
+    long usleep_mpi_io_kludge = 0;
 &end
 \end{verbatim}
 
@@ -2204,7 +2184,15 @@ Use of this feature results in a doubling of the number of turns tracked.
 $\epsilon_n = \epsilon\langle\beta\gamma\rangle$, where $\epsilon$ is the geometric emittance computed from the trace-space coordinates.
 If this variable is set to a non-zero value, \verb|elegant| instead uses a slower but more accurate method, namely, using the momentum coordinates.
 \cite{Floettmann-PRSTAB6-034202}. The results will show up in the \verb|sigma| and \verb|final| output files, if these are requested in the \verb|run_setup| command.
-  \end{itemize}
+\item \verb|mpi_io_force_file_sync|  --- If non-zero, \verb|Pelegant| will perform a file synchronization after writing each row of
+  an SDDS file. This can significantly impact performance, but can solve problems on some filesystems that result in corrupted files
+  or files in which zeros appear in place of the expected data.
+\item \verb|usleep_mpi_io_kludge|  --- If non-zero, \verb|Pelegant| will sleep for the given number of microseconds after
+  writing each row of an SDDS file. This can impact performance, but can solve problems on some filesystems that result in corrupted files
+  or files in which zeros appear in place of the expected data.
+  It may give better performance than setting \verb|mpi_io_force_file_sync=1|.
+  A value of 100 is suggested.
+\end{itemize}
 
 
 %\begin{latexonly}
@@ -7278,6 +7266,83 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 34.1.0, 27 February 2018}
+
+Here is a summary of what's changed since release 34.0.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Restored the long-deprecated \verb|DIRECTION| parameter for the \verb|SCRAPER| element, as a convenience.
+\item Fixed a problem that caused the \verb|SCRIPT| element to sometimes hang up in \verb|Pelegant| if some processors 
+  did not have any particles after loading data from the script output file.
+\item The \verb|UKICKMAP| element would sometimes fail to add synchrotron radiation effects during tracking even if asked; this would
+  happen, for example, if there was no \verb|twiss_output| or \verb|matrix_output| command.
+\item The \verb|WIGGLER|, \verb|UKICKMAP|, \verb|CWIGGLER|, and \verb|GFWIGGLER| elements had an inconsistency in radiation
+  integral computations, in that in some cases $gamma$ was used when $\beta\gamma$ was intended. The differences were very
+  small for any practical case.
+\item The \verb|BRAT| element and the \verb|abrat| commandline program for tracking particles through 3D field distributions
+  had an error in the initial coordinate transformation, discovered by R. Lindberg (APS). In practical use, the error seems
+  to have had a negligible effect on results.
+  Also, the element was treated as a drift for matrix computations; now, the matrix is determined by tracking (which can
+  be time-consuming).
+\item Synchrotron radiation calculations for \verb|KQUAD|, \verb|KSEXT|, and \verb|KOCT| had a bug that resulted in only
+  the last component being computed. For example, if steering or higher multipoles were included, those would override 
+  the effect of the main field.
+\item Previously, when the \verb|KQUAD| element was split (with the \verb|divide_elements| command or
+  \verb|element_divisions| in the \verb|run_setup| command), soft-edge effects would be replicated at the
+  interior boundaries. This was fixed.
+\item Soft-edge effects on the \verb|KQUAD| element were not exactly symmetric. This would, e.g., introduce a slight
+  asymmetry into an otherwise symmetric lattice. This has been fixed.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|rf_setup| command could not handle $\alpha_c<0$, as discovered using files provided by P. Piot (NIU/FNAL).
+  This was fixed.
+\item The \verb|analyze_map| command would crash if SDDS output was not requested. This was fixed.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CCBEND| element, which integrates symplectically in Cartesian coordinates
+  through a straight-pole combined-function bending magnet, was added.
+\item The \verb|BMXYZ| element, which integrates particles through straight-element 
+  3D magnetic field maps, now includes misalignment parameters.
+  Multiple \verb|BMXYZ| elements that use the same field map will share the data internally to reduce I/O and memory requirements.
+\item The \verb|EHKICK|, \verb|EVKICK|, and \verb|EHVKICK| elements now include the \verb|RANDOM_MULTIPOLE_FACTOR| and 
+  \verb|SYSTEMATIC_MULTIPOLE_FACTOR| parameters.
+\item The \verb|BGGEXP| element can now handle bending magnets. The non-symplectic integrator was replaced with 
+  a new method that is more accurate. R. Lindberg (APS) did most of the work on this.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item During tracking, particles are no long checked against apertures after transitioning through zero-length elements that
+  don't modify the aperture. This improves performance in lattices with many \verb|MONI|, \verb|MARK|, and similar elements.
+\item The \verb|analyze_map| command can now output the matrix in SDDS format to second or third order, on request.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|sddsbrightness| now correctly includes the effect of $J_x$ and $J_y$ on the x and y emittances
+  when the \verb|-coupling| option is used.
+\item Added the script \verb|parmela2elegant|, to convert PARMELA beam data (ASCII format) to a form
+  acceptable by \verb|elegant|.
+\item Fixed error in the atomic mass of CO$_2$ in the script \verb|ionTrapping|.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 34.0, 31 October 2017}
 
