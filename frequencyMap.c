@@ -304,7 +304,7 @@ long doFrequencyMap(
 				     IC_DIFFUSION, 
                                      diffusion,
 				     IC_DIFFUSION_RATE, 
-                                     diffusion/turns,
+                                     diffusion/log10(turns),
 				     -1)) {
 		SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
