@@ -466,7 +466,7 @@ long expand_phys(
     }
     if (comparison<0)
       break;
-      elem_list = elem_list->succ;
+    elem_list = elem_list->succ;
   }
   
   /* it isn't an element, so search list of beam-lines for occurence
@@ -734,9 +734,10 @@ long tell_type(char *s, ELEMENT_LIST *elem)
      */
     while (elem && elem->name) {
         if ((comparison=strcmp(elem->name, ptr))==0) {
-            if (match_found)
+            if (match_found) {
                 printf("warning: reference to item %s is ambiguous--assuming element copy desired\n", ptr);
                 fflush(stdout);
+	    }
             if (!elem->definition_text)
                 bombElegant("element copy with no definition_text--internal error", NULL);
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
