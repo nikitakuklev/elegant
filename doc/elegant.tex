@@ -496,7 +496,7 @@ The \verb|-macro| option allows performing text substitutions in the command str
 Multiple \verb|-macro| options may be given.
 Usage is described in more detail below.
 
-\subsection{General Command Syntax}
+\subsection{General Command Syntax}\label{sect:generalCommandSyntax}
 
 Each namelist has a number of variables associated with it, which are
 used to control details of the run.  These variables come in three
@@ -754,6 +754,7 @@ Command name & Type & Description \\\hline
 \item type: action command.
 \item function: modify the value of a parameter for one or more elements
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -831,6 +832,7 @@ Command name & Type & Description \\\hline
 \item type: action command.
 \item function: compute corrected and uncorrected orbit amplification factors and functions.
 \item sequence: must be the last command in a sequence.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -879,6 +881,7 @@ Recommended value: ``\%s.kaf''.
   Also find related quantities, such as chromaticity.
 \item sequence: must follow \verb|run_control|.
 \item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -941,6 +944,7 @@ Recommended value: ``\%s.kaf''.
 \item type: setup command.
 \item function: specify a file from which to take x and y aperture data vs s.
 \item note: this command is also available under the name \verb|aperture_input|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -980,6 +984,7 @@ Recommended value: ``\%s.kaf''.
 \item sequence: must follow \verb|run_control|.
 \item function: set up for tracking of particle coordinates with various distributions.
 \item In \verb|Pelegant|, the exact particles generated will change as the number of cores is changed.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1191,6 +1196,7 @@ particles.
 \item sequence: must precede \verb|run_setup|.
 \item N.B.: this feature has had limited testing, mostly to verify that electron tracking is not
  impacted by the implementation.  Please use with caution and be alert for suspicious results.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1219,6 +1225,7 @@ particles.
 \item type: setup command.
 \item function: set up for chromaticity correction.
 \item sequence: should follow \verb|twiss_output|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1283,6 +1290,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 \begin{itemize}
 \item type: setup command.
 \item function: set up for computation of the closed orbit.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1351,6 +1359,7 @@ during the computations.
 \item type: setup command.
 \item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item function: set up for correction of the trajectory or closed orbit.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1487,6 +1496,7 @@ use at each iteration.
 \item type: setup/action command.
 \item function: provide output of the orbit/trajectory correction matrix.
 \item sequence: must follow \verb|run_setup| and definition of steering elements (if wanted, with \verb|steering_element|).
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1537,6 +1547,7 @@ matrix.
 \item type: setup command.
 \item function: set up for correction of the tunes.
 \item sequence: should follow \verb|twiss_output|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1596,6 +1607,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 \item type: setup/action command.
 \item function: set up or execute computation of coupled twiss parameters and beam sizes
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1649,6 +1661,7 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 \item type: setup command.
 \item function: define how to subdivide certain beamline elements.
 \item sequence: must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.  
@@ -1728,6 +1741,7 @@ and \verb|SOLE|.
 \item function: perform simulation of elastic scattering at multiple s locations, for
   use in computing elastic gas scattering lifetime and loss distribution
 \item sequence: must follow \verb|run_control|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
   \begin{itemize} 
     \item Only available in \verb|Pelegant|.
@@ -1787,6 +1801,7 @@ and \verb|SOLE|.
 \item type: setup command.
 \item sequence: must follow \verb|run_control|.
 \item function: assert a random error defintion for the accelerator.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1856,6 +1871,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \item type: setup command
 \item sequence: must follow \verb|run_control|.
 \item function: overall control of random errors.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -1908,6 +1924,7 @@ The proper use of this command can be confusing.  A typical sequence will be as 
 \item function: find the aperture in (x, y) space for an accelerator.
 \item N.B.: can use parallel resources (\verb|Pelegant|). Recommend using n-line mode with \verb|nx|*\verb|n_splits|
   greater than the number of cores (e.g., a factor of 10).
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2024,6 +2041,7 @@ aperture for use in the penalty function.  This is available only for the line s
 \item type: action command.
 \item function: compute floor coordinates for an accelerator.
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2076,6 +2094,7 @@ distance between the vertices.
 \item function: compute frequency map from tracking
       Note that the number of turns tracked is set by the \verb|run_control| command.
 \item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2136,6 +2155,7 @@ Use of this feature results in a doubling of the number of turns tracked.
 \item type: action command.  
 \item sequence: should precede \verb|run_setup|.
 \item function: change global settings.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2199,12 +2219,13 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \newpage
 \begin{center}{\Large\verb|ignore_elements|}\end{center}
 %\end{latexonly}
-\subsection{ignore\_elements \label{subsec:transmuteelements}}
+\subsection{ignore\_elements \label{subsec:ignoreelements}}
 
 \begin{itemize}
 \item type: setup command.
 \item function: causes specified elements to be ignored during tracking.
 \item Must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.
@@ -2257,6 +2278,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item function: perform simulation of inelastic scattering at multiple s locations, for
   use in computing inelastic gas scattering lifetime and loss distribution
 \item sequence: must follow \verb|run_control|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
   \begin{itemize} 
     \item Only available in \verb|Pelegant|.
@@ -2327,6 +2349,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item notes: 
 	The modified beamline can be saved through \verb|save_lattice|
    command. Be sure to use ``output\_seq = 1'' option in that command.  
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2380,6 +2403,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 \item type: setup command.
 \item function: set up for transverse space charge calculation.  
 \item sequence: must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2447,6 +2471,7 @@ included in the plane in question.
   \item One or more \verb|IONEFFECTS| elements must be inserted in the lattice. This can be
     done manually, or using the \verb|insert_elements| command.
   \end{enumerate}
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2516,6 +2541,7 @@ included in the plane in question.
 \item sequence: must follow \verb|run_setup|.
 \item N.B.: This command is deprecated and no longer maintained. Use a beamline containing one or
   more \verb|ILMATRIX| elements instead. This provides much more functionality.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2557,6 +2583,7 @@ included in the plane in question.
 \item type: setup command.
 \item function: overall control of element parameter links.
 \item sequence: must follow \verb|run_control|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2585,6 +2612,7 @@ during computations.
 \item type: setup command.
 \item function: assert a link between parameters of accelerator elements.
 \item sequence: must follow \verb|run_control| and \verb|link_control|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2640,6 +2668,7 @@ assigned to the target parameter.
 \item type: setup command.
 \item function: load parameters for elements from an SDDS file.
 \item sequence: must follow \verb|run_setup| and precede \verb|run_control| and \verb|error_control| (if present).
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2771,6 +2800,7 @@ changes to parameters.
 \begin{itemize}
 \item type: setup/action command.
 \item function: generate matrix output, or set up to do so later.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2819,6 +2849,7 @@ number of the occurrence of the named element from which to start.
 \item type: setup command.
 \item function: define parameters for time-dependent modulation of elements
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -2911,6 +2942,7 @@ is modulated.
 \item type: action/setup command.
 \item function: compute periodic or propagate non-periodic beam moments without tracking, optionally including radiation.
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3012,6 +3044,7 @@ tilted bending magnets when \verb|slice_etilted=0|. This reduces the accuracy of
 \item type: major action command.
 \item function: determine momentum aperture as a function of position in the lattice by tracking
 \item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3178,6 +3211,7 @@ Also, if it is desirable for the output from \verb|Pelegant| to have exactly the
 \item function: perform optimization.
 \item sequence: must follow \verb|optimization_setup| and beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item can use parallel resources (\verb|Pelegant|) for tracking-based optimization.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item note: on UNIX systems, the user may press Control-C to force
 \verb|elegant| to terminate optimization and proceed as if
 optimization had converged.  (To genuinely terminate the run during
@@ -3185,7 +3219,6 @@ optimization press Control-C twice.) This is very useful if one wants
 to get a look at the partially optimized result.  If one uses parameter
 saving (\verb|run_setup|) or \verb|save_lattice| one can make a new
 run that starts from the optimized result.
-
 \end{itemize}
 
 \begin{verbatim}
@@ -3216,6 +3249,7 @@ summary of the optimization parameters should be printed.
 	is that the hard constraints imposed by \verb|optimization_constraint|
 	may make it more difficult for the optimizer to converge.  See the discussion of the
         \verb|selt| and \verb|segt| macros in the manual entry to \verb|optimization_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3259,6 +3293,7 @@ characters:
 \verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
 make an SDDS parameter name containing the element name, and these characters are disallowed
 at the beginning of such a name.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3290,6 +3325,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
 \item type: setup command.
 \item function: define overall optimization parameters and methods.
 \item sequence: must precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3538,6 +3574,7 @@ a significant difference in the optimization speed.
 \item N.B.: In addition to the optimization parameters used in the optimization\_setup command, 	    
       several new parameters are added for parallel optimization. User should replace 
       optimization\_setup with parallel\_optimization\_setup and append necessary parameters. 
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3607,6 +3644,7 @@ to a very large number to use this rule as the stop condition alone.
 \item type: setup command.
 \item function: define optimization equation via individual terms
 \item sequence: must follow \verb|optimization_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3677,6 +3715,7 @@ characters:
 \verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
 make an SDDS parameter name containing the element name, and these characters are disallowed
 at the beginning of such a name.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3710,6 +3749,7 @@ equal, the range of the parameter is unlimited.
 \begin{itemize}
 \item type: action command.
 \item function: print dictionary of supported accelerator elements.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3735,6 +3775,7 @@ equal, the range of the parameter is unlimited.
 \item type: setup command.
 \item function: define parameters for time-dependent ramping of elements
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3818,6 +3859,7 @@ Note that $i=0$ on the first pass.
 \item type: setup/action command.
 \item function: set up rf cavity frequency, phase, and voltage for a storage ring
 \item sequence: must follow \verb|run_setup|. In action mode, must follow action-mode instance of \verb|twiss_output|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3906,6 +3948,7 @@ energy loss per turn.
    `replace\_elements'' twice. If in the first command you use ``occurence[0]=1,3'',
    then in the second command you have to use ``occurence[0]=3'', since after remove of
    (1,3) Q1s, the 5th Q1 now becoming 3rd Q1.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3952,6 +3995,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
 \begin{itemize}
 \item type: action/setup command.
 \item function: pass an expression directly to the rpn submodule for execution.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -3974,6 +4018,7 @@ used, for example, to read in {\tt rpn} commands from a file or store values in 
 \begin{itemize}
 \item type: action/setup command.
 \item function: load data from SDDS file into RPN variables.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4046,6 +4091,7 @@ a different run.
 \item type: setup command.
 \item function: set up the number of simulation steps and passes.
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4092,6 +4138,7 @@ in \verb|run_setup|.
 \begin{itemize}
 \item type: setup command.
 \item function: set global parameters of the simulation and define primary input and output files.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4225,6 +4272,7 @@ tracking.
 \item type: setup/action command.
 \item function: set parameters for computation of SASE FEL gain and other properties.
 \item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4267,6 +4315,7 @@ supported; the ``Ming-Xie'' model is based on the simple parametrization M. Xie\
 \begin{itemize}
 \item type: action command.
 \item function: save the current accelerator element and beamline definitions.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4296,6 +4345,7 @@ together with \verb|insert_elements| and \verb|replace_elements|.
 \item type: setup command.
 \item function: set up for tracking and histogram analyzing of particle coordinates stored in an SDDS file.
 \item sequence: must follow \verb|run_control|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4399,6 +4449,7 @@ and is useful for tracking very large numbers of particles.
 \item function: set up names for semaphore files, which are used to mark the
         start and end of program execution.
 \item sequence: must precede \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4436,6 +4487,7 @@ and is useful for tracking very large numbers of particles.
 \item sequence: must follow \verb|run_setup| and precede beam definition (\verb|bunched_beam| or \verb|sdds_beam|).
 \item N.B.: slice analysis uses an approximate computation of the normalized emittance, regardless of the
   setting of the \verb|exact_normalized_emittance| flag in the \verb|global_settings| command.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4467,6 +4519,7 @@ long final_values_only = 0;
 \begin{itemize}
 \item type: action command.
 \item function: execute a system command in a shell.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4496,6 +4549,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
   %For trajectory correction, this facility works without any additional effort by the user.
   %However, it will not work for orbit correction unless the user also sets \verb|use_response_from_computed_orbits=1| in
   %\verb|&correct|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4551,6 +4605,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
    beamline (one pass only), and beam loss information is recorded.
 \item sequence: must follow \verb|run_setup| and \verb|twiss_output|.
 \item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
 	\begin{itemize} 
       \item A momentum aperture file is required previous using this command. It
@@ -4687,6 +4742,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
 	turn off unneeded diagnostics and speed up tracking when concatenation
 	is being used.
 \item Must be preceded by \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item notes: 
 	\begin{itemize}
 	\item Any number of these commands may be given.
@@ -4733,6 +4789,7 @@ A literal ``\%s'' must be entered as ``\%\%s''.
 \item sequence: must follow \verb|run_control|.
 \item can use parallel resources (\verb|Pelegant|)
 \item N.B.: the number of turns tracked is set by the \verb|run_control| command.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4829,6 +4886,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item function: analyze Twiss parameters within a user-defined region for purposes of
         optimization.
 \item sequence: must precede \verb|twiss_output|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -4872,6 +4930,7 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item type: action/setup command.
 \item function: compute and output uncoupled Twiss parameters, or set up to do so.
 \item sequence: must follow \verb|run_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -5119,6 +5178,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
 \item function: track particles.
 \item sequence: must follow \verb|run_setup|, \verb|run_control|, and beam definition with \verb|bunched_beam| or \verb|sdds_beam|.
 \item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
@@ -5188,6 +5248,7 @@ for a ring.  Use \verb|ILMATRIX| elements instead.
 \item type: setup command.
 \item function: prepare for computation of tune shifts with amplitude.
 \item sequence: must follow \verb|twiss_output|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \item methods: 
 \begin{itemize}
  \item[Method 1]: tune shifts with amplitude are computed via tracking a series of
@@ -5298,6 +5359,7 @@ characters:
 \verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
 make an SDDS parameter name containing the element name, and these characters are disallowed
 at the beginning of such a name.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
 \end{itemize}
 
 \begin{verbatim}
