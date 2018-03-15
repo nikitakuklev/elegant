@@ -997,7 +997,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 40
-#define N_TFBDRIVER_PARAMS 43
+#define N_TFBDRIVER_PARAMS 45
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 25
@@ -3073,7 +3073,7 @@ typedef struct {
 extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
 typedef struct {
   char *ID;
-  double strength, kickLimit, frequency, phase;
+  double strength, kickLimit, frequency, phase, Ra, QLoaded;
   long delay;
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
@@ -3082,7 +3082,7 @@ typedef struct {
   short longitudinal;
   short bunchedBeamMode; 
   /* internal parameters */
-  short initialized;
+  short initialized, computePower;
   long filterLength, dataWritten, outputIndex, pass0;
   TFBPICKUP *pickup;
   SDDS_DATASET *SDDSout;
@@ -3090,6 +3090,8 @@ typedef struct {
   /* circular buffer for storing output signal */
   long maxDelay;
   double **driverSignal;
+  /* variables needed for computing driver power */
+  double lastV, lastPhase, lastTime;
 } TFBDRIVER;
 
 

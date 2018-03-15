@@ -237,7 +237,7 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
 
 void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LIST *beamline, long pass, long nPasses, char *rootname, double Po, long idSlotsPerBunch)
 {
-  double kick;
+  double kick, nomKick;
   long i, j;
   double *time0 = NULL;           /* array to record arrival time of each particle */
   long *ibParticle = NULL;        /* array to record which bucket each particle is in */
@@ -245,7 +245,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long iBucket, nBuckets;
   long rpass, updateInterval;
-  double tAve, rfFactor, phase=0;
+  double tAve, rfFactor, phase=0, power=0;
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -374,7 +374,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
       if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
         kick = SIGN(kick)*tfbd->kickLimit;
-      
+
       if (isSlave || !notSinglePart) {
         tAve = 0;
         rfFactor = 1;
@@ -407,7 +407,66 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           }
         }
 
-        
+        if (tfbd->computePower) {
+          double V0, V1, phi0, phi1, dt, Tf, omega;
+          double V0r, V0i, V1r, V1i;
+          double Rc, C, Id, phid;
+
+          omega = tfbd->frequency*PIx2;
+          Tf = 2*tfbd->QLoaded/omega;
+          
+          /* Compute ring-down of voltage time when last bunch went through (not beam-loading voltage) */
+          dt = tAve - tfbd->lastTime;
+          V0 = tfbd->lastV*exp(-dt/Tf);
+          phi0 = fmod(tfbd->lastPhase + omega*dt, PIx2);
+          V0r = V0*cos(phi0);
+          V0i = V0*sin(phi0);
+
+          /* compute voltage including ring-down from last passage */
+          V1 = kick*Po*particleMassMV*1e6; /* voltage we'd get without remainder from last bunch */
+          phi1 = tfbd->phase;
+          V1r = V1*cos(phi1) + V0r;
+          V1i = V1*sin(phi1) + V0i;
+          V1 = sqrt(sqr(V1r)+sqr(V1i));
+          phase = atan2(V1i, V1r);
+          kick = V1/(Po*particleMassMV*1e6);
+
+          /* Determine the power assuming the feedback system doesn't try to compensate for the residual voltage
+           */
+          /* -- Drive current and phase */
+          Rc = tfbd->Ra/2;
+          C = 1/(omega*(Rc/tfbd->QLoaded)); /* capacitance */
+          Id = (-2*C*(ipow(V1i,2) + ipow(V1r,2))*sqrt(1 + 4*ipow(Tf,2)*ipow(omega,2)))/
+            (Tf*sqrt((ipow(V1i,2) + ipow(V1r,2))*(cosh(dt/Tf) - sinh(dt/Tf))*
+                     (cosh(dt/Tf)*(2 + 8*ipow(Tf,2)*ipow(omega,2) - 2*cos(2*dt*omega) + 4*Tf*omega*sin(2*dt*omega)) -
+                      4*(Tf*omega*(2*Tf*omega + sin(2*dt*omega)) + (ipow(sin(dt*omega),2) + Tf*omega*sin(2*dt*omega))*sinh(dt/Tf)))));
+          phid = -acos((2*(Tf*omega*(-((V1i + 2*Tf*V1r*omega)*cos(dt*omega)) + (V1r - 2*Tf*V1i*omega)*sin(dt*omega)) +
+                           cosh(dt/Tf)*(Tf*omega*(V1i + 2*Tf*V1r*omega)*cos(dt*omega) 
+                                        + (V1i + Tf*V1r*omega + 2*ipow(Tf,2)*V1i*ipow(omega,2))*sin(dt*omega)) -
+                         (Tf*omega*(V1i + 2*Tf*V1r*omega)*cos(dt*omega) 
+                          + (V1i + Tf*V1r*omega + 2*ipow(Tf,2)*V1i*ipow(omega,2))*sin(dt*omega))*sinh(dt/Tf)))/
+                     (sqrt(1 + 4*ipow(Tf,2)*ipow(omega,2))*
+                      sqrt((ipow(V1i,2) + ipow(V1r,2))*(cosh(dt/Tf) - sinh(dt/Tf))*
+                           (cosh(dt/Tf)*(2 + 8*ipow(Tf,2)*ipow(omega,2) - 2*cos(2*dt*omega) + 4*Tf*omega*sin(2*dt*omega)) -
+                            4*(Tf*omega*(2*Tf*omega + sin(2*dt*omega)) + (ipow(sin(dt*omega),2) + Tf*omega*sin(2*dt*omega))*sinh(dt/Tf))))));
+
+          /* power averaged over the time between bunches */
+          power = 
+            (-(ipow(Id,2)*ipow(Tf,2))/(2.*C) + (ipow(Id,2)*ipow(Tf,2))/(2.*C*exp(dt/Tf)) +
+             (ipow(Id,2)*ipow(Tf,2))/(2.*C*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) -
+             (2*ipow(Id,2)*ipow(Tf,4)*ipow(omega,2))/(C*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
+             (2*ipow(Id,2)*ipow(Tf,3)*dt*ipow(omega,2))/(C*(1 + 4*ipow(Tf,2)*ipow(omega,2))) + 
+             Id*Tf*V0*cos(phid - phi0) - (Id*Tf*V0*cos(phid - phi0))/exp(dt/Tf) -
+             (ipow(Id,2)*ipow(Tf,2)*cos(2*dt*omega))/(2.*C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
+             (2*ipow(Id,2)*ipow(Tf,4)*ipow(omega,2)*cos(2*dt*omega))/(C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
+             (2*ipow(Id,2)*ipow(Tf,3)*omega*sin(2*dt*omega))/(C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)))/dt;
+
+          tfbd->lastPhase = phase;
+          tfbd->lastV = V1;
+        }
+        tfbd->lastTime = tAve;
+
+        nomKick = kick*cos(phase);
         if (!tfbd->longitudinal) {
           j = tfbd->pickup->iPlane+1;
           if (nBuckets==1) {
@@ -448,13 +507,23 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         }
       }
     }
-    
+
 #if defined(DEBUG) || MPI_DEBUG
     printf("TFBDRIVER: preparing for output for bunch %ld\n", iBucket);
     fflush(stdout);
 #endif
 
 #if USE_MPI
+    if (tfbd->computePower) {
+      MPI_Status mpiStatus;
+      if (myid==0) { 
+        MPI_Recv(&nomKick, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&power, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+      } else if (myid==1) {
+        MPI_Send(&nomKick, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+        MPI_Send(&power, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+      }
+    }
     if (myid==0) 
 #endif
       if (tfbd->outputFile) {
@@ -474,12 +543,16 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         fflush(stdout);
 #endif
         if (!SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                               tfbd->outputIndex++, "Bunch", iBucket, "Pass", pass,
+                               tfbd->outputIndex, "Bunch", iBucket, "Pass", pass,
                                "PickupOutput", tfbd->pickup->filterOutput[iBucket], 
-                               "DriverOutput", kick, NULL)) {
+                               "DriverOutput", nomKick, NULL) ||
+            (tfbd->computePower &&
+             !SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                tfbd->outputIndex, "DriverPower", power, NULL))) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
+        tfbd->outputIndex++;
         tfbd->dataWritten = 0;
       }
 
@@ -541,7 +614,14 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
 
   if (tfbd->ID==NULL || !strlen(tfbd->ID))
     bombElegant("you must give an ID string for TFBDRIVER", NULL);
-  
+  if ((tfbd->Ra>0 && tfbd->QLoaded<=0) || (tfbd->Ra<=0 && tfbd->QLoaded>0))
+    bombElegant("Ra and QLoaded must both be set to positive values, or else both set to zero in TFBDRIVER", NULL);
+  if (tfbd->Ra>0 && tfbd->QLoaded>0) {
+    tfbd->computePower = 1;
+    if (tfbd->frequency<=0)
+      bombElegant("FREQUENCY must be positive when RA and QLOADED are set in TFBDRIVER", NULL);
+  }
+
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbd->a[i]!=0)
       break;
@@ -579,6 +659,8 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
+        (tfbd->computePower 
+         && !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverPower", "W", SDDS_DOUBLE)) ||
         !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
@@ -593,6 +675,7 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     free(tfbd->driverSignal);
     tfbd->driverSignal = NULL;
   }
+
   tfbd->nBunches = 0;
 
   if (tfbd->updateInterval<1)
