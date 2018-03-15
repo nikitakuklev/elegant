@@ -495,7 +495,7 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
   MaxIndex[0]=GetMaxIndex(VV[0], N);
   VV[1][MaxIndex[0]] = -1.0;
   MaxIndex[1]=GetMaxIndex(VV[1], N);
-  if( N>1 ) {
+  if( N>2 ) {
     VV[2][MaxIndex[0]] = -1.0;
     VV[2][MaxIndex[1]] = -1.0;
     MaxIndex[2]=GetMaxIndex(VV[2], N);
