@@ -81,7 +81,9 @@ void setup_coupled_twiss_output(
         !SDDS_DefineSimpleColumn(&SDDScoupled, "betay1", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "betay2", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&SDDScoupled, "etax", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDScoupled, "etay", "m", SDDS_DOUBLE)) {
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "etay", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDScoupled, "nux", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDScoupled, "nuy", "", SDDS_DOUBLE)) {
       printf("Unable to set up file %s\n", filename);
       fflush(stdout);
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
@@ -141,6 +143,7 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   ELEMENT_LIST *eptr, *eptr0;
   long nElements, lastNElements, iElement;
   double betax1, betax2, betay1, betay2, etax, etay, tilt;
+  double nux, nuy;
 
   if (!initialized)
     return 0;
@@ -277,6 +280,8 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 
   /*--- Sorting of eigenvalues and eigenvectors according to (x,y,z)... */
   SortEigenvalues((double*)&WR, (double*)&WI, (double*)&VR, matDim, eigenModesNumber, verbosity);
+  nux = fabs(atan2(WI[0], WR[0])/PIx2);
+  nuy = fabs(atan2(WI[2], WR[2])/PIx2);
 
   /*--- Normalization of eigenvectors... */
   for (k=0; k<eigenModesNumber; k++) {
@@ -301,7 +306,9 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
 
   if (SDDScoupledInitialized) {
     /*--- Prepare the output file */
-    if (!SDDS_StartPage(&SDDScoupled, nElements)) {
+    if (!SDDS_StartPage(&SDDScoupled, nElements) ||
+        !SDDS_SetParameters(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                            "nux", nux, "nuy", nuy, NULL)) {
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       return(1);
