@@ -402,7 +402,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
         x1x2Ready = 1;
       }
     } 
-    if ((!elem && IS_BEND(last_elem->type)) || (elem && !is_bend && elem->type!=T_MARK && elem->type!=T_WATCH)) {
+    if ((!elem && IS_BEND(last_elem->type)) || (elem && !is_bend && elem->type!=T_MARK && elem->type!=T_WATCH && elem->type!=T_MAXAMP)) {
 #ifdef DEBUG
       printf("preparing vertex output after %s\n", elem?elem->name:"END");
 #endif
@@ -824,9 +824,9 @@ ELEMENT_LIST *bendPreceeds(ELEMENT_LIST *elem)
 #endif
       return eptr;
     }
-    if (eptr->type==T_MARK || eptr->type==T_WATCH) {
+    if (eptr->type==T_MARK || eptr->type==T_WATCH || eptr->type==T_MAXAMP) {
 #ifdef DEBUG
-      printf("MARK/WATCH found for %s---continuing\n", elem->name);
+      printf("MARK/WATCH/MAXAMP found for %s---continuing\n", elem->name);
 #endif
       eptr = eptr->pred;
     } else {
@@ -856,9 +856,9 @@ ELEMENT_LIST *bendFollows(ELEMENT_LIST *elem)
 #endif
       return eptr;
     }
-    if (eptr->type==T_MARK || eptr->type==T_WATCH) {
+    if (eptr->type==T_MARK || eptr->type==T_WATCH || eptr->type==T_MAXAMP) {
 #ifdef DEBUG
-      printf("MARK/WATCH found for %s---continuing\n",elem->name);
+      printf("MARK/WATCH/MAXAMP found for %s---continuing\n",elem->name);
 #endif
       eptr = eptr->succ;
     } else {
