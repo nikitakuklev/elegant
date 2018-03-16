@@ -4936,6 +4936,8 @@ I.e., one wants the maximum stable region for momentum and position deviations w
 \item function: compute and output uncoupled Twiss parameters, or set up to do so.
 \item sequence: must follow \verb|run_setup|.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item N.B.: the output of this command is strictly correct only when the beamline has vanishingly small x-y coupling.
+  For rings, use of \verb|coupled_twiss_output| is an option when that requirement is not sufficiently well satisfied.
 \end{itemize}
 
 \begin{verbatim}
