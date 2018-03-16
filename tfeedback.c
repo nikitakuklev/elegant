@@ -246,6 +246,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long iBucket, nBuckets;
   long rpass, updateInterval;
   double tAve, rfFactor, phase=0, power=0;
+  double V0r, V0i, V1r, V1i;
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -409,7 +410,6 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
         if (tfbd->computePower) {
           double V0, V1, phi0, phi1, dt, Tf, omega;
-          double V0r, V0i, V1r, V1i;
           double Rc, C, Id, phid;
 
           omega = tfbd->frequency*PIx2;
@@ -519,9 +519,21 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       if (myid==0) { 
         MPI_Recv(&nomKick, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
         MPI_Recv(&power, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+#ifdef DEBUG
+        MPI_Recv(&V0i, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&V0r, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&V1i, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+        MPI_Recv(&V1r, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+#endif
       } else if (myid==1) {
         MPI_Send(&nomKick, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
         MPI_Send(&power, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+#ifdef DEBUG
+        MPI_Send(&V0i, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+        MPI_Send(&V0r, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+        MPI_Send(&V1i, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+        MPI_Send(&V1r, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+#endif
       }
     }
     if (myid==0) 
@@ -548,7 +560,11 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
                                "DriverOutput", nomKick, NULL) ||
             (tfbd->computePower &&
              !SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                tfbd->outputIndex, "DriverPower", power, NULL))) {
+                                tfbd->outputIndex, "DriverPower", power, 
+#ifdef DEBUG
+                                "V0i", V0i, "V0r", V0r, "V1i", V1i, "V1r", V1r,
+#endif
+                                NULL))) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
         }
@@ -660,7 +676,15 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
         (tfbd->computePower 
-         && !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverPower", "W", SDDS_DOUBLE)) ||
+         && (
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverPower", "W", SDDS_DOUBLE) 
+#ifdef DEBUG
+             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V0i", "V", SDDS_DOUBLE)
+             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V0r", "V", SDDS_DOUBLE) 
+             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V1i", "V", SDDS_DOUBLE) 
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V1r", "V", SDDS_DOUBLE)
+#endif
+             ) ) ||
         !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
