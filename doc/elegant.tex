@@ -56,7 +56,7 @@ instead of
 \begin{equation}
   d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
 \end{equation}
-\item The \verb|coupled_twiss_output| command would sometimes crash when \verb|calculate_3d_coupling=0|. This was fixed.
+\item The \verb|coupled_twiss_output| command would sometimes crash when \verb|calculate_3d_coupling=0|. 
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -2210,13 +2210,13 @@ $\epsilon_n = \epsilon\langle\beta\gamma\rangle$, where $\epsilon$ is the geomet
 If this variable is set to a non-zero value, \verb|elegant| instead uses a slower but more accurate method, namely, using the momentum coordinates.
 \cite{Floettmann-PRSTAB6-034202}. The results will show up in the \verb|sigma| and \verb|final| output files, if these are requested in the \verb|run_setup| command.
 \item \verb|mpi_io_force_file_sync|  --- If non-zero, \verb|Pelegant| will perform a file synchronization after writing each row of
-  an SDDS file. This can significantly impact performance, but can solve problems on some filesystems that result in corrupted files
+  an SDDS file. This can {\em significantly} impact performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
 \item \verb|usleep_mpi_io_kludge|  --- If non-zero, \verb|Pelegant| will sleep for the given number of microseconds after
   writing each row of an SDDS file. This can impact performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
   It may give better performance than setting \verb|mpi_io_force_file_sync=1|.
-  A value of 100 is suggested.
+  A value of 100 is suggested as a starting point, but this will be highly system-dependent.
 \end{itemize}
 
 
