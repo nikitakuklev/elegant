@@ -335,6 +335,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     bombElegant("mismatch in number of buckets between TFBDRIVER and TFBPICKUP", NULL);
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
+    nomKick = power = 0;
 #if USE_MPI
 #if MPI_DEBUG
     printf("Waiting on barrier at top of bucket loop\n");
