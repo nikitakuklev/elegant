@@ -376,13 +376,13 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
       if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
         kick = SIGN(kick)*tfbd->kickLimit;
+      phase = tfbd->phase*PI/180;
 
       if (isSlave || !notSinglePart) {
         tAve = 0;
         rfFactor = 1;
 
         if (tfbd->frequency>0) {
-          phase = tfbd->phase*PI/180;
           /* Determine average arrival time of bunch */
           if (nBuckets==1) {
 #if USE_MPI
@@ -515,7 +515,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
 
 #if USE_MPI
-    if (tfbd->computePower) {
+    if (tfbd->outputFile) {
       MPI_Status mpiStatus;
       if (myid==0) { 
         MPI_Recv(&nomKick, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
@@ -537,6 +537,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
       }
     }
+
     if (myid==0) 
 #endif
       if (tfbd->outputFile) {
