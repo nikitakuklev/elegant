@@ -166,10 +166,12 @@ long addBGGExpData(char *filename)
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
-  long ip, ig, im, iz, irow, m, igLimit, izLast;
+  long ip, ig, im, iz, irow, m, igLimit;
+  //long izLast;
   STORED_BGGEXP_DATA *bggData;
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
-  double gamma, step,  length;
+  //double gamma;
+  double step,  length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
   double zMin, zMax, xVertex, zVertex, xEntry, zEntry, xExit, zExit;
@@ -287,7 +289,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   
   if (bgg->zInterval<=0) 
     bombElegantVA("zInterval %ld is invalid for BGGEXP %s #%ld\n", bgg->zInterval, tcontext.elementName, tcontext.elementOccurrence);
-  izLast = bggData->nz-bgg->zInterval;
+  //izLast = bggData->nz-bgg->zInterval;
 
   if (bgg->symplectic) {
     long iImpLoop;
@@ -668,7 +670,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       p[2] = pOrig/denom;
       p[0] = xp*p[2];
       p[1] = yp*p[2];
-      gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
+      //gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
       pErr[0] = pErr[1] = pErr[2] = 0;
 
 #if !USE_MPI
@@ -689,7 +691,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	p[2] = pCentral*(1+delta)/denom;
 	p[0] = xp*p[2];
 	p[1] = yp*p[2];
-	gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
+	//gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
 #if !USE_MPI
         if (bgg->SDDSpo &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,

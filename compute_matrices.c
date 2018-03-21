@@ -1012,7 +1012,8 @@ VMATRIX *compute_matrix(
     KSEXT *ksext; KOCT *koct; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQUSE *kquse;
     MULT *mult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; CCBEND *ccbend; RFCA *rfca; ENERGY *energy;
-    RFCW *rfcw; BRAT *brat;
+    RFCW *rfcw; 
+    //BRAT *brat;
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
@@ -1476,7 +1477,7 @@ VMATRIX *compute_matrix(
         }
         break;
       case T_BRAT:
-        brat = (BRAT*)elem->p_elem;
+        //brat = (BRAT*)elem->p_elem;
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
         break;
       case T_CCBEND:
