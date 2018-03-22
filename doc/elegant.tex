@@ -45,6 +45,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|CCBEND| element had incorrect signs for the odd-order systematic multipoles when the bending
   angle was negative. R. Lindberg (APS) helped identify this problem.
+\item The \verb|KQUAD| element had an issue with the order of the submatrices used for linear edge effects when
+  tracking. This would cause small tune errors in tracking compared to the results of \verb|twiss_output|.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
