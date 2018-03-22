@@ -202,6 +202,21 @@ long track_through_ccbend(
     readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
     readErrorMultipoleData(&(ccbend->edgeMultipoleData), ccbend->edge_multipoles, 0);
     readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
+    if (angle<0) {
+      long i;
+      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
+        if (ccbend->systematicMultipoleData.order[i]%2==0) {
+          ccbend->systematicMultipoleData.an[i] *= -1;
+          ccbend->systematicMultipoleData.bn[i] *= -1;
+        }
+      }
+      for (i=0; i<ccbend->edgeMultipoleData.orders; i++) {
+        if (ccbend->edgeMultipoleData.order[i]%2==0) {
+          ccbend->edgeMultipoleData.an[i] *= -1;
+          ccbend->edgeMultipoleData.bn[i] *= -1;
+        }
+      }
+    }
     ccbend->multipolesInitialized = 1;
   }
   if (!ccbend->totalMultipolesComputed) {

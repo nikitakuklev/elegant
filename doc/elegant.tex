@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 34.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 34.3.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,28 +35,21 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 34.2.0}
+\section{Highlights of What's New in Version 34.3.0}
 
-Here is a summary of what's changed since release 34.1.
+Here is a summary of what's changed since release 34.12.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item The \verb|CCBEND| element had incorrect signs for the odd-order systematic multipoles when the bending
+  angle was negative. R. Lindberg (APS) helped identify this problem.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|frequency_map| command was incorrectly computing the diffusion rate as 
-\begin{equation}
-  d_r = \frac{\log_{10} \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)}{N},
-\end{equation}
-instead of
-\begin{equation}
-  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
-\end{equation}
-\item The \verb|coupled_twiss_output| command would sometimes crash when \verb|calculate_3d_coupling=0|. 
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -66,13 +59,7 @@ instead of
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|global_settings| command has two new fields, \verb|mpi_io_force_file_sync| and \verb|usleep_mpi_io_kludge|,
-  which can be used to solved MPI I/O problems that appear on some file systems. Z. Pan (LBNL) brought the problems to our
-  attention.
-\item The \verb|floor_coodinates| command now ignores \verb|MAXAMP| elements when computing combined vertex points
-  of strings of dipoles.
-\item The \verb|coupled_twiss_output| command did not compute the tunes of the two modes, as pointed out by
-  G. Wei (TJNAF). This was addressed with assistance from V. Sajaev (APS).
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -87,11 +74,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The program \verb|sddsbrightness| now correctly includes the effect of $J_x$ and $J_y$ on the x and y emittances
-  when the \verb|-coupling| option is used.
-\item Added the script \verb|parmela2elegant|, to convert PARMELA beam data (ASCII format) to a form
-  acceptable by \verb|elegant|.
-\item Fixed error in the atomic mass of CO$_2$ in the script \verb|ionTrapping|.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7335,6 +7318,66 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 34.2.0, March 22, 2018}
+
+Here is a summary of what's changed since release 34.1.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|frequency_map| command was incorrectly computing the diffusion rate as 
+\begin{equation}
+  d_r = \frac{\log_{10} \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)}{N},
+\end{equation}
+instead of
+\begin{equation}
+  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
+\end{equation}
+\item The \verb|coupled_twiss_output| command would sometimes crash when \verb|calculate_3d_coupling=0|. 
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|global_settings| command has two new fields, \verb|mpi_io_force_file_sync| and \verb|usleep_mpi_io_kludge|,
+  which can be used to solved MPI I/O problems that appear on some file systems. Z. Pan (LBNL) brought the problems to our
+  attention.
+\item The \verb|floor_coodinates| command now ignores \verb|MAXAMP| elements when computing combined vertex points
+  of strings of dipoles.
+\item The \verb|coupled_twiss_output| command did not compute the tunes of the two modes, as pointed out by
+  G. Wei (TJNAF). This was addressed with assistance from V. Sajaev (APS).
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The program \verb|sddsbrightness| now correctly includes the effect of $J_x$ and $J_y$ on the x and y emittances
+  when the \verb|-coupling| option is used.
+\item Added the script \verb|parmela2elegant|, to convert PARMELA beam data (ASCII format) to a form
+  acceptable by \verb|elegant|.
+\item Fixed error in the atomic mass of CO$_2$ in the script \verb|ionTrapping|.
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 34.1.0, 27 February 2018}
 
