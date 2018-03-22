@@ -36,18 +36,10 @@ void quadFringe(double **coord, long np, double K1,
   double a, dx, dpx, dy, dpy, ds;
   double *fringeIntM, *fringeIntP;
   VMATRIX *M;
-  
+
   M = tmalloc(sizeof(*M));
   initialize_matrices(M, 1);
-  
-  if (inFringe==-1) {
-    fringeIntM = fringeIntP0;
-    fringeIntP = fringeIntM0;
-  } else {
-    fringeIntM = fringeIntM0;
-    fringeIntP = fringeIntP0;
-  }
-  
+
   for (ip=0; ip<np; ip++) {
     vec = coord[ip];
     delta = vec[5];
@@ -57,11 +49,15 @@ void quadFringe(double **coord, long np, double K1,
     yp = vec[3];
     denom = sqrt(1+sqr(xp)+sqr(yp));
     vec[1] = (1+delta)*xp/denom;
-   vec[3] = (1+delta)*yp/denom;
-    
+    vec[3] = (1+delta)*yp/denom;
+
     if (linearFlag) {
       /* determine first linear matrix for this delta */
-      quadPartialFringeMatrix(M, K1, inFringe, fringeIntM, 1);
+      quadPartialFringeMatrix(M, K1, -1, inFringe==-1?fringeIntP0:fringeIntM0, inFringe==-1?1:2);
+      if (inFringe!=-1) {
+        SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
+        SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
+      }
       x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
       px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
       y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
@@ -126,7 +122,6 @@ void quadFringe(double **coord, long np, double K1,
       ds  = (a/(1+delta))*(3*py*y*xpow[2] - px*xpow[3] - 3*px*x*ypow[2] + py*ypow[3]);
     }
     
-
     x  += nonlinearFactor*dx;
     px += nonlinearFactor*dpx;
     y  += nonlinearFactor*dy;
@@ -134,8 +129,11 @@ void quadFringe(double **coord, long np, double K1,
 
     if (linearFlag) {
       /* determine and apply second linear matrix */
-      quadPartialFringeMatrix(M, K1, inFringe, fringeIntP, 2);
-    
+      quadPartialFringeMatrix(M, K1, -1, inFringe!=-1?fringeIntP0:fringeIntM0, inFringe!=-1?1:2);
+      if (inFringe!=-1) {
+        SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
+        SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
+      }
       vec[0] = M->R[0][0]*x + M->R[0][1]*px;
       vec[1] = M->R[1][0]*x + M->R[1][1]*px;
       vec[2] = M->R[2][2]*y + M->R[2][3]*py;
@@ -293,7 +291,7 @@ VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *f
   M->R[0][1] = J2x/expJ1x;
   M->R[1][0] = expJ1x*J3x;
   M->R[1][1] = (1 + J2x*J3x)/expJ1x;
-  
+
   expJ1y = M->R[2][2] = exp(J1y);
   M->R[2][3] = J2y/expJ1y;
   M->R[3][2] = expJ1y*J3y;
