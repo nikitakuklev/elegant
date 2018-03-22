@@ -34,11 +34,26 @@ void quadFringe(double **coord, long np, double K1,
   double x, px, y, py, delta, xp, yp, denom;
   double *vec;
   double a, dx, dpx, dy, dpy, ds;
-  double *fringeIntM, *fringeIntP;
-  VMATRIX *M;
+  VMATRIX *M1 = NULL, *M2 = NULL;
 
-  M = tmalloc(sizeof(*M));
-  initialize_matrices(M, 1);
+  if (linearFlag) {
+    M1 = tmalloc(sizeof(*M1));
+    initialize_matrices(M1, 1);
+    M2 = tmalloc(sizeof(*M2));
+    initialize_matrices(M2, 1);
+    
+    /* determine first linear matrix for this delta */
+    quadPartialFringeMatrix(M1, K1, -1, inFringe==-1?fringeIntP0:fringeIntM0, inFringe==-1?1:2);
+    if (inFringe!=-1) {
+      SWAP_DOUBLE(M1->R[0][0], M1->R[1][1]);
+      SWAP_DOUBLE(M1->R[2][2], M1->R[3][3]);
+    }
+    quadPartialFringeMatrix(M2, K1, -1, inFringe!=-1?fringeIntP0:fringeIntM0, inFringe!=-1?1:2);
+    if (inFringe!=-1) {
+      SWAP_DOUBLE(M2->R[0][0], M2->R[1][1]);
+      SWAP_DOUBLE(M2->R[2][2], M2->R[3][3]);
+    }
+  }
 
   for (ip=0; ip<np; ip++) {
     vec = coord[ip];
@@ -52,16 +67,10 @@ void quadFringe(double **coord, long np, double K1,
     vec[3] = (1+delta)*yp/denom;
 
     if (linearFlag) {
-      /* determine first linear matrix for this delta */
-      quadPartialFringeMatrix(M, K1, -1, inFringe==-1?fringeIntP0:fringeIntM0, inFringe==-1?1:2);
-      if (inFringe!=-1) {
-        SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
-        SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
-      }
-      x  = M->R[0][0]*vec[0] + M->R[0][1]*vec[1];
-      px = M->R[1][0]*vec[0] + M->R[1][1]*vec[1];
-      y  = M->R[2][2]*vec[2] + M->R[2][3]*vec[3];
-      py = M->R[3][2]*vec[2] + M->R[3][3]*vec[3];
+      x  = M1->R[0][0]*vec[0] + M1->R[0][1]*vec[1];
+      px = M1->R[1][0]*vec[0] + M1->R[1][1]*vec[1];
+      y  = M1->R[2][2]*vec[2] + M1->R[2][3]*vec[3];
+      py = M1->R[3][2]*vec[2] + M1->R[3][3]*vec[3];
     } else {
       x  = vec[0];
       px = vec[1];
@@ -129,15 +138,10 @@ void quadFringe(double **coord, long np, double K1,
 
     if (linearFlag) {
       /* determine and apply second linear matrix */
-      quadPartialFringeMatrix(M, K1, -1, inFringe!=-1?fringeIntP0:fringeIntM0, inFringe!=-1?1:2);
-      if (inFringe!=-1) {
-        SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
-        SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
-      }
-      vec[0] = M->R[0][0]*x + M->R[0][1]*px;
-      vec[1] = M->R[1][0]*x + M->R[1][1]*px;
-      vec[2] = M->R[2][2]*y + M->R[2][3]*py;
-      vec[3] = M->R[3][2]*y + M->R[3][3]*py;
+      vec[0] = M2->R[0][0]*x + M2->R[0][1]*px;
+      vec[1] = M2->R[1][0]*x + M2->R[1][1]*px;
+      vec[2] = M2->R[2][2]*y + M2->R[2][3]*py;
+      vec[3] = M2->R[3][2]*y + M2->R[3][3]*py;
     } else {
       vec[0] = x;
       vec[1] = px;
@@ -157,8 +161,15 @@ void quadFringe(double **coord, long np, double K1,
       vec[1] = vec[3] = DBL_MAX;
   }
   
-  free_matrices(M);
-  free(M);
+  if (M1) {
+    free_matrices(M1);
+    free(M1);
+  } 
+  if (M2) {
+    free_matrices(M2);
+    free(M2);
+  } 
+
 }
 
 
