@@ -2125,9 +2125,13 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
         the changes in the tunes.  This is expressed in terms of the diffusion, which is defined
         as 
 \begin{equation}
-  d = \log \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)
+  d = \log_{10} \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)
 \end{equation}
-Use of this feature results in a doubling of the number of turns tracked.
+Use of this feature results in a doubling of the number of turns tracked. The diffusion rate, 
+\begin{equation}
+  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
+\end{equation} is also computed. (Note that some programs, e.g., TRACY and MAD, define these quantities
+with a square-root inside the logarithm \cite{BuesingPC}. This changes the values by a factor of 2.)
 \item \verb|quadratic_spacing| --- If non-zero, the spacing of points is quadratic rather than linear, thus emphasizing
   the higher amplitude regions.
 \item \verb|full_grid_output| --- If non-zero, all grid points are represented in the output file, even if tracking or
@@ -8441,6 +8445,9 @@ Proc. IPAC15, 623 (2015).
 
 \bibitem{Bassetti}
 M. Bassetti, G. Erskine, CERN ISR TH/80-06 (1980).
+
+\bibitem{BuesingPC}
+B. Buesing, private communication, 2018.
 
 \end{thebibliography}
 
