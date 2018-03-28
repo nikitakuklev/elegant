@@ -2129,9 +2129,9 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
 \end{equation}
 Use of this feature results in a doubling of the number of turns tracked. The diffusion rate, 
 \begin{equation}
-  d_r = \log_{10} \left(\frac{\Delta\nu_x^2 + \Delta\nu_y^2}{N}\right),
-\end{equation} is also computed. (Note that some programs, e.g., TRACY and MAD, define these quantities
-with a square-root inside the logarithm \cite{BuesingPC}. This changes the values by a factor of 2.)
+  d_r = \log_{10} \left(\frac{\sqrt{\Delta\nu_x^2 + \Delta\nu_y^2}}{N}\right),
+\end{equation} is also computed. $d_r$ is the more conventional quantity, computed by
+programs such as TRACY and MAD \cite{BuesingPC}.
 \item \verb|quadratic_spacing| --- If non-zero, the spacing of points is quadratic rather than linear, thus emphasizing
   the higher amplitude regions.
 \item \verb|full_grid_output| --- If non-zero, all grid points are represented in the output file, even if tracking or

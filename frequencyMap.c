@@ -45,7 +45,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"dx", "&column name=dx, symbol=$gD$rx, units=m, type=double &end"},
     {"dy", "&column name=dy, symbol=$gD$ry, units=m, type=double &end"},
     {"diffusion", "&column name=diffusion, symbol=\"log$b10$n($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)\", type=double &end"},
-    {"diffusionRate", "&column name=diffusionRate, symbol=\"log$b10$n(($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)\", type=double &end"}
+    {"diffusionRate", "&column name=diffusionRate, symbol=\"log$b10$n($sr$e($gDn$r$bx$n$a2$n+$gDn$r$bx$n$a2$n)/Turns)\", type=double &end"}
     } ;
 
 #define IP_STEP 0
@@ -304,7 +304,7 @@ long doFrequencyMap(
 				     IC_DIFFUSION, 
                                      diffusion,
 				     IC_DIFFUSION_RATE, 
-                                     diffusion/log10(turns),
+                                     diffusion/2-log10(turns),
 				     -1)) {
 		SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
 		SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
