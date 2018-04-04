@@ -219,14 +219,14 @@ proc findFixedPoints {} {
 		      "-define=param,phi1,$synchPhaseDeg pi * 180 /" "-define=param,phih,$harmonicPhaseDeg pi * 180 /" \
 		      "-define=param,U0,$U1" \
 		      "-define=column,error,U0 V1 phi1 dphi + sin * - Vh phih dphi h * + sin * -" \
-		      | sddszerofind -pipe -zeroesOf=error -columns=dphi \
+		      "-define=column,deriv,V1 phi1 dphi + cos * Vh phih dphi h * + sin * h * + chs" \
+		      | sddszerofind -pipe -zeroesOf=error -columns=dphi,deriv \
+		      | sddsprocess -pipe "-test=column,deriv 0 <" \
 		      | sdds2stream -pipe -column=dphi]
     global fixedPoint
-    #puts stderr "[llength $dataList] zero crossings: [join $dataList ,]"
-    if [llength $dataList]>2 {
+    if [llength $dataList]>1 {
 	set fixedPoint(1) [lindex $dataList 0]
 	set fixedPoint(2) [lindex $dataList 1]
-	set fixedPoint(3) [lindex $dataList 2]
 	set fixedPoint(valid) 1
     } else {
 	set fixedPoint(valid) 0
