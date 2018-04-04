@@ -182,7 +182,7 @@ proc compute {args} {
                 set voltageRatio 0
             }
             set harmonicPhase [expr $harmonicPhaseDeg*$pi/180.]
-            set U1 [expr $U1-$voltageRatio*$voltage*sin($harmonicPhase)]
+            # set U1 [expr $U0-$voltageRatio*$voltage*sin($harmonicPhase)]
             set synchPhase [expr asin($U1/$voltage)]
             set synchPhaseDeg [expr $synchPhase*180/$pi]
             set synchTune0 [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
@@ -211,17 +211,20 @@ proc findFixedPoints {} {
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
     global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
 
-    set dataList [exec sddssequence -pipe=out -define=dphi -sequence=begin=[expr -1.99*$pi],end=[expr 1.99*$pi],n=100000 \
-		      | sddsprocess -pipe \
+    #puts stderr "findFixedPoints: $voltage, $voltageRatio $harmonicRatio $harmonicPhaseDeg $U1"
+    set dataList [exec sddssequence -pipe=out -define=dphi -sequence=begin=[expr -2*$pi],end=[expr 2*$pi],n=1000000 \
+		      | sddsprocess -pipe -clip=1,0 \
 		      "-define=param,V1,$voltage" "-define=param,Vh,$voltage $voltageRatio *" \
 		      "-define=param,h,$harmonicRatio" \
 		      "-define=param,phi1,$synchPhaseDeg pi * 180 /" "-define=param,phih,$harmonicPhaseDeg pi * 180 /" \
 		      "-define=param,U0,$U1" \
 		      "-define=column,error,U0 V1 phi1 dphi + sin * - Vh phih dphi h * + sin * -" \
+	| tee ds1.lc \
 		      | sddszerofind -pipe -zeroesOf=error -columns=dphi \
 		      | sdds2stream -pipe -column=dphi]
     global fixedPoint
-    if [llength $dataList]==3 {
+    #puts stderr "[llength $dataList] zero crossings: [join $dataList ,]"
+    if [llength $dataList]>2 {
 	set fixedPoint(1) [lindex $dataList 0]
 	set fixedPoint(2) [lindex $dataList 1]
 	set fixedPoint(3) [lindex $dataList 2]
