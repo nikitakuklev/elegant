@@ -30,11 +30,13 @@ static SDDS_TABLE SDDS_floor;
 #define IC_ELEMENT 8
 #define IC_OCCURENCE 9
 #define IC_TYPE 10
+#define IC_NEXT_ELEMENT 11
+#define IC_NEXT_TYPE 12
 #ifdef INCLUDE_WIJ 
-#define IC_W11 11
-#define N_COLUMNS 20
+#define IC_W11 13
+#define N_COLUMNS 22
 #else
-#define N_COLUMNS 11
+#define N_COLUMNS 13
 #endif
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
@@ -49,6 +51,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"ElementOccurence", 
          "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
     {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+    {"NextElementName", "&column name=NextElementName, type=string, description=\"Next element name\", format_string=%10s &end"},
+    {"NextElementType", "&column name=NextElementType, type=string, description=\"Element-type name for next element\", format_string=%10s &end"},
 #ifdef INCLUDE_WIJ 
     {"W11", "&column name=W11 type=double &end\n"},
     {"W12", "&column name=W12 type=double &end\n"},
@@ -184,11 +188,15 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
 
   s = 0;
 
+  elem = &(beamline->elem);
+
   row_index = 0;
   if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                          IC_S, (double)0.0, IC_DS, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
                          IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
-                         IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
+                         IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", 
+                         IC_NEXT_ELEMENT, elem->succ?elem->succ->name:"_END_", IC_NEXT_TYPE, "MARK",
+                         -1)) {
     SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -202,8 +210,6 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
       }
 #endif
   row_index++;
-
-  elem = &(beamline->elem);
 
   while (elem) {
     if (elem->type==T_STRAY) {
@@ -464,7 +470,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                                    IC_S, sVertex+ds, IC_DS, ds,
                                    IC_X, c->ve[0], IC_Y, c->ve[1], IC_Z, c->ve[2],
                                    IC_THETA, anglesVertex[0], IC_PHI, anglesVertex[1], IC_PSI, anglesVertex[2],
-                                   IC_ELEMENT, label, IC_OCCURENCE, preceeds->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
+                                   IC_ELEMENT, label, IC_OCCURENCE, preceeds->occurence, IC_TYPE, "VERTEX-POINT", 
+                                   IC_NEXT_ELEMENT, "", IC_NEXT_TYPE, "",
+                                   -1)) {
               SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
@@ -550,7 +558,8 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                                IC_S, *s+length/2, IC_DS, length, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
                                IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
                                IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
-                               entity_name[elem->type], -1)) {
+                               entity_name[elem->type], IC_NEXT_ELEMENT, "", IC_NEXT_TYPE, "",
+                               -1)) {
           SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -580,8 +589,10 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                            IC_S, *s+length, IC_DS, length, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
                            IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
-                           IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
-                           entity_name[elem->type], -1)) {
+                           IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, entity_name[elem->type], 
+                           IC_NEXT_ELEMENT, elem->succ?elem->succ->name:"_END_", IC_NEXT_TYPE, 
+                           elem->succ?entity_name[elem->succ->type]:"MARK",
+                           -1)) {
       SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
