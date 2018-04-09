@@ -88,7 +88,7 @@ coupling       Ratio between vertical and horizontal emittances.\n\
 emityInput     Vertical emittance in meters.\n\
 emitInput      Natural emittance in meters. By default, taken from twiss file.\n\
 deltaInput     Rms fractional energy spread. By default, taken from twiss file.\n\
-deltaLimit     Maximum value of stable momentum deviation, imposed as a cap\n\
+deltaLimit     Maximum value (in percent) of stable momentum deviation, imposed as a cap\n\
                over the momentum aperture in the aperture file.\n\
 RF             Give rf voltage (in MV) and harmonic number. If limit qualifier\n\
                is given, then deltaLimit is computed from the bucket half-height.\n\
