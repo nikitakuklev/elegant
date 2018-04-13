@@ -24,7 +24,7 @@ static FILE *fpHam = NULL;
 #endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2);
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, long order);
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
@@ -111,7 +111,7 @@ long track_through_ccbend(
       if (!disable[0] || !disable[1]) {
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
-        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.tilt = ccbendCopy.etilt = 
+        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt =
           ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
         ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.random_multipoles = NULL;
         PoCopy = Po;
@@ -247,21 +247,22 @@ long track_through_ccbend(
     bombTracking("expansion_coefficients(2) returned NULL pointer (track_through_ccbend)");
 
   tilt = ccbend->tilt;
-  dx = ccbend->dx + (ccbend->optimized ? ccbend->dxOffset : 0);
+  dx = ccbend->dx;
   dy = ccbend->dy;
   dz = ccbend->dz;
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
-  if (angle!=0 && iPart<=0) {
-    switchRbendPlane(particle, n_part, fabs(angle/2), Po);
-    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length);
-  }
-
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, dx, dy, dz);
   if (tilt)
     rotateBeamCoordinates(particle, n_part, tilt);
+  if (ccbend->optimized)
+    offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
+  if (angle!=0 && iPart<=0) {
+    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    switchRbendPlane(particle, n_part, fabs(angle/2), Po);
+  }
 
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
@@ -286,17 +287,19 @@ long track_through_ccbend(
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
 
+  if (ccbend->optimized!=-1) { /* don't think this test is needed */
+    if (angle!=0 && (iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
+      switchRbendPlane(particle, n_part, fabs(angle/2), Po);
+      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    }
+  }
+
+  if (ccbend->optimized)
+    offsetBeamCoordinates(particle, n_part, -ccbend->dxOffset, 0, 0);
   if (tilt)
     rotateBeamCoordinates(particle, n_part, -tilt);
   if (dx || dy || dz)
     offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
-  if (ccbend->optimized!=-1) { /* don't think this test is needed */
-    if (angle!=0 && (iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) { 
-      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length);
-      switchRbendPlane(particle, n_part, fabs(angle/2), Po);
-    }
-  }
-
   if (angle<0)
     /* note that we use n_part here so lost particles get rotated back as well */
     rotateBeamCoordinates(particle, n_part, -PI);
@@ -623,13 +626,18 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
   }
 }
 
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2)
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, long order)
 {
   long i;
   double c, d, e;
+  if (order<1)
+    return;
+  c = d = e = 0;
   c = sin(alpha)/rho0;
-  d = sin(alpha)*K1;
-  e = sin(alpha)*K2/2;
+  if (order>1)
+    d = sin(alpha)*K1;
+  if (order>2)
+    e = sin(alpha)*K2/2;
   for (i=0; i<n_part; i++) {
     double x, y;
     x = particle[i][0];
