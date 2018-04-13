@@ -462,11 +462,17 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       nelem++;
     }
     while (eptr) {
+      long code;
       /* The end position will have been set in a previous call to get_beamline(), prior to 
          definition of insertions */
-      if (insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos)) {
-        add_element(eptr, eptr_add); 
-        eptr = eptr->succ;		/* move pointer to new added element */
+      if (code=insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos)) {
+        if (code==1) {
+          add_element(eptr, eptr_add); 
+          eptr = eptr->succ;		/* move pointer to new added element */
+        } else if (eptr->pred) {
+          add_element(eptr->pred, eptr_add); 
+          eptr = eptr->succ;		/* move pointer to next element */
+        }
         nelem++;
       }
       if (eptr->succ==NULL && getAddEndFlag()) {	/* add element to the end of line if request */

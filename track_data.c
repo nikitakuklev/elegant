@@ -2857,6 +2857,7 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"OPTIMIZE_DX_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeDxOnce), NULL, 0.0, 0, "If nonzero, the x offset is optimized only once, even if relevant parameters are changed."},
     {"OPTIMIZE_FSE_ONCE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.optimizeFseOnce), NULL, 0.0, 0, "If nonzero, the FSE offset is optimized only once, even if relevant parameters are changed."},
     {"COMPENSATE_KN", "", IS_SHORT, 0, (long)((char *)&ccbend_example.compensateKn), NULL, 0.0, 0, "If nonzero, K1 and K2 strengths are adjusted to compensate for the changes in FSE needed to center the trajectory."},
+    {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.edgeOrder), NULL, 0.0, 3, "Gives order of edge effects. Does not affect edge multipoles."},
     {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
     };
 

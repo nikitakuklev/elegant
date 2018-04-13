@@ -2287,16 +2287,18 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
     STRING losses = NULL;
     STRING output = NULL;
     STRING log_file = NULL;
-    double delta_min = 0.001;
+    double k_min = 0.001;
     STRING momentum_aperture = NULL;
-    double momentum_aperture_scale = 0.95;
-    double delta_max = 0.100;
-    long n_delta = 101;
+    double momentum_aperture_scale = 0.90;
+    double momentum_aperture_periodicity = 0;
+    long n_k = 101;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
     STRING include_type_pattern = NULL;
     long verbosity = 1;        
+    long soft_failure = 0;
+    long allow_watch_file_output = 0;
 &end
 \end{verbatim}
 
@@ -2313,11 +2315,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   The electron has $\delta = -k$ after scattering.
   \verb|k_min| should be small enough that no electron scattered by -\verb|k_min| is lost, 
   regardless of the scattering location. 
-\item \verb|k_max| --- Maximum energy $k$ of the brehmsstrahlung photon as a fraction of the beam energy.
-  The electron has $\delta = -k$ after scattering.
-  \verb|k_max| should be large enough that no electron scattered by -\verb|k_max| survives,
-  regardless of the scattering location. 
-\item \verb|n_k| --- Number of scattering values on the range \verb|k_min| to \verb|k_max|.
+\item \verb|n_k| --- Number of scattering values on the range \verb|k_min| to 1.
 \item \verb|momentum_aperture|, \verb|momentum_aperture_scale| --- If given, names a file giving the momentum aperture vs s, which
   is interpolated at the scattering locations to obtain the local momentum aperture.
   Such a file may be obtained from running the \verb|momentum_aperture| command. The absolute values of the 
@@ -2325,10 +2323,14 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   The \verb|k_min| values thus obtained are multiplied by \verb|momentum_aperture_scale|, so there is some assurance
   that the minimally-scattered particles will survive. This ensures that the results are valid for computation of 
   loss rates, for example.
+\item \verb|momentum_aperture_periodicity| --- If nonzero, the momentum aperture data from \verb|momentum_aperture| is
+  periodic with the given periodicity.
 \item \verb|s_start|, \verb|s_end| --- Range of s location for simulated scattering sites.
 \item \verb|include_name_pattern| --- Wildcard-containing string to match to element names in selecting scattering sites.
 \item \verb|include_type_pattern| --- Wildcard-containing string to match to element types in selecting scattering sites.
 \item \verb|verbosity| --- Higher values may result in more verbose informational output.
+\item \verb|soft_failure| --- If nonzero, failure to kind a loss does not result in aborting the run.
+\item \verb|allow_watch_file_output| --- If nonzero, \verb|WATCH| elements provide output during tracking. 
 \end{itemize}
 
 %\begin{latexonly}
