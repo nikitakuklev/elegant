@@ -44,7 +44,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item The \verb|CCBEND| element had incorrect signs for the odd-order systematic multipoles when the bending
-  angle was negative. R. Lindberg (APS) helped identify this problem.
+  angle was negative. There was also an issue with incorrect ordering of edge effects and coordinate transformations.
+  R. Lindberg (APS) helped identify these problems.
 \item The \verb|KQUAD| element had an issue with the order of the submatrices used for linear edge effects when
   tracking. This would cause small tune errors in tracking compared to the results of \verb|twiss_output|.
 \end{itemize}
@@ -56,7 +57,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item \verb|CCBEND| has an new parameter, \verb|EDGE_ORDER|, that allows controlling the order of edge kicks.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -64,6 +65,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|floor_coordinates| command now creates additional columns in the output file, giving data on
   the next element in the lattice. Given that data is only provided at the end of elements, this provides
   an easier way to determine information at the start of elements.
+\item The \verb|insert_elements| command now has a parameter, \verb|insert_before|, that allows controlling whether
+  elements are inserted before or after (default) the specified locations.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
