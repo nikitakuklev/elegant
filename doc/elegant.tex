@@ -562,6 +562,14 @@ this naming convention, particularly if one consistently uses the same
 extension for the same type of output.  Recommended filename
 extensions are given in the lists below.
 
+Note that this substitution feature is not generally available for
+input files, though there are some exceptions (e.g., \verb|load_parameters|).
+Another convenience for input file organization is the search-path feature,
+which can be set from the \verb|run_setup| command.
+By default, \verb|elegant| assumes input filenames give the full pathname.
+If the search path is specified, \verb|elegant| will instead look for files in one of
+the listed directories.
+
 When {\tt elegant} reads a namelist command, one of its first actions
 is to print the namelist back to the standard output.  This printout
 includes all the variables in the namelist and their values.
