@@ -203,6 +203,8 @@ void setupElasticScattering(
         (ideltaLost=SDDS_DefineColumn(&SDDSsa, "deltaLost", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (isLost=SDDS_DefineColumn(&SDDSsa, "sLost", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         SDDS_DefineParameter(&SDDSsa, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0 ||
+        SDDS_DefineParameter(&SDDSsa, "badThetaMin", NULL, NULL, "Number of particles on innermost theta ring that were lost. Should be zero for valid result.", NULL, SDDS_LONG, NULL)<0 ||
+        SDDS_DefineParameter(&SDDSsa, "badThetaMax", NULL, NULL, "Number of particles on outermost theta ring that were not lost. Should be zero for valid result.", NULL, SDDS_LONG, NULL)<0 ||
         SDDS_DefineParameter(&SDDSsa, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION)<0) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
@@ -328,7 +330,13 @@ long runElasticScattering(
   } else {
     nEachProcessor = nTotal/nWorkingProcessors;
   }
-  
+  if (nWorkingProcessors%n_theta==0) {
+    printf("*** Warning!: The number of working processors (%ld) is a multiple of n_theta (%ld)!\nThis will probably give very poor load balancing and poor parallel performance!\n", nWorkingProcessors, n_theta);
+  }
+  if (nWorkingProcessors%n_phi==0) {
+    printf("*** Warning!: The number of working processors (%ld) is a multiple of n_phi (%ld)!\nThis will probably give very poor load balancing and poor parallel performance!\n", nWorkingProcessors, n_phi);
+  }
+
   if (myid==0 || mpiDebug) {
     printf("nTotal = %ld, nWorkingProcessors = %ld, n_theta = %ld, n_phi = %ld, nElements = %ld, nEachProcessor = %ld\n",
            nTotal, nWorkingProcessors, n_theta, n_phi, nElements, nEachProcessor);
@@ -560,6 +568,11 @@ long runElasticScattering(
                lostParticles[ip][0], lostParticles[ip][2], lostParticles[ip][5], lostParticles[ip][4]);
         fflush(stdout);
       }
+    }
+    if (!SDDS_SetParameters(&SDDSsa, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "badThetaMin",
+			    badThetaMin, "badThetaMax", nThetaMax, NULL)) {
+      SDDS_SetError("Problem writing SDDS table (doSlopeApertureSearch)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (verbosity>5) {
       printf("About to write page\n");
