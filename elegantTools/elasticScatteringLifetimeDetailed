@@ -124,7 +124,7 @@ exec sddsprocess $twiss -pipe=out -process=beta*,first,%s0 -filter=col,s,0,[expr
 
 # Interpolate the pressure data at locations of lattice function data 
 # Convert all the s-dependent quantities into parameters (one s location per page)
-exec sddsinterp $pressure -pipe=out -fileValues=$tmpRoot.1,column=s -column=s,[join $speciesList ,] -belowRange=abort -aboveRange=abort \
+exec sddsinterp $pressure -pipe=out -fileValues=$tmpRoot.1,column=s -column=s,[join $speciesList ,] -belowRange=wrap -aboveRange=wrap \
     | sddsxref -pipe $tmpRoot.1 -take=* -transfer=param,* \
     | sddsexpand -pipe=in $tmpRoot.2 
 set nTw [exec sdds2stream -npage=bare $tmpRoot.2]
