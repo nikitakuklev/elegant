@@ -43,8 +43,8 @@ void computeScatteringAngles(long itheta, long iphi, double *xpReturn, double *y
   
   theta0 = theta_min;
   if (twiss_scaling) {
-    xScale = sqrt(twiss->betax/betax0);
-    yScale = sqrt(twiss->betay/betay0);
+    xScale = sqrt(betax0/twiss->betax);
+    yScale = sqrt(betay0/twiss->betay);
     theta0 = theta_min*(xScale<yScale?xScale:yScale);
   }
   theta = (theta_max-theta0)/(n_theta-1.0)*itheta + theta0;
@@ -570,7 +570,7 @@ long runElasticScattering(
       }
     }
     if (!SDDS_SetParameters(&SDDSsa, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "badThetaMin",
-			    badThetaMin, "badThetaMax", nThetaMax, NULL)) {
+			    badThetaMin, "badThetaMax", nElements*n_phi-nThetaMax, NULL)) {
       SDDS_SetError("Problem writing SDDS table (doSlopeApertureSearch)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }

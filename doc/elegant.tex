@@ -52,7 +52,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The beta-function scaling resulting from the \verb|twiss_scaling=1| setting
+  for the \verb|elastic_scattering| command was incorrect. Although the tracking results would be correct,
+  this made it more difficult to optimize run time.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -67,6 +69,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   an easier way to determine information at the start of elements.
 \item The \verb|insert_elements| command now has a parameter, \verb|insert_before|, that allows controlling whether
   elements are inserted before or after (default) the specified locations.
+\item The \verb|elastic_scattering| command now includes data that indicates warning conditions in the file
+  specified by \verb|log_file|.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
