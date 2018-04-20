@@ -1790,7 +1790,8 @@ and \verb|SOLE|.
   by this angle survives, regardless of scattering location. 
 \item \verb|n_theta| --- Number of polar scattering angle values on the range \verb|theta_min| to \verb|theta_max|.
 \item \verb|n_phi| --- Number of azimuthal scattering angles on the range $[0, \pi]$.
-\item \verb|twiss_scaling| --- If nonzero, then \verb|theta_min| is scaled by $\text{min}\{\sqrt{\beta_x(0)/\beta_x(s)}, \sqrt{\beta_y(0)/\beta_y(s)}\}$,
+\item \verb|twiss_scaling| --- If nonzero, then \verb|theta_min| is scaled by 
+  $\min (\sqrt{\beta_x(0)/\beta_x(s)}, \sqrt{\beta_y(0)/\beta_y(s)})$,
   where $s$ is the location of the scattering location and $s=0$ is the start of the lattice.
 \item \verb|s_start|, \verb|s_end| --- Range of s location for simulated scattering sites.
 \item \verb|include_name_pattern| --- Wildcard-containing string to match to element names in selecting scattering sites.
