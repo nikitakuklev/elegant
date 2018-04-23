@@ -248,13 +248,17 @@ foreach sLoc $sLocList sStart $sStartList sEnd $sEndList {
 if $verbose {
     puts stderr "generating $output"
 }
-eval exec sddscombine $trackingList -pipe=out \
-    | tee $output.full \
-    | sddscombine -pipe -merge \
-    | sddshist -pipe=in $output.his -data=sLost -weight=rate -size=$binsize -norm=sum -cdf
 
 eval exec sddscombine $trackingList -collapse -pipe=out \
   | sddsprocess -pipe=in $output -process=rateSum,sum,rateTotal \
   "{-define=parameter,lifetime,rateTotal rec 3600 /,units=h}" 
+
+
+eval exec sddscombine $trackingList -pipe=out \
+    | tee $output.full \
+    | sddscombine -pipe -merge \
+    | sddsconvert -pipe -delete=param,* \
+    | sddsxref -pipe -leave=* -transfer=parameter,* $output \
+    | sddshist -pipe=in $output.his -data=sLost -weight=rate -size=$binsize -norm=sum -cdf
 
 eval file delete $trackingList
