@@ -297,6 +297,10 @@ int main(int argc, char **argv)
       is2++;
     }
   nkScatterUnique[is2-1] = is-indexScatterUnique[is2-1];
+  if (verbose) {
+    printf("%ld unique scattering locations from s=%le to %le\n",
+           nScatterUnique, sScatterUnique[0], sScatterUnique[nScatterUnique]);
+  }
 
   /* Set up output files */
   /* -- main file: quantities vs unique scattering location */
@@ -420,7 +424,7 @@ int main(int argc, char **argv)
       rateSum += rate[index];
       /* Output rate vs (sScatterUnique, delta) */
       if (!SDDS_SetRowValues(&SDDSfull, SDDS_PASS_BY_VALUE|SDDS_SET_BY_NAME, index,
-                             "s", sScatter[index],
+                             "s", sScatterUnique[is],
                              "sLost", sLost[index],
                              "delta", deltaScatter[index],
                              "rate", rate[index], NULL))
@@ -428,7 +432,7 @@ int main(int argc, char **argv)
     }
     /* Output rateSum vs sScatterUnique */
     if (!SDDS_SetRowValues(&SDDSmain, SDDS_PASS_BY_VALUE|SDDS_SET_BY_NAME, is,
-                           "s", sScatter[is],
+                           "s", sScatterUnique[is],
                            "sStart", sScatterStart[is],
                            "sEnd", sScatterEnd[is],
                            "G1Ave", G1Ave, "G2Ave", G2Ave, 
