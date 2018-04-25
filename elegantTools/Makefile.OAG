@@ -103,7 +103,7 @@
 
 #CMPLR = ANSI
 Ocustom = -O3
-#HOST_OPT = NO
+HOST_OPT = YES
 
 #RATIONAL = purify
 #RATIONAL = quantify
@@ -119,17 +119,17 @@ CCC := $(RATIONAL) -best-effort $(CCC)
 endif
 endif
 
-PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
+PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg inelasticScatteringAnalysis \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime astra2elegant rfgun2elegant sddsbunchingfactor sddsmatchmoments
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry generateBunch radiationEnvelope computeCoherentFraction plotTwissBeamsize analyzeMagnets bremsstrahlungLifetime elasticScatteringLifetime makeWigglerFromBends elasticScatteringLifetimeDetailed bremsstrahlungLifetimeDetailed reorganizeMmap prepareTAPAs makeSummedCsrZ TFBFirSetup computeSCTuneSpread ionTrapping computeGeneralizedGradients weightedBunch removeBackDrifts elasticScatteringAnalysis LFBFirSetup inelasticScatteringAnalysis parmela2elegant bucketParameters
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param pop2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant coreEmittance scaleRingErrors view3dGeometry generateBunch radiationEnvelope computeCoherentFraction plotTwissBeamsize analyzeMagnets bremsstrahlungLifetime elasticScatteringLifetime makeWigglerFromBends elasticScatteringLifetimeDetailed bremsstrahlungLifetimeDetailed reorganizeMmap prepareTAPAs makeSummedCsrZ TFBFirSetup computeSCTuneSpread ionTrapping computeGeneralizedGradients weightedBunch removeBackDrifts elasticScatteringAnalysis LFBFirSetup parmela2elegant bucketParameters
 
 PROD_HOST = $(PRODOAG)
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE
+		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE -I../../../physics
 #USR_LDFLAGS += -g
 
 #Look for private version of GSL used here at APS
@@ -201,7 +201,7 @@ z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib $(GSLLIB) mdbmth mdblib lzma \
-		meschach
+		meschach oagphy
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z
 SYS_PROD_LIBS_solaris += z rt 
@@ -217,6 +217,7 @@ lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
+oagphy_DIR = $(EPICS_TOP_DIR)/oag/apps/lib/$(EPICS_HOST_ARCH)
 #fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 
 astra2elegant_SRCS = astra2elegant.c
