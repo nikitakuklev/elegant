@@ -9,7 +9,7 @@
 
 /* program: inelasticScatteringAnalysis
  * purpose: take inelastic scattering tracking output from elegant along with
- *          twiss output and pressure distribution, compute elastic scattering
+ *          twiss output and pressure distribution, compute inelastic scattering
  *          loss distribution etc.
  *
  * Michael Borland, 2018
@@ -22,18 +22,17 @@
 
 #define SET_TWISS 0
 #define SET_PRESSURE 1
-#define SET_BIN_SIZE 2
-#define SET_VERBOSE 3
-#define SET_STORED_CHARGE 4
-#define N_OPTIONS 5
+#define SET_VERBOSE 2
+#define SET_STORED_CHARGE 3
+#define N_OPTIONS 4
 
 char *option[N_OPTIONS] = {
-  "twiss", "pressure", "binsize", "verbose", "storedcharge",
+  "twiss", "pressure", "verbose", "storedcharge",
 } ;
 
 char *USAGE1="inelasticScatteringAnalysis <SDDSinputfile> <outputRootname>\n\
   [-twiss=<filename>] [-pressure=<filename>[,periodic]]\n\
-  [-storedCharge=<Coulombs>] [-binsize=<meters>(0.001)] [-verbose]\n\n\
+  [-storedCharge=<Coulombs>] [-verbose]\n\n\
 The input file should be created by the &inelastic_scattering command in Pelegant.\n\
 Three output files are created with different extensions:\n\
  + .sdds : out-scattering rate and other quantities as a function of scattering location s.\n\
@@ -50,7 +49,6 @@ Three output files are created with different extensions:\n\
    s         --- SDDS_FLOAT or SDDS_DOUBLE giving location in the lattice in meters\n\
    <gasName> --- SDDS_FLOAT or SDDS_DOUBLE giving pressure of <gasName> in Torr or nT\n\
 -storedCharge Charge in beam, in nanocoulombs. Used to compute the loss distribution in physical units.\n\
--binSize      Size of bins for loss distribution, in meters.\n\
 -verbose      If given, possibly useful intermediate information is printed.\n\n\
 Program by Michael Borland.  ("__DATE__")\n";
 
@@ -121,7 +119,7 @@ int main(int argc, char **argv)
   long i_arg, verbose, twissRows;
   SCANNED_ARG *s_arg;
   unsigned long pressureFlags;
-  double storedCharge, binSize, *sTwiss = NULL, LTotal;
+  double storedCharge, *sTwiss = NULL, LTotal;
   PRESSURE_DATA pressureData;
   char buffer[16384];
   long is, is2, ns2, ig, ic;
@@ -144,7 +142,6 @@ int main(int argc, char **argv)
 
   inputFile = outputRootname = twissFile = pressureFile  = NULL;
   verbose = pressureFlags = 0;
-  binSize = 0.001;
   storedCharge = 0;
 
   for (i_arg=1; i_arg<argc; i_arg++) {
@@ -171,11 +168,6 @@ int main(int argc, char **argv)
           SDDS_Bomb("invalid -storedCharge syntax/values: use -storedCharge=<nC>");
         get_double(&storedCharge, s_arg[i_arg].list[1]);
         storedCharge *= 1e-9;
-        break;
-      case SET_BIN_SIZE:
-        if (s_arg[i_arg].n_items != 2 )
-          SDDS_Bomb("invalid -binSize syntax/values: use -binSize=<m>");
-        get_double(&binSize, s_arg[i_arg].list[1]);
         break;
       case SET_VERBOSE:
         verbose = 1;
