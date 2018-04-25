@@ -455,7 +455,5 @@ long findMinMaxStep(double *pmin, double *pmax, double *dp, double *data, long n
     if (data[i]<p1 && data[i]>*pmin && fabs(data[i]-*pmin)>1e-6*(*pmax))
       p1 = data[i];
   *dp = (p1-*pmin);
-  printf("pmin = %le, pmax = %le, p1 = %le, dp = %le\n",
-         *pmin, *pmax, p1, *dp);
   return 1;
 }
