@@ -223,8 +223,11 @@ int main(int argc, char **argv)
   /* Check for negative drifts, remove zero-length intervals */
   for (is=1; is<twissRows; is++) {
     if (fabs(sTwiss[is]-sTwiss[is-1])<1e-6) {
-      if (is!=(twissRows-1))
-        memcpy(sTwiss+is, sTwiss+is+1, (twissRows-is)*sizeof(double));
+      if (is!=(twissRows-1)) {
+        for (is2=is; is2<(twissRows-1); is2++)
+          sTwiss[is2] = sTwiss[is2+1];
+        /* memcpy(sTwiss+is, sTwiss+is+1, (twissRows-is)*sizeof(double)); */
+      }
       twissRows--;
       is--;
     } else if (sTwiss[is]<sTwiss[is-1])
@@ -269,7 +272,7 @@ int main(int argc, char **argv)
   rate = tmalloc(sizeof(*rate)*nScatter);
 
   /* Find unique scattering locations */
-  nScatterUnique = 0;
+  nScatterUnique = 1;
   sScatterMax = sScatter[0];
   for (is=1; is<nScatter; is++) {
     if (sScatter[is]!=sScatter[is-1])
@@ -291,6 +294,8 @@ int main(int argc, char **argv)
   is2 = 1;
   for (is=0; is<nScatter; is++) 
     if (sScatter[is]!=sScatterUnique[is2-1]) {
+      if (is2>(nScatterUnique-1))
+        bombVA("is2 = %ld, nScatterUnique=%ld\n", is2, nScatterUnique);
       nkScatterUnique[is2-1] = is-indexScatterUnique[is2-1];
       sScatterUnique[is2] = sScatter[is];
       indexScatterUnique[is2] = is;
@@ -299,7 +304,7 @@ int main(int argc, char **argv)
   nkScatterUnique[is2-1] = is-indexScatterUnique[is2-1];
   if (verbose) {
     printf("%ld unique scattering locations from s=%le to %le\n",
-           nScatterUnique, sScatterUnique[0], sScatterUnique[nScatterUnique]);
+           nScatterUnique, sScatterUnique[0], sScatterUnique[nScatterUnique-1]);
   }
 
   /* Set up output files */
@@ -341,9 +346,8 @@ int main(int argc, char **argv)
 
   G1 = tmalloc(sizeof(*G1)*pressureData.nLocations);
   G2 = tmalloc(sizeof(*G2)*pressureData.nLocations);
-  for (is=0; is<pressureData.nLocations; is++) {
+  for (is=0; is<pressureData.nLocations; is++)
     G1[is] = G2[is] = 0;
-  }
   for (ig=0; ig<pressureData.nGasses; ig++) {
     double s1, s2;
     s1 = s2 = 0;
@@ -356,7 +360,6 @@ int main(int argc, char **argv)
       G2[is] += pressureData.pressure[ig][is]*s2;
     }
   }
-  LTotal = sTwiss[twissRows-1];
   for (is=0; is<pressureData.nLocations; is++) {
     double alpha = 1/137.038073869629898;
     /* 133.3224 converts Torr to Pascal */
