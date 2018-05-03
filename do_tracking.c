@@ -1032,30 +1032,35 @@ long do_tracking(
 	}
         else if (eptr->type==T_BRANCH) {
           BRANCH *branch;
+	  long choice = 0;
           branch = (BRANCH*)(eptr->p_elem);
-	  if (nToTrack>branch->npThreshold) {
-	    if (i_pass==0) 
-	      branch->privateCounter = branch->counter;
-	    if (branch->privateCounter<=0) {
-	      if (!branch->beptr1)
-		bombElegant("No element pointer defined for BRANCH (1)---seek expert help!", NULL);
-	      if (branch->verbosity) {
-		printf("Branching to %s\n", branch->beptr1->name);
-		fflush(stdout);
-	      }
-	      eptr = branch->beptr1->pred;
-	      z = branch->z;
-	    } else {
-	      if (!branch->beptr2)
-		bombElegant("No element pointer defined for BRANCH (2)---seek expert help!", NULL);
-	      if (branch->verbosity) {
-		printf("Branching to %s\n", branch->beptr2->name);
-		fflush(stdout);
-	      }
-	      eptr = branch->beptr2->pred;
-	      z = branch->z;
-	      branch->privateCounter--;
+	  if (i_pass==0) 
+	    branch->privateCounter = branch->counter;
+	  if (flags&TEST_PARTICLES) {
+	    choice = branch->defaultToElse;
+	  } else {
+	    if (branch->privateCounter>0)
+	      choice = 1;
+	  }
+	  if (choice==0) {
+	    if (!branch->beptr1)
+	      bombElegant("No element pointer defined for BRANCH (1)---seek expert help!", NULL);
+	    if (branch->verbosity) {
+	      printf("Branching to %s\n", branch->beptr1->name);
+	      fflush(stdout);
 	    }
+	    eptr = branch->beptr1->pred;
+	    z = branch->z;
+	  } else {
+	    if (!branch->beptr2)
+	      bombElegant("No element pointer defined for BRANCH (2)---seek expert help!", NULL);
+	    if (branch->verbosity) {
+	      printf("Branching to %s\n", branch->beptr2->name);
+	      fflush(stdout);
+	    }
+	    eptr = branch->beptr2->pred;
+	    z = branch->z;
+	    branch->privateCounter--;
 	  }
         }
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&

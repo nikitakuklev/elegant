@@ -859,7 +859,7 @@ BRANCH branch_example;
 PARAMETER branch_param[N_BRANCH_PARAMS] = {
     {"COUNTER", "", IS_LONG, 0, (long)((char *)&branch_example.counter), NULL, 0.0, 0, "Counter, which is decremented by 1 for each pass."},
     {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&branch_example.verbosity), NULL, 0.0, 0, "Larger values result in more output during running."},
-    {"NP_THRESHOLD", "", IS_LONG, 0, (long)((char *)&branch_example.npThreshold), NULL, 0.0, -1, "Ignored if the number of particles is less than or equal to this amount."},
+    {"DEFAULT_TO_ELSE", "", IS_LONG, 0, (long)((char *)&branch_example.defaultToElse), NULL, 0.0, 0, "If non-zero, defaults to ELSE_TO when performing tracking for closed orbit, twiss_output, etc."},
     {"BRANCH_TO", "", IS_STRING, 0, (long)((char *)&branch_example.branchTo), NULL, 0.0, 0, "Optional name of element to which to jump when counter is non-positive."},
     {"ELSE_TO", "", IS_STRING, 0, (long)((char *)&branch_example.elseTo), NULL, 0.0, 0, "Optional name of element to which to jump when counter is positive."},
     } ;

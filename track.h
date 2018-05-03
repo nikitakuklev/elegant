@@ -1831,7 +1831,7 @@ typedef struct {
 extern PARAMETER branch_param[N_BRANCH_PARAMS];
 
 typedef struct {
-  long counter, verbosity, npThreshold;
+  long counter, verbosity, defaultToElse;
   char *branchTo, *elseTo;
   /* internal variables */
   ELEMENT_LIST *beptr1, *beptr2;
