@@ -4,9 +4,9 @@ It should work well with tracking.
 
 The application that inspired creation of this element is to switch from tracking using lumped elements to tracking
 using element-by-element methods.
-More specifically, imagine we want to track for 10,000 turns to reach an equilibrium, then perform a beam dump.
+More specifically, imagine we want to track for 10,000 turns to reach an equilibrium, then perform a beam abort.
 The equilibrium state can be accurately and rapidly modeled using lumped elements, such as \verb|ILMATRIX| and \verb|SREFFECTS|,
-but the beam dump needs to be modeled using comparatively slow element-by-element tracking.
+but the beam abort needs to be modeled using comparatively slow element-by-element tracking.
 \begin{verbatim}
 RING1: ILMATRIX,...
 SR1: SREFFECTS,...
