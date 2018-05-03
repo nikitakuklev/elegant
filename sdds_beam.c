@@ -750,7 +750,9 @@ long get_sdds_particles(double ***particle,
     fflush(stdout);
     return -1;
   }
-  
+
+  printMessageAndTime(stdout, "Starting to read beam from SDDS file.\n");
+
   retval = data_seen = np = np_new = 0;
 #if SDDS_MPI_IO
   if (SDDS_input.MPI_dataset == NULL) /* For the case of one_dump, this setup should be only called once */
@@ -996,6 +998,8 @@ long get_sdds_particles(double ***particle,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   
+  printMessageAndTime(stdout, "Done reading beam from SDDS file.\n");
+
   if (!data_seen && one_dump)
     return -1;
 #if SDDS_MPI_IO  
