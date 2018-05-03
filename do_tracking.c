@@ -1045,8 +1045,8 @@ long do_tracking(
 	  if (choice==0) {
 	    if (!branch->beptr1)
 	      bombElegant("No element pointer defined for BRANCH (1)---seek expert help!", NULL);
-	    if (branch->verbosity) {
-	      printf("Branching to %s\n", branch->beptr1->name);
+	    if (branch->verbosity && !(flags&TEST_PARTICLES)) {
+	      printf("Branching to %s on pass %ld\n", branch->beptr1->name, i_pass);
 	      fflush(stdout);
 	    }
 	    eptr = branch->beptr1->pred;
@@ -1054,8 +1054,8 @@ long do_tracking(
 	  } else {
 	    if (!branch->beptr2)
 	      bombElegant("No element pointer defined for BRANCH (2)---seek expert help!", NULL);
-	    if (branch->verbosity) {
-	      printf("Branching to %s\n", branch->beptr2->name);
+	    if (branch->verbosity && !(flags&TEST_PARTICLES)) {
+	      printf("Branching to %s on pass %ld\n", branch->beptr2->name, i_pass);
 	      fflush(stdout);
 	    }
 	    eptr = branch->beptr2->pred;
