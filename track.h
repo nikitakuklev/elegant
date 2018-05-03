@@ -1026,7 +1026,7 @@ extern char *entity_text[N_TYPES];
 #define N_BMAPXYZ_PARAMS 13
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 25
-#define N_BRANCH_PARAMS 4
+#define N_BRANCH_PARAMS 5
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
@@ -1831,7 +1831,7 @@ typedef struct {
 extern PARAMETER branch_param[N_BRANCH_PARAMS];
 
 typedef struct {
-  long counter, verbosity;
+  long counter, verbosity, npThreshold;
   char *branchTo, *elseTo;
   /* internal variables */
   ELEMENT_LIST *beptr1, *beptr2;
