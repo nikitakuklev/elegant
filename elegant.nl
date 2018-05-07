@@ -16,6 +16,8 @@
      STRING error_log_file = NULL;
      long share_tracking_based_matrices = 0;
      long mpi_io_force_file_sync = 0;
+     long mpi_io_read_buffer_size = 0;
+     long mpi_io_write_buffer_size = 0;
      long usleep_mpi_io_kludge = 0;
 #end
 

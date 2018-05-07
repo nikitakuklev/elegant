@@ -2761,6 +2761,10 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
 #if SDDS_MPI_IO
   SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
   SDDS_MPI_SetFileSync(mpi_io_force_file_sync);
+  if (mpi_io_read_buffer_size)
+    SDDS_SetDefaultReadBufferSize(mpi_io_read_buffer_size);
+  if (mpi_io_write_buffer_size)
+    SDDS_SetDefaultWriteBufferSize(mpi_io_write_buffer_size);
 #endif
   if (log_file)
     freopen(log_file, "w", stdout);
