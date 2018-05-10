@@ -23,6 +23,10 @@
 #define DEBUG2 0
 #define DEBUG3 0
 
+#ifndef HUGE_VAL
+#define HUGE_VAL HUGE
+#endif
+
 typedef struct {
   double *coefficient, *coefficient_error;
   int order_of_fit;   /* 1=linear, 2=quadratic...*/
@@ -757,7 +761,7 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
       sigmay[k] = 1;
   }
   
-  best_fit->chi_squared = HUGE;
+  best_fit->chi_squared = HUGE_VAL;
   best_fit->order_of_fit = 0;
   order_of_fit = lowest_order_of_fit;
 
