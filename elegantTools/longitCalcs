@@ -53,6 +53,8 @@ foreach item $dataItemList {
 }
 set revFreq1 [expr $revFreq]
 set sMax1 [expr $sMax]
+set gamma [expr sqrt(1+$pCentral*$pCentral)]
+set eta [expr $alphac-1./pow($gamma,2)]
 
 set extradE 0
 set harmonic2 $hh
@@ -150,7 +152,7 @@ proc compute {args} {
     set plot 0
     APSStrictParseArguments {plot}
     global dataItemList gui output outputIndex
-    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg eta gamma
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
@@ -166,7 +168,7 @@ proc compute {args} {
     set U1 [expr $superPeriods*($U0+$extradE)]
     set sMax1 [expr $superPeriods*$sMax]
     set revFreq1 [expr $revFreq/$superPeriods]
-    set energy [expr sqrt($pCentral*$pCentral+1)*0.51099906]
+    set energy [expr $gamma*0.51099906]
     set omegaRF [expr $harmonic*2*$pi*$revFreq1]
     set rfFrequency [expr $omegaRF/(2*$pi*1.0e6)]
 
@@ -176,11 +178,11 @@ proc compute {args} {
             set voltageRatio 0
             set harmonicPhaseDeg 0
             set synchPhase [expr asin($U1/$voltage)]
-            set rfAcceptance [expr sqrt(2*$U1/($pi*$alphac*$harmonic*$energy)*(sqrt($overVoltage*$overVoltage-1)-acos(1/$overVoltage)))]
-            set synchTune [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
+            set rfAcceptance [expr sqrt(2*$U1/($pi*$eta*$harmonic*$energy)*(sqrt($overVoltage*$overVoltage-1)-acos(1/$overVoltage)))]
+            set synchTune [expr sqrt($eta*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
             set synchFreq [expr $synchTune*$revFreq1]
-            set bunchLength [expr $Sdelta0*$cMKS*sqrt($alphac*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))]
-            set coupling [expr sqrt($alphac*$voltage*cos($synchPhase)*$omegaRF/($energy*$revFreq1*4.0))]
+            set bunchLength [expr $Sdelta0*$cMKS*sqrt($eta*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))]
+            set coupling [expr sqrt($eta*$voltage*cos($synchPhase)*$omegaRF/($energy*$revFreq1*4.0))]
             set bunchDuration [expr $bunchLength/$cMKS]
         }
         OptLengthen {
@@ -196,12 +198,12 @@ proc compute {args} {
             }
             #set check [expr $voltage*(sin($synchPhase) + $voltageRatio*sin($harmonicPhase))-$U1]
             #puts stderr "check: $check"
-            set synchTune0 [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
+            set synchTune0 [expr sqrt($eta*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
             set synchFreq ?
             set synchTune ?
             set rfAcceptance ?
             set coupling ?
-            set bunchLength [expr 2/3.6256*pow(3./($m*$m-1), 0.25)*sqrt(2*$harmonic*$alphac*$Sdelta0/$synchTune0)*$cMKS/$omegaRF]
+            set bunchLength [expr 2/3.6256*pow(3./($m*$m-1), 0.25)*sqrt(2*$harmonic*$eta*$Sdelta0/$synchTune0)*$cMKS/$omegaRF]
         }
         Custom {
             if [expr $voltageRatio<0] {
@@ -211,10 +213,10 @@ proc compute {args} {
             set U2 [expr $U1-$voltageRatio*$voltage*sin($harmonicPhase)]
             set synchPhase [expr asin($U2/$voltage)]
             set synchPhaseDeg [expr $synchPhase*180/$pi]
-            set synchTune0 [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
+            set synchTune0 [expr sqrt($eta*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
             set synchTune ?
             set synchFreq ?
-            set bunchLength [expr $Sdelta0*$cMKS*sqrt($alphac*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))/sqrt(1 + $harmonicRatio*$voltageRatio/cos($synchPhase))]
+            set bunchLength [expr $Sdelta0*$cMKS*sqrt($eta*$energy/($revFreq1*$omegaRF*cos($synchPhase)*$voltage))/sqrt(1 + $harmonicRatio*$voltageRatio/cos($synchPhase))]
             set coupling ?
         }
     }
@@ -257,7 +259,7 @@ proc compute {args} {
 
 proc findFixedPoints {} {
     global dataItemList gui
-    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss eta gamma
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
@@ -287,7 +289,7 @@ proc findFixedPoints {} {
 
 proc computeBucketHH {args} {
     global dataItemList gui
-    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss eta gamma
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
@@ -306,7 +308,7 @@ proc computeBucketHH {args} {
     if [expr $W>=0] {
         set rfAcceptance 0
     } else {
-	set rfAcceptance [expr sqrt(-$W/($pi*$harmonic*$alphac*$energy))*100]
+	set rfAcceptance [expr sqrt(-$W/($pi*$harmonic*$eta*$energy))*100]
     }
     
 }
@@ -315,7 +317,7 @@ proc computeBunchShape {args} {
     set plot 0
     APSStrictParseArguments {plot}
     global dataItemList
-    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
+    eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss eta gamma
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
@@ -327,8 +329,9 @@ proc computeBunchShape {args} {
     }
     exec sddssequence -pipe=out -define=t,type=double,units=s -sequence=begin=[expr -$fractionalSpan*1e-6/$rfFrequency],end=[expr $fractionalSpan*1e-6/$rfFrequency],n=10000 \
         | sddsprocess -pipe=in $outFile \
-        "-define=param,C1,[expr $alphac*$cMKS*$voltage/($energy*$sMax1*$omegaRF)]" \
+        "-define=param,C1,[expr $eta*$cMKS*$voltage/($energy*$sMax1*$omegaRF)]" \
         "-define=param,alphac,$alphac" \
+        "-define=param,eta,$eta" \
         "-define=param,Sdelta0,$Sdelta0" \
         "-define=param,phis,$synchPhaseDeg dtor" \
         "-define=param,k,$voltageRatio" \
@@ -340,7 +343,7 @@ proc computeBunchShape {args} {
         "-define=col,Phi2,phih cos  phi n * phih + cos - k * n /" \
         "-define=col,Phi3,phis sin  phih sin k * + phi *" \
         "-define=col,Phi,Phi1 Phi2 + Phi3 - C1 *" \
-        "-define=col,rhoArg,Phi alphac sqr / Sdelta0 sqr / chs" \
+        "-define=col,rhoArg,Phi eta sqr / Sdelta0 sqr / chs" \
         -process=rhoArg,min,%sMin \
         "-define=col,rho,rhoArg chs exp" \
         -process=rho,integ,rhoInteg,functionOf=t \
@@ -357,7 +360,7 @@ proc computeBunchShape {args} {
 
 proc outputForElegantDialog {} {
     global gui
-    global code outputFile rfMainName rfHarmonicName harmonicMode
+    global code outputFile rfMainName rfHarmonicName harmonicMode eta gamma
     global voltage rfFrequency synchPhaseDeg voltageRatio harmonicRatio harmonicPhaseDeg
     if $gui {
         APSDialogBox .output -modal 0 -okCommand "set code 1" -cancelCommand "set code 0" \
