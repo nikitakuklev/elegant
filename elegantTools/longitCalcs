@@ -5,14 +5,33 @@ exec oagwish "$0" "$@"
 if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
-set usage "usage: longitCalcs -twiss <filename> \[-voltage <MV>\]"
+set usage "usage: longitCalcs \[-gui 0\] \[-output <filename>\] -twiss <filename> \[-voltage <MV> -harmonic <number> -superPeriods <number>(1) \[-hVoltage <MV> -hh <ratio>(3) -hphase <deg>(360)\]\]"
 set twiss ""
 set voltage -1.0
+set harmonic 1296
+set hVoltage 0
+set hh 3
+set hphase 360
+set gui 1
+set output ""
+set superPeriods 1
 set args $argv
-if {[APSStrictParseArguments {twiss voltage}] || ![string length $twiss]} {
+if {[APSStrictParseArguments {output superPeriods twiss voltage harmonic hVoltage hh hphase gui}] || ![string length $twiss]} {
     puts stderr $usage
     exit 1
 }
+if $gui==0 {
+    wm withdraw .
+    if ![string length $output] {
+        puts stderr "Supply output file with -output option"
+        exit 1
+    }
+}
+if [file exists $output] {
+    puts stderr "In use: $output"
+    exit 1
+}
+
 if ![file exists $twiss] {
     puts stderr "Not found: $twiss"
     exit 1
@@ -35,52 +54,24 @@ foreach item $dataItemList {
 set revFreq1 [expr $revFreq]
 set sMax1 [expr $sMax]
 
-APSApplication . -name longitCalcs 
-set harmonic 1296
 set extradE 0
-set harmonic2 3
-set voltage2 0
-set superPeriods 1
+set harmonic2 $hh
+set voltage2 $hVoltage
 if [expr $voltage<0] {
     # initial start with overvoltage of 1.5
     # to avoid problem with arcsin function
     set voltage [expr $superPeriods*($U0+$extradE) * 1.5]
 }
 
-APSLabeledEntry .voltage -parent .userFrame \
-  -label "Voltage (MV): " -textVariable voltage -width 22
-APSLabeledEntry .harmonic -parent .userFrame \
-  -label "Harmonic number: " -textVariable harmonic -width 22 -type integer
-APSLabeledEntry .sdelta -parent .userFrame \
-    -label "Sigma P/P0: " -textVariable Sdelta0 -width 22
-APSLabeledEntry .extradE -parent .userFrame \
-    -label "Additional dE (MeV/period/turn): " -textVariable extradE -width 22
-APSLabeledEntry .super -parent .userFrame \
-    -label "Superperiods: " -textVariable superPeriods -width 22 
-foreach item {voltage harmonic sdelta extradE super} {
-    bind .userFrame.$item.entry <Return> compute
-}
-
-APSFrame .hharm -parent .userFrame  -label "Harmonic cavity" -width 22
+set harmonicRatio $harmonic2 
+set voltageRatio [expr $hVoltage/$voltage]
 set harmonicMode None
-APSRadioButtonFrame  .mode -parent .userFrame.hharm.frame -label "Mode: " \
-    -orientation horizontal -variable harmonicMode \
-    -buttonList [list None "Opt.Lengthen" "Custom"] \
-    -valueList [list None OptLengthen Custom] \
-    -commandList [list compute compute compute]
-set harmonicRatio 4
-set voltageRatio 0
-set harmonicPhase 0
-APSLabeledEntry .harmonicRatio -parent .userFrame.hharm.frame \
-    -label "Freq. ratio" -textVariable harmonicRatio -type integer -width 22
-APSLabeledEntry .voltageRatio -parent .userFrame.hharm.frame \
-    -label "Volt. ratio" -textVariable voltageRatio -width 22 -type real
-APSLabeledEntry .harmonicPhaseDeg -parent .userFrame.hharm.frame \
-    -label "Phase (deg)" -textVariable harmonicPhaseDeg -width 22 -type real
-bind .userFrame.hharm.frame.harmonicRatio.entry <Return> compute
-bind .userFrame.hharm.frame.voltageRatio.entry <Return> compute
-bind .userFrame.hharm.frame.harmonicPhaseDeg.entry <Return> compute
+if [expr $voltageRatio!=0] {
+    set harmonicMode Custom
+}
+set harmonicPhase $hphase
 set lastHarmonicMode None
+
 
 set synchTune 0
 set bunchLength 0
@@ -92,43 +83,78 @@ set rfAcceptance 0
 set rfFrequency 0
 set synchFreq 0
 set coupling 0
-APSLabeledOutput .length -parent .userFrame \
-    -label "Circumference (m): " -textVariable sMax1 -width 22
-APSLabeledOutput .revFreq -parent .userFrame \
-    -label "Rev. frequency (MHz): " -textVariable revFreq1 -width 22
-APSLabeledOutput .rfFreq -parent .userFrame \
-    -label "RF frequency (MHz): " -textVariable rfFrequency -width 22
-APSLabeledOutput .synchphase -parent .userFrame \
-  -label "Synchronous Phase: " -textVariable synchPhaseDeg -width 22
-APSLabeledOutput .overvolt -parent .userFrame \
-    -label "Over Voltage: " -textVariable overVoltage  -width 22
-APSLabeledOutput .accept -parent .userFrame \
-    -label "RF Acceptance: " -textVariable rfAcceptance -width 22
-APSLabeledOutput .nus -parent .userFrame \
-  -label "Synchrotron Tune: " -textVariable synchTune  -width 22
-APSLabeledOutput .nuf -parent .userFrame \
-  -label "Synchrotron Frequency (Hz): " -textVariable synchFreq  -width 22
-APSLabeledOutput .blen -parent .userFrame \
-  -label "Bunch length (m): " -textVariable bunchLength -width 22
-APSLabeledOutput .bdur -parent .userFrame \
-  -label "Bunch duration (s): " -textVariable bunchDuration -width 22
-APSLabeledOutput .coupling -parent .userFrame \
-  -label "Longitudinal coupling: " -textVariable coupling -width 22
-
 set fractionalSpan 0.25
-APSLabeledEntry .span -parent .userFrame \
-  -label "Calculation half-span: " -textVariable fractionalSpan -width 22 \
-    -contextHelp "Half-span of the bunch distribution calculation in units of the rf period. Changing this may resolve numerical problems for long bunches."
+set harmonicPhaseDeg $hphase
 
+if $gui {
+    APSApplication . -name longitCalcs 
+    APSLabeledEntry .voltage -parent .userFrame \
+        -label "Voltage (MV): " -textVariable voltage -width 22
+    APSLabeledEntry .harmonic -parent .userFrame \
+        -label "Harmonic number: " -textVariable harmonic -width 22 -type integer
+    APSLabeledEntry .sdelta -parent .userFrame \
+        -label "Sigma P/P0: " -textVariable Sdelta0 -width 22
+    APSLabeledEntry .extradE -parent .userFrame \
+        -label "Additional dE (MeV/period/turn): " -textVariable extradE -width 22
+    APSLabeledEntry .super -parent .userFrame \
+        -label "Superperiods: " -textVariable superPeriods -width 22 
+    foreach item {voltage harmonic sdelta extradE super} {
+        bind .userFrame.$item.entry <Return> compute
+    }
+
+    APSFrame .hharm -parent .userFrame  -label "Harmonic cavity" -width 22
+    APSRadioButtonFrame  .mode -parent .userFrame.hharm.frame -label "Mode: " \
+        -orientation horizontal -variable harmonicMode \
+        -buttonList [list None "Opt.Lengthen" "Custom"] \
+        -valueList [list None OptLengthen Custom] \
+        -commandList [list compute compute compute]
+
+    APSLabeledEntry .harmonicRatio -parent .userFrame.hharm.frame \
+        -label "Freq. ratio" -textVariable harmonicRatio -type integer -width 22
+    APSLabeledEntry .voltageRatio -parent .userFrame.hharm.frame \
+        -label "Volt. ratio" -textVariable voltageRatio -width 22 -type real
+    APSLabeledEntry .harmonicPhaseDeg -parent .userFrame.hharm.frame \
+        -label "Phase (deg)" -textVariable harmonicPhaseDeg -width 22 -type real
+    bind .userFrame.hharm.frame.harmonicRatio.entry <Return> compute
+    bind .userFrame.hharm.frame.voltageRatio.entry <Return> compute
+    bind .userFrame.hharm.frame.harmonicPhaseDeg.entry <Return> compute
+    APSLabeledOutput .length -parent .userFrame \
+        -label "Circumference (m): " -textVariable sMax1 -width 22
+    APSLabeledOutput .revFreq -parent .userFrame \
+        -label "Rev. frequency (MHz): " -textVariable revFreq1 -width 22
+    APSLabeledOutput .rfFreq -parent .userFrame \
+        -label "RF frequency (MHz): " -textVariable rfFrequency -width 22
+    APSLabeledOutput .synchphase -parent .userFrame \
+        -label "Synchronous Phase: " -textVariable synchPhaseDeg -width 22
+    APSLabeledOutput .overvolt -parent .userFrame \
+        -label "Over Voltage: " -textVariable overVoltage  -width 22
+    APSLabeledOutput .accept -parent .userFrame \
+        -label "RF Acceptance: " -textVariable rfAcceptance -width 22
+    APSLabeledOutput .nus -parent .userFrame \
+        -label "Synchrotron Tune: " -textVariable synchTune  -width 22
+    APSLabeledOutput .nuf -parent .userFrame \
+        -label "Synchrotron Frequency (Hz): " -textVariable synchFreq  -width 22
+    APSLabeledOutput .blen -parent .userFrame \
+        -label "Bunch length (m): " -textVariable bunchLength -width 22
+    APSLabeledOutput .bdur -parent .userFrame \
+        -label "Bunch duration (s): " -textVariable bunchDuration -width 22
+    APSLabeledOutput .coupling -parent .userFrame \
+        -label "Longitudinal coupling: " -textVariable coupling -width 22
+    APSLabeledEntry .span -parent .userFrame \
+        -label "Calculation half-span: " -textVariable fractionalSpan -width 22 \
+        -contextHelp "Half-span of the bunch distribution calculation in units of the rf period. Changing this may resolve numerical problems for long bunches."
+} 
+
+set outputIndex -1
 proc compute {args} {
     set plot 0
     APSStrictParseArguments {plot}
-    global dataItemList
+    global dataItemList gui output outputIndex
     eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune
     global bunchDuration superPeriods revFreq1 sMax1 sMax
     global harmonicRatio voltageRatio harmonicMode lastHarmonicMode harmonicPhaseDeg
-    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency
+    global pi cMKS U1 sMax1 revFreq1 energy omegaRF rfFrequency output
 
     if [expr $harmonicRatio<=1] {
         set harmonicMode None
@@ -201,10 +227,36 @@ proc compute {args} {
     computeBucketHH
     
     update
+    if [string length $output] { 
+        exec sddsmakedataset $output.tmp \
+            -column=MainVoltage,units=MV,type=double -data=$voltage \
+            -column=MainHarmonic,type=long -data=$harmonic \
+            -column=Sdelta0,type=double -data=$Sdelta0 \
+            -column=U0,type=double,units=MeV -data=$U0 \
+            -column=dU,type=double,units=MeV -data=$extradE \
+            -column=Superperiods,type=long -data=$superPeriods \
+            -column=HHRatio,type=short -data=$harmonicRatio \
+            -column=VhRatio,type=double -data=$voltageRatio \
+            -column=Vh,type=double,units=MV -data=[expr $voltageRatio*$voltage] \
+            -column=HPhase,type=double,units=deg -data=$harmonicPhaseDeg \
+            -column=Circumference,type=double,units=m -data=$sMax1 \
+            -column=RfFrequency,type=double,units=MHz -data=$rfFrequency \
+            -column=MainPhase,type=double,units=deg -data=$synchPhaseDeg \
+            -column=RfAcceptance,type=double -data=[expr $rfAcceptance/100.0] \
+            -column=BunchLength,type=double,units=m -data=$bunchLength \
+            -column=BunchDuration,type=double,units=s -data=$bunchDuration
+        if [file exists $output] {
+            exec sddscombine $output $output.tmp $output.tmp2 -merge -over
+            file rename -force $output.tmp2 $output
+            file delete $output.tmp
+        } else {
+            file rename $output.tmp $output
+        }
+    }
 }
 
 proc findFixedPoints {} {
-    global dataItemList
+    global dataItemList gui
     eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
     global bunchDuration superPeriods revFreq1 sMax1 sMax
@@ -234,7 +286,7 @@ proc findFixedPoints {} {
 }
 
 proc computeBucketHH {args} {
-    global dataItemList
+    global dataItemList gui
     eval global $dataItemList bunchLength harmonic voltage synchPhaseDeg twiss
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE synchTune energy
     global bunchDuration superPeriods revFreq1 sMax1 sMax
@@ -304,42 +356,49 @@ proc computeBunchShape {args} {
 }
 
 proc outputForElegantDialog {} {
+    global gui
     global code outputFile rfMainName rfHarmonicName harmonicMode
     global voltage rfFrequency synchPhaseDeg voltageRatio harmonicRatio harmonicPhaseDeg
-    APSDialogBox .output -modal 0 -okCommand "set code 1" -cancelCommand "set code 0" \
-        -name "Elegant output"
-    APSLabeledEntry .le1 -parent .output.userFrame -label "Filename: " \
-        -textVariable outputFile -width 80 
-    APSLabeledEntry .le2 -parent .output.userFrame -label "Main rf element name: " \
-        -textVariable rfMainName -width 80
-    if {[string compare $harmonicMode None] && $harmonicRatio>1} {
-        APSLabeledEntry .le3 -parent .output.userFrame -label "Harmonic rf element name: " \
-          -textVariable rfHarmonicName -width 80 
-        set doHarmonic 1
-    } else {
-        set doHarmonic 0
-        set rfHarmonicName ""
-    }
-    update
-    tkwait variable code
-    if {$code && [string length $outputFile] && [string length $rfMainName] && (!$doHarmonic || [string length $rfHarmonicName])} {
-        compute -plot 0
-        lappend ElementNameList $rfMainName $rfMainName $rfMainName 
-        lappend ElementParameterList VOLT FREQ PHASE
-        lappend ParameterValueList [expr $voltage*1e6] [expr $rfFrequency*1e6] $synchPhaseDeg
-        if $doHarmonic {
-            lappend ElementNameList $rfHarmonicName $rfHarmonicName $rfHarmonicName
-            lappend ElementParameterList VOLT FREQ PHASE
-            lappend ParameterValueList [expr $voltage*1e6*$voltageRatio] [expr $rfFrequency*1e6*$harmonicRatio] $harmonicPhaseDeg
+    if $gui {
+        APSDialogBox .output -modal 0 -okCommand "set code 1" -cancelCommand "set code 0" \
+            -name "Elegant output"
+        APSLabeledEntry .le1 -parent .output.userFrame -label "Filename: " \
+            -textVariable outputFile -width 80 
+        APSLabeledEntry .le2 -parent .output.userFrame -label "Main rf element name: " \
+            -textVariable rfMainName -width 80
+        if {[string compare $harmonicMode None] && $harmonicRatio>1} {
+            APSLabeledEntry .le3 -parent .output.userFrame -label "Harmonic rf element name: " \
+                -textVariable rfHarmonicName -width 80 
+            set doHarmonic 1
+        } else {
+            set doHarmonic 0
+            set rfHarmonicName ""
         }
-        exec sddsmakedataset $outputFile \
-          -column=ElementName,type=string -data=[join $ElementNameList ,] \
-          -column=ElementParameter,type=string -data=[join $ElementParameterList ,] \
-          -column=ParameterValue,type=double -data=[join $ParameterValueList ,]
+        update
+        tkwait variable code
+        if {$code && [string length $outputFile] && [string length $rfMainName] && (!$doHarmonic || [string length $rfHarmonicName])} {
+            compute -plot 0
+            lappend ElementNameList $rfMainName $rfMainName $rfMainName 
+            lappend ElementParameterList VOLT FREQ PHASE
+            lappend ParameterValueList [expr $voltage*1e6] [expr $rfFrequency*1e6] $synchPhaseDeg
+            if $doHarmonic {
+                lappend ElementNameList $rfHarmonicName $rfHarmonicName $rfHarmonicName
+                lappend ElementParameterList VOLT FREQ PHASE
+                lappend ParameterValueList [expr $voltage*1e6*$voltageRatio] [expr $rfFrequency*1e6*$harmonicRatio] $harmonicPhaseDeg
+            }
+            exec sddsmakedataset $outputFile \
+                -column=ElementName,type=string -data=[join $ElementNameList ,] \
+                -column=ElementParameter,type=string -data=[join $ElementParameterList ,] \
+                -column=ParameterValue,type=double -data=[join $ParameterValueList ,]
+        }
     }
 }
 
 compute
-APSButton .compute -parent .userFrame -text Compute -command "compute -plot 0"
-APSButton .plot -parent .userFrame -text Plot -command "compute -plot 1"
-APSButton .output  -parent .userFrame -text ">Elegant" -command outputForElegantDialog
+if $gui {
+    APSButton .compute -parent .userFrame -text Compute -command "compute -plot 0"
+    APSButton .plot -parent .userFrame -text Plot -command "compute -plot 1"
+    APSButton .output  -parent .userFrame -text ">Elegant" -command outputForElegantDialog
+} else {
+    exit 0
+}
