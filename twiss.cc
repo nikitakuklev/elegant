@@ -5044,6 +5044,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   double St0, Sz0, nus, rfAcceptance = -1;
   double wrf, w0, Vdot, E;
   long h;
+  double eta, gamma;
 
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT) || !(beamline->flags&BEAMLINE_RADINT_CURRENT)) {
     if (output_before_tune_correction)
@@ -5054,7 +5055,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   if (beamline->revolution_length<=0)
     bombElegant("Beamline length is undefined (do_rf_setup)", NULL);
   
-  beta = run->p_central/sqrt(sqr(run->p_central)+1);
+  beta = run->p_central/(gamma=sqrt(sqr(run->p_central)+1));
   T0 = beamline->revolution_length/(beta*c_mks);
   if (rf_setup_struct.harmonic>0)
     harmonic = rf_setup_struct.harmonic;
@@ -5080,11 +5081,13 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   if (beamline->alpha[0]==0) 
     bombElegant("alphac == 0. rf_setup can't handle this.", NULL);
 
+  eta = beamline->alpha[0] - 1/sqr(gamma);
+
   if (rf_setup_struct.bucket_half_height>0) {
     double F, E;
     
     E = sqrt(sqr(run->p_central)+1)*particleMassMV;
-    F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*fabs(beamline->alpha[0])*harmonic*E));
+    F = sqr(rf_setup_struct.bucket_half_height)/(beamline->radIntegrals.Uo/(PI*fabs(eta)*harmonic*E));
     q = (F+2)/2;
     voltage = (q=solveForOverVoltage(F,q))*beamline->radIntegrals.Uo*1e6/nRfca;
   } else if (rf_setup_struct.over_voltage)
@@ -5096,7 +5099,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
 
   phase = 0;
   if (voltage) {
-    if (beamline->alpha[0]>0) 
+    if (eta>0) 
       phase = 180-asin(1/q)*180/PI;
     else
       phase = asin(1/q)*180/PI;
@@ -5118,12 +5121,12 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   Vdot = nRfca*h*w0*voltage*cos(phase*PI/180);
   E = sqrt(sqr(run->p_central)+1)*particleMassMV*1e6;
   
-  if ((beamline->alpha[0]*Vdot)<=0) {
-    nus = sqrt(beamline->alpha[0]/PIx2*(-Vdot/w0)/E);
-    St0 = beamline->radIntegrals.sigmadelta*beamline->alpha[0]/(nus*w0);
+  if ((eta*Vdot)<0) {
+    nus = sqrt(eta/PIx2*(-Vdot/w0)/E);
+    St0 = fabs(beamline->radIntegrals.sigmadelta*eta/(nus*w0));
     Sz0 = St0*c_mks;
     if ((q = nRfca*voltage/(1e6*beamline->radIntegrals.Uo))>1)
-      rfAcceptance = sqrt(2*beamline->radIntegrals.Uo*1e6/(PI*beamline->alpha[0]*h*E)*(sqrt(q*q-1)-acos(1/q)));
+      rfAcceptance = sqrt(2*beamline->radIntegrals.Uo*1e6/(PI*fabs(eta)*h*E)*(sqrt(q*q-1)-acos(1/q)));
   } else {
     q = rfAcceptance = nus = St0 = Sz0 = -1;
   }
