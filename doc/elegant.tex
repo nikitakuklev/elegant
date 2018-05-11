@@ -55,6 +55,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The beta-function scaling resulting from the \verb|twiss_scaling=1| setting
   for the \verb|elastic_scattering| command was incorrect. Although the tracking results would be correct,
   this made it more difficult to optimize run time.
+\item The \verb|rf_setup| command now handles $\alpha_c<0$, a deficiency that was reported by P. Piot (NIU/FNAL).
+  It also now uses $\eta = \alpha_c - 1/\gamma^2$ instead of $\alpha_c$, though this rarely makes a significant
+  difference.
 \end{itemize}
 
 \subsection{New and Modified Elements}
