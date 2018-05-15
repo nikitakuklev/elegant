@@ -30,23 +30,36 @@ Output files
 
 * Postprocess
 
-inelasticScatteringAnalysis -tracking run1.islos -twiss run1.twi -output run1.isanal -pressure PARPressure2015-11-11.sdds -verbose 1 
+ + Interpolate pressure data with uniform spacing over the entire region of the lattice
+sMin=`sddsprocess run1.twi -pipe=out -process=s,min,%sMin | sdds2stream -pipe -parameter=sMin`
+sMax=`sddsprocess run1.twi -pipe=out -process=s,max,%sMax | sdds2stream -pipe -parameter=sMax`
+sddsinterp PARPressure2015-11-11.sdds PARPressure2015-11-11.sdds.interp -column=s,* \
+           -sequence=1000,$sMin,$sMax -below=extrapolate -above=extrapolate
+
+ + Sort the scattering results file
+sddssort -column=s -column=delta run1.islos run1.islos.sort
+
+ + Perform scattering analysis
+inelasticScatteringAnalysis run1.islos.sort run1.isanal -twiss=run1.twi -pressure=PARPressure2015-11-11.sdds.interp
 
 Output files
-       run1.isanal --- Main analysis file.
+       run1.isanal.sdds --- Main analysis file.
                    Has lifetime and total scattering rate parameters.
                    Also has total scattering rate from each scattering location
        run1.isanal.full --- Full analysis output
                    Has one page for each scattering location s, giving scattering coordinate (k), 
                    loss coordinates (xLost, yLost, deltaLost, sLost), and rate.
-       run1.isanal.his --- Histogram of loss rates vs sLost
 
 * Example plots and follow-on analysis
-  * Add column with the log of the rate, then plot scattering amplitude k for each scattering location, color-coded by rate.
-sddsprocess run1.isanal.full -define=col,logRate,"rate log"
-sddsplot -col=s,k run1.isanal.full -split=col=logRate -order=temperature -graph=sym,vary=subtype,fill  
 
-  * Plot lost distribution histogram and cumulative distribution function
-sddsplot -col=sLost,frequency run1.isanal.his 
-sddsplot -col=sLost,sLostCdf run1.isanal.his 
+ + Print the lifetime
+sddsprintout -param=lifetime run1.isanal.sdds
+
+ + Make rate-weighted loss-location histogram with 1cm bin size
+sddshist run1.isanal.full run1.isanal.his -data=sLost -weight=rate -size=0.01 -cdf
+sddsplot -layout=1,2 -join=x -column=sLost,frequency run1.isanal.his -end -column=sLost,sLostCdf run1.isanal.his
+
+  + Add column with the log of the rate, then plot scattering amplitude delta for each scattering location, color-coded by rate.
+sddsprocess run1.isanal.full -define=col,logRate,"rate log"
+sddsplot -col=s,delta run1.isanal.full -split=col=logRate -order=temperature -graph=sym,vary=subtype,fill  
 
