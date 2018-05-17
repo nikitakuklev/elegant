@@ -23,6 +23,7 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
     KSEXT *ksext;
     BEND  *bend;
     DRIFT *drift;
+    EDRIFT *edrift;
     CSBEND *csbend;
     CSRCSBEND *csrbend;
     CSRDRIFT *csrdrift;
@@ -84,6 +85,11 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
           drift = (DRIFT*)eptr->p_elem;
           sprintf(s, "%s: DRIF,L=%.15g",
                   name, drift->length);
+          break;
+        case T_EDRIFT:
+          edrift = (EDRIFT*)eptr->p_elem;
+          sprintf(s, "%s: DRIF,L=%.15g",
+                  name, edrift->length);
           break;
         case T_CSRDRIFT:
           csrdrift = (CSRDRIFT*)eptr->p_elem;
