@@ -169,6 +169,21 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exitElegant(1);
   }    
+  multData->referenceOrder = -1; /* assumed to be the order of the lowest main multipole */
+  if (SDDS_CheckParameter(&SDDSin, "referenceOrder", NULL, SDDS_ANY_INTEGER_TYPE, NULL)!=SDDS_CHECK_NONEXISTENT) {
+    if (SDDS_CheckParameter(&SDDSin, "referenceOrder", NULL, SDDS_ANY_INTEGER_TYPE, NULL)==SDDS_CHECK_OK) {
+      printf("Problems with data in multipole file %s---referenceOrder parameter should be integer type\n", multFile);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    if (!SDDS_GetParameterAsLong(&SDDSin, "referenceOrder", &multData->referenceOrder) ||
+        multData->referenceOrder<0) {
+      sprintf(buffer, "Unable to read referenceOrder data for file %s, or invalid value\n", multFile);
+      SDDS_SetError(buffer);
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+  }
   if (steering!=1) {
     if (!(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, bnCheck?"bn":"skew"))) {
       sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
@@ -787,7 +802,7 @@ long multipole_tracking2(
 				       kquad->randomMultipoleFactor,
                                        &(kquad->steeringMultipoleData),
 				       kquad->steeringMultipoleFactor,
-                                       KnL, 1);
+                                       KnL, 1, 1);
       kquad->totalMultipolesComputed = 1;
     }
     multData = &(kquad->totalMultipoleData);
@@ -849,7 +864,7 @@ long multipole_tracking2(
 				       ksext->randomMultipoleFactor,
                                        &(ksext->steeringMultipoleData),
 				       ksext->steeringMultipoleFactor,
-                                       KnL, 2);
+                                       KnL, 2, 1);
       ksext->totalMultipolesComputed = 1;
     }
     multData = &(ksext->totalMultipoleData);
@@ -901,7 +916,7 @@ long multipole_tracking2(
 				       1.0,
                                        NULL,
 				       1.0,
-                                       KnL, 3);
+                                       KnL, 3, 1);
       koct->totalMultipolesComputed = 1;
     }
     multData = &(koct->totalMultipoleData);
@@ -1634,11 +1649,36 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 				      double randomMultFactor,
                                       MULTIPOLE_DATA *steeringMult,
 				      double steeringMultFactor,
-                                      double KmL, long rootOrder)
+                                      double KmL, long rootOrder0,
+                                      long orderCheck)
 {
   long i;
   double sFactor=0.0, rFactor=0.0;
-  
+  long rootOrder[3]; /* systematic body, systematic edge, random */
+
+  rootOrder[0] = rootOrder[1] = rootOrder[2] = rootOrder0;
+  if (orderCheck) {
+    if (systematicMult && systematicMult->initialized && systematicMult->referenceOrder>=0 && rootOrder0!=systematicMult->referenceOrder)
+        bombElegantVA("root order mismatch for multipole data file %s---expected %ld but found %ld in referenceOrder parameter",
+                      systematicMult->filename, rootOrder0, systematicMult->referenceOrder);
+    if (edgeMult && edgeMult->initialized && edgeMult->referenceOrder>=0 && rootOrder0!=edgeMult->referenceOrder)
+      bombElegantVA("root order mismatch for multipole data file %s---expected %ld but found %ld in referenceOrder parameter",
+                    edgeMult->filename, rootOrder0, edgeMult->referenceOrder);
+    if (randomMult && randomMult->initialized && randomMult->referenceOrder>=0 && rootOrder0!=randomMult->referenceOrder)
+      bombElegantVA("root order mismatch for multipole data file %s---expected %ld but found %ld in referenceOrder parameter",
+                    randomMult->filename, rootOrder0, randomMult->referenceOrder);
+  } else {
+    if (systematicMult && systematicMult->referenceOrder>=0)
+      rootOrder[0] = systematicMult->referenceOrder;
+    if (edgeMult && edgeMult->referenceOrder>=0)
+      rootOrder[1] = edgeMult->referenceOrder;
+    if (randomMult && randomMult->referenceOrder>=0)
+      rootOrder[2] = randomMult->referenceOrder;
+  }
+  if (steeringMult && steeringMult->initialized && steeringMult->referenceOrder>=0 && steeringMult->referenceOrder!=0)
+    bombElegantVA("root order error for multipole data file %s---expected 0 but found %ld in referenceOrder parameter",
+                  randomMult->filename, randomMult->referenceOrder);
+
   if (!totalMult->initialized) {
     totalMult->initialized = 1;
     /* make a list of unique orders for random and systematic multipoles */
@@ -1711,9 +1751,9 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
    * of the magnet with strength KmL
    */
   if (systematicMult->orders)
-    sFactor = KmL/dfactorial(rootOrder)*ipow(systematicMult->referenceRadius, rootOrder)*systematicMultFactor;
+    sFactor = KmL/dfactorial(rootOrder[0])*ipow(systematicMult->referenceRadius, rootOrder[0])*systematicMultFactor;
   if (randomMult->orders)
-    rFactor = KmL/dfactorial(rootOrder)*ipow(randomMult->referenceRadius, rootOrder)*randomMultFactor;
+    rFactor = KmL/dfactorial(rootOrder[2])*ipow(randomMult->referenceRadius, rootOrder[2])*randomMultFactor;
   for (i=0; i<totalMult->orders; i++) {
     totalMult->KnL[i] = totalMult->JnL[i] = 0;
     if (systematicMult->orders) {
@@ -1733,7 +1773,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
      * JnL = bn*n!/r^n*(KmL*r^m/m!), where m is the root order 
      * of the magnet with strength KmL
      */
-    sFactor = KmL/dfactorial(rootOrder)*ipow(edgeMult->referenceRadius, rootOrder)*systematicMultFactor;
+    sFactor = KmL/dfactorial(rootOrder[1])*ipow(edgeMult->referenceRadius, rootOrder[1])*systematicMultFactor;
     for (i=0; i<edgeMult->orders; i++) {
       edgeMult->KnL[i] = sFactor*edgeMult->anMod[i];
       edgeMult->JnL[i] = sFactor*edgeMult->bnMod[i];

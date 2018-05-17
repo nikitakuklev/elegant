@@ -14,7 +14,8 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 				      double randomMultFactor,
                                       MULTIPOLE_DATA *steeringMult,
 				      double steeringMultFactor,
-                                      double KmL, long rootOrder);
+                                      double KmL, long defaultOrder,
+                                      long orderOverride);
 
 void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
 

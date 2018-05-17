@@ -168,6 +168,7 @@ typedef struct {
   long orders;
   int32_t *order;
   double referenceRadius;  
+  int32_t referenceOrder;
   char *filename;
   /* normal and skew terms */
   double *an, *bn;         /* input values for normal and skew terms, respectively (note difference from common use!),

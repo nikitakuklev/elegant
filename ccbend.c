@@ -225,7 +225,9 @@ long track_through_ccbend(
                                      &(ccbend->edgeMultipoleData),
                                      &(ccbend->randomMultipoleData), ccbend->randomMultipoleFactor,
                                      NULL, 0.0,
-                                     referenceKnL, ccbend->referenceOrder);
+                                     referenceKnL, 
+                                     ccbend->referenceOrder, 0
+                                     );
     ccbend->totalMultipolesComputed = 1;
   }
   multData = &(ccbend->totalMultipoleData);
