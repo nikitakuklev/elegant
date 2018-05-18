@@ -171,7 +171,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }    
   multData->referenceOrder = -1; /* assumed to be the order of the lowest main multipole */
   if (SDDS_CheckParameter(&SDDSin, "referenceOrder", NULL, SDDS_ANY_INTEGER_TYPE, NULL)!=SDDS_CHECK_NONEXISTENT) {
-    if (SDDS_CheckParameter(&SDDSin, "referenceOrder", NULL, SDDS_ANY_INTEGER_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (SDDS_CheckParameter(&SDDSin, "referenceOrder", NULL, SDDS_ANY_INTEGER_TYPE, NULL)!=SDDS_CHECK_OK) {
       printf("Problems with data in multipole file %s---referenceOrder parameter should be integer type\n", multFile);
       fflush(stdout);
       exitElegant(1);
