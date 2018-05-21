@@ -743,8 +743,9 @@ void accumulate_beam_sums1(
           offset += i-1;
 
       for (j=i; j<7; j++) {
+        double b;
 #ifdef USE_KAHAN
-        double Y, b, SijOld;
+        double Y, SijOld;
         errorSig[j]=0.0;
 #endif
         if (flags&BEAM_SUMS_SPARSE && !sparse[i][j]) {
@@ -806,7 +807,7 @@ void accumulate_beam_sums1(
             if (chosen[i_part]) {
 #ifndef USE_KAHAN
               Sij += ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
-                ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]:-centroid[j]timeCoord[i_part]));
+                ((j<6?((flags&BEAM_SUMS_EXACTEMIT) && (j==1 || j==3)?pz[i_part]:1)*coord[i_part][j]-centroid[j]:timeCoord[i_part]));
 #else
               Sij = KahanPlus(Sij, 
                               ((i<6?((flags&BEAM_SUMS_EXACTEMIT) && (i==1 || i==3)?pz[i_part]:1)*coord[i_part][i]-centroid[i]:timeCoord[i_part]))*
