@@ -685,7 +685,7 @@ long compute_final_properties
   } else {
     double dummy;
     for (i=0; i<2; i++)
-      computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+2*i+0, data+F_NEMIT_OFFSET+2*i+1, &dummy, &dummy, sums->sigman, 2*i);
+      computeEmitTwissFromSigmaMatrix(data+F_NEMIT_OFFSET+i+0, data+F_NEMIT_OFFSET+i+2, &dummy, &dummy, sums->sigman, 2*i);
   }
 
 #ifdef DEBUG
