@@ -292,7 +292,6 @@ void accumulate_beam_sums(
     { 0, 0, 0, 0, 0, 1, 0 },
     { 0, 0, 0, 0, 0, 0, 1 }
   };
-  
 #ifdef USE_KAHAN
   double errorCen[7], errorCenn[7], errorSig, errorSign;
 #endif
@@ -313,7 +312,6 @@ void accumulate_beam_sums(
   }
 #endif /* HAVE_GPU */
 
-
    timeCoord = malloc(sizeof(*timeCoord)*n_part);
    if (!timeValue)
      computeTimeCoordinates(timeCoord, p_central, coord, n_part);
@@ -321,7 +319,7 @@ void accumulate_beam_sums(
     memcpy(timeCoord, timeValue, sizeof(*timeCoord)*n_part);
 
   chosen = malloc(sizeof(short)*n_part);
-  
+
   if (exactNormalizedEmittance) {
     pz = malloc(sizeof(double)*n_part);
     for (i=0; i<n_part; i++)
@@ -386,7 +384,7 @@ void accumulate_beam_sums(
         centroidn[i] /= npCount;
       } 
     }
-    for (i=0; i<6; i++) {
+    for (i=0; i<7; i++) {
       if (i!=1 && i!=3)
         centroidn[i] = centroid[i];
     }
@@ -437,14 +435,13 @@ void accumulate_beam_sums(
         for (i_part=0; i_part<n_part; i_part++) {
           if (chosen[i_part]) {
             b = ((i<6?coord[i_part][i]-centroid[i]:timeCoord[i_part]))*((j<6?coord[i_part][j]-centroid[j]:timeCoord[i_part]));
-            if (exactNormalizedEmittance && i<4 && j<4) {
+            if (exactNormalizedEmittance) {
               bn = (coord[i_part][i]*(i==1 || i==3?pz[i_part]:1)-centroidn[i])*(coord[i_part][j]*(j==1 || j==3?pz[i_part]:1));
             }
 #ifndef USE_KAHAN
             Sij += b;
-            if (exactNormalizedEmittance && i<4 && j<4) {
+            if (exactNormalizedEmittance)
               Sijn += bn;
-            }
 #else
             /* In-line KahanPlus to improve performance */
             /* Sij = KahanPlus(Sij, b, &errorSig); */
@@ -452,7 +449,7 @@ void accumulate_beam_sums(
             SijOld = Sij;
             Sij += Y;
             errorSig = Y - (Sij-SijOld);
-            if (exactNormalizedEmittance && i<4 && j<4) {
+            if (exactNormalizedEmittance) {
               Yn = bn + errorSign;
               SijOldn = Sijn;
               Sijn += Yn;
@@ -468,7 +465,7 @@ void accumulate_beam_sums(
       }
     }
   }
-  
+
   sums->charge = mp_charge*npCount;
   sums->n_part += npCount;
   free(timeCoord);
@@ -647,13 +644,13 @@ void accumulate_beam_sums1(
       }
     }
   }
-  
+
   if (notSinglePart) {
     if (parallelStatus==trueParallel) {
       if (isMaster) { 
         n_part = 0;  /* All the particles have been distributed to the slave processors */
         npCount = 0;
-        memset(centroid, 0.0,  sizeof(double)*6);
+        memset(centroid, 0.0,  sizeof(double)*7);
       }
       /* compute centroid sum over processors */
 #ifndef USE_KAHAN 
@@ -687,7 +684,6 @@ void accumulate_beam_sums1(
         npCount_total = npCount;
       }
   }
-  
 
   if (active) {	        
     for (i_part=0; i_part<n_part; i_part++)
@@ -738,7 +734,7 @@ void accumulate_beam_sums1(
   if (active) {
     for (i=0; i<7; i++) {
 
-      if ((parallelStatus==trueParallel) && notSinglePart)
+      /* if ((parallelStatus==trueParallel) && notSinglePart)  */
         if (i>=1)        
           offset += i-1;
 
@@ -919,7 +915,6 @@ void accumulate_beam_sums1(
 
   }
   
-
 #ifdef USE_KAHAN
   free_czarray_2d((void**)sumMatrixCen, n_processors, 7); 
   free_czarray_2d((void**)errorMatrixCen, n_processors, 7);

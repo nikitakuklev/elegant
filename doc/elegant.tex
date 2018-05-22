@@ -58,6 +58,12 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|rf_setup| command now handles $\alpha_c<0$, a deficiency that was reported by P. Piot (NIU/FNAL).
   It also now uses $\eta = \alpha_c - 1/\gamma^2$ instead of $\alpha_c$, though this rarely makes a significant
   difference.
+\item The computation of exact normalized emittances, requested with the \verb|global_settings| command,
+  had several issues that were fixed. First, the values assigned to the horizontal and vertical corrected and
+  uncorrected emittances were permuted. Second, in the serial version, the corrected emittances (with dispersive
+  terms removed) were computed incorrectly. This would impact the \verb|sigma| and \verb|final| files from
+  the \verb|run_setup| command. J. Bj{\"o}rklund Svensson (MAX-Lab) reported problems that helped find these
+  bugs.
 \end{itemize}
 
 \subsection{New and Modified Elements}
