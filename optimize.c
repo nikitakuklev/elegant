@@ -1543,7 +1543,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS (88+18)
+#define N_TWISS_QUANS (88+18+2)
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -1579,6 +1579,7 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "p98.betay", "p98.etay", "p98.etapy",
     "p96.betax", "p96.etax", "p96.etapx", 
     "p96.betay", "p96.etay", "p96.etapy",
+    "Ax", "Ay"
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -1612,6 +1613,7 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, 
   -1, -1, -1,  
   -1, -1, -1, 
+  -1, -1,
     };
 
 static char *radint_name[14] = {
@@ -1664,7 +1666,7 @@ int showTwissMemories(FILE *fp)
 {
   long i;
   
-  for (i=0; i<32; i++) {
+  for (i=0; i<N_TWISS_QUANS; i++) {
     if (twiss_mem[i]!=-1)
       fprintf(fp, "%s = %21.15e\n", 
               twiss_name[i], rpn_recall(twiss_mem[i]));
@@ -2022,6 +2024,9 @@ double optimization_function(double *value, long *invalid)
     rpn_store(twiss_p96.betay, NULL, twiss_mem[103]);
     rpn_store(twiss_p96.etay, NULL,  twiss_mem[104]);
     rpn_store(twiss_p96.etapy, NULL, twiss_mem[105]);
+
+    rpn_store(beamline->acceptance[0], NULL, twiss_mem[106]);
+    rpn_store(beamline->acceptance[1], NULL, twiss_mem[107]);
 
 #if DEBUG
     printf("Twiss parameters stored.\n");
