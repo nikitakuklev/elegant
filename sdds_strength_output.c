@@ -57,14 +57,16 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
         n = -1;
         switch (eptr->type) {
           case T_QUAD:
-            L = ((QUAD*)eptr->p_elem)->length;
+            if ((L=((QUAD*)eptr->p_elem)->lEffective)==0)
+              L = ((QUAD*)eptr->p_elem)->length;
             KnL = ((QUAD*)eptr->p_elem)->k1*L;
             n = 1;
             param_name = "K1";
             KnL2PF = 1/L;
             break;
           case T_KQUAD:
-            L = ((KQUAD*)eptr->p_elem)->length;
+            if ((L=((KQUAD*)eptr->p_elem)->lEffective)==0)
+              L = ((KQUAD*)eptr->p_elem)->length;
             KnL = ((KQUAD*)eptr->p_elem)->k1*L;
             n = 1;
             param_name = "K1";
