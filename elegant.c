@@ -64,7 +64,8 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
 #define DEFINE_PIPE 3
 #define DEFINE_RPN_DEFNS 4
 #define DEFINE_VERBOSE 5
-#define N_OPTIONS 6
+#define DEFINE_CONFIGURATION 6
+#define N_OPTIONS 7
 char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
@@ -72,6 +73,7 @@ char *option[N_OPTIONS] = {
     "pipe",
     "rpndefns",
     "verbose",
+    "configuration",
   };
 
 #define SHOW_USAGE    0x0001
@@ -81,18 +83,18 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
  #if HAVE_GPU
-  char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
+  char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
   char *GREETING="This is gpu-Pelegant 34.3Beta0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
-  char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
+  char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
   char *GREETING="This is elegant 34.3Beta0, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
-  char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
+  char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
   char *GREETING="This is gpu-elegant 34.3Beta0 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
-  char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>]";
+  char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
   char *GREETING="This is elegant 34.3Beta0, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
@@ -334,7 +336,8 @@ char **argv;
   long macros;
   LINE_LIST *beamline=NULL;        /* pointer to root of linked list */
   FILE *fp_in=NULL;
-  char *inputfile;
+  char *inputfile, *inputFileArray[2] = {NULL, NULL};
+  long iInput;
   SCANNED_ARG *scanned;
   char s[NAMELIST_BUFLEN], *ptr;
   long i, verbose = 0;
@@ -359,7 +362,7 @@ char **argv;
   long namelists_read = 0, failed, firstPass;
   unsigned long pipeFlags = 0;
   double apertureReturn;
-  char *rpnDefns = NULL;
+  char *rpnDefns = NULL, *configurationFile = NULL;
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
@@ -476,7 +479,8 @@ char **argv;
   fflush(stdout);
   link_date();
 
-  inputfile = NULL;
+  inputFileArray[0] = NULL;
+  inputFileArray[1] = NULL;
   for (i=1; i<argc; i++) {
     if (scanned[i].arg_type==OPTION) {
       switch (match_string(scanned[i].list[0], option, N_OPTIONS, 0)) {
@@ -559,6 +563,10 @@ char **argv;
         if (scanned[i].n_items!=2 || !strlen(rpnDefns=scanned[i].list[1]))
           bombElegant("invalid -rpnDefns syntax", NULL);
         break;
+      case DEFINE_CONFIGURATION:
+        if (scanned[i].n_items!=2 || !strlen(configurationFile=scanned[i].list[1]))
+          bombElegant("invalid -configurationFile syntax", NULL);
+        break;
       default:
         printf("Unknown option given.\n");
         showUsageOrGreeting(SHOW_USAGE);
@@ -591,6 +599,11 @@ char **argv;
     if (rpn_check_error()) {
       bombElegant("rpn definitions file invalid", NULL);
     }
+  }
+
+  if (!configurationFile) {
+    if (!strlen(configurationFile = getenv("ELEGANT_CONFIGURATION")))
+      configurationFile = NULL;
   }
 
 #if defined(_WIN32)
@@ -634,7 +647,17 @@ char **argv;
   starting_coord = tmalloc(sizeof(*starting_coord)*COORDINATES_PER_PARTICLE);
   
   beam_type = -1;
+  if (configurationFile) {
+    inputFileArray[0] = configurationFile;
+    inputFileArray[1] = inputfile;
+  } else {
+    inputFileArray[0] = inputfile;
+    inputFileArray[1] = NULL;
+  }
 
+  iInput = 0;
+  while (iInput<2 && (inputfile=inputFileArray[iInput++])!=NULL) {
+    fp_in = fopen_e(inputfile, "r", 0);
   while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
     substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
 #if DEBUG
@@ -1835,6 +1858,7 @@ char **argv;
 #ifdef SUNOS4
     check_heap();
 #endif
+  }
   }
 #if DEBUG
   printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
