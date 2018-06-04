@@ -510,14 +510,17 @@ next in the file and react appropriately.
 
 The commandline syntax for {\tt elegant} is of the form
 \begin{flushleft}{\tt
-elegant \{{\em inputfile}|-pipe=in\} [-rpnDefns={\em filename}] -macro={\em tag1}={\em value1}[,{\em
-tag2}={\em value2}...]  }\end{flushleft} 
+elegant \{{\em inputfile}|-pipe=in\} [-rpnDefns={\em filename}] [-configuration={\em filename}] [-macro={\em tag1}={\em value1}[,{\em
+tag2}={\em value2}...] }\end{flushleft} 
 {\em inputfile} is the name of the command input file, which is a series of
 namelist commands directing the calculations.
 Alternatively, one may give the \verb|-pipe=in| option, allowing {\tt elegant } to be
 fed a stream of commands by another program or script.
 The \verb|-rpnDefns| option allows providing the name of the RPN definitions file as an alternative
 to defining the \verb|RPN_DEFNS| environment variable.
+The \verb|-configuration| option allows providing the name of an input file to be read prior to {\em inputfile};
+this can be used for configuring \verb|elegant| using, e.g., the \verb|global_settings| command; this is
+an alternative to using the \verb|ELEGANT_CONFIGURATION| environment variable.
 The \verb|-macro| option allows performing text substitutions in the command stream.
 Multiple \verb|-macro| options may be given.
 Usage is described in more detail below.
@@ -2195,6 +2198,9 @@ programs such as TRACY and MAD \cite{BuesingPC}.
 \item sequence: should precede \verb|run_setup|.
 \item function: change global settings.
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+ One way to use the \verb|global_settings| command is in a configuration file, which can be supplied via the 
+ \verb|-configuration| option or \verb|ELEGANT_CONFIGURATION| environment variable; an example of using this
+ would be to set MPI I/O options an a per-system basis.
 \end{itemize}
 
 \begin{verbatim}
@@ -2210,6 +2216,8 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     long share_tracking_based_matrices = 0;
     long mpi_io_force_file_sync = 0;
     long usleep_mpi_io_kludge = 0;
+    long mpi_io_read_buffer_size = 0;
+    long mpi_io_write_buffer_size = 0;
 &end
 \end{verbatim}
 
