@@ -101,6 +101,7 @@
 #
 #
 
+HDEPENDS_FILES =
 #CMPLR = ANSI
 Ocustom = -O3
 HOST_OPT = YES
