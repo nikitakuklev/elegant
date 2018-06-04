@@ -479,8 +479,7 @@ char **argv;
   fflush(stdout);
   link_date();
 
-  inputFileArray[0] = NULL;
-  inputFileArray[1] = NULL;
+  inputfile = inputFileArray[0] = inputFileArray[1] = NULL;
   for (i=1; i<argc; i++) {
     if (scanned[i].arg_type==OPTION) {
       switch (match_string(scanned[i].list[0], option, N_OPTIONS, 0)) {
@@ -602,7 +601,8 @@ char **argv;
   }
 
   if (!configurationFile) {
-    if (!strlen(configurationFile = getenv("ELEGANT_CONFIGURATION")))
+    if ((configurationFile = getenv("ELEGANT_CONFIGURATION")) && 
+        !strlen(configurationFile = getenv("ELEGANT_CONFIGURATION")))
       configurationFile = NULL;
   }
 
