@@ -218,7 +218,7 @@ lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
-oagphy_DIR = $(EPICS_TOP_DIR)/oag/apps/lib/$(EPICS_HOST_ARCH)
+oagphy_DIR = $(OAG_APPS_LIB)
 #fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 
 astra2elegant_SRCS = astra2elegant.c
