@@ -92,6 +92,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item Read buffering was re-enabled for parallel I/O to avoid performance problems on GPFS file systems.
   Write buffering is still disabled, since this seems to prevent data corruption on some file systems.
+  Users may wish to configure this for their file system using the new \verb|ELEGANT_CONFIGURATION| 
+  environment variable.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
