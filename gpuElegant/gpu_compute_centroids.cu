@@ -347,7 +347,7 @@ void gpu_accumulate_beam_sums(
         centroidn[i] /= npCount;
       }
     }
-    for (i=0; i<6; i++) {
+    for (i=0; i<7; i++) {
       if (i==4)
         continue;  /* done below */
       if(pmax[i] > -pmin[i]) sums->maxabs[i] = pmax[i];
@@ -406,7 +406,7 @@ void gpu_accumulate_beam_sums(
           gpuParticleReductionAsync(npCount,
               &Sijarr[i][j], gpuSij(d_center, 0., d_center, 0.),
               Add<double>());
-        if (exactNormalizedEmittance && i<4 && j<4)
+        if (exactNormalizedEmittance)
           gpuParticleReductionAsync(npCount, &Sijnarr[i][j],
               gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
 #else
@@ -428,7 +428,7 @@ void gpu_accumulate_beam_sums(
           gpuParticleKahanReductionAsync(npCount,
               &Sijarr[i][j], &errorSig,
               gpuSij(d_center, 0., d_center, 0.));
-        if (exactNormalizedEmittance && i<4 && j<4)
+        if (exactNormalizedEmittance)
           gpuParticleKahanReductionAsync(npCount,
               &Sijnarr[i][j], &errorSign,
               gpuSijn(i, centroidn[i], j, centroidn[j], d_pz));
@@ -611,7 +611,7 @@ void gpu_accumulate_beam_sums(
       if (isMaster) { 
         n_part = 0;  /* All the particles have been distributed to the slave processors */
         npCount = 0;
-        memset(centroid, 0.0,  sizeof(double)*6);
+        memset(centroid, 0.0,  sizeof(double)*7);
       }
       /* compute centroid sum over processors */
 #ifndef USE_KAHAN 
@@ -685,7 +685,7 @@ void gpu_accumulate_beam_sums(
   if (active) {
     for (i=0; i<7; i++) {
 
-      if ((parallelStatus==trueParallel) && notSinglePart)
+      /*if ((parallelStatus==trueParallel) && notSinglePart)*/
         if (i>=1)        
           offset += i-1;
 
