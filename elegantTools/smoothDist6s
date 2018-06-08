@@ -76,6 +76,12 @@ if [string length $semaphore] {
 
 set factor [expr int($factor)]
 
+set np [exec sdds2stream -rows=bare $input]
+if [expr $np<12000] {
+    puts "Error0: need at least 12k points in the input file. $input has only $np points"
+    exit 1
+}
+
 set tmpRoot [APSTmpDir]/tmp[pid]-$env(USER)
 
 # fit a polynomial to the (t,p) data to make a table for computing p(t)
