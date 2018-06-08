@@ -32,7 +32,7 @@ sddsconvert $input -pipe=out -retain=column,t,p,x,xp,y,yp \
     "-define=column,pz,p xp sqr yp sqr + 1 + sqrt / mev * 1e6 *,units=eV" \
     "-define=column,px,pz xp *,units=eV" \
     "-define=column,py,pz yp *,units=eV" \
-    "-define=column,betaz,pz px sqr py sqr + pz sqr + sqrt /" \
+    "-define=column,betaz,pz px sqr py sqr + pz sqr + 1 + sqrt /" \
     "-define=column,z,t c_mks * betaz *,units=m" \
     "-redefine=column,t,0,units=ns" 
 
