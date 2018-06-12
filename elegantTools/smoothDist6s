@@ -83,14 +83,19 @@ if [expr $np<12000] {
 }
 
 set tmpRoot [APSTmpDir]/tmp[pid]-$env(USER)
+exec sddsconvert $input -pipe=out -delete=parameter,tAve \
+    | sddsprocess -pipe=in $tmpRoot.inp -process=t,ave,tAve "-redefine=column,t,t tAve -,units=s" 
+if $debug {
+    exec sddsplot -column=t,p $tmpRoot.inp -graph=dot
+}
 
 # fit a polynomial to the (t,p) data to make a table for computing p(t)
-if {[catch {exec sddspfit $input $tmpRoot.fit -terms=12 -evaluate=$tmpRoot.eval,number=10000 -column=t,p} results]} {
+if {[catch {exec sddspfit $tmpRoot.inp $tmpRoot.fit -terms=12 -evaluate=$tmpRoot.eval,number=10000 -column=t,p} results]} {
     puts "Error1: $results"
     exit 1
 }
 if $debug {
-    exec sddsplot -col=t,p $input -graph=dot -col=t,p $tmpRoot.eval -graph=line,type=1 "-title=momentum fit"
+    exec sddsplot -col=t,p $tmpRoot.inp -graph=dot -col=t,p $tmpRoot.eval -graph=line,type=1 "-title=momentum fit"
 }
 
 # find the StDev(pResidual) and make a table for computing pStDev(t)
@@ -109,7 +114,7 @@ if $debug {
 }
 
 # compute number of particles that we'll generate
-if {[catch {exec sdds2stream -rows=bare $input} results]} {
+if {[catch {exec sdds2stream -rows=bare $tmpRoot.inp} results]} {
     puts "Error3: $results"
     exit 1
 }
@@ -121,7 +126,7 @@ if $debug {
 }
 
 # find average momentum
-if {[catch {exec sddsprocess $input -pipe=out -process=p,ave,pAve \
+if {[catch {exec sddsprocess $tmpRoot.inp -pipe=out -process=p,ave,pAve \
               | sdds2stream -pipe -param=pAve} results]} {
     puts "Error4: $results"
     exit 1
@@ -134,7 +139,7 @@ if $debug {
 
 # smooth the longitudinal density to get a function for generating
 # the distribution, and apply the modulation
-if {[catch {exec sddshist $input -pipe=out -bins=1000 -data=t -expand=1.2 \
+if {[catch {exec sddshist $tmpRoot.inp -pipe=out -bins=1000 -data=t -expand=1.2 \
               | sddssmooth -pipe -column=t -savit=2,2,1 -column=frequency -pass=50 -newcolumns \
               | sddsprocess -pipe=in $tmpRoot.this \
               "-define=parameter,rippleOmega,c_mks $rippleWavelength 1e6 / / 2 * pi *,units=Hz" \
@@ -149,7 +154,7 @@ if $debug {
 }
 
 # slice the beam up and compute slice emittances
-if [catch {exec sddssort $input -pipe=out -column=t \
+if [catch {exec sddssort $tmpRoot.inp -pipe=out -column=t \
              | sddsbreak -rowlimit=1000 -pipe \
              | sddsprocess -pipe "-test=parameter,n_rows 10 >" "-test=parameter,i_page 10 > i_page 90 < &&" \
              | sddsanalyzebeam -pipe \
@@ -165,7 +170,7 @@ if $debug {
 APSSetVarsFromList -variableList "enx eny" -valueList $emitList
 
 # find the projected twiss parameters (which LCLS is matched to)
-if {[catch {exec sddsanalyzebeam $input -pipe=out \
+if {[catch {exec sddsanalyzebeam $tmpRoot.inp -pipe=out \
               | sdds2stream -pipe -column=betax,betay,alphax,alphay} results]} {
     puts "Error6: $results"
     exit 1
@@ -279,13 +284,13 @@ if $betaSlices>1 {
     }
 
     # compute and retriev slice parameters from input file
-    if {[catch {exec sdds2stream -rows=bare $input} results]} {
+    if {[catch {exec sdds2stream -rows=bare $tmpRoot.inp} results]} {
         puts "Error15: $results"
         exit 1
     }
     set np $results
     set sliceNp [expr $np/$betaSlices]
-    if {[catch {exec sddssort $input -column=t -pipe=out \
+    if {[catch {exec sddssort $tmpRoot.inp -column=t -pipe=out \
                   | sddsbreak -rowlimit=$sliceNp -pipe \
                   | sddsprocess -pipe "-test=param,n_rows 10 >" \
                   | sddsanalyzebeam -pipe=in $rootname.sliceTwiss} results]} {
@@ -351,11 +356,21 @@ if $betaSlices>1 {
     eval file delete -force $newList
     # replace the old output file
     file delete $output
-    file rename $rootname.new $output
+    exec sddsxref $rootname.new $tmpRoot.inp -pipe=out -leave=* -transfer=parameter,tAve \
+        | sddsprocess -pipe=in $output "-redefine=column,t,t tAve +,units=s" 
+} else {
+    exec sddsxref $output $tmpRoot.inp -pipe=out -leave=* -transfer=parameter,tAve \
+      | sddsprocess -pipe=in $tmpRoot.out "-redefine=column,t,t tAve +,units=s" 
+    file delete $output
+    file rename $tmpRoot.out $output
 }
 
-# exec sddsplot -sparse=10 -col=t,p $input $tmpRoot.mult $output -graph=dot,vary -separate -same &
-eval file delete -force $tmpRoot.pStDevP $tmpRoot.partial $output.gdf $tmpRoot.fit $tmpRoot.eval $tmpRoot.pStDev $tmpRoot.this
+
+if $debug {
+    exec sddsplot -sparse=10 -col=t,p $input $output -graph=dot,vary -separate -same &
+}
+
+eval file delete -force $tmpRoot.pStDevP $tmpRoot.partial $output.gdf $tmpRoot.fit $tmpRoot.eval $tmpRoot.pStDev $tmpRoot.this $tmpRoot.inp
 
 if [string length $semaphore] {
     set fd [open $semaphore w]
