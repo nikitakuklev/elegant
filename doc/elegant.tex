@@ -2820,7 +2820,9 @@ only one definition of each element, even if it is used multiple times.
 This behavior can be altered with the next control.
 
 \item \verb|force_occurence_data| --- If set, then occurence data is
-used even in \verb|change_defined_values| mode.
+used even in \verb|change_defined_values| mode. When loading data for
+a highly repetitive system, where many elements have identical names, this can greatly
+speed completion of the operation.
 
 \item \verb|use_first| --- It is possible that the input file will contain
 multiple lines for any given parameter.  In this case, {\tt elegant} will
@@ -2829,7 +2831,7 @@ then all would be included. However, if the lines give absolute values, then the
 last one will overwrite the previous values; this flag allows overriding the
 behavior in this case to force {\tt elegant} to use the first value.
 This can have speed advantages for cases where there are many identical
-occurences of the same element.
+occurences of the same element with identical values for the parameters.
 
 \item \verb|clear_settings| --- If set, clear all settings and files
 being used for loading parameters.
