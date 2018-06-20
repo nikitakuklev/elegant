@@ -675,7 +675,7 @@ void trackWithIonEffects
                nToAdd = someFunctionOfExistingNumberOfIons(...); 
             */
 
-	    // Note: not parallelized!!
+
 	    double beamFact = 0, jx = 0, jy = 0, Pmi = 0, rnd = 0;
 	    beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * sigma[0] * sigma[1]);
 	    for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
@@ -691,7 +691,19 @@ void trackWithIonEffects
 		mx = ionEffects->coordinate[index][jMacro][0];
 		my = ionEffects->coordinate[index][jMacro][2];
 		addIon_point(ionEffects, iSpecies, qToAdd, mx, my); //add multiply ionized ion
-		
+
+		//20 eV kinetic energy
+		// 10 +/- 5 eV
+		double vmag, ionMass, vx, vy, rangle, Emi;	      
+		ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
+		Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
+		vmag = sqrt(2 * Emi * e_mks / ionMass);
+		rangle = random_2(0) * 2 * PI;
+		vx = vmag * cos(rangle);
+		vy = vmag * sin(rangle);
+		ionEffects->coordinate[iSpecies][ionEffects->nIons[iSpecies]-1][1] = vx;
+		ionEffects->coordinate[iSpecies][ionEffects->nIons[iSpecies]-1][3] = vy;
+
 		//delete source ion
 		long k;
                 for (k=0; k<5; k++) {
@@ -967,7 +979,7 @@ void trackWithIonEffects
 #if USE_MPI
     if (myid==0) {
 #endif
-    if (SDDS_ionDensityOutput) {
+      if ((SDDS_ionDensityOutput) && (iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
       if (ion_output_all_locations || ionEffects==firstIonEffects) {
         if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
                                "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sLocation,
@@ -1266,6 +1278,9 @@ void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double 
   ionEffects->coordinate[iSpecies][iNew][2] =  y;
   ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
   ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
+
+
+
     
   
 }
