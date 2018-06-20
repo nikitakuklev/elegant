@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 34.3.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 34.4.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -43,57 +43,28 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|CCBEND| element had incorrect signs for the odd-order systematic multipoles when the bending
-  angle was negative. There was also an issue with incorrect ordering of edge effects and coordinate transformations.
-  R. Lindberg (APS) helped identify these problems.
-\item The \verb|KQUAD| element had an issue with the order of the submatrices used for linear edge effects when
-  tracking. This would cause small tune errors in tracking compared to the results of \verb|twiss_output|.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The beta-function scaling resulting from the \verb|twiss_scaling=1| setting
-  for the \verb|elastic_scattering| command was incorrect. Although the tracking results would be correct,
-  this made it more difficult to optimize run time.
-\item The \verb|rf_setup| command now handles $\alpha_c<0$, a deficiency that was reported by P. Piot (NIU/FNAL).
-  It also now uses $\eta = \alpha_c - 1/\gamma^2$ instead of $\alpha_c$, though this rarely makes a significant
-  difference.
-\item The computation of exact normalized emittances, requested with the \verb|global_settings| command,
-  had several issues that were fixed. First, the values assigned to the horizontal and vertical corrected and
-  uncorrected emittances were permuted. Second, in the serial version, the corrected emittances (with dispersive
-  terms removed) were computed incorrectly. This would impact the \verb|sigma| and \verb|final| files from
-  the \verb|run_setup| command. J. Bj{\"o}rklund Svensson (MAX-Lab) reported problems that helped find these
-  bugs.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item \verb|CCBEND| has a new parameter, \verb|EDGE_ORDER|, that allows controlling the order of edge kicks.
-\item \verb|BRANCH| has a new parameter, \verb|DEFAULT_TO_ELSE|, which allows determining how the element
-  behaves when tracking for closed orbits and the like. 
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|configuration| command-line argument was added, which allows specifying a configuration file
-  to be read before processing the input file. This file can also be specified with the \verb|ELEGANT_CONFIGURATION|
-  environment variable.
-\item The \verb|floor_coordinates| command now creates additional columns in the output file, giving data on
-  the next element in the lattice. Given that data is only provided at the end of elements, this provides
-  an easier way to determine information at the start of elements.
-\item The \verb|insert_elements| command now has a parameter, \verb|insert_before|, that allows controlling whether
-  elements are inserted before or after (default) the specified locations.
-\item The \verb|elastic_scattering| command now includes data that indicates warning conditions in the file
-  specified by \verb|log_file|.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item Read buffering was re-enabled for parallel I/O to avoid performance problems on GPFS file systems.
-  Write buffering is still disabled, since this seems to prevent data corruption on some file systems.
-  Users may wish to configure this for their file system using the new \verb|ELEGANT_CONFIGURATION| 
-  environment variable.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -108,18 +79,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The scripts \verb|elasticScatteringAnalysis| and \verb|inelasticScatteringAnalysis|---which are used to
-  analyze data from the \verb|elastic_scattering| and \verb|inelastic_scattering| commands---were replaced with
-  compiled programs of the same name, giving a large reduction in run time.
-\item The script \verb|longitCalcs|, which does rf calculations using an output file from \verb|twiss_output|, 
-  now supports a commandline mode that is convenient for use in other scripts.
-\item The script \verb|computeQuadFringeIntegrals| was added. It computes the fringe integrals and effective
-  length for a quadrupole from gradient vs z data, producing a file suitable for configuring \verb|KQUAD| elements.
-\item A bug was fixed in \verb|elegant2astra| that would affect results for particles that are not
-   highly relativistic. Forum user Biaobin reported the bug and provided the fix.
-\item A bug was fixed in \verb|smoothDist6s| that resulted in strange longitudinal phase space when the 
-  average value of \verb|t| was very large compared to the spread in \verb|t|. Forum user \verb|Marcello| reported
-  the bug.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7392,6 +7352,92 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 34.3.0, June 14, 2018}
+
+Here is a summary of what's changed since release 34.2.0.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|CCBEND| element had incorrect signs for the odd-order systematic multipoles when the bending
+  angle was negative. There was also an issue with incorrect ordering of edge effects and coordinate transformations.
+  R. Lindberg (APS) helped identify these problems.
+\item The \verb|KQUAD| element had an issue with the order of the submatrices used for linear edge effects when
+  tracking. This would cause small tune errors in tracking compared to the results of \verb|twiss_output|.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The beta-function scaling resulting from the \verb|twiss_scaling=1| setting
+  for the \verb|elastic_scattering| command was incorrect. Although the tracking results would be correct,
+  this made it more difficult to optimize run time.
+\item The \verb|rf_setup| command now handles $\alpha_c<0$, a deficiency that was reported by P. Piot (NIU/FNAL).
+  It also now uses $\eta = \alpha_c - 1/\gamma^2$ instead of $\alpha_c$, though this rarely makes a significant
+  difference.
+\item The computation of exact normalized emittances, requested with the \verb|global_settings| command,
+  had several issues that were fixed. First, the values assigned to the horizontal and vertical corrected and
+  uncorrected emittances were permuted. Second, in the serial version, the corrected emittances (with dispersive
+  terms removed) were computed incorrectly. This would impact the \verb|sigma| and \verb|final| files from
+  the \verb|run_setup| command. J. Bj{\"o}rklund Svensson (MAX-Lab) reported problems that helped find these
+  bugs.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item \verb|CCBEND| has a new parameter, \verb|EDGE_ORDER|, that allows controlling the order of edge kicks.
+\item \verb|BRANCH| has a new parameter, \verb|DEFAULT_TO_ELSE|, which allows determining how the element
+  behaves when tracking for closed orbits and the like. 
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|configuration| command-line argument was added, which allows specifying a configuration file
+  to be read before processing the input file. This file can also be specified with the \verb|ELEGANT_CONFIGURATION|
+  environment variable.
+\item The \verb|floor_coordinates| command now creates additional columns in the output file, giving data on
+  the next element in the lattice. Given that data is only provided at the end of elements, this provides
+  an easier way to determine information at the start of elements.
+\item The \verb|insert_elements| command now has a parameter, \verb|insert_before|, that allows controlling whether
+  elements are inserted before or after (default) the specified locations.
+\item The \verb|elastic_scattering| command now includes data that indicates warning conditions in the file
+  specified by \verb|log_file|.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item Read buffering was re-enabled for parallel I/O to avoid performance problems on GPFS file systems.
+  Write buffering is still disabled, since this seems to prevent data corruption on some file systems.
+  Users may wish to configure this for their file system using the new \verb|ELEGANT_CONFIGURATION| 
+  environment variable.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The scripts \verb|elasticScatteringAnalysis| and \verb|inelasticScatteringAnalysis|---which are used to
+  analyze data from the \verb|elastic_scattering| and \verb|inelastic_scattering| commands---were replaced with
+  compiled programs of the same name, giving a large reduction in run time.
+\item The script \verb|longitCalcs|, which does rf calculations using an output file from \verb|twiss_output|, 
+  now supports a commandline mode that is convenient for use in other scripts.
+\item The script \verb|computeQuadFringeIntegrals| was added. It computes the fringe integrals and effective
+  length for a quadrupole from gradient vs z data, producing a file suitable for configuring \verb|KQUAD| elements.
+\item A bug was fixed in \verb|elegant2astra| that would affect results for particles that are not
+   highly relativistic. Forum user Biaobin reported the bug and provided the fix.
+\item A bug was fixed in \verb|smoothDist6s| that resulted in strange longitudinal phase space when the 
+  average value of \verb|t| was very large compared to the spread in \verb|t|. Forum user \verb|Marcello| reported
+  the bug.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 34.2.0, March 22, 2018}
 
