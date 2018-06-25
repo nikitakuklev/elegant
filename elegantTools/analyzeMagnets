@@ -51,50 +51,53 @@ if [expr $H==0] {
 }
 
 if [string length $groups] {
-    set extraCmd "sddsxref -pipe $groups -match=ElementName -take=PartOfElement -reuse=row -nowarning"
+    exec sddsxref $paramFile $groups -pipe=out -match=ElementName -take=PartOfElement -reuse=row -nowarning \
+        | sddsprocess -pipe=in $paramFile.tmp1 -match=col,ElementType=MARK,! 
 } elseif $useGroupData {
-    set extraCmd "sddsprocess -pipe -print=col,PartOfElement,%s,ElementGroup"
+    exec sddsprocess $paramFile $paramFile.tmp1 -match=col,ElementType=MARK,! \
+        -print=col,PartOfElement,%s,ElementGroup
 } else {
-    set extraCmd "sddsprocess -pipe -print=col,PartOfElement,%s,ElementName"
+    exec sddsprocess $paramFile -pipe=out -match=col,ElementType=MARK,! \
+        | sddsbreak -pipe -change=ElementName \
+        | sddsprocess -pipe \
+        "-define=parameter,page,i_page,type=long" \
+        -print=column,PartOfElement,%s\#%ld,ElementName,page \
+        | sddscombine -pipe=in $paramFile.tmp1  -merge
 }
+
 
 foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1/m^3 1/m^4} units {T/m T/m^2 T/m^3} units2 {T T/m T/m^2} typeName {Quad Sext Oct} {
     set grad [os editstring %/K/B/ $parameter]
 
     # Get the total length
-    if [catch {eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=$wc \
+    if [catch {eval exec sddsprocess $paramFile.tmp1 -pipe=out -match=col,ElementType=$wc \
                 -match=column,ElementParameter=L \
                 -filter=col,ParameterValue,0,0,! \
-                | $extraCmd \
                 | tee $paramFile.nz \
                 | sddsbreak -pipe -change=PartOfElement \
                 | sddsprocess -pipe -process=Element*,first,%s -process=ParameterValue,sum,Length \
                 -process=ParameterValue,count,PartCount \
                 -print=parameter,ElementTag,%s.%.0lf,ElementName,ElementOccurence \
                 -convert=parameter,Length,m,,1 \
-                | sddscollapse -pipe \
-                | sddsxref -pipe $rootname.twi -match=ElementName -take=s \
-                | sddssort -pipe=in -column=s $paramFile.1} result] {
-        file delete $paramFile.nz $paramFile.1
+                | sddscollapse -pipe=in $paramFile.1} result] {
         puts stderr "No results for $wc"
+        file delete $paramFile.nz $paramFile.1
         continue
     }
  
 
     # Get the strength 
-    if [catch {eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=$wc -match=column,ElementParameter=$parameter \
+    if [catch {eval exec sddsprocess $paramFile.tmp1 -pipe=out -match=col,ElementType=$wc -match=column,ElementParameter=$parameter \
 	-print=column,ElementTag,%s.%ld,ElementName,ElementOccurence \
 	-define=col,$parameter,ParameterValue,units=$KnUnits \
-        | sddsxref -pipe $paramFile.nz -match=ElementName -take=* \
-	| sddsxref -pipe  $paramFile.1 -nowarning -match=ElementTag -take=* \
+	| sddsxref -pipe $paramFile.1 -nowarning -match=ElementTag -take=* \
         | sddssort -pipe -column=ElementName -unique=count \
-	| sddssort -pipe -column=s \
-	| sddsprocess -pipe=in $rootname-$type.sdds -process=Ide*,sum,%sTotal \
+	| sddsprocess -pipe=in $rootname-$type.sdds \
 	-process=Length,max,%sMax -process=Length,min,%sMin \
 	-process=$parameter,largest,${parameter}Largest \
 	"{-define=col,$grad,$parameter $H *,units=$units}" \
 	"{-define=col,${grad}L,$parameter $H * Length *,units=$units2}"} result] {
-	puts stderr "No results for $wc"
+	puts stderr "No results for $wc: $result"
         continue
     } else {
 	if ![string length $caption] {
@@ -118,10 +121,10 @@ foreach wc {*QUAD *SEXT *OCT} parameter {K1 K2 K3} type {Q S O} KnUnits {1/m^2 1
     file delete $paramFile.nz $paramFile.1
 }
 # bends
-eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* \
+eval exec sddsprocess $paramFile.tmp1 -pipe=out -match=col,ElementType=*BEN* \
   -match=column,ElementParameter=L \
   -filter=col,ParameterValue,0,0,! \
-  | sddsbreak -pipe -change=ElementName \
+  | sddsbreak -pipe -change=PartOfElement \
   | sddsprocess -pipe -process=Element*,first,%s -process=ParameterValue,sum,Length \
   -process=ParameterValue,count,PartCount \
   -print=parameter,ElementTag,%s.%.0lf,ElementName,ElementOccurence \
@@ -130,14 +133,14 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* \
   | sddsxref -pipe $rootname.twi -match=ElementName -take=s \
   | sddssort -pipe=in -column=s $paramFile.1 
 
-exec sddsprocess $paramFile $rootname-B-K1 -match=col,ElementType=*BEN* \
+exec sddsprocess $paramFile.tmp1 $rootname-B-K1 -match=col,ElementType=*BEN* \
   -match=column,ElementParameter=K1 \
   -print=column,ElementTag,%s.%ld,ElementName,ElementOccurence 
-exec sddsprocess $paramFile $rootname-B-K2 -match=col,ElementType=*BEN* \
+exec sddsprocess $paramFile.tmp1 $rootname-B-K2 -match=col,ElementType=*BEN* \
   -match=column,ElementParameter=K2 \
   -print=column,ElementTag,%s.%ld,ElementName,ElementOccurence 
 
-eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=column,ElementParameter=ANGLE \
+eval exec sddsprocess $paramFile.tmp1 -pipe=out -match=col,ElementType=*BEN* -match=column,ElementParameter=ANGLE \
   -print=column,ElementTag,%s.%ld,ElementName,ElementOccurence \
   | sddsxref -pipe $paramFile.1 -match=ElementTag -take=Length,PartCount,s -nowarning \
   | sddsxref -pipe $rootname-B-K1 -match=ElementTag -take=ParameterValue -rename=col,ParameterValue=K1 -nowarning \
@@ -158,7 +161,6 @@ eval exec sddsprocess $paramFile -pipe=out -match=col,ElementType=*BEN* -match=c
     "{-define=col,PowerDensity,TotalPower Angle abs 1e-16 + / 21 * 32 / $pCentral * 1e6 /,units=W/mrad\$a2\$n}" \
   | sddssort -pipe -column=ElementName -unique=count  \
   | sddssort -pipe -column=s \
-  | $extraCmd \
   | sddsprocess -pipe=in $rootname-B.sdds \
     "-define=param,AngleSumOffset,$angleOffset" \
     "{-rpnexpression=0 sto previousSum}" \
@@ -188,5 +190,5 @@ if $latex {
       "-column=PowerDensity,label=Pow.Dens." -col=IdenticalCount,label=Count
 }
 
-file delete -force $paramFile.1 $rootname-B1 $rootname-B-K1 $rootname-B-K2
+file delete -force $paramFile.1 $rootname-B1 $rootname-B-K1 $rootname-B-K2 $paramFile.tmp1
 
