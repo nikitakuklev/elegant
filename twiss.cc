@@ -3984,15 +3984,15 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss, RADIATION_INTEGRALS *radIntegrals)
 {
   long i, j;
-  static char *twiss_name_suffix[12] = {
-    (char*)"betax", (char*)"alphax", (char*)"nux", (char*)"etax", (char*)"etapx", (char*)"etaxp",
-    (char*)"betay", (char*)"alphay", (char*)"nuy", (char*)"etay", (char*)"etapy", (char*)"etayp",
+  static char *twiss_name_suffix[14] = {
+    (char*)"betax", (char*)"alphax", (char*)"nux", (char*)"etax", (char*)"etapx", (char*)"etaxp", (char*)"psix",
+    (char*)"betay", (char*)"alphay", (char*)"nuy", (char*)"etay", (char*)"etapy", (char*)"etayp", (char*)"psiy",
     } ;
   static char s[200];
   if (!(fpt->init_flags&1)) {
-    fpt->twiss_mem = (long*)tmalloc(sizeof(*(fpt->twiss_mem))*18);
+    fpt->twiss_mem = (long*)tmalloc(sizeof(*(fpt->twiss_mem))*20);
     fpt->init_flags |= 1;
-    for (i=0; i<12; i++) {
+    for (i=0; i<14; i++) {
       sprintf(s, (char*)"%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
       fpt->twiss_mem[i] = rpn_create_mem(s, 0);
     }
@@ -4007,15 +4007,26 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
     abort();
   }
   for (i=0; i<5; i++) {
-    rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), NULL, fpt->twiss_mem[i]);
-    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), NULL, fpt->twiss_mem[i+6]);
+    if (i==2) {
+      /* psi/(2*pi) */
+      rpn_store(*((&twiss->betax)+i)/PIx2, NULL, fpt->twiss_mem[2]);
+      rpn_store(*((&twiss->betay)+i)/PIx2, NULL, fpt->twiss_mem[9]);
+      /* psi */
+      rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[6]);
+      rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[13]);
+    } else if (i==4) {
+      /* store etaxp and etayp in under two names each: etapx and etaxp */
+      rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i]);
+      rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i+1]);
+      rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
+      rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
+    } else {
+      rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i]);
+      rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
+    }
   }
-  /* store etaxp and etayp in under two names each: etapx and etaxp */
-  i = 4;
-  rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i+1]);
-  rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
   if (radIntegrals) {
-    i = 12;
+    i = 14;
     for (j=0; j<6; j++, i++)
       rpn_store(radIntegrals->RI[j], NULL, fpt->twiss_mem[i]);
   }
