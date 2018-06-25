@@ -1241,7 +1241,7 @@ proc APSTouschekLifetime {args} {
       -defi=param,gamma,$gamma \
       -defi=param,enAper,$energyAperture \
       -defi=param,rce,$rce,units=m "-defi=param,sigmal,$bunchLength 1e3 /,units=m" \
-      {-defi=param,epsx,emit 1 coupling + /} \
+      {-defi=param,epsx,emit 1 coupling taux * tauy / + /} \
       {-defi=param,epsy,epsx coupling *} \
       {-defi=col,sigmax,betax epsx * etax sigmap * sqr + sqrt} \
       {-defi=col,sigmaxp,1 alphax sqr + betax / epsx  * etaxp sigmap * sqr + sqrt} \
