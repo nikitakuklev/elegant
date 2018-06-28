@@ -11,8 +11,16 @@
  *
  * Michael Borland, 2003
  */
+#if defined(SOLARIS) && !defined(__GNUC__)
+#include <sunmath.h>
+#endif
+
+#include <complex>
 #include "mdb.h"
 #include "track.h"
+
+void propagateLfbCavity(double *V, double *Vp, double *VResidual, double dt0, TFBDRIVER *tfbd, 
+                        std::complex <double> Ig, std::complex <double> Zc);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pass, double Po, long idSlotsPerBunch)
 {
@@ -80,10 +88,10 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
 	free(tfbp->data[i]);
     }
     tfbp->nBunches = nBuckets;
-    tfbp->data = SDDS_Realloc(tfbp->data, sizeof(*tfbp->data)*nBuckets);
-    tfbp->filterOutput = SDDS_Realloc(tfbp->filterOutput, sizeof(*tfbp->filterOutput)*nBuckets);
+    tfbp->data = (double**)SDDS_Realloc(tfbp->data, sizeof(*tfbp->data)*nBuckets);
+    tfbp->filterOutput = (double*)SDDS_Realloc(tfbp->filterOutput, sizeof(*tfbp->filterOutput)*nBuckets);
     for (i=0; i<nBuckets; i++) {
-      if (!(tfbp->data[i] = calloc(TFB_FILTER_LENGTH, sizeof(**tfbp->data))))
+      if (!(tfbp->data[i] = (double*)calloc(TFB_FILTER_LENGTH, sizeof(**tfbp->data))))
         bombElegant("Memory allocation problem for TFBPICKUP", NULL);
       tfbp->filterOutput[i] = 0;
     }
@@ -245,8 +253,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long iBucket, nBuckets;
   long rpass, updateInterval;
-  double tAve, rfFactor, phase=0, power=0;
-  double V0r, V0i, V1r, V1i;
+  double tAve, rfFactor, phase=0;
+  std::complex <double> Zc, Ig, iu;
+  double V, Vp, tMax;
+
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -323,10 +333,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       free(tfbd->driverSignal);
     }
     tfbd->nBunches = nBuckets;
-    if (!(tfbd->driverSignal = tmalloc(sizeof(*tfbd->driverSignal)*nBuckets)))
+    if (!(tfbd->driverSignal = (double**)tmalloc(sizeof(*tfbd->driverSignal)*nBuckets)))
       bombElegant("memory allocation failure (transverseFeedbackDriver)", NULL);
     for (iBucket=0; iBucket<nBuckets; iBucket++) {
-      tfbd->driverSignal[iBucket] = calloc((tfbd->delay+1+TFB_FILTER_LENGTH), sizeof(**tfbd->driverSignal));
+      tfbd->driverSignal[iBucket] = (double*)calloc((tfbd->delay+1+TFB_FILTER_LENGTH), sizeof(**tfbd->driverSignal));
     }
     tfbd->pass0 = pass;
   } 
@@ -335,7 +345,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     bombElegant("mismatch in number of buckets between TFBDRIVER and TFBPICKUP", NULL);
 
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
-    nomKick = power = 0;
+    nomKick = 0;
 #if USE_MPI
 #if MPI_DEBUG
     printf("Waiting on barrier at top of bucket loop\n");
@@ -352,158 +362,122 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     
     tfbd->driverSignal[iBucket][rpass%(tfbd->delay+tfbd->filterLength)] = kick;
     
-    if (rpass<tfbd->delay+tfbd->filterLength) {
-#if defined(DEBUG) || MPI_DEBUG
-      printf("TFBDRIVER: no kick applied for pass %ld due to delay of %ld\n",
-              pass, tfbd->delay);
-      fflush(stdout);
-#endif
-      kick = 0;
-    }
-    else {
-      kick = 0;
+    kick = 0;
+    if (rpass>=tfbd->delay+tfbd->filterLength) {
       for (i=0; i<tfbd->filterLength; i++) {
 #ifdef DEBUG
         printf("TFBDRIVER: adding term a[%ld]=%e  *   %e\n",
-                i, tfbd->a[i], tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)]);
+               i, tfbd->a[i], tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)]);
         fflush(stdout);
 #endif
         kick += tfbd->a[i]*tfbd->driverSignal[iBucket][(rpass - tfbd->delay - i)%(tfbd->delay+tfbd->filterLength)];
       }
+    }
 #if defined(DEBUG) || MPI_DEBUG
-      printf("TFBDRIVER: kick = %le\n", kick);
-      fflush(stdout);
+    printf("TFBDRIVER: kick = %le\n", kick);
+    fflush(stdout);
 #endif
-      if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
-        kick = SIGN(kick)*tfbd->kickLimit;
-      phase = tfbd->phase*PI/180;
+    if (tfbd->kickLimit>0 && fabs(kick)>tfbd->kickLimit)
+      kick = SIGN(kick)*tfbd->kickLimit;
+    phase = tfbd->phase*PI/180;
 
-      if (isSlave || !notSinglePart) {
-        tAve = 0;
-        rfFactor = 1;
-
-        if (tfbd->frequency>0) {
-          /* Determine average arrival time of bunch */
-          if (nBuckets==1) {
+    if (isSlave || !notSinglePart) {
+      tAve = 0;
+      rfFactor = 1;
+      
+      if (tfbd->frequency>0) {
+        /* Determine average arrival time of bunch */
+        if (nBuckets==1) {
 #if USE_MPI
-            tAve = computeAverage_p(time0, np0, workers);
+          tAve = computeAverage_p(time0, np0, workers);
 #else
-            compute_average(&tAve, time0, np0);
+          compute_average(&tAve, time0, np0);
 #endif
-          } else {
+        } else {
 #if USE_MPI
-            long npTotal = 0;
+          long npTotal = 0;
 #endif
-            double tSum, error;
-            error = tSum = 0;
-            for (i=0; i<npBucket[iBucket]; i++)
-              tSum = KahanPlus(tSum, time0[ipBucket[iBucket][i]], &error);
+          double tSum, error;
+          error = tSum = 0;
+          for (i=0; i<npBucket[iBucket]; i++)
+            tSum = KahanPlus(tSum, time0[ipBucket[iBucket][i]], &error);
 #if USE_MPI
-            MPI_Allreduce(&npBucket[iBucket], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
-            if (npTotal)
-              tAve = KahanParallel(tSum, error, workers)/npTotal;
+          MPI_Allreduce(&npBucket[iBucket], &npTotal, 1, MPI_LONG, MPI_SUM, workers);
+          if (npTotal)
+            tAve = KahanParallel(tSum, error, workers)/npTotal;
 #else
-            if (npBucket[iBucket]>0)
-              tAve = tSum/npBucket[iBucket];
+          if (npBucket[iBucket]>0)
+            tAve = tSum/npBucket[iBucket];
 #endif
-          }
         }
-
-        if (tfbd->computePower) {
-          double V0, V1, phi0, phi1, dt, Tf, omega;
-          double Rc, C, Id, phid;
-
-          omega = tfbd->frequency*PIx2;
-          Tf = 2*tfbd->QLoaded/omega;
-          
-          /* Compute ring-down of voltage time when last bunch went through (not beam-loading voltage) */
-          dt = tAve - tfbd->lastTime;
-          V0 = tfbd->lastV*exp(-dt/Tf);
-          phi0 = fmod(tfbd->lastPhase + omega*dt, PIx2);
-          V0r = V0*cos(phi0);
-          V0i = V0*sin(phi0);
-
-          /* compute voltage including ring-down from last passage */
-          V1 = kick*Po*particleMassMV*1e6; /* voltage we'd get without remainder from last bunch */
-          phi1 = tfbd->phase;
-          V1r = V1*cos(phi1) + V0r;
-          V1i = V1*sin(phi1) + V0i;
-          V1 = sqrt(sqr(V1r)+sqr(V1i));
-          phase = atan2(V1i, V1r);
-          kick = V1/(Po*particleMassMV*1e6);
-
-          /* Determine the power assuming the feedback system doesn't try to compensate for the residual voltage
-           */
-          /* -- Drive current and phase */
-          Rc = tfbd->Ra/2;
-          C = 1/(omega*(Rc/tfbd->QLoaded)); /* capacitance */
-          Id = (-2*C*(ipow(V1i,2) + ipow(V1r,2))*sqrt(1 + 4*ipow(Tf,2)*ipow(omega,2)))/
-            (Tf*sqrt((ipow(V1i,2) + ipow(V1r,2))*(cosh(dt/Tf) - sinh(dt/Tf))*
-                     (cosh(dt/Tf)*(2 + 8*ipow(Tf,2)*ipow(omega,2) - 2*cos(2*dt*omega) + 4*Tf*omega*sin(2*dt*omega)) -
-                      4*(Tf*omega*(2*Tf*omega + sin(2*dt*omega)) + (ipow(sin(dt*omega),2) + Tf*omega*sin(2*dt*omega))*sinh(dt/Tf)))));
-          phid = -acos((2*(Tf*omega*(-((V1i + 2*Tf*V1r*omega)*cos(dt*omega)) + (V1r - 2*Tf*V1i*omega)*sin(dt*omega)) +
-                           cosh(dt/Tf)*(Tf*omega*(V1i + 2*Tf*V1r*omega)*cos(dt*omega) 
-                                        + (V1i + Tf*V1r*omega + 2*ipow(Tf,2)*V1i*ipow(omega,2))*sin(dt*omega)) -
-                         (Tf*omega*(V1i + 2*Tf*V1r*omega)*cos(dt*omega) 
-                          + (V1i + Tf*V1r*omega + 2*ipow(Tf,2)*V1i*ipow(omega,2))*sin(dt*omega))*sinh(dt/Tf)))/
-                     (sqrt(1 + 4*ipow(Tf,2)*ipow(omega,2))*
-                      sqrt((ipow(V1i,2) + ipow(V1r,2))*(cosh(dt/Tf) - sinh(dt/Tf))*
-                           (cosh(dt/Tf)*(2 + 8*ipow(Tf,2)*ipow(omega,2) - 2*cos(2*dt*omega) + 4*Tf*omega*sin(2*dt*omega)) -
-                            4*(Tf*omega*(2*Tf*omega + sin(2*dt*omega)) + (ipow(sin(dt*omega),2) + Tf*omega*sin(2*dt*omega))*sinh(dt/Tf))))));
-
-          /* power averaged over the time between bunches */
-          power = 
-            (-(ipow(Id,2)*ipow(Tf,2))/(2.*C) + (ipow(Id,2)*ipow(Tf,2))/(2.*C*exp(dt/Tf)) +
-             (ipow(Id,2)*ipow(Tf,2))/(2.*C*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) -
-             (2*ipow(Id,2)*ipow(Tf,4)*ipow(omega,2))/(C*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
-             (2*ipow(Id,2)*ipow(Tf,3)*dt*ipow(omega,2))/(C*(1 + 4*ipow(Tf,2)*ipow(omega,2))) + 
-             Id*Tf*V0*cos(phid - phi0) - (Id*Tf*V0*cos(phid - phi0))/exp(dt/Tf) -
-             (ipow(Id,2)*ipow(Tf,2)*cos(2*dt*omega))/(2.*C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
-             (2*ipow(Id,2)*ipow(Tf,4)*ipow(omega,2)*cos(2*dt*omega))/(C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)) +
-             (2*ipow(Id,2)*ipow(Tf,3)*omega*sin(2*dt*omega))/(C*exp(dt/Tf)*ipow(1 + 4*ipow(Tf,2)*ipow(omega,2),2)))/dt;
-
-          tfbd->lastPhase = phase;
-          tfbd->lastV = V1;
-        }
-        tfbd->lastTime = tAve;
-
-        nomKick = kick*cos(phase);
-        if (!tfbd->longitudinal) {
-          j = tfbd->pickup->iPlane+1;
-          if (nBuckets==1) {
-            for (i=0; i<np0; i++)  {
-               if (tfbd->frequency>0) 
-                 rfFactor = cos(PIx2*tfbd->frequency*(time0[i]-tAve)+phase);
-               part0[i][j] += kick/(1+part0[i][5]);
-            }
-          } else {
-            if (npBucket)
-              for (i=0; i<npBucket[iBucket]; i++) {
-                if (tfbd->frequency>0) 
-                  rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
-                part0[ipBucket[iBucket][i]][j] += kick*rfFactor/(1+part0[ipBucket[iBucket][i]][5]);
-              }
+      }
+      
+      if (tfbd->computeGeneratorCurrent) {
+        /* method described in Berenc, RF-TN-2018-005; email from Berenc on 6/27/2018 */
+        double Vkick, Tb;
+        Tb = tAve - tfbd->lastTime; /* approximates the bunch spacing for use in computing generator current */
+        Vkick = kick*Po*particleMassMV*1e6;
+        Zc = std::complex <double> (tfbd->Zc[0], tfbd->Zc[1]);
+        iu = std::complex <double> (0, 1);
+        Ig = Vkick/Zc/(1-exp(-tfbd->sigma*Tb))*exp(-iu*(Tb*tfbd->omegag+tfbd->phase));
+      }
+      
+      nomKick = kick*cos(phase);
+      if (!tfbd->longitudinal) {
+        j = tfbd->pickup->iPlane+1;
+        if (nBuckets==1) {
+          for (i=0; i<np0; i++)  {
+            if (tfbd->frequency>0) 
+              rfFactor = cos(PIx2*tfbd->frequency*(time0[i]-tAve)+phase);
+            part0[i][j] += kick/(1+part0[i][5]);
           }
         } else {
-          if (nBuckets==1) {
-            for (i=0; i<np0; i++) {
+          if (npBucket) {
+            for (i=0; i<npBucket[iBucket]; i++) {
+              if (tfbd->frequency>0) 
+                rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
+              part0[ipBucket[iBucket][i]][j] += kick*rfFactor/(1+part0[ipBucket[iBucket][i]][5]);
+            }
+          }
+        }
+      } else { /* longitudinal */
+        tMax = -DBL_MAX;
+        if (nBuckets==1) {
+          for (i=0; i<np0; i++) {
+            if (time0[i]>tMax)
+              tMax = time0[i];
+            if (tfbd->computeGeneratorCurrent) {
+              double dt0;
+              dt0 = time0[i] - tfbd->lastTime;
+              propagateLfbCavity(&V, &Vp, NULL, dt0, tfbd, Ig, Zc);
+              part0[i][5] += V/(Po*particleMassMV*1e6);
+            } else { /* no generator sim */
               if (tfbd->frequency>0) 
                 rfFactor = cos(PIx2*tfbd->frequency*(time0[i]-tAve)+phase);
               part0[i][5] += kick*rfFactor;
             }
-          } else {
-            if (npBucket) {
+          }
+        } else { /* multiple buckets */
+          if (npBucket) {
 #ifdef MPI_DEBUG
-	      printf("ib=%ld, tAve = %le, freq = %le, phase = %le\n, rfFactor = %le, np=%ld\n", 
-		     iBucket, tAve, tfbd->frequency, phase, rfFactor, npBucket[iBucket]);
-	      fflush(stdout);
+            printf("ib=%ld, tAve = %le, freq = %le, phase = %le\n, rfFactor = %le, np=%ld\n", 
+                   iBucket, tAve, tfbd->frequency, phase, rfFactor, npBucket[iBucket]);
+            fflush(stdout);
 #endif
-              for (i=0; i<npBucket[iBucket]; i++) {
+            for (i=0; i<npBucket[iBucket]; i++) {
+              if (time0[ipBucket[iBucket][i]]>tMax)
+                tMax = time0[ipBucket[iBucket][i]];
+              if (tfbd->computeGeneratorCurrent) {
+                double dt0;
+                dt0 = time0[ipBucket[iBucket][i]] - tfbd->lastTime;
+                propagateLfbCavity(&V, &Vp, NULL, dt0, tfbd, Ig, Zc);
+                part0[ipBucket[iBucket][i]][5] += V/(Po*particleMassMV*1e6);
+              } else { /* no generator sim */
                 if (tfbd->frequency>0) 
                   rfFactor = cos(PIx2*tfbd->frequency*(time0[ipBucket[iBucket][i]]-tAve)+phase);
                 part0[ipBucket[iBucket][i]][5] += kick*rfFactor;
               }
-	    }
+            }
           }
         }
       }
@@ -517,29 +491,51 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #if USE_MPI
     if (tfbd->outputFile) {
       MPI_Status mpiStatus;
+      double buffer[4];
       if (myid==0) { 
-        MPI_Recv(&nomKick, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&power, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-#ifdef DEBUG
-        MPI_Recv(&V0i, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&V0r, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&V1i, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-        MPI_Recv(&V1r, 1, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-#endif
+        MPI_Recv(buffer, 4, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+        nomKick = buffer[0];
+        tfbd->lastIg = buffer[1];
+        tfbd->lastV = buffer[2];
+        tfbd->lastVp = buffer[3];
+        tMax = -DBL_MAX;
       } else if (myid==1) {
-        MPI_Send(&nomKick, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-        MPI_Send(&power, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-#ifdef DEBUG
-        MPI_Send(&V0i, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-        MPI_Send(&V0r, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-        MPI_Send(&V1i, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-        MPI_Send(&V1r, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-#endif
+        buffer[0] = nomKick;
+        buffer[1] = tfbd->lastIg;
+        buffer[2] = tfbd->lastV;
+        buffer[3] = tfbd->lastVp;
+        MPI_Send(buffer, 4, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+      }
+      if (tfbd->computeGeneratorCurrent) {
+        MPI_Allreduce(&tMax, &buffer[0], 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        tMax = buffer[0];
+        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tMax - tfbd->lastTime, tfbd, Ig, Zc);
+        tfbd->lastV = V;
+        tfbd->lastVp = Vp;
+        tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
+        tfbd->lastTime = tMax;
+        if (myid==0) {
+          printf("pass %ld, bunch  %ld, V = %le, Vp = %le, Ig = %le, tAve =  %le, tMax-tAve = %le\n",
+                 pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve);
+          fflush(stdout);
+        }
       }
     }
 
     if (myid==0) 
+#else
+      if (tfbd->computeGeneratorCurrent) {
+        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tMax - tfbd->lastTime, tfbd, Ig, Zc);
+        tfbd->lastV = V;
+        tfbd->lastVp = Vp;
+        tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
+        tfbd->lastTime = tMax;
+        printf("pass %ld, bunch  %ld, V = %le, Vp = %le, Ig = %le, tAve =  %le, tMax-tAve = %le\n",
+               pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve);
+        fflush(stdout);
+      }
 #endif
+
       if (tfbd->outputFile) {
         if ((tfbd->outputIndex+1)%tfbd->outputInterval==0) {
 #ifdef DEBUG
@@ -557,15 +553,16 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
         fflush(stdout);
 #endif
         if (!SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                               tfbd->outputIndex, "Bunch", iBucket, "Pass", pass,
+                               tfbd->outputIndex, 
+                               "Bunch", iBucket, "Pass", pass,
                                "PickupOutput", tfbd->pickup->filterOutput[iBucket], 
                                "DriverOutput", nomKick, NULL) ||
-            (tfbd->computePower &&
-             !SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                tfbd->outputIndex, "DriverPower", power, 
-#ifdef DEBUG
-                                "V0i", V0i, "V0r", V0r, "V1i", V1i, "V1r", V1r,
-#endif
+            (tfbd->computeGeneratorCurrent &&
+             !SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, tfbd->outputIndex, 
+                                "LastGeneratorCurrent", tfbd->lastIg,
+                                "LastVoltage", tfbd->lastV,
+                                "LastVoltageDeriv", tfbd->lastVp,
+                                "ResidualVoltage", tfbd->VResidual,
                                 NULL))) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb("problem writing data for TFBDRIVER output file");
@@ -609,37 +606,29 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 }
   
 
-void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
-{
-#if USE_MPI
-  if (myid!=0)
-    return;
-#endif
-  if (tfbd->initialized && !(tfbd->dataWritten)) {
-    if (!SDDS_WritePage(tfbd->SDDSout)) {
-      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem writing data for TFBDRIVER output file (flushTransverseFeedbackDriverFiles)");
-    }
-    tfbd->dataWritten = 1;
-  }
-  tfbd->outputIndex = 0;
-}
 
 void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, long nPasses, char *rootname)
 {
   ELEMENT_LIST *eptr;
   long pickupFound = 0, i;
+  long count = 0;
 
   if (tfbd->ID==NULL || !strlen(tfbd->ID))
     bombElegant("you must give an ID string for TFBDRIVER", NULL);
-  if ((tfbd->Ra>0 && tfbd->QLoaded<=0) || (tfbd->Ra<=0 && tfbd->QLoaded>0))
-    bombElegant("Ra and QLoaded must both be set to positive values, or else both set to zero in TFBDRIVER", NULL);
-  if (tfbd->Ra>0 && tfbd->QLoaded>0) {
-    tfbd->computePower = 1;
+  if (tfbd->RaOverQ>0)
+    count ++;
+  if (tfbd->QLoaded>0)
+    count ++;
+  if (count && count!=2)
+    bombElegant("RAOVERQ and QLOADED must both be set to positive values, or else both set to zero in TFBDRIVER", NULL);
+  if (count==2) {
+    tfbd->computeGeneratorCurrent = 1;
     if (tfbd->frequency<=0)
-      bombElegant("FREQUENCY must be positive when RA and QLOADED are set in TFBDRIVER", NULL);
+      bombElegant("FREQUENCY must be positive when RAOVERQ and QLOADED also set to positive values in TFBDRIVER", NULL);
   }
-
+  else
+    tfbd->computeGeneratorCurrent = 0;
+    
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbd->a[i]!=0)
       break;
@@ -671,22 +660,18 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   if (tfbd->outputFile) {
     tfbd->outputFile = compose_filename(tfbd->outputFile, rootname);
     if (!tfbd->SDDSout)
-      tfbd->SDDSout = tmalloc(sizeof(*(tfbd->SDDSout)));
+      tfbd->SDDSout = (SDDS_DATASET *)tmalloc(sizeof(*(tfbd->SDDSout)));
     if (!SDDS_InitializeOutput(tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Bunch", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
-        (tfbd->computePower 
-         && (
-             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverPower", "W", SDDS_DOUBLE) 
-#ifdef DEBUG
-             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V0i", "V", SDDS_DOUBLE)
-             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V0r", "V", SDDS_DOUBLE) 
-             || !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V1i", "V", SDDS_DOUBLE) 
-             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "V1r", "V", SDDS_DOUBLE)
-#endif
-             ) ) ||
+        (tfbd->computeGeneratorCurrent 
+         && (!SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastGeneratorCurrent", "A", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastVoltage", "V", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastVoltageDeriv", "V/s", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "ResidualVoltage", "V", SDDS_DOUBLE))
+         ) ||
         !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
@@ -707,7 +692,45 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   if (tfbd->updateInterval<1)
     tfbd->updateInterval = 1;
 
+  tfbd->lastV = tfbd->lastIg = tfbd->lastTime = tfbd->lastVp = 0;
+
+  if (tfbd->computeGeneratorCurrent) {
+    /* compute quantities described in Berenc, RF-TN-2018-005 */
+    double denom;
+    tfbd->omegao = PIx2*tfbd->frequency;
+    tfbd->omegan = tfbd->omegao*sqrt(1 - 1/(4*sqr(tfbd->QLoaded)));
+    if (tfbd->driveFrequency<=0)
+      tfbd->omegag = tfbd->omegan;
+    else
+      tfbd->omegag = PIx2*tfbd->driveFrequency;
+    tfbd->sigma = tfbd->omegao/(2*tfbd->QLoaded);
+    tfbd->k = (tfbd->omegao/4)*tfbd->RaOverQ;
+    denom = sqr(sqr(tfbd->omegao)-sqr(tfbd->omegag)) + sqr(2*tfbd->sigma*tfbd->omegag);
+    /* store real and imaginary parts in an array since track.h can't include complex.h */
+    tfbd->Zc[0] = 4*tfbd->k*tfbd->sigma*sqr(tfbd->omegag)/denom;
+    tfbd->Zc[1] = 2*tfbd->k*tfbd->omegag*(sqr(tfbd->omegao)-sqr(tfbd->omegag))/denom;
+  }
+
   tfbd->initialized = 1;
 }
 
 
+void propagateLfbCavity(double *V, double *Vp, double *VResidualSum, double dt0, TFBDRIVER *tfbd, 
+                        std::complex <double> Ig, std::complex <double> Zc)
+{
+  double alpha, alpha1, alpha2, beta, beta1, beta2;
+  std::complex <double> iu, exp1, exp2;
+  iu = std::complex <double> (0, 1);
+  alpha1 = tfbd->lastV;
+  alpha2 = -(Ig*Zc).real();
+  alpha = alpha1 + alpha2;
+  beta1 = (2*tfbd->k*tfbd->lastIg - tfbd->sigma*tfbd->lastV - tfbd->lastVp)/tfbd->omegan;
+  beta2 = (-sqr(tfbd->omegao)/tfbd->omegag*(Ig*Zc).imag() - tfbd->sigma*(Ig*Zc).real())/tfbd->omegan;
+  beta = beta1 + beta2;
+  exp1 = Ig*Zc*exp(iu*tfbd->omegag*dt0);
+  exp2 = (alpha + iu*beta)*exp((iu*tfbd->omegan - tfbd->sigma)*dt0);
+  *V = (exp1 + exp2).real();
+  *Vp = (iu*tfbd->omegag*exp1 + (iu*tfbd->omegan - tfbd->sigma)*exp2).real();
+  if (VResidualSum)
+    *VResidualSum += ((alpha1 + iu*beta1)*exp((iu*tfbd->omegan - tfbd->sigma)*dt0)).real();
+}
