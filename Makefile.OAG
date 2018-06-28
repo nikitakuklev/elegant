@@ -569,7 +569,7 @@ elegant_SRCS = 	ignoreElements.c alpha_data.c alpha_matrix.c amplif.c analyze.c 
 		ztransverse.c twiss.cc vary.c zlongit.c SReffects.c mod_rfca.c \
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
-		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
+		frfmode.c ftrfmode.c tfeedback.cc engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c moments.c \
                 insert_elements.c regexCode.cc touschekScatter.c chbook.c kickmap.c matrixOp.c \

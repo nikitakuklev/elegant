@@ -5296,3 +5296,23 @@ void checkBeamStructure(BEAM *beam)
   }
   
 }
+
+/* Put this here so routines in this file can see it. Putting it in tfeedback.cc 
+ * causes it to be invisible.
+ */
+
+void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
+{
+#if USE_MPI
+  if (myid!=0)
+    return;
+#endif
+  if (tfbd->initialized && !(tfbd->dataWritten)) {
+    if (!SDDS_WritePage(tfbd->SDDSout)) {
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem writing data for TFBDRIVER output file (flushTransverseFeedbackDriverFiles)");
+    }
+    tfbd->dataWritten = 1;
+  }
+  tfbd->outputIndex = 0;
+}
