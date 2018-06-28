@@ -59,12 +59,16 @@ To invoke this, the user must provide the loaded Q of the cavity using the \verb
 the $(R_a/Q)$ using \verb|RAOVERQ|, and the resonant frequency of the unloaded 
 cavity using \verb|FREQUENCY|. Optionally, the drive frequency may be specified using
 \verb|DRIVE_FREQUENCY|; it defaults to the unloaded resonant frequency.
+
 Typically one should choose the resonant frequency to be $(n\pm \frac{1}{4})f_b$, where
 $f_b$ is the bunch frequency and $n$ is an integer.
 This will ensure that the kick to one bunch from the residual voltage from the previous
 bunch (both beam-loading and generator terms), is approximately minimized.
+Checking the \verb|ResidualVoltage| column in the output file to confirm this is advised.
+
 Beam loading is not included in the model, but can be superimposed by inserting an \verb|RFMODE| element
 with matching parameters.
+
 
 See Section 7.2.14 of {\em Handbook of Accelerator Physics and Engineering}
 (Chao and Tigner, eds.) for a discussion of feedback systems.

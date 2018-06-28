@@ -3092,7 +3092,7 @@ typedef struct {
   long maxDelay;
   double **driverSignal;
   /* variables needed for circuit model per Berenc, RF-TN-2018-005 */
-  double lastV, lastVp, lastIg, lastTime, lastPhase;
+  double lastV, lastVp, lastIg, lastTime, lastPhase, VResidual;
   double sigma, k, omegao, omegan, omegag;
   double Zc[2];
 } TFBDRIVER;
