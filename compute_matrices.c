@@ -1454,6 +1454,7 @@ VMATRIX *compute_matrix(
         if (csbend->n_kicks<1)
             bombElegant("n_kicks must be > 0 for CSBEND element", NULL);
         csbend->edgeFlags = determine_bend_flags(elem, csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index]);
+        csbend_update_fse_adjustment(csbend);
         if (csbend->length==0 && (csbend->use_bn || csbend->xReference)) 
           bombElegant("Can't compute matrix for CSBEND with L=0 and USE_BN!=0 or XREFERENCE!=0", NULL);
         if (csbend->trackingMatrix)

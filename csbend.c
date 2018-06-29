@@ -1015,6 +1015,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     else
       particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &s_lost,
                                              &apertureData);
+    Qf[4] -= csbend->fseCorrectionPathError;
     convertFromDipoleCanonicalCoordinates(Qf, rho0);
 
     if (particle_lost) {
@@ -1316,7 +1317,7 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
       QY -= refTrajectoryData[i][3];
       dist -= refTrajectoryData[i][4];
     }
-
+    
 #if defined(IEEE_MATH)
     if (isnan(X) || isnan(QX) || isnan(Y) || isnan(QY)) {
       *s_lost = dist;
@@ -4928,6 +4929,50 @@ void logPhoton(double Ep, double x, double xp, double y, double yp, double theta
   if (photonRows%10000==0) {
     if (!SDDS_UpdatePage(SDDSphotons, FLUSH_TABLE))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+}
+
+static CSBEND csbendWorking;
+static long optimizationEvaluations;
+static double **optParticle = NULL;
+
+double csbend_fse_adjustment_penalty(double *value, long *invalid) 
+{
+  if (!optParticle) 
+    optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
+  memset(optParticle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**optParticle));
+
+  csbendWorking.fse = *value;
+  optimizationEvaluations ++;
+  if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL)) {
+    *invalid = 1;
+    return 0.0;
+  }
+  *invalid = 0;
+  return fabs(optParticle[0][1]);
+}
+
+void csbend_update_fse_adjustment(CSBEND *csbend)
+{
+  double fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
+  short disable = 0;
+  if (csbend->fseCorrection && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2)) {
+    if (!optParticle) 
+      optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
+    fse = csbend->fse;
+    memcpy(&csbendWorking, csbend, sizeof(csbendWorking));
+    csbendWorking.dx = csbendWorking.dy = csbendWorking.dz = csbendWorking.etilt = csbendWorking.tilt = 0;
+    csbendWorking.isr = csbendWorking.synch_rad = csbendWorking.fseCorrectionPathError = 0;
+    optimizationEvaluations = 0;
+    if (simplexMin(&acc, &fse, &stepSize, &lowerLimit, &upperLimit, &disable, 1,
+                   fabs(1e-14*csbend->angle), fabs(1e-16*csbend->angle), 
+                   csbend_fse_adjustment_penalty, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
+      bombElegantVA("failed to find FSE to center trajectory for csbend. accuracy acheived was %le.", acc);
+    }
+    csbend->fse = fse;
+    csbend->fseCorrectionPathError = optParticle[0][4] - csbend->length;
+    printf("FSE optimized to %le for CSBEND after %ld evaluations, giving error of %le and path-length adjustment of %le\n",
+           fse, optimizationEvaluations, acc, csbend->fseCorrectionPathError);
   }
 }
 

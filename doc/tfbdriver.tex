@@ -71,6 +71,7 @@ In addition to the resonant and drive frequencies, one must specify a clock freq
 determine when the drive current changes, which happens at regular intervals. The clock offset is used to 
 ensure that the change does not occur during passage of the bunch. If the clock offset is too small and
 the bunch length too long, this will happen and results in an error.
+The phase shift that results from the clock offset is automatically compensated.
 
 Beam loading is not included in the model, but can be superimposed by inserting an \verb|RFMODE| element
 with matching parameters.

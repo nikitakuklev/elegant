@@ -963,7 +963,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 68
+#define N_CSBEND_PARAMS 69
 #define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
@@ -2253,10 +2253,10 @@ typedef struct {
     short distributionBasedRadiation, includeOpeningAngle;
     char *photonOutputFile;
     double photonLowEnergyCutoff;
-    short referenceCorrection, trackingMatrix;
+    short referenceCorrection, trackingMatrix, fseCorrection;
     /* for internal use only: */
     unsigned short edgeFlags;
-    double b[8], c[8];
+    double b[8], c[8], fseCorrectionPathError;
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
     short refKicks;
@@ -4127,6 +4127,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                              double z_start, double z_end, CHARGE *charge, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2, char *rootname, MAXAMP *maxamp, APERTURE_DATA *apFileData);
+void csbend_update_fse_adjustment(CSBEND *csbend);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, CHARGE *charge, char *rootname);
