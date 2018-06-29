@@ -259,6 +259,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
 #if USE_MPI
   MPI_Status mpiStatus;
+  double buffer[5];
 #endif
 
 #if defined(DEBUG) || MPI_DEBUG
@@ -500,79 +501,41 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
 
 #if USE_MPI
-    if (tfbd->outputFile) {
-      MPI_Status mpiStatus;
-      double buffer[5];
-#if defined(DEBUG) || MPI_DEBUG
-      printf("TFBDRIVER: MPI collection of data for bunch %ld...\n", iBucket);
-      fflush(stdout);
+    if (myid==0) { 
+      MPI_Recv(buffer, 5, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+      nomKick = buffer[0];
+      tfbd->lastIg = buffer[1];
+      tfbd->lastV = buffer[2];
+      tfbd->lastVp = buffer[3];
+      tfbd->thisTime = buffer[4];
+    } else if (myid==1) {
+      buffer[0] = nomKick;
+      buffer[1] = tfbd->lastIg;
+      buffer[2] = tfbd->lastV;
+      buffer[3] = tfbd->lastVp;
+      buffer[4] = tfbd->thisTime;
+      MPI_Send(buffer, 5, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+    }
 #endif
-      if (myid==0) { 
-        MPI_Recv(buffer, 5, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
-        nomKick = buffer[0];
-        tfbd->lastIg = buffer[1];
-        tfbd->lastV = buffer[2];
-        tfbd->lastVp = buffer[3];
-        tfbd->thisTime = buffer[4];
+    if (tfbd->computeGeneratorCurrent) {
+#if USE_MPI
+      if (myid==0)
         tMax = -DBL_MAX;
-      } else if (myid==1) {
-        buffer[0] = nomKick;
-        buffer[1] = tfbd->lastIg;
-        buffer[2] = tfbd->lastV;
-        buffer[3] = tfbd->lastVp;
-        buffer[4] = tfbd->thisTime;
-        MPI_Send(buffer, 5, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
-      }
-#if defined(DEBUG) || MPI_DEBUG
-      printf("TFBDRIVER: MPI collection of data for bunch %ld done (part 1)\n", iBucket);
-      fflush(stdout);
+      MPI_Allreduce(&tMax, &buffer[0], 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      tMax = buffer[0];
 #endif
-      if (tfbd->computeGeneratorCurrent) {
-        MPI_Allreduce(&tMax, &buffer[0], 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        tMax = buffer[0];
-#if defined(DEBUG) || MPI_DEBUG
-        printf("TFBDRIVER: tMax = %le, tfbd->thisTime = %le", tMax, tfbd->thisTime);
-        fflush(stdout);
-#endif
-        if (tMax>tfbd->thisTime) 
-          bombElegant("bunch extends past the clock tick. Increase the clock offset or decrease the clock frequency for TFBDRIVER.", NULL);
-        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tfbd->thisTime - tfbd->lastTime, tfbd, Ig, Zc);
-        tfbd->lastV = V;
-        tfbd->lastVp = Vp;
-        tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
-        /*
-        if (myid==0) {
-          printf("pass %ld, bunch  %ld, V=%le, Vp=%le, Ig=%le, tAve= %le, tMax-tAve=%le, tClock-tMax=%le\n",
-                 pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve, tfbd->thisTime-tMax);
-          fflush(stdout);
-        }
-        */
-        tfbd->lastTime = tfbd->thisTime;
-      }
-#if defined(DEBUG) || MPI_DEBUG
-      printf("TFBDRIVER: MPI collection of data for bunch %ld done (part 2)\n", iBucket);
-      fflush(stdout);
-#endif
+      if (tMax>tfbd->thisTime) 
+        bombElegant("bunch extends past the clock tick. Increase the clock offset or decrease the clock frequency for TFBDRIVER.", NULL);
+      propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tfbd->thisTime - tfbd->lastTime, tfbd, Ig, Zc);
+      tfbd->lastV = V;
+      tfbd->lastVp = Vp;
+      tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
+      tfbd->lastTime = tfbd->thisTime;
     }
 
+#if USE_MPI
     if (myid==0) 
-#else
-      if (tfbd->computeGeneratorCurrent) {
-        if (tMax>tfbd->thisTime) 
-          bombElegant("bunch extends past the clock tick. Increase the clock offset for TFBDRIVER.", NULL);
-        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tfbd->thisTime - tfbd->lastTime, tfbd, Ig, Zc);
-        tfbd->lastV = V;
-        tfbd->lastVp = Vp;
-        tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
-        /*
-        printf("pass %ld, bunch  %ld, V=%le, Vp=%le, Ig=%le, tAve= %le, tMax-tAve=%le, tClock-tMax=%le\n",
-               pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve, tfbd->thisTime-tMax);
-        */
-        tfbd->lastTime = tfbd->thisTime;
-        fflush(stdout);
-      }
 #endif
-
       if (tfbd->outputFile) {
         if ((tfbd->outputIndex+1)%tfbd->outputInterval==0) {
 #ifdef DEBUG
