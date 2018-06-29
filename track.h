@@ -998,7 +998,7 @@ extern char *entity_text[N_TYPES];
 #define N_FRFMODE_PARAMS  14
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 40
-#define N_TFBDRIVER_PARAMS 46
+#define N_TFBDRIVER_PARAMS 48
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 25
@@ -3074,7 +3074,7 @@ typedef struct {
 extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
 typedef struct {
   char *ID;
-  double strength, kickLimit, frequency, driveFrequency, phase, RaOverQ, QLoaded;
+  double strength, kickLimit, frequency, driveFrequency, clockFrequency, clockOffset, phase, RaOverQ, QLoaded;
   char *outputFile;
   long delay;
   double a[TFB_FILTER_LENGTH];
@@ -3083,7 +3083,10 @@ typedef struct {
   short longitudinal;
   short bunchedBeamMode; 
   /* internal parameters */
-  short initialized, computeGeneratorCurrent;
+  unsigned short initialized;
+#define TFBDRIVER_MAIN_INIT ((unsigned short)0x01)
+#define TFBDRIVER_CLOCK_INIT ((unsigned short)0x02)
+  short computeGeneratorCurrent;
   long filterLength, dataWritten, outputIndex, pass0;
   TFBPICKUP *pickup;
   SDDS_DATASET *SDDSout;
@@ -3092,7 +3095,7 @@ typedef struct {
   long maxDelay;
   double **driverSignal;
   /* variables needed for circuit model per Berenc, RF-TN-2018-005 */
-  double lastV, lastVp, lastIg, lastTime, VResidual;
+  double lastV, lastVp, lastIg, lastTime, thisTime, VResidual;
   double sigma, k, omegao, omegan, omegag;
   double Zc[2];
 } TFBDRIVER;

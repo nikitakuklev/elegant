@@ -66,6 +66,12 @@ This will ensure that the kick to one bunch from the residual voltage from the p
 bunch (both beam-loading and generator terms), is approximately minimized.
 Checking the \verb|ResidualVoltage| column in the output file to confirm this is advised.
 
+In addition to the resonant and drive frequencies, one must specify a clock frequency with
+\verb|CLOCK_FREQUENCY| and a clock offset with \verb|CLOCK_OFFSET|. The clock used used to
+determine when the drive current changes, which happens at regular intervals. The clock offset is used to 
+ensure that the change does not occur during passage of the bunch. If the clock offset is too small and
+the bunch length too long, this will happen and results in an error.
+
 Beam loading is not included in the model, but can be superimposed by inserting an \verb|RFMODE| element
 with matching parameters.
 

@@ -2382,6 +2382,8 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick, nominally in radians."},
    {"FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.frequency), NULL, 0.0, 0, "Resonant frequency of the unloaded kicker cavity."},
    {"DRIVE_FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.driveFrequency), NULL, 0.0, 0, "Drive frequency. If zero, defaults to resonant frequency of the loaded cavity."},
+   {"CLOCK_FREQUENCY", "Hz", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.clockFrequency), NULL, 0.0, 0, "Clock frequency used for timing of the changes to generator current. Typically the rf or bunch frequency is used."},
+   {"CLOCK_OFFSET", "s", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.clockOffset), NULL, 0.0, 0, "Offset of the generator current change relative to clock tick. Clock tick is nominally aligned to the bunch center."},
    {"PHASE", "Deg", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.phase), NULL, 0.0, 0, "Phase of the applied voltage relative to the bunch center, with 0 being on-crest.x2"},
    {"RAOVERQ", "Ohm", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.RaOverQ), NULL, 0.0, 0, "Shunt impedance, Ra/Q=V^2/(P*Q)."},
    {"QLOADED", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.QLoaded), NULL, 0.0, 0, "Loaded Q of the cavity."},

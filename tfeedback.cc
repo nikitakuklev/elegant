@@ -255,7 +255,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long rpass, updateInterval;
   double tAve, rfFactor, phase=0;
   std::complex <double> Zc, Ig, iu;
-  double V, Vp, tMax;
+  double V, Vp, tMax = -DBL_MAX;
 
 #if USE_MPI
   MPI_Status mpiStatus;
@@ -414,12 +414,23 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       
       if (tfbd->computeGeneratorCurrent) {
         /* method described in Berenc, RF-TN-2018-005; email from Berenc on 6/27/2018 */
-        double Vkick, Tb;
-        Tb = tAve - tfbd->lastTime; /* approximates the bunch spacing for use in computing generator current */
+        double Vkick, dt;
+        long nc;
+        if (!(tfbd->initialized&TFBDRIVER_CLOCK_INIT)) {
+          /* align the clock to this bunch */
+          tfbd->initialized |= TFBDRIVER_CLOCK_INIT;
+          tfbd->lastTime = tAve + tfbd->clockOffset - 1./tfbd->clockFrequency;
+        }
+        nc = ceil((tAve - tfbd->lastTime)*tfbd->clockFrequency);
+        dt = nc/tfbd->clockFrequency;
+        tfbd->thisTime = tfbd->lastTime + dt;
+        if (tfbd->thisTime<tAve) 
+          bombElegant("clock alignment problem in TFBDRIVER. Consider reducing clock frequency.", NULL);
+        dt -= tfbd->clockOffset; /* ensures that we are targetting the region where the bunch supposedly sits */
         Vkick = kick*Po*particleMassMV*1e6;
         Zc = std::complex <double> (tfbd->Zc[0], tfbd->Zc[1]);
         iu = std::complex <double> (0, 1);
-        Ig = Vkick/Zc/(1-exp(-tfbd->sigma*Tb))*exp(-iu*(Tb*tfbd->omegag+tfbd->phase));
+        Ig = Vkick/Zc/(1-exp(-tfbd->sigma*dt))*exp(-iu*(dt*tfbd->omegag+tfbd->phase));
       }
       
       nomKick = kick*cos(phase);
@@ -509,29 +520,37 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
       if (tfbd->computeGeneratorCurrent) {
         MPI_Allreduce(&tMax, &buffer[0], 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         tMax = buffer[0];
-        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tMax - tfbd->lastTime, tfbd, Ig, Zc);
+        if (tMax>tfbd->thisTime) 
+          bombElegant("bunch extends past the clock tick. Increase the clock offset or decrease the clock frequency for TFBDRIVER.", NULL);
+        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tfbd->thisTime - tfbd->lastTime, tfbd, Ig, Zc);
         tfbd->lastV = V;
         tfbd->lastVp = Vp;
         tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
-        tfbd->lastTime = tMax;
+        /*
         if (myid==0) {
-          printf("pass %ld, bunch  %ld, V = %le, Vp = %le, Ig = %le, tAve =  %le, tMax-tAve = %le\n",
-                 pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve);
+          printf("pass %ld, bunch  %ld, V=%le, Vp=%le, Ig=%le, tAve= %le, tMax-tAve=%le, tClock-tMax=%le\n",
+                 pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve, tfbd->thisTime-tMax);
           fflush(stdout);
         }
+        */
+        tfbd->lastTime = tfbd->thisTime;
       }
     }
 
     if (myid==0) 
 #else
       if (tfbd->computeGeneratorCurrent) {
-        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tMax - tfbd->lastTime, tfbd, Ig, Zc);
+        if (tMax>tfbd->thisTime) 
+          bombElegant("bunch extends past the clock tick. Increase the clock offset for TFBDRIVER.", NULL);
+        propagateLfbCavity(&V, &Vp, &tfbd->VResidual, tfbd->thisTime - tfbd->lastTime, tfbd, Ig, Zc);
         tfbd->lastV = V;
         tfbd->lastVp = Vp;
         tfbd->lastIg = sqrt(sqr(Ig.real()) + sqr(Ig.imag()));
-        tfbd->lastTime = tMax;
-        printf("pass %ld, bunch  %ld, V = %le, Vp = %le, Ig = %le, tAve =  %le, tMax-tAve = %le\n",
-               pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve);
+        /*
+        printf("pass %ld, bunch  %ld, V=%le, Vp=%le, Ig=%le, tAve= %le, tMax-tAve=%le, tClock-tMax=%le\n",
+               pass, iBucket, V, Vp, tfbd->lastIg, tAve, tMax-tAve, tfbd->thisTime-tMax);
+        */
+        tfbd->lastTime = tfbd->thisTime;
         fflush(stdout);
       }
 #endif
@@ -622,9 +641,15 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   if (count && count!=2)
     bombElegant("RAOVERQ and QLOADED must both be set to positive values, or else both set to zero in TFBDRIVER", NULL);
   if (count==2) {
+    if (!tfbd->longitudinal)
+      bombElegant("Positive RAOVERQ and QLOADED given for TFBDRIVER in transverse plane", NULL);
     tfbd->computeGeneratorCurrent = 1;
     if (tfbd->frequency<=0)
       bombElegant("FREQUENCY must be positive when RAOVERQ and QLOADED also set to positive values in TFBDRIVER", NULL);
+    if (tfbd->clockFrequency<=0)
+      bombElegant("CLOCK_FREQUENCY must be positive when RAOVERQ and QLOADED also set to positive values in TFBDRIVER", NULL);
+    if (tfbd->clockOffset<=0)
+      bombElegant("CLOCK_OFFSET must be positive when RAOVERQ and QLOADED also set to positive values in TFBDRIVER", NULL);
   }
   else
     tfbd->computeGeneratorCurrent = 0;
@@ -709,9 +734,11 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     /* store real and imaginary parts in an array since track.h can't include complex.h */
     tfbd->Zc[0] = 4*tfbd->k*tfbd->sigma*sqr(tfbd->omegag)/denom;
     tfbd->Zc[1] = 2*tfbd->k*tfbd->omegag*(sqr(tfbd->omegao)-sqr(tfbd->omegag))/denom;
+    if (tfbd->clockOffset*tfbd->clockFrequency>=1) 
+      bombElegant("TFBDRIVER clock offset must be less than clock period!", NULL);
   }
 
-  tfbd->initialized = 1;
+  tfbd->initialized = TFBDRIVER_MAIN_INIT;
 }
 
 
