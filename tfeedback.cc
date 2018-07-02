@@ -345,6 +345,11 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if (tfbd->nBunches!=tfbd->pickup->nBunches)
     bombElegant("mismatch in number of buckets between TFBDRIVER and TFBPICKUP", NULL);
 
+  if (tfbd->computeGeneratorCurrent) {
+    Zc = std::complex <double> (tfbd->Zc[0], tfbd->Zc[1]);
+    iu = std::complex <double> (0, 1);
+  }
+
   for (iBucket=0; iBucket<nBuckets; iBucket++) {
     nomKick = 0;
 #if USE_MPI
@@ -429,8 +434,6 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
           bombElegant("clock alignment problem in TFBDRIVER. Consider reducing clock frequency.", NULL);
         dt -= tfbd->clockOffset; /* ensures that we are targetting the region where the bunch supposedly sits */
         Vkick = kick*Po*particleMassMV*1e6;
-        Zc = std::complex <double> (tfbd->Zc[0], tfbd->Zc[1]);
-        iu = std::complex <double> (0, 1);
         Ig = Vkick/Zc/(1-exp(-tfbd->sigma*dt))*exp(-iu*(dt*tfbd->omegag+tfbd->phase));
       }
       
@@ -502,19 +505,16 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 
 #if USE_MPI
     if (myid==0) { 
-      MPI_Recv(buffer, 5, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
+      MPI_Recv(buffer, 4, MPI_DOUBLE, 1, 1, MPI_COMM_WORLD, &mpiStatus);
       nomKick = buffer[0];
-      tfbd->lastIg = buffer[1];
-      tfbd->lastV = buffer[2];
-      tfbd->lastVp = buffer[3];
-      tfbd->thisTime = buffer[4];
+      tfbd->thisTime = buffer[1];
+      Ig = std::complex <double>(buffer[2], buffer[3]);
     } else if (myid==1) {
       buffer[0] = nomKick;
-      buffer[1] = tfbd->lastIg;
-      buffer[2] = tfbd->lastV;
-      buffer[3] = tfbd->lastVp;
-      buffer[4] = tfbd->thisTime;
-      MPI_Send(buffer, 5, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+      buffer[1] = tfbd->thisTime;
+      buffer[2] = Ig.real();
+      buffer[3] = Ig.imag();
+      MPI_Send(buffer, 4, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
     }
 #endif
     if (tfbd->computeGeneratorCurrent) {
