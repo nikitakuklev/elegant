@@ -559,9 +559,9 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
                                "DriverOutput", nomKick, NULL) ||
             (tfbd->computeGeneratorCurrent &&
              !SDDS_SetRowValues(tfbd->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, tfbd->outputIndex, 
-                                "LastGeneratorCurrent", tfbd->lastIg,
-                                "LastVoltage", tfbd->lastV,
-                                "LastVoltageDeriv", tfbd->lastVp,
+                                "GeneratorCurrent", tfbd->lastIg,
+                                "Voltage", tfbd->lastV,
+                                "VoltageDeriv", tfbd->lastVp,
                                 "ResidualVoltage", tfbd->VResidual,
                                 NULL))) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
@@ -673,9 +673,9 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(tfbd->SDDSout, "DriverOutput", tfbd->longitudinal?"":"rad", SDDS_DOUBLE) ||
         (tfbd->computeGeneratorCurrent 
-         && (!SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastGeneratorCurrent", "A", SDDS_DOUBLE) ||
-             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastVoltage", "V", SDDS_DOUBLE) ||
-             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "LastVoltageDeriv", "V/s", SDDS_DOUBLE) ||
+         && (!SDDS_DefineSimpleColumn(tfbd->SDDSout, "GeneratorCurrent", "A", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "Voltage", "V", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleColumn(tfbd->SDDSout, "VoltageDeriv", "V/s", SDDS_DOUBLE) ||
              !SDDS_DefineSimpleColumn(tfbd->SDDSout, "ResidualVoltage", "V", SDDS_DOUBLE))
          ) ||
         !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
