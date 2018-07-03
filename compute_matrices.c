@@ -1457,9 +1457,11 @@ VMATRIX *compute_matrix(
         csbend_update_fse_adjustment(csbend);
         if (csbend->length==0 && (csbend->use_bn || csbend->xReference)) 
           bombElegant("Can't compute matrix for CSBEND with L=0 and USE_BN!=0 or XREFERENCE!=0", NULL);
-        if (csbend->trackingMatrix)
-          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
-        else {
+        if (csbend->trackingMatrix>0) {
+          if (csbend->trackingMatrix>3)
+            csbend->trackingMatrix = 3;
+          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, csbend->trackingMatrix));
+        } else {
           elem->matrix = bend_matrix(csbend->length, csbend->angle, csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], 
                       csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
                       (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)

@@ -1313,7 +1313,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"PHOTON_OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&csbend_example.photonOutputFile), NULL, 0.0, 0, "output file for photons, if USE_RAD_DIST=1"},
     {"PHOTON_LOW_ENERGY_CUTOFF", "eV", IS_DOUBLE, 0, (long)((char *)&csbend_example.photonLowEnergyCutoff), NULL, 0.0, 0, "Lower limit of photon energy to output."},
     {"REFERENCE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&csbend_example.referenceCorrection), NULL, 0.0, 0, "If nonzero, reference trajectory is subtracted from particle trajectories to compensate for inaccuracy in integration."},
-    {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&csbend_example.trackingMatrix), NULL, 0.0, 0, "If nonzero, matrix up to third order used for twiss parameters etc is computed from tracking. Experimental."},
+    {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&csbend_example.trackingMatrix), NULL, 0.0, 0, "If nonzero, gives order of tracking-based matrix up to third order to be used for twiss parameters etc.  If zero, 2nd-order analytical matrix is used."},
     {"FSE_CORRECTION", "", IS_SHORT, 0, (long)((char *)&csbend_example.fseCorrection), NULL, 0.0, 0, "If nonzero, FSE is adjusted to compensate for edge effects when EDGE1_EFFECTS or EDGE2_EFFECTS = 2"},
     };
 

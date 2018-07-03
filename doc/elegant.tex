@@ -61,6 +61,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item When K. Hwang's fringe model is used for the \verb|CSBEND| element, automatic adjustment of the \verb|FSE|
   value can optionally be invoked in order to null out trajectory errors that result from the fringe fields extending outside
   the magnet. This is obtained by setting \verb|FSE_CORRECTION=1|.
+\item The \verb|TRACKING_MATRIX| parameter of \verb|CSBEND| can now be used to control the order of the tracking-based
+  matrix, with a limit of third order. This provides an alternative to the 2nd-order analytical matrix.
 \end{itemize}
 
 \subsection{New and Modified Commands}
