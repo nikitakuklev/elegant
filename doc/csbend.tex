@@ -75,7 +75,8 @@ as follows:
   \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}. Note that there will be a
   trajectory offset when using this method that is particularly evident for small bending radii, due to extension of the
   fringe field outside the body of the magnet. To suppress this, adjustment of the FSE parameter can be performed automatically 
-  if \verb|FSE_CORRECTION| is set to a non-zero value. In addition, the path-length is adjusted to match the nominal length.
+  if \verb|FSE_CORRECTION| is set to a non-zero value. If \verb|FSE_CORRECTION=1|, the path-length is adjusted to match the nominal
+  length, which is not physical; this behavior can be suppressed by setting \verb|FSE_CORRECTION=2|.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
       \item \verb|EDGE_ORDER>=2| --- include all terms. Recommended for applications where symplecticity and nonlinear dynamics

@@ -1015,7 +1015,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     else
       particle_lost = !integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, rho0, Po, &s_lost,
                                              &apertureData);
-    Qf[4] -= csbend->fseCorrectionPathError;
+    if (csbend->fseCorrection==1)
+      Qf[4] -= csbend->fseCorrectionPathError;
     convertFromDipoleCanonicalCoordinates(Qf, rho0);
 
     if (particle_lost) {
@@ -4971,8 +4972,9 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
     }
     csbend->fse = fse;
     csbend->fseCorrectionPathError = optParticle[0][4] - csbend->length;
-    printf("FSE optimized to %le for CSBEND after %ld evaluations, giving error of %le and path-length adjustment of %le\n",
-           fse, optimizationEvaluations, acc, csbend->fseCorrectionPathError);
+    printf("FSE optimized to %le for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
+           fse, optimizationEvaluations, acc, 
+           csbend->fseCorrection==1?"adjustment":"error", csbend->fseCorrectionPathError);
   }
 }
 
