@@ -2514,6 +2514,7 @@ included in the plane in question.
           STRING field_calculation_method = NULL;
           long macro_ions = 0;
           long generation_interval = 1;
+          long multiple_ionization_interval = 100;
           double x_span = 0;
           double y_span = 0;
           long verbosity = 0;
@@ -2527,7 +2528,7 @@ included in the plane in question.
   \item \verb|Mass| --- Floating-point column giving the ion mass, in AMU.
   \item \verb|ChargeState| --- Integer column giving the ion charge state (a positive integer).
   \item \verb|SourceName| --- String column giving the name of the source gas for this ion.
-    In a future release, the source may also be another type of ion, to allow for multiple ionization.
+    Alternately, for a multiply ionized molecule (e.g. CO++) one can give a source ion (e.g. CO+).  The source ion must also be defined in the \verb|ion_properties| file.
   \item \verb|CrossSection| --- Floating-point column giving the cross section for producing the ion from the source, in $Mb$.
   \end{itemize}
 \item \verb|pressure_profile| --- Name of an SDDS file giving the s-dependent gas pressure for
@@ -2551,6 +2552,8 @@ included in the plane in question.
   \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements. The actual condition for generation of
   ions is such that the generating bunches vary on each turn. This can be used to effectively reduce \verb|macro_ions|
   below 1, to prevent generation of too many macro ions.
+\item \verb|multiple_ionization_interval| --- The number of bunches between multiple ionization calculations.  The macro ion charge is adjusted
+  to account for this, so the effective ion charge after many turns is the same.
 \item \verb|x_span|, \verb|y_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
@@ -7278,6 +7281,9 @@ E.g., a positive $K_1$ value indicates a horizontally focusing quadrupole.
 \section{Element Dictionary}
 
 \include{dictionary}
+
+%\newpage
+%\include{ioneffects.tex}
 
 \newpage
 \section{Examples}
