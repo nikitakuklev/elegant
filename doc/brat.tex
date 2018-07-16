@@ -23,9 +23,13 @@ The bending angle is equal to the angle between two lines: the line from \verb|E
 line from \verb|VERTEX| to \verb|EXIT|.
 The \verb|L| and \verb|ANGLE| parameters supplied by the user are used for geometry calculations (e.g., floor coordinates) only.
 
+The \verb|DXMAP|, \verb|DZMAP|, \verb|YAWMAP|, and \verb|FSE| values can be used to optimize the field map to ensure that
+the horizontal reference trajectory is not displaced at the exit of the element.
+The optimization feature of the \verb|abrat| program can be used to determine these values.
+
 {\bf Matrix generation}
 
-{\tt elegant} will use tracking to determine the transport matrix for \verb|CCBEND| elements, which 
+{\tt elegant} will use tracking to determine the transport matrix for \verb|BRAT| elements, which 
 is needed for computation of twiss parameters and other operations.
 This can require some time, so {\tt elegant} will cache the matrices and re-use them for
 identical elements.
