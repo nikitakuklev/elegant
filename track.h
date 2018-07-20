@@ -2256,7 +2256,7 @@ typedef struct {
     short referenceCorrection, trackingMatrix, fseCorrection;
     /* for internal use only: */
     unsigned short edgeFlags;
-    double b[8], c[8], fseCorrectionPathError;
+    double b[8], c[8], fseCorrectionValue, fseCorrectionPathError;
     short refTrajectoryChangeSet;
     double refLength, refAngle, **refTrajectoryChange;
     short refKicks;

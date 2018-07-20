@@ -1469,7 +1469,7 @@ VMATRIX *compute_matrix(
                       (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
                       + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
                       csbend->tilt, csbend->fint, 
-                      csbend->hgap*2, csbend->fse, csbend->etilt,
+                      csbend->hgap*2, csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0), csbend->etilt,
                       csbend->nonlinear?2:(run->default_order?run->default_order:1),
                       csbend->edge_order, csbend->edgeFlags, 0);
           if (csbend->dx || csbend->dy || csbend->dz) {

@@ -846,7 +846,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
   }
   
-  fse = csbend->fse;
+  fse = csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
   n = -csbend->b[0]/h;
   if (fse>-1)
@@ -4943,7 +4943,7 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid)
     optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
   memset(optParticle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**optParticle));
 
-  csbendWorking.fse = *value;
+  csbendWorking.fseCorrectionValue = *value;
   optimizationEvaluations ++;
   if (!track_through_csbend(optParticle, 1, &csbendWorking, 0, 1e3, NULL, 0.0, NULL, NULL, NULL, NULL)) {
     *invalid = 1;
@@ -4955,12 +4955,13 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid)
 
 void csbend_update_fse_adjustment(CSBEND *csbend)
 {
-  double fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
+  double fseUser = 0, fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
   short disable = 0;
   if (csbend->fseCorrection && (csbend->edge_effects[csbend->e1Index]==2 || csbend->edge_effects[csbend->e2Index]==2)) {
     if (!optParticle) 
       optParticle = (double**)czarray_2d(sizeof(**optParticle), 1, COORDINATES_PER_PARTICLE);
-    fse = csbend->fse;
+    fseUser = csbend->fse;
+    csbend->fse = 0;
     memcpy(&csbendWorking, csbend, sizeof(csbendWorking));
     csbendWorking.dx = csbendWorking.dy = csbendWorking.dz = csbendWorking.etilt = csbendWorking.tilt = 0;
     csbendWorking.isr = csbendWorking.synch_rad = csbendWorking.fseCorrectionPathError = 0;
@@ -4970,7 +4971,8 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
                    csbend_fse_adjustment_penalty, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
       bombElegantVA("failed to find FSE to center trajectory for csbend. accuracy acheived was %le.", acc);
     }
-    csbend->fse = fse;
+    csbend->fse = fseUser;
+    csbend->fseCorrectionValue = fse;
     csbend->fseCorrectionPathError = optParticle[0][4] - csbend->length;
     printf("FSE optimized to %le for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
            fse, optimizationEvaluations, acc, 
