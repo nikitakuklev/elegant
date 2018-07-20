@@ -170,8 +170,8 @@ void do_perturbations(NAMELIST_TEXT *nltext)
     fprintf(fpKMULT, "&parameter name=SrPole, type=double, units=m, fixed_value=%e &end\n", dradius);
     fprintf(fpKMULT, "&parameter name=referenceRadius, type=double, fixed_value=%e, units=m &end\n", reference_radius);
     fprintf(fpKMULT, "&column name=order, type=long &end\n");
-    fprintf(fpKMULT, "&column name=an, type=double &end\n");
-    fprintf(fpKMULT, "&column name=bn, type=double &end\n");
+    fprintf(fpKMULT, "&column name=normal, type=double &end\n");
+    fprintf(fpKMULT, "&column name=skew, type=double &end\n");
     fprintf(fpKMULT, "&data mode=ascii no_row_counts=1 &end\n");
   }
   
