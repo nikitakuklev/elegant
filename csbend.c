@@ -853,6 +853,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     rho_actual = 1/((1+fse)*h);
   else
     rho_actual = 1e16/h;
+  /*
+  if (1) {
+      TRACKING_CONTEXT tcontext;
+      getTrackingContext(&tcontext);
+      printf("Tracking %s#%ld: FSE=%le, FSE(User)=%le, FSE(Correction)=%le\n",
+             tcontext.elementName, tcontext.elementOccurrence, fse, csbend->fse, csbend->fseCorrectionValue);
+  }
+  */
 
   e1_kick_limit = csbend->edge_kick_limit[csbend->e1Index];
   e2_kick_limit = csbend->edge_kick_limit[csbend->e2Index];
@@ -4974,8 +4982,8 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
     csbend->fse = fseUser;
     csbend->fseCorrectionValue = fse;
     csbend->fseCorrectionPathError = optParticle[0][4] - csbend->length;
-    printf("FSE optimized to %le for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
-           fse, optimizationEvaluations, acc, 
+    printf("FSE optimized to %le (%le net) for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
+           fse, fse+fseUser, optimizationEvaluations, acc, 
            csbend->fseCorrection==1?"adjustment":"error", csbend->fseCorrectionPathError);
   }
 }
