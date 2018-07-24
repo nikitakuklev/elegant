@@ -889,8 +889,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	default:
 	  break;
 	}
-	if (copied)
+	if (copied) {
+          free_matrices_above_order(M, order);
 	  return M;
+        }
       }
     }
   }
