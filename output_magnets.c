@@ -22,12 +22,12 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CCBEND *crbptr; CSRCSBEND *csrbptr;
     long iPhase;
     double start, end, dz, value;
-    //double total_length;
+    /* double total_length; */
     FILE *fpm;
 
     log_entry("output_magnets");
 
-    //total_length = 0;
+    /* total_length = 0; */
     eptr = &(beamline->elem);
 
     fpm = fopen_e(filename, "w", 0);

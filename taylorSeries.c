@@ -138,7 +138,7 @@ long taylorSeries_tracking(
   TAYLORSERIES_DATA data;
   double dx, dy, dz;  /* transverse offsets of the element center */
   long i_part, i_top;
-  //long is_lost=0;
+  /* long is_lost=0; */
   double *coord;
   double cos_tilt, sin_tilt;
   double x, xp, y, yp;
@@ -235,7 +235,7 @@ long taylorSeries_tracking(
 
 	/* convert qx qy to xp yp */
 	if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-	  //is_lost = 1;
+	  /* is_lost = 1; */
 	  break;
 	}
 	xp = qx/(denom=sqrt(denom));

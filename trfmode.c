@@ -597,7 +597,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     if (myid == 1) /* We let the first slave to dump the parameter */
 #endif
   if (trfmode->record && !trfmode->fileInitialized) {
-    //long n = n_passes/trfmode->sample_interval;
+    /* long n = n_passes/trfmode->sample_interval; */
     trfmode->record = compose_filename(trfmode->record, run->rootname);
     if (!trfmode->perParticleOutput && trfmode->binless) {
       if (!trfmode->SDDSrec)
@@ -646,7 +646,7 @@ void runBinlessTrfMode(
   double x, y;
   double VxMax, VxRealMax, VyMax, VyRealMax;
   static long been_warned = 0;
-  //static long called = 0;
+  /* static long called = 0; */
 #if DEBUG
   static FILE *fpdeb = NULL;
   double dphase, Vxr_last, Vxi_last;
@@ -873,7 +873,7 @@ void runBinlessTrfMode(
   max_np = 0;
 #endif
 
-  //called = 1;
+  /* called = 1; */
 }
 
 int compTimeData(const void *tv1, const void *tv2)

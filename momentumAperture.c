@@ -326,7 +326,7 @@ long doMomentumApertureSearch(
 {    
   double **coord;
   long nElem;
-  //long iElem;
+  /* long iElem; */
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
   long side;
@@ -472,7 +472,7 @@ long doMomentumApertureSearch(
   lostParticles = (double**)czarray_2d(sizeof(double),1, COORDINATES_PER_PARTICLE+1);	 
  
   elem = elem0;
-  //iElem = 0;
+  /* iElem = 0; */
   processElements = process_elements;
   skipElements = skip_elements;
   

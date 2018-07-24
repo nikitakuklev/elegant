@@ -69,7 +69,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   double *buffer;
 #endif
   long ib, nb, nfreq, iReal, iImag, plane, first;
-  //long n_binned;
+  /* long n_binned; */
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
   long ip, i_pass0;

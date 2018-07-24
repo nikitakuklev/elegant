@@ -185,7 +185,7 @@ long do_tracking(
   long nLeft;     /* number of those that are left after a tracking routine returns */
   long nLost=0;     /* accumulated number lost */
   long nMaximum=0;  /* maximum number of particles seen */
-  //long show_dE;
+  /* long show_dE; */
   long maxampOpenCode=0, maxampExponent=0, maxampYExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, i_pass, isConcat, i_elem;
@@ -1000,7 +1000,7 @@ long do_tracking(
                   );
 	fflush(stdout);
 	}
-        //show_dE = 0;
+        /* show_dE = 0; */
         nLeft = nToTrack;  /* in case it isn't set by the element tracking */
         if (eptr==eptrCLMatrix) {
           /* This element is the place-holder for the chromatic linear matrix or
@@ -1227,7 +1227,7 @@ long do_tracking(
 	    case T_RFTMEZ0:
               nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
 			     &dgamma, dP, accepted, last_z);
-              //show_dE = 1;
+              /* show_dE = 1; */
 	      break;
 	    case T_TMCF:
 	    case T_CEPL:
@@ -1235,7 +1235,7 @@ long do_tracking(
 	      if (!(flags&TIME_DEPENDENCE_OFF)) {
 		nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
 			       &dgamma, dP, accepted, last_z);
-		//show_dE = 1;
+		/* show_dE = 1; */
 	      }
 	      else
 		drift_beam(coord, nToTrack, ((TW_LINAC*)eptr->p_elem)->length, run->default_order);
@@ -1248,7 +1248,7 @@ long do_tracking(
 	    case T_TWMTA:
 	      nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
 			     &dgamma, dP, accepted, last_z);
-	      //show_dE = 1;
+	      /* show_dE = 1; */
 	      break;
 	    case T_RCOL:
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
@@ -1933,7 +1933,7 @@ long do_tracking(
 	    case T_LSRMDLTR:
 	      nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
 			     &dgamma, dP, accepted, last_z);
-	      //show_dE = 1;
+	      /* show_dE = 1; */
 	      break;
 	    case T_CWIGGLER:
               if (flags&TEST_PARTICLES) {
@@ -4886,7 +4886,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
   long ip, ik, nKicks, debug = ftable->verbose;
   double *coord, p0, factor;
   double xyz[3], p[3], B[3], BA, pA, **A;
-  //double pz0;
+  /* double pz0; */
   double rho, theta0, theta1, theta2, theta, tm_a, tm_b, tm_c;
   double step, eomc, s_location;
   char *rootname;
@@ -4975,7 +4975,7 @@ void field_table_tracking(double **particle, long np, FTABLE *ftable, double Po,
         A[2][2] = A[0][0]*A[1][1]-A[0][1]*A[1][0];
         
         /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
-        //pz0 = p[2];
+        /* pz0 = p[2]; */
         rotate_coordinate(A, p, 0);
         if (p[2] < 0)
           bombElegant("Table function doesn't support particle going backward", NULL);
@@ -5204,7 +5204,7 @@ void convertToCanonicalCoordinates(double **coord, long np, double p0, long incl
 {
   long ip;
   double factor;
-  //double p, beta;
+  /* double p, beta; */
   for (ip=0; ip<np; ip++) {
     factor = (1+coord[ip][5])/sqrt(1 + sqr(coord[ip][1]) +sqr(coord[ip][3]));
     coord[ip][1] *= factor;
@@ -5218,7 +5218,7 @@ void convertFromCanonicalCoordinates(double **coord, long np, double p0, long in
 {
   long ip;
   double px, py, factor, delta;
-  //double p, beta;
+  /* double p, beta; */
   for (ip=0; ip<np; ip++) {
     px = coord[ip][1];
     py = coord[ip][3];

@@ -1818,7 +1818,7 @@ void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M)
   size_t offset;
   double C, S, Cp, Sp;
   double beta1;
-  //double alpha1;
+  /* double alpha1; */
   double beta0, alpha0, eta0, etap0, gamma0;
   double cos_dphi, sin_dphi, dphi;
   long plane;
@@ -1835,7 +1835,7 @@ void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M)
     Cp = M->R[plane*2+1][plane*2  ];
     Sp = M->R[plane*2+1][plane*2+1];
     beta1  = *(&(twiss1->betax )+offset) = C*C*beta0 - 2*S*C*alpha0 + S*S*gamma0;
-    //alpha1 = *(&(twiss1->alphax)+offset) = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
+    /* alpha1 = *(&(twiss1->alphax)+offset) = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0; */
     *(&(twiss1->alphax)+offset) = -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0;
     *(&(twiss1->etax )+offset) = eta0*C  + etap0*S  + M->R[plane*2  ][5];
     *(&(twiss1->etapx)+offset) = eta0*Cp + etap0*Sp + M->R[plane*2+1][5];

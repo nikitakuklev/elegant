@@ -64,7 +64,7 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
 void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
 {
   long id, id0, id1, id2, coord;
-  //double delta0;
+  /* double delta0; */
   double delta1, delta2, nu0[2];
   double nuMin, nuMax;
 
@@ -75,7 +75,7 @@ void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double
       id0 = id;
       nu0[0] = deltaTfData[id].nu[0];
       nu0[1] = deltaTfData[id].nu[1];
-      //delta0 = deltaTfData[id].delta;
+      /* delta0 = deltaTfData[id].delta; */
       break;
     }
   }

@@ -267,7 +267,7 @@ void run_matrix_output(
   long i_output, output_order;
   VMATRIX *M1, *M2, *tmp;
   char s[256];
-  //double z0;
+  /* double z0; */
   VARY rcContext;
   double Ccopy[6];
   
@@ -288,7 +288,7 @@ void run_matrix_output(
         
     n_elements = n_elem_no_matrix = 0;
     first_member = member = &(beamline->elem);
-    //z0 = 0;
+    /* z0 = 0; */
     sfo = start_occurence[i_output];
     if (start_name[i_output]!=NULL) {
       member = NULL;

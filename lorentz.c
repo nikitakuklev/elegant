@@ -927,12 +927,12 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
   long step;
   double h, hh;
   double *q, *w, *wp;
-  //double *qp;
+  /* double *qp; */
   double F[8];
 
   q = Qf;
   w = Qf+3;
-  //qp = F;
+  /* qp = F; */
   wp = F+3;
 
   copy_doubles(Qf, Qi, 8);
@@ -1136,8 +1136,8 @@ void nibend_coord_transform(double *q, double *coord, void *field, long which_en
 
 double nibend_exit_function(double *qp, double *q, double s)
 {
-  //static NIBEND *nibend;
-  //nibend = (NIBEND*)field_global;
+  /* static NIBEND *nibend; */
+  /* nibend = (NIBEND*)field_global; */
 
     /* returns positive if inside, negative if outside, exit fringe region */
     if (exit_slope!=DBL_MAX)
@@ -1150,12 +1150,12 @@ void nibend_deriv_function(double *qp, double *q, double s)
 {
   static double *w, *wp, F0, F1, F2;
   static double S, dq0, z, z2, z3, q22;
-  //static NIBEND *nibend;
+  /* static NIBEND *nibend; */
   static double Fa_y, Fa_z, tanh_Fa_z, sech_Fa_z, cosh_Fa_z;
   static double sinh_Fa_z, sinh_3Fa_z, cosh_2Fa_z, cosh_4Fa_z;
   static double Fa_y_sech, tmp, tmp1;
   
-  //nibend = (NIBEND*)field_global;
+  /* nibend = (NIBEND*)field_global; */
   n_deriv_calls++;
 
   w  = q+3;
@@ -1406,8 +1406,8 @@ void nisept_coord_transform(double *q, double *coord, void *field, long which_en
 
 double nisept_exit_function(double *qp, double *q, double s)
 {
-  //static NISEPT *nisept;
-  //nisept = (NISEPT*)field_global;
+  /* static NISEPT *nisept; */
+  /* nisept = (NISEPT*)field_global; */
 
     /* returns positive if inside or before, negative if after */
     return(exit_intercept - q[0]);
@@ -1477,8 +1477,8 @@ void nisept_deriv_function(double *qp, double *q, double s)
 
 double bmapxy_exit_function(double *qp, double *q, double s)
 {
-  //static BMAPXY *bmapxy;
-  //bmapxy = (BMAPXY*)field_global;
+  /* static BMAPXY *bmapxy; */
+  /* bmapxy = (BMAPXY*)field_global; */
   
   /* returns positive if inside or before, negative if after */
   return(central_length-q[0]);
@@ -1562,7 +1562,7 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 void bmapxy_coord_transform(double *q, double *coord, void *field, long which_end)
 {
   double dzds, *dqds;
-  //BMAPXY *bmapxy = field;
+  /* BMAPXY *bmapxy = field; */
 
   dqds = q+3;
   if (which_end==-1) {
@@ -1799,8 +1799,8 @@ void writeEngeFunctionToFile(char *filename)
 
 double bmapxyz_exit_function(double *qp, double *q, double s)
 {
-  //static BMAPXYZ *bmapxyz;
-  //bmapxyz = (BMAPXYZ*)field_global;
+  /* static BMAPXYZ *bmapxyz; */
+  /* bmapxyz = (BMAPXYZ*)field_global; */
   
   /* returns positive if inside or before, negative if after */
   return(central_length-q[0]);

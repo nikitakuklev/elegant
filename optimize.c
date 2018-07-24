@@ -1338,11 +1338,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         if (optimization_data->restart_worst_term_factor!=1 && optimization_data->terms>1) {
           long imax, imin, iworst;
           double *savedTermValue;
-	  //double newResult;
+	  /* double newResult; */
           if (!(savedTermValue = malloc(sizeof(*savedTermValue)*optimization_data->terms)))
             bombElegant("memory allocation failure (saving term values)", NULL);
           memcpy(savedTermValue, optimization_data->termValue, optimization_data->terms*sizeof(*savedTermValue));
-          //newResult = lastResult;
+          /* newResult = lastResult; */
           for (iworst=0; iworst<optimization_data->restart_worst_terms; iworst++) {
             if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms)) {
               optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
@@ -2449,7 +2449,7 @@ void storeOptimRecord(double *value, long values, long invalid, double result)
 void optimization_report(double result, double *value, long pass, long n_evals, long n_dim)
 {
     OPTIM_VARIABLES *variables;
-    //OPTIM_COVARIABLES *covariables;
+    /* OPTIM_COVARIABLES *covariables; */
     OPTIM_CONSTRAINTS *constraints;
     long i;
 
@@ -2469,7 +2469,7 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
 #endif  
 
     variables = &(optimization_data->variables);
-    //covariables = &(optimization_data->covariables);
+    /* covariables = &(optimization_data->covariables); */
     constraints = &(optimization_data->constraints);
 
 #if !USE_MPI

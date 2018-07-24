@@ -4063,14 +4063,14 @@ void dipoleFringeSym(double *Qf, double *Qi,
   double dx, dpx, dy, dpy;
   double tan_edge, sin_edge, sec_edge, cos_edge;
   double x0, px0, y0, py0, dp0;
-  //double psi, Kg;
+  /* double psi, Kg; */
   double k0, k3, k2;
   double k4, k5, k6;
 
   k0 = sqr(PI)/6.;
   k2 = fint;
   k3 = 1.0*1./6.;
-  //Kg = gap*fint;
+  /* Kg = gap*fint; */
   k4 = -1.0*sqr(PI)/3.;
   k5 = 0.0;
   k6 = -1.0;
@@ -4081,7 +4081,7 @@ void dipoleFringeSym(double *Qf, double *Qi,
   py0 = Qi[3];  
   dp0 = Qi[5];
   dx = dpx = dy = dpy = 0;
-  //psi = Kg/rho/cos(edge)*(1+sqr(sin(edge)));
+  /* psi = Kg/rho/cos(edge)*(1+sqr(sin(edge))); */
 
   sec_edge=1./cos(edge);
   tan_edge=tan(edge);

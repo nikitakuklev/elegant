@@ -197,7 +197,7 @@ int main(int argc, char **argv)
   double accelCoord[6], q[10];
   long vertexGiven, entryGiven, exitGiven;
   char *inputBeamFile, *outputBeamFile;
-  //double *xB, *xpB, *yB, *ypB, *sB, *deltaB;
+  /* double *xB, *xpB, *yB, *ypB, *sB, *deltaB; */
   double xCenter, zCenter;
   char *arcSName, *arcFieldName;
   double Breference = 0;
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
   xVertex =  0;
   vertexGiven = entryGiven = exitGiven = 0;
   inputBeamFile = outputBeamFile = NULL;
-  //xB = xpB = yB = ypB = sB = deltaB = NULL;
+  /* xB = xpB = yB = ypB = sB = deltaB = NULL; */
   arcSName = arcFieldName = NULL;
   idealMode = 0;
   

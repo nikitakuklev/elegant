@@ -167,10 +167,10 @@ long addBGGExpData(char *filename)
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2)
 {
   long ip, ig, im, iz, irow, m, igLimit;
-  //long izLast;
+  /* long izLast; */
   STORED_BGGEXP_DATA *bggData;
   double ds, dz, x, y, xp, yp, delta, s, r, phi, denom;
-  //double gamma;
+  /* double gamma; */
   double step,  length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
@@ -208,7 +208,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   getTrackingContext(&tcontext);
 
   if (!bgg->initialized) {
-    //char *outputFile;
+    /* char *outputFile; */
     bgg->initialized = 1;
     if (!(bgg->filename) || !strlen(bgg->filename)) {
       bombElegantVA("No filename given for BGGEXP %s #%ld\n", tcontext.elementName, tcontext.elementOccurrence);
@@ -289,7 +289,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
   
   if (bgg->zInterval<=0) 
     bombElegantVA("zInterval %ld is invalid for BGGEXP %s #%ld\n", bgg->zInterval, tcontext.elementName, tcontext.elementOccurrence);
-  //izLast = bggData->nz-bgg->zInterval;
+  /* izLast = bggData->nz-bgg->zInterval; */
 
   if (bgg->symplectic) {
     long iImpLoop;
@@ -495,7 +495,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
           pyNext = py + step*bgg->zInterval*scaleA*( (ux*dAx_dy + uy*dAy_dy)*denom + dAz_dy );
           iImpLoop++;
           if(iImpLoop>10) {
-            //printf("HERE: daz_dx = %e\t By = %e\n", scaleA*dAz_dx, B[2]);
+            /* printf("HERE: daz_dx = %e\t By = %e\n", scaleA*dAz_dx, B[2]); */
             break;
           }
         } while ( (fabs(xNext - xLoop) > epsImplConverge) || (fabs(yNext - yLoop) > epsImplConverge) ||
@@ -670,7 +670,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       p[2] = pOrig/denom;
       p[0] = xp*p[2];
       p[1] = yp*p[2];
-      //gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
+      /* gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1); */
       pErr[0] = pErr[1] = pErr[2] = 0;
 
 #if !USE_MPI
@@ -691,7 +691,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	p[2] = pCentral*(1+delta)/denom;
 	p[0] = xp*p[2];
 	p[1] = yp*p[2];
-	//gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1);
+	/* gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1); */
 #if !USE_MPI
         if (bgg->SDDSpo &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
@@ -859,9 +859,9 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
 
       part[ip][0] = x;
-      part[ip][1] = xp; // p[0]/p[2];
+      part[ip][1] = xp; /*  p[0]/p[2]; */
       part[ip][2] = y;
-      part[ip][3] = yp; // p[1]/p[2];
+      part[ip][3] = yp; /*  p[1]/p[2]; */
       part[ip][4] = s;
       /*
       printf("P: %le -> %le, change = %le, B2Max = %le\n",

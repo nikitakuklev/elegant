@@ -356,7 +356,7 @@ char **argv;
   long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, twiss_computed = 0;
-  //long correctionDone, moments_computed = 0, links_present;
+  /* long correctionDone, moments_computed = 0, links_present; */
   long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
@@ -1003,7 +1003,7 @@ char **argv;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         /* vary_beamline asserts changes due to vary_element, error_element, and load_parameters */
         fill_double_array(starting_coord, 6, 0.0);
-        //correctionDone = 0;
+        /* correctionDone = 0; */
         new_beam_flags = 0;
         if (correct.mode!=-1 && (correct.track_before_and_after || correct.start_from_centroid)) {
           if (beam_type==SET_SDDS_BEAM) {
@@ -1119,7 +1119,7 @@ char **argv;
                 break;
               }
             }
-            //correctionDone = 1;
+            /* correctionDone = 1; */
           }
           if (failed)
             continue;
@@ -1291,7 +1291,7 @@ char **argv;
       setupMomentsOutput(&namelist_text, &run_conditions, beamline, &do_moments_output,
                          run_conditions.default_order);
       if (!do_moments_output) {
-        //moments_computed = 1;
+        /* moments_computed = 1; */
         runMomentsOutput(&run_conditions, beamline, NULL, -1, 1);
         delete_phase_references();
         reset_special_elements(beamline, RESET_INCLUDE_RF);
@@ -1526,7 +1526,7 @@ char **argv;
                 break;
               }
             }
-            //correctionDone = 1;
+            /* correctionDone = 1; */
           }
           if (failed)
             continue;
@@ -1685,7 +1685,7 @@ char **argv;
       if (!beamline)
         bombElegant("beamline not defined--can't add element links", NULL);
       add_element_links(&links, &namelist_text, beamline);
-      //links_present = 1;
+      /* links_present = 1; */
       beamline->links = &links;
       break;
     case STEERING_ELEMENT:

@@ -2547,7 +2547,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   long iteration, kick_offset;
   long i_moni, i_corr, i, sl_index, i_pegged;
   double dp, x, y, reading;
-  //double last_rms_pos;
+  /* double last_rms_pos; */
   double best_rms_pos, rms_pos, corr_fraction;
   double fraction, minFraction, param, change;
   MAT *Qo, *dK=NULL;
@@ -2630,7 +2630,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
 
     /* find readings at monitors and add in reading errors */
     i = 1;
-    //last_rms_pos = rms_pos;
+    /* last_rms_pos = rms_pos; */
     if (best_rms_pos>rms_pos)
       best_rms_pos = rms_pos;
     rms_pos = 0;

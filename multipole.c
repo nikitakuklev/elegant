@@ -342,7 +342,7 @@ long fmultipole_tracking(
                          double z_start
                          )
 {
-  //double dummy;
+  /* double dummy; */
   double dzLoss=0;
   long n_kicks;       /* number of kicks to split multipole into */
   long i_part, i_top, is_lost=0, i_order;
@@ -451,7 +451,7 @@ long multipole_tracking(
     double drift;
     double *coef;
     double x, xp, y, yp, s, dp;
-    //double ratio;
+    /* double ratio; */
     double rad_coef;
     double beta0, beta1, p;
     static long maxOrder = -1;
@@ -714,7 +714,7 @@ long multipole_tracking2(
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
-  //double K2L;
+  /* double K2L; */
   
 #ifdef HAVE_GPU
   if(getElementOnGpu()){

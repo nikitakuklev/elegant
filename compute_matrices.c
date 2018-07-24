@@ -1013,13 +1013,13 @@ VMATRIX *compute_matrix(
     MULT *mult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; CCBEND *ccbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
-    //BRAT *brat;
+    /* BRAT *brat; */
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
     UKICKMAP *ukmap; SCRIPT *script; 
-    //FTABLE *ftable;
+    /* FTABLE *ftable; */
     EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -1157,7 +1157,7 @@ VMATRIX *compute_matrix(
         }
 	break;
       case T_FTABLE:
-        //ftable = ((FTABLE*)elem->p_elem);
+        /* ftable = ((FTABLE*)elem->p_elem); */
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
@@ -1480,7 +1480,7 @@ VMATRIX *compute_matrix(
         }
         break;
       case T_BRAT:
-        //brat = (BRAT*)elem->p_elem;
+        /* brat = (BRAT*)elem->p_elem; */
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
         break;
       case T_CCBEND:
@@ -2029,7 +2029,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       cscPhi0, f1, sf1, f2, cos2phi0, f4, f2s, f5, logf4, sf5,
       dgMaxs, sqrt2, f5_1p5, cosPhi0s, sinPhi0s, lambdas, f6, logf6,
         sinPhi0c, dgMaxc, f1_1p5, f7, f7s;
-      //double PIs, f3;
+      /* double PIs, f3; */
       double p00, dgMax, phi0, lambda, L;
 
       phi0 = phase*PI/180;
@@ -2049,7 +2049,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       f1 = 1+p00s;
       sf1 = sqrt(f1);
       f2 = sf1+dgMax*sinPhi0;
-      //f3 = p00s+sf1;
+      /* f3 = p00s+sf1; */
       cos2phi0 = cos(2*phi0);
       f4 = p00+sf1;
       f2s = sqr(f2);
@@ -2069,7 +2069,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       f1_1p5 = pow(f1,1.5);
       f7 = p00s+2*dgMax*sf1*sinPhi0+dgMaxs*sinPhi0s;
       f7s = sqr(f7);
-      //PIs = sqr(PI);
+      /* PIs = sqr(PI); */
 
       R[0][0] = R[2][2] = R[4][4] = 1;
       R[0][1] = R[2][3] = (L*p00*cscPhi0*(-logf4+logf6))/dgMax;

@@ -140,7 +140,7 @@ long doFrequencyMap(
   double p;
   long n_part, badPoint;
   double diffusion=0;
-  //double diffusionRate;
+  /* double diffusionRate; */
 #if USE_MPI
   double oldPercentage=0;
 #endif
@@ -251,7 +251,7 @@ long doFrequencyMap(
 		printf("Problem with particle %ld tune determination\n", ip);
               badPoint = 1;
               firstTune[0] = firstTune[1] = -1;
-              //firstTune[1] = firstTune[1] = -1;
+              /* firstTune[1] = firstTune[1] = -1; */
               if (!full_grid_output)
                 continue;
 	    }

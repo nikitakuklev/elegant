@@ -31,7 +31,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
   double XInitial, YInitial, phiInitial, YRI, CEY;
   double Xint[2], Yint[2], XInt=0.0, YInt=0.0;
   double XMagnetEnd, YPoleCenter;
-  //double YRefFinal;
+  /* double YRefFinal; */
   double phiExit=0.0, XFinal, YFinal;
   double *coord;
   double rho_particle, CPX, CPY;
@@ -70,7 +70,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
   /* Center of the pole at either end of the magnet */
   YPoleCenter = (rhoMagnet*cos(thetaMagnet/2)+CEY-w2);
   /* The Y coordinate of the reference trajectory at the exit (and entrance) */
-  //YRefFinal = rhoRefTraj*cos(thetaRefTraj/2);
+  /* YRefFinal = rhoRefTraj*cos(thetaRefTraj/2); */
 
   i_top = n_part - 1;
   for (ip=0; ip<=i_top; ip++) {

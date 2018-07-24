@@ -115,13 +115,13 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         
         if (M->order>=2) {
           double k2,k3,k4,l2,cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
-          //double l3, l4;
+          /* double l3, l4; */
           k2 = ipow(k,2) ;
           k3 = ipow(k,3) ;
           k4 = ipow(k,4) ;
           l2 = ipow(lHC,2) ;
-          //l3 = ipow(lHC,3) ;
-          //l4 = ipow(lHC,4) ;
+          /* l3 = ipow(lHC,3) ; */
+          /* l4 = ipow(lHC,4) ; */
           cos_kl = cos(k*lHC) ;
           cos_2kl = cos(2*k*lHC) ;
           cos_3kl = cos(3*k*lHC) ;
@@ -213,13 +213,13 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         
         if (M->order>=2) {
           double k2,k3,k4,l2,cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
-          //double l3, l4;
+          /* double l3, l4; */
           k2 = ipow(k,2) ;
           k3 = ipow(k,3) ;
           k4 = ipow(k,4) ;
           l2 = ipow(lHC,2) ;
-          //l3 = ipow(lHC,3) ;
-          //l4 = ipow(lHC,4) ;
+          /* l3 = ipow(lHC,3) ; */
+          /* l4 = ipow(lHC,4) ; */
           cos_kl = cos(k*lHC) ;
           cos_2kl = cos(2*k*lHC) ;
           cos_3kl = cos(3*k*lHC) ;
@@ -818,7 +818,7 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
     if (K1>0) {
       double k2,k3,k4,k5,k6,k7,l,l2;
       double cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
-      //double k8;
+      /* double k8; */
       
       k = sqrt(K1);
       kl = k*length;
@@ -830,7 +830,7 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
       k5 = ipow(k,5) ;
       k6 = ipow(k,6) ;
       k7 = ipow(k,7) ;
-      //k8 = ipow(k,8) ;
+      /* k8 = ipow(k,8) ; */
       l2 = ipow(l,2) ;
       cos_kl = cos(kl) ;
       cos_2kl = cos(2*kl) ;
@@ -969,7 +969,7 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
     } else {
       double k2,k3,k4,k5,k6,k7,l,l2;
       double cos_kl,cos_2kl,cos_3kl,sin_kl,sin_2kl,sin_3kl,cosh_kl,cosh_2kl,cosh_3kl,sinh_kl,sinh_2kl,sinh_3kl ;
-      //double k8
+      /* double k8 */
 
       k = sqrt(-K1);
       kl = k*length;
@@ -983,7 +983,7 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
       k5 = ipow(k,5) ;
       k6 = ipow(k,6) ;
       k7 = ipow(k,7) ;
-      //k8 = ipow(k,8) ;
+      /* k8 = ipow(k,8) ; */
       l2 = ipow(l,2) ;
       cos_kl = cos(kl) ;
       cos_2kl = cos(2*kl) ;

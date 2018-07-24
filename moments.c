@@ -116,7 +116,7 @@ void dumpBeamMoments(
   )
 {
   double data[N_COLUMNS];
-  //double *emit;
+  /* double *emit; */
   long j, row_count, elemCheck;
   char *stage;
   ELEMENT_LIST *elem;
@@ -141,7 +141,7 @@ void dumpBeamMoments(
 
   elem   = beamline->elem_twiss;
   sigma0 = beamline->sigmaMatrix0;
-  //emit = data+IC_EMITTANCE;
+  /* emit = data+IC_EMITTANCE; */
   if (!final_values_only) {
     row_count = 0;
     data[IC_PCENTRAL] = elem->Pref_input;
@@ -480,7 +480,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
   ELEMENT_LIST *elem;
   VMATRIX *M1, *M2, *Me;
   SIGMA_MATRIX *S1, *S2;
-  //double path[6];
+  /* double path[6]; */
   MATRIX *Ms;
   
   /* Allocate memory to store sigma matrix as we propagate, copy initial matrix */
@@ -494,13 +494,13 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
   initialize_matrices(M2, 1);
   if (traj) {
     for (i=0; i<6; i++) {
-      //path[i] = traj[i];
+      /* path[i] = traj[i]; */
       M1->R[i][i] = 1;
     }
   }
   else {
     for (i=0; i<6; i++) {
-      //path[i] = 0;
+      /* path[i] = 0; */
       M1->R[i][i] = 1;
     }
   }

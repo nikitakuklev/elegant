@@ -40,7 +40,7 @@ void track_through_frfmode(
   double Vb, V, omega, phase, t, k, damping_factor, tau;
   double V_sum, Vr_sum, phase_sum;
   double Vc, Vcr, dgamma;
-  //long max_hist, nb2, n_occupied;
+  /* long max_hist, nb2, n_occupied; */
   long imode;
   double Qrp, VbImagFactor, Q;
   double rampFactor;
@@ -316,9 +316,9 @@ void track_through_frfmode(
             continue;
           
           V_sum = Vr_sum = phase_sum = Vc = Vcr = 0;
-          //max_hist = n_occupied = 0;
-          //n_occupied = 0;
-          //nb2 = rfmode->n_bins/2;
+          /* max_hist = n_occupied = 0; */
+          /* n_occupied = 0; */
+          /* nb2 = rfmode->n_bins/2; */
           
           omega = rfmode->omega[imode];
           Q = rfmode->Q[imode]/(1+rfmode->beta[imode]);
