@@ -854,6 +854,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     for (i=0; i<nStoredMatrices; i++) {
       CCBEND *crbptr0, *crbptr1;
       BRAT *brat0, *brat1;
+      CSBEND *csbptr0, *csbptr1;
       short copied = 0;
       if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
 	  storedMatrix[i] && storedMatrix[i]->order>0) {
@@ -873,6 +874,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
 	  copied = 1;
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
+		 storedElement[i]->name, storedElement[i]->occurence);
+	  fflush(stdout);
+	  break;
+	case T_CSBEND:
+	  copied = 1;
+	  csbptr0 = (CCBEND*)storedElement[i]->p_elem;
+	  csbptr1 = (CCBEND*)eptr->p_elem;
+	  printf("Using stored matrix for CSBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
 	  break;
@@ -1049,7 +1058,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
   if (shareTrackingBasedMatrices) {
-    if (eptr->type==T_CCBEND || eptr->type==T_BRAT) {
+    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_CSBEND) {
       ELEMENT_LIST *eptrCopy;
       VMATRIX *matrixCopy;
       
@@ -1996,6 +2005,15 @@ long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
               entity_name[e1->type]);
       exit(1);
       break;
+    }
+  }
+  if (e1->type==T_CSBEND) {
+    CSBEND *csb1, *csb2;
+    csb1 = (CSBEND*)e1->p_elem;
+    csb2 = (CSBEND*)e2->p_elem;
+    if (csb1->e1Index!=csb2->e1Index || csb1->e2Index!=csb2->e2Index) {
+      /* elements are reflections of each other */
+      return -1;
     }
   }
   return 0;
