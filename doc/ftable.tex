@@ -14,7 +14,7 @@ format can be used if the \verb|SIMPLE_INPUT| parameter is non-zero.
 \verb|BRAT| elements and is more convenient than the original, default format.
 The field map file is an SDDS file with the following columns:
 \begin{itemize}
-\item {\bf x}, {\bf y}, {\bf x} --- Transverse coordinates in meters (units should be ``m'').
+\item {\bf x}, {\bf y}, {\bf z} --- Transverse coordinates in meters (units should be ``m'').
 \item {\bf Bx}, {\bf By}, {\bf Bz} --- Field values in Tesla (units should be ``T'').
 \end{itemize}
 
@@ -64,7 +64,7 @@ N.B.: Particles are injected into the field region with z=0. Hence, one would no
 
 \begin{figure}[htbp] 
   \begin{center}
-  \includegraphics[width=3in,height=2.5in]{ftable-fig1.eps}
+  \includegraphics[width=3in,height=2.5in]{ftable-fig1}
   \caption{\label{fig:ftable_mag} Illustration of coordinate
       system and magnet definition.}  
    \end{center} 
@@ -72,7 +72,7 @@ N.B.: Particles are injected into the field region with z=0. Hence, one would no
 
 \begin{figure}[htbp] 
   \begin{center}
-  \includegraphics[width=6.5in,height=5.5in]{ftable-fig2.eps}
+  \includegraphics[width=6.5in,height=5.5in]{ftable-fig2}
   \caption{\label{fig:ftable_input} Example of SDDS input
       file. The column x\_index, y\_index, z\_index is not the necessary
       part, it's shown here just for clarifying how the data is
@@ -80,3 +80,4 @@ N.B.: Particles are injected into the field region with z=0. Hence, one would no
   \end{center} 
 
 \end{figure}
+\clearpage
