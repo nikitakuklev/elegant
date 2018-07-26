@@ -43,7 +43,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|BRAT|
+  element via the \verb|USE_FTABLE| control. Previously, the control existed but resulted in no transformation
+  of particles taking place.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -90,7 +92,9 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|abrat|
+  program via the \verb|-ftable| commandline option. Previously, the control existed but resulted in no transformation
+  of particles taking place.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
