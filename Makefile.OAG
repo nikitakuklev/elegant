@@ -680,7 +680,7 @@ elegantto_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
 elegant_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
 endif
 
-
+abrat_LIBS += $(GSLLIB)
 elegantto_LIBS += $(GSLLIB)
 elegantto_SYS_LIBS += $(SYS_GSLLIB) $(EXTRAGPULIBS)
 elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 

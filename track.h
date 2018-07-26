@@ -3537,6 +3537,8 @@ extern void track_through_kicker(double **part, long np, KICKER *kicker, double 
 void initializeFTable(FTABLE *ftable);
 void readSimpleFtable(FTABLE *ftable);
 void field_table_tracking(double **coord, long np, FTABLE *ftable, double Po, RUN *run);
+void rotate_coordinate(double **A, double *x, long inverse);
+double choose_theta(double rho, double x0, double x1, double x2);
 void track_through_mkicker(double **part, long np, MKICKER *kicker, double p_central, long pass, long default_order);
 
 extern long simple_rf_cavity(double **part, long np, RFCA *rfca, double **accepted, double *P_central,

@@ -27,6 +27,7 @@
 #include "track.h"
 
 void BRAT_B_field(double *B, double *Q);
+void BRAT_B_field_permuted(double *B, double *Q);
 double BRAT_setup_field_data(char *input, double xCenter, double zCenter);
 double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, double xCenter);
 void BRAT_setup_single_scan_field_data(char *input);
@@ -95,6 +96,7 @@ static double xCenter, zCenter;
 
 static long quiet=1;
 static long useFTABLE = 0;
+static double Po;
 
 static short idealMode = 0, fieldMapDimension=2;
 /* static double idealB; */
@@ -120,7 +122,9 @@ static long nBrat3dData = 0;
 long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted)
 {
   long ip, ic;
-  
+
+  Po = pCentral;
+
   if (!brat->initialized) {
     double *xd, *yd, *zd, *Bxd, *Byd, *Bzd;
     double Bmin, Bmax;
@@ -441,6 +445,9 @@ void BRAT_optimize_magnet(unsigned long flags)
 #define MIN_N_STEPS 100
 
 static double global_delta;
+#ifdef USE_GSL
+#include "gsl/gsl_poly.h"
+#endif
 
 void BRAT_lorentz_integration(
                             double *accelCoord, 
@@ -556,31 +563,45 @@ void BRAT_lorentz_integration(
 #endif
   } else {
     /* FTABLE mode */
+#define FTABLE_WORKING 1
 #ifdef FTABLE_WORKING
     double eomc;
-    double **A, step;
-    long  nKicks;
+    double **A, BA, pA, step, p[3], xyz0[3], xyz[3], p0, B[3], rho;
+    double theta, theta0, theta1, theta2, tm_a, tm_b, tm_c, pathLength, zStop;
+    long  nKicks, ik;
     nKicks = useFTABLE;
     eomc = -particleCharge/particleMass/c_mks;
-    step = (zf-zi)/nKicks;
+    step = 2*(zf-zi)/nKicks;
     A = (double**)czarray_2d(sizeof(double), 3, 3);
 
-    for (ik=0; ik<nKicks; ik++) {
-      /* 1. get particle's coordinates */
-      coord = particle[ip];
-      factor = sqrt(1+sqr(coord[1])+sqr(coord[3]));
-      p0 = (1.+coord[5])*Po;
-      p[2] = p0/factor;
-      p[0] = coord[1]*p[2];
-      p[1] = coord[3]*p[2];
-      
+    /* 1. get particle's coordinates */
+    p0 = (1.+accelCoord[5])*Po;
+    /* working coordinate order is (X, Y, Z), whereas BRAT uses (Z, X, Y) */
+    p[2] = w[0]*p0;
+    p[0] = w[1]*p0;
+    p[1] = w[2]*p0;
+    xyz0[2] = q[0];
+    xyz0[0] = q[1];
+    xyz0[1] = q[2];
+    pathLength = 0;
+    B[0] = B[1] = B[2] = 0;
+    zStop = -q[0];
+    if (zStop<zf)
+      zStop = zf;
+
+    while (xyz0[2]<=zStop) {
+      BRAT_store_data_permuted(p0, p, xyz0, B, pathLength, 0.0);
       /* 2. get field at the middle point */
-      xyz[0] = coord[0] + p[0]/p[2]*step/2.0;
-      xyz[1] = coord[2] + p[1]/p[2]*step/2.0;
-      xyz[2] = s_location; 
-      interpolateFTable(B, xyz, ftable);
-      if (fpdebug) 
-        fprintf(fpdebug, "%ld 0 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
+      xyz[0] = xyz0[0] + p[0]/p[2]*step/2.0;
+      xyz[1] = xyz0[1] + p[1]/p[2]*step/2.0;
+      xyz[2] = xyz0[2] + step/2.0;
+      BRAT_B_field_permuted(B, xyz);
+#ifdef DEBUG
+      fprintf(stderr, "xyz: %le, %le, %le   pxyz: %le, %le, %le  B: %le, %le, %le\n",
+              xyz[0], xyz[1], xyz[2],
+              p[0], p[1], p[2],
+              B[0], B[1], B[2]);
+#endif
       BA = sqrt(sqr(B[0]) + sqr(B[1]) + sqr(B[2]));
       if (BA>BMaxOnTrajectory) {
         BMaxOnTrajectory = BA;
@@ -592,7 +613,7 @@ void BRAT_lorentz_integration(
       A[0][2] = -(p[0]*B[1] - p[1]*B[0]);
       pA = sqrt(sqr(A[0][0]) + sqr(A[0][1]) + sqr(A[0][2]));
       /* When field not equal to zero or not parallel to the particles motion */
-      if (BA>ftable->threshold && pA) {
+      if (BA>1e-8 && pA) {
         A[0][0] /= pA;
         A[0][1] /= pA;
         A[0][2] /= pA;
@@ -604,7 +625,6 @@ void BRAT_lorentz_integration(
         A[2][2] = A[0][0]*A[1][1]-A[0][1]*A[1][0];
         
         /* 4. rotate coordinates from (x,y,z) to (u,v,w) with u point to BxP, v point to B */
-        pz0 = p[2];
         rotate_coordinate(A, p, 0);
         if (p[2] < 0)
           bombElegant("Table function doesn't support particle going backward", NULL);
@@ -631,9 +651,7 @@ void BRAT_lorentz_integration(
           theta0 = step/rho/tm_a;
         }
         theta=choose_theta(rho, theta0, theta1, theta2);
-        if (fpdebug) 
-          fprintf(fpdebug, "%ld 1 %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", ik, ip, xyz[0], xyz[1], xyz[2], B[0], B[1], B[2]);
-        
+
         p[0] = -p[2]*sin(theta);
         p[2] *= cos(theta);
         xyz[0] = rho*(cos(theta)-1);
@@ -643,20 +661,26 @@ void BRAT_lorentz_integration(
         /* 6. rotate back to (x,y,z) */
         rotate_coordinate(A, xyz, 1);
         rotate_coordinate(A, p, 1);
-        coord[0] += xyz[0];
-        coord[2] += xyz[1];
-        coord[4] += sqrt(sqr(rho*theta)+sqr(xyz[1]));
-        coord[1] = p[0]/p[2];
-        coord[3] = p[1]/p[2];
+        xyz0[0] += xyz[0];
+        xyz0[1] += xyz[1];
+        pathLength += sqrt(sqr(rho*theta)+sqr(xyz[1]));
+        xyz0[2] += step;
       } else {
-        coord[0] += coord[1]*step;
-        coord[2] += coord[3]*step;
-        coord[4] += step*factor;         
+        xyz0[0] += p[0]/p[2]*step;
+        xyz0[1] += p[1]/p[2]*step;
+        pathLength += step;
+        xyz0[2] += step;
       }
-      s_location += step;
     }
 #endif
+    BRAT_store_data_permuted(p0, p, xyz0, B, pathLength, 0.0);
     /* convert back to (Z, X, Y, WZ, WX, WY) */
+    w[0] = p[2]/p0;
+    w[1] = p[0]/p0;
+    w[2] = p[1]/p0;
+    q[0] = xyz0[2];
+    q[1] = xyz0[0];
+    q[2] = xyz0[1];
   }
   
   /* drift back to reference plane */
@@ -725,6 +749,22 @@ void BRAT_deriv_function(double *qp, double *q, double s)
   wp[1] = (w[0]*F[2]-w[2]*F[0])*factor;
   wp[2] = (w[1]*F[0]-w[0]*F[1])*factor;
 }
+
+void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval)
+{
+  double q[9]={0,0,0,0,0,0,0,0,0}, qp[9]={0,0,0,0,0,0,0,0,0};
+  q[0] = q1[2];
+  q[1] = q1[0];
+  q[2] = q1[1];
+  q[4] = p[2]/p0;
+  q[5] = p[0]/p0;
+  q[6] = p[1]/p0;
+  qp[6] = B[2];
+  qp[7] = B[0];
+  qp[8] = B[1];
+  BRAT_store_data(qp, q, s, 0.0);
+}
+
 
 void BRAT_store_data(double *qp, double *q, double s, double exval)
 {
@@ -1172,6 +1212,22 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
   return Bmax;
 }
 
+void BRAT_B_field_permuted(
+                           double *Fp,  /* Output: Bx, By, Bz */
+                           double *Qp   /* Input: X, Y, Z */
+                           )
+{
+  double Q[3];
+  double F[3];
+  Q[0] = Qp[2];
+  Q[1] = Qp[0];
+  Q[2] = Qp[1];
+  BRAT_B_field(F, Q);
+  Fp[0] = F[1];
+  Fp[1] = F[2];
+  Fp[2] = F[0];
+}
+
 void BRAT_B_field(double *F, double *Qg)
 {
   long ix, iy, iz, j;
@@ -1248,18 +1304,30 @@ void BRAT_B_field(double *F, double *Qg)
   F[0] = F[1] = F[2] = 0;
 
 #ifdef DEBUG
-  fprintf(stderr, "Finding field at x=%e (%e) z=%e\n", x, Q[1], z);
+  fprintf(stderr, "Finding field at x=%e (%e) y=%e z=%e\n", x, Q[1], y, z);
 #endif
 
   if (!single_scan) {
     if (!particle_inside) {
-      if ((xi-x)>dx*1e-6 || (x-xf)>dx*1e-6)
+      if ((xi-x)>dx*1e-6 || (x-xf)>dx*1e-6) {
+#ifdef DEBUG
+        fprintf(stderr, "Particle outside grid [%le, %le] in x\n", xi, xf);
+#endif
         return;
-      if ((zi-z)>dz*1e-6 || (z-zf)>dz*1e-6)
+      }
+      if ((zi-z)>dz*1e-6 || (z-zf)>dz*1e-6) {
+#ifdef DEBUG
+        fprintf(stderr, "Particle outside grid [%le, %le] in z\n", zi, zf);
+#endif
         return;
+      }
       if (fieldMapDimension==3 &&
-          ((yi-y)>dy*1e-6 || (y-yf)>dy*1e-6))
+          ((yi-y)>dy*1e-6 || (y-yf)>dy*1e-6)) {
+#ifdef DEBUG
+        fprintf(stderr, "Particle outside grid [%le, %le] in y\n", yi, yf);
+#endif
         return;
+      }
     }
 
     particle_inside = 1;
@@ -1348,7 +1416,6 @@ void BRAT_B_field(double *F, double *Qg)
     Fq[0] = BzNorm;
     Fq[1] = BxNorm;
     Fq[2] = ByNorm;
-
 #ifdef DEBUG
     fprintf(stderr, "Doing 3d interpolation: x=(%le, %le, %le), i=(%ld, %ld, %ld), f=(%le, %le, %le)\n", 
             x, y, z, ix, iy, iz, fx, fy, fz);
@@ -1419,5 +1486,48 @@ double refineAngle(double theta,
   printf("Error: failed to figure out refined angle: theta = %le, theta1 = %le\n",
          theta, theta1);
   exit(1);
+}
+
+void rotate_coordinate(double **A, double *x, long inverse) {
+  long i, j;
+  double temp[3] = {0,0,0}; /* prevent spurious compiler warning */
+
+  for (i=0; i<3; i++) {
+    temp[i] = 0;
+    for (j=0; j<3; j++) {
+      if (!inverse)
+        temp[i] += A[i][j]*x[j];
+      else
+        temp[i] += A[j][i]*x[j];
+    }
+  }
+
+  for (i=0; i<3; i++)
+    x[i] =  temp[i];
+
+  return;
+}
+
+/* choose suitable value from cubic solver */
+double choose_theta(double rho, double x0, double x1, double x2)
+{
+  double temp = 0;
+
+  if (rho<0) {
+    temp = -DBL_MAX;
+    if (x0<0 && x0>temp) temp = x0;
+    if (x1<0 && x1>temp) temp = x1;
+    if (x2<0 && x2>temp) temp = x2;
+  } else if (rho>0) {
+    temp = DBL_MAX;
+    if (x0>0 && x0<temp) temp = x0;
+    if (x1>0 && x1<temp) temp = x1;
+    if (x2>0 && x2<temp) temp = x2;
+  } else {
+    fprintf(stderr, "choose_theta: rho = %21.15e, x0 = %21.15e,  x1 = %21.15e, x2 = %21.15e\n", rho, x0, x1, x2);
+    bombElegant("rho = 0 in choose_theta (FTABLE). Seek expert help.", NULL);
+  }
+
+  return temp;
 }
 

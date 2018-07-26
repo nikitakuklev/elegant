@@ -79,7 +79,8 @@ static char *variable_description[5] = {
 #define SET_YAW_LIMIT 25
 #define SET_YAW 26
 #define SET_3DFIELDMAP 27
-#define N_OPTIONS 28
+#define SET_USE_FTABLE 28
+#define N_OPTIONS 29
 
 static char *option[N_OPTIONS] = {
     "tolerance", "theta", "output",
@@ -89,7 +90,7 @@ static char *option[N_OPTIONS] = {
     "dxdipole", "zduplicate", "dzdipole", "arcscan",
     "nominalEntrance", "nominalExit",
     "rigidity", "ideal", "fseLimit", "dxLimit", "dzLimit", "yawLimit", "yawDipole",
-    "3dfieldfile",
+    "3dfieldfile", "ftable",
     } ;
 
 static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>} \n"
@@ -104,7 +105,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 "  -fseLimit=<min>,<max> -dxLimit=<min>,<max> -dzLimit=<min>,<max> -yawLimit=<min>,<max>}\n"
 " [-fieldmapOutput=filename,zmin,zmax,nz,xmin,xmax,nx]\n"
 " [-tolerance=integration-tolerance]\n"
-" [-gap=<meters>] [-quiet]\n"
+" [-gap=<meters>] [-ftable=<kicks>] [-quiet]\n"
 " Integrates particle trajectories through a symmetric or asymmetric bending magnet.\n\n"
 " The data is in a SDDS-format file of (x, z, B), where x is parallel to\n"
 " the line through the center of the magnet and the center of curvature,\n"
@@ -124,7 +125,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 " -nominalExit      Give nominal entry and exit points for the trajectory,\n"
 "                   to define the hard-edge entrance and exit points relative to which\n"
 "                   accelerator coordinates and transfer matrices are defined.\n"
-" -theta            bending angle in degrees (positive value) desired for this magnet.\n"
+" -theta            bending angle in degrees desired for this magnet.\n"
 " -rigidity         Rigidity for the beam.\n"
 " -fsc              fractional strength change, which may be the FSE value\n"
 "                   obtained from a previous optimization with this field map\n"
@@ -155,8 +156,9 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 " -fieldSign        specify the sign of the bending radius (normally +)\n"
 " -gap              specify the full gap of the magnet in meters.  Used to\n"
 "                   compute the edge-field integral.\n"
+" -ftable           use FTABLE method (see elegant manual).\n"
 " -quiet            Suppress informational printouts.\n\n"
-"Program by Michael Borland  (Version 6, May 2016).\n";
+"Program by Michael Borland  (Version 7, July 2018).\n";
 
 unsigned long optimizeFlags;
 #define OPTIMIZE_ON        0x0001
@@ -192,7 +194,7 @@ int main(int argc, char **argv)
   long nx_fmap, nz_fmap;
   double zmin_fmap, zmax_fmap, xmin_fmap, xmax_fmap;
   SDDS_DATASET SDDS_output;
-  double initial, final, value, delta;
+  double initial, final, value, delta, pCentral;
   long number, variable;
   double accelCoord[6], q[10];
   long vertexGiven, entryGiven, exitGiven;
@@ -253,8 +255,7 @@ int main(int argc, char **argv)
         break;
       case SET_THETA:
         if (scanned[i_arg].n_items!=2 ||
-            sscanf(scanned[i_arg].list[1], "%lf", &theta)!=1 ||
-            theta<=0)
+            sscanf(scanned[i_arg].list[1], "%lf", &theta)!=1)
           bomb("invalid -theta syntax/value", NULL);
         break;
       case SET_RIGIDITY:
@@ -416,6 +417,12 @@ int main(int argc, char **argv)
       case SET_Z_DUPLICATE:
         zDuplicate = 1;
         break;
+      case SET_USE_FTABLE:
+        if (scanned[i_arg].n_items!=2 ||
+            sscanf(scanned[i_arg].list[1], "%ld", &useFTABLE)!=1 ||
+            useFTABLE<=1)
+          bomb("invalid -ftable syntax/values", USAGE);
+        break;
       default:
         fprintf(stderr, "option %s not recognized\n", scanned[i_arg].list[0]);
         bomb("unknown option given", USAGE);
@@ -436,8 +443,8 @@ int main(int argc, char **argv)
   zero_tol = integ_tol*10;
   delta = (final-initial)/(number-1);
 
-  if (theta<=0)
-    bomb("you must specify theta > 0", USAGE);
+  if (theta==0)
+    bomb("you must specify theta != 0", USAGE);
   if (!entryGiven)
     bomb("you must give -entry", USAGE);
   if (!vertexGiven)
@@ -469,7 +476,8 @@ int main(int argc, char **argv)
     zStart = -idealChord;
   }
   rhoMax = rigidity/Breference;
-  
+  Po = pCentral = rigidity*c_mks/(me_mev*1e6);
+
   /* set variables for saving the path */
   max_store = 0;
   X_stored = Z_stored = Y_stored = s_stored = NULL;
@@ -585,7 +593,7 @@ int main(int argc, char **argv)
     }
   } else {
     double *x=NULL, *xp=NULL, *y=NULL, *yp=NULL, *t=NULL, *p=NULL;
-    double pCentral, beta;
+    double beta;
     SDDS_DATASET inputBeam, outputBeam;
     if (!SDDS_InitializeInput(&inputBeam, inputBeamFile) ||
         !SDDS_ReadPage(&inputBeam)) {
@@ -608,6 +616,7 @@ int main(int argc, char **argv)
         SDDS_CheckParameter(&inputBeam, "pCentral", "", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OKAY) {
       bomb("Parameter pCentral is missing or has wrong units", NULL);
     }
+    Po = pCentral;
     if (!(x = SDDS_GetColumnInDoubles(&inputBeam, "x")) ||
         !(xp = SDDS_GetColumnInDoubles(&inputBeam, "xp")) ||
         !(y = SDDS_GetColumnInDoubles(&inputBeam, "y")) ||
@@ -628,6 +637,7 @@ int main(int argc, char **argv)
       accelCoord[3] = yp[iv];
       accelCoord[4] = 0;
       accelCoord[5] = (p[iv]-pCentral)/pCentral;
+      Po = pCentral;
       BRAT_lorentz_integration(accelCoord, q, 0, NULL);
       x[iv] = accelCoord[0];
       xp[iv] = accelCoord[1];

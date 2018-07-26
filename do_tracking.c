@@ -55,7 +55,6 @@ void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence);
 void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
 
 void interpolateFTable(double *B, double *xyz, FTABLE *ftable);
-void rotate_coordinate(double **A, double *x, long inverse);
 void ftable_frame_converter(double **coord, long np, FTABLE *ftable, long entrance_exit);
 double choose_theta(double rho, double x0, double x1, double x2);
 void track_through_multipole_deflector(
@@ -5128,49 +5127,6 @@ void interpolateFTable(double *B, double *xyz, FTABLE *ftable)
   B[2] = ftable->factor*interpolate_bookn(ftable->Bz, dummy, xyz, 0, 0, 0, 1, 0);
   
   return;
-}
-
-void rotate_coordinate(double **A, double *x, long inverse) {
-  long i, j;
-  double temp[3] = {0,0,0}; /* prevent spurious compiler warning */
-
-  for (i=0; i<3; i++) {
-    temp[i] = 0;
-    for (j=0; j<3; j++) {
-      if (!inverse)
-        temp[i] += A[i][j]*x[j];
-      else
-        temp[i] += A[j][i]*x[j];
-    }
-  }
-
-  for (i=0; i<3; i++)
-    x[i] =  temp[i];
-
-  return;
-}
-
-/* choose suitable value from cubic solver */
-double choose_theta(double rho, double x0, double x1, double x2)
-{
-  double temp = 0;
-
-  if (rho<0) {
-    temp = -DBL_MAX;
-    if (x0<0 && x0>temp) temp = x0;
-    if (x1<0 && x1>temp) temp = x1;
-    if (x2<0 && x2>temp) temp = x2;
-  } else if (rho>0) {
-    temp = DBL_MAX;
-    if (x0>0 && x0<temp) temp = x0;
-    if (x1>0 && x1<temp) temp = x1;
-    if (x2>0 && x2<temp) temp = x2;
-  } else {
-    fprintf(stderr, "choose_theta: rho = %21.15e, x0 = %21.15e,  x1 = %21.15e, x2 = %21.15e\n", rho, x0, x1, x2);
-    bombElegant("rho = 0 in choose_theta (FTABLE). Seek expert help.", NULL);
-  }
-
-  return temp;
 }
 
 short determineP0ChangeBlocking(ELEMENT_LIST *eptr)
