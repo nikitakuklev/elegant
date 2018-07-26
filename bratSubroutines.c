@@ -681,6 +681,7 @@ void BRAT_lorentz_integration(
     q[0] = xyz0[2];
     q[1] = xyz0[0];
     q[2] = xyz0[1];
+    s_start = pathLength;
   }
   
   /* drift back to reference plane */
