@@ -1661,7 +1661,7 @@ long do_tracking(
 	      track_through_lscdrift(coord, nToTrack, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
 	      break;
 	    case T_SCMULT:
-	      if (getSCMULTSpecCount()) trackThroughSCMULT(coord, nToTrack, eptr);
+	      if (getSCMULTSpecCount() && !(flags&TEST_PARTICLES)) trackThroughSCMULT(coord, nToTrack, eptr);
 	      break;
 	    case T_EDRIFT:
 	      exactDrift(coord, nToTrack, ((EDRIFT*)eptr->p_elem)->length);
