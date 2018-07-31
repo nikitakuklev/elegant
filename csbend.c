@@ -4961,6 +4961,8 @@ double csbend_fse_adjustment_penalty(double *value, long *invalid)
   return fabs(optParticle[0][1]);
 }
 
+static long FSEOptimizationCount = 0;
+
 void csbend_update_fse_adjustment(CSBEND *csbend)
 {
   double fseUser = 0, fse = 0, stepSize = 1e-3, lowerLimit = -1, upperLimit = 1, acc;
@@ -4982,9 +4984,25 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
     csbend->fse = fseUser;
     csbend->fseCorrectionValue = fse;
     csbend->fseCorrectionPathError = optParticle[0][4] - csbend->length;
-    printf("FSE optimized to %le (%le net) for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
-           fse, fse+fseUser, optimizationEvaluations, acc, 
-           csbend->fseCorrection==1?"adjustment":"error", csbend->fseCorrectionPathError);
+    if (++FSEOptimizationCount<1000) {
+      printf("FSE optimized to %le (%le net) for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
+             fse, fse+fseUser, optimizationEvaluations, acc, 
+             csbend->fseCorrection==1?"adjustment":"error", csbend->fseCorrectionPathError);
+      fflush(stdout);
+    } else {
+      if (FSEOptimizationCount==1000) {
+        printf("FSE optimized to %le (%le net) for CSBEND after %ld evaluations, giving error of %le and path-length %s of %le\n",
+               fse, fse+fseUser, optimizationEvaluations, acc, 
+               csbend->fseCorrection==1?"adjustment":"error", csbend->fseCorrectionPathError);
+        printf("Suppressing further FSE optimization messages\n");
+        fflush(stdout);
+      } else {
+        if (FSEOptimizationCount%1000==0) {
+          printf("FSE optimization done %ld times in total\n", FSEOptimizationCount);
+          fflush(stdout);
+        }
+      }
+    }
   }
 }
 
