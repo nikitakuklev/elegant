@@ -53,6 +53,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|share_tracking_based_matrices| feature, controlled by the \verb|global_settings| command, now
   works correctly. This can provide a considerable increase in performance when tracking-based matrices are
   required for many beamline elements.
+\item The \verb|insert_sceffects| command  and \verb|SCMULT| element, used for space-charge simulation in rings,
+  had a bug that caused the sign of the tune shift to be wrong for protons and positrons. This was reported by
+  forum user \verb|hongjin|.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -61,12 +64,14 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   optimization, in addition to \verb|nux| and \verb|nuy|. This may be more intuitive for some users, as pointed
   out by forum user \verb|jgarland|.
 \item When used for longitudinal feedback, the \verb|TFBDRIVER| element now includes simulation of the 
-  feedback cavity resonance and driving circuit, usign a circuit model developed by T. Berenc (APS).
+  feedback cavity resonance and driving circuit, using a circuit model developed by T. Berenc (APS).
 \item When K. Hwang's fringe model is used for the \verb|CSBEND| element, automatic adjustment of the \verb|FSE|
   value can optionally be invoked in order to null out trajectory errors that result from the fringe fields extending outside
   the magnet. This is obtained by setting \verb|FSE_CORRECTION=1|.
 \item The \verb|TRACKING_MATRIX| parameter of \verb|CSBEND| can now be used to control the order of the tracking-based
   matrix, with a limit of third order. This provides an alternative to the 2nd-order analytical matrix.
+\item The \verb|CSBEND| element now supports separate edge integral values for the entrance and exit fringes, using the
+  \verb|FINT1| and \verb|FINT2| parameters. If not given, the \verb|FINT| parameter is used as before.
 \end{itemize}
 
 \subsection{New and Modified Commands}

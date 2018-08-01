@@ -365,17 +365,17 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
 #if USE_MPI
 	    long np_total;
 	    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-	    sc->chargePerParticle = charge->charge/(double)np_total;	    
+	    sc->chargePerParticle = fabs(charge->charge/(double)np_total);
 #ifdef DEBUG
             printf("initializeSCMULT np_total = %ld\n", np_total); fflush(stdout);
 #endif
 #else
-	    sc->chargePerParticle = charge->charge/(double)np;
+	    sc->chargePerParticle = fabs(charge->charge/(double)np);
 #endif	    
 
 	  }
 	} else {
-	  sc->chargePerParticle = charge->chargePerParticle;
+	  sc->chargePerParticle = fabs(charge->chargePerParticle);
 	}
        break;
       }
@@ -405,7 +405,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   /* set it back to parallel execution */
   notSinglePart = 1;
 #endif
-  sc->c0 = sqrt(2.0/PI) * particleRadius / particleCharge;
+  sc->c0 = fabs(sqrt(2.0/PI) * particleRadius / particleCharge);
   sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
   /* printf("r=%g, chargeperparticle=%g, particleCharge=%g\n",  particleRadius,  sc->chargePerParticle, particleCharge); 
      printf("c0=%g, c1=%g, sz=%.6g\n", sc->c0, sc->c1, sc->sigmaz); */

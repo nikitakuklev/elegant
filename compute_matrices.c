@@ -1185,7 +1185,7 @@ VMATRIX *compute_matrix(
                         bend->e[bend->e1Index], bend->e[bend->e2Index], 
                         bend->h[bend->e1Index], bend->h[bend->e2Index], 
                         bend->k1_internal, bend->k2_internal, 
-                        bend->tilt, bend->fint, 
+                        bend->tilt, bend->fint, bend->fint, 
                         bend->hgap*2, bend->fse, bend->etilt,
                         bend->order?bend->order:run->default_order, bend->edge_order, 
 			bend->edgeFlags, bend->TRANSPORT);
@@ -1331,7 +1331,7 @@ VMATRIX *compute_matrix(
                         ksbend->e[ksbend->e1Index], ksbend->e[ksbend->e2Index], 
                         ksbend->h[ksbend->e1Index], ksbend->h[ksbend->e2Index], 
                         ksbend->k1, 
-                        ksbend->k2, ksbend->tilt, ksbend->fint, 
+                        ksbend->k2, ksbend->tilt, ksbend->fint, ksbend->fint, 
                         ksbend->hgap*2, ksbend->fse, ksbend->etilt,
                         ksbend->nonlinear?2:(run->default_order?run->default_order:1),
                         ksbend->edge_order, ksbend->flags,
@@ -1430,7 +1430,7 @@ VMATRIX *compute_matrix(
         elem->matrix = 
             bend_matrix(nibend->length, nibend->angle, 
                         nibend->e[nibend->e1Index], nibend->e[nibend->e2Index], 
-                        0.0, 0.0, 0.0, 0.0, nibend->tilt, nibend->fint, nibend->hgap*2,
+                        0.0, 0.0, 0.0, 0.0, nibend->tilt, nibend->fint, nibend->fint, nibend->hgap*2,
                         nibend->fse, nibend->etilt,
                         (run->default_order?run->default_order:1), 0L, nibend->edgeFlags, 0);
         break;
@@ -1439,7 +1439,7 @@ VMATRIX *compute_matrix(
         nisept->edgeFlags = determine_bend_flags(elem, 1, 1);
         elem->matrix = 
             bend_matrix(nisept->length, nisept->angle, nisept->e1, nisept->angle-nisept->e1, 
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         (run->default_order?run->default_order:1), 0, nisept->edgeFlags, 0);
         break;
       case T_STRAY:
@@ -1463,15 +1463,17 @@ VMATRIX *compute_matrix(
           elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, csbend->trackingMatrix));
         } else {
           elem->matrix = bend_matrix(csbend->length, csbend->angle, csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], 
-                      csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
-                      (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)
-                      + (csbend->xReference>0 ? csbend->f1*csbend->angle/csbend->length/csbend->xReference : 0),
-                      (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
-                      + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
-                      csbend->tilt, csbend->fint, 
-                      csbend->hgap*2, csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0), csbend->etilt,
-                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
-                      csbend->edge_order, csbend->edgeFlags, 0);
+                                     csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], 
+                                     (csbend->use_bn ? csbend->b1*csbend->angle/csbend->length : csbend->k1)
+                                     + (csbend->xReference>0 ? csbend->f1*csbend->angle/csbend->length/csbend->xReference : 0),
+                                     (csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2)
+                                     + (csbend->xReference>0 ? 2*csbend->f2*csbend->angle/csbend->length/sqr(csbend->xReference) : 0),
+                                     csbend->tilt, 
+                                     csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth, 
+                                     csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth, 
+                                     csbend->hgap*2, csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0), csbend->etilt,
+                                     csbend->nonlinear?2:(run->default_order?run->default_order:1),
+                                     csbend->edge_order, csbend->edgeFlags, 0);
           if (csbend->dx || csbend->dy || csbend->dz) {
             if (csbend->tilt)
               bombElegant("can't misalign tilted bending magnet", NULL);
@@ -1499,7 +1501,7 @@ VMATRIX *compute_matrix(
                         csrcsbend->h[csrcsbend->e1Index], csrcsbend->h[csrcsbend->e2Index], 
                         csrcsbend->use_bn ? csrcsbend->b1/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k1,
                         csrcsbend->use_bn ? csrcsbend->b2/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k2,
-                        csrcsbend->tilt, csrcsbend->fint, 
+                        csrcsbend->tilt, csrcsbend->fint, csrcsbend->fint, 
                         csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
                         csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
                         csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
@@ -2779,7 +2781,7 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
   }
   switch (mult->order) {
   case 0: /* dipole */
-    M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, mult->tilt, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
+    M = bend_matrix(length, KnL/length, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, order, order, 0, 0);
     break;
   case 1: /* quadrupole */
     M = quadrupole_matrix(KnL/length, length, order, mult->tilt, 0.0, 0.0, 0.0, 0.0, 0.0, NULL, 0.0, -1.0, NULL, NULL, 0);

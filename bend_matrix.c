@@ -28,7 +28,8 @@ VMATRIX *bend_matrix(
     double k1,              /* quadrupole term */
     double k2,              /* sextupole term */
     double tilt,            /* tilt angle */
-    double fint,            /* FINT in MAD format, K in SLAC-75 notation */
+    double fint1,           /* FINT in MAD format, K in SLAC-75 notation */
+    double fint2,           /* FINT in MAD format, K in SLAC-75 notation */
     double gap,             /* full gap */
     double fse,             /* Fractional Strength Error = (h_actual-h_coord)/h_coord */
     double etilt,           /* error tilt angle--changes y, y' for reference trajectory */
@@ -52,7 +53,7 @@ VMATRIX *bend_matrix(
     if (angle<0) {
         /* Note that k2 gets a minus sign here because beta has a rho^3 in it. */
         M = bend_matrix(length, -angle, -ea1, -ea2, hPole1, hPole2, k1, -k2, tilt, 
-                    fint, gap, fse, etilt, order, edge_order, flags, TRANSPORT);
+                        fint1, fint2, gap, fse, etilt, order, edge_order, flags, TRANSPORT);
         tilt_matrices(M, PI);
         log_exit("bend_matrix");
         return(M);
@@ -72,12 +73,12 @@ VMATRIX *bend_matrix(
 
     if (edge_order==0)
         edge_order = order;
-    if (ea1!=0 || ea2!=0 || order>1 || fint*gap!=0) {
+    if (ea1!=0 || ea2!=0 || order>1 || fint1*gap!=0 || fint2*gap!=0) {
         Mtot =  tmalloc(sizeof(*Mtot));
         initialize_matrices(Mtot, M->order);
 
         if ((flags&BEND_EDGE1_EFFECTS) && !(flags&SAME_BEND_PRECEDES)) {
-            Medge = edge_matrix(ea1, ha, hPole1, n, -1, fint*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea1, ha, hPole1, n, -1, fint1*gap, order, edge_order>=2, TRANSPORT);
             concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -86,7 +87,7 @@ VMATRIX *bend_matrix(
             }
 
         if ((flags&BEND_EDGE2_EFFECTS) && !(flags&SAME_BEND_FOLLOWS)) {
-            Medge = edge_matrix(ea2, ha, hPole2, n, 1, fint*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea2, ha, hPole2, n, 1, fint2*gap, order, edge_order>=2, TRANSPORT);
             concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;

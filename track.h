@@ -963,7 +963,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 69
+#define N_CSBEND_PARAMS 71
 #define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
@@ -2235,7 +2235,7 @@ typedef struct {
     double length, angle;
     double k1, k2, k3, k4, k5, k6, k7, k8;
     double e[2], tilt;
-    double h[2], hgap, fint;
+    double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
@@ -3330,8 +3330,8 @@ void adjust_arrival_time_data(double **coord, long np, double Po, long center_t,
  
 /* prototypes for bend_matrix6.c: */
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
-    double k1, double k2, double tilt, double fint, double gap, double fse, double etilt,
-    long order, long edge_order, long flags, long TRANSPORT);
+                            double k1, double k2, double tilt, double fint1, double fint2, double gap, double fse, double etilt,
+                            long order, long edge_order, long flags, long TRANSPORT);
 extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,             
     double gK, long order, long all_terms, long TRANSPORT);
 extern VMATRIX *corrector_matrix(double length, double kick, double tilt, double b2, double calibration,

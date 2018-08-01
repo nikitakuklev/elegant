@@ -159,7 +159,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
         emitCosyDipole(fp, eptr->name, csbend->length, csbend->angle,
                        csbend->e[csbend->e1Index], csbend->e[csbend->e2Index], csbend->h[csbend->e1Index], csbend->h[csbend->e2Index],
                        csbend->k1, csbend->k2, csbend->k3,
-                       csbend->hgap, csbend->fint);
+                       csbend->hgap, csbend->fintBoth);
         break;
       case T_CSRCSBEND:
         csrbend = (CSRCSBEND*)eptr->p_elem;

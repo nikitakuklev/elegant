@@ -74,7 +74,8 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
         case T_CSBEND:
           csbend = (CSBEND*)eptr->p_elem;
           sprintf(s, "%s: SBEN,L=%.15g,ANGLE=%.15g,K1=%.15g,E1=%.15g,E2=%.15g,TILT=%.15g,HGAP=%.15g,FINT=%.15g",
-                  name, csbend->length, csbend->angle, csbend->k1, csbend->e[0], csbend->e[1], csbend->tilt, csbend->hgap, csbend->fint);
+                  name, csbend->length, csbend->angle, csbend->k1, csbend->e[0], csbend->e[1], csbend->tilt, csbend->hgap, 
+                  csbend->fintBoth);
           break;
         case T_CSRCSBEND:
           csrbend = (CSRCSBEND*)eptr->p_elem;

@@ -597,7 +597,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double n, fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double *coord, s_lost;
-  double angle, e1, e2, Kg;
+  double angle, e1, e2, Kg1, Kg2;
   double psi1, psi2, he1, he2;
   double Qi[6], Qf[6];
   double dcoord_etilt[6];
@@ -874,9 +874,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     fflush(stdout);
   
   /* angles for fringe-field effects */
-  Kg   = 2*csbend->hgap*csbend->fint;
-  psi1 = Kg/rho_actual/cos(e1)*(1+sqr(sin(e1)));
-  psi2 = Kg/rho_actual/cos(e2)*(1+sqr(sin(e2)));
+  Kg1  = 2*csbend->hgap*(csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
+  psi1 = Kg1/rho_actual/cos(e1)*(1+sqr(sin(e1)));
+  Kg2  = 2*csbend->hgap*(csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth);
+  psi2 = Kg2/rho_actual/cos(e2)*(1+sqr(sin(e2)));
 
   /* rad_coef is d((P-Po)/Po)/ds for the on-axis, on-momentum particle, where po is the momentum of
    * the central particle.
@@ -993,7 +994,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, rho0);
-        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
+        dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, 
+                        csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
+                        csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
         convertFromDipoleCanonicalCoordinates(Qf, rho0);
         x  = Qf[0];  
@@ -1102,7 +1105,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
         convertToDipoleCanonicalCoordinates(Qi, rho0);
-        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
+        dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, 
+                        csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
+                        csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
         convertFromDipoleCanonicalCoordinates(Qf, rho0);
         x  = Qf[0];  
@@ -1840,9 +1845,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->nonlinear = 0;
     Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
-                                   angle/csbend->n_kicks, 0.0, 0.0, 
-                                   0.0, 0.0, csbend->b[0]*h,  0.0,
-                                   0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
+                           angle/csbend->n_kicks, 0.0, 0.0, 
+                           0.0, 0.0, csbend->b[0]*h,  0.0,
+                           0.0, 0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
   }
   computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
