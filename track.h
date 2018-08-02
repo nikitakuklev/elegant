@@ -950,9 +950,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 29
+#define N_KSEXT_PARAMS 30
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 46
+#define N_KQUAD_PARAMS 47
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1009,13 +1009,13 @@ extern char *entity_text[N_TYPES];
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 46
 #define N_TSCATTER_PARAMS 1
-#define N_KQUSE_PARAMS 15
+#define N_KQUSE_PARAMS 16
 #define N_UKICKMAP_PARAMS 15
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
 #define N_FTABLE_PARAMS 16
-#define N_KOCT_PARAMS 17
+#define N_KOCT_PARAMS 18
 #define N_MRADITEGRALS_PARAMS 1
 #define N_APPLE_PARAMS 25
 #define N_MRFDF_PARAMS 23
@@ -1934,18 +1934,18 @@ extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
     double length, k2, j1, tilt, bore, B;
+    long n_kicks;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
-    long xSteering, ySteering, n_kicks, synch_rad;
+    short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
-    long integration_order, sqrtOrder, isr, isr1Particle;
+    short integration_order, sqrtOrder, isr, isr1Particle, expandHamiltonian;
     /* for internal use */
-    long multipolesInitialized;
+    short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edgeMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;      
-    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     MULTIPOLE_DATA steeringMultipoleData;
     } KSEXT;
@@ -1956,14 +1956,13 @@ extern PARAMETER koct_param[N_KOCT_PARAMS];
 typedef struct {
     double length, k3, tilt, bore, B;
     double dx, dy, dz, fse;
-    long n_kicks, synch_rad;
+    long n_kicks;
     char *systematic_multipoles, *random_multipoles;
-    long integration_order, sqrtOrder, isr, isr1Particle;
+    short integration_order, sqrtOrder, synch_rad, isr, isr1Particle, expandHamiltonian;
     /* for internal use */
-    long multipolesInitialized;
+    short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;      
-    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KOCT;
 
@@ -1989,24 +1988,25 @@ extern PARAMETER kquad_param[N_KQUAD_PARAMS];
 
 typedef struct {
     double length, k1, tilt, bore, B;
-    double dx, dy, dz, fse, xkick, ykick;
+    double dx, dy, dz, fse;
+    long n_kicks;
+    double xkick, ykick;
     double xKickCalibration, yKickCalibration;
-    long xSteering, ySteering, n_kicks, synch_rad;
+    short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
-    long integration_order, sqrtOrder, isr, isr1Particle;
-    long edge1_effects, edge2_effects;
+    short integration_order, sqrtOrder, isr, isr1Particle;
+    short edge1_effects, edge2_effects;
     double lEffective;
     double fringeIntP[5], fringeIntM[5];
-    long edge1Linear, edge2Linear;
+    short edge1Linear, edge2Linear;
     double edge1NonlinearFactor, edge2NonlinearFactor;
-    long radial;
+    short radial, expandHamiltonian;
     /* for internal use */
-    long multipolesInitialized;
+    short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edgeMultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;
-    long totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     MULTIPOLE_DATA steeringMultipoleData;
     } KQUAD;
@@ -3156,7 +3156,7 @@ typedef struct {
     double length, k1, k2, tilt;
     double dx, dy, dz, fse1, fse2;
     long n_kicks;
-    short synch_rad, integration_order, isr, isr1Particle, matrixTracking;
+    short integration_order, synch_rad, isr, isr1Particle, matrixTracking, expandHamiltonian;
   } KQUSE;
 
 /* names and storage structure for kick map physical parameters */

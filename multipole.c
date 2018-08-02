@@ -20,6 +20,7 @@
 #endif
 
 unsigned long multipoleKicksDone = 0;
+unsigned short expandHamiltonian = 0;
 
 #define ODD(j) ((j)%2)
 
@@ -55,8 +56,6 @@ long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MUL
   }
   return maxOrder;
 }
-
-
 
 long searchForStoredMultipoleData(char *multFile)
 {
@@ -748,6 +747,7 @@ long multipole_tracking2(
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
     n_kicks = kquad->n_kicks;
+    expandHamiltonian = kquad->expandHamiltonian;
     order = 1;
     if ((lEffective = kquad->lEffective)<=0)
       lEffective = kquad->length;
@@ -812,6 +812,7 @@ long multipole_tracking2(
   case T_KSEXT:
     ksext = ((KSEXT*)elem->p_elem);
     n_kicks = ksext->n_kicks;
+    expandHamiltonian = ksext->expandHamiltonian;
     order = 2;
     if (ksext->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
@@ -874,6 +875,7 @@ long multipole_tracking2(
   case T_KOCT:
     koct = ((KOCT*)elem->p_elem);
     n_kicks = koct->n_kicks;
+    expandHamiltonian = koct->expandHamiltonian;
     order = 3;
     if (koct->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
@@ -925,6 +927,7 @@ long multipole_tracking2(
     /* Implemented as a quadrupole with sextupole as a secondary multipole */
     kquse = ((KQUSE*)elem->p_elem);
     n_kicks = kquse->n_kicks;
+    expandHamiltonian = kquse->expandHamiltonian;
     order = 1;
     KnL = kquse->k1*kquse->length*(1+kquse->fse1);
     drift = kquse->length;
@@ -1079,7 +1082,38 @@ long multipole_tracking2(
   }
 
   log_exit("multipole_tracking2");
+  expandHamiltonian = 0;
   return(i_top+1);
+}
+
+int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta)
+{
+  if (expandHamiltonian) {
+    *qx = (1+delta)*xp;
+    *qy = (1+delta)*yp;
+  } else {
+    double denom;
+    denom = sqrt(1+sqr(xp)+sqr(yp));
+    *qx = (1+delta)*xp/denom;
+    *qy = (1+delta)*yp/denom;
+  }
+  return 1;
+}
+
+int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta)
+{
+  if (expandHamiltonian) {
+    *xp = qx/(1+delta);
+    *yp = qy/(1+delta);
+  } else {
+    double denom;
+    if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0)
+      return 0;
+    denom = sqrt(denom);
+    *xp = qx/denom;
+    *yp = qy/denom;
+  }
+  return 1;
 }
 
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
@@ -1093,7 +1127,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial) 
 {
-  double p, qx, qy, denom, beta0, beta1, dp, s;
+  double p, qx, qy, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, imult;
   long maxOrder;
@@ -1123,16 +1157,14 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
     return 0;
   }
+  *dzLoss = 0;
 
   maxOrder = findMaximumOrder(order, order2, edgeMultData, steeringMultData, multData);
   xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
   ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
 
   /* calculate initial canonical momenta */
-  denom = 1+sqr(xp)+sqr(yp);
-  denom = sqrt(denom);
-  qx = (1+dp)*xp/denom;
-  qy = (1+dp)*yp/denom;
+  convertSlopesToMomenta(&qx, &qy, xp, yp, dp);
 
   if (edgeMultData && edgeMultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
@@ -1149,22 +1181,18 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
   /* We must do this in case steering or edge multipoles were run. We do it even if not in order
    * to avoid numerical precision issues that may subtly change the results
    */
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
     return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
 
-  
-  *dzLoss = 0;
   for (i_kick=0; i_kick<n_kicks; i_kick++) {
     if (drift) {
       x += xp*drift*(i_kick?2:1);
       y += yp*drift*(i_kick?2:1);
-      s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+      if (expandHamiltonian) {
+        s += drift*(i_kick?2:1)*(1 + (sqr(xp) + sqr(yp))/2);
+      } else {
+        s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+      }
       *dzLoss += drift*(i_kick?2:1);
     }
     if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
@@ -1221,14 +1249,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
       }
     }
 
-    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      coord[0] = x;
-      coord[2] = y;
+    if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
       return 0;
-    }
-    denom = sqrt(denom);
-    xp = qx/denom;
-    yp = qy/denom;
+
     if ((rad_coef || isr_coef) && drift) {
       double deltaFactor, F2, dsFactor;
       deltaFactor = sqr(1+dp);
@@ -1244,13 +1267,19 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
         *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
       qx *= (1+dp);
       qy *= (1+dp);
+      if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+        return 0;
     }
   }
   if (drift) {
     /* go through final drift */
     x += xp*drift;
     y += yp*drift;
-    s += drift*sqrt(1 + sqr(xp) + sqr(yp));
+    if (expandHamiltonian) {
+      s += drift*(1 + (sqr(xp) + sqr(yp))/2);
+    } else {
+      s += drift*sqrt(1 + sqr(xp) + sqr(yp));
+    }
     *dzLoss += drift;
   }
   if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
@@ -1271,14 +1300,8 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                       edgeMultData->JnL[imult], 1);
     }
   }
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
     return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
 
   free(xpow);
   free(ypow);
@@ -1321,7 +1344,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial) 
 {
-  double p, qx, qy, denom, beta0, beta1, dp, s;
+  double p, qx, qy, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, step, imult;
   double dsh;
@@ -1360,8 +1383,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   }
 
   /* calculate initial canonical momenta */
-  qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
-  qy = (1+dp)*yp/denom;
+  convertSlopesToMomenta(&qx, &qy, xp, yp, dp);
 
   maxOrder = findMaximumOrder(order, order2, edgeMultData, steeringMultData, multData);
   xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
@@ -1382,14 +1404,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
   /* We must do this in case steering or edge multipoles were run. We do it even if not in order
    * to avoid numerical precision issues that may subtly change the results
    */
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
     return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
 
   *dzLoss = 0;
   for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -1403,7 +1419,11 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         dsh = drift*driftFrac[step];
         x += xp*dsh;
         y += yp*dsh;
-        s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+        if (expandHamiltonian) {
+          s += dsh*(1 + (sqr(xp) + sqr(yp))/2);
+        } else {
+          s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+        }
         *dzLoss += dsh;
       }
 
@@ -1466,13 +1486,10 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
           }
         }
       }
-      if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-        coord[0] = x;
-        coord[2] = y;
+
+      if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
         return 0;
-      }
-      xp = qx/(denom=sqrt(denom));
-      yp = qy/denom;
+
       if ((rad_coef || isr_coef) && drift) {
 	double deltaFactor, F2, dsFactor, dsISRFactor;
         qx /= (1+dp);
@@ -1490,6 +1507,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
           *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
         qx *= (1+dp);
         qy *= (1+dp);
+        if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
+          return 0;
       }
     }
   }
@@ -1512,14 +1531,8 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
                                       edgeMultData->JnL[imult], 1);
     }
   }
-  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    coord[0] = x;
-    coord[2] = y;
+  if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp))
     return 0;
-  }
-  denom = sqrt(denom);
-  xp = qx/denom;
-  yp = qy/denom;
 
   free(xpow);
   free(ypow);
