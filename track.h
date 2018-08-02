@@ -917,7 +917,7 @@ extern char *entity_text[N_TYPES];
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 10
 #define N_OCTU_PARAMS 8
-#define N_MULT_PARAMS 12
+#define N_MULT_PARAMS 13
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 11
 #define N_VCOR_PARAMS 11
@@ -1205,7 +1205,7 @@ extern PARAMETER mult_param[N_MULT_PARAMS];
 typedef struct {
     double length, KnL, tilt, bore, BTipL;
     double dx, dy, dz, factor;
-    short order, n_kicks, synch_rad;
+    short order, n_kicks, synch_rad, expandHamiltonian;
     } MULT;
 
 /* names and storage structure for arbitary multipole from an SDDS File */

@@ -37,6 +37,36 @@ void applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
 					long order, double KnL, long skew);
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
+int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta)
+{
+  if (expandHamiltonian) {
+    *qx = (1+delta)*xp;
+    *qy = (1+delta)*yp;
+  } else {
+    double denom;
+    denom = sqrt(1+sqr(xp)+sqr(yp));
+    *qx = (1+delta)*xp/denom;
+    *qy = (1+delta)*yp/denom;
+  }
+  return 1;
+}
+
+int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta)
+{
+  if (expandHamiltonian) {
+    *xp = qx/(1+delta);
+    *yp = qy/(1+delta);
+  } else {
+    double denom;
+    if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0)
+      return 0;
+    denom = sqrt(denom);
+    *xp = qx/denom;
+    *yp = qy/denom;
+  }
+  return 1;
+}
+
 long findMaximumOrder(long order, long order2, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData, 
                       MULTIPOLE_DATA *multData)
 {
@@ -557,14 +587,16 @@ long multipole_tracking(
             }
 
         /* calculate initial canonical momenta */
-        qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
-        qy = (1+dp)*yp/denom;
+        convertSlopesToMomenta(&qx, &qy, xp, yp, dp);
         is_lost = 0;
         for (i_kick=0; i_kick<n_kicks; i_kick++) {
             if (drift) {
                 x += xp*drift*(i_kick?2:1);
                 y += yp*drift*(i_kick?2:1);
-                s += (i_kick?2:1)*drift*sqrt(1+sqr(xp)+sqr(yp));
+                if (multipole->expandHamiltonian) 
+                  s += (i_kick?2:1)*drift*(1+(sqr(xp)+sqr(yp))/2);
+                else 
+                  s += (i_kick?2:1)*drift*sqrt(1+sqr(xp)+sqr(yp));
                 }
             fillPowerArray(x, xpow, order);
             fillPowerArray(y, ypow, order);
@@ -578,26 +610,31 @@ long multipole_tracking(
             /* apply kicks canonically */
             qx -= KnL*sum_Fy;
             qy += KnL*sum_Fx;
-            if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+            if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp)) {
+              is_lost = 1;
+              break;
+            }
+            if (rad_coef && drift) {
+              qx /= (1+dp);
+              qy /= (1+dp);
+              dp -= rad_coef*sqr(KnL*(1+dp))*(sqr(sum_Fy)+sqr(sum_Fx))*sqrt(1+sqr(xp)+sqr(yp))/(2*drift);
+              qx *= (1+dp);
+              qy *= (1+dp);
+              if (!convertMomentaToSlopes(&xp, &yp, qx, qy, dp)) {
                 is_lost = 1;
                 break;
-                }
-            xp = qx/(denom=sqrt(denom));
-            yp = qy/denom;
-            if (rad_coef && drift) {
-                qx /= (1+dp);
-                qy /= (1+dp);
-                dp -= rad_coef*sqr(KnL*(1+dp))*(sqr(sum_Fy)+sqr(sum_Fx))*sqrt(1+sqr(xp)+sqr(yp))/(2*drift);
-                qx *= (1+dp);
-                qy *= (1+dp);
-                }
+              }
             }
+        }
         if (drift && !is_lost) {
-            /* go through final drift */
-            x += xp*drift;
-            y += yp*drift;
+          /* go through final drift */
+          x += xp*drift;
+          y += yp*drift;
+          if (multipole->expandHamiltonian) 
+            s += drift*(1+(sqr(xp)+sqr(yp))/2);
+          else 
             s += drift*sqrt(1 + sqr(xp) + sqr(yp));
-            }
+        }
 
         coord[0] = x;
         coord[1] = xp;
@@ -1084,36 +1121,6 @@ long multipole_tracking2(
   log_exit("multipole_tracking2");
   expandHamiltonian = 0;
   return(i_top+1);
-}
-
-int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta)
-{
-  if (expandHamiltonian) {
-    *qx = (1+delta)*xp;
-    *qy = (1+delta)*yp;
-  } else {
-    double denom;
-    denom = sqrt(1+sqr(xp)+sqr(yp));
-    *qx = (1+delta)*xp/denom;
-    *qy = (1+delta)*yp/denom;
-  }
-  return 1;
-}
-
-int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta)
-{
-  if (expandHamiltonian) {
-    *xp = qx/(1+delta);
-    *yp = qy/(1+delta);
-  } else {
-    double denom;
-    if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0)
-      return 0;
-    denom = sqrt(denom);
-    *xp = qx/denom;
-    *yp = qy/denom;
-  }
-  return 1;
 }
 
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,

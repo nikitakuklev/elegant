@@ -342,6 +342,7 @@ PARAMETER mult_param[N_MULT_PARAMS] = {
     {"ORDER", "", IS_SHORT, 0, (long)((char *)&mult_example.order), NULL, 0.0, 1, "multipole order"},
     {"N_KICKS", "", IS_SHORT, 0, (long)((char *)&mult_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&mult_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
+    {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&mult_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
     };
 
 FMULT fmult_example;
