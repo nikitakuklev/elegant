@@ -84,18 +84,18 @@ void showUsageOrGreeting (unsigned long mode)
 #if USE_MPI
  #if HAVE_GPU
   char *USAGE="usage: mpirun -np <number of processes> gpu-Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-Pelegant 34.4Beta5 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is gpu-Pelegant 34.4Beta6 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #else
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 34.4Beta5, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 34.4Beta6, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
  #endif
 #else
  #if HAVE_GPU
   char *USAGE="usage: gpu-elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is gpu-elegant 34.4Beta5 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is gpu-elegant 34.4Beta6 ALPHA RELEASE, "__DATE__", by M. Borland, J. Calvey, K. Amyx, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, J.R. King, R. Lindberg, I.V. Pogorelov, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #else
   char *USAGE="usage: elegant {<inputfile>|-pipe=in} [-macro=<tag>=<value>,[...]] [-rpnDefns=<filename>] [-configuration=<filename>]";
-  char *GREETING="This is elegant 34.4Beta5, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 34.4Beta6, "__DATE__", by M. Borland, J. Calvey, M. Carla', N. Carmignani, M. Ehrlichman, L. Emery, W. Guo, R. Lindberg, V. Sajaev, R. Soliday, Y.-P. Sun, C.-X. Wang, Y. Wang, Y. Wu, and A. Xiao.";
  #endif
 #endif
   time_t timeNow;
