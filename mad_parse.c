@@ -860,8 +860,15 @@ void parse_element(
       exitElegant(1);
     }
     for (i=1; i<n_params; i++) {
-      if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
-        printf("error: bad parameter offset for element type %s, parameter %ld (%s)\n",
+      /* difference of offsets must be positive and less than size of double */
+      if ((difference=parameter[i].offset-parameter[i-1].offset)<=0) {
+        printf("error: bad parameter offset (retrograde) for element type %s, parameter %ld (%s)\n",
+                type_name, i, parameter[i].name?parameter[i].name:"NULL");
+        fflush(stdout);
+        exitElegant(1);
+      }
+      if (difference>sizeof(double)) {
+        printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
                 type_name, i, parameter[i].name?parameter[i].name:"NULL");
         fflush(stdout);
         exitElegant(1);
