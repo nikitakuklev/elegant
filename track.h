@@ -963,7 +963,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 71
+#define N_CSBEND_PARAMS 72
 #define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 50
 #define N_TRFMODE_PARAMS 25
@@ -2242,7 +2242,7 @@ typedef struct {
     long n_kicks;
     short nonlinear, synch_rad;
     short edge_effects[2], edge_order;
-    short integration_order;
+    short integration_order, expandHamiltonian;
     double edge_kick_limit[2];
     short kick_limit_scaling;
     short use_bn, expansionOrder;

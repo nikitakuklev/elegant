@@ -1281,6 +1281,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE2_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"EDGE_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_order), NULL, 0.0, 1, "order to which to include edge effects"},
     {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&csbend_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
     {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge_kick_limit[0]), NULL, -1., 0, "maximum kick entrance edge can deliver"},
     {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge_kick_limit[1]), NULL, -1., 0, "maximum kick exit edge can deliver"},
     {"KICK_LIMIT_SCALING", "", IS_SHORT, 0, (long)((char *)&csbend_example.kick_limit_scaling), NULL, 0, 0, "scale maximum edge kick with FSE?"},
