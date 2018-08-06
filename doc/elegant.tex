@@ -46,6 +46,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|BRAT|
   element via the \verb|USE_FTABLE| control. Previously, the control existed but resulted in no transformation
   of particles taking place.
+\item The \verb|YAW| and \verb|PITCH| parameters of the \verb|LTHINLENS| and \verb|LMIRROR| elements were overwriting
+  the \verb|TILT| parameters of the same elements. 
+\item The \verb|B7| and \verb|B8| parameters of the \verb|CSRCSBEND| elements were overwriting the \verb|B6| parameter
+  of the same element.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
