@@ -2457,7 +2457,7 @@ typedef struct {
     char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;
     long muteGenerator;        /* if non-zero, generator output is muted */
-    char *noiseAlphaGen, *noisePhiGen;
+  /** char *noiseAlphaGen, *noisePhiGen; */
 #define I_NOISE_ALPHA_GEN 0
 #define I_NOISE_PHI_GEN 1
 #define I_NOISE_ALPHA_V 2

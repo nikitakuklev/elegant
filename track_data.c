@@ -1379,8 +1379,8 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0, "K4 = B4/rho"},
     {"B5", "1/M$a5$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b5), NULL, 0.0, 0, "K5 = B5/rho"},
     {"B6", "1/M$a6$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K6 = B6/rho"},
-    {"B7", "1/M$a7$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K7 = B7/rho"},
-    {"B8", "1/M$a8$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b6), NULL, 0.0, 0, "K8 = B8/rho"},
+    {"B7", "1/M$a7$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b7), NULL, 0.0, 0, "K7 = B7/rho"},
+    {"B8", "1/M$a8$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b8), NULL, 0.0, 0, "K8 = B8/rho"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"ISR1PART", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"CSR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.csr), NULL, 0.0, 1, "enable CSR computations?"},
@@ -2138,8 +2138,8 @@ PARAMETER lthinlens_param[N_LTHINLENS_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.dz), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "misalignment rotation about longitudinal axis"},
-    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "misalignment rotation about vertical axis"},
-    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "misalignment rotation about transverse horizontal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.yaw), NULL, 0.0, 0, "misalignment rotation about vertical axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.pitch), NULL, 0.0, 0, "misalignment rotation about transverse horizontal axis"},
     };
 
 LMIRROR lmirror_example;
@@ -2151,8 +2151,8 @@ PARAMETER lmirror_param[N_LMIRROR_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.dz), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "misalignment rotation about longitudinal axis"},
-    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "misalignment rotation about vertical axis"},
-    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "misalignment rotation about transverse horizontal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.yaw), NULL, 0.0, 0, "misalignment rotation about vertical axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.pitch), NULL, 0.0, 0, "misalignment rotation about transverse horizontal axis"},
     };
 
 EMATRIX ematrix_example;
@@ -3050,6 +3050,32 @@ void compute_offsets()
       }
       entity_description[i].user_structure_size = entity_description[i].parameter[j].offset + typeSize;
     }
+  }
+
+  for (i=0; i<N_TYPES; i++) {
+    size_t difference;
+    if (entity_description[i].n_params==0) continue;
+    if (entity_description[i].parameter[0].offset<0) {
+      printf("error: bad initial parameter offset for element type %s\n", entity_name[i]);
+      fflush(stdout);
+      exitElegant(1);
+    }
+    for (j=1; j<entity_description[i].n_params; j++) {
+      /* difference of offsets must be positive and less than size of double */
+      if ((difference=(entity_description[i].parameter[j].offset-entity_description[i].parameter[j-1].offset))<=0) {
+        printf("error: bad parameter offset (retrograde) for element type %s, parameter %s\n",
+               entity_name[i], entity_description[i].parameter[j].name?entity_description[i].parameter[j].name:"NULL");
+        fflush(stdout);
+        exitElegant(1);
+      }
+      if (difference>sizeof(double) && i!=T_TWISSELEMENT && i!=T_EMATRIX) {
+        printf("error: bad parameter offset (too large) for element type %s, parameter %s\n",
+               entity_name[i], entity_description[i].parameter[j].name?entity_description[i].parameter[j].name:"NULL");
+        fflush(stdout);
+        exitElegant(1);
+      }
+    }
+    entity_description[i].flags |= OFFSETS_CHECKED;
   }
 }
 

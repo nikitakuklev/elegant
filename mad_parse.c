@@ -867,7 +867,7 @@ void parse_element(
         fflush(stdout);
         exitElegant(1);
       }
-      if (difference>sizeof(double) && eptr->type!=T_TWISSELEMENT) {
+      if (difference>sizeof(double) && eptr->type!=T_TWISSELEMENT && eptr->type!=T_EMATRIX) {
         printf("error: bad parameter offset (too large) for element type %s, parameter %ld (%s)\n",
                 type_name, i, parameter[i].name?parameter[i].name:"NULL");
         fflush(stdout);
