@@ -1385,11 +1385,8 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                            double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
-  double factor, f, phi, ds, dsh, dist;
+  double ds, dsh, dist;
   double Fx, Fy, x, y;
-  double sine, cosi, tang;
-  double sin_phi, cos_phi;
-  
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -1743,11 +1740,9 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                            double *s_lost, MULT_APERTURE_DATA *apData)
 {
   long i;
-  double factor, f, phi, ds, dsh, dist;
+  double ds, dsh, dist;
   double Fx, Fy, x, y;
-  double sine, cosi, tang;
-  double sin_phi, cos_phi;
-  
+
 #define X0 Qi[0]
 #define XP0 Qi[1]
 #define Y0 Qi[2]
@@ -2379,12 +2374,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       else {
         rho = (1+DP)*rho_actual;
         if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
+          /* apply edge focusing, nonsymplectic method */
           delta_xp = tan(e1)/rho*X;
           XP += delta_xp;
           YP -= tan(e1-psi1/(1+DP))/rho*Y;
         } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) 
           apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
-        else if (csbend->edge_effects[csbend->e1Index]>=2) {
+        else if (csbend->edge_effects[csbend->e1Index]==2) {
           rho = (1+DP)*rho_actual;
 	  /* load input coordinates into arrays */
 	  Qi[0] = X;
@@ -2402,6 +2398,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Y  = Qf[2];  
 	  YP = Qf[3];  
 	  DP = Qf[5];
+        } else if (csbend->edge_effects[csbend->e1Index]==3) {
+          applySimpleDipoleEdgeKick(&XP, &YP, X, Y, DP, rho_actual, e1, psi1, -1.0, 0);
         }
       }
     }
@@ -2950,7 +2948,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
           } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1)
             apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
-          else if (csbend->edge_effects[csbend->e2Index]>=2) {
+          else if (csbend->edge_effects[csbend->e2Index]==2) {
             rho = (1+DP)*rho_actual;
             /* load input coordinates into arrays */
             Qi[0] = X;
@@ -2968,8 +2966,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Y  = Qf[2];  
             YP = Qf[3];  
             DP = Qf[5];
-	  }
-	}
+	  } else if (csbend->edge_effects[csbend->e2Index]==3) {
+            applySimpleDipoleEdgeKick(&XP, &YP, X, Y, DP, rho_actual, e2, psi2, -1.0, 0);
+          }
+        }
       }
 
       coord = part[i_part];
@@ -4332,6 +4332,7 @@ void apply_edge_effects(
                         double *x, double *xp, double *y, double *yp, 
                         double rho, double n, double beta, double he, double psi, long which_edge
                         )
+/* Applies edge effects using non-symplectic K. L. Brown method to second order */
 {
   double h, tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
   double R21, R43;
@@ -5324,6 +5325,7 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
 void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea, double psi, 
                                double kickLimit, long expanded) 
 {
+  /*  Apply edge effects using a symplectic method based on linear K. L. Brown matrix */
   double Qi[6];
   double dqx, dqy;
 
