@@ -76,6 +76,11 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   matrix, with a limit of third order. This provides an alternative to the 2nd-order analytical matrix.
 \item The \verb|CSBEND| element now supports separate edge integral values for the entrance and exit fringes, using the
   \verb|FINT1| and \verb|FINT2| parameters. If not given, the \verb|FINT| parameter is used as before.
+\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now support a new symplectic edge effects mode, based on 
+  the linear approach of K. L. Brown. It is similar to the existing, non-symplectic default mode, but in most cases
+  users won't see a difference.
+\item The \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, and \verb|MULT| elements now support use
+  of the expanded (to leading order) Hamiltonian by setting the \verb|EXPAND_HAMILTONIAN| flag to 1.
 \end{itemize}
 
 \subsection{New and Modified Commands}
