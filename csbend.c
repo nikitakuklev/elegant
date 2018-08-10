@@ -64,8 +64,8 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 
 long correctDistribution(double *array, long npoints, double desiredSum);
 
-void convertToDipoleCanonicalCoordinates(double *Qi, double rho);
-void convertFromDipoleCanonicalCoordinates(double *Qi, double rho);
+void convertToDipoleCanonicalCoordinates(double *Qi, long expanded);
+void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded);
 
 long inversePoissonCDF(double mu, double C);
 
@@ -81,7 +81,8 @@ short refTrajectoryMode = 0;
 long refTrajectoryPoints = 0;
 double **refTrajectoryData = NULL;
 
-
+void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea, 
+                               double psi, double kickLimit, long expanded);
 
 void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 {
@@ -983,31 +984,36 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dp = dp0 = coord[5];
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
-      rho = (1+dp)*rho_actual;
       if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e1Index]==1) {
-        /* apply edge focusing */
+        /* apply edge focusing, nonsymplectic method */
+        rho = (1+dp)*rho_actual;
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
           delta_xp = SIGN(delta_xp)*e1_kick_limit;
         xp += delta_xp;
         yp -= tan(e1-psi1/(1+dp))/rho*y;
       } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e1Index]==1) {
+        /* apply edge focusing, nonsymplectic method */
+        rho = (1+dp)*rho_actual;
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
       } else if (csbend->edge_effects[csbend->e1Index]==2) {
-        rho = (1+dp)*rho_actual;
+        /* K. Hwang's symplectic approach */
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, rho0);
+        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
         dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, 
                         csbend->fint[csbend->e1Index]>=0?csbend->fint[csbend->e1Index]:csbend->fintBoth,
                         csbend->h[csbend->e1Index]);
         /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, rho0);
+        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
         x  = Qf[0];  
         xp = Qf[1];  
         y  = Qf[2];  
         yp = Qf[3];  
         dp = Qf[5];
+      } else if (csbend->edge_effects[csbend->e1Index]==3) {
+        /* simple-minded symplectic approach */
+        applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e1, psi1, e1_kick_limit, csbend->expandHamiltonian);
       }
     }
 
@@ -1022,7 +1028,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
-    convertToDipoleCanonicalCoordinates(Qi, rho0);
+    convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
     
     if (csbend->integration_order==4) {
       if (csbend->expandHamiltonian)
@@ -1041,7 +1047,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
     if (csbend->fseCorrection==1)
       Qf[4] -= csbend->fseCorrectionPathError;
-    convertFromDipoleCanonicalCoordinates(Qf, rho0);
+    convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
 
     if (particle_lost) {
       if (!part[i_top]) {
@@ -1104,30 +1110,32 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
-      rho = (1+dp)*rho_actual;
       if (csbend->edge_order<=1 && csbend->edge_effects[csbend->e2Index]==1) {
+        rho = (1+dp)*rho_actual;
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
       } else if (csbend->edge_order>=2 && csbend->edge_effects[csbend->e2Index]==1) {
+        rho = (1+dp)*rho_actual;
         apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
       } else if (csbend->edge_effects[csbend->e2Index]==2) {
-        rho = (1+dp)*rho_actual;
         /* load input coordinates into arrays */
         Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-        convertToDipoleCanonicalCoordinates(Qi, rho0);
+        convertToDipoleCanonicalCoordinates(Qi, csbend->expandHamiltonian);
         dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, 
                         csbend->fint[csbend->e2Index]>=0?csbend->fint[csbend->e2Index]:csbend->fintBoth, 
                         csbend->h[csbend->e2Index]);
         /* retrieve coordinates from arrays */
-        convertFromDipoleCanonicalCoordinates(Qf, rho0);
+        convertFromDipoleCanonicalCoordinates(Qf, csbend->expandHamiltonian);
         x  = Qf[0];  
         xp = Qf[1];  
         y  = Qf[2];  
         yp = Qf[3];  
         dp = Qf[5];
+      } else if (csbend->edge_effects[csbend->e2Index]==3) {
+        applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, rho_actual, e2, psi2, e2_kick_limit, csbend->expandHamiltonian);
       }
     }
     
@@ -1168,18 +1176,24 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   return(i_top+1);
 }
 
-void convertToDipoleCanonicalCoordinates(double *Qi, double rho)
+void convertToDipoleCanonicalCoordinates(double *Qi, long expanded)
 {
   double f;
-  f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
+  if (expanded)
+    f = (1 + Qi[5]);
+  else
+    f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
 
-void convertFromDipoleCanonicalCoordinates(double *Qi, double rho)
+void convertFromDipoleCanonicalCoordinates(double *Qi, long expanded)
 {
   double f;
-  f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
+  if (expanded) 
+    f = 1/(1+Qi[5]);
+  else
+    f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
@@ -2379,10 +2393,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[3] = YP;
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, rho0);
+          convertToDipoleCanonicalCoordinates(Qi, 0);
           dipoleFringeSym(Qf, Qi, rho_actual, -1., csbend->edge_order, csbend->b[0]/rho0, e1, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e1Index]);
 	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0);
+          convertFromDipoleCanonicalCoordinates(Qf, 0);
 	  X  = Qf[0];  
 	  XP = Qf[1];  
 	  Y  = Qf[2];  
@@ -2424,7 +2438,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[3] = YP;
 	  Qi[4] = 0;  
 	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, rho0);
+          convertToDipoleCanonicalCoordinates(Qi, 0);
         
 	  if (csbend->integration_order==4)
 	    particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
@@ -2432,7 +2446,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	    particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
       
 	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, rho0);
+          convertFromDipoleCanonicalCoordinates(Qf, 0);
 	  X  = Qf[0];  
 	  XP = Qf[1];  
 	  Y  = Qf[2];  
@@ -2945,10 +2959,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             Qi[3] = YP;
             Qi[4] = 0;  
             Qi[5] = DP;
-            convertToDipoleCanonicalCoordinates(Qi, rho0);
+            convertToDipoleCanonicalCoordinates(Qi, 0);
             dipoleFringeSym(Qf, Qi, rho_actual, 1., csbend->edge_order, csbend->b[0]/rho0, e2, 2*csbend->hgap, csbend->fint, csbend->h[csbend->e2Index]);
             /* retrieve coordinates from arrays */
-            convertFromDipoleCanonicalCoordinates(Qf, rho0);
+            convertFromDipoleCanonicalCoordinates(Qf, 0);
             X  = Qf[0];  
             XP = Qf[1];  
             Y  = Qf[2];  
@@ -5307,3 +5321,27 @@ void csbend_update_fse_adjustment(CSBEND *csbend)
   }
 }
 
+void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea, double psi, 
+                               double kickLimit, long expanded) 
+{
+  double Qi[6];
+  double dqx, dqy;
+
+  Qi[0] = x; Qi[1] = *xp;
+  Qi[2] = y; Qi[3] = *yp;
+  Qi[4] = 0; Qi[5] = delta;
+  convertToDipoleCanonicalCoordinates(Qi, expanded);
+
+  dqx = tan(ea)/rho*x;
+  if (kickLimit>0 && fabs(dqx)>kickLimit) {
+    dqx = SIGN(dqx)*kickLimit;
+  }
+  dqy = tan(ea-psi/(1+delta))/rho*y;
+
+  Qi[1] += dqx;
+  Qi[3] += dqy;
+  
+  convertFromDipoleCanonicalCoordinates(Qi, expanded);
+  *xp = Qi[1];
+  *yp = Qi[3];
+}
