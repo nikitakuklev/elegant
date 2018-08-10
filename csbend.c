@@ -5338,7 +5338,7 @@ void applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, doubl
   if (kickLimit>0 && fabs(dqx)>kickLimit) {
     dqx = SIGN(dqx)*kickLimit;
   }
-  dqy = tan(ea-psi/(1+delta))/rho*y;
+  dqy = -tan(ea-psi/(1+delta))/rho*y;
 
   Qi[1] += dqx;
   Qi[3] += dqy;
