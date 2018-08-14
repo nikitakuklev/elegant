@@ -68,10 +68,10 @@ as follows:
 \begin{itemize}
   \item 1: --- Edge effects using non-symplectic method \cite{KLBrown}. 
     \begin{itemize}
-      \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders. Not recommended for
-        applications where symplecticity matters. 
-      \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders. Not recommended for
-        applications where symplecticity matters.
+      \item \verb|EDGE_ORDER<2| --- linear edge focusing with $\delta$-dependence to all orders. Generally not recommended
+        if symplecticity is important, though when the edge effects are weak it appears acceptable.
+      \item \verb|EDGE_ORDER>=2| --- second-order matrix edge focusing with $\delta$-dependence to all orders. Use of this
+        model is strongly discouraged when symplecticity matters.
     \end{itemize}              
   \item 2: --- Edge effects using K. Hwang's symplectic method \cite{KHwang}. Note that there will be a
   trajectory offset when using this method that is particularly evident for small bending radii, due to extension of the
@@ -80,10 +80,12 @@ as follows:
   length, which is not physical; this behavior can be suppressed by setting \verb|FSE_CORRECTION=2|.
     \begin{itemize}
       \item \verb|EDGE_ORDER<2| --- include only terms linear in transverse coordinates, but $\delta$-dependence to all orders.
-      \item \verb|EDGE_ORDER>=2| --- include all terms. Recommended for applications where symplecticity and nonlinear dynamics
-        matter.
+        Recommended for applications where symplecticity matters. 
+      \item \verb|EDGE_ORDER>=2| --- include all terms. This settings has been observed to produce emittance damping in some cases
+        (particularly with large emittance and small bending radii), so users are advised to be cautious.
     \end{itemize}              
   \item 3: --- Edge effects using symplectic method similar to \cite{KLBrown}. The value of \verb|EDGE_ORDER| is ignored.
+        Recommended for applications where symplecticity matters.
   \item Other: --- No edge effects.
 \end{itemize}
 
