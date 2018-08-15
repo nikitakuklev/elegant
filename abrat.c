@@ -158,7 +158,7 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 "                   compute the edge-field integral.\n"
 " -ftable           use FTABLE method (see elegant manual).\n"
 " -quiet            Suppress informational printouts.\n\n"
-"Program by Michael Borland  (Version 7, July 2018).\n";
+"Program by Michael Borland  (Version 8, August 2018).\n";
 
 unsigned long optimizeFlags;
 #define OPTIMIZE_ON        0x0001
