@@ -191,7 +191,7 @@ int main( int argc, char **argv)
   FUNCTION density, densityOld, diff, wake, stepResponse;
   FUNCTION potential, rfVoltageFn, rfPotential, potentialDistortion, distribution, Vinduced;
   char *wakeFile, *tCol, *wCol;
-  double syncPhase, syncTune, syncAngFrequency;
+  double syncPhase=0, syncTune, syncAngFrequency;
   double VrfDot, ZoverN=0, inductance=0, resistance;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction, lastMaxDifference;
   double maxDensity;
@@ -681,7 +681,7 @@ void readRingParameters( char *twissFile, double desiredEnergyMeV, RINGPARAMETER
 void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
                      double deltaTime, long pointsCalledFor) {
   SDDS_TABLE wakePage;
-  double time, endTime, *t, *V;
+  double time, *t, *V;
   long i, rows, pointsThatCoversRangeOfData, returnCode;
   
   if (verbosity) {
@@ -728,7 +728,6 @@ void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
     wake->offset = 0;
     wake->xStart = 0.0;
   }
-  endTime = t[rows-1];
   pointsThatCoversRangeOfData = (long)((t[rows-1] - t[0])/deltaTime) + 1;
   /* points generated for wake function cannot give a greater range that
      what is provided by SDDS file */

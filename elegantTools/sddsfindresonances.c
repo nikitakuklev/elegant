@@ -158,7 +158,7 @@ int main(int argc, char **argv)
   char *columnName[4] = {NULL, NULL, "nux", "nuy"};  
   char *multipole0[4]={"dipole", "quadrupole", "sextupole", "octupole"};
   char **multipole = NULL;
-  double **outputData, *tmpData, **indepData, slope, delta, delta1;  
+  double **outputData, **indepData, slope, delta, delta1;  
   unsigned long multipoleFlags, typeFlags, pipeFlags;
   char label[1024];
   long inputPage;
@@ -173,7 +173,6 @@ int main(int argc, char **argv)
   /* outputData[i] i=0,1,2,3 is the interpolated values of x, y, nux, and nuy respectively */
   outputData[0] = outputData[1] = outputData[2] = outputData[3]= NULL;
   indepData[0] = indepData[1] = indepData[2] = indepData[3] = NULL;
-  tmpData=NULL;
   /*sortIndex is for sorting x (and then y) or y (and then y) data*/
   /* 0 (sort x and then y), 1 (sort y and then x) */
   sortIndex = malloc(sizeof(*sortIndex)*2);

@@ -61,7 +61,7 @@ int main(int argc, char **argv)
   double cos_theta, sin_theta, p;
   char s[200];
   long n_new, n_mp, i_new, j, verbose, inPoints, outPoints;
-  double *pxIn, *tIn, *xIn, *yIn, *pyIn, *pzIn, *charge;
+  double *pxIn=NULL, *tIn=NULL, *xIn=NULL, *yIn=NULL, *pyIn=NULL, *pzIn=NULL, *charge=NULL;
   double pmin = 0, xp, yp;
   double drift = 0;
 
@@ -270,6 +270,7 @@ int main(int argc, char **argv)
   free(pzIn);
   if (verbose)
     printf("\n%ld macro-particles created\n", n_mp);
+  exit(0);
 }
 
 

@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin;
   char *inputFile, *outputRootname, *twissFile, *pressureFile;
-  long i_arg, verbose, twissRows;
+  long i_arg, verbose, twissRows=0;
   SCANNED_ARG *s_arg;
   unsigned long pressureFlags;
   double storedCharge, *sTwiss = NULL, LTotal;
@@ -124,8 +124,8 @@ int main(int argc, char **argv)
   char buffer[16384];
   long is, is2, ns2, ig, ic;
   /* Variables for scattering simulation output */
-  long nScatter, nScatterPeriods;
-  double *sScatter, *deltaScatter, *sLost, sScatterMax, *dkScatter;
+  long nScatter=0, nScatterPeriods;
+  double *sScatter=NULL, *deltaScatter=NULL, *sLost=NULL, sScatterMax, *dkScatter=NULL;
   long nScatterUnique, *indexScatterUnique, *nkScatterUnique;
   double *sScatterUnique, *sScatterStart, *sScatterEnd;
   double *G1, *G2, G1Ave, G2Ave, ds2;
