@@ -51,7 +51,25 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
     int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, curandState_t *state,
     double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData);
 __device__ long 
+gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2, 
+    double s, int n, double rho0, 
+    double p0, double &s_lost,
+    double d_rho_actual, double d_rad_coef, double d_isrConstant, 
+    int d_distributionBasedRadiation, int d_includeOpeningAngle,
+    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
+    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, curandState_t *state,
+    double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData);
+__device__ long 
 gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, 
+    double s, int n, double rho0, double p0,
+    double &s_lost,
+    double d_rho_actual, double d_rad_coef, double d_isrConstant, 
+    int d_distributionBasedRadiation, int d_includeOpeningAngle,
+    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
+    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+    double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData);
+__device__ long 
+gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, 
     double s, int n, double rho0, double p0,
     double &s_lost,
     double d_rho_actual, double d_rad_coef, double d_isrConstant, 
@@ -106,21 +124,54 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 }
 
 __device__ void 
-gpu_convertToDipoleCanonicalCoordinates(double *Qi, double rho)
+gpu_convertToDipoleCanonicalCoordinates(double *Qi, long expanded)
 {
   double f;
-  f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
+  if (expanded)
+    f = (1 + Qi[5]);
+  else
+    f = (1 + Qi[5])/sqrt(1 + sqr(Qi[1]) + sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
 }
 
 __device__ void 
-gpu_convertFromDipoleCanonicalCoordinates(double *Qi, double rho)
+gpu_convertFromDipoleCanonicalCoordinates(double *Qi, long expanded)
 {
   double f;
-  f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
+  if (expanded) 
+    f = 1/(1+Qi[5]);
+  else
+    f = 1/sqrt(sqr(1+Qi[5])-sqr(Qi[1])-sqr(Qi[3]));
   Qi[1] *= f;
   Qi[3] *= f;
+}
+
+__device__ void 
+gpu_applySimpleDipoleEdgeKick(double *xp, double *yp, double x, double y, double delta, double rho, double ea, double psi, 
+                              double kickLimit, long expanded)
+{
+  /*  Apply edge effects using a symplectic method based on linear K. L. Brown matrix */
+  double Qi[6];
+  double dqx, dqy;
+
+  Qi[0] = x; Qi[1] = *xp;
+  Qi[2] = y; Qi[3] = *yp;
+  Qi[4] = 0; Qi[5] = delta;
+  gpu_convertToDipoleCanonicalCoordinates(Qi, expanded);
+
+  dqx = tan(ea)/rho*x;
+  if (kickLimit>0 && fabs(dqx)>kickLimit) {
+    dqx = SIGN(dqx)*kickLimit;
+  }
+  dqy = -tan(ea-psi/(1+delta))/rho*y;
+
+  Qi[1] += dqx;
+  Qi[3] += dqy;
+  
+  gpu_convertFromDipoleCanonicalCoordinates(Qi, expanded);
+  *xp = Qi[1];
+  *yp = Qi[3];
 }
 
 __device__ int gpu_inversePoissonCDF(double mu, double C)
@@ -187,12 +238,15 @@ public:
   double dcet0, dcet1, dcet2, dcet3;
   double e1_kick_limit, e2_kick_limit;
   // From CSBEND struct
-  double length, b0, hgap, fint;
+  double length, b0, hgap, fint1, fint2, fintBoth;
   double h1, h2;
   int edge1_effects, edge2_effects; 
   int edge_order, n_kicks;
   int integration_order, d_expansionOrder, d_hasSkew, d_hasNormal;
   unsigned long edgeFlags;
+  long expandHamiltonian;
+  short fseCorrection;
+  double fseCorrectionPathError;
   // From csbend.h globals
   double d_rho0, d_rho_actual, d_rad_coef, d_isrConstant;
   double d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0;
@@ -208,10 +262,11 @@ public:
       double he1, double he2, double psi1, double psi2, double n,
       double dcet0, double dcet1, double dcet2, double dcet3,
       double e1_kick_limit, double e2_kick_limit,
-      double length, double b0, double hgap, double fint, double h1, double h2, 
+      double length, double b0, double hgap, double fint1, double fint2, double fintBoth, double h1, double h2, 
       int edge1_effects, int edge2_effects,
       int edge_order, int n_kicks, int integration_order, 
-      unsigned long edgeFlags, double d_rho0, double d_rho_actual,
+      unsigned long edgeFlags, long expandHamiltonian,
+      short fseCorrection, double fseCorrectionPathError, double d_rho0, double d_rho_actual,
       double d_rad_coef, double d_isrConstant, int d_expansionOrder, int d_hasSkew, int d_hasNormal,
       double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
       int d_distributionBasedRadiation, int d_includeOpeningAngle,
@@ -223,10 +278,11 @@ public:
     he1(he1), he2(he2), psi1(psi1), psi2(psi2), n(n), dcet0(dcet0), 
     dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), e1_kick_limit(e1_kick_limit),
     e2_kick_limit(e2_kick_limit), length(length),
-    b0(b0), hgap(hgap), fint(fint), h1(h1), h2(h2), 
+    b0(b0), hgap(hgap), fint1(fint1), fint2(fint2), fintBoth(fintBoth), h1(h1), h2(h2), 
     edge1_effects(edge1_effects), edge2_effects(edge2_effects), 
     edge_order(edge_order), n_kicks(n_kicks),
-    integration_order(integration_order), edgeFlags(edgeFlags), d_rho0(d_rho0),
+    integration_order(integration_order), edgeFlags(edgeFlags), expandHamiltonian(expandHamiltonian), 
+    fseCorrection(fseCorrection), fseCorrectionPathError(fseCorrectionPathError), d_rho0(d_rho0),
     d_rho_actual(d_rho_actual), d_rad_coef(d_rad_coef),
     d_isrConstant(d_isrConstant), d_expansionOrder(d_expansionOrder), d_hasSkew(d_hasSkew), d_hasNormal(d_hasNormal),
     d_meanPhotonsPerMeter0(d_meanPhotonsPerMeter0),
@@ -255,30 +311,34 @@ public:
     dp = dp0 = coord[5];
 
     if (edgeFlags&BEND_EDGE1_EFFECTS) {
-      rho = (1+dp)*d_rho_actual;
       if (edge_order<=1 || edge1_effects==1) {
-        /* apply edge focusing */
+        /* apply edge focusing, nonsymplectic method */
+        rho = (1+dp)*d_rho_actual;
         delta_xp = tan(e1)/rho*x;
         if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
           delta_xp = SIGN(delta_xp)*e1_kick_limit;
         xp += delta_xp;
         yp -= tan(e1-psi1/(1+dp))/rho*y;
       } else if (edge_order>=2 && edge1_effects==1) {
+        /* apply edge focusing, nonsymplectic method */
+        rho = (1+dp)*d_rho_actual;
         gpu_apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, he1, psi1*(1+dp), -1);
       } else if (edge1_effects==2) {
-        rho = (1+dp)*d_rho_actual;
-
+        /* K. Hwang's symplectic approach */
 	/* load input coordinates into arrays */
 	Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
-        gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, -1., edge_order, b0/d_rho0, e1, 2*hgap, fint, h1);
+	gpu_convertToDipoleCanonicalCoordinates(Qi, expandHamiltonian);
+        gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, -1., edge_order, b0/d_rho0, e1, 2*hgap, fint1>=0?fint1:fintBoth, h1);
 	/* retrieve coordinates from arrays */
-	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+	gpu_convertFromDipoleCanonicalCoordinates(Qf, expandHamiltonian);
 	x  = Qf[0];  
 	xp = Qf[1];  
 	y  = Qf[2];  
 	yp = Qf[3];  
 	dp = Qf[5];
+      } else if (edge1_effects==3) {
+        /* simple-minded symplectic approach */
+        gpu_applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, d_rho_actual, e1, psi1, e1_kick_limit, expandHamiltonian);
       }
     }
 
@@ -293,7 +353,7 @@ public:
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
-    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
+    gpu_convertToDipoleCanonicalCoordinates(Qi, expandHamiltonian);
  
     int particle_lost = 0;
     double s_lost;
@@ -308,25 +368,48 @@ public:
       if (d_gauss_rn) t_gauss_rn1 = &d_gauss_rn[n_kicks*tid];
       if (d_gauss_rn_p2) t_gauss_rn2 = &d_gauss_rn_p2[n_kicks*tid];
       if (d_gauss_rn_p3) t_gauss_rn3 = &d_gauss_rn_p3[n_kicks*tid];
-      particle_lost = !gpu_integrate_csbend_ord4(Qf, Qi, tSigmaDelta2, length, 
-          n_kicks, d_rho0, Po, s_lost,
-          d_rho_actual, d_rad_coef, d_isrConstant, 
-          d_distributionBasedRadiation, d_includeOpeningAngle,
-          d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-          d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
-          d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
+      if (expandHamiltonian) {
+        particle_lost = !gpu_integrate_csbend_ord4_expanded(Qf, Qi, tSigmaDelta2, length, 
+                                                            n_kicks, d_rho0, Po, s_lost,
+                                                            d_rho_actual, d_rad_coef, d_isrConstant, 
+                                                            d_distributionBasedRadiation, d_includeOpeningAngle,
+                                                            d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                                                            d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
+                                                            d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
+      } else {
+        particle_lost = !gpu_integrate_csbend_ord4(Qf, Qi, tSigmaDelta2, length, 
+                                                   n_kicks, d_rho0, Po, s_lost,
+                                                   d_rho_actual, d_rad_coef, d_isrConstant, 
+                                                   d_distributionBasedRadiation, d_includeOpeningAngle,
+                                                   d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                                                   d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_gauss_rn2, t_gauss_rn3, t_state, srGaussianLimit,
+                                                   d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
+      }
     } else {
       if (d_gauss_rn) t_gauss_rn1 = &d_gauss_rn[n_kicks*tid];
-      particle_lost = !gpu_integrate_csbend_ord2(Qf, Qi, tSigmaDelta2, length,
-          n_kicks, d_rho0, Po, s_lost,
-          d_rho_actual, d_rad_coef, d_isrConstant, 
-          d_distributionBasedRadiation, d_includeOpeningAngle,
-          d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
-          d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_state, srGaussianLimit,
-          d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
-    }
+      if (expandHamiltonian) {
+        particle_lost = !gpu_integrate_csbend_ord2_expanded(Qf, Qi, tSigmaDelta2, length,
+                                                            n_kicks, d_rho0, Po, s_lost,
+                                                            d_rho_actual, d_rad_coef, d_isrConstant, 
+                                                            d_distributionBasedRadiation, d_includeOpeningAngle,
+                                                            d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                                                            d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_state, srGaussianLimit,
+                                                            d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
 
-    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+      } else {
+        particle_lost = !gpu_integrate_csbend_ord2(Qf, Qi, tSigmaDelta2, length,
+                                                   n_kicks, d_rho0, Po, s_lost,
+                                                   d_rho_actual, d_rad_coef, d_isrConstant, 
+                                                   d_distributionBasedRadiation, d_includeOpeningAngle,
+                                                   d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                                                   d_expansionOrder, d_hasSkew, d_hasNormal, t_gauss_rn1, t_state, srGaussianLimit,
+                                                   d_refTrajectoryData, d_refTrajectoryMode, &apertureData);
+      }
+    }
+    if (fseCorrection==1)
+      Qf[4] -= fseCorrectionPathError;
+
+    gpu_convertFromDipoleCanonicalCoordinates(Qf, expandHamiltonian);
 
     if (particle_lost) {
       // TODO: accepted particles
@@ -369,29 +452,30 @@ public:
 
     if (edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
-      rho = (1+dp)*d_rho_actual;
       if (edge_order<=1 || edge2_effects==1) {
+        rho = (1+dp)*d_rho_actual;
         delta_xp = tan(e2)/rho*x;
         if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
           delta_xp = SIGN(delta_xp)*e2_kick_limit;
         xp += delta_xp;
         yp -= tan(e2-psi2/(1+dp))/rho*y;
       } else if (edge_order>=2 && edge2_effects==1) {
+        rho = (1+dp)*d_rho_actual;
         gpu_apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, he2, psi2*(1+dp), 1);
       } else if (edge2_effects==2) {
-        //rho = (1+dp)*d_rho_actual;
-
 	/* load input coordinates into arrays */
 	Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
-	gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
-        gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, 1., edge_order, b0/d_rho0, e2, 2*hgap, fint, h2);
+	gpu_convertToDipoleCanonicalCoordinates(Qi, expandHamiltonian);
+        gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, 1., edge_order, b0/d_rho0, e2, 2*hgap, fint2>=0?fint2:fintBoth, h2);
 	/* retrieve coordinates from arrays */
-	gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+	gpu_convertFromDipoleCanonicalCoordinates(Qf, expandHamiltonian);
 	x  = Qf[0];  
 	xp = Qf[1];  
 	y  = Qf[2];  
 	yp = Qf[3];  
 	dp = Qf[5];
+      } else if (edge2_effects==3) {
+        gpu_applySimpleDipoleEdgeKick(&xp, &yp, x, y, dp, d_rho_actual, e2, psi2, e2_kick_limit, expandHamiltonian);
       }
     }
     
@@ -421,7 +505,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
   long j;
   double n, fse;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
-  double angle, e1, e2, Kg;
+  double angle, e1, e2, Kg1, Kg2;
   double psi1, psi2, he1, he2;
   double dcoord_etilt[6];
   double dxi, dyi, dzi;
@@ -658,7 +742,7 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
   }
 
 
-  fse = csbend->fse;
+  fse = csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
   n = -csbend->b[0]/h;
   if (fse>-1)
@@ -678,9 +762,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
     fflush(stdout);
   
   /* angles for fringe-field effects */
-  Kg   = 2*csbend->hgap*csbend->fint;
-  psi1 = Kg/rho_actual/cos(e1)*(1+sqr(sin(e1)));
-  psi2 = Kg/rho_actual/cos(e2)*(1+sqr(sin(e2)));
+  Kg1  = 2*csbend->hgap*(csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
+  psi1 = Kg1/rho_actual/cos(e1)*(1+sqr(sin(e1)));
+  Kg2  = 2*csbend->hgap*(csbend->fint[csbend->e2Index]>=0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth);
+  psi2 = Kg2/rho_actual/cos(e2)*(1+sqr(sin(e2)));
 
   /* rad_coef is d((P-Po)/Po)/ds for the on-axis, on-momentum particle, where po is the momentum of
    * the central particle.
@@ -820,10 +905,10 @@ long gpu_track_through_csbend(long n_part, CSBEND *csbend,
         sin_ttilt, e1, e2, he1, he2, psi1, psi2, n, dcoord_etilt[0],
         dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3], 
         e1_kick_limit, e2_kick_limit, 
-        csbend->length, csbend->b[0], csbend->hgap, csbend->fint, 
+        csbend->length, csbend->b[0], csbend->hgap, csbend->fint[csbend->e1Index], csbend->fint[csbend->e2Index], csbend->fintBoth,
         csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
         csbend->edge_order, csbend->n_kicks, csbend->integration_order,
-        csbend->edgeFlags, rho0, rho_actual, rad_coef, isrConstant,
+        csbend->edgeFlags, csbend->expandHamiltonian, csbend->fseCorrection, csbend->fseCorrectionPathError, rho0, rho_actual, rad_coef, isrConstant,
         expansionOrder1, hasSkew, hasNormal, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
         distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
         d_refTrajectoryData, refTrajectoryMode, apertureData)); 
@@ -1001,6 +1086,132 @@ gpu_integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2,
       dist += factor*(1+DPoP);
       f = cos_phi/cosi;
       X  = rho0*(f-1) + f*X;
+    }
+
+    if (d_refTrajectoryMode==RECORD_TRAJECTORY) {
+      d_refTrajectoryData[i*5+0] = X;
+      d_refTrajectoryData[i*5+1] = QX;
+      d_refTrajectoryData[i*5+2] = Y;
+      d_refTrajectoryData[i*5+3] = QY;
+      d_refTrajectoryData[i*5+4] = dist - ds;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (d_refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= d_refTrajectoryData[i*5+0];
+      QX -= d_refTrajectoryData[i*5+1];
+      Y -= d_refTrajectoryData[i*5+2];
+      QY -= d_refTrajectoryData[i*5+3];
+      dist -= d_refTrajectoryData[i*5+4];
+    }
+#if defined(IEEE_MATH)
+    if (isnan(X) || isnan(QX) || isnan(Y) || isnan(QY)) {
+      s_lost = dist;
+      return 0;
+    }
+#endif
+    if (FABS(X)>COORD_LIMIT || FABS(Y)>COORD_LIMIT ||
+        FABS(QX)>SLOPE_LIMIT || FABS(QY)>SLOPE_LIMIT) {
+      s_lost = dist;
+      return 0;
+    }
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+  }
+
+  Qf[4] += dist;
+  return 1;
+}
+
+__device__ long 
+gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2, 
+    double s, int n, double rho0, 
+    double p0, double &s_lost,
+    double d_rho_actual, double d_rad_coef, double d_isrConstant, 
+    int d_distributionBasedRadiation, int d_includeOpeningAngle,
+    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
+    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, curandState_t *state,
+    double srGaussianLimit,  double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
+{
+  int i;
+  double ds, dsh, dist;
+  double Fx, Fy, x, y;
+  
+#define X0 Qi[0]
+#define XP0 Qi[1]
+#define Y0 Qi[2]
+#define YP0 Qi[3]
+#define S0 Qi[4]
+#define DPoP0 Qi[5]
+
+#define X Qf[0]
+#define QX Qf[1]
+#define Y Qf[2]
+#define QY Qf[3]
+#define S Qf[4]
+#define DPoP Qf[5]
+
+//  if (!Qf)
+//    bombElegant("NULL final coordinates pointer ()", NULL);
+//  if (!Qi)
+//    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord2)", NULL);
+//  if (n<1)
+//    bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
+
+
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+  
+  X = X0;
+  Y = Y0;
+  S = S0;
+  DPoP = DPoP0;
+
+  ds = s/n;
+  dsh = ds/2;
+  dist = 0;
+  
+  for (i=0; i<n; i++) {
+    if (i==0) {
+      /* do half-length drift */
+      X += QX*dsh*(1+X/rho0)/(1+DPoP);
+      Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+      QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    }
+
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+
+    /* calculate the scaled fields */
+    x = X;
+    y = Y;
+
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew, d_hasNormal);
+
+    /* do kicks */
+    QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
+    QY += ds*(1+X/rho0)*Fx/d_rho_actual;
+    if (d_rad_coef || d_isrConstant)
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, 
+		       X, Y, (i+0.5)*ds/rho0, s/rho0, 1./rho0, Fx, Fy, 
+		       ds, d_rad_coef, ds, d_isrConstant, 
+                       d_distributionBasedRadiation, d_includeOpeningAngle,
+                       d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0, 
+                       p0, d_gauss_rn1, state, srGaussianLimit);
+    
+    if (i==n-1) {
+      /* do half-length drift */
+      X += QX*dsh*(1+X/rho0)/(1+DPoP);
+      Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+      QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    }
+    else {
+      /* do full-length drift */
+      X += QX*ds*(1+X/rho0)/(1+DPoP);
+      Y += QY*ds*(1+X/rho0)/(1+DPoP);
+      QX += ds/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
     }
 
     if (d_refTrajectoryMode==RECORD_TRAJECTORY) {
@@ -1285,6 +1496,174 @@ gpu_integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2,
   return 1;
 }
 
+__device__ long 
+gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, 
+    double s, int n, double rho0, double p0,
+    double &s_lost,
+    double d_rho_actual, double d_rad_coef, double d_isrConstant, 
+    int d_distributionBasedRadiation, int d_includeOpeningAngle,
+    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
+    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
+    double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
+{
+  int i;
+  double ds, dsh, dist;
+  double Fx, Fy, x, y;
+  
+#define X0 Qi[0]
+#define XP0 Qi[1]
+#define Y0 Qi[2]
+#define YP0 Qi[3]
+#define S0 Qi[4]
+#define DPoP0 Qi[5]
+
+#define X Qf[0]
+#define QX Qf[1]
+#define Y Qf[2]
+#define QY Qf[3]
+#define S Qf[4]
+#define DPoP Qf[5]
+
+  /* BETA is 2^(1/3) */
+#define BETA 1.25992104989487316477
+
+//  if (!Qf)
+//    bombElegant("NULL final coordinates pointer ()", NULL);
+//  if (!Qi)
+//    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+//  if (n<1)
+//    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
+
+  
+  memcpy(Qf, Qi, sizeof(*Qi)*6);
+
+  dist = 0;
+
+  s /= n;
+  for (i=0; i<n; i++) {
+    if (i>0) {
+      d_gauss_rn1++;
+      d_gauss_rn2++;
+      d_gauss_rn3++;
+    }
+    
+    /* do first drift */
+    dsh = s/2/(2-BETA);
+    X += QX*dsh*(1+X/rho0)/(1+DPoP);
+    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+    QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+ 
+    /* do first kick */
+    ds = s/(2-BETA);
+    /* -- calculate the scaled fields */
+    x = X;
+    y = Y;
+
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew, d_hasNormal);
+    
+    /* --do kicks */
+    QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
+    QY += ds*(1+X/rho0)*Fx/d_rho_actual;
+    if (d_rad_coef || d_isrConstant) {
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
+		       X, Y, (i+1./3)*s, s*n, 1./rho0, Fx, Fy, 
+		       ds, d_rad_coef, s/3, d_isrConstant,
+                       d_distributionBasedRadiation, d_includeOpeningAngle,
+                       d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                       p0, d_gauss_rn1, state, srGaussianLimit);
+    }
+
+    /* do second drift */
+    dsh = s*(1-BETA)/(2-BETA)/2;
+    X += QX*dsh*(1+X/rho0)/(1+DPoP);
+    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+    QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+    
+    /* do second kick */
+    ds = -s*BETA/(2-BETA);
+    /* -- calculate the scaled fields */
+    x = X;
+    y = Y;
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew, d_hasNormal);
+
+    /* --do kicks */
+    QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
+    QY += ds*(1+X/rho0)*Fx/d_rho_actual;
+    if (d_rad_coef || d_isrConstant)
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
+		       X, Y, (i+2./3)*s, s*n, 1./rho0, Fx, Fy, 
+		       ds, d_rad_coef, s/3, d_isrConstant,
+                       d_distributionBasedRadiation, d_includeOpeningAngle,
+                       d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                       p0, d_gauss_rn2, state, srGaussianLimit);
+
+    /* do third drift */
+    dsh = s*(1-BETA)/(2-BETA)/2;
+    X += QX*dsh*(1+X/rho0)/(1+DPoP);
+    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+    QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+    
+    /* do third kick */
+    ds = s/(2-BETA);
+    /* -- calculate the scaled fields */
+    x = X;
+    y = Y;
+    gpu_computeCSBENDFields(&Fx, &Fy, x, y, d_expansionOrder, d_hasSkew, d_hasNormal);
+
+    /* --do kicks */
+    QX += -ds*(1+X/rho0)*Fy/d_rho_actual;
+    QY += ds*(1+X/rho0)*Fx/d_rho_actual;
+    if (d_rad_coef || d_isrConstant) 
+      gpu_addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2,
+		       X, Y, (i+1)*s, n*s, 1./rho0, Fx, Fy, 
+		       ds, d_rad_coef, s/3, d_isrConstant,
+                       d_distributionBasedRadiation, d_includeOpeningAngle,
+                       d_meanPhotonsPerMeter0, d_normalizedCriticalEnergy0,
+                       p0, d_gauss_rn3, state, srGaussianLimit);
+    
+    /* do fourth drift */
+    dsh = s/2/(2-BETA);
+    X += QX*dsh*(1+X/rho0)/(1+DPoP);
+    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
+    QX += dsh/rho0*((1+DPoP) - (sqr(QX)+sqr(QY))/(2*(1+DPoP)));
+    if (apData && !gpu_checkMultAperture(X, Y, apData)) {
+      s_lost = dist;
+      return 0;
+    }
+
+    if (d_refTrajectoryMode==RECORD_TRAJECTORY) {
+      d_refTrajectoryData[i*5+0] = X;
+      d_refTrajectoryData[i*5+1] = QX;
+      d_refTrajectoryData[i*5+2] = Y;
+      d_refTrajectoryData[i*5+3] = QY;
+      d_refTrajectoryData[i*5+4] = dist - s;
+      X = QX = Y = QY = dist = 0;
+    }
+    if (d_refTrajectoryMode==SUBTRACT_TRAJECTORY) {
+      X -= d_refTrajectoryData[i*5+0];
+      QX -= d_refTrajectoryData[i*5+1];
+      Y -= d_refTrajectoryData[i*5+2];
+      QY -= d_refTrajectoryData[i*5+3];
+      dist -= d_refTrajectoryData[i*5+4];
+    }
+  }
+
+  Qf[4] += dist;
+  return 1;
+}
+
 class gpu_track_through_csbendCSR_kernel1{
 public:
   double length;
@@ -1370,12 +1749,13 @@ public:
     double Qi[6], Qf[6];
     double rho = (1+DP)*d_rho_actual;
     if (edge_order<=1 && edge1_effects==1) {
+      /* apply edge focusing, nonsymplectic method */
       double delta_xp = tan(e1)/rho*X;
       XP += delta_xp;
       YP -= tan(e1-psi1/(1+DP))/rho*Y;
     } else if (edge_order>=2 && edge1_effects==1) 
       gpu_apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
-    else if (edge1_effects>=2) {
+    else if (edge1_effects==2) {
       //rho = (1+DP)*d_rho_actual;
 
       /* load input coordinates into arrays */
@@ -1385,15 +1765,17 @@ public:
       Qi[3] = YP;
       Qi[4] = 0;  
       Qi[5] = DP;
-      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
+      gpu_convertToDipoleCanonicalCoordinates(Qi, 0);
       gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, -1., edge_order, b0/d_rho0, e1, 2*hgap, fint, h1);
       /* retrieve coordinates from arrays */
-      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+      gpu_convertFromDipoleCanonicalCoordinates(Qf, 0);
       X  = Qf[0];  
       XP = Qf[1];  
       Y  = Qf[2];  
       YP = Qf[3];  
       DP = Qf[5];
+    } else if (edge1_effects==3) {
+      gpu_applySimpleDipoleEdgeKick(&XP, &YP, X, Y, DP, d_rho_actual, e1, psi1, -1.0, 0);
     }
   }
 };
@@ -1472,7 +1854,7 @@ public:
     Qi[3] = YP;
     Qi[4] = 0;  
     Qi[5] = DP;
-    gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
+    gpu_convertToDipoleCanonicalCoordinates(Qi, 0);
   
     int particle_lost = 0;
     double s_lost; /* unused here */
@@ -1510,7 +1892,7 @@ public:
       d_sortIndex[tid] = tid;  
   
     /* retrieve coordinates from arrays */
-    gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+    gpu_convertFromDipoleCanonicalCoordinates(Qf, 0);
     X  = Qf[0];  
     XP = Qf[1];  
     Y  = Qf[2];  
@@ -1641,7 +2023,7 @@ public:
       YP -= tan(e2-psi2/(1+DP))/rho*Y;
     } else if (edge_order>=2 && edge2_effects==1) {
       gpu_apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
-    } else if (edge2_effects>=2) {
+    } else if (edge2_effects==2) {
       //rho = (1+DP)*rho_actual;
 
       /* load input coordinates into arrays */
@@ -1651,15 +2033,17 @@ public:
       Qi[3] = YP;
       Qi[4] = 0;  
       Qi[5] = DP;
-      gpu_convertToDipoleCanonicalCoordinates(Qi, d_rho0);
+      gpu_convertToDipoleCanonicalCoordinates(Qi, 0);
       gpu_dipoleFringeSym(Qf, Qi, d_rho_actual, 1., edge_order, b0/d_rho0, e2, 2*hgap, fint, h2);
       /* retrieve coordinates from arrays */
-      gpu_convertFromDipoleCanonicalCoordinates(Qf, d_rho0);
+      gpu_convertFromDipoleCanonicalCoordinates(Qf, 0);
       X  = Qf[0];  
       XP = Qf[1];  
       Y  = Qf[2];  
       YP = Qf[3];  
       DP = Qf[5];
+    } else if (edge2_effects==3) {
+      gpu_applySimpleDipoleEdgeKick(&XP, &YP, X, Y, DP, d_rho_actual, e2, psi2, -1.0, 0);
     }
 
   }
@@ -1924,9 +2308,9 @@ long gpu_track_through_csbendCSR(long n_part, CSRCSBEND *csbend,
     csbend->nonlinear = 0;
     Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
-                                   angle/csbend->n_kicks, 0.0, 0.0, 
-                                   0.0, 0.0, csbend->b[0]*h,  0.0,
-                                   0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
+                           angle/csbend->n_kicks, 0.0, 0.0, 
+                           0.0, 0.0, csbend->b[0]*h,  0.0,
+                           0.0, 0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
   }
   computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
@@ -3632,6 +4016,7 @@ __device__ void
 gpu_apply_edge_effects(double *x, double *xp, double *y, double *yp, 
                        double rho, double n, double beta, double he,
                        double psi, int which_edge)
+/* Applies edge effects using non-symplectic K. L. Brown method to second order */
 {
   double h, tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
   double R21, R43;

@@ -50,6 +50,8 @@ __device__ void gpu_apply_canonical_multipole_kicks(double *qx, double *qy,
 __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
     double *sum_Fx_return, double *sum_Fy_return, double x, double y, 
     int order, double KnL, int skew);
+__device__ int gpu_convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta, short expandHamiltonian);
+__device__ int gpu_convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta, short expandHamiltonian);
 
 class gpu_multipole_tracking2_kernel {
 public:
@@ -59,6 +61,7 @@ public:
   curandState_t *state;
   double dx, dy, xkick, ykick, Po, rad_coef, isr_coef, KnL, KnL2, drift, z_start;
   int order, order2, n_parts, integ_order;
+  short expandHamiltonian;
   // Associated MULTIPOLE_DATA is also in constant memory
   // From MULTIPOLE_DATA (*multData) 
   int multDataOrders; // set to -1 if no multData
@@ -77,7 +80,7 @@ public:
       double KnL, double KnL2, double drift, double z_start, int order, int order2,
       int n_parts, int integ_order, int multDataOrders, int edgeMultDataOrders,
       int steeringMultDataOrders, int present, double xMax, double xCen,
-      double yMax, double yCen, int radial, double srGaussianLimit) :
+      double yMax, double yCen, int radial, double srGaussianLimit, short expandHamiltonian) :
     d_sortIndex(d_sortIndex), d_sigmaDelta2(d_sigmaDelta2),
     state(state), dx(dx), dy(dy), xkick(xkick), ykick(ykick), Po(Po),
     rad_coef(rad_coef), isr_coef(isr_coef), KnL(KnL), KnL2(KnL2), drift(drift),
@@ -86,7 +89,7 @@ public:
     edgeMultDataOrders(edgeMultDataOrders),
     steeringMultDataOrders(steeringMultDataOrders), present(present),
     xMax(xMax), xCen(xCen), yMax(yMax), yCen(yCen), radial(radial),
-    srGaussianLimit(srGaussianLimit) {};
+    srGaussianLimit(srGaussianLimit), expandHamiltonian(expandHamiltonian) {};
 
   __device__ unsigned int operator()(gpuParticleAccessor& coord) {
     unsigned int tid = coord.getParticleIndex();
@@ -97,10 +100,10 @@ public:
     if (d_sigmaDelta2) tSigmaDelta2 = &d_sigmaDelta2[tid];
     if (integ_order==4) {
       particle_lost = !gpu_integrate_kick_multipole_ord4(coord, KnL, KnL2, n_parts, 
-                         drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit);
+                         drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit, expandHamiltonian);
     } else if (integ_order==2) {
       particle_lost = !gpu_integrate_kick_multipole_ord2(coord, KnL, KnL2, n_parts, 
-                         drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit);
+                         drift, &dzLoss, tSigmaDelta2, radial, srGaussianLimit, expandHamiltonian);
     }
     if (particle_lost) {
       coord[4] = z_start+dzLoss;
@@ -121,8 +124,8 @@ public:
   __device__ int
   gpu_integrate_kick_multipole_ord2(gpuParticleAccessor& coord, double KnL, double KnL2, long n_kicks, 
       double drift, double *dzLoss, double *sigmaDelta2, int radial,
-      double srGaussianLimit) {
-    double p, qx, qy, denom, beta0, beta1, s;
+      double srGaussianLimit, short expandHamiltonian) {
+    double p, qx, qy, beta0, beta1, s;
     double sum_Fx, sum_Fy;
     int i_kick, imult;
     
@@ -152,11 +155,10 @@ public:
       return 0;
     }
   
+    *dzLoss = 0;
+
     /* calculate initial canonical momenta */
-    denom = 1+sqr(xp)+sqr(yp);
-    denom = sqrt(denom);
-    qx = (1+dp)*xp/denom;
-    qy = (1+dp)*yp/denom;
+    gpu_convertSlopesToMomenta(&qx, &qy, xp, yp, dp, expandHamiltonian);
   
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
@@ -168,22 +170,22 @@ public:
                                         edgeMultDataJnL[imult], 1);
       }
     }
-    // for numerical accuracy
-    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-    if (denom <= 0) return 0;
-    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    //  return 0;
-    //}
-    denom = sqrt(denom);
-    xp = qx/denom;
-    yp = qy/denom;
- 
-    *dzLoss = 0;
+
+    /* We must do this in case steering or edge multipoles were run. We do it even if not in order
+     * to avoid numerical precision issues that may subtly change the results
+     */
+    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+      return 0;
+
     for (i_kick=0; i_kick<n_parts; i_kick++) {
       if (drift) {
         x += xp*drift*(i_kick?2:1);
         y += yp*drift*(i_kick?2:1);
-        s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+        if (expandHamiltonian) {
+          s += drift*(i_kick?2:1)*(1 + (sqr(xp) + sqr(yp))/2);
+        } else {
+          s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
+        }
         *dzLoss += drift*(i_kick?2:1);
       }
       if (present &&
@@ -238,24 +240,17 @@ public:
                                           multDataJnL[imult]/n_parts, 1);
       }
   
-      // for numerical accuracy
-      denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-      if (denom <= 0) return 0;
-      //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-      //  return 0;
-      //}
-      denom = sqrt(denom);
-      xp = qx/denom;
-      yp = qy/denom;
+      if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+        return 0;
+
       if ((rad_coef || isr_coef) && drift) {
         double deltaFactor, F2, dsFactor;
         deltaFactor = sqr(1+dp);
         F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL/(2*drift));
         dsFactor = xp*xp+yp*yp;
         dsFactor = sqrt(1+dsFactor)*2*drift;
-        // comment out useless q->q transform
-        //qx /= (1+dp);
-        //qy /= (1+dp);
+        qx /= (1+dp);
+        qy /= (1+dp);
         if (rad_coef)
           dp -= rad_coef*deltaFactor*F2*dsFactor;
         if (isr_coef>0) {
@@ -267,15 +262,21 @@ public:
         }
         if (sigmaDelta2)
           *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-        //qx *= (1+dp);
-        //qy *= (1+dp);
+        qx *= (1+dp);
+        qy *= (1+dp);
+        if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+          return 0;
       }
     }
     if (drift) {
       /* go through final drift */
       x += xp*drift;
       y += yp*drift;
-      s += drift*sqrt(1 + sqr(xp) + sqr(yp));
+      if (expandHamiltonian) {
+        s += drift*(1 + (sqr(xp) + sqr(yp))/2);
+      } else {
+        s += drift*sqrt(1 + sqr(xp) + sqr(yp));
+      }
       *dzLoss += drift;
     }
     if (present &&
@@ -295,15 +296,8 @@ public:
       }
     }
 
-    // for numerical accuracy
-    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-    if (denom <= 0) return 0;
-    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    //  return 0;
-    //}
-    denom = sqrt(denom);
-    xp = qx/denom;
-    yp = qy/denom;
+    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+      return 0;
   
     //coord[0] = x;
     //coord[1] = xp;
@@ -336,8 +330,8 @@ public:
   __device__ int
   gpu_integrate_kick_multipole_ord4(gpuParticleAccessor& coord, double KnL, double KnL2, long n_kicks,
       double drift, double *dzLoss, double *sigmaDelta2, int radial,
-      double srGaussianLimit) {
-    double p, qx, qy, denom, beta0, beta1, s;
+      double srGaussianLimit, short expandHamiltonian) {
+    double p, qx, qy, beta0, beta1, s;
     double sum_Fx, sum_Fy;
     int i_kick, step, imult;
     double dsh;
@@ -372,9 +366,7 @@ public:
     }
   
     /* calculate initial canonical momenta */
-    qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
-    qy = (1+dp)*yp/denom;
-  
+    gpu_convertSlopesToMomenta(&qx, &qy, xp, yp, dp, expandHamiltonian);  
 
     if (edgeMultDataOrders>=0) {
       for (imult=0; imult<edgeMultDataOrders; imult++) {
@@ -388,14 +380,11 @@ public:
                                           edgeMultDataJnL[imult], 1);
       }
     }
-    // for numerical accuracy
-    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-    if (denom <= 0) return 0;
-    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    //  return 0;
-    //}
-    xp = qx/(denom=sqrt(denom));
-    yp = qy/denom;
+    /* We must do this in case steering or edge multipoles were run. We do it even if not in order
+     * to avoid numerical precision issues that may subtly change the results
+     */
+    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+      return 0;
 
     *dzLoss = 0;
     for (i_kick=0; i_kick<n_parts; i_kick++) {
@@ -409,7 +398,11 @@ public:
           dsh = drift*driftFrac[step];
           x += xp*dsh;
           y += yp*dsh;
-          s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+          if (expandHamiltonian) {
+            s += dsh*(1 + (sqr(xp) + sqr(yp))/2);
+          } else {
+            s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+          }
           *dzLoss += dsh;
         }
   
@@ -467,19 +460,12 @@ public:
                                             1);
           }
         }
-        // for numerical accuracy
-        denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-        if (denom <= 0) return 0;
-        //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-        //  return 0;
-        //}
-        xp = qx/(denom=sqrt(denom));
-        yp = qy/denom;
+        if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+          return 0;
         if ((rad_coef || isr_coef) && drift) {
           double deltaFactor, F2, dsFactor, dsISRFactor;
-          // comment out useless q->q transform
-          //qx /= (1+dp);
-          //qy /= (1+dp);
+          qx /= (1+dp);
+          qy /= (1+dp);
           deltaFactor = sqr(1+dp);
           F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL/drift);
           dsFactor = xp*xp+yp*yp;
@@ -497,8 +483,10 @@ public:
           }
           if (sigmaDelta2)
             *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
-          //qx *= (1+dp);
-          //qy *= (1+dp);
+          qx *= (1+dp);
+          qy *= (1+dp);
+          if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+            return 0;
         }
       }
     }
@@ -521,15 +509,9 @@ public:
                                           edgeMultDataJnL[imult], 1);
       }
     }
-
-    // for numerical accuracy
-    denom=(1+dp)*(1+dp)-(qx*qx+qy*qy);
-    if (denom <= 0) return 0;
-    //if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
-    //  return 0;
-    //}
-    xp = qx/(denom=sqrt(denom));
-    yp = qy/denom;
+    
+    if (!gpu_convertMomentaToSlopes(&xp, &yp, qx, qy, dp, expandHamiltonian))
+      return 0;
   
     //coord[0] = x;
     //coord[1] = xp;
@@ -564,6 +546,7 @@ public:
 };
 
 __device__ extern unsigned long multipoleKicksDone;
+unsigned short host_expandHamiltonian;
 
 extern "C" {
 
@@ -607,6 +590,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
     n_kicks = kquad->n_kicks;
+    host_expandHamiltonian = kquad->expandHamiltonian;
     order = 1;
     if ((lEffective = kquad->lEffective)<=0)
       lEffective = kquad->length;
@@ -671,6 +655,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   case T_KSEXT:
     ksext = ((KSEXT*)elem->p_elem);
     n_kicks = ksext->n_kicks;
+    host_expandHamiltonian = ksext->expandHamiltonian;
     order = 2;
     if (ksext->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
@@ -733,6 +718,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   case T_KOCT:
     koct = ((KOCT*)elem->p_elem);
     n_kicks = koct->n_kicks;
+    host_expandHamiltonian = koct->expandHamiltonian;
     order = 3;
     if (koct->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
@@ -784,6 +770,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     /* Implemented as a quadrupole with sextupole as a secondary multipole */
     kquse = ((KQUSE*)elem->p_elem);
     n_kicks = kquse->n_kicks;
+    host_expandHamiltonian = kquse->expandHamiltonian;
     order = 1;
     KnL = kquse->k1*kquse->length*(1+kquse->fse1);
     drift = kquse->length;
@@ -960,7 +947,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
     edgeMultData?edgeMultData->orders:-1,
     steeringMultData?steeringMultData->orders:-1, apertureData.present,
     apertureData.xMax, apertureData.xCen, apertureData.yMax,
-    apertureData.yCen, elem->type==T_KQUAD?kquad->radial:0, srGaussianLimit));
+    apertureData.yCen, elem->type==T_KQUAD?kquad->radial:0, srGaussianLimit, host_expandHamiltonian));
   gpuErrorHandler("gpu_multipole_tracking2::gpu_multipole_tracking2_kernel");
 
   if (sigmaDelta2) {
@@ -997,6 +984,7 @@ long gpu_multipole_tracking2(long n_part, ELEMENT_LIST *elem,
   }
 
   log_exit("multipole_tracking2");
+  host_expandHamiltonian = 0;
   return n_part;
 }
 
@@ -1070,4 +1058,34 @@ __device__ void gpu_applyRadialCanonicalMultipoleKicks(double *qx, double *qy,
     *sum_Fx_return = sum_Fx;
   if (sum_Fy_return)
     *sum_Fy_return = sum_Fy;
+}
+
+__device__ int gpu_convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta, short expandHamiltonian)
+{
+  if (expandHamiltonian) {
+    *qx = (1+delta)*xp;
+    *qy = (1+delta)*yp;
+  } else {
+    double denom;
+    denom = sqrt(1+sqr(xp)+sqr(yp));
+    *qx = (1+delta)*xp/denom;
+    *qy = (1+delta)*yp/denom;
+  }
+  return 1;
+}
+
+__device__ int gpu_convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta, short expandHamiltonian)
+{
+  if (expandHamiltonian) {
+    *xp = qx/(1+delta);
+    *yp = qy/(1+delta);
+  } else {
+    double denom;
+    if ((denom=(1+delta)*(1+delta)-(qx*qx+qy*qy))<=0)
+      return 0;
+    denom = sqrt(denom);
+    *xp = qx/denom;
+    *yp = qy/denom;
+  }
+  return 1;
 }
