@@ -300,14 +300,14 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
     bombElegant("TFBDRIVER linked to TFBPICKUP with PLANE=delta or time, but driver not working on longitudinal plane", NULL);
 
   if (tfbd->startPass>0 && tfbd->startPass!=tfbd->pickup->startPass)
-    bombElegantVA("TFBDRIVER linked to TFBPICKUP with different START_PASS value (%ld vs %ld).", 
+    bombElegantVA((char*)"TFBDRIVER linked to TFBPICKUP with different START_PASS value (%ld vs %ld).", 
 		  tfbd->startPass, tfbd->pickup->startPass);
   if (tfbd->endPass>0 && tfbd->endPass!=tfbd->pickup->endPass)
-    bombElegantVA("TFBDRIVER linked to TFBPICKUP with different END_PASS value (%ld vs %ld).", 
+    bombElegantVA((char*)"TFBDRIVER linked to TFBPICKUP with different END_PASS value (%ld vs %ld).", 
 		  tfbd->endPass, tfbd->pickup->endPass);
 
   if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
-    bombElegantVA("TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
+    bombElegantVA((char*)"TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
   if (pass%updateInterval!=0) {
     if (time0) 
       free(time0);
@@ -544,7 +544,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
 #endif
           if (!SDDS_UpdatePage(tfbd->SDDSout, FLUSH_TABLE)) {
             SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-            SDDS_Bomb("problem flushing data for TFBDRIVER output file");
+            SDDS_Bomb((char*)"problem flushing data for TFBDRIVER output file");
           }
           tfbd->dataWritten = 1;
         }
@@ -565,7 +565,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
                                 "ResidualVoltage", tfbd->VResidual,
                                 NULL))) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          SDDS_Bomb("problem writing data for TFBDRIVER output file");
+          SDDS_Bomb((char*)"problem writing data for TFBDRIVER output file");
         }
         tfbd->outputIndex++;
         tfbd->dataWritten = 0;
@@ -680,7 +680,7 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
          ) ||
         !SDDS_WriteLayout(tfbd->SDDSout) || !SDDS_StartPage(tfbd->SDDSout, tfbd->outputInterval)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("Problem setting up TFBDRIVER output file");
+      SDDS_Bomb((char*)"Problem setting up TFBDRIVER output file");
     }
   }
   tfbd->dataWritten = tfbd->outputIndex = 0;

@@ -475,7 +475,7 @@ long multipole_tracking(
     long order;         /* order (n) */
     long n_kicks;       /* number of kicks to split multipole into */
     long i_part, i_kick, i, i_top, is_lost;
-    double sum_Fx, sum_Fy, denom, qx, qy;
+    double sum_Fx, sum_Fy, qx, qy;
     double *coord;
     double drift;
     double *coef;

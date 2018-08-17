@@ -38,6 +38,7 @@ void BRAT_store_data(double *qp, double *q, double s, double exval);
 void BRAT_optimize_magnet(unsigned long flags);
 double refineAngle(double theta, double z0, double x0, double zv, double xv, 
                    double z1, double x1);
+void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval);
 static long verbose_optimize = 0;
 
 /* parameters of element needed for integration */
@@ -568,7 +569,7 @@ void BRAT_lorentz_integration(
     double eomc;
     double **A, BA, pA, step, p[3], xyz0[3], xyz[3], p0, B[3], rho;
     double theta, theta0, theta1, theta2, tm_a, tm_b, tm_c, pathLength, zStop;
-    long  nKicks, ik;
+    long  nKicks;
     nKicks = useFTABLE;
     eomc = -particleCharge/particleMass/c_mks;
     step = 2*(zf-zi)/nKicks;
