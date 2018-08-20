@@ -19,6 +19,7 @@
      long mpi_io_read_buffer_size = 0;
      long mpi_io_write_buffer_size = 0;
      long usleep_mpi_io_kludge = 0;
+     double tracking_matrix_step_factor = 1;
 #end
 
 #namelist run_setup static

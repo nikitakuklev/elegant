@@ -81,12 +81,13 @@ extern long particleIsElectron;
 /* number of sigmas for gaussian random numbers in radiation emission simulation in CSBEND, KQUAD, etc. */
 extern double srGaussianLimit;
 
-/* various user-controlled global flags (global_settings namelist) */
+/* various user-controlled global flags and settings (global_settings namelist) */
 extern long inhibitFileSync;
 extern long echoNamelists;
 extern long mpiRandomizationMode;
 extern long exactNormalizedEmittance;
 extern long shareTrackingBasedMatrices;
+extern double trackingMatrixStepFactor;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -1031,7 +1032,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 28
+#define N_CCBEND_PARAMS 29
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2271,7 +2272,7 @@ extern PARAMETER ccbend_param[N_CCBEND_PARAMS];
 typedef struct {
     double length, angle;
     double K1, K2;
-    double tilt;
+    double tilt, yaw;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
@@ -2285,7 +2286,7 @@ typedef struct {
     /* for internal use only: */
     short optimized;
     double fseOffset, dxOffset, KnDelta;
-    double referenceData[4]; /* length, angle, K1, K2 */
+    double referenceData[5]; /* length, angle, K1, K2, yaw */
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edgeMultipoleData; 

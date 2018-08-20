@@ -17,7 +17,7 @@
 #include "multipole.h"
 
 static CCBEND ccbendCopy;
-static double PoCopy, xMax, xError, xpError, lastRho, lastX, lastXp;
+static double PoCopy, xMin, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
@@ -85,7 +85,8 @@ long track_through_ccbend(
         ccbend->length!=ccbend->referenceData[0] ||
         ccbend->angle!=ccbend->referenceData[1] ||
         ccbend->K1!=ccbend->referenceData[2] ||
-        ccbend->K2!=ccbend->referenceData[3]) {
+        ccbend->K2!=ccbend->referenceData[3] ||
+        ccbend->yaw!=ccbend->referenceData[4]) {
       double acc;
       double startValue[2], stepSize[2], lowerLimit[2], upperLimit[2];
       short disable[2] = {0, 0};
@@ -120,7 +121,7 @@ long track_through_ccbend(
         lowerLimit[0] = lowerLimit[1] = -1;
         upperLimit[0] = upperLimit[1] = 1;
         if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
-                       fabs(1e-14*ccbend->length/ccbend->angle), fabs(1e-16*ccbend->length/ccbend->angle),
+                       fabs(1e-14*ccbend->length), fabs(1e-16*ccbend->length),
                        ccbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
           bombElegantVA("failed to find FSE and x offset to center trajectory for ccbend. accuracy acheived was %le.", acc);
         }
@@ -131,9 +132,12 @@ long track_through_ccbend(
         ccbend->referenceData[1] = ccbend->angle;
         ccbend->referenceData[2] = ccbend->K1;
         ccbend->referenceData[3] = ccbend->K2;
+        ccbend->referenceData[4] = ccbend->yaw;
 	if (ccbend->verbose) {
-	  printf("CCBEND %s#%ld optimized: FSE=%le, x=%le, accuracy=%le\n", 
+	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n", 
 		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
+          printf("xMin = %le, xMax = %le, xAve = %le, xpError = %le\n", 
+                 xMin, xMax, xAve, xpError);
 	  fflush(stdout);
 	}
         ccbend->optimized = 1;
@@ -255,15 +259,16 @@ long track_through_ccbend(
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
-  if (dx || dy || dz)
-    offsetBeamCoordinates(particle, n_part, dx, dy, dz);
-  if (tilt)
-    rotateBeamCoordinates(particle, n_part, tilt);
-  if (ccbend->optimized)
-    offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
-  if (angle!=0 && iPart<=0) {
-    verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
-    switchRbendPlane(particle, n_part, fabs(angle/2), Po);
+  if (iPart<=0) {
+    xpError = particle[0][1];
+    switchRbendPlane(particle, n_part, fabs(angle/2-ccbend->yaw), Po);
+    if (dx || dy || dz)
+      offsetBeamCoordinates(particle, n_part, dx, dy, dz);
+    if (ccbend->optimized)
+      offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
+    if (tilt)
+      rotateBeamCoordinates(particle, n_part, tilt);
+    verticalRbendFringe(particle, n_part, fabs(angle/2-ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
   }
 
   if (sigmaDelta2)
@@ -289,19 +294,18 @@ long track_through_ccbend(
   if (sigmaDelta2)
     *sigmaDelta2 /= i_top+1;
 
-  if (ccbend->optimized!=-1) { /* don't think this test is needed */
-    if (angle!=0 && (iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
-      switchRbendPlane(particle, n_part, fabs(angle/2), Po);
-      verticalRbendFringe(particle, n_part, fabs(angle/2), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
-    }
+  if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
+    verticalRbendFringe(particle, i_top+1, fabs(angle/2+ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    if (ccbend->optimized)
+      offsetBeamCoordinates(particle, i_top+1, -ccbend->dxOffset, 0, 0);
+    if (tilt)
+      rotateBeamCoordinates(particle, i_top+1, -tilt);
+    if (dx || dy || dz)
+      offsetBeamCoordinates(particle, i_top+1, -dx, -dy, -dz);
+    switchRbendPlane(particle, i_top+1, fabs(angle/2+ccbend->yaw), Po);
+    xpError = fabs(xpError+particle[0][1]);
   }
 
-  if (ccbend->optimized)
-    offsetBeamCoordinates(particle, n_part, -ccbend->dxOffset, 0, 0);
-  if (tilt)
-    rotateBeamCoordinates(particle, n_part, -tilt);
-  if (dx || dy || dz)
-    offsetBeamCoordinates(particle, n_part, -dx, -dy, -dz);
   if (angle<0)
     /* note that we use n_part here so lost particles get rotated back as well */
     rotateBeamCoordinates(particle, n_part, -PI);
@@ -347,8 +351,8 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
-  double xMin, x0, xp0;
-  long i_kick, step, steps, iMult;
+  double xSum;
+  long i_kick, step, steps, iMult, nSum;
   double dsh;
   long maxOrder;
   double *xpow, *ypow;
@@ -424,10 +428,12 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   yp = qy/denom;
 
   *dzLoss = 0;
-  xMax = xMin = x0 = x;
-  xp0 = xp;
   if (iFinalSlice<=0)
     iFinalSlice = n_parts;
+  xMin = DBL_MAX;
+  xMax = -DBL_MAX;
+  xSum = x;
+  nSum = 1;
   for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
 #ifdef DEBUG
     double H0;
@@ -458,10 +464,6 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
         s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
         *dzLoss += dsh;
       }
-      if (x>xMax)
-        xMax = x;
-      if (x<xMin)
-        xMin = x;
 
       if (!kickFrac[step])
         break;
@@ -529,11 +531,15 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
         qy *= (1+dp);
       }
     }
+    xSum += x;
+    nSum ++;
+    if (x>xMax) xMax = x;
+    if (x<xMin) xMin = x;
     if (iPart>=0)
       break;
   }
-  xError = fabs(x - x0) + fabs(x + xMax);
-  xpError =  fabs(xp0+xp);
+  xAve = xSum/nSum;
+  xError = xMax + xMin;
   /*
   printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
   printf("xp init, fin = %le, %le\n", xp0, xp);
@@ -668,13 +674,16 @@ double ccbend_trajectory_error(double *value, long *invalid)
   ccbendCopy.dxOffset = value[1];
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
-  /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); */
+  /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); fflush(stdout);  */
   if (!track_through_ccbend(particle, 1, NULL, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
-  result = xError + xpError/fabs(ccbendCopy.angle);
-  /* printf("particle[0][0] = %le, particle[0][1] = %le, result = %le\n", particle[0][0], particle[0][1], result); */
+  result = fabs(xError) + fabs(xpError/ccbendCopy.angle);
+  /*
+  printf("particle[0][0] = %le, particle[0][1] = %le, xError = %le, xpError = %le, result = %le\n", 
+         particle[0][0], particle[0][1], xError, xpError, result); fflush(stdout);
+  */
   return result;
 }
 

@@ -29,12 +29,13 @@ long particleIsElectron = 1;
 /* A hash table for loading parameters effectively */
 htab *load_hash;
 
-/* various user-controlled global flags (global_settings namelist) */
+/* various user-controlled global flags and settings (global_settings namelist) */
 long inhibitFileSync = 0;
 long echoNamelists = 1;
 long mpiRandomizationMode = 3;
 long exactNormalizedEmittance = 0;
 long shareTrackingBasedMatrices = 0;
+double trackingMatrixStepFactor = 1;
 #if USE_MPI
 short mpiAbort = 0;
 #endif
@@ -2849,6 +2850,7 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.K1), NULL, 0.0, 0, "geometric quadrupole strength"},
     {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.K2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.yaw), NULL, 0.0, 0, "rotation about vertical axis through entrance point"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dz), NULL, 0.0, 0, "misalignment"},

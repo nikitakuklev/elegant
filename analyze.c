@@ -617,8 +617,13 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
    		 
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, COORDINATES_PER_PARTICLE);
 
-  if (stepSize==NULL)
-    stepSize = defaultStep;
+  if (stepSize) {
+    for (i=0; i<6; i++)
+      defaultStep[i] = stepSize[i];
+  }
+  stepSize = defaultStep;
+  for (i=0; i<6; i++)
+    stepSize[i] *= trackingMatrixStepFactor;
   
   n_track = 4*6+1;
   for (j=0; j<COORDINATES_PER_PARTICLE; j++)
@@ -840,7 +845,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nPoints1 = 5;
   long maxFitOrder = 4;
   /* We'll store some of the matrices to avoid recomputing them */
-#define MAX_N_STORED_MATRICES 100
+#define MAX_N_STORED_MATRICES 1000
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
@@ -908,8 +913,13 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
   }
 
-  if (stepSize==NULL)
-    stepSize = defaultStep;
+  if (stepSize) {
+    for (i=0; i<6; i++)
+      defaultStep[i] = stepSize[i];
+  }
+  stepSize = defaultStep;
+  for (i=0; i<6; i++)
+    stepSize[i] *= trackingMatrixStepFactor;
 
   n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
   n_left = n_track;
