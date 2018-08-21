@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 34.4.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 34.5.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,53 +35,26 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 34.4.0}
+\section{Highlights of What's New in Version 34.5.0}
 
-Here is a summary of what's changed since release 34.3.0.
+Here is a summary of what's changed since release 34.4.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|BRAT|
-  element via the \verb|USE_FTABLE| control. Previously, the control existed but resulted in no transformation
-  of particles taking place.
-\item The \verb|YAW| and \verb|PITCH| parameters of the \verb|LTHINLENS| and \verb|LMIRROR| elements were overwriting
-  the \verb|TILT| parameters of the same elements. 
-\item The \verb|B7| and \verb|B8| parameters of the \verb|CSRCSBEND| elements were overwriting the \verb|B6| parameter
-  of the same element.
+\item The order of edge transformations for the \verb|CCBEND| element was revised to make more physical sense.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|share_tracking_based_matrices| feature, controlled by the \verb|global_settings| command, now
-  works correctly. This can provide a considerable increase in performance when tracking-based matrices are
-  required for many beamline elements.
-\item The \verb|insert_sceffects| command  and \verb|SCMULT| element, used for space-charge simulation in rings,
-  had a bug that caused the sign of the tune shift to be wrong for protons and positrons. This was reported by
-  forum user \verb|hongjin|.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item \verb|MARK| elements with \verb|FITPOINT=1| now create \verb|psix| and \verb|psiy| symbols for use in
-  optimization, in addition to \verb|nux| and \verb|nuy|. This may be more intuitive for some users, as pointed
-  out by forum user \verb|jgarland|.
-\item When used for longitudinal feedback, the \verb|TFBDRIVER| element now includes simulation of the 
-  feedback cavity resonance and driving circuit, using a circuit model developed by T. Berenc (APS).
-\item When K. Hwang's fringe model is used for the \verb|CSBEND| element, automatic adjustment of the \verb|FSE|
-  value can optionally be invoked in order to null out trajectory errors that result from the fringe fields extending outside
-  the magnet. This is obtained by setting \verb|FSE_CORRECTION=1|.
-\item The \verb|TRACKING_MATRIX| parameter of \verb|CSBEND| can now be used to control the order of the tracking-based
-  matrix, with a limit of third order. This provides an alternative to the 2nd-order analytical matrix.
-\item The \verb|CSBEND| element now supports separate edge integral values for the entrance and exit fringes, using the
-  \verb|FINT1| and \verb|FINT2| parameters. If not given, the \verb|FINT| parameter is used as before.
-\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now support a new symplectic edge effects mode, based on 
-  the linear approach of K. L. Brown. It is similar to the existing, non-symplectic default mode, but in most cases
-  users won't see a difference.
-\item The \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, and \verb|MULT| elements now support use
-  of the expanded (to leading order) Hamiltonian by setting the \verb|EXPAND_HAMILTONIAN| flag to 1. Note that no significant
-  reduction in run time is observed with the expanded Hamiltonian.
+\item The \verb|CCBEND| element now was a \verb|YAW| parameter that permits changing the entrance and exit
+  angles in a coordinated fashion.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -7394,6 +7367,85 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 34.4.0}
+
+Here is a summary of what's changed since release 34.3.0.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|BRAT|
+  element via the \verb|USE_FTABLE| control. Previously, the control existed but resulted in no transformation
+  of particles taking place.
+\item The \verb|YAW| and \verb|PITCH| parameters of the \verb|LTHINLENS| and \verb|LMIRROR| elements were overwriting
+  the \verb|TILT| parameters of the same elements. 
+\item The \verb|B7| and \verb|B8| parameters of the \verb|CSRCSBEND| elements were overwriting the \verb|B6| parameter
+  of the same element.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|share_tracking_based_matrices| feature, controlled by the \verb|global_settings| command, now
+  works correctly. This can provide a considerable increase in performance when tracking-based matrices are
+  required for many beamline elements.
+\item The \verb|insert_sceffects| command  and \verb|SCMULT| element, used for space-charge simulation in rings,
+  had a bug that caused the sign of the tune shift to be wrong for protons and positrons. This was reported by
+  forum user \verb|hongjin|.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item \verb|MARK| elements with \verb|FITPOINT=1| now create \verb|psix| and \verb|psiy| symbols for use in
+  optimization, in addition to \verb|nux| and \verb|nuy|. This may be more intuitive for some users, as pointed
+  out by forum user \verb|jgarland|.
+\item When used for longitudinal feedback, the \verb|TFBDRIVER| element now includes simulation of the 
+  feedback cavity resonance and driving circuit, using a circuit model developed by T. Berenc (APS).
+\item When K. Hwang's fringe model is used for the \verb|CSBEND| element, automatic adjustment of the \verb|FSE|
+  value can optionally be invoked in order to null out trajectory errors that result from the fringe fields extending outside
+  the magnet. This is obtained by setting \verb|FSE_CORRECTION=1|.
+\item The \verb|TRACKING_MATRIX| parameter of \verb|CSBEND| can now be used to control the order of the tracking-based
+  matrix, with a limit of third order. This provides an alternative to the 2nd-order analytical matrix.
+\item The \verb|CSBEND| element now supports separate edge integral values for the entrance and exit fringes, using the
+  \verb|FINT1| and \verb|FINT2| parameters. If not given, the \verb|FINT| parameter is used as before.
+\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now support a new symplectic edge effects mode, based on 
+  the linear approach of K. L. Brown. It is similar to the existing, non-symplectic default mode, but in most cases
+  users won't see a difference.
+\item The \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, \verb|KOCT|, \verb|KQUSE|, and \verb|MULT| elements now support use
+  of the expanded (to leading order) Hamiltonian by setting the \verb|EXPAND_HAMILTONIAN| flag to 1. Note that no significant
+  reduction in run time is observed with the expanded Hamiltonian.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|abrat|
+  program via the \verb|-ftable| commandline option. Previously, the control existed but resulted in no transformation
+  of particles taking place.
+\item The program \verb|abrat| now places the vertex, entry, and exit points (which are provided by the user)
+  in the trajectory output file.
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 34.3.0, June 14, 2018}
 
