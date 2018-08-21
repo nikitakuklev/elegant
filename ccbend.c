@@ -17,7 +17,7 @@
 #include "multipole.h"
 
 static CCBEND ccbendCopy;
-static double PoCopy, xMin, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
+static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
@@ -64,7 +64,7 @@ long track_through_ccbend(
   long i_part, i_top;
   double *coef;
   double fse, tilt, rad_coef, isr_coef, dzLoss=0;
-  double rho0, arcLength, length, angle;
+  double rho0, arcLength, length, angle, yaw, angleSign;
   MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
@@ -127,6 +127,7 @@ long track_through_ccbend(
         }
         ccbend->fseOffset = startValue[0];
         ccbend->dxOffset = startValue[1];
+        ccbend->xAdjust = xFinal;
         ccbend->KnDelta = ccbendCopy.KnDelta;
         ccbend->referenceData[0] = ccbend->length;
         ccbend->referenceData[1] = ccbend->angle;
@@ -136,8 +137,8 @@ long track_through_ccbend(
 	if (ccbend->verbose) {
 	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n", 
 		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
-          printf("xMin = %le, xMax = %le, xAve = %le, xpError = %le\n", 
-                 xMin, xMax, xAve, xpError);
+          printf("xMin = %le, xMax = %le, xAve = %le, xFinal = %le, xpError = %le\n", 
+                 xMin, xMax, xAve, xFinal, xpError);
 	  fflush(stdout);
 	}
         ccbend->optimized = 1;
@@ -186,9 +187,15 @@ long track_through_ccbend(
       bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
   if (angle<0) {
+    angleSign = -1;
     K0L *= -1;
     K2L *= -1;
+    angle = -angle;
+    yaw = -ccbend->yaw*ccbend->edgeFlip;
     rotateBeamCoordinates(particle, n_part, PI);
+  } else {
+    angleSign = 1;
+    yaw = ccbend->yaw*ccbend->edgeFlip;
   }
 
   integ_order = ccbend->integration_order;
@@ -206,7 +213,7 @@ long track_through_ccbend(
     readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
     readErrorMultipoleData(&(ccbend->edgeMultipoleData), ccbend->edge_multipoles, 0);
     readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
-    if (angle<0) {
+    if (angleSign<0) {
       long i;
       for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
         if (ccbend->systematicMultipoleData.order[i]%2==0) {
@@ -261,14 +268,14 @@ long track_through_ccbend(
 
   if (iPart<=0) {
     xpError = particle[0][1];
-    switchRbendPlane(particle, n_part, fabs(angle/2-ccbend->edgeFlip*ccbend->yaw), Po);
+    switchRbendPlane(particle, n_part, angle/2-yaw, Po);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, n_part, tilt);
-    verticalRbendFringe(particle, n_part, fabs(angle/2-ccbend->edgeFlip*ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, K1L/length, K2L/length, ccbend->edgeOrder);
   }
 
   if (sigmaDelta2)
@@ -295,18 +302,18 @@ long track_through_ccbend(
     *sigmaDelta2 /= i_top+1;
 
   if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
-    verticalRbendFringe(particle, i_top+1, fabs(angle/2+ccbend->edgeFlip*ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, K1L/length, K2L/length, ccbend->edgeOrder);
     if (ccbend->optimized)
-      offsetBeamCoordinates(particle, i_top+1, -ccbend->dxOffset, 0, 0);
+      offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, i_top+1, -tilt);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, i_top+1, -dx, -dy, -dz);
-    switchRbendPlane(particle, i_top+1, fabs(angle/2+ccbend->edgeFlip*ccbend->yaw), Po);
+    switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
     xpError = fabs(xpError+particle[0][1]);
   }
 
-  if (angle<0)
+  if (angleSign<0)
     /* note that we use n_part here so lost particles get rotated back as well */
     rotateBeamCoordinates(particle, n_part, -PI);
 
@@ -318,7 +325,7 @@ long track_through_ccbend(
     free(multData);
   }
 
-  if (ccbend->angle<0) {
+  if (angleSign<0) {
     lastRho *= -1;
     lastX *= -1;
     lastXp *= -1;
@@ -538,6 +545,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
     if (iPart>=0)
       break;
   }
+  xFinal = x;
   xAve = xSum/nSum;
   xError = xMax + xMin;
   /*
