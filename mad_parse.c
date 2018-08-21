@@ -1214,6 +1214,7 @@ void copy_p_elem(char *target, char *source, long type)
     ((CCBEND*)target)->referenceData[1] = ((CCBEND*)source)->referenceData[1];
     ((CCBEND*)target)->referenceData[2] = ((CCBEND*)source)->referenceData[2];
     ((CCBEND*)target)->referenceData[3] = ((CCBEND*)source)->referenceData[3];
+    ((CCBEND*)target)->edgeFlip = ((CCBEND*)source)->edgeFlip;
     break;
   case T_BRAT:
     ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
@@ -1295,6 +1296,8 @@ void setEdgeIndices(ELEMENT_LIST *e1)
     csrbptr->e1Index = 0;
     csrbptr->e2Index = 1;
     break;
+  case T_CCBEND:
+    ((CCBEND*)e1->p_elem)->edgeFlip = 1;
   default:
     break;
   }
@@ -1307,6 +1310,7 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   CSBEND *csbptr;
   CSRCSBEND *csrbptr;
   NIBEND *nibptr;
+  CCBEND *ccbptr;
 
   switch (e1->type) {
   case T_SBEN:
@@ -1329,6 +1333,10 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   case T_CSRCSBEND:
     csrbptr = (CSRCSBEND*)e1->p_elem;
     SWAP_LONG(csrbptr->e1Index, csrbptr->e2Index);
+    break;
+  case T_CCBEND:
+    ccbptr = (CCBEND*)e1->p_elem;
+    ccbptr->edgeFlip = -ccbptr->edgeFlip;
     break;
   default:
     break;

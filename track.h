@@ -2284,7 +2284,7 @@ typedef struct {
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
     short optimizeDxOnce, optimizeFseOnce, compensateKn, edgeOrder, verbose;
     /* for internal use only: */
-    short optimized;
+    short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta;
     double referenceData[5]; /* length, angle, K1, K2, yaw */
     short multipolesInitialized;

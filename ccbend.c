@@ -261,14 +261,14 @@ long track_through_ccbend(
 
   if (iPart<=0) {
     xpError = particle[0][1];
-    switchRbendPlane(particle, n_part, fabs(angle/2-ccbend->yaw), Po);
+    switchRbendPlane(particle, n_part, fabs(angle/2-ccbend->edgeFlip*ccbend->yaw), Po);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, n_part, tilt);
-    verticalRbendFringe(particle, n_part, fabs(angle/2-ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, n_part, fabs(angle/2-ccbend->edgeFlip*ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
   }
 
   if (sigmaDelta2)
@@ -295,14 +295,14 @@ long track_through_ccbend(
     *sigmaDelta2 /= i_top+1;
 
   if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
-    verticalRbendFringe(particle, i_top+1, fabs(angle/2+ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, i_top+1, fabs(angle/2+ccbend->edgeFlip*ccbend->yaw), rho0, K1L/length, K2L/length, ccbend->edgeOrder);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, -ccbend->dxOffset, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, i_top+1, -tilt);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, i_top+1, -dx, -dy, -dz);
-    switchRbendPlane(particle, i_top+1, fabs(angle/2+ccbend->yaw), Po);
+    switchRbendPlane(particle, i_top+1, fabs(angle/2+ccbend->edgeFlip*ccbend->yaw), Po);
     xpError = fabs(xpError+particle[0][1]);
   }
 
