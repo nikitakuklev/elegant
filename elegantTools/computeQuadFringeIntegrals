@@ -97,7 +97,7 @@ exec sddsprocess $output.tmp1 -pipe=out -filter=col,$zColumn,$s0,$s2 \
   "-define=column,I2,h1Integ1 g0Integ1 $zColumn * - g0 *" \
   -process=I2,gminteg,LAMBDA2P,functionOf=$zColumn
   
-exec sddsxref $output.tmp2 $output.tmp3 $output.tmp4 -leave=* -transfer=param,l2? $output
+exec sddsxref $output.tmp2 $output.tmp3 $output.tmp4 -leave=* -transfer=param,LAMBDA2? $output
 file delete $output.tmp1 $output.tmp2 $output.tmp3 $output.tmp4 
 
 set paramFileList ""
@@ -105,7 +105,7 @@ foreach magnet $magnetList {
     puts stderr "$magnet"
     APSAddToTempFileList $output.$magnet
     exec sddscollapse $output -pipe=out \
-      | sddsconvert -pipe -retain=column,I??,L??,LEFFECTIVE \
+      | sddsconvert -pipe -retain=column,I??,LAMBDA??,LEFFECTIVE \
       | sddstranspose -pipe \
       | sddsconvert -pipe -rename=col,OldColumnNames=ElementParameter,Column=ParameterValue \
       | sddsprocess -pipe=in $output.$magnet -print=column,ElementName,$magnet
