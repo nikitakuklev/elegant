@@ -24,7 +24,7 @@ static FILE *fpHam = NULL;
 #endif
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double Po);
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, long order);
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, long order);
 int integrate_kick_K012(double *coord, double dx, double dy, 
                         double Po, double rad_coef, double isr_coef,
                         double K0L, double K1L, double K2L,
@@ -69,6 +69,7 @@ long track_through_ccbend(
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double referenceKnL = 0;
+  double gK[2];
 
   if (!particle)
     bombTracking("particle array is null (track_through_ccbend)");
@@ -197,6 +198,13 @@ long track_through_ccbend(
     angleSign = 1;
     yaw = ccbend->yaw*ccbend->edgeFlip;
   }
+  if (ccbend->edgeFlip==1) {
+    gK[0] = 2*ccbend->fint1*ccbend->hgap;
+    gK[1] = 2*ccbend->fint2*ccbend->hgap;
+  } else {
+    gK[1] = 2*ccbend->fint1*ccbend->hgap;
+    gK[0] = 2*ccbend->fint2*ccbend->hgap;
+  }
 
   integ_order = ccbend->integration_order;
   if (ccbend->synch_rad)
@@ -275,7 +283,7 @@ long track_through_ccbend(
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, n_part, tilt);
-    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, K1L/length, K2L/length, gK[0], ccbend->edgeOrder);
   }
 
   if (sigmaDelta2)
@@ -302,7 +310,7 @@ long track_through_ccbend(
     *sigmaDelta2 /= i_top+1;
 
   if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
-    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, K1L/length, K2L/length, ccbend->edgeOrder);
+    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, K1L/length, K2L/length, gK[1], ccbend->edgeOrder);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
     if (tilt)
@@ -642,13 +650,15 @@ void switchRbendPlane(double **particle, long n_part, double alpha, double po)
   }
 }
 
-void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, long order)
+void verticalRbendFringe(double **particle, long n_part, double alpha, double rho0, double K1, double K2, double gK, long order)
 {
   long i;
   double c, d, e;
   if (order<1)
     return;
   c = d = e = 0;
+  if (gK!=0) 
+    alpha -= gK/fabs(rho0)/cos(alpha)*(1+sqr(sin(alpha)));
   c = sin(alpha)/rho0;
   if (order>1)
     d = sin(alpha)*K1;

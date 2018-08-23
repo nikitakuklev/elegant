@@ -1032,7 +1032,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 29
+#define N_CCBEND_PARAMS 31
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2272,7 +2272,7 @@ extern PARAMETER ccbend_param[N_CCBEND_PARAMS];
 typedef struct {
     double length, angle;
     double K1, K2;
-    double tilt, yaw;
+    double tilt, yaw, hgap, fint1, fint2;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
