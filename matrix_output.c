@@ -30,7 +30,7 @@ static char **SDDS_match = NULL;
 static SDDS_TABLE *SDDS_matrix = NULL;
 static long *SDDS_matrix_initialized = NULL;
 static long *SDDS_matrix_count = NULL;
-static long individualMatrices;
+static long individualMatrices=0, printElementData=0;
 
 #define IC_S 0
 #define IC_ELEMENT 1
@@ -101,7 +101,8 @@ void setup_matrix_output(
   if (individual_matrices && full_matrix_only)
     bombElegant("individual_matrices and full_matrix_only are incompatible", NULL);
   individualMatrices = individual_matrices;
-  
+  printElementData = print_element_data;
+
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
   else 
@@ -336,7 +337,7 @@ void run_matrix_output(
 	member = member->succ;
       }
     }
-    if (fp_printout[i_output])
+    if (fp_printout[i_output] && printElementData)
       print_line(fp_printout[i_output], beamline);
     if (SDDS_matrix_initialized[i_output]) {
       ELEMENT_LIST start_elem;

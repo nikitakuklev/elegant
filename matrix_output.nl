@@ -9,6 +9,7 @@
     STRING printout = NULL;
     long printout_order = 1;
     long full_matrix_only = 0;
+    long print_element_data = 1;
     STRING SDDS_output = NULL;
     long SDDS_output_order = 1;
     long individual_matrices = 0;
