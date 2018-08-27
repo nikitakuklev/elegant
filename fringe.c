@@ -293,7 +293,7 @@ VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *f
     J3x = inFringe*(K1sqr*(fringeInt[4]-fringeInt[0]*fringeInt[1]));
 
     K1 = -K1;
-    J1y = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]);
+    J1y = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]/2);
     J2y = -J2x;
     J3y = J3x;
   }

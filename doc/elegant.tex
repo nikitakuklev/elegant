@@ -44,6 +44,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item The order of edge transformations for the \verb|CCBEND| element was revised to make more physical sense.
+\item A bug was fixed in the expressions for integral-based fringe field effects in \verb|QUAD| and \verb|KQUAD|.
+  The bug resulted in very small inconsistencies between the matrices when $K_1 \rightarrow -K_1$.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
