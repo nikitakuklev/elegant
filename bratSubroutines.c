@@ -28,7 +28,7 @@
 
 void BRAT_B_field(double *B, double *Q);
 void BRAT_B_field_permuted(double *B, double *Q);
-double BRAT_setup_field_data(char *input, double xCenter, double zCenter);
+double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *interpolationParameter);
 double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, double xCenter);
 void BRAT_setup_single_scan_field_data(char *input);
 double BRAT_exit_function(double *qp, double *q, double s);
@@ -40,9 +40,12 @@ double refineAngle(double theta, double z0, double x0, double zv, double xv,
                    double z1, double x1);
 void BRAT_store_data_permuted(double p0, double *p, double *q1, double *B, double s, double exval);
 static long verbose_optimize = 0;
+void clear2dMapList();
+void add2dMapList(double interpValue);
 
 /* parameters of element needed for integration */
-static double theta, fse=0;
+static double theta, fse=0, interpParameter=0;
+static long interpOrder = 1;
 static double dXOffset = 0, dZOffset = 0;
 static double magnetYaw = 0;
 static double fieldFactor = 1;
@@ -51,11 +54,17 @@ static double rhoMax = 0;
 static double fieldSign = 1;
 static double BMaxOnTrajectory = -DBL_MAX;
 static double BSignOnTrajectory = 0;
+static char *interpolationParameterUnits = NULL;
 
 /* parameters for field calculation: */
 /* Bnorm is misnamed here, based on earlier versions of the program */
 static double **Bnorm, **dBnormdz, **dBnormdx;
 static double *BxNorm, *ByNorm, *BzNorm;
+/* these are used to store multiple 2D field maps for interpolation for abrat program */
+/* the results of interpolation are loaded into Bnorm, dBnormdz, and dBnormdx */
+static double *interpolationParameterValue = NULL;
+static double ***BnormList = NULL, ***dBnormdzList = NULL, ***dBnormdxList = NULL;
+static long length2dMapList = 0;
 /* static double Breference = 0; */
 static double xi, xf, dx;
 static double yi, yf, dy;
@@ -361,6 +370,33 @@ double BRAT_optim_function(double *param, long *invalid)
   dXOffset = param[1];
   dZOffset = param[2];
   magnetYaw = param[3];
+  if (length2dMapList>1) {
+    /* interpolate field maps */
+    long i, ix, iz;
+    unsigned long interpCode;
+    double *xbuffer, *ybuffer;
+    OUTRANGE_CONTROL outRange;
+    xbuffer = tmalloc(sizeof(*xbuffer)*length2dMapList);
+    ybuffer = tmalloc(sizeof(*ybuffer)*length2dMapList);
+    outRange.flags = OUTRANGE_EXTRAPOLATE;
+    for (i=0; i<length2dMapList; i++) 
+      xbuffer[i] = interpolationParameterValue[i];
+    for (ix=0; ix<nx; ix++) 
+      for (iz=0; iz<nz; iz++) {
+        for (i=0; i<length2dMapList; i++) 
+          ybuffer[i] = BnormList[i][ix][iz];
+        Bnorm[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
+                                    &interpCode, 1);
+        for (i=0; i<length2dMapList; i++) 
+          ybuffer[i] = dBnormdxList[i][ix][iz];
+        dBnormdx[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
+                                       &interpCode, 1);
+        for (i=0; i<length2dMapList; i++) 
+          ybuffer[i] = dBnormdzList[i][ix][iz];
+        dBnormdz[ix][iz] = interpolate(ybuffer, xbuffer, length2dMapList, param[4], &outRange, &outRange, interpOrder,
+                                       &interpCode, 1);
+      }
+  }
   BRAT_lorentz_integration(accelCoord, q, 0, NULL);
   *invalid = 0;
   w = q+3;
@@ -390,8 +426,8 @@ void BRAT_report_function(double result, double *param, long pass,
 
 void BRAT_optimize_magnet(unsigned long flags)
 {
-  double x[4], dx[4], xlo[4], xhi[4];
-  short disable[4] = {0,0,0,0};
+  double x[5], dx[5], xlo[5], xhi[5];
+  short disable[5] = {0,0,0,0,1}; /* fse, dx, dz, yaw, parameter */
   double tolerance, result;
   long dummy;
 
@@ -409,6 +445,15 @@ void BRAT_optimize_magnet(unsigned long flags)
   xhi[2] = dzLimit[1];
   xlo[3] = yawLimit[0]; 
   xhi[3] = yawLimit[1];
+  if (length2dMapList>1) {
+    double range;
+    find_min_max(&xlo[4], &xhi[4], interpolationParameterValue, length2dMapList);
+    dx[4] = (range=xhi[4]-xlo[4])*1e-4;
+    x[4] = (xhi[4]+xlo[4])/2;
+    xlo[4] = x[4] - range*5;
+    xhi[4] = x[4] + range*5;
+    disable[4] = 0;
+  }
   if (!(flags&OPTIMIZE_FSE))
     disable[0] = 1;
   if (!(flags&OPTIMIZE_DX))
@@ -417,13 +462,15 @@ void BRAT_optimize_magnet(unsigned long flags)
     disable[2] = 1;
   if (!(flags&OPTIMIZE_YAW))
     disable[3] = 1;
-  if (simplexMin(&result, x, dx, xlo, xhi, disable, 4, tolerance,
+  if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
                  N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
     fprintf(stderr, "warning: optimization of magnet `failed'\n");
   }
   dx[0] = dx[1] = dx[2] = dx[3] = 1e-4;
-  if (simplexMin(&result, x, dx, xlo, xhi, disable, 4, tolerance,
+  if (length2dMapList>1)
+    dx[4] = (xhi[4]-xlo[4])*1e-4;
+  if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
                  N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
     fprintf(stderr, "warning: optimization of magnet `failed'\n");
@@ -432,6 +479,8 @@ void BRAT_optimize_magnet(unsigned long flags)
   dXOffset = x[1];
   dZOffset = x[2];
   magnetYaw = x[3];
+  if (length2dMapList>1) 
+    interpParameter= x[4];
   BMaxOnTrajectory = -DBL_MAX;
   result = BRAT_optim_function(x, &dummy);
   if (!quiet) {
@@ -440,6 +489,8 @@ void BRAT_optimize_magnet(unsigned long flags)
     printf("dX  = %.15e\n", x[1]);
     printf("dZ  = %.15e\n", x[2]);
     printf("Yaw = %.15e\n", x[3]);
+    if (length2dMapList>1) 
+      printf("Parameter = %.15e\n", x[4]);
   }
 }
 
@@ -888,7 +939,7 @@ double BRAT_setup_arc_field_data(char *input, char *sName, char *fieldName, doub
   return BRef;
 }
 
-double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
+double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *interpolationParameter)
 {
   SDDS_TABLE SDDS_table;
   long idata, ix, iz, rows;
@@ -911,214 +962,252 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter)
   if (!(rows=SDDS_CountRowsOfInterest(&SDDS_table)))
     bomb("no data in field file", NULL);
 
+  clear2dMapList();
+
   if (fieldMapDimension==2) {
-    if (!single_scan) {
-      if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
-        exit(1);
-      }
-      if (!(xd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
-          !(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z")) ||
-          !((Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B")))) {
-        SDDS_SetError("Unable to retrieve data column(s)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    long firstPage = 1;
+    double interpParamValue;
+    interpolationParameterUnits = NULL;
+    interpParameter = 0;
+    do {
+      if (!single_scan) {
+        if (firstPage) {
+          if (interpolationParameter) {
+            if (SDDS_CheckParameter(&SDDS_table, interpolationParameter, NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY)
+              exit(1);
+            if (SDDS_GetParameterInformation(&SDDS_table, "units", &interpolationParameterUnits, SDDS_GET_BY_NAME, interpolationParameter)
+                !=SDDS_STRING)
+              bomb("unable to get units for interpolation parameter", NULL);
+          }
+          if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
+              SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
+              SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
+            exit(1);
+          }
+          if (SDDS_CheckParameter(&SDDS_table, "xMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
+              SDDS_CheckParameter(&SDDS_table, "xInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "xDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "zMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
+              SDDS_CheckParameter(&SDDS_table, "zInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
+              SDDS_CheckParameter(&SDDS_table, "zDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY)
+            exit(1);
+        }
+        if (!(xd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "x")) ||
+            !(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z")) ||
+            !((Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B")))) {
+          SDDS_SetError("Unable to retrieve data column(s)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        xi = xf = dx = 0;
+        zi = zf = dz = 0;
+        nx = nz = 0;
+        
+        if (!SDDS_GetParameter(&SDDS_table, "xMinimum", &xi) || !SDDS_GetParameter(&SDDS_table, "xDimension", &nx) ||
+            !SDDS_GetParameter(&SDDS_table, "xInterval", &dx) ||
+            !SDDS_GetParameter(&SDDS_table, "zMinimum", &zi) || !SDDS_GetParameter(&SDDS_table, "zDimension", &nz) ||
+            !SDDS_GetParameter(&SDDS_table, "zInterval", &dz)) {
+          SDDS_SetError("Unable to retrieve parameter value(s)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (interpolationParameter && !SDDS_GetParameterAsDouble(&SDDS_table, interpolationParameter, &interpParamValue)) {
+          SDDS_SetError("Unable to retrieve parameter value(s)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+
+        if (nx<=0 || nz<=0) 
+          bomb("non-positive value for dx and/or dz", NULL);
+        xf = (nx-1)*dx+xi;
+        zf = (nz-1)*dz+zi;
+        if (nx==1) {
+          single_scan = 1;
+          xi = xf = 0;
+          if (!quiet)
+            printf("data treated as single scan\n");
+        }
+        else if (!quiet)
+          printf("data grid:\n    x: [%.8f, %.8f]m   dx = %.8fm   nx = %ld\n",
+                 xi, xf, dx, nx);
+        if (!quiet)
+          printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
+                 zi, zf, dz, nz);
+      } else {
+        if (interpolationParameter)
+          bomb("interpolation not supported for single scan", NULL);
+        if (SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) 
+          exit(1);
+        if (SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)==SDDS_CHECK_OKAY)
+          exit(1);
+        if (!(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
+          SDDS_SetError("Unable to retrieve data z column");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (!(Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B"))) {
+          SDDS_SetError("Unable to retrieve data field column");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        nx = 1;
+        xi = xf = 0;
+        zi = zd[0];
+        zf = zd[rows-1];
+        nz = rows;
+        if (nz<1)
+          bomb("nz < 1 in single scan data", NULL);
+        dz = (zf-zi)/(nz-1);
+        if (!quiet) {
+          printf("data grid:\n    ");
+          printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
+                 zi, zf, dz, nz);
+        }
       }
       
-      if (SDDS_CheckParameter(&SDDS_table, "xMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckParameter(&SDDS_table, "xInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckParameter(&SDDS_table, "xDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckParameter(&SDDS_table, "zMinimum", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY || 
-          SDDS_CheckParameter(&SDDS_table, "zInterval", "m", SDDS_DOUBLE, stderr)!=SDDS_CHECK_OKAY ||
-          SDDS_CheckParameter(&SDDS_table, "zDimension", NULL, SDDS_LONG, stderr)!=SDDS_CHECK_OKAY)
-        exit(1);
-      if (!SDDS_GetParameter(&SDDS_table, "xMinimum", &xi) || !SDDS_GetParameter(&SDDS_table, "xDimension", &nx) ||
-          !SDDS_GetParameter(&SDDS_table, "xInterval", &dx) ||
-          !SDDS_GetParameter(&SDDS_table, "zMinimum", &zi) || !SDDS_GetParameter(&SDDS_table, "zDimension", &nz) ||
-          !SDDS_GetParameter(&SDDS_table, "zInterval", &dz)) {
-        SDDS_SetError("Unable to retrieve parameter value(s)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      if (nx<=0 || nz<=0) 
-        bomb("non-positive value for dx and/or dz", NULL);
-      xf = (nx-1)*dx+xi;
-      zf = (nz-1)*dz+zi;
-      if (nx==1) {
-        single_scan = 1;
-        xi = xf = 0;
-        if (!quiet)
-          printf("data treated as single scan\n");
-      }
-      else if (!quiet)
-        printf("data grid:\n    x: [%.8f, %.8f]m   dx = %.8fm   nx = %ld\n",
-               xi, xf, dx, nx);
-      if (!quiet)
-      printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
-             zi, zf, dz, nz);
-    }
-    else {
-      if (SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) 
-        exit(1);
-      if (SDDS_CheckColumn(&SDDS_table, "B", "T", SDDS_ANY_FLOATING_TYPE, stderr)==SDDS_CHECK_OKAY)
-        exit(1);
-      if (!(zd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "z"))) {
-        SDDS_SetError("Unable to retrieve data z column");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      if (!(Bd=(double*)SDDS_GetColumnInDoubles(&SDDS_table, "B"))) {
-        SDDS_SetError("Unable to retrieve data field column");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      nx = 1;
-      xi = xf = 0;
-      zi = zd[0];
-      zf = zd[rows-1];
-      nz = rows;
-      if (nz<1)
-        bomb("nz < 1 in single scan data", NULL);
-      dz = (zf-zi)/(nz-1);
-      if (!quiet) {
-        printf("data grid:\n    ");
-        printf("    z: [%.8f, %.8f]m   dz = %.8fm   nz = %ld\n",
-               zi, zf, dz, nz);
-      }
-    }
-
 #ifdef DEBUG
-    fprintf(stderr, "Allocating %ld x %ld field and gradient arrays\n", 
-            nx, nz);
+      fprintf(stderr, "Allocating %ld x %ld field and gradient arrays\n", 
+              nx, nz);
 #endif
-    Bnorm = (double**)zarray_2d(sizeof(**Bnorm), nx, nz);
-    dBnormdz = (double**)zarray_2d(sizeof(**dBnormdz), nx, nz);
-    dBnormdx = (double**)zarray_2d(sizeof(**dBnormdx), nx, nz);
+      Bnorm = (double**)zarray_2d(sizeof(**Bnorm), nx, nz);
+      dBnormdz = (double**)zarray_2d(sizeof(**dBnormdz), nx, nz);
+      dBnormdx = (double**)zarray_2d(sizeof(**dBnormdx), nx, nz);
 #ifdef DEBUG
-    fprintf(stderr, "Initializing Bnorm array\n");
+      fprintf(stderr, "Initializing Bnorm array\n");
 #endif
-    for (ix=0; ix<nx; ix++)
-      for (iz=0; iz<nz; iz++)
-        Bnorm[ix][iz] = DBL_MAX;
-    idata = 0;
-#ifdef DEBUG
-    xc = xi;
-#endif
-    Bmin = -(Bmax = -DBL_MAX);
-    ix = 0;
-    if (single_scan)
-      dx = 1;
-    for (idata=0; idata<rows; idata++) {
-#ifdef DEBUG
-      fprintf(stderr, "Checking idata=%ld\n", idata);
-#endif
-      x = single_scan?0:xd[idata];
-      z = zd[idata];
-      B = Bd[idata];
-#ifdef DEBUG
-      fprintf(stderr, "x=%e, z=%e, B=%e\n", x, z, B);
-#endif
-      if (!single_scan)
-        ix = (x-xi)/dx+0.5;
-      iz = (z-zi)/dz+0.5;
-      xCheck = ix*dx+xi;
-      zCheck = iz*dz+zi;
-#ifdef DEBUG
-      fprintf(stderr, "ix = %ld, iz = %ld, xc=%e, zc=%e\n", ix, iz,
-              xCheck, zCheck);
-#endif
-      if (fabs(x-xCheck)/dx>1e-2 || fabs(z-zCheck)/dz>1e-2) {
-        fprintf(stderr, "Grid data not uniform: (%e, %e) -> (%e, %e)\n",
-                x, z, xCheck, zCheck);
-        exit(1);
-      }
-      if (ix<0 || ix>nx || iz<0 || iz>nz) {
-        fprintf(stderr, "Point outside grid: (%e, %e) -> (%ld, %ld)\n",
-                x, z, ix, iz);
-        exit(1);
-      }
-      if (Bnorm[ix][iz]!=DBL_MAX)
-        bomb("two data points map to one grid point", NULL);
-      Bnorm[ix][iz] = B;
-      if (B<Bmin)
-        Bmin = B;
-      if (B>Bmax)
-        Bmax = B;
-    }
-    if (!single_scan) 
-      free(xd);
-    free(zd);
-    free(Bd);
-    if (!SDDS_Terminate(&SDDS_table))
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    
-    idata = 0;
-    for (ix=0; ix<nx; ix++)
-      for (iz=0; iz<nz; iz++) {
-        if (Bnorm[ix][iz]==DBL_MAX) {
-          idata ++;
-          Bnorm[ix][iz] = 0;
-        }
-      }
-    if (idata && !quiet)
-      fprintf(stderr, "Warning: no data for %ld of %ld points\n",
-              idata, nx*nz);
-    
-    if (fabs(Bmin)>fabs(Bmax))
-      Bmax = Bmin;
-    if (Bmax==0)
-      bomb("extremal B value is zero", NULL);
-    if (!quiet) {
-      printf("Maximum value of B is %.8f T\n", Bmax);
-    }
-    /* 
-      if (!quiet)
-      printf("reference B value is %.8f T\n", Bmax);
       for (ix=0; ix<nx; ix++)
-      for (iz=0; iz<nz; iz++)
-      Bnorm[ix][iz] /= Bmax;
+        for (iz=0; iz<nz; iz++)
+          Bnorm[ix][iz] = DBL_MAX;
+      idata = 0;
+#ifdef DEBUG
+      xc = xi;
+#endif
+      Bmin = -(Bmax = -DBL_MAX);
+      ix = 0;
+      if (single_scan)
+        dx = 1;
+      for (idata=0; idata<rows; idata++) {
+#ifdef DEBUG
+        fprintf(stderr, "Checking idata=%ld\n", idata);
+#endif
+        x = single_scan?0:xd[idata];
+        z = zd[idata];
+        B = Bd[idata];
+#ifdef DEBUG
+        fprintf(stderr, "x=%e, z=%e, B=%e\n", x, z, B);
+#endif
+        if (!single_scan)
+          ix = (x-xi)/dx+0.5;
+        iz = (z-zi)/dz+0.5;
+        xCheck = ix*dx+xi;
+        zCheck = iz*dz+zi;
+#ifdef DEBUG
+        fprintf(stderr, "ix = %ld, iz = %ld, xc=%e, zc=%e\n", ix, iz,
+                xCheck, zCheck);
+#endif
+        if (fabs(x-xCheck)/dx>1e-2 || fabs(z-zCheck)/dz>1e-2) {
+          fprintf(stderr, "Grid data not uniform: (%e, %e) -> (%e, %e)\n",
+                  x, z, xCheck, zCheck);
+          exit(1);
+        }
+        if (ix<0 || ix>nx || iz<0 || iz>nz) {
+          fprintf(stderr, "Point outside grid: (%e, %e) -> (%ld, %ld)\n",
+                  x, z, ix, iz);
+          exit(1);
+        }
+        if (Bnorm[ix][iz]!=DBL_MAX)
+          bomb("two data points map to one grid point", NULL);
+        Bnorm[ix][iz] = B;
+        if (B<Bmin)
+          Bmin = B;
+        if (B>Bmax)
+          Bmax = B;
+      }
+      if (!single_scan) 
+        free(xd);
+      free(zd);
+      free(Bd);
+    
+      idata = 0;
+      for (ix=0; ix<nx; ix++)
+        for (iz=0; iz<nz; iz++) {
+          if (Bnorm[ix][iz]==DBL_MAX) {
+            idata ++;
+            Bnorm[ix][iz] = 0;
+          }
+        }
+      if (idata && !quiet)
+        fprintf(stderr, "Warning: no data for %ld of %ld points\n",
+                idata, nx*nz);
+    
+      if (fabs(Bmin)>fabs(Bmax))
+        Bmax = Bmin;
+      if (Bmax==0)
+        bomb("extremal B value is zero", NULL);
+      if (!quiet) {
+        printf("Maximum value of B is %.8f T\n", Bmax);
+      }
+      /* 
+         if (!quiet)
+         printf("reference B value is %.8f T\n", Bmax);
+         for (ix=0; ix<nx; ix++)
+         for (iz=0; iz<nz; iz++)
+         Bnorm[ix][iz] /= Bmax;
       */
 
-    /* compute derivatives */
-    for (ix=0; ix<nx; ix++) {
-      if (nx==1)
-        ix0 = ix1 = 0;
-      else {
-        if (ix==0) {
-          dx0 = dx;
-          ix1 = ix+1;
-          ix0 = ix;
-        }
-        else if (ix==(nx-1)) {
-          dx0 = dx;
-          ix1 = ix;
-          ix0 = ix-1;
-        }
+      /* compute derivatives */
+      for (ix=0; ix<nx; ix++) {
+        if (nx==1)
+          ix0 = ix1 = 0;
         else {
-          dx0 = 2*dx;
-          ix1 = ix+1;
-          ix0 = ix-1;
+          if (ix==0) {
+            dx0 = dx;
+            ix1 = ix+1;
+            ix0 = ix;
+          }
+          else if (ix==(nx-1)) {
+            dx0 = dx;
+            ix1 = ix;
+            ix0 = ix-1;
+          }
+          else {
+            dx0 = 2*dx;
+            ix1 = ix+1;
+            ix0 = ix-1;
+          }
+        }
+        for (iz=0; iz<nz; iz++) {
+          if (iz==0) {
+            dz0 = dz;
+            iz1 = iz+1;
+            iz0 = iz;
+          }
+          else if (iz==(nz-1)) {
+            dz0 = dz;
+            iz1 = iz;
+            iz0 = iz-1;
+          }
+          else {
+            dz0 = 2*dz;
+            iz1 = iz+1;
+            iz0 = iz-1;
+          }
+          dBnormdz[ix][iz] = (Bnorm[ix][iz1]-Bnorm[ix][iz0])/dz0;
+          dBnormdx[ix][iz] = (Bnorm[ix1][iz]-Bnorm[ix0][iz])/dx0;
         }
       }
-      for (iz=0; iz<nz; iz++) {
-        if (iz==0) {
-          dz0 = dz;
-          iz1 = iz+1;
-          iz0 = iz;
-        }
-        else if (iz==(nz-1)) {
-          dz0 = dz;
-          iz1 = iz;
-          iz0 = iz-1;
-        }
-        else {
-          dz0 = 2*dz;
-          iz1 = iz+1;
-          iz0 = iz-1;
-        }
-        dBnormdz[ix][iz] = (Bnorm[ix][iz1]-Bnorm[ix][iz0])/dz0;
-        dBnormdx[ix][iz] = (Bnorm[ix1][iz]-Bnorm[ix0][iz])/dx0;
-      }
+      if (interpolationParameter)
+        add2dMapList(interpParamValue);
+    } while (interpolationParameter && SDDS_ReadPage(&SDDS_table)>0 && (rows=SDDS_CountRowsOfInterest(&SDDS_table))>0);
+    if (interpolationParameter) {
+      if (length2dMapList<=1)
+        bomb("interpolation parameter was given but only one page was found in the input file", NULL);
+      /* these will be used for holding the interpolated map */
+      Bnorm = (double**)zarray_2d(sizeof(**Bnorm), nx, nz);
+      dBnormdz = (double**)zarray_2d(sizeof(**dBnormdz), nx, nz);
+      dBnormdx = (double**)zarray_2d(sizeof(**dBnormdx), nx, nz);
     }
+    if (!SDDS_Terminate(&SDDS_table))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   } else {
     /* 3d field map */
+    if (interpolationParameter)
+      bomb("interpolation not supported for 3D maps", NULL);
     if (SDDS_CheckColumn(&SDDS_table, "x", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY || 
         SDDS_CheckColumn(&SDDS_table, "y", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY ||
         SDDS_CheckColumn(&SDDS_table, "z", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OKAY) {
@@ -1533,3 +1622,61 @@ double choose_theta(double rho, double x0, double x1, double x2)
   return temp;
 }
 
+static long last_nx=-1, last_nz=-1;
+static double last_xi, last_xf, last_dx;
+static double last_zi, last_zf, last_dz;
+
+void clear2dMapList() 
+{
+  long i;
+  for (i=0; i<length2dMapList; i++) {
+    free_zarray_2d((void**)BnormList[i], nx, nz);
+    free_zarray_2d((void**)dBnormdzList[i], nx, nz);
+    free_zarray_2d((void**)dBnormdxList[i], nx, nz);
+  }
+  if (BnormList) free(BnormList);
+  if (dBnormdzList) free(dBnormdzList);
+  if (dBnormdxList) free(dBnormdxList);
+  if (interpolationParameterValue) free(interpolationParameterValue);
+  BnormList = dBnormdzList = dBnormdxList = NULL;
+  interpolationParameterValue = NULL;
+  length2dMapList = 0;
+}
+
+void add2dMapList(double interpValue) 
+{
+  BnormList = SDDS_Realloc(BnormList, sizeof(*BnormList)*(length2dMapList+1));
+  dBnormdxList = SDDS_Realloc(dBnormdxList, sizeof(*dBnormdxList)*(length2dMapList+1));
+  dBnormdzList = SDDS_Realloc(dBnormdzList, sizeof(*dBnormdzList)*(length2dMapList+1));
+  interpolationParameterValue = SDDS_Realloc(interpolationParameterValue, sizeof(*interpolationParameterValue)*(length2dMapList+1));
+  /* the map is stored in the global variables, so just copy it */
+  BnormList[length2dMapList] = Bnorm;
+  Bnorm = NULL;
+  dBnormdxList[length2dMapList] = dBnormdx;
+  dBnormdx = NULL;
+  dBnormdzList[length2dMapList] = dBnormdz;
+  dBnormdz = NULL;
+  interpolationParameterValue[length2dMapList] = interpValue;
+  length2dMapList++;
+  if (length2dMapList>1) {
+    if (interpolationParameterValue[length2dMapList-2] >= interpolationParameterValue[length2dMapList-1])
+      bomb("interpolation parameter values are not monotonically increasing in the input file", NULL);
+    if (last_nx!=nx || last_xi!=xi || last_xf!=xf || last_dx!=dx) 
+      bomb("x grid parameters changed between pages", NULL);
+    if (last_nz!=nz || last_zi!=zi || last_zf!=zf || last_dz!=dz) {
+      printf("z grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
+             last_nz, last_zi, last_zf, last_dz,
+             nz, zi, zf, dz);
+      exit(1);
+    }
+  } else {
+    last_nx = nx;
+    last_nz = nz;
+    last_xi = xi;
+    last_xf = xf;
+    last_dx = dx;
+    last_zi = zi;
+    last_zf = zf;
+    last_dz = dz;
+  }
+}

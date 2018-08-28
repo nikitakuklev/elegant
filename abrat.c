@@ -80,7 +80,8 @@ static char *variable_description[5] = {
 #define SET_YAW 26
 #define SET_3DFIELDMAP 27
 #define SET_USE_FTABLE 28
-#define N_OPTIONS 29
+#define SET_INTERPOLATE 29
+#define N_OPTIONS 30
 
 static char *option[N_OPTIONS] = {
     "tolerance", "theta", "output",
@@ -90,12 +91,12 @@ static char *option[N_OPTIONS] = {
     "dxdipole", "zduplicate", "dzdipole", "arcscan",
     "nominalEntrance", "nominalExit",
     "rigidity", "ideal", "fseLimit", "dxLimit", "dzLimit", "yawLimit", "yawDipole",
-    "3dfieldfile", "ftable",
+    "3dfieldfile", "ftable", "interpolate"
     } ;
 
-static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>} \n"
-" [-3dFieldFile] [-zDuplicate] [-extendData[=edge-angle]] [-fieldSign={+|-}]\n"
-" [{-scan={x | xp | y | yp | delta},lower,upper,number | \n"
+static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>}\n"
+" [-3dFieldFile] [-interpolateField=<parameterName>[,<order>(1)]] [-zDuplicate] [-extendData[=edge-angle]]\n"
+" [-fieldSign={+|-}] [{-scan={x | xp | y | yp | delta},lower,upper,number | \n"
 " -beamFiles=<input>,<output> }]\n"
 " -vertex=<x-in-meters>,<z-in-meters> -nominalEntrance=<x>,<y> -nominalExit=<x>,<y>\n"
 " -theta=<targetInDegrees> -rigidity=<Tesla-meters>\n"
@@ -117,6 +118,10 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 " -3dFieldFile      specifies that field-file has (x, y, z, Bx, By, Bz).\n"
 "                   The grid must be equi-spaced and sorted in (z, y, x) order.\n"
 "                   E.g., sddssort <filename> -col=z,incr -col=y,incr -col=x,incr\n"
+" -interpolateField If given, field file is expected to have multiple pages.\n"
+"                   In this case, interpolation as a function of the named parameter\n"
+"                   will be performed in place of FSE adjustment. By default, linear\n"
+"                   (order=1) interpolation is performed.\n"
 " -scan             specifies which accelerator coordinate to scan and over what range\n"
 " -beamFiles        specifies elegant-style SDDS beam file, <input>, to track and\n"
 "                   file, <output>, in which to place resulting beam \n"
@@ -161,14 +166,14 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 "Program by Michael Borland  (Version 8, August 2018).\n";
 
 unsigned long optimizeFlags;
-#define OPTIMIZE_ON        0x0001
-#define OPTIMIZE_FSE       0x0002
-#define OPTIMIZE_DX        0x0004
-#define OPTIMIZE_VERBOSE   0x0008
-#define OPTIMIZE_QUIET     0x0010
-#define OPTIMIZE_DZ        0x0020
-#define OPTIMIZE_YAW       0x0040
-
+#define OPTIMIZE_ON          0x0001
+#define OPTIMIZE_FSE         0x0002
+#define OPTIMIZE_DX          0x0004
+#define OPTIMIZE_VERBOSE     0x0008
+#define OPTIMIZE_QUIET       0x0010
+#define OPTIMIZE_DZ          0x0020
+#define OPTIMIZE_YAW         0x0040
+#define OPTIMIZE_INTERPOLATE 0x0080
 #define TOLERANCE_FACTOR 1e-14
 
 double particleMass = me_mks;
@@ -180,7 +185,7 @@ long particleIsElectron = 1;
 
 void make_fieldmap_file(char *filename, char *data_file, double Zi, double Zf, long nZ, double Xi, double Xf, long nX);
 void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inputfile, char *field_map_file,
-                              double theta, double fse, long variable);
+                              double theta, double fse, long variable, char *interpolationParameter, char *interpolationParameterUnits);
 
 #include "bratSubroutines.c"
 
@@ -191,6 +196,7 @@ int main(int argc, char **argv)
   SCANNED_ARG *scanned;
   char *output, *input;
   char *fmap_output;
+  char *interpolationParameter;
   long nx_fmap, nz_fmap;
   double zmin_fmap, zmax_fmap, xmin_fmap, xmax_fmap;
   SDDS_DATASET SDDS_output;
@@ -222,7 +228,8 @@ int main(int argc, char **argv)
   /* xB = xpB = yB = ypB = sB = deltaB = NULL; */
   arcSName = arcFieldName = NULL;
   idealMode = 0;
-  
+  interpolationParameter = NULL;
+
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (scanned[i_arg].arg_type==OPTION) {
       /* process options here */
@@ -288,6 +295,14 @@ int main(int argc, char **argv)
         if (scanned[i_arg].n_items!=2)
           bomb("invalid -output syntax", NULL);
         output = scanned[i_arg].list[1];
+        break;
+      case SET_INTERPOLATE:
+        if (scanned[i_arg].n_items<2 || scanned[i_arg].n_items>3)
+          bomb("invalid -interpolateField syntax", NULL);
+        interpolationParameter = scanned[i_arg].list[1];
+        if (scanned[i_arg].n_items==3 && 
+            (sscanf(scanned[i_arg].list[2], "%ld", &interpOrder)!=1 || interpOrder<1))
+          bomb("invalid -interpolateField syntax", NULL);
         break;
       case SET_SCAN:
         if (scanned[i_arg].n_items!=5 ||
@@ -443,6 +458,14 @@ int main(int argc, char **argv)
   zero_tol = integ_tol*10;
   delta = (final-initial)/(number-1);
 
+  if (interpolationParameter) {
+    if (optimizeFlags&OPTIMIZE_FSE)
+      bomb("can't use FSE optimization if interpolation is invoked", NULL);
+    if (arc_scan)
+      bomb("can't use interpolation mode with arc scan", NULL);
+    optimizeFlags |= OPTIMIZE_ON+OPTIMIZE_INTERPOLATE;
+  }
+
   if (theta==0)
     bomb("you must specify theta != 0", USAGE);
   if (!entryGiven)
@@ -463,7 +486,7 @@ int main(int argc, char **argv)
     if (arc_scan) {
       Breference = BRAT_setup_arc_field_data(input, arcSName, arcFieldName, xCenter);
     } else {
-      Breference = BRAT_setup_field_data(input, xCenter, zCenter);
+      Breference = BRAT_setup_field_data(input, xCenter, zCenter, interpolationParameter);
       zStart = zi-dz;
       if (zStart>zNomEntry) {
         fprintf(stderr, "zStart = %e, zNomEntry = %e\n",
@@ -516,7 +539,7 @@ int main(int argc, char **argv)
     if (inputBeamFile)
       bomb("Use of -beamFiles option is incompatible with -output option", NULL);
     setup_integration_output(&SDDS_output, output, input, fmap_output, theta*180/PI, fse,
-                             variable);
+                             variable, interpolationParameter, interpolationParameterUnits);
   }
   
   if (!inputBeamFile) {
@@ -585,6 +608,9 @@ int main(int argc, char **argv)
                                 "BReference", Breference,
                                 (variable==-1?NULL:initial_variable_name[variable]), value, 
                                 NULL) ||
+            (interpolationParameter &&
+             !SDDS_SetParameters(&SDDS_output, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                 interpolationParameter, interpParameter, NULL)) ||
             !SDDS_WriteTable(&SDDS_output)) {
           SDDS_SetError("Problem writing SDDS table for integration output");
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -718,7 +744,8 @@ void make_fieldmap_file(char *filename, char *data_file, double Zi, double Zf, l
 }
 
 void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inputfile, char *field_map_file,
-                              double theta, double fse, long variable)
+                              double theta, double fse, long variable, char *interpolationParameter,
+                              char *interpolationParameterUnits)
 {
   char s[200];
   sprintf(s, "brat output for file %s with $gQ$r=%g$ao$n, fse=%.4f",
@@ -771,6 +798,10 @@ void setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inp
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
   }
+  if (interpolationParameter && 
+      SDDS_DefineParameter(SDDS_output, interpolationParameter, NULL, interpolationParameterUnits, NULL, 
+                           NULL, SDDS_DOUBLE, NULL)<0)
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   if (variable!=-1 &&
       SDDS_DefineParameter(SDDS_output, initial_variable_name[variable], 
                            initial_variable_symbol[variable], variable_units[variable],
