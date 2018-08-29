@@ -88,7 +88,9 @@ Users are encouraged to check results against the serial or parallel versions an
   program via the \verb|-ftable| commandline option. Previously, the control existed but resulted in no transformation
   of particles taking place.
 \item The program \verb|abrat| now places the vertex, entry, and exit points (which are provided by the user)
-  in the trajectory output file.
+  in the trajectory output file. The program also now supports interpolation among multiple 2D field maps, which
+  can be used, for example, to find the operating point in a magnet for which the field scales differently with
+  current in different regions.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5628,7 +5630,7 @@ The results of these optimizations can be used in {\tt elegant} with the \verb|B
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-abrat {\em field-file} [-3dFieldFile] 
+abrat {\em field-file} [-3dFieldFile] [-interpolateField={\em parameterName},[,order={\em n}][,extrapolate][,permissive]] 
  [{-scan={x | xp | y | yp | delta},lower,upper,number | -beamFiles={\em input},{\em output} }]
  -vertex={\em x-in-meters},{\em z-in-meters} -nominalEntrance={\em x},{\em y} -nominalExit={\em x},{\em y}
  -theta={\em targetInDegrees} -rigidity={\em Tesla-meters}
@@ -5652,6 +5654,17 @@ Positive \verb|x| is away from the center of curvature.
 \item {\bf switches:}
 \begin{itemize}
 \item {\tt -3dFieldFile} --- If given, then {\em field-file} is expected to contain a 3D field map. See above for details.
+\item {\tt -interpolate} --- If given, then {\em field-file} is expected to contain at least two 2D field maps on separate
+  pages of the file.
+  These field maps could be, for example, from measurements with different excitation currents, with the excitation current
+  for each case being stored in a named parameter; the pages must be arranged so that the parameter values increase monotonically.
+  {\t abrat} will then automatically interpolate among the field maps to determine the required excitation current (for example);
+  this overrides the \verb|fse| parameter of the \verb|-optimize| option.
+  By default, linear interpolation is used (\verb|order=1|).
+  By default, the search will not go outside the range of the parameter values in the data; if \verb|extrapolate| is given, however,
+  extrapolation outside this range is performed.
+  By default, the grid parameters of the several pages must match exactly; if \verb|permissive| is given, however, this requirement
+  is not enforced.
 \item {\tt -scan} --- If given, then the value of the named accelerator coordinate is scanned to create a bundle of incoming rays. Output is provided for each  ray.
 \item {\tt -beamFiles } --- If given, then an {\tt elegant}-style beam is read and the particles therein are tracked through the dipole.
 A simular file is created for the output coordinates. Coordinates are defined at the nominal entrance and exit planes. Back-drifts are used to ensure that
