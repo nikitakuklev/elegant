@@ -56,6 +56,10 @@ static double BMaxOnTrajectory = -DBL_MAX;
 static double BSignOnTrajectory = 0;
 static char *interpolationParameterUnits = NULL;
 
+#define BRAT_INTERP_EXTRAPOLATE 0x001UL
+#define BRAT_INTERP_PERMISSIVE  0x002UL
+static unsigned long bratInterpFlags = 0;
+
 /* parameters for field calculation: */
 /* Bnorm is misnamed here, based on earlier versions of the program */
 static double **Bnorm, **dBnormdz, **dBnormdx;
@@ -378,7 +382,10 @@ double BRAT_optim_function(double *param, long *invalid)
     OUTRANGE_CONTROL outRange;
     xbuffer = tmalloc(sizeof(*xbuffer)*length2dMapList);
     ybuffer = tmalloc(sizeof(*ybuffer)*length2dMapList);
-    outRange.flags = OUTRANGE_EXTRAPOLATE;
+    if (bratInterpFlags&BRAT_INTERP_EXTRAPOLATE)
+      outRange.flags = OUTRANGE_EXTRAPOLATE;
+    else
+      outRange.flags = 0;
     for (i=0; i<length2dMapList; i++) 
       xbuffer[i] = interpolationParameterValue[i];
     for (ix=0; ix<nx; ix++) 
@@ -450,8 +457,10 @@ void BRAT_optimize_magnet(unsigned long flags)
     find_min_max(&xlo[4], &xhi[4], interpolationParameterValue, length2dMapList);
     dx[4] = (range=xhi[4]-xlo[4])*1e-4;
     x[4] = (xhi[4]+xlo[4])/2;
-    xlo[4] = x[4] - range*5;
-    xhi[4] = x[4] + range*5;
+    if (bratInterpFlags&BRAT_INTERP_EXTRAPOLATE) {
+      xlo[4] = x[4] - range*5;
+      xhi[4] = x[4] + range*5;
+    }
     disable[4] = 0;
   }
   if (!(flags&OPTIMIZE_FSE))
@@ -1661,13 +1670,23 @@ void add2dMapList(double interpValue)
   if (length2dMapList>1) {
     if (interpolationParameterValue[length2dMapList-2] >= interpolationParameterValue[length2dMapList-1])
       bomb("interpolation parameter values are not monotonically increasing in the input file", NULL);
-    if (last_nx!=nx || last_xi!=xi || last_xf!=xf || last_dx!=dx) 
-      bomb("x grid parameters changed between pages", NULL);
-    if (last_nz!=nz || last_zi!=zi || last_zf!=zf || last_dz!=dz) {
-      printf("z grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
-             last_nz, last_zi, last_zf, last_dz,
-             nz, zi, zf, dz);
-      exit(1);
+    if (last_nx!=nx)
+      bomb("x grid size changed between pages", NULL);
+    if (last_nz!=nz)
+      bomb("z grid size changed between pages", NULL);
+    if (!(bratInterpFlags&BRAT_INTERP_PERMISSIVE)) {
+      if (last_xi!=xi || last_xf!=xf || last_dx!=dx) {
+        printf("x grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
+               last_nx, last_xi, last_xf, last_dx,
+               nx, xi, xf, dx);
+        exit(1);
+      }
+      if (last_nz!=nz || last_zi!=zi || last_zf!=zf || last_dz!=dz) {
+        printf("z grid parameters changed from %ld, %le, %le, %le to %ld, %le, %le, %le!\n",
+               last_nz, last_zi, last_zf, last_dz,
+               nz, zi, zf, dz);
+        exit(1);
+      }
     }
   } else {
     last_nx = nx;

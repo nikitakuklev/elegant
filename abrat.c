@@ -95,9 +95,9 @@ static char *option[N_OPTIONS] = {
     } ;
 
 static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,<edgeAngleInDeg>}\n"
-" [-3dFieldFile] [-interpolateField=<parameterName>[,<order>(1)]] [-zDuplicate] [-extendData[=edge-angle]]\n"
-" [-fieldSign={+|-}] [{-scan={x | xp | y | yp | delta},lower,upper,number | \n"
-" -beamFiles=<input>,<output> }]\n"
+" [-3dFieldFile] [-interpolateField=<parameterName>[,order=<order>(1)][,extrapolate][,permissive]]\n"
+" [-zDuplicate] [-extendData[=edge-angle]] [-fieldSign={+|-}]\n"
+" [{-scan={x | xp | y | yp | delta},lower,upper,number | -beamFiles=<input>,<output> }]\n"
 " -vertex=<x-in-meters>,<z-in-meters> -nominalEntrance=<x>,<y> -nominalExit=<x>,<y>\n"
 " -theta=<targetInDegrees> -rigidity=<Tesla-meters>\n"
 " [-output=filename] [-singleScan | -arcScan=<sName>,<fieldName>,<rhoIdeal>]\n"
@@ -121,7 +121,8 @@ static char *USAGE = "abrat {<field-file>|-ideal=<fieldInTesla>,<chordInMeters>,
 " -interpolateField If given, field file is expected to have multiple pages.\n"
 "                   In this case, interpolation as a function of the named parameter\n"
 "                   will be performed in place of FSE adjustment. By default, linear\n"
-"                   (order=1) interpolation is performed.\n"
+"                   (order=1) interpolation is performed. In 'permissive' mode, ignores\n"
+"                   mismatch between grid parameters (assuming they are correct).\n"
 " -scan             specifies which accelerator coordinate to scan and over what range\n"
 " -beamFiles        specifies elegant-style SDDS beam file, <input>, to track and\n"
 "                   file, <output>, in which to place resulting beam \n"
@@ -174,6 +175,8 @@ unsigned long optimizeFlags;
 #define OPTIMIZE_DZ          0x0020
 #define OPTIMIZE_YAW         0x0040
 #define OPTIMIZE_INTERPOLATE 0x0080
+#define OPTIMIZE_EXTRAPOLATE 0x0100
+#define OPTIMIZE_PERMISSIVE  0x0200
 #define TOLERANCE_FACTOR 1e-14
 
 double particleMass = me_mks;
@@ -297,11 +300,16 @@ int main(int argc, char **argv)
         output = scanned[i_arg].list[1];
         break;
       case SET_INTERPOLATE:
-        if (scanned[i_arg].n_items<2 || scanned[i_arg].n_items>3)
+        if (scanned[i_arg].n_items<2)
           bomb("invalid -interpolateField syntax", NULL);
         interpolationParameter = scanned[i_arg].list[1];
-        if (scanned[i_arg].n_items==3 && 
-            (sscanf(scanned[i_arg].list[2], "%ld", &interpOrder)!=1 || interpOrder<1))
+        scanned[i_arg].n_items -= 2;
+        bratInterpFlags = 0;
+        if (!scanItemList(&bratInterpFlags, scanned[i_arg].list+2, &scanned[i_arg].n_items, 0,
+                          "order", SDDS_LONG, &interpOrder, 1, 0,
+                          "permissive", -1, NULL, 0, BRAT_INTERP_PERMISSIVE,
+                          "extrapolate", -1, NULL, 0, BRAT_INTERP_EXTRAPOLATE,
+                          NULL))
           bomb("invalid -interpolateField syntax", NULL);
         break;
       case SET_SCAN:
