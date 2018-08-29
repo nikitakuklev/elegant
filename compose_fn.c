@@ -31,7 +31,7 @@ char *compose_filename_occurence(char *template, char *root_name, long occurence
 {
   char *ptr_s, *ptr_ld;
   char *ptr, *filename;
-  char format[10];
+  char format[100];
   long i;
   
   ptr_s = str_in(template, "%s");
