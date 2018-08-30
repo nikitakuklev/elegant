@@ -194,6 +194,9 @@ long track_through_ccbend(
   KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
   KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles) {
+    /* Note that referenceKnL is recorded before we change the signs of the Kn (if needed).
+     * This is accounted for when we initialize the multipoles below.
+     */
     if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
         bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
     if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
