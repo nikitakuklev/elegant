@@ -32,6 +32,13 @@ int integrate_kick_K012(double *coord, double dx, double dy,
                         double drift,
                         MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
                         MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+int integrate_kick_KnL(double *coord, double dx, double dy, 
+                      double Po, double rad_coef, double isr_coef,
+                      double *KnL, long nTerms,
+                      long integration_order, long n_parts, long iPart, long iFinalSlice,
+                      double drift,
+                      MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
+                      MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 double ccbend_trajectory_error(double *value, long *invalid);
 
 long track_through_ccbend(
@@ -58,7 +65,8 @@ long track_through_ccbend(
                           long iFinalSlice
                           )
 {
-  double K0L, K1L, K2L;
+  double KnL[9];
+  long iTerm, nTerms;
   double dx, dy, dz; /* offsets of the multipole center */
   long n_kicks, integ_order;
   long i_part, i_top;
@@ -167,30 +175,38 @@ long track_through_ccbend(
     fse = ccbend->fse + ccbend->fseOffset;
   else 
     fse = ccbend->fse;
-  K0L = length = rho0 = 0; /* prevent compiler warnings */
+  for (iTerm=0; iTerm<9; iTerm++)
+    KnL[iTerm] = 0;
+  length = rho0 = 0; /* prevent compiler warnings */
   if ((angle = ccbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
-    K0L = (1+fse)/rho0*length;
+    KnL[0] = (1+fse)/rho0*length;
   }
   else
     bombTracking("Can't have zero ANGLE for CCBEND.");
-  K1L = (1+fse)*ccbend->K1*length/(1-ccbend->KnDelta);
-  K2L = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
+  KnL[1] = (1+fse)*ccbend->K1*length/(1-ccbend->KnDelta);
+  KnL[2] = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
+  KnL[3] = (1+fse)*ccbend->K3*length/(1-ccbend->KnDelta);
+  KnL[4] = (1+fse)*ccbend->K4*length/(1-ccbend->KnDelta);
+  KnL[5] = (1+fse)*ccbend->K5*length/(1-ccbend->KnDelta);
+  KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
+  KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
+  KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles) {
-    if (ccbend->referenceOrder==0 && (referenceKnL=K0L)==0)
+    if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
         bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
-    if (ccbend->referenceOrder==1 && (referenceKnL=K1L)==0)
+    if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
       bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
-    if (ccbend->referenceOrder==2 && (referenceKnL=K2L)==0)
+    if (ccbend->referenceOrder==2 && (referenceKnL=KnL[2])==0)
       bombElegant("REFERENCE_ORDER=2 but CCBEND K2 is zero", NULL);
     if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
       bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
   if (angle<0) {
     angleSign = -1;
-    K0L *= -1;
-    K2L *= -1;
+    for (iTerm=0; iTerm<9; iTerm+=2)
+      KnL[iTerm] *= -1;
     angle = -angle;
     yaw = -ccbend->yaw*ccbend->edgeFlip;
     rotateBeamCoordinates(particle, n_part, PI);
@@ -283,14 +299,26 @@ long track_through_ccbend(
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
     if (tilt)
       rotateBeamCoordinates(particle, n_part, tilt);
-    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, K1L/length, K2L/length, gK[0], ccbend->edgeOrder);
+    verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
   }
+
+  nTerms = 0;
+  for (iTerm=8; iTerm>=0; iTerm--)
+    if (KnL[iTerm]) {
+      nTerms = iTerm+1;
+      break;
+    }
 
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
-    if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, K0L, K1L, K2L, 
+    /*
+    if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL[0], KnL[1], KnL[2],
+                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edgeMultData, 
+                             &apertureData, &dzLoss, sigmaDelta2)) {
+    */
+    if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
                              integ_order, n_kicks, iPart, iFinalSlice, length, multData, edgeMultData, 
                              &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
@@ -310,7 +338,7 @@ long track_through_ccbend(
     *sigmaDelta2 /= i_top+1;
 
   if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
-    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, K1L/length, K2L/length, gK[1], ccbend->edgeOrder);
+    verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
     if (tilt)
@@ -617,6 +645,266 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
   }
   return 1;
 }
+
+int integrate_kick_KnL(double *coord, /* coordinates of the particle */
+                       double dx, double dy,  /* misalignments, needed for aperture checks */
+                       double Po, double rad_coef, double isr_coef, /* radiation effects */
+                       double *KnLFull, 
+                       long nTerms,
+                       long integration_order, /* 2 or 4 */
+                       long n_parts, /* N_KICKS */
+                       long iPart,   /* If <0, integrate the full magnet. If >=0, integrate just a single part and return.
+                                      * This is needed to allow propagation of the radiation matrix. */
+                       long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
+                                          * interior matrix from tracking data. */
+                       double drift, /* length of the full element */
+                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, /* error multipoles */
+                       MULT_APERTURE_DATA *apData,  /* aperture */
+                       double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
+                       double *sigmaDelta2  /* accumulate the energy spread increase for propagation of radiation matrix */
+                       )
+{
+  double p, qx, qy, denom, beta0, beta1, dp, s;
+  double x, y, xp, yp, sum_Fx, sum_Fy;
+  double xSum;
+  long i_kick, step, steps, iMult, nSum;
+  double dsh;
+  long maxOrder, iTerm;
+  double *xpow, *ypow, *KnL;
+  static double driftFrac[4] = {
+    0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
+    } ;
+  static double kickFrac[4] = {
+    1./(2-BETA),  -BETA/(2-BETA),  1/(2-BETA),  0
+    } ;
+  if (integration_order==2) {
+    driftFrac[0] = driftFrac[1] = 0.5;
+    kickFrac[0] = 1;
+    kickFrac[1] = 0;
+    steps = 2;
+  } else
+    steps = 4;
+
+  drift = drift/n_parts;
+
+  KnL = tmalloc(sizeof(*KnL)*nTerms);
+  for (iTerm=0; iTerm<nTerms; iTerm++)
+    KnL[iTerm] = KnLFull[iTerm]/n_parts;
+
+  x = coord[0];
+  xp = coord[1];
+  y = coord[2];
+  yp = coord[3];
+  s  = 0;
+  dp = coord[5];
+  p = Po*(1+dp);
+  beta0 = p/sqrt(sqr(p)+1);
+
+#if defined(ieee_math)
+  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+    return 0;
+  }
+#endif
+  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
+      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
+    return 0;
+  }
+
+  /* calculate initial canonical momenta */
+  qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
+  qy = (1+dp)*yp/denom;
+
+  maxOrder = findMaximumOrder(1, nTerms, edgeMultData, multData, NULL);
+  xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
+  ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
+
+  if (iPart<=0 && edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
+    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->KnL[iMult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->JnL[iMult], 1);
+    }
+  }
+  /* we must do this to avoid numerical precision issues that may subtly change the results
+   * when edge multipoles are enabled to disabled
+   */
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    free(xpow); free(ypow);
+    free(KnL);
+    return 0;
+  }
+  denom = sqrt(denom);
+  xp = qx/denom;
+  yp = qy/denom;
+
+  *dzLoss = 0;
+  if (iFinalSlice<=0)
+    iFinalSlice = n_parts;
+  xMin = DBL_MAX;
+  xMax = -DBL_MAX;
+  xSum = x;
+  nSum = 1;
+  for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
+    if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
+      coord[0] = x;
+      coord[2] = y;
+      free(xpow); free(ypow);
+      free(KnL);
+      return 0;
+    }
+    for (step=0; step<steps; step++) {
+      if (drift) {
+        dsh = drift*driftFrac[step];
+        x += xp*dsh;
+        y += yp*dsh;
+        s += dsh*sqrt(1 + sqr(xp) + sqr(yp));
+        *dzLoss += dsh;
+      }
+
+      if (!kickFrac[step])
+        break;
+
+      fillPowerArray(x, xpow, maxOrder);
+      fillPowerArray(y, ypow, maxOrder);
+
+      sum_Fx = sum_Fy = 0;
+
+      for (iTerm=0; iTerm<nTerms; iTerm++)
+        if (KnL[iTerm])
+          apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 
+                                          iTerm, KnL[iTerm]*kickFrac[step], 0);
+
+      if (multData) {
+        /* do kicks for spurious multipoles */
+        for (iMult=0; iMult<multData->orders; iMult++) {
+          if (multData->KnL && multData->KnL[iMult]) {
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            multData->order[iMult], 
+                                            multData->KnL[iMult]*kickFrac[step]/n_parts,
+                                            0);
+          }
+          if (multData->JnL && multData->JnL[iMult]) {
+            apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                            multData->order[iMult], 
+                                            multData->JnL[iMult]*kickFrac[step]/n_parts,
+                                            1);
+          }
+        }
+      }
+      if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+        coord[0] = x;
+        coord[2] = y;
+        free(xpow); free(ypow);
+        free(KnL);
+        return 0;
+      }
+      xp = qx/(denom=sqrt(denom));
+      yp = qy/denom;
+      /* these three quantities are needed for radiation integrals */
+      lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
+      lastX = x;
+      lastXp = xp;
+      if ((rad_coef || isr_coef) && drift) {
+	double deltaFactor, F2, dsFactor, dsIsrFactor;
+        qx /= (1+dp);
+        qy /= (1+dp);
+	deltaFactor = sqr(1+dp);
+	F2 = (sqr(sum_Fy)+sqr(sum_Fx))/sqr(lastRho);
+	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
+	dsIsrFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
+	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
+	if (rad_coef)
+	  dp -= rad_coef*deltaFactor*F2*dsFactor;
+	if (isr_coef>0)
+	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsIsrFactor)*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+        if (sigmaDelta2)
+          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
+        qx *= (1+dp);
+        qy *= (1+dp);
+      }
+    }
+    xSum += x;
+    nSum ++;
+    if (x>xMax) xMax = x;
+    if (x<xMin) xMin = x;
+    if (iPart>=0)
+      break;
+  }
+  xFinal = x;
+  xAve = xSum/nSum;
+  xError = xMax + xMin;
+  /*
+  printf("x init, min, max, fin = %le, %le, %le, %le\n", x0, xMin, xMax, x);
+  printf("xp init, fin = %le, %le\n", xp0, xp);
+  */
+
+  if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
+    coord[0] = x;
+    coord[2] = y;
+    free(xpow); free(ypow);
+    free(KnL);
+    return 0;
+  }
+  
+  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edgeMultData && edgeMultData->orders) {
+    fillPowerArray(x, xpow, maxOrder);
+    fillPowerArray(y, ypow, maxOrder);
+    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->KnL[iMult], 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
+                                      edgeMultData->order[iMult], 
+                                      edgeMultData->JnL[iMult], 1);
+    }
+  }
+  if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+    coord[0] = x;
+    coord[2] = y;
+    free(xpow); free(ypow);
+    free(KnL);
+    return 0;
+  }
+  denom = sqrt(denom);
+  xp = qx/denom;
+  yp = qy/denom;
+
+  free(xpow);
+  free(ypow);
+  free(KnL);
+
+  coord[0] = x;
+  coord[1] = xp;
+  coord[2] = y;
+  coord[3] = yp;
+  if (rad_coef) {
+    p = Po*(1+dp);
+    beta1 = p/sqrt(sqr(p)+1);
+    coord[4] = beta1*(coord[4]/beta0 + 2*s/(beta0+beta1));
+  }
+  else 
+    coord[4] += s;
+  coord[5] = dp;
+
+#if defined(ieee_math)
+  if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+    return 0;
+  }
+#endif
+  if (fabs(x)>COORD_LIMIT || fabs(y)>COORD_LIMIT ||
+      fabs(xp)>SLOPE_LIMIT || fabs(yp)>SLOPE_LIMIT) {
+    return 0;
+  }
+  return 1;
+}
+
 
 void switchRbendPlane(double **particle, long n_part, double alpha, double po)
 /* transforms the reference plane to one that is at an angle alpha relative to the
