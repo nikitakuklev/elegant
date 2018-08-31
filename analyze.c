@@ -859,7 +859,6 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     for (i=0; i<nStoredMatrices; i++) {
       CCBEND *crbptr0, *crbptr1;
       BRAT *brat0, *brat1;
-      /*CSBEND *csbptr0, *csbptr1;*/
       short copied = 0;
       if (eptr->type==storedElement[i]->type && compareElements(storedElement[i], eptr)==0 &&
 	  storedMatrix[i] && storedMatrix[i]->order>0) {
@@ -902,6 +901,11 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
 	  break;
+        case T_FMULT:
+	  printf("Using stored matrix for FMULT %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
+		 storedElement[i]->name, storedElement[i]->occurence);
+	  fflush(stdout);
+          break;
 	default:
 	  break;
 	}
@@ -1008,6 +1012,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     break;
   case T_FTABLE:
     field_table_tracking(finalCoord, n_track, (FTABLE*)eptr->p_elem, run->p_central, run);
+    break;
+  case T_FMULT:
+    fmultipole_tracking(finalCoord, n_track, (FMULT*)eptr->p_elem, 0, run->p_central, NULL, 0);
     break;
   default:
     printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
