@@ -951,7 +951,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 30
+#define N_KSEXT_PARAMS 31
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 47
 #define N_MAGNIFY_PARAMS 6
@@ -1032,7 +1032,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 38
+#define N_CCBEND_PARAMS 41
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1934,7 +1934,7 @@ typedef struct {
 extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
-    double length, k2, j1, tilt, bore, B;
+    double length, k2, k1, j1, tilt, bore, B;
     long n_kicks;
     double dx, dy, dz, fse, xkick, ykick;
     double xKickCalibration, yKickCalibration;
@@ -2278,18 +2278,19 @@ typedef struct {
     double etilt;   /* error tilt angle */
     long n_kicks;
     short integration_order;
-    char *systematic_multipoles, *edge_multipoles, *random_multipoles;
+    char *systematic_multipoles, *edge_multipoles, *edge1_multipoles, *edge2_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short optimizeDxOnce, optimizeFseOnce, compensateKn, edgeOrder, verbose;
+    short optimizeTrajectory, optimizeDxOnce, optimizeFseOnce, compensateKn, edgeOrder, verbose;
     /* for internal use only: */
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
     double referenceData[5]; /* length, angle, K1, K2, yaw */
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
-    MULTIPOLE_DATA edgeMultipoleData; 
+    MULTIPOLE_DATA edge1MultipoleData; 
+    MULTIPOLE_DATA edge2MultipoleData; 
     MULTIPOLE_DATA randomMultipoleData;
     short totalMultipolesComputed;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
@@ -3848,13 +3849,13 @@ extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipol
                                 double p_error, double Po, double **accepted, double z_start);
 int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, double KnL, long order2, double KnL2, long n_kicks, double drift,
+                                  long *order, double *KnL, short *skew, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);
 int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
-                                  long order, double KnL, long order2, double KnL2, long n_kicks, double drift,
+                                  long *order, double *KnL, short *skew, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2,
 				  long radial);

@@ -53,5 +53,12 @@ The skew values (for vertical steering) are deduced from the {\tt normal} values
 $g_n = f_n*(-1)^{n/2}$.
 \end{enumerate}
 
+Another way of introducing errors is via the \verb|K1| and \verb|J1| parameters, which allow
+introducing a normal and skew quadrupole {\bf error} term.
+For tracking, the strength of these values can be arbitrarily high without introducing errors.
+However, the matrix analysis (e.g., for determination of tunes and beta functions) assumes that
+these are weak effects and high accuracy should not be expected if this is not true.
+If \verb|K1| is significant, then use of the \verb|KQUSE| element is preferred.
+
 Apertures specified via an upstream \verb|MAXAMP| element or an \verb|aperture_input|
 command will be imposed inside this element.

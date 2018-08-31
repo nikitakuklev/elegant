@@ -297,7 +297,10 @@ void track_through_mkicker(
   double time, time_offset, strength, t0, amplitude;
   double dummy;
   long n_parts;
-  
+  short skew[3] = {0, 0, 0};
+  long multipoleOrder[3] = {0, 0, 0};
+  double KnL[3] = {0, 0, 0};
+
   if (np<=0)
     return;
 
@@ -399,8 +402,10 @@ void track_through_mkicker(
                                       kicker->t_wf[i],   kicker->t_wf[i+1], time));
     }
 
+    KnL[0] = strength*kicker->length;
+
     integrate_kick_multipole_ord4(part[ip], kicker->dx, kicker->dy, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                  kicker->order, strength*kicker->length, 0, 0.0, n_parts,
+                                  multipoleOrder, KnL, skew, n_parts,
                                   kicker->length, NULL, NULL, NULL, NULL, &dummy, NULL, 0);
   }
 

@@ -37,7 +37,7 @@ int integrate_kick_KnL(double *coord, double dx, double dy,
                       double *KnL, long nTerms,
                       long integration_order, long n_parts, long iPart, long iFinalSlice,
                       double drift,
-                      MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, 
+                      MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edge1MultData, MULTIPOLE_DATA *edge2MultData, 
                       MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 double ccbend_trajectory_error(double *value, long *invalid);
 
@@ -73,7 +73,7 @@ long track_through_ccbend(
   double *coef;
   double fse, tilt, rad_coef, isr_coef, dzLoss=0;
   double rho0, arcLength, length, angle, yaw, angleSign;
-  MULTIPOLE_DATA *multData = NULL, *edgeMultData = NULL;
+  MULTIPOLE_DATA *multData = NULL, *edge1MultData = NULL, *edge2MultData = NULL;
   long freeMultData=0;
   MULT_APERTURE_DATA apertureData;
   double referenceKnL = 0;
@@ -89,7 +89,7 @@ long track_through_ccbend(
   if (iFinalSlice>0 && ccbend->optimized!=1)
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
 
-  if (ccbend->optimized!=-1 && ccbend->angle!=0) {
+  if (ccbend->optimizeTrajectory && ccbend->optimized!=-1 && ccbend->angle!=0) {
     if (ccbend->optimized==0 || 
         ccbend->length!=ccbend->referenceData[0] ||
         ccbend->angle!=ccbend->referenceData[1] ||
@@ -123,7 +123,8 @@ long track_through_ccbend(
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
         ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt =
           ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
-        ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.random_multipoles = NULL;
+        ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.edge1_multipoles = 
+          ccbendCopy.edge2_multipoles = ccbendCopy.random_multipoles = NULL;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -193,12 +194,13 @@ long track_through_ccbend(
   KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
   KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
   KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
-  if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles) {
+  if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
+      ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
     /* Note that referenceKnL is recorded before we change the signs of the Kn (if needed).
      * This is accounted for when we initialize the multipoles below.
      */
     if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
-        bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
+      bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
     if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
       bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
     if (ccbend->referenceOrder==2 && (referenceKnL=KnL[2])==0)
@@ -238,38 +240,54 @@ long track_through_ccbend(
   if (!ccbend->multipolesInitialized) {
     /* read the data files for the error multipoles */
     readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
-    readErrorMultipoleData(&(ccbend->edgeMultipoleData), ccbend->edge_multipoles, 0);
+    if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip))
+        readErrorMultipoleData(&(ccbend->edge1MultipoleData), 
+                               ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles, 0);
+    else 
+      readErrorMultipoleData(&(ccbend->edge1MultipoleData), ccbend->edge_multipoles, 0);
+    if ((ccbend->edge2_multipoles && !ccbend->edgeFlip) || (ccbend->edge1_multipoles && ccbend->edgeFlip))
+        readErrorMultipoleData(&(ccbend->edge2MultipoleData), 
+                               ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles, 0);
+    else 
+      readErrorMultipoleData(&(ccbend->edge2MultipoleData), ccbend->edge_multipoles, 0);
     readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
-    if (angleSign<0) {
-      long i;
-      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
-        if (ccbend->systematicMultipoleData.order[i]%2==0) {
-          ccbend->systematicMultipoleData.an[i] *= -1;
-          ccbend->systematicMultipoleData.bn[i] *= -1;
-        }
-      }
-      for (i=0; i<ccbend->edgeMultipoleData.orders; i++) {
-        if (ccbend->edgeMultipoleData.order[i]%2==0) {
-          ccbend->edgeMultipoleData.an[i] *= -1;
-          ccbend->edgeMultipoleData.bn[i] *= -1;
-        }
-      }
-    }
     ccbend->multipolesInitialized = 1;
   }
   if (!ccbend->totalMultipolesComputed) {
     computeTotalErrorMultipoleFields(&(ccbend->totalMultipoleData),
                                      &(ccbend->systematicMultipoleData), ccbend->systematicMultipoleFactor, 
-                                     &(ccbend->edgeMultipoleData),
+                                     &(ccbend->edge1MultipoleData), &(ccbend->edge2MultipoleData),
                                      &(ccbend->randomMultipoleData), ccbend->randomMultipoleFactor,
                                      NULL, 0.0,
                                      referenceKnL, 
                                      ccbend->referenceOrder, 0
                                      );
+    if (angleSign<0) {
+      long i;
+      for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
+        if (ccbend->systematicMultipoleData.order[i]%2==0) {
+          ccbend->systematicMultipoleData.KnL[i] *= -1;
+          ccbend->systematicMultipoleData.JnL[i] *= -1;
+        }
+      }
+      for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
+        if (ccbend->edge1MultipoleData.order[i]%2==0) {
+          ccbend->edge1MultipoleData.KnL[i] *= -1;
+          ccbend->edge1MultipoleData.JnL[i] *= -1;
+        }
+      }
+      for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
+        if (ccbend->edge2MultipoleData.order[i]%2==0) {
+          ccbend->edge2MultipoleData.KnL[i] *= -1;
+          ccbend->edge2MultipoleData.JnL[i] *= -1;
+        }
+      }
+    }
     ccbend->totalMultipolesComputed = 1;
   }
   multData = &(ccbend->totalMultipoleData);
-  edgeMultData = &(ccbend->edgeMultipoleData);
+  edge1MultData = &(ccbend->edge1MultipoleData);
+  edge2MultData = &(ccbend->edge2MultipoleData);
 
   if (multData && !multData->initialized)
     multData = NULL;
@@ -316,13 +334,8 @@ long track_through_ccbend(
     *sigmaDelta2 = 0;
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
-    /*
-    if (!integrate_kick_K012(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL[0], KnL[1], KnL[2],
-                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edgeMultData, 
-                             &apertureData, &dzLoss, sigmaDelta2)) {
-    */
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
-                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edgeMultData, 
+                             integ_order, n_kicks, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
                              &apertureData, &dzLoss, sigmaDelta2)) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
@@ -661,7 +674,10 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                        long iFinalSlice, /* If >0, integrate to the indicated slice. Needed to allow extracting the
                                           * interior matrix from tracking data. */
                        double drift, /* length of the full element */
-                       MULTIPOLE_DATA *multData, MULTIPOLE_DATA *edgeMultData, /* error multipoles */
+                       /* error multipoles */
+                       MULTIPOLE_DATA *multData,       /* body terms */
+                       MULTIPOLE_DATA *edge1MultData,  /* entrance */
+                       MULTIPOLE_DATA *edge2MultData,  /* exit */
                        MULT_APERTURE_DATA *apData,  /* aperture */
                        double *dzLoss,      /* if particle is loss, offset from start of element where this occurs */
                        double *sigmaDelta2  /* accumulate the energy spread increase for propagation of radiation matrix */
@@ -717,20 +733,20 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
   qy = (1+dp)*yp/denom;
 
-  maxOrder = findMaximumOrder(1, nTerms, edgeMultData, multData, NULL);
+  maxOrder = findMaximumOrder(1, nTerms, edge1MultData, edge2MultData, multData);
   xpow = tmalloc(sizeof(*xpow)*(maxOrder+1));
   ypow = tmalloc(sizeof(*ypow)*(maxOrder+1));
 
-  if (iPart<=0 && edgeMultData && edgeMultData->orders) {
+  if (iPart<=0 && edge1MultData && edge1MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
+    for (iMult=0; iMult<edge1MultData->orders; iMult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->KnL[iMult], 0);
+                                      edge1MultData->order[iMult], 
+                                      edge1MultData->KnL[iMult], 0);
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->JnL[iMult], 1);
+                                      edge1MultData->order[iMult], 
+                                      edge1MultData->JnL[iMult], 1);
     }
   }
   /* we must do this to avoid numerical precision issues that may subtly change the results
@@ -856,16 +872,16 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     return 0;
   }
   
-  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edgeMultData && edgeMultData->orders) {
+  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edge2MultData && edge2MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
-    for (iMult=0; iMult<edgeMultData->orders; iMult++) {
+    for (iMult=0; iMult<edge2MultData->orders; iMult++) {
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->KnL[iMult], 0);
+                                      edge2MultData->order[iMult], 
+                                      edge2MultData->KnL[iMult], 0);
       apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 
-                                      edgeMultData->order[iMult], 
-                                      edgeMultData->JnL[iMult], 1);
+                                      edge2MultData->order[iMult], 
+                                      edge2MultData->JnL[iMult], 1);
     }
   }
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {

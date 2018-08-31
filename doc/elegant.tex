@@ -58,6 +58,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|CCBEND| element now was a \verb|YAW| parameter that permits changing the entrance and exit
   angles in a coordinated fashion. It also supports the \verb|FINT1|, \verb|FINT2|, and \verb|HGAP| parameters
   for soft-fringe effects, as well as multipoles from octupole to 18-pole.
+\item The \verb|FMULT| element, which provides a general multipole with content specified by an SDDS file, now
+  affects matrix-based computations (e.g., twiss parameters, chromaticities, and transfer matrix).
+\item The \verb|KSEXT| element now provides a parameter for a normal quadrupole error, in addition to the existing
+  skew quadrupole error. The utility of this was pointed out by Y.-P. Sun (APS) and X. Huang (SLAC).
 \end{itemize}
 
 \subsection{New and Modified Commands}
