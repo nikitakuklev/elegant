@@ -194,20 +194,6 @@ long track_through_ccbend(
   KnL[6] = (1+fse)*ccbend->K6*length/(1-ccbend->KnDelta);
   KnL[7] = (1+fse)*ccbend->K7*length/(1-ccbend->KnDelta);
   KnL[8] = (1+fse)*ccbend->K8*length/(1-ccbend->KnDelta);
-  if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
-      ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
-    /* Note that referenceKnL is recorded before we change the signs of the Kn (if needed).
-     * This is accounted for when we initialize the multipoles below.
-     */
-    if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
-      bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
-    if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
-      bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
-    if (ccbend->referenceOrder==2 && (referenceKnL=KnL[2])==0)
-      bombElegant("REFERENCE_ORDER=2 but CCBEND K2 is zero", NULL);
-    if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
-      bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
-  }
   if (angle<0) {
     angleSign = -1;
     for (iTerm=0; iTerm<9; iTerm+=2)
@@ -218,6 +204,17 @@ long track_through_ccbend(
   } else {
     angleSign = 1;
     yaw = ccbend->yaw*ccbend->edgeFlip;
+  }
+  if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
+      ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
+    if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
+      bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
+    if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
+      bombElegant("REFERENCE_ORDER=1 but CCBEND K1 is zero", NULL);
+    if (ccbend->referenceOrder==2 && (referenceKnL=KnL[2])==0)
+      bombElegant("REFERENCE_ORDER=2 but CCBEND K2 is zero", NULL);
+    if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
+      bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
   if (ccbend->edgeFlip==1) {
     gK[0] = 2*ccbend->fint1*ccbend->hgap;
@@ -265,22 +262,16 @@ long track_through_ccbend(
     if (angleSign<0) {
       long i;
       for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
-        if (ccbend->systematicMultipoleData.order[i]%2==0) {
-          ccbend->systematicMultipoleData.KnL[i] *= -1;
-          ccbend->systematicMultipoleData.JnL[i] *= -1;
-        }
+        ccbend->totalMultipoleData.KnL[i] *= -1;
+        ccbend->totalMultipoleData.JnL[i] *= -1;
       }
       for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
-        if (ccbend->edge1MultipoleData.order[i]%2==0) {
-          ccbend->edge1MultipoleData.KnL[i] *= -1;
-          ccbend->edge1MultipoleData.JnL[i] *= -1;
-        }
+        ccbend->edge1MultipoleData.KnL[i] *= -1;
+        ccbend->edge1MultipoleData.JnL[i] *= -1;
       }
       for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
-        if (ccbend->edge2MultipoleData.order[i]%2==0) {
-          ccbend->edge2MultipoleData.KnL[i] *= -1;
-          ccbend->edge2MultipoleData.JnL[i] *= -1;
-        }
+        ccbend->edge2MultipoleData.KnL[i] *= -1;
+        ccbend->edge2MultipoleData.JnL[i] *= -1;
       }
     }
     ccbend->totalMultipolesComputed = 1;
