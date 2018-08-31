@@ -262,16 +262,22 @@ long track_through_ccbend(
     if (angleSign<0) {
       long i;
       for (i=0; i<ccbend->systematicMultipoleData.orders; i++) {
-        ccbend->totalMultipoleData.KnL[i] *= -1;
-        ccbend->totalMultipoleData.JnL[i] *= -1;
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->totalMultipoleData.KnL[i] *= -1;
+          ccbend->totalMultipoleData.JnL[i] *= -1;
+        }
       }
       for (i=0; i<ccbend->edge1MultipoleData.orders; i++) {
-        ccbend->edge1MultipoleData.KnL[i] *= -1;
-        ccbend->edge1MultipoleData.JnL[i] *= -1;
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->edge1MultipoleData.KnL[i] *= -1;
+          ccbend->edge1MultipoleData.JnL[i] *= -1;
+        }
       }
       for (i=0; i<ccbend->edge2MultipoleData.orders; i++) {
-        ccbend->edge2MultipoleData.KnL[i] *= -1;
-        ccbend->edge2MultipoleData.JnL[i] *= -1;
+        if (ccbend->totalMultipoleData.order[i]%2) {
+          ccbend->edge2MultipoleData.KnL[i] *= -1;
+          ccbend->edge2MultipoleData.JnL[i] *= -1;
+        }
       }
     }
     ccbend->totalMultipolesComputed = 1;
