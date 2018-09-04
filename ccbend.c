@@ -207,6 +207,7 @@ long track_through_ccbend(
   }
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
       ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
+    /* Note that with referenceOrder=0, referenceKnL will always be positive if angle is nonzero */
     if (ccbend->referenceOrder==0 && (referenceKnL=KnL[0])==0)
       bombElegant("REFERENCE_ORDER=0 but CCBEND ANGLE is zero", NULL);
     if (ccbend->referenceOrder==1 && (referenceKnL=KnL[1])==0)
