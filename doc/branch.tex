@@ -6,7 +6,7 @@ The element permits switching tracking between two segments of a beamline. This 
 or periodically. For the former, the \verb|COUNTER| parameter should be used to specify the pass number (which
 is zero on the first pass) on which to branch.
 For the latter, the \verb|INTERVAL| $i$ and (optionally) \verb|OFFSET| $o$ parameters should be used; the branch will occur
-when $(p-o) \mod i == 0$.
+when $(p-o) \% i == 0$.
 
 The application that inspired creation of this element is to switch from tracking using lumped elements to tracking
 using element-by-element methods.
@@ -26,7 +26,7 @@ BR2: BRANCH,COUNTER=-1,BRANCH_TO="M2"
 BL: line=(BR1,RING1,SR1,M1,RINGFULL,M2,RF)
 \end{verbatim}
 
-Another application is to model a periodic by-pass, e.g.,
+Another application is to model a periodic bypass, e.g.,
 \begin{verbatim}
 RINGA: line=(...)
 RINGB: line=(...)
