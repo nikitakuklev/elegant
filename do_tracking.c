@@ -1038,8 +1038,9 @@ long do_tracking(
 	  if (flags&TEST_PARTICLES) {
 	    choice = branch->defaultToElse;
 	  } else {
-	    if (branch->privateCounter>0)
-	      choice = 1;
+            if ((branch->interval>0  && (i_pass-branch->offset)%branch->interval) ||
+                branch->privateCounter>0)
+              choice = 1;
 	  }
 	  if (choice==0) {
 	    if (!branch->beptr1)

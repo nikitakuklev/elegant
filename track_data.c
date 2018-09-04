@@ -859,7 +859,9 @@ PARAMETER recirc_param[N_RECIRC_PARAMS] = {
 BRANCH branch_example;
 /* names for branch instruction */
 PARAMETER branch_param[N_BRANCH_PARAMS] = {
-    {"COUNTER", "", IS_LONG, 0, (long)((char *)&branch_example.counter), NULL, 0.0, 0, "Counter, which is decremented by 1 for each pass."},
+    {"COUNTER", "", IS_LONG, 0, (long)((char *)&branch_example.counter), NULL, 0.0, 0, "Counter, which is decremented by 1 for each pass. Set to negative value for unconditional branch."},
+    {"INTERVAL", "", IS_LONG, 0, (long)((char *)&branch_example.interval), NULL, 0.0, 0, "Interval between branching. If non-positive, use COUNTER-based method instead."},
+    {"OFFSET", "", IS_LONG, 0, (long)((char *)&branch_example.offset), NULL, 0.0, 0, "If INTERVAL method used, offset of branch passes."},
     {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&branch_example.verbosity), NULL, 0.0, 0, "Larger values result in more output during running."},
     {"DEFAULT_TO_ELSE", "", IS_LONG, 0, (long)((char *)&branch_example.defaultToElse), NULL, 0.0, 0, "If non-zero, defaults to ELSE_TO when performing tracking for closed orbit, twiss_output, etc."},
     {"BRANCH_TO", "", IS_STRING, 0, (long)((char *)&branch_example.branchTo), NULL, 0.0, 0, "Optional name of element to which to jump when counter is non-positive."},
