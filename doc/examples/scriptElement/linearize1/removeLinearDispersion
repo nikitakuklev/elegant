@@ -1,0 +1,8 @@
+#!/bin/bash
+
+sddsprocess $1 -pipe=out \
+            "-define=column,delta,p pCentral / 1 -" \
+            | sddsmpfit -pipe -independent=delta -dependent=x,xp -terms=2 \
+            | sddsxref $1 -pipe -take=y,yp,t,p,particleID \
+            | sddsconvert -pipe=in $2 -delete=col,x,xp,*Fit -rename=col,xResidual=x,xpResidual=xp 
+
