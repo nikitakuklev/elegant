@@ -2777,13 +2777,13 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
 {
   VMATRIX *M;
   double length, H, KnL;
-  if ((length = mult->length)<=1e-12)
-    length = 1e-12;
+  if ((length = mult->length)<=1e-24)
+    length = 1e-24;
   H = P*me_mks*c_mks/e_mks;
   if (mult->bore) {
-    KnL = dfactorial(mult->order)*mult->BTipL/(H*ipow(mult->bore, mult->order));
+    KnL = dfactorial(mult->order)*mult->BTipL*mult->factor/(H*ipow(mult->bore, mult->order));
   } else {
-    KnL = mult->KnL;
+    KnL = mult->KnL*mult->factor;
   }
   switch (mult->order) {
   case 0: /* dipole */

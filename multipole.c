@@ -518,7 +518,7 @@ long multipole_tracking(
     if (multipole->bore)
         /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) */
         KnL = dfactorial(multipole->order)*multipole->BTipL/ipow(multipole->bore, multipole->order)*
-              (particleCharge/(particleMass*c_mks*Po))*multipole->factor;
+              (particleCharge/(particleMass*c_mks*Po))*multipole->factor/n_kicks;
     else
       KnL = multipole->KnL*multipole->factor/n_kicks;
 
