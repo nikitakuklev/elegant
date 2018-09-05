@@ -18,6 +18,9 @@
 
 static CCBEND ccbendCopy;
 static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
+#define OPTIMIZE_X  0x01UL
+#define OPTIMIZE_XP 0x02UL
+static unsigned long optimizationFlags = 0;
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
@@ -89,7 +92,7 @@ long track_through_ccbend(
   if (iFinalSlice>0 && ccbend->optimized!=1)
     bombTracking("Programming error: partial integration mode invoked for unoptimized CCBEND.");
 
-  if (ccbend->optimizeTrajectory && ccbend->optimized!=-1 && ccbend->angle!=0) {
+  if ((ccbend->optimizeFse || ccbend->optimizeDx) && ccbend->optimized!=-1 && ccbend->angle!=0) {
     if (ccbend->optimized==0 || 
         ccbend->length!=ccbend->referenceData[0] ||
         ccbend->angle!=ccbend->referenceData[1] ||
@@ -109,15 +112,29 @@ long track_through_ccbend(
       */
       if (iPart>=0)
         bombTracking("Programming error: oneStep mode is incompatible with optmization for CCBEND.");
+      optimizationFlags = OPTIMIZE_X|OPTIMIZE_XP;
       if (ccbend->optimized) {
-          startValue[0] = ccbend->fseOffset;
-          startValue[1] = ccbend->dxOffset;
-          if (ccbend->optimizeFseOnce)
-            disable[0] = 1;
-          if (ccbend->optimizeDxOnce) 
-            disable[1] = 1;
-      } else
+        startValue[0] = ccbend->fseOffset;
+        startValue[1] = ccbend->dxOffset;
+        if (ccbend->optimizeFseOnce) {
+          disable[0] = 1;
+          optimizationFlags &= ~OPTIMIZE_XP;
+        }
+        if (ccbend->optimizeDxOnce) {
+          disable[1] = 1;
+          optimizationFlags &= ~OPTIMIZE_X;
+        }
+      } else {
         startValue[0] = startValue[1] = 0;
+        if (ccbend->optimizeFse) {
+          disable[0] = 1;
+          optimizationFlags &= ~OPTIMIZE_XP;
+        }
+        if (ccbend->optimizeDx) {
+          disable[1] = 1;
+          optimizationFlags &= ~OPTIMIZE_X;
+        }
+      }
       if (!disable[0] || !disable[1]) {
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
@@ -1002,7 +1019,11 @@ double ccbend_trajectory_error(double *value, long *invalid)
     *invalid = 1;
     return DBL_MAX;
   }
-  result = fabs(xError) + fabs(xpError/ccbendCopy.angle);
+  result = 0;
+  if (optimizationFlags&OPTIMIZE_X)
+    result += fabs(xError);
+  if (optimizationFlags&OPTIMIZE_XP)
+    result += fabs(xpError/ccbendCopy.angle);
   /*
   printf("particle[0][0] = %le, particle[0][1] = %le, xError = %le, xpError = %le, result = %le\n", 
          particle[0][0], particle[0][1], xError, xpError, result); fflush(stdout);
