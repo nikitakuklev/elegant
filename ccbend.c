@@ -126,11 +126,11 @@ long track_through_ccbend(
         }
       } else {
         startValue[0] = startValue[1] = 0;
-        if (ccbend->optimizeFse) {
+        if (!ccbend->optimizeFse) {
           disable[0] = 1;
           optimizationFlags &= ~OPTIMIZE_XP;
         }
-        if (ccbend->optimizeDx) {
+        if (!ccbend->optimizeDx) {
           disable[1] = 1;
           optimizationFlags &= ~OPTIMIZE_X;
         }

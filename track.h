@@ -2282,7 +2282,7 @@ typedef struct {
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
-    short optimizeFse, optimizeDx, optimizeDxOnce, optimizeFseOnce, compensateKn, edgeOrder, verbose;
+    short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, edgeOrder, verbose;
     /* for internal use only: */
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
