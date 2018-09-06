@@ -20,6 +20,7 @@ static long output_now = 0;
 static long n_outputs = 0;
 static FILE **fp_printout;      /* for printout */
 static long *print_full_only = NULL;
+static char **printoutFormat = NULL;
 static long *SDDS_order = NULL;
 static long *print_order = NULL;
 static char *unit[6] = {"m", "rad", "m", "rad", "m", "1"};
@@ -90,6 +91,7 @@ void setup_matrix_output(
   SDDS_output = compose_filename(SDDS_output, run->rootname);
   fp_printout = trealloc(fp_printout, sizeof(*fp_printout)*(n_outputs+1));
   print_full_only = trealloc(print_full_only, sizeof(*print_full_only)*(n_outputs+1));
+  printoutFormat = trealloc(printoutFormat, sizeof(*printoutFormat)*(n_outputs+1));
   print_order= trealloc(print_order, sizeof(*print_order)*(n_outputs+1));
   start_name = trealloc(start_name, sizeof(*start_name)*(n_outputs+1));
   start_occurence = trealloc(start_occurence, sizeof(*start_occurence)*(n_outputs+1));
@@ -110,6 +112,7 @@ void setup_matrix_output(
   start_occurence[n_outputs] = start_from_occurence;
   print_order[n_outputs] = printout?printout_order:0;
   print_full_only[n_outputs] = full_matrix_only;
+  cp_str(&printoutFormat[n_outputs], printout_format);
 
   SDDS_order[n_outputs]   = SDDS_output?SDDS_output_order:0;
   if (SDDS_output_match)
@@ -359,11 +362,11 @@ void run_matrix_output(
 #endif
 	  if (member->matrix->order>print_order[i_output]) {
 	    SWAP_LONG(member->matrix->order, print_order[i_output]);
-	    print_matrices(fp_printout[i_output], member->name, member->matrix);
+	    print_matrices1(fp_printout[i_output], member->name, printoutFormat[i_output], member->matrix);
 	    SWAP_LONG(member->matrix->order, print_order[i_output]);
 	  }
 	  else
-	    print_matrices(fp_printout[i_output], member->name, member->matrix);
+	    print_matrices1(fp_printout[i_output], member->name, printoutFormat[i_output], member->matrix);
 	}
 #ifdef DEBUG
 	printf("concatenating matrix of %s %s\n", 
@@ -384,10 +387,10 @@ void run_matrix_output(
                   individualMatrices ? "Effective element" : "Concatenated");
 	  if (M1->order > print_order[i_output]) {
 	    SWAP_LONG(M1->order, print_order[i_output]);
-	    print_matrices(fp_printout[i_output], s, M1);
+	    print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
 	    SWAP_LONG(M1->order, print_order[i_output]);
 	  } else {
-	    print_matrices(fp_printout[i_output], s, M1);
+	    print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
 	  }
 	}
       } else {
@@ -434,7 +437,7 @@ void run_matrix_output(
       else
 	sprintf(s, "full matrix");
       SWAP_LONG(M1->order, print_order[i_output]);
-      print_matrices(fp_printout[i_output], s, M1);
+      print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
       SWAP_LONG(M1->order, print_order[i_output]);
     }
   }

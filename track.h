@@ -916,7 +916,7 @@ extern char *entity_text[N_TYPES];
 #define N_QUAD_PARAMS 30
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
-#define N_SEXT_PARAMS 10
+#define N_SEXT_PARAMS 11
 #define N_OCTU_PARAMS 8
 #define N_MULT_PARAMS 13
 #define N_SOLE_PARAMS 7
@@ -1176,7 +1176,7 @@ typedef struct {
 extern PARAMETER sext_param[N_SEXT_PARAMS];
 
 typedef struct {
-    double length, k2, j1, tilt;
+    double length, k2, k1, j1, tilt;
     double dx, dy, dz, fse;
     double ffringe;
     short order;
@@ -3435,7 +3435,7 @@ extern void GWigSymplecticPass(double **coord, long num_particles, double pCentr
 extern void InitializeAPPLE(char *file, APPLE *apple);
 extern void APPLE_Track(double **coord, long num_particles, double pCentral,
 			APPLE *apple);
-extern VMATRIX *sextupole_matrix(double K2, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
+extern VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long maximum_order, double tilt, double fse, double xkick, double ykick, double ffringe);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void startMatrixComputationTiming();
@@ -3810,6 +3810,7 @@ extern void offsetBeamCoordinates(double **part, long np, double dx, double dy, 
 
 /* prototypes for matrix7.c: */
 extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
+extern void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M);
 extern void initialize_matrices(VMATRIX *M, long order);
 extern void null_matrices(VMATRIX *M, unsigned long flags);
 /* flags for null_matrices */

@@ -799,11 +799,11 @@ VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
     if (K1==0 || length==0) {
       if (K2==0)
         return drift_matrix(length, maximum_order);
-      return sextupole_matrix(K2, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
+      return sextupole_matrix(K2, 0.0, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
     }
     if (fabs(K1*(1+fse1)*length)<1e-6) {
       if (K2!=0)
-        return sextupole_matrix(K2, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
+        return sextupole_matrix(K2, K1, 0.0, length, maximum_order, tilt, fse2, 0.0, 0.0, 0);
       return quadrupole_matrix(K1, length, maximum_order, tilt, fse1, 0.0, 0.0, 0, 0, NULL, 0.0, -1.0, NULL, NULL, 0);
     }
     

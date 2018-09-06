@@ -71,7 +71,8 @@ typedef struct {
 
 void copyParticles(double ***coordCopy, double **coord, long np);
 void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv);
-void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data);
+void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat, 
+                             VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data);
 void propagateTwissParameters(TWISS *twiss1, TWISS *twiss0, VMATRIX *M);
   
 void setup_transport_analysis(
@@ -506,9 +507,9 @@ void do_transport_analysis(
     }
 
     if (fpPrintout)
-      printMapAnalysisResults(fpPrintout, printout_order, M, &twiss, &chromDeriv, data);
+      printMapAnalysisResults(fpPrintout, printout_order, printout_format, M, &twiss, &chromDeriv, data);
     if (verbosity>0)
-      printMapAnalysisResults(stdout, printout_order, M, &twiss, &chromDeriv, data);
+      printMapAnalysisResults(stdout, printout_order, printout_format, M, &twiss, &chromDeriv, data);
 
     /* check accuracy of matrix in reproducing coordinates */
     /* all processors do this for all particles, which shouldn't take much time */
@@ -550,12 +551,13 @@ void do_transport_analysis(
     }
 
 
-void printMapAnalysisResults(FILE *fp, long printoutOrder, VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data)
+void printMapAnalysisResults(FILE *fp, long printoutOrder, char *printoutFormat, 
+                             VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chromDeriv, double *data)
 {
   long saveOrder;
   saveOrder = M->order;
   M->order = printout_order>3 ? 3 : printout_order;
-  print_matrices(fp, "Matrix from fitting:", M);
+  print_matrices1(fp, "Matrix from fitting:", printoutFormat, M);
   M->order = saveOrder;
   fprintf(fp, "determinant of R = 1 + %14.6e\n", data[DETR_OFFSET]-1);
   if (delta_dp && center_on_orbit) 

@@ -29,7 +29,11 @@
 #include <gpu_matrix.h>
 #endif
 
-void print_matrices(FILE *fp, char *string, VMATRIX *M)
+void print_matrices(FILE *fp, char *string, VMATRIX *M) {
+    print_matrices1(fp, string, "%22.15e ", M);
+}
+
+void print_matrices1(FILE *fp, char *string, char *format, VMATRIX *M) 
 {
     register long i, j, k, l;
     double *C;
@@ -43,13 +47,13 @@ void print_matrices(FILE *fp, char *string, VMATRIX *M)
 
     fprintf(fp, "%s\nC:   ", string);
     for (i=0; i<6; i++) 
-        fprintf(fp, "%22.15e ", C[i]);
+        fprintf(fp, format, C[i]);
     fputc('\n', fp);
 
     for (i=0; i<6; i++) {
         fprintf(fp, "R%ld: ", i+1);
         for (j=0; j<6; j++)
-            fprintf(fp, "%22.15e ", R[i][j]);
+            fprintf(fp, format, R[i][j]);
         fputc('\n', fp);
         }
 
@@ -58,7 +62,7 @@ void print_matrices(FILE *fp, char *string, VMATRIX *M)
             for (j=0; j<6; j++) {
                 fprintf(fp, "T%ld%ld: ", i+1, j+1);
                 for (k=0; k<=j; k++) 
-                    fprintf(fp, "%22.15e ", T[i][j][k]);
+                    fprintf(fp, format, T[i][j][k]);
                 fputc('\n', fp);
                 }
             }
@@ -70,7 +74,7 @@ void print_matrices(FILE *fp, char *string, VMATRIX *M)
                 for (k=0; k<=j; k++) {
                     fprintf(fp, "Q%ld%ld%ld: ", i+1, j+1, k+1);
                     for (l=0; l<=k; l++)
-                        fprintf(fp, "%22.15e ", Q[i][j][k][l]);
+                        fprintf(fp, format, Q[i][j][k][l]);
                     fputc('\n', fp);
                     }
                 }

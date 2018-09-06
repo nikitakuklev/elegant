@@ -8,6 +8,7 @@
 #namelist matrix_output
     STRING printout = NULL;
     long printout_order = 1;
+    STRING printout_format = "%22.15e ";
     long full_matrix_only = 0;
     long print_element_data = 1;
     STRING SDDS_output = NULL;

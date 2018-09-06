@@ -68,8 +68,13 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|matrix_output| command has a new parameter, \verb|print_element_data| that controls whether the
-  element data is printed in addition to the matrices.
+\item The \verb|matrix_output| command has two new parameters
+  \begin{itemize}
+    \item \verb|print_element_data| controls whether the element data is printed in addition to the matrices. 
+    \item \verb|printout_format| allows controlling the format of the printed elements.
+    \end{itemize}
+  \end{itemize}
+\item The \verb|analyze_map| command has a new parameter, \verb|printout_format|, allows controlling the format of the printed elements.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -910,6 +915,7 @@ Recommended value: ``\%s.kaf''.
     STRING output = NULL;
     long output_order = 1;
     STRING printout = NULL;
+    STRING printout_format = "%22.15e ";
     long printout_order = 2;
     double delta_x = 1e-6;
     double delta_xp = 1e-6;
@@ -942,6 +948,8 @@ Recommended value: ``\%s.kaf''.
         dispersion functions.
     \end{itemize}
 \item \verb|printout| --- The (incomplete) name of a file for text output of the matrix.
+\item \verb|printout_format| --- The C-style formatting statement for the matrix elements. A space, comma, or other separator
+  should appear at the end of the string.
 \item \verb|delta_X| --- The amount by which to change the quantity X in computing the derivatives that give the matrix elements.
 \item \verb|accuracy_factor| --- The fraction of the maximum absolute value of the final coordinate that is considered meaningful.
   Used to estimate errors and eliminate spurious matrix elements.
@@ -2852,6 +2860,7 @@ changes to parameters.
 &matrix_output
     STRING printout = NULL;
     long printout_order = 1;
+    STRING printout_format = "%22.15e ";
     long full_matrix_only = 0;
     long print_element_data = 1;
     STRING SDDS_output = NULL;
@@ -2868,6 +2877,8 @@ changes to parameters.
 \item \verb|printout| --- The (incomplete) name of a file to which the 
 matrix output will be printed (as text).  Recommended value: ``\%s.mpr''.
 \item \verb|printout_order| --- The order to which the matrix is printed.
+\item \verb|printout_format| --- The C-style formatting statement for the matrix elements. A space, comma, or other separator
+  should appear at the end of the string.
 \item \verb|full_matrix_only| --- A flag indicating that only the matrix of
 the entire accelerator is to be output.
 \item \verb|print_element_data| --- A flag indicating whether the element data should be printed out.
