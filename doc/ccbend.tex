@@ -23,12 +23,16 @@ gradient, or sextupole term change:
       By default, this affects all field 
       components together, per the usual convention in {\tt elegant}. To restrict
       the strength change to the dipole term, set \verb|COMPENSATE_KN=1|.
+      To turn off this optimization, set \verb|OPTIMIZE_FSE=0|.
 \item The transverse position is adjusted to center the trajectory in the magnet.
       If the sagitta is $\sigma$ and \verb|ANGLE| is positive, the initial and final $x$ 
       coordinates are $x=-\sigma/2$, while the center coordinate is $x=\sigma/2$.
+      To turn off this optimization, set \verb|OPTIMIZE_DX=0|.
 \end{enumerate}
 One can block the re-optimization of these parameters by setting 
 \verb|OPTIMIZE_FSE_ONCE| and \verb|OPTIMIZE_DX_ONCE| to 1.
+Note also that the optimization is performed with all error-defining parameters
+(\verb|DX|, \verb|DY|, \verb|DZ|, \verb|FSE|, and \verb|ETILT|) set to zero.
 
 {\bf Edge angles and edge effects} 
 
