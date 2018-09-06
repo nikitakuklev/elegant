@@ -612,7 +612,7 @@ VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long m
         double Lp6,Lp7,Lp8,Lp9;
         double K1p3,K1p4;
         double J1p3,J1p4;
-        double K2p2,K2p3,K2p4;
+        double K2p2;
         Lp6 = pow(L,6);
         Lp7 = pow(L,7);
         Lp8 = pow(L,8);
@@ -622,8 +622,6 @@ VMATRIX *sextupole_matrix(double K2, double K1, double J1, double length, long m
         J1p3 = pow(J1,3);
         J1p4 = pow(J1,4);
         K2p2 = pow(K2,2);
-        K2p3 = pow(K2,3);
-        K2p4 = pow(K2,4);
 
         T[0][0][0] += (K1*K2*Lp4)/16. + (J1p2*K2*Lp6)/240. - (K1p2*K2*Lp6)/240.;
         T[0][1][0] += (K1*K2*Lp5)/24. + (J1p2*K2*Lp7)/504. - (K1p2*K2*Lp7)/504.;
