@@ -5,18 +5,19 @@ exec oagwish "$0" "$@"
 if {![info exists env(OAG_TOP_DIR)]} { set env(OAG_TOP_DIR) /usr/local }
 set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_ARCH)]
 
-set usage "usage: longitCalcs \[-gui 0\] \[-output <filename>\] -twiss <filename> \[-voltage <MV> -harmonic <number> -superPeriods <number>(1) \[-hVoltage <MV> -hh <ratio>(3) -hphase <deg>(360)\]\]"
+set usage "usage: longitCalcs \[-gui 0\] \[-output <filename>\] -twiss <filename> \[-voltage <MV> -harmonic <number> -superPeriods <number>(1) \[-hh <ratio>(3) {-hcOpt 1 | -hVoltage <MV> -hphase <deg>(360)}\]\]"
 set twiss ""
 set voltage -1.0
 set harmonic 1296
 set hVoltage 0
 set hh 3
+set hcOpt 0
 set hphase 360
 set gui 1
 set output ""
 set superPeriods 1
 set args $argv
-if {[APSStrictParseArguments {output superPeriods twiss voltage harmonic hVoltage hh hphase gui}] || ![string length $twiss]} {
+if {[APSStrictParseArguments {output superPeriods twiss voltage harmonic hVoltage hcOpt hh hphase gui}] || ![string length $twiss]} {
     puts stderr $usage
     exit 1
 }
@@ -70,6 +71,9 @@ set voltageRatio [expr $hVoltage/$voltage]
 set harmonicMode None
 if [expr $voltageRatio!=0] {
     set harmonicMode Custom
+}
+if $hcOpt {
+    set harmonicMode OptLengthen
 }
 set harmonicPhase $hphase
 set lastHarmonicMode None
@@ -199,11 +203,12 @@ proc compute {args} {
             #set check [expr $voltage*(sin($synchPhase) + $voltageRatio*sin($harmonicPhase))-$U1]
             #puts stderr "check: $check"
             set synchTune0 [expr sqrt($eta*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
-            set synchFreq ?
-            set synchTune ?
+            set bunchLength [expr 2/3.6256*pow(3./($m*$m-1), 0.25)*sqrt(2*$harmonic*$eta*$Sdelta0/$synchTune0)*$cMKS/$omegaRF]
+            set bunchDuration [expr $bunchLength/$cMKS]
+            set synchFreq [expr 0.128*$eta*$Sdelta0/$bunchDuration]
+            set synchTune [expr $synchFreq/$revFreq1]
             set rfAcceptance ?
             set coupling ?
-            set bunchLength [expr 2/3.6256*pow(3./($m*$m-1), 0.25)*sqrt(2*$harmonic*$eta*$Sdelta0/$synchTune0)*$cMKS/$omegaRF]
         }
         Custom {
             if [expr $voltageRatio<0] {
@@ -246,8 +251,7 @@ proc compute {args} {
             -column=MainPhase,type=double,units=deg -data=$synchPhaseDeg \
             -column=RfAcceptance,type=double -data=[expr $rfAcceptance/100.0] \
             -column=BunchLength,type=double,units=m -data=$bunchLength \
-            -column=BunchDuration,type=double,units=s -data=$bunchDuration \
-            -column=SynchrotronTune,type=double -data=$synchTune 
+            -column=BunchDuration,type=double,units=s -data=$bunchDuration
         if [file exists $output] {
             exec sddscombine $output $output.tmp $output.tmp2 -merge -over
             file rename -force $output.tmp2 $output
