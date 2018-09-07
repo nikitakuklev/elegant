@@ -58,8 +58,11 @@ int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double 
     *yp = qy/(1+delta);
   } else {
     double denom;
-    if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0)
+    if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0) {
+      printf("Warning: particle acquired undefined slopes when integrating through kick multipole\n");
+      fflush(stdout);
       return 0;
+    }
     denom = sqrt(denom);
     *xp = qx/denom;
     *yp = qy/denom;
