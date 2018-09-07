@@ -246,7 +246,8 @@ proc compute {args} {
             -column=MainPhase,type=double,units=deg -data=$synchPhaseDeg \
             -column=RfAcceptance,type=double -data=[expr $rfAcceptance/100.0] \
             -column=BunchLength,type=double,units=m -data=$bunchLength \
-            -column=BunchDuration,type=double,units=s -data=$bunchDuration
+            -column=BunchDuration,type=double,units=s -data=$bunchDuration \
+            -column=SynchrotronTune,type=double -data=$synchTune 
         if [file exists $output] {
             exec sddscombine $output $output.tmp $output.tmp2 -merge -over
             file rename -force $output.tmp2 $output
