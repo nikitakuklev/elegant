@@ -1877,6 +1877,11 @@ void reset_special_elements(LINE_LIST *beamline, unsigned long flags)
               ((KQUAD*)eptr->p_elem)->randomMultipoleData.randomized = 0;
             ((KQUAD*)eptr->p_elem)->totalMultipolesComputed = 0;
             break;
+          case T_CCBEND:
+            if (includeRandom) 
+              ((CCBEND*)eptr->p_elem)->randomMultipoleData.randomized = 0;
+            ((CCBEND*)eptr->p_elem)->totalMultipolesComputed = 0;
+            break;
           case T_KSEXT:
             if (includeRandom)
               ((KSEXT*)eptr->p_elem)->randomMultipoleData.randomized = 0;
