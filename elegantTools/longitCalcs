@@ -235,6 +235,13 @@ proc compute {args} {
     
     update
     if [string length $output] { 
+        if [string compare $synchTune ?]==0 {
+            set synchTuneNum -1
+            set synchFreqNum -1
+        } else {
+            set synchTuneNum $synchTune
+            set synchFreqNum $synchFreq
+        }
         exec sddsmakedataset $output.tmp \
             -column=MainVoltage,units=MV,type=double -data=$voltage \
             -column=MainHarmonic,type=long -data=$harmonic \
@@ -249,6 +256,8 @@ proc compute {args} {
             -column=Circumference,type=double,units=m -data=$sMax1 \
             -column=RfFrequency,type=double,units=MHz -data=$rfFrequency \
             -column=MainPhase,type=double,units=deg -data=$synchPhaseDeg \
+            -column=SynchrotronFrequency,type=double,units=Hz -data=$synchFreqNum \
+            -column=SynchrotronTune,type=double -data=$synchTuneNum \
             -column=RfAcceptance,type=double -data=[expr $rfAcceptance/100.0] \
             -column=BunchLength,type=double,units=m -data=$bunchLength \
             -column=BunchDuration,type=double,units=s -data=$bunchDuration
