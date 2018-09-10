@@ -138,7 +138,7 @@ long track_through_ccbend(
       if (!disable[0] || !disable[1]) {
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
-        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt =
+        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt = 
           ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
         ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.edge1_multipoles = 
           ccbendCopy.edge2_multipoles = ccbendCopy.random_multipoles = NULL;
@@ -216,6 +216,7 @@ long track_through_ccbend(
     for (iTerm=0; iTerm<9; iTerm+=2)
       KnL[iTerm] *= -1;
     angle = -angle;
+    rho0 = -rho0;
     yaw = -ccbend->yaw*ccbend->edgeFlip;
     rotateBeamCoordinates(particle, n_part, PI);
   } else {
@@ -328,13 +329,13 @@ long track_through_ccbend(
 
   if (iPart<=0) {
     xpError = particle[0][1];
+    if (tilt)
+      rotateBeamCoordinates(particle, n_part, tilt);
     switchRbendPlane(particle, n_part, angle/2-yaw, Po);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, n_part, dx, dy, dz);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
-    if (tilt)
-      rotateBeamCoordinates(particle, n_part, tilt);
     verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
   }
 
@@ -372,11 +373,11 @@ long track_through_ccbend(
     verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
-    if (tilt)
-      rotateBeamCoordinates(particle, i_top+1, -tilt);
     if (dx || dy || dz)
       offsetBeamCoordinates(particle, i_top+1, -dx, -dy, -dz);
     switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
+    if (tilt)
+      rotateBeamCoordinates(particle, i_top+1, -tilt);
     xpError = fabs(xpError+particle[0][1]);
   }
 

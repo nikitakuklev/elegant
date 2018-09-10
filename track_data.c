@@ -3031,7 +3031,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
     { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
     { N_BRAT_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,   sizeof(BRAT),  brat_param      },
-    { N_BGGEXP_PARAMS,   HAS_LENGTH,   sizeof(BGGEXP),  bggexp_param      },
+    { N_BGGEXP_PARAMS,   MAT_LEN_NCAT|IS_MAGNET,   sizeof(BGGEXP),  bggexp_param      },
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 

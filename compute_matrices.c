@@ -1172,7 +1172,7 @@ VMATRIX *compute_matrix(
       case T_BGGEXP:
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
-        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
         run->p_central = pSave;
         break;
       case T_RBEN: case T_SBEN:
