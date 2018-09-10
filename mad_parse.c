@@ -273,7 +273,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
 
-    if (IS_BEND(type))
+    if (IS_BEND(type) || type==T_NIBEND)
       setEdgeIndices(eptr);
 
     switch (type) {

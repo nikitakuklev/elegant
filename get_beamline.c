@@ -465,7 +465,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       long code;
       /* The end position will have been set in a previous call to get_beamline(), prior to 
          definition of insertions */
-      if (code=insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos)) {
+      if ((code=insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos))) {
         if (code==1) {
           add_element(eptr, eptr_add); 
           eptr = eptr->succ;		/* move pointer to new added element */
