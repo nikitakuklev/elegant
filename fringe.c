@@ -279,18 +279,18 @@ VMATRIX *quadPartialFringeMatrix(VMATRIX *M, double K1, long inFringe, double *f
   K1sqr = sqr(K1);
 
   if (part==1) {
-    J1x = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3.);
-    J2x = inFringe*(K1*fringeInt[2]);
-    J3x = inFringe*(K1sqr*(fringeInt[2] + fringeInt[4]));
+    J1x = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3. - K1sqr*fringeInt[0]*fringeInt[2]/2);
+    J2x = inFringe*K1*fringeInt[2];
+    J3x = inFringe*K1sqr*(fringeInt[2] + fringeInt[4] + fringeInt[0]*fringeInt[1]);
 
     K1 = -K1;
-    J1y = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3.);
+    J1y = inFringe*(K1*fringeInt[1] - 2*K1sqr*fringeInt[3]/3. - K1sqr*fringeInt[0]*fringeInt[2]/2);
     J2y = -J2x;
     J3y = J3x;
   } else {
     J1x = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]/2);
-    J2x = inFringe*(K1*fringeInt[2]);
-    J3x = inFringe*(K1sqr*(fringeInt[4]-fringeInt[0]*fringeInt[1]));
+    J2x = inFringe*K1*fringeInt[2];
+    J3x = inFringe*K1sqr*(fringeInt[4] - fringeInt[0]*fringeInt[1]);
 
     K1 = -K1;
     J1y = inFringe*(K1*fringeInt[1] + K1sqr*fringeInt[0]*fringeInt[2]/2);
@@ -315,8 +315,8 @@ VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeI
 {
   VMATRIX *M1, *M2, *M;
   
-  M1 = quadPartialFringeMatrix(NULL, K1, -1, fringeIntP, 1);
-  M2 = quadPartialFringeMatrix(NULL, K1, -1, fringeIntM, 2);
+  M1 = quadPartialFringeMatrix(NULL, K1, 1, fringeIntM, 1);
+  M2 = quadPartialFringeMatrix(NULL, K1, 1, fringeIntP, 2);
 
   if (Mu) {
     M = Mu;
@@ -328,7 +328,7 @@ VMATRIX *quadFringeMatrix(VMATRIX *Mu, double K1, long inFringe, double *fringeI
   concat_matrices(M, M2, M1, 0);
   free_matrices(M1); free(M1);
   free_matrices(M2); free(M2);
-  if (inFringe!=-1) {
+  if (inFringe==-1) {
     SWAP_DOUBLE(M->R[0][0], M->R[1][1]);
     SWAP_DOUBLE(M->R[2][2], M->R[3][3]);
   }
