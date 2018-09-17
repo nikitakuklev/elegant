@@ -142,7 +142,6 @@ long track_through_ccbend(
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt = 
           ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
-        ccbendCopy.edgeFlip = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
