@@ -15,6 +15,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "multipole.h"
+#define DEBUG
 
 static CCBEND ccbendCopy;
 static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
@@ -174,12 +175,16 @@ long track_through_ccbend(
   }
 
 #ifdef DEBUG
-  if (ccbend->optimized!=-1) {
+  if (ccbend->optimized==1) {
+    char filename[1000];
     logHamiltonian = 1;
-    fpHam = fopen("ccbend.sdds", "w");
+    snprintf(filename, 1000, "ccbend-%s.sdds", eptr->name);
+    fpHam = fopen(filename, "w");
     fprintf(fpHam, "SDDS1\n&column name=z type=double units=m &end\n");
     fprintf(fpHam, "&column name=x type=double units=m &end\n");
     fprintf(fpHam, "&column name=y type=double units=m &end\n");
+    fprintf(fpHam, "&column name=qx type=double &end\n");
+    fprintf(fpHam, "&column name=qy type=double &end\n");
     fprintf(fpHam, "&column name=dH type=double &end\n");
     fprintf(fpHam, "&data mode=ascii no_row_counts=1 &end\n");
   }
@@ -399,6 +404,11 @@ long track_through_ccbend(
     lastXp *= -1;
   }
 
+  if (fpHam) {
+    fclose(fpHam);
+    fpHam = NULL;
+  }
+
   log_exit("track_through_ccbend");
   return(i_top+1);
 }
@@ -520,7 +530,7 @@ int integrate_kick_K012(double *coord, /* coordinates of the particle */
         K2L/(6*drift)*(ipow(x, 3) - 3*x*y*y);
       if (i_kick==0) 
         H0 = H;
-      fprintf(fpHam, "%e %e %e %e\n", i_kick*drift, x, y, H-H0);
+      fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick*drift, x, y, qx, qy, H-H0);
       if (i_kick==n_parts)
         fputs("\n", fpHam);
     }
@@ -787,6 +797,21 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
   xSum = x;
   nSum = 1;
   for (i_kick=0; i_kick<iFinalSlice; i_kick++) {
+#ifdef DEBUG
+    double H0;
+    if (logHamiltonian && fpHam) {
+      double H;
+      H = -sqrt(ipow(1+dp, 2)-qx*qx-qy*qy) +
+        KnL[0]/drift*x +
+        KnL[1]/(2*drift)*(x*x - y*y) +
+        KnL[2]/(6*drift)*(ipow(x, 3) - 3*x*y*y);
+      if (i_kick==0) 
+        H0 = H;
+      fprintf(fpHam, "%e %e %e %e %le %le\n", i_kick*drift, x, y, qx, qy, H-H0);
+      if (i_kick==n_parts)
+        fputs("\n", fpHam);
+    }
+#endif
     if (apData && !checkMultAperture(x+dx, y+dy, apData))  {
       coord[0] = x;
       coord[2] = y;
@@ -1148,6 +1173,8 @@ VMATRIX *determinePartialCcbendLinearMatrix(CCBEND *ccbend, double *startingCoor
 #endif
   return M;
 }
+
+#undef DEBUG
 
 void addCcbendRadiationIntegrals(CCBEND *ccbend, double *startingCoord, double pCentral,
                                  double eta0, double etap0, double beta0, double alpha0,

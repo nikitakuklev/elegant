@@ -1297,7 +1297,7 @@ void setEdgeIndices(ELEMENT_LIST *e1)
     csrbptr->e2Index = 1;
     break;
   case T_CCBEND:
-    ((CCBEND*)e1->p_elem)->edgeFlip = 1;
+    ((CCBEND*)e1->p_elem)->edgeFlip = 0;
   default:
     break;
   }
@@ -1336,7 +1336,7 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
     break;
   case T_CCBEND:
     ccbptr = (CCBEND*)e1->p_elem;
-    ccbptr->edgeFlip = -ccbptr->edgeFlip;
+    ccbptr->edgeFlip = !ccbptr->edgeFlip;
     break;
   default:
     break;
