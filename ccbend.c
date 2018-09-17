@@ -221,11 +221,11 @@ long track_through_ccbend(
       KnL[iTerm] *= -1;
     angle = -angle;
     rho0 = -rho0;
-    yaw = -ccbend->yaw*ccbend->edgeFlip;
+    yaw = -ccbend->yaw*(ccbend->edgeFlip?-1:1);
     rotateBeamCoordinates(particle, n_part, PI);
   } else {
     angleSign = 1;
-    yaw = ccbend->yaw*ccbend->edgeFlip;
+    yaw = ccbend->yaw*(ccbend->edgeFlip?-1:1);
   }
   if (ccbend->systematic_multipoles || ccbend->edge_multipoles || ccbend->random_multipoles ||
       ccbend->edge1_multipoles || ccbend->edge2_multipoles) {
@@ -239,7 +239,7 @@ long track_through_ccbend(
     if (ccbend->referenceOrder<0 || ccbend->referenceOrder>2)
       bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
-  if (ccbend->edgeFlip==1) {
+  if (ccbend->edgeFlip==0) {
     gK[0] = 2*ccbend->fint1*ccbend->hgap;
     gK[1] = 2*ccbend->fint2*ccbend->hgap;
   } else {
