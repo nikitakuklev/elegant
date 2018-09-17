@@ -15,7 +15,6 @@
 #include "mdb.h"
 #include "track.h"
 #include "multipole.h"
-#define DEBUG
 
 static CCBEND ccbendCopy;
 static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
