@@ -22,6 +22,7 @@ static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX,
 #define OPTIMIZE_X  0x01UL
 #define OPTIMIZE_XP 0x02UL
 static unsigned long optimizationFlags = 0;
+static long edgeMultActive[2]; 
 #ifdef DEBUG
 static short logHamiltonian = 0;
 static FILE *fpHam = NULL;
@@ -148,7 +149,7 @@ long track_through_ccbend(
         lowerLimit[0] = lowerLimit[1] = -1;
         upperLimit[0] = upperLimit[1] = 1;
         if (simplexMin(&acc, startValue, stepSize, lowerLimit, upperLimit, disable, 2, 
-                       fabs(1e-14*ccbend->length), fabs(1e-16*ccbend->length),
+                       fabs(1e-15*ccbend->length), fabs(1e-16*ccbend->length),
                        ccbend_trajectory_error, NULL, 1500, 3, 12, 3.0, 1.0, 0)<0) {
           bombElegantVA("failed to find FSE and x offset to center trajectory for ccbend. accuracy acheived was %le.", acc);
         }
@@ -369,6 +370,7 @@ long track_through_ccbend(
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
   i_top = n_part-1;
+  edgeMultActive[0] = edgeMultActive[1] = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!integrate_kick_KnL(particle[i_part], dx, dy, Po, rad_coef, isr_coef, KnL, nTerms,
                              integ_order, n_kicks, iPart, iFinalSlice, length, multData, edge1MultData, edge2MultData, 
@@ -382,6 +384,10 @@ long track_through_ccbend(
       i_part--;
       continue;
     }
+    /* 
+    if (i_part==0 && ccbend->verbose && ccbend->optimized!=-1)
+      printf("Edge multipoles active: %ld, %ld\n", edgeMultActive[0], edgeMultActive[1]);
+    */
   }
   multipoleKicksDone += (i_top+1)*n_kicks;
   if (multData)
@@ -791,6 +797,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                                       edge1MultData->order[iMult], 
                                       edge1MultData->JnL[iMult], 1);
     }
+    edgeMultActive[0] = 1;
   }
   /* we must do this to avoid numerical precision issues that may subtly change the results
    * when edge multipoles are enabled to disabled
@@ -930,7 +937,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
     return 0;
   }
   
-  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts-1) && edge2MultData && edge2MultData->orders) {
+  if ((iPart<0 || iPart==n_parts) && (iFinalSlice==n_parts) && edge2MultData && edge2MultData->orders) {
     fillPowerArray(x, xpow, maxOrder);
     fillPowerArray(y, ypow, maxOrder);
     for (iMult=0; iMult<edge2MultData->orders; iMult++) {
@@ -941,6 +948,7 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
                                       edge2MultData->order[iMult], 
                                       edge2MultData->JnL[iMult], 1);
     }
+    edgeMultActive[1] = 1;
   }
   if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
     coord[0] = x;
