@@ -260,16 +260,32 @@ long track_through_ccbend(
   if (!ccbend->multipolesInitialized) {
     /* read the data files for the error multipoles */
     readErrorMultipoleData(&(ccbend->systematicMultipoleData), ccbend->systematic_multipoles, 0);
-    if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip))
+    if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip)) {
         readErrorMultipoleData(&(ccbend->edge1MultipoleData), 
                                ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles, 0);
-    else 
+        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles))
+          printf("Using file %s for edge 1 of %s#%ld\n",
+                 ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles,
+                 eptr->name, eptr->occurence);
+    } else {
       readErrorMultipoleData(&(ccbend->edge1MultipoleData), ccbend->edge_multipoles, 0);
-    if ((ccbend->edge2_multipoles && !ccbend->edgeFlip) || (ccbend->edge1_multipoles && ccbend->edgeFlip))
+      if (ccbend->verbose && ccbend->edge_multipoles)
+        printf("Using file %s for edge 1 of %s#%ld\n",
+               ccbend->edge_multipoles, eptr->name, eptr->occurence);
+    }
+    if ((ccbend->edge2_multipoles && !ccbend->edgeFlip) || (ccbend->edge1_multipoles && ccbend->edgeFlip)) {
         readErrorMultipoleData(&(ccbend->edge2MultipoleData), 
                                ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles, 0);
-    else 
+        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles))
+          printf("Using file %s for edge 2 of %s#%ld\n",
+                 ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles,
+                 eptr->name, eptr->occurence);
+    } else {
       readErrorMultipoleData(&(ccbend->edge2MultipoleData), ccbend->edge_multipoles, 0);
+      if (ccbend->verbose && ccbend->edge_multipoles)
+        printf("Using file %s for edge 2 of %s#%ld\n",
+               ccbend->edge_multipoles, eptr->name, eptr->occurence);
+    }
     readErrorMultipoleData(&(ccbend->randomMultipoleData), ccbend->random_multipoles, 0);
     ccbend->multipolesInitialized = 1;
   }
@@ -403,10 +419,12 @@ long track_through_ccbend(
     lastXp *= -1;
   }
 
+#ifdef DEBUG
   if (fpHam) {
     fclose(fpHam);
     fpHam = NULL;
   }
+#endif
 
   log_exit("track_through_ccbend");
   return(i_top+1);
