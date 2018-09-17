@@ -17,6 +17,7 @@
 #include "multipole.h"
 
 static CCBEND ccbendCopy;
+static ELEMENT_LIST *eptrCopy = NULL;
 static double PoCopy, xMin, xFinal, xAve, xMax, xError, xpError, lastRho, lastX, lastXp;
 #define OPTIMIZE_X  0x01UL
 #define OPTIMIZE_XP 0x02UL
@@ -138,10 +139,10 @@ long track_through_ccbend(
       if (!disable[0] || !disable[1]) {
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
+        eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt = 
           ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
-        ccbendCopy.systematic_multipoles = ccbendCopy.edge_multipoles = ccbendCopy.edge1_multipoles = 
-          ccbendCopy.edge2_multipoles = ccbendCopy.random_multipoles = NULL;
+        ccbendCopy.edgeFlip = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -263,7 +264,7 @@ long track_through_ccbend(
     if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip)) {
         readErrorMultipoleData(&(ccbend->edge1MultipoleData), 
                                ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles, 0);
-        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles))
+        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles))
           printf("Using file %s for edge 1 of %s#%ld\n",
                  ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles,
                  eptr->name, eptr->occurence);
@@ -1058,7 +1059,7 @@ double ccbend_trajectory_error(double *value, long *invalid)
   if (ccbendCopy.compensateKn)
     ccbendCopy.KnDelta = -ccbendCopy.fseOffset;
   /* printf("** fse = %le, dx = %le, x[0] = %le\n", value[0], value[1], particle[0][0]); fflush(stdout);  */
-  if (!track_through_ccbend(particle, 1, NULL, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
+  if (!track_through_ccbend(particle, 1, eptrCopy, &ccbendCopy, PoCopy, NULL, 0.0, NULL, NULL, NULL, NULL, -1, -1)) {
     *invalid = 1;
     return DBL_MAX;
   }
