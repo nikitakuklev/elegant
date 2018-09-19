@@ -344,7 +344,7 @@ long track_through_ccbend(
   tilt = ccbend->tilt;
   dx = ccbend->dx;
   dy = ccbend->dy;
-  dz = ccbend->dz;
+  dz = ccbend->dz*(ccbend->edgeFlip?-1:1);
 
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
