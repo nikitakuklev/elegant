@@ -172,6 +172,7 @@ void do_transport_analysis(
 #if USE_MPI
     long *nToTrackCounts, my_nTrack, my_offset, n_leftTotal, nItems;
     MPI_Status status;
+    long nWorking;
     notSinglePart = 0;
 #endif
 
@@ -250,19 +251,26 @@ void do_transport_analysis(
        The arrays are oversized, but not so large that it will hurt. 
     */
     n_left = n_track - 1;
-    my_nTrack = n_left/n_processors+0.5;
+    if (n_left<n_processors)
+      nWorking = n_left;
+    else
+      nWorking = n_processors;
+    my_nTrack = (1.0*n_left)/nWorking+0.5;
     my_offset = myid*my_nTrack + 1;
-    if (myid==(n_processors-1))
+    if (myid==(nWorking-1))
       my_nTrack = n_left - my_offset + 1;
+    else if (myid>=nWorking)
+      my_nTrack = my_offset = n_left = 0;
 #if MPI_DEBUG
     printf("Tracking %ld particles, offset %ld, processor %d\n",
 	   my_nTrack, my_offset, myid);
     fflush(stdout);
 #endif    
-    n_left = do_tracking(NULL, finalCoord+my_offset, my_nTrack, NULL, beamline, &p_central, 
-			 NULL, NULL, NULL, NULL, run, control->i_step, 
-			 FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
-			 1, 0, NULL, NULL, NULL, NULL, NULL);
+    if (my_nTrack)
+      n_left = do_tracking(NULL, finalCoord+my_offset, my_nTrack, NULL, beamline, &p_central, 
+                           NULL, NULL, NULL, NULL, run, control->i_step, 
+                           FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
+                           1, 0, NULL, NULL, NULL, NULL, NULL);
 #if MPI_DEBUG
     printf("Tracking done\n"); fflush(stdout);
 #endif
@@ -290,7 +298,7 @@ void do_transport_analysis(
     if (myid==0) {
       /* Copy data from each slave */
       my_nTrack += my_offset; /* to account for the fiducial particle */
-      for (i=1; i<n_processors; i++) {
+      for (i=1; i<nWorking; i++) {
 	if (verbosity>2) {
 	  printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
 	  fflush(stdout);
@@ -301,7 +309,8 @@ void do_transport_analysis(
       }
     } else {
       /* Send data to master */
-      MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+      if (my_nTrack)
+        MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
     }
     free(nToTrackCounts);
 #endif
@@ -835,6 +844,8 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   return M;
 }
 
+/* static FILE *fpdeb = NULL; */
+
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order)
 {
   double **initialCoord, **finalCoord, **coordError;
@@ -851,6 +862,18 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
+  long my_nTrack, my_offset, n_leftTotal, *nToTrackCounts;
+  long k, nWorking;
+
+  /*
+#if USE_MPI
+  if (fpdeb==NULL) {
+    char s[100];
+    sprintf(s, "debug-%03d.txt", myid);
+    fpdeb = fopen(s, "w");
+  }
+#endif
+  */
 
   if (shareTrackingBasedMatrices) {
     if (storedElement==NULL) {
@@ -913,6 +936,11 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	}
 	if (copied) {
           free_matrices_above_order(M, order);
+          /*
+#if USE_MPI
+          print_matrices1(fpdeb, eptr->name, "%13.8e ", M);
+#endif
+          */
 	  return M;
         }
       }
@@ -929,104 +957,166 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
   n_left = n_track;
+#if USE_MPI
+  /* We partition by processor in MPI mode.
+     The arrays are oversized, but not so large that it will hurt. 
+  */
+  n_left = n_track;
+  nWorking = n_left<n_processors ? n_left : n_processors;
+  my_nTrack = (1.0*n_left)/nWorking+0.5;
+  my_offset = myid*my_nTrack;
+  if (myid==(nWorking-1))
+    my_nTrack = n_left - my_offset;
+  else if (myid>=nWorking)
+    my_nTrack = my_offset = n_left = 0;
+  /*
+  fprintf(fpdeb, "my_offset = %ld, my_nTrack = %ld\n",
+          my_offset, my_nTrack);
+  */
+#else
+  my_offset = 0;
+  my_nTrack = n_track;
+#endif
 
-  switch (eptr->type) {
-  case T_CSBEND:
-    ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
-    ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
-    ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
-    n_left = track_through_csbend(finalCoord, n_track, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
-                         NULL, NULL, NULL, NULL);
-    ((CSBEND*)eptr->p_elem)->isr = ltmp1;
-    ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
-   break;
-  case T_CCBEND:
-    ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
-    ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
-    ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
-    /* printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence); */
-    fflush(stdout);
-    n_left = track_through_ccbend(finalCoord, n_track, eptr, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
-                                  NULL, NULL, NULL, NULL, -1, -1);
-    ((CCBEND*)eptr->p_elem)->isr = ltmp1;
-    ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
-   break;
-  case T_CWIGGLER:
-    ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
-    ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
-    ((CWIGGLER*)eptr->p_elem)->isr = ((CWIGGLER*)eptr->p_elem)->sr = 0;
-    GWigSymplecticPass(finalCoord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
-    ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
-    ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
-    break;
-  case T_BRAT:
-    printf("Computing tracking-based matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
-    fflush(stdout);
-    n_left = trackBRAT(finalCoord, n_track, (BRAT*)eptr->p_elem, run->p_central, NULL);
-    break;
-  case T_APPLE:
-    ltmp1 = ((APPLE*)eptr->p_elem)->isr;
-    ltmp2 = ((APPLE*)eptr->p_elem)->sr;
-    ((APPLE*)eptr->p_elem)->isr = ((APPLE*)eptr->p_elem)->sr = 0;
-    APPLE_Track(finalCoord, n_track, run->p_central, (APPLE*)eptr->p_elem);
-    ((APPLE*)eptr->p_elem)->isr = ltmp1;
-    ((APPLE*)eptr->p_elem)->sr = ltmp2;
-    break;
-  case T_UKICKMAP:
-    ltmp1 = ((UKICKMAP*)eptr->p_elem)->isr;
-    ltmp2 = ((UKICKMAP*)eptr->p_elem)->synchRad;
-    ((UKICKMAP*)eptr->p_elem)->isr = ((UKICKMAP*)eptr->p_elem)->synchRad = 0;
-    if (trackUndulatorKickMap(finalCoord, NULL, n_track, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=n_track) {
-      printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
+  if (my_nTrack) {
+    switch (eptr->type) {
+    case T_CSBEND:
+      ltmp1 = ((CSBEND*)eptr->p_elem)->isr;
+      ltmp2 = ((CSBEND*)eptr->p_elem)->synch_rad;
+      ((CSBEND*)eptr->p_elem)->isr = ((CSBEND*)eptr->p_elem)->synch_rad = 0;
+      n_left = track_through_csbend(finalCoord+my_offset, my_nTrack, (CSBEND*)eptr->p_elem, 0.0, run->p_central, NULL, 0.0,
+                                    NULL, NULL, NULL, NULL);
+      ((CSBEND*)eptr->p_elem)->isr = ltmp1;
+      ((CSBEND*)eptr->p_elem)->synch_rad = ltmp2;
+      break;
+    case T_CCBEND:
+      ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
+      ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
+      ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
+      /* printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence); */
+      fflush(stdout);
+      n_left = track_through_ccbend(finalCoord+my_offset, my_nTrack, eptr, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
+                                    NULL, NULL, NULL, NULL, -1, -1);
+      ((CCBEND*)eptr->p_elem)->isr = ltmp1;
+      ((CCBEND*)eptr->p_elem)->synch_rad = ltmp2;
+      break;
+    case T_CWIGGLER:
+      ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
+      ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
+      ((CWIGGLER*)eptr->p_elem)->isr = ((CWIGGLER*)eptr->p_elem)->sr = 0;
+      GWigSymplecticPass(finalCoord+my_offset, my_nTrack, run->p_central, (CWIGGLER*)eptr->p_elem, NULL, 0, NULL);
+      ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
+      ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
+      break;
+    case T_BRAT:
+      printf("Computing tracking-based matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
+      fflush(stdout);
+      n_left = trackBRAT(finalCoord+my_offset, my_nTrack, (BRAT*)eptr->p_elem, run->p_central, NULL);
+      break;
+    case T_APPLE:
+      ltmp1 = ((APPLE*)eptr->p_elem)->isr;
+      ltmp2 = ((APPLE*)eptr->p_elem)->sr;
+      ((APPLE*)eptr->p_elem)->isr = ((APPLE*)eptr->p_elem)->sr = 0;
+      APPLE_Track(finalCoord+my_offset, my_nTrack, run->p_central, (APPLE*)eptr->p_elem);
+      ((APPLE*)eptr->p_elem)->isr = ltmp1;
+      ((APPLE*)eptr->p_elem)->sr = ltmp2;
+      break;
+    case T_UKICKMAP:
+      ltmp1 = ((UKICKMAP*)eptr->p_elem)->isr;
+      ltmp2 = ((UKICKMAP*)eptr->p_elem)->synchRad;
+      ((UKICKMAP*)eptr->p_elem)->isr = ((UKICKMAP*)eptr->p_elem)->synchRad = 0;
+      if (trackUndulatorKickMap(finalCoord+my_offset, NULL, my_nTrack, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=my_nTrack) {
+        printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
+        exitElegant(1);
+      }
+      ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
+      ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
+      break;
+    case T_BGGEXP:
+      ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
+      ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
+      ((BGGEXP*)eptr->p_elem)->isr = ((BGGEXP*)eptr->p_elem)->synchRad = 0;
+      trackBGGExpansion(finalCoord+my_offset, my_nTrack, (BGGEXP*)eptr->p_elem, run->p_central, NULL, NULL);
+      ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
+      ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
+      break;
+    case T_TWMTA:
+    case T_MAPSOLENOID:
+    case T_TWLA:
+      motion(finalCoord+my_offset, my_nTrack, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+      break;
+    case T_RFDF:
+      /* Don't actually use this */
+      track_through_rf_deflector(finalCoord+my_offset, (RFDF*)eptr->p_elem,
+                                 finalCoord+my_offset, my_nTrack, run->p_central, 0, eptr->end_pos, 0);
+      break;
+    case T_LSRMDLTR:
+      ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
+      ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
+      dtmp1 = ((LSRMDLTR*)eptr->p_elem)->laserPeakPower;
+      ((LSRMDLTR*)eptr->p_elem)->isr = ((LSRMDLTR*)eptr->p_elem)->synchRad = 0;
+      ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = 0;
+      motion(finalCoord+my_offset, my_nTrack, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+      ((LSRMDLTR*)eptr->p_elem)->isr = ltmp1;
+      ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
+      ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = dtmp1;
+      break;
+    case T_FTABLE:
+      field_table_tracking(finalCoord+my_offset, my_nTrack, (FTABLE*)eptr->p_elem, run->p_central, run);
+      break;
+    case T_FMULT:
+      fmultipole_tracking(finalCoord+my_offset, my_nTrack, (FMULT*)eptr->p_elem, 0, run->p_central, NULL, 0);
+      break;
+    default:
+      printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
+      printf("***        Seek professional help!\n");
       exitElegant(1);
+      break;
     }
-    ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
-    ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
-    break;
-  case T_BGGEXP:
-    ltmp1 = ((BGGEXP*)eptr->p_elem)->isr;
-    ltmp2 = ((BGGEXP*)eptr->p_elem)->synchRad;
-    ((BGGEXP*)eptr->p_elem)->isr = ((BGGEXP*)eptr->p_elem)->synchRad = 0;
-    trackBGGExpansion(finalCoord, n_track, (BGGEXP*)eptr->p_elem, run->p_central, NULL, NULL);
-    ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
-    ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
-    break;
-  case T_TWMTA:
-  case T_MAPSOLENOID:
-  case T_TWLA:
-    motion(finalCoord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
-    break;
-  case T_RFDF:
-    /* Don't actually use this */
-    track_through_rf_deflector(finalCoord, (RFDF*)eptr->p_elem,
-			       finalCoord, n_track, run->p_central, 0, eptr->end_pos, 0);
-    break;
-  case T_LSRMDLTR:
-    ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
-    ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
-    dtmp1 = ((LSRMDLTR*)eptr->p_elem)->laserPeakPower;
-    ((LSRMDLTR*)eptr->p_elem)->isr = ((LSRMDLTR*)eptr->p_elem)->synchRad = 0;
-    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = 0;
-    motion(finalCoord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
-    ((LSRMDLTR*)eptr->p_elem)->isr = ltmp1;
-    ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
-    ((LSRMDLTR*)eptr->p_elem)->laserPeakPower = dtmp1;
-    break;
-  case T_FTABLE:
-    field_table_tracking(finalCoord, n_track, (FTABLE*)eptr->p_elem, run->p_central, run);
-    break;
-  case T_FMULT:
-    fmultipole_tracking(finalCoord, n_track, (FMULT*)eptr->p_elem, 0, run->p_central, NULL, 0);
-    break;
-  default:
-    printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
-    printf("***        Seek professional help!\n");
-    exitElegant(1);
-    break;
   }
+#if USE_MPI
+  MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  if (n_leftTotal!=n_track)
+    bombElegantVA("lost particles (%ld -> %ld) when tracking to determine matrix for %s\n", 
+                  n_track, n_leftTotal, eptr->name);
+#else    
   if (n_left!=n_track) {
     bombElegantVA("lost particles when tracking to determine matrix for %s\n", eptr->name);
   }
+#endif
+
+#if USE_MPI
+    /* Gather final particles back to master */
+    MPI_Barrier(MPI_COMM_WORLD);
+    nToTrackCounts = tmalloc(sizeof(long)*n_processors);
+    MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    if (myid==0) {
+      MPI_Status status;
+      long nItems;
+      /* Copy data from each slave */
+      my_nTrack += my_offset; /* to account for the fiducial particle */
+      for (i=1; i<nWorking; i++) {
+	if (verbosity>2) {
+	  printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
+	  fflush(stdout);
+	}
+	nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+	MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
+	my_nTrack += nToTrackCounts[i];
+      }
+    } else {
+      /* Send data to master */
+      if (my_nTrack)
+        MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+    }
+    free(nToTrackCounts);
+    nToTrackCounts = NULL;
+#endif
+    
+#if USE_MPI
+    if (myid==0) {
+      /* In MPI mode, only master does analysis */
+#endif
 
   /*
   if (1) {
@@ -1078,6 +1168,29 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
                                   maximumValue, nPoints1, n_track, maxFitOrder, 0);
 
+  free_matrices_above_order(M, order);
+
+#if USE_MPI 
+    } else {
+    /* distribute matrices to other processors */
+      M = tmalloc(sizeof(*M));
+      initialize_matrices(M, M->order=order);
+    }
+    MPI_Bcast(M->C, 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    for (i=0; i<6; i++)
+      MPI_Bcast(M->R[i], 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (order>=2) {
+      for (i=0; i<6; i++)
+        for (j=0; j<6; j++)
+          MPI_Bcast(M->T[i][j], j+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      if (order>=3)
+        for (i=0; i<6; i++)
+          for (j=0; j<6; j++)
+            for (k=0; k<=j; k++)
+              MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+#endif
+
   if (shareTrackingBasedMatrices) {
     if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_CSBEND) {
       ELEMENT_LIST *eptrCopy;
@@ -1127,38 +1240,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
   }
 
-  /*
-  for (i=0; i<6; i++) {
-    printf("R[%ld]: ", i);
-    for (j=0; j<6; j++) {
-      printf("%le ", M->R[i][j]);
-    }
-    printf("\n");
-  }
-  */
-
   free_czarray_2d((void**)initialCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
 
-  free_matrices_above_order(M, order);
-
   /*
-  for (i=0; i<6; i++) {
-    if (fabs(M->C[i])<1e-10)
-      M->C[i] = 0;
-    for (j=0; j<6; j++) {
-      long k;
-      if (fabs(M->R[i][j])<1e-8)
-        M->R[i][j] = 0;
-      for (k=0; k<=j; k++) 
-        if (fabs(M->T[i][j][k])<1e-6)
-          M->T[i][j][k] = 0;
-    }
-  }
+#if USE_MPI
+  print_matrices1(fpdeb, eptr->name, "%13.8e ", M);
+#endif
   */
-
-  /* print_matrices(stdout, "Matrix from fitting:", M); */
 
   return M;
 }

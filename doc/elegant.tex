@@ -77,6 +77,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   skew quadrupole error. The utility of this was pointed out by Y.-P. Sun (APS) and X. Huang (SLAC).
 \item The \verb|BRANCH| element now provides periodic branching, which permits modeling a periodic bypass, for
   example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
+\item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
+  now takes advantage of parallel resources.
 \end{itemize}
 
 \subsection{New and Modified Commands}
