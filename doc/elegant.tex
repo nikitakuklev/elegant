@@ -55,6 +55,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   the interpretation of the \verb|INSERT_FROM=''x''| and \verb|INSERT_FROM=''y''| was incorrect, since these were
   supposed to correspond to a scraper inserted from both sides. Both problems were reported by forum user 
   \verb|Youssef| and have been fixed.
+\item The \verb|SPEEDBUMP| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
+  made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -66,7 +68,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|CCBEND| element now was a \verb|YAW| parameter that permits changing the entrance and exit
   angles in a coordinated fashion. It also supports the \verb|FINT1|, \verb|FINT2|, and \verb|HGAP| parameters
-  for soft-fringe effects, as well as multipoles from octupole to 18-pole.
+  for soft-fringe effects, as well as explicit multipoles from octupole to 18-pole (in addition to the
+  existing support for systematic multipole errors). The multipoles at the entrance and exit can now be
+  specified separately, using the \verb|EDGE1_MULTIPOLES| and \verb|EDGE2_MULTIPOLES| parameters.
 \item The \verb|FMULT| element, which provides a general multipole with content specified by an SDDS file, now
   affects matrix-based computations (e.g., twiss parameters, chromaticities, and transfer matrix).
 \item The \verb|KSEXT| element now provides a parameter for a normal quadrupole error, in addition to the existing
