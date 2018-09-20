@@ -1143,7 +1143,6 @@ unsigned long interpretScraperDirection(char *insert_from, long oldDirectionCode
   if (!direction) {
     printf("**** Warning: invalid insert_from parameter: %s\n", insert_from ? insert_from : "NULL");
     printf("insert_from axis letter is not one of x, h, y, or v\n");
-    fflush(stdout);
   }
   return direction;
 }

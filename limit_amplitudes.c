@@ -556,6 +556,11 @@ long beam_scraper(
   long dflag[2] = {0, 0};
   MATTER matter;
 
+  if (!((scraper->direction = interpretScraperDirection(scraper->insert_from, scraper->oldDirection))&(DIRECTION_X|DIRECTION_Y))) {
+    exactDrift(initial, np, scraper->length);
+    return np;
+  }
+
 #ifdef HAVE_GPU
    if(getElementOnGpu()){
       startGpuTimer();
@@ -607,14 +612,24 @@ long beam_scraper(
     for (ip=0; ip<np; ip++) {
       ini = initial[ip];
       hit = 0;
-      for (idir=0; idir<2 && !hit; idir++) {
-        if (!dflag[idir]) continue;
-        if ((do_x && dsign[idir]*(ini[0]-scraper->dx)>dsign[idir]*scraper->position) ||
-            (do_y && dsign[idir]*(ini[2]-scraper->dy)>dsign[idir]*scraper->position)) {
+      if (dflag[0] && dflag[1]) {
+        if ((do_x && fabs(ini[0]-scraper->dx)>scraper->position) ||
+            (do_y && fabs(ini[2]-scraper->dy)>scraper->position)) {
           /* scatter and/or absorb energy */
           hit = 1;
           if (!track_through_matter(&ini, 1, 0, &matter, Po, NULL, z))
             ini[5] = -1;
+        }
+      } else {
+        for (idir=0; idir<2 && !hit; idir++) {
+          if (!dflag[idir]) continue;
+          if ((do_x && dsign[idir]*(ini[0]-scraper->dx)>dsign[idir]*scraper->position) ||
+              (do_y && dsign[idir]*(ini[2]-scraper->dy)>dsign[idir]*scraper->position)) {
+            /* scatter and/or absorb energy */
+            hit = 1;
+            if (!track_through_matter(&ini, 1, 0, &matter, Po, NULL, z))
+              ini[5] = -1;
+          }
         }
       }
       if (!hit) {
@@ -627,7 +642,30 @@ long beam_scraper(
     return(np);
   }
 
-  /* come here for idealized scraper that just absorbs particles */
+  if (dflag[0] && dflag[1]) {
+    /* Scraper from both sides is like an RCOL */
+    RCOL rcol;
+    if (scraper->position<=0) {
+      for (ip=0; ip<np; ip++) {
+        initial[ip][4] = z;
+        initial[ip][5] = Po*(initial[ip][5]);
+      }
+      return 0;
+    }
+    rcol.length = scraper->length;
+    rcol.x_max = rcol.y_max = 0;
+    if (do_x)
+      rcol.x_max = scraper->position;
+    else
+      rcol.y_max = scraper->position;
+    rcol.dx = scraper->dx;
+    rcol.dy = scraper->dy;
+    rcol.invert = 0;
+    rcol.openSide = NULL;
+    return rectangular_collimator(initial, &rcol, np, accepted, z, Po);
+  }
+
+  /* come here for idealized on-sided scraper that just absorbs particles */
   for (ip=0; ip<np; ip++) {
     ini = initial[ip];
     hit = 0;
@@ -1191,6 +1229,11 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
   long iplane, ip, idir, hit, phit;
   long dsign[2] = {1, -1};
   long dflag[2] = {0, 0};
+
+  if (!((speedbump->direction = interpretScraperDirection(speedbump->insertFrom, -1))&(DIRECTION_X|DIRECTION_Y))) {
+    exactDrift(initial, np, speedbump->length);
+    return np;
+  }
 
   iplane = 0;
   if (speedbump->direction&DIRECTION_X) {
