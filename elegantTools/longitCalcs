@@ -287,7 +287,7 @@ proc findFixedPoints {} {
 		      "-define=param,phi1,$synchPhaseDeg pi * 180 /" "-define=param,phih,$harmonicPhaseDeg pi * 180 /" \
 		      "-define=param,U0,$U1" \
 		      "-define=column,error,U0 V1 phi1 dphi + sin * - Vh phih dphi h * + sin * -" \
-		      "-define=column,deriv,V1 phi1 dphi + cos * Vh phih dphi h * + sin * h * + chs" \
+		      "-define=column,deriv,V1 phi1 dphi + cos * Vh phih dphi h * + cos * h * + chs" \
 		      | sddszerofind -pipe -zeroesOf=error -columns=dphi,deriv \
 		      | sddsprocess -pipe "-test=column,deriv 0 <" \
 		      | sdds2stream -pipe -column=dphi]
