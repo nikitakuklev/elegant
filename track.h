@@ -966,7 +966,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 72
 #define N_MATTER_PARAMS 18
-#define N_RFMODE_PARAMS 51
+#define N_RFMODE_PARAMS 55
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 28
@@ -2456,6 +2456,8 @@ typedef struct {
     double phaseSetpoint;      /* desired total cavity phase, to be achieved by feedback */
     long updateInterval;       /* feedback update interval in buckets */
     long readOffset;           /* offset of voltage, phase reading relative to filled bucket */
+    long adjustmentStart, adjustmentEnd, adjustmentInterval;
+    double adjustmentFraction;
     char *amplitudeFilterFile, *phaseFilterFile;
     char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;
@@ -2482,6 +2484,7 @@ typedef struct {
     double last_omega;         /* omega at t=last_t */
     double last_Q;             /* loaded Q at t=last_t */
     /* generator- and feedback-related data, see T. Berenc RF-TN-2015-001 */
+    double setpointAdjustment, fbVCavity;
     double lambdaA;          /* 2/((Ra/Q)*Qloaded) */
     double Vg, phaseg, tg;   /* Used to determine the voltage and phase seen during the bunch passage according to Vg*cos(omega*(t-tg) + phaseg) */
     MATRIX *Viq;             /* (2x1) matrix giving I and Q components of generator voltage */

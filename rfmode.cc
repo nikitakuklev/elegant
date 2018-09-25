@@ -53,7 +53,7 @@ void track_through_rfmode(
     long *ibParticle = NULL;          /* array to record which bucket each particle is in */
     long **ipBucket = NULL;           /* array to record particle indices in part0 array for all particles in each bucket */
     long *npBucket = NULL;            /* array to record how many particles are in each bucket */
-    long iBucket, nBuckets=0, np, effectiveBuckets, jBucket;
+    long iBucket, nBuckets=0, np, effectiveBuckets, jBucket, adjusting, outputing;
     double tOffset;
     /*
     static FILE *fpdeb = NULL;
@@ -399,6 +399,7 @@ void track_through_rfmode(
             
             /* - Compute total voltage amplitude and phase */
             V = sqrt(Vrl*Vrl+Vil*Vil);
+	    rfmode->fbVCavity = V;
             phase = atan2(Vil, Vrl);
             VI =  cos(omegaDrive*dt)*Vrl + sin(omegaDrive*dt)*Vil;
             VQ = -sin(omegaDrive*dt)*Vrl + cos(omegaDrive*dt)*Vil;
@@ -448,7 +449,8 @@ void track_through_rfmode(
               */
               
               IgAmp = sqrt(sqr(rfmode->Ig0->a[0][0])+sqr(rfmode->Ig0->a[1][0]))
-                + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, rfmode->lambdaA*(rfmode->voltageSetpoint - V));
+                + applyIIRFilter(rfmode->amplitudeFilter, rfmode->nAmplitudeFilters, 
+				 rfmode->lambdaA*(rfmode->voltageSetpoint + rfmode->setpointAdjustment - V));
               IgPhase = atan2(rfmode->Ig0->a[1][0], rfmode->Ig0->a[0][0]) 
                 + applyIIRFilter(rfmode->phaseFilter, rfmode->nPhaseFilters, PI/180*rfmode->phaseSetpoint - 3*PI/2 - phase);
               
@@ -474,8 +476,8 @@ void track_through_rfmode(
                * the nominal beam phase)
                */
               phaseg = PI/180*rfmode->phaseSetpoint - 3*PI/2;
-              VISetpoint = rfmode->voltageSetpoint*cos(phaseg) + rfmode->V0*cos(rfmode->last_phase0);
-              VQSetpoint = rfmode->voltageSetpoint*sin(phaseg) + rfmode->V0*sin(rfmode->last_phase0);
+              VISetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*cos(phaseg) + rfmode->V0*cos(rfmode->last_phase0);
+              VQSetpoint = (rfmode->voltageSetpoint+rfmode->setpointAdjustment)*sin(phaseg) + rfmode->V0*sin(rfmode->last_phase0);
               
               rfmode->Iiq->a[0][0] = rfmode->Ig0->a[0][0] + (dII=applyIIRFilter(rfmode->IFilter, rfmode->nIFilters, rfmode->lambdaA*(VISetpoint-VI)));
               rfmode->Iiq->a[1][0] = rfmode->Ig0->a[1][0] + (dIQ=applyIIRFilter(rfmode->QFilter, rfmode->nQFilters, rfmode->lambdaA*(VQSetpoint-VQ)));
@@ -526,7 +528,7 @@ void track_through_rfmode(
               IgAmp = sqrt(sqr(rfmode->Iiq->a[0][0])+sqr(rfmode->Iiq->a[1][0]));
               IgPhase = atan2(rfmode->Iiq->a[1][0], rfmode->Iiq->a[0][0]);
             }
-            
+
             if (rfmode->driveFrequency && rfmode->feedbackRecordFile) {
 #if USE_MPI
               if (myid==1) {
@@ -893,33 +895,28 @@ void track_through_rfmode(
             memcpy(part0[ipBucket[iBucket][ip]], part[ip], sizeof(double)*COORDINATES_PER_PARTICLE);
         }
       }
-      
 
-      if (rfmode->record) {
+      adjusting = (rfmode->adjustmentFraction>0 && pass>=rfmode->adjustmentStart && pass<=rfmode->adjustmentEnd &&
+		   rfmode->adjustmentInterval>0 && pass%rfmode->adjustmentInterval==0 && jBucket==0);
+      if (adjusting && pass==rfmode->adjustmentStart)
+	rfmode->setpointAdjustment = 0;
+      outputing = (rfmode->record && (pass%rfmode->sample_interval)==0);
+      if (outputing || adjusting) {
 #if USE_MPI
-#define SR_BUFLEN 15
+#define SR_BUFLEN 16
         double sendBuffer[SR_BUFLEN], receiveBuffer[SR_BUFLEN];
 #endif
-        if ((pass%rfmode->sample_interval)==0) {
-#ifdef DEBUG
-          printf("sampling RFMODE output, pass=%ld, sample_counter=%ld, n_alloc=%ld\n", pass, rfmode->sample_counter, rfmode->SDDSrec->n_rows_allocated);
-          fflush(stdout);
-#endif
-#if USE_MPI
-          if (myid==0)
-#endif
-            if ((rfmode->sample_counter+1)%rfmode->flush_interval==0) {
-#ifdef DEBUG
-              printf("Preparing to flush table\n");
-              fflush(stdout);
-#endif
-              if (!SDDS_UpdatePage(rfmode->SDDSrec, FLUSH_TABLE)) {
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                SDDS_Bomb((char*)"problem flushing RFMODE record file");
-              }
-            }
-          
 
+#if USE_MPI
+	if (myid==0)
+#endif
+	  if (outputing) {
+	    if (!SDDS_UpdatePage(rfmode->SDDSrec, FLUSH_TABLE)) {
+	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	      SDDS_Bomb((char*)"problem flushing RFMODE record file");
+	    }
+	  }
+          
           np_total = np; /* Used by serial version */
 #if (USE_MPI)
           /* Sum data across all cores */
@@ -941,13 +938,20 @@ void track_through_rfmode(
             sendBuffer[12] = n_occupied;
             sendBuffer[13] = n_summed;
             sendBuffer[14] = Vg_sum;
+	    sendBuffer[15] = rfmode->fbVCavity;
           }
-          MPI_Reduce(sendBuffer, receiveBuffer, SR_BUFLEN, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-          if (myid == 0) {
+	  if (adjusting) {
+	    MPI_Allreduce(sendBuffer, receiveBuffer, SR_BUFLEN, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	  } else 
+	    MPI_Reduce(sendBuffer, receiveBuffer, SR_BUFLEN, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+          if (adjusting || (myid == 0)) {
             n_binned = receiveBuffer[0];
-            rfmode->V = receiveBuffer[1]/(n_processors-1);
-            rfmode->last_phase = receiveBuffer[2]/(n_processors-1);
-            rfmode->last_t = receiveBuffer[3]/(n_processors-1);
+	    if (myid==0) {
+	      rfmode->fbVCavity = receiveBuffer[15]/(n_processors-1);
+	      rfmode->V = receiveBuffer[1]/(n_processors-1);
+	      rfmode->last_phase = receiveBuffer[2]/(n_processors-1);
+	      rfmode->last_t = receiveBuffer[3]/(n_processors-1);
+	    }
             V_sum = receiveBuffer[4];
             Vr_sum = receiveBuffer[5];
             Vi_sum = receiveBuffer[6];
@@ -959,6 +963,16 @@ void track_through_rfmode(
             n_occupied = receiveBuffer[12];
             n_summed = receiveBuffer[13];
             Vg_sum = receiveBuffer[14];
+	    if (adjusting) {
+	      /* adjust the voltage setpoint to get the voltage we really want */
+	      double VcEffective;
+	      VcEffective = n_summed?sqrt(sqr(Vcr_sum)+sqr(Vci_sum))/n_summed:0.0;
+	      rfmode->setpointAdjustment += (rfmode->voltageSetpoint - VcEffective)*rfmode->adjustmentFraction;
+	      printf("Voltage setpoint adjustment changed to %le V on pass %ld\n\n", rfmode->setpointAdjustment, pass);
+	      fflush(stdout);
+	    }
+	  }
+	  if (myid==0) {
 #endif
 #ifdef DEBUG
             printf("Writing record file\n");
@@ -1000,7 +1014,6 @@ void track_through_rfmode(
 #if USE_MPI
           }
 #endif
-        }
       }
 
 #if USE_MPI
