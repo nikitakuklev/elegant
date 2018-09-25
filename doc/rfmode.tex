@@ -7,11 +7,20 @@ files requested with the \verb|RECORD| and \verb|FEEDBACK_RECORD| parameters, a 
 differs by $-90$ degrees from the \verb|PHASE_SETPOINT|  parameter. 
 
 The feedback implementation uses either amplitude and phase feedback or else in-phase and quadrature feedback.
-It is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
-\verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| or else
-\verb|IN_PHASE_FILTER| and \verb|QUADRATURE_FILTER| are given.
 Figure \ref{fig:rfFeedbackModel} shows the model used for the feedback system.
 More information is available in \cite{Berenc-IPAC15-MOPMA006}.
+Feedback is active when a non-zero value is given for \verb|DRIVE_FREQUENCY| and when either
+\verb|AMPLITUDE_FILTER| and \verb|PHASE_FILTER| or else
+\verb|IN_PHASE_FILTER| and \verb|QUADRATURE_FILTER| are given.
+
+The feedback loop reads the cavity state and acts on the generator at a fixed interval (in buckets) of
+\verb|UPDATE_INTERVAL|. 
+The timing of this activity is aligned to the arrival time of the first bunch in the \verb|RFMODE| element.
+By default (\verb|READ_OFFSET|=0), the timing is such that the state is read just before the next arrival of
+that bunch; in particular, it is 180 degrees ahead of that arrival.
+If bunches are equally spaced by, say $N_b$ buckets, the \verb|UPDATE_INTERVAL| parameter should ideally be
+$m N_b$, where $m>0$ is an integer.
+This ensures that the state is read at a fixed timing relative to the bunches.
 
 \begin{figure}[htb]
 \center

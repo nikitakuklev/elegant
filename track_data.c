@@ -1501,6 +1501,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"V_SETPOINT", "V", IS_DOUBLE, 0, (long)((char *)&rfmode_example.voltageSetpoint), NULL, 0.0, 0, "setpoint for total cavity voltage"},
     {"PHASE_SETPOINT", "DEG", IS_DOUBLE, 0, (long)((char *)&rfmode_example.phaseSetpoint), NULL, 0.0, 0, "setpoint for total cavity phase"},
     {"UPDATE_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.updateInterval), NULL, 0.0, 1, "update interval of feedback in units of rf period"},
+    {"READ_OFFSET", "", IS_LONG, 0, (long)((char *)&rfmode_example.readOffset), NULL, 0.0, 0, "Offset in buckets of point at which voltage and phase are read for feedback relative to the first bunch passage. A positive value corresponds to reading before bunch passage."},
     {"AMPLITUDE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.amplitudeFilterFile), NULL, 0.0, 0, "IIR filter specification for amplitude feedback"},
     {"PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.phaseFilterFile), NULL, 0.0, 0, "IIR filter specification for phase feedback"},
     {"IN_PHASE_FILTER", "", IS_STRING, 0, (long)((char *)&rfmode_example.IFilterFile), NULL, 0.0, 0, "IIR filter specification for in-phase component feedback"},

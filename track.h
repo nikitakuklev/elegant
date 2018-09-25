@@ -966,7 +966,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 72
 #define N_MATTER_PARAMS 18
-#define N_RFMODE_PARAMS 50
+#define N_RFMODE_PARAMS 51
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 28
@@ -2455,6 +2455,7 @@ typedef struct {
     double voltageSetpoint;    /* desired total cavity voltage, to be achieved by feedback */
     double phaseSetpoint;      /* desired total cavity phase, to be achieved by feedback */
     long updateInterval;       /* feedback update interval in buckets */
+    long readOffset;           /* offset of voltage, phase reading relative to filled bucket */
     char *amplitudeFilterFile, *phaseFilterFile;
     char *IFilterFile, *QFilterFile;
     char *feedbackRecordFile;

@@ -352,7 +352,7 @@ void track_through_rfmode(
           /* handle generator voltage, cavity feedback */
           if (!rfmode->fbRunning) {
             /* This next statement phases the generator to the first bunch at the desired phase */
-            rfmode->tGenerator = rfmode->fbLastTickTime = tmean - 0.5/rfmode->driveFrequency;
+            rfmode->tGenerator = rfmode->fbLastTickTime = tmean - (rfmode->readOffset + 0.5)/rfmode->driveFrequency;
             rfmode->fbNextTickTime = rfmode->fbLastTickTime + rfmode->updateInterval/rfmode->driveFrequency;
             rfmode->fbNextTickTimeError = 0;
             rfmode->fbRunning = 1;
