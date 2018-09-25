@@ -630,7 +630,7 @@ void trackWithIonEffects
       }
       */
       
-      if ((iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
+      if (((iPass-ionEffects->startPass)*nBunches+iBunch)%ionEffects->generationInterval==0) {
         /*** Generate ions */
         for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
           long nToAdd = 0, index;
@@ -664,7 +664,7 @@ void trackWithIonEffects
               addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
             }
           } else if (((index=ionProperties.sourceIonIndex[iSpecies])>=0) && \
-		     ((iPass-ionEffects->startPass+iBunch)%multiple_ionization_interval == 0)) {
+		     (((iPass-ionEffects->startPass)*nBunches+iBunch)%multiple_ionization_interval == 0)) {
             /* This is a multiply-ionized molecule, so use source ion density.
              * Relevant quantities:
              * ionEffects->nIons[index] --- Number of ions of the source species
@@ -692,11 +692,11 @@ void trackWithIonEffects
 		my = ionEffects->coordinate[index][jMacro][2];
 		addIon_point(ionEffects, iSpecies, qToAdd, mx, my); //add multiply ionized ion
 
-		//20 eV kinetic energy
-		// 10 +/- 5 eV
+		// Initial kinetic energy
 		double vmag, ionMass, vx, vy, rangle, Emi;	      
 		ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
-		Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
+		Emi = fabs(gauss_rn_lim(0, 1, 3, random_4));
+		//Emi = 0;
 		vmag = sqrt(2 * Emi * e_mks / ionMass);
 		rangle = random_2(0) * 2 * PI;
 		vx = vmag * cos(rangle);
@@ -798,6 +798,12 @@ void trackWithIonEffects
     ionSigma[1] = 0;
     qIon = 0;
     long mTot = 0;
+    double bx1, bx2, by1, by2;
+    bx1 = centroid[0] - 3*sigma[0];
+    bx2 = centroid[0] + 3*sigma[0];
+    by1 = centroid[1] - 3*sigma[1];
+    by2 = centroid[1] + 3*sigma[1];
+
 
     if (ion_species_output && iBunch==0) {
       speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
@@ -823,16 +829,19 @@ void trackWithIonEffects
           speciesCount[iSpecies] = 0;
         }
 	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
-          if (ion_species_output) {
-            speciesCentroid[iSpecies][0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
-            speciesCentroid[iSpecies][1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
-            speciesCharge[iSpecies] += ionEffects->coordinate[iSpecies][jMacro][4];
-            speciesCount[iSpecies] += 1;
-          }
-	  ionCentroid[0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
-	  ionCentroid[1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
-	  qIon += ionEffects->coordinate[iSpecies][jMacro][4];
-	  mTot++;
+	  if ((ionEffects->coordinate[iSpecies][jMacro][0] > bx1) && (ionEffects->coordinate[iSpecies][jMacro][0] < bx2) &&
+	      (ionEffects->coordinate[iSpecies][jMacro][2] > by1) && (ionEffects->coordinate[iSpecies][jMacro][2] < by2)) {
+	    if (ion_species_output) {
+	      speciesCentroid[iSpecies][0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
+	      speciesCentroid[iSpecies][1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
+	      speciesCharge[iSpecies] += ionEffects->coordinate[iSpecies][jMacro][4];
+	      speciesCount[iSpecies] += 1;
+	    }
+	    ionCentroid[0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
+	    ionCentroid[1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
+	    qIon += ionEffects->coordinate[iSpecies][jMacro][4];
+	    mTot++;
+	  }
         }
       }
     } else {
@@ -922,13 +931,16 @@ void trackWithIonEffects
         if (ion_species_output) 
           speciesSigma[iSpecies][0] = speciesSigma[iSpecies][1] = 0;
 	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
-	  ionSigma[0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-ionCentroid[0])*ionEffects->coordinate[iSpecies][jMacro][4];
-	  ionSigma[1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-ionCentroid[1])*ionEffects->coordinate[iSpecies][jMacro][4];
-          if (ion_species_output) {
-            speciesSigma[iSpecies][0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-speciesCentroid[iSpecies][0])*ionEffects->coordinate[iSpecies][jMacro][4];
-            speciesSigma[iSpecies][1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-speciesCentroid[iSpecies][1])*ionEffects->coordinate[iSpecies][jMacro][4];
-          }
-        }
+	  if ((ionEffects->coordinate[iSpecies][jMacro][0] > bx1) && (ionEffects->coordinate[iSpecies][jMacro][0] < bx2) &&
+	      (ionEffects->coordinate[iSpecies][jMacro][2] > by1) && (ionEffects->coordinate[iSpecies][jMacro][2] < by2)) {
+	    ionSigma[0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-ionCentroid[0])*ionEffects->coordinate[iSpecies][jMacro][4];
+	    ionSigma[1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-ionCentroid[1])*ionEffects->coordinate[iSpecies][jMacro][4];
+	    if (ion_species_output) {
+	      speciesSigma[iSpecies][0] += sqr(ionEffects->coordinate[iSpecies][jMacro][0]-speciesCentroid[iSpecies][0])*ionEffects->coordinate[iSpecies][jMacro][4];
+	      speciesSigma[iSpecies][1] += sqr(ionEffects->coordinate[iSpecies][jMacro][2]-speciesCentroid[iSpecies][1])*ionEffects->coordinate[iSpecies][jMacro][4];
+	    }
+	  }
+	}
       }
     } else {
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -1054,7 +1066,7 @@ void trackWithIonEffects
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
-          double kick[2];	  
+          double kick[2], sigFudge[2];	  
 
 	  /*
 	  if ((ionSigma[0] > 0.99*ionSigma[1]) && (ionSigma[0] < 1.01*ionSigma[1])) {
@@ -1063,8 +1075,11 @@ void trackWithIonEffects
 	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 	  }
 	  */
+	  //	  sigFudge[0] = ionSigma[0] * sqrt(2);
+	  //sigFudge[1] = ionSigma[1] * sqrt(2);
 
 	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
+	  //gaussianBeamKick(part[ip], ionCentroid, sigFudge, kick, qIon, me_mks, 1);
 
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    part[ip][1] += kick[0] / c_mks / Po;
@@ -1127,7 +1142,7 @@ void trackWithIonEffects
 
 #if DEBUG
       // write out coordinates of each ion
-      if (verbosity > 20) {
+      if ((verbosity > 20) && (iBunch == 323)) {
 	double xtemp, ytemp, qtemp; 
 	int jMacro = 0;
 	FILE * fion;
