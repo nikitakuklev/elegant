@@ -25,9 +25,11 @@ This ensures that the state is read at a fixed timing relative to the bunches.
 The rf feedback feature makes use of the voltage amplitude measured when there is no bunch present.
 The \verb|RECORD| file shows the voltage seen by the beam, computed by averaging over the voltage for
 each particle.
-These may deviate by values from a few percent to of order ten percent.
-To reduce this discrepancy, one may use the \verb|ADJUSTMENT_FRACTION|, \verb|ADJUSTMENT_START|, and \verb|ADJUSTMENT_INTERVAL|
-parameters.
+These may deviate by values from a few percent to of order ten percent, depending on the loss factor for the
+cavity and the number of bunchess; this is caused by the fact that the rate at which an intense bunch removes
+energy from the cavity will typically, albeit briefly, exceed the power from the generator.
+To reduce the impact of this effect, one may use the \verb|ADJUSTMENT_FRACTION|, \verb|ADJUSTMENT_START|, and \verb|ADJUSTMENT_INTERVAL|
+parameters to modify the voltage setpoint.
 If \verb|ADJUSTMENT_FRACTION| is non-zero, then for every \verb|ADJUSTMENT_INTERVAL|$^{th}$ pass after the 
 \verb|ADJUSTMENT_START|$^{th}$ pass, the voltage setpoint will be adjusted based on a comparison of the bunch-averaged
 voltage to the user's setpoint.
