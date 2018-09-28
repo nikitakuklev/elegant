@@ -64,7 +64,7 @@ void track_through_rfmode(
     double tmin=0, tmax, last_tmax, tmean, dt=0;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
-    double V_sum, Vr_sum, Vi_sum, Vg_sum, Vgr_sum, Vgi_sum, Vci_sum, Vcr_sum;
+    double V_sum, Vr_sum, Vi_sum, Vg_sum, Vgr_sum, Vgi_sum, Vci_sum, Vcr_sum, Vc_sum;
     double Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
@@ -77,7 +77,7 @@ void track_through_rfmode(
 #endif
 
     /* These are here just to quash apparently spurious compiler warnings about possibly using uninitialzed variables */
-    tOffset = last_tmax = k = tau = V_sum = Vr_sum = Vi_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = VbImagFactor = tmean = DBL_MAX;
+    tOffset = last_tmax = k = tau = V_sum = Vr_sum = Vi_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = Vc_sum = VbImagFactor = tmean = DBL_MAX;
     n_summed = n_occupied = LONG_MAX;
     
     /*
@@ -645,7 +645,7 @@ void track_through_rfmode(
             bombElegantVA((char*)"%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
 #endif
           }
-          V_sum = Vr_sum = Vi_sum = Q_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = 0;
+          V_sum = Vr_sum = Vi_sum = Q_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = Vc_sum = 0;
           n_summed = max_hist = n_occupied = 0;
     
           /* find frequency and Q at this time */
@@ -819,8 +819,9 @@ void track_through_rfmode(
             Vbin[ib] += Vr;
             Vgi_sum += Ihist[ib]*Vi;
             Vgr_sum += Ihist[ib]*Vr;
-            Vci_sum += Ihist[ib]*(Vi+rfmode->Vi);
             Vcr_sum += Ihist[ib]*(Vr+rfmode->Vr-Vb/2);
+            Vci_sum += Ihist[ib]*(Vi+rfmode->Vi-Vb*VbImagFactor/2);
+            Vc_sum += Ihist[ib]*sqrt(sqr(Vr+rfmode->Vr-Vb/2)+ sqr(Vi+rfmode->Vi-Vb*VbImagFactor/2));
             /* fprintf(fpdeb2, "%ld %21.15le %21.15le %le %le %le\n", pass, t, dt, sqrt(Vi*Vi+Vr*Vr), atan2(Vi, Vr), Vr); */
           }
           
@@ -903,7 +904,7 @@ void track_through_rfmode(
       outputing = (rfmode->record && (pass%rfmode->sample_interval)==0);
       if (outputing || adjusting) {
 #if USE_MPI
-#define SR_BUFLEN 16
+#define SR_BUFLEN 17
         double sendBuffer[SR_BUFLEN], receiveBuffer[SR_BUFLEN];
 #endif
 
@@ -939,6 +940,7 @@ void track_through_rfmode(
             sendBuffer[13] = n_summed;
             sendBuffer[14] = Vg_sum;
 	    sendBuffer[15] = rfmode->fbVCavity;
+            sendBuffer[16] = Vc_sum;
           }
 	  if (adjusting) {
 	    MPI_Allreduce(sendBuffer, receiveBuffer, SR_BUFLEN, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -960,13 +962,14 @@ void track_through_rfmode(
             Vgi_sum = receiveBuffer[9];
             Vcr_sum = receiveBuffer[10];
             Vci_sum = receiveBuffer[11];
+            Vc_sum = receiveBuffer[16];
             n_occupied = receiveBuffer[12];
             n_summed = receiveBuffer[13];
             Vg_sum = receiveBuffer[14];
 	    if (adjusting) {
 	      /* adjust the voltage setpoint to get the voltage we really want */
 	      double VcEffective;
-	      VcEffective = n_summed?sqrt(sqr(Vcr_sum)+sqr(Vci_sum))/n_summed:0.0;
+	      VcEffective = n_summed?Vc_sum/n_summed:0.0;
 	      rfmode->setpointAdjustment += (rfmode->voltageSetpoint - VcEffective)*rfmode->adjustmentFraction;
 	      printf("Voltage setpoint adjustment changed to %le V on pass %ld\n\n", rfmode->setpointAdjustment, pass);
 	      fflush(stdout);
@@ -995,7 +998,7 @@ void track_through_rfmode(
                                        rfmode->sample_counter-1,                
                                        (char*)"VGenerator", n_summed?Vg_sum/n_summed:0.0,
                                        (char*)"PhaseGenerator", n_summed?atan2(Vgi_sum/n_summed, Vgr_sum/n_summed):0.0,
-                                       (char*)"VCavity", n_summed?sqrt(sqr(Vcr_sum)+sqr(Vci_sum))/n_summed:0.0,
+                                       (char*)"VCavity", n_summed?Vc_sum/n_summed:0.0,
                                        (char*)"PhaseCavity", n_summed?atan2(Vci_sum/n_summed, Vcr_sum/n_summed):0.0,
                                        NULL))) {
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
