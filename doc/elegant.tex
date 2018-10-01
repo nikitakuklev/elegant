@@ -1346,14 +1346,17 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     STRING output = NULL;
     long output_monitors_only = 0;
     long start_from_centroid = 1;
-    long start_from_dp_centroid = 1;
+    long start_from_dp_centroid = 0;
     double closed_orbit_accuracy = 1e-12;
-    long closed_orbit_iterations = 10;
-    double iteration_fraction = 1;
+    long closed_orbit_iterations = 40;
     long fixed_length = 0;
     long start_from_recirc = 0;
     long verbosity = 0;
+    double iteration_fraction = 0.9;
+    double fraction_multiplier = 1.05;
+    double multiplier_interval = 5;
     long tracking_turns = 0;
+    long disable = 0;
 &end
 \end{verbatim}
 
@@ -1392,6 +1395,13 @@ element in the beamline.  In general, if one has a recirculation
 element, one should give this flag.
 \item \verb|verbosity| --- A larger value results in more printouts
 during the computations.
+\item \verb|iteration_fraction| --- Controls the fraction of the update to apply
+  when iterating toward a closed orbit. Smaller numbers give less chance of instability
+  at the price of slower convergence.e
+\item \verb|fraction_multiplier| --- Multiplier to apply to the iteration fraction if
+  iteration is converging.
+\item \verb|multiplier_interval| --- Interval in number of iterations at which to adjust
+  the interation fraction.
 \item \verb|tracking_turns| --- If non-zero, the number of turns to track for detemination 
   of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
   complains about convergence issues.
