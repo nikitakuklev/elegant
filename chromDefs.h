@@ -26,6 +26,7 @@ typedef struct {
     double sextupole_tweek;
     double tolerance;         /* how close to get to desired chromaticities */
     long exit_on_failure;     /* exit if fails to converge */
+    long update_orbit;        /* interval between orbit updates during chrom iteration */
     double dK2_weight;        /* weight for minimization of changes to K2 values */
     MATRIX *T;                /* Nfx2 matrix to give sextupole strength changes to change 
                                  chromaticities by given amount */
@@ -36,7 +37,7 @@ typedef struct {
 
 /* prototypes for chrom.c */
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
-long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline, double *clorb,
+long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline, double *clorb, long run_closed_orbit,
         long step, long last_iteration);
 void computeChromaticities(double *chromx, double *chromy, 
                            double *dbetax, double *dbetay,

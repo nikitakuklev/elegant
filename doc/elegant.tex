@@ -94,6 +94,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|analyze_map| command has a new parameter, \verb|printout_format|, allows controlling the format of the printed elements.
 \item The \verb|correct_tunes| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
   is updated during correction. The need for this arose from a problem encountered by I. Agapov (DESY).
+\item The \verb|chromaticity| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
+  is updated during correction.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1293,6 +1295,7 @@ particles.
     double strength_limit = 0;
     long use_perturbed_matrix = 0;    
     long exit_on_failure = 0;
+    long update_orbit = 0;
     long verbosity = 1;
     double dK2_weight = 1;
 &end
@@ -1327,6 +1330,8 @@ performing correction.  For difficult lattices with large errors, this may be ne
 to obtain correction.  In general, it is not necessary and only slows the simulation.
 \item \verb|exit_on_failure| --- If nonzero, then failure to reach the desired chromaticities within the
   tolerance results in the program exiting.
+\item \verb|update_orbit| --- If non-zero, the orbit calculation is updated after each $n^{th}$ adjustment of the
+  sextupoles.
 \item \verb|verbosity| --- Increasing positive values result in increasing amounts of information printed during
   execution.
 \end{itemize}

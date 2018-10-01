@@ -1849,7 +1849,7 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
   }
   if (!*invalid && doChromCorr &&
-      !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
+      !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, doClosedOrbit,
                                   0, 0)) {
     *invalid = 1;
     printf("warning: unable to do chromaticity correction\n");

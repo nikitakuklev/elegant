@@ -334,7 +334,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
 
 
 long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline,
-            double *clorb, long step, long last_iteration)
+                                double *clorb, long do_closed_orbit, long step, long last_iteration)
 {
     VMATRIX *M;
     double chromx0, chromy0, dchromx=0, dchromy=0;
@@ -514,6 +514,15 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
           free(beamline->matrix);
           beamline->matrix = NULL;
         }
+
+        if (do_closed_orbit && (chrom->update_orbit!=0 && i%chrom->update_orbit==0)) {
+          if (verbosityLevel>1) {
+            printf("Updating closed orbit\n");
+            fflush(stdout);
+          }
+          run_closed_orbit(run, beamline, clorb, NULL, 0);
+        }
+
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
