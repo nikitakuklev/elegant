@@ -19,6 +19,7 @@
     long change_defined_values = 0;
     long use_perturbed_matrix = 0;
     double dK1_weight = 1;
+    long update_orbit = 0;
     long verbosity = 1;
 #end
 

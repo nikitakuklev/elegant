@@ -1092,7 +1092,7 @@ char **argv;
                 failed = 1;
                 break;
               }
-              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
+              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
                 printf("Tune correction failed---continuing to next step\n");
@@ -1499,7 +1499,7 @@ char **argv;
                 failed = 1;
                 break;
               }
-              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
+              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
                 printf("Tune correction failed---continuing to next step\n");

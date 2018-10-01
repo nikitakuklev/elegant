@@ -23,6 +23,7 @@ typedef struct {
     double maximum_gain;    /* maximum gain to use */
     double dK1_weight;      /* how much to weight minimization of dK1 */
     long verbosity;
+    long update_orbit;
     MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
                                chromaticities by given amount */
     MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */
@@ -32,5 +33,6 @@ typedef struct {
 
 /* prototypes for tune.c */
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune);
-long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, long step, long last_iteration);
+long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, 
+                        long run_closed_orbit, long step, long last_iteration);
 void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout);

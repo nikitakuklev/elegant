@@ -1842,7 +1842,7 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
   }
   if (!*invalid && doTuneCorr &&
-      !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, 
+      !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, doClosedOrbit,
                                   0, 0)) {
     *invalid = 1;
     printf("warning: unable to do tune correction\n");
