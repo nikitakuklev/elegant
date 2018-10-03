@@ -413,7 +413,7 @@ long trackRfCavityWithWakes
 
     timeOffset = 0;
     if (isSlave || !notSinglePart) {
-      if (omega && rfca->change_t) {
+      if (omega && rfca->change_t && np!=0) {
 	coord = part[0];
 	P     = *P_central*(1+coord[5]);
 	beta_i = P/(gamma=sqrt(sqr(P)+1));
