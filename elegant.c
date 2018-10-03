@@ -2783,6 +2783,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   inhibitRandomSeedPermutation(inhibit_seed_permutation);
   shareTrackingBasedMatrices = share_tracking_based_matrices;
   trackingMatrixStepFactor = tracking_matrix_step_factor;
+  parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
 #if SDDS_MPI_IO
   SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
   SDDS_MPI_SetFileSync(mpi_io_force_file_sync);

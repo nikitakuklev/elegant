@@ -87,6 +87,7 @@ extern long echoNamelists;
 extern long mpiRandomizationMode;
 extern long exactNormalizedEmittance;
 extern long shareTrackingBasedMatrices;
+extern long parallelTrackingBasedMatrices;
 extern double trackingMatrixStepFactor;
 
 /* flag used to identify which processor is allowed to write to a file */

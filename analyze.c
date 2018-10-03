@@ -961,22 +961,23 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   /* We partition by processor in MPI mode.
      The arrays are oversized, but not so large that it will hurt. 
   */
-  n_left = n_track;
-  nWorking = n_left<n_processors ? n_left : n_processors;
-  my_nTrack = (1.0*n_left)/nWorking+0.5;
-  my_offset = myid*my_nTrack;
-  if (myid==(nWorking-1))
-    my_nTrack = n_left - my_offset;
-  else if (myid>=nWorking)
-    my_nTrack = my_offset = n_left = 0;
-  /*
-  fprintf(fpdeb, "my_offset = %ld, my_nTrack = %ld\n",
-          my_offset, my_nTrack);
-  */
-#else
-  my_offset = 0;
-  my_nTrack = n_track;
+  if (parallelTrackingBasedMatrices) {
+    n_left = n_track;
+    nWorking = n_left<n_processors ? n_left : n_processors;
+    my_nTrack = (1.0*n_left)/nWorking+0.5;
+    my_offset = myid*my_nTrack;
+    if (myid==(nWorking-1))
+      my_nTrack = n_left - my_offset;
+    else if (myid>=nWorking)
+      my_nTrack = my_offset = n_left = 0;
+  } else {
 #endif
+    my_offset = 0;
+    my_nTrack = n_track;
+#if USE_MPI
+  }
+#endif
+
 
   if (my_nTrack) {
     switch (eptr->type) {
@@ -1075,17 +1076,22 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
   }
 #if USE_MPI
-  MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-  if (n_leftTotal!=n_track)
-    bombElegantVA("lost particles (%ld -> %ld) when tracking to determine matrix for %s\n", 
-                  n_track, n_leftTotal, eptr->name);
-#else    
-  if (n_left!=n_track) {
-    bombElegantVA("lost particles when tracking to determine matrix for %s\n", eptr->name);
+  if (parallelTrackingBasedMatrices) {
+    MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (n_leftTotal!=n_track)
+      bombElegantVA("lost particles (%ld -> %ld) when tracking to determine matrix for %s\n", 
+                    n_track, n_leftTotal, eptr->name);
+  } else {
+#endif
+    if (n_left!=n_track) {
+      bombElegantVA("lost particles when tracking to determine matrix for %s\n", eptr->name);
+    }
+#if USE_MPI
   }
 #endif
 
 #if USE_MPI
+    if (parallelTrackingBasedMatrices) {
     /* Gather final particles back to master */
     MPI_Barrier(MPI_COMM_WORLD);
     nToTrackCounts = tmalloc(sizeof(long)*n_processors);
@@ -1111,39 +1117,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
     free(nToTrackCounts);
     nToTrackCounts = NULL;
-#endif
-    
-#if USE_MPI
-    if (myid==0) {
+  }
+
+    if (!parallelTrackingBasedMatrices || myid==0) {
       /* In MPI mode, only master does analysis */
 #endif
 
-  /*
-  if (1) {
-    FILE *fplog;
-    fplog = fopen("matrix.log", "w");
-    fprintf(fplog, "SDDS1\n");
-    fprintf(fplog, "&column name=x0 type=double &end\n");
-    fprintf(fplog, "&column name=x1 type=double &end\n");
-    fprintf(fplog, "&column name=xp0 type=double &end\n");
-    fprintf(fplog, "&column name=xp1 type=double &end\n");
-    fprintf(fplog, "&column name=y0 type=double &end\n");
-    fprintf(fplog, "&column name=y1 type=double &end\n");
-    fprintf(fplog, "&column name=yp0 type=double &end\n");
-    fprintf(fplog, "&column name=yp1 type=double &end\n");
-    fprintf(fplog, "&column name=s0 type=double &end\n");
-    fprintf(fplog, "&column name=s1 type=double &end\n");
-    fprintf(fplog, "&column name=delta0 type=double &end\n");
-    fprintf(fplog, "&column name=delta1 type=double &end\n");
-    fprintf(fplog, "&data mode=ascii no_row_counts=1 &end\n");
-    for (i=0; i<n_track; i++) {
-      for (j=0; j<6; j++)
-        fprintf(fplog, "%13.6le %13.6le ", initialCoord[i][j], finalCoord[i][j]);
-      fprintf(fplog, "\n");
-    }
-    fclose(fplog);
-  }
-  */
 
   /* Set errors as fraction of the absolute maximum coordinate */
   for (i=0; i<6; i++) {
@@ -1171,7 +1150,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   free_matrices_above_order(M, order);
 
 #if USE_MPI 
-    } else {
+  } else {
     /* distribute matrices to other processors */
       M = tmalloc(sizeof(*M));
       initialize_matrices(M, M->order=order);

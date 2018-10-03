@@ -14,7 +14,8 @@
      long inhibit_seed_permutation = 0;
      STRING log_file = NULL;
      STRING error_log_file = NULL;
-     long share_tracking_based_matrices = 0;
+     long share_tracking_based_matrices = 1;
+     long parallel_tracking_based_matrices = 1;
      long mpi_io_force_file_sync = 0;
      long mpi_io_read_buffer_size = 0;
      long mpi_io_write_buffer_size = 0;

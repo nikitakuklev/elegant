@@ -59,6 +59,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
 \item The \verb|RFCA| element would bomb if no particles per present on a processor and \verb|CHANGE_T=1|. This
   was found upon investigating a problem reported by G. Penn (ALS).
+\item The transport matrix for \verb|BGGEXP| was being computed only to first order, which resulted in erroneous
+  values for chromaticity, for example. This was reported by R. Linbdberg (APS).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}

@@ -152,6 +152,8 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
 {
   do_optimization_setup(optimization_data, nltext, run, beamline);
 
+  parallelTrackingBasedMatrices = 0;
+
   if (optimization_data->method!=OPTIM_METHOD_SIMPLEX) 
     runInSinglePartMode = 1;  /* All the processors will track the same particles with different parameters */
   
