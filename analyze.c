@@ -902,9 +902,11 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->referenceData[2] = crbptr0->referenceData[2];
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
 	  copied = 1;
+          /* 
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
+          */
 	  break;
 	case T_CSBEND:
 	  copied = 1;
@@ -912,9 +914,11 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
           csbptr0 = (CCBEND*)storedElement[i]->p_elem;
 	  csbptr1 = (CCBEND*)eptr->p_elem;
           */
+          /*
 	  printf("Using stored matrix for CSBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
+          */
 	  break;
 	case T_BRAT:
 	  brat0 = (BRAT*)storedElement[i]->p_elem;
@@ -922,14 +926,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  brat1->initialized = brat0->initialized;
 	  brat1->dataIndex = brat0->dataIndex;
 	  copied = 1;
+          /*
 	  printf("Using stored matrix for BRAT %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
+          */
 	  break;
         case T_FMULT:
+          /*
 	  printf("Using stored matrix for FMULT %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  fflush(stdout);
+          */
+          copied = 1;
           break;
 	default:
 	  break;
