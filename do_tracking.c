@@ -916,8 +916,14 @@ long do_tracking(
 	  } 
 	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */  
 	  if ((balanceStatus==badBalance) || (parallelStatus==notParallel)) {
+#if USE_MPI && MPI_DEBUG
+            printf("Scattering particles (1): nToTrack = %ld\n", nToTrack);
+#endif
 	    scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			     balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+#if USE_MPI && MPI_DEBUG
+            printf("Scattering particles done: nToTrack = %ld\n", nToTrack);
+#endif
 	    nLeft = nToTrack;
 	    if (myid != 0) {
 	      /* update the nMaximum for recording the nLost on all the slave processors */
@@ -929,8 +935,14 @@ long do_tracking(
 	  else if (balanceStatus==startMode) { 
 	    /* For the first pass, scatter when it is not in parallel mode */
 	    if (parallelStatus!=trueParallel) {
+#if USE_MPI && MPI_DEBUG
+              printf("Scattering particles (2): nToTrack = %ld\n", nToTrack);
+#endif
 	      scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+#if USE_MPI && MPI_DEBUG
+              printf("Scattering particles done: nToTrack = %ld\n", nToTrack);
+#endif
 	      nLeft = nToTrack;
 	      if (myid != 0) {
 		/* update the nMaximum for recording the nLost on all the slave processors */
@@ -1373,9 +1385,15 @@ long do_tracking(
                         dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
 #if SDDS_MPI_IO
 		      if (!partOnMaster && notSinglePart) {
+#if USE_MPI && MPI_DEBUG
+                        printf("Scattering particles (3): nToTrack = %ld\n", nToTrack);
+#endif
 			scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 					 balanceStatus, my_rate, nParPerElements, round, 
 					 lostSinceSeqMode, &distributed, &reAllocate, P_central);
+#if USE_MPI && MPI_DEBUG
+                        printf("Scattering particles done: nToTrack = %ld\n", nToTrack);
+#endif
 			nLeft = nToTrack;
 		      }
 #endif
@@ -2612,8 +2630,14 @@ long do_tracking(
   #else
       /* Make sure that the particles are distributed to the slave processors for parallel IO */ 
       if (partOnMaster && notSinglePart) {
+#if USE_MPI && MPI_DEBUG
+        printf("Scattering particles (4): nToTrack = %ld\n", nToTrack);
+#endif
 	scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
 			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
+#if USE_MPI && MPI_DEBUG
+        printf("Scattering particles done: nToTrack = %ld\n", nToTrack);
+#endif
 	nLeft = nToTrack;
         parallelStatus = trueParallel;
       }
