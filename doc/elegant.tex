@@ -46,10 +46,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The order of edge transformations for the \verb|CCBEND| element was revised to make more physical sense.
 \item A bug was fixed in the expressions for integral-based fringe field effects in \verb|QUAD| and \verb|KQUAD|.
   The bug resulted in very small inconsistencies between the matrices when $K_1 \rightarrow -K_1$.
-\item A bug was fixed in the \verb|NIBEND| element that resulted in incorrect edge effects for \verb|ANGLE<0|.
-  This bug was apparently introduced in release 33.0.
 \item Some small errors were found and fixed in the linear fringe treatment for the \verb|KQUAD| and \verb|QUAD| elements.
   Thanks to X. Huang (SLAC) for pointing out the problem.
+\item A bug was fixed in the \verb|NIBEND| element that resulted in incorrect edge effects for \verb|ANGLE<0|.
+  This bug was apparently introduced in release 33.0.
 \item The \verb|SCRAPER| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
   made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|). In addition,
   the interpretation of the \verb|INSERT_FROM=''x''| and \verb|INSERT_FROM=''y''| was incorrect, since these were
@@ -57,6 +57,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   \verb|Youssef| and have been fixed.
 \item The \verb|SPEEDBUMP| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
   made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
+\item The \verb|RFCA| element would bomb if no particles per present on a processor and \verb|CHANGE_T=1|. This
+  was found upon investigating a problem reported by G. Penn (ALS).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -78,7 +80,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|BRANCH| element now provides periodic branching, which permits modeling a periodic bypass, for
   example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
 \item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
-  now takes advantage of parallel resources.
+  now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
+  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|.
 \item The \verb|RFMODE| element has additional features that help refine the agreement between the voltage obtained by 
   rf feedback and the effective voltage seen by the beam.
 \end{itemize}
@@ -2240,12 +2243,12 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     long echo_namelists = 1;
     long mpi_randomization_mode = 1;
     long exact_normalized_emittance = 0;
-    long share_tracking_based_matrices = 0;
     double SR_gaussian_limit = 3.0;
     long inhibit_seed_permutation = 0;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
-    long share_tracking_based_matrices = 0;
+    long share_tracking_based_matrices = 1;
+    long parallel_tracking_based_matrices = 1;
     long mpi_io_force_file_sync = 0;
     long usleep_mpi_io_kludge = 0;
     long mpi_io_read_buffer_size = 0;
@@ -2271,6 +2274,15 @@ programs such as TRACY and MAD \cite{BuesingPC}.
 \item \verb|error_log_file| --- By default, \verb|elegant| writes error messages to the terminal.  If a filename is supplied
   for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
   the output being discarded.
+\item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
+  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
+  This can save considerable computation time.
+\item \verb|parallel_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
+  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed using parallel resources in \verb|Pelegant|. 
+  This can save considerable wall clock time.
+  N.B.: This is set to zero when using \verb|parallel_optimization_setup|.
+\item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
+  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
 \item \verb|mpi_randomization_mode| --- Controls how the random numbers are seeded on multiple processors
   \begin{itemize}
     \item[1] --- This is the original default, which showed issues in some simulations. The seed on the $i^{th}$ processor is $s_0+2*i$.
