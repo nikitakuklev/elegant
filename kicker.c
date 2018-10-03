@@ -403,8 +403,9 @@ void track_through_mkicker(
     }
 
     KnL[0] = strength*kicker->length;
+    multipoleOrder[0] = kicker->order;
 
-    integrate_kick_multipole_ord4(part[ip], kicker->dx, kicker->dy, 0.0, 0.0, 0.0, 0.0, 0.0,
+    integrate_kick_multipole_ord4(part[ip], kicker->dx, kicker->dy, 0.0, 0.0, p_central, 0.0, 0.0,
                                   multipoleOrder, KnL, skew, n_parts,
                                   kicker->length, NULL, NULL, NULL, NULL, &dummy, NULL, 0);
   }
