@@ -972,13 +972,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   */
   if (parallelTrackingBasedMatrices) {
     n_left = n_track;
-    nWorking = n_left<n_processors ? n_left : n_processors;
-    my_nTrack = (1.0*n_left)/nWorking+0.5;
+    nWorking = n_track<n_processors ? n_track : n_processors;
+    my_nTrack = (1.0*n_track)/nWorking+0.5;
     my_offset = myid*my_nTrack;
     if (myid==(nWorking-1))
-      my_nTrack = n_left - my_offset;
+      my_nTrack = n_track - my_offset;
     else if (myid>=nWorking)
-      my_nTrack = my_offset = n_left = 0;
+      my_nTrack = my_offset = 0;
+    n_left = my_nTrack;  /* In case tracking routine doesn't set this */
   } else {
 #endif
     my_offset = 0;
