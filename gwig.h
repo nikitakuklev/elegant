@@ -50,6 +50,7 @@ struct gwig {
   double zEndH, zEndV;      /* based on the phase of the first harmonic to get matched dispersion. */
   short sr, isr;    /* flags for classical and incoherent SR */
   double srCoef, isrCoef;
+  double normGradient;  /* normalized gradient, such that fields are multiplied by (1+gradient*x) */
 
   int HSplitPole, VSplitPole;
   double HCw[WHmax];

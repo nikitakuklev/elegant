@@ -4,9 +4,9 @@ CMPLR = ANSI
 OP_SYS_CFLAGS = 
 OPT_CFLAGS_NO = -g
 OPT_CFLAGS_YES = -O3
-HOST_OPT = YES
-Ocustom = -O3
-#USR_LDFLAGS+= -g
+HOST_OPT = NO
+#Ocustom = -O3
+USR_LDFLAGS+= -g
 
 #RATIONAL = purify
 #RATIONAL = quantify

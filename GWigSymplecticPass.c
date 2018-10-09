@@ -32,6 +32,7 @@ void GWigInit(struct gwig *Wig,
 	      double Bmax, /* peak magnetic field (Tesla) */
               double BHmax, /* peak magnetic field (Tesla) for H wiggler expansion, ignored if Bmax is nonzero */
               double BVmax, /* peak magnetic field (Tesla) for V wiggler expansion, ignored if Bmax is nonzero */
+              double normGradient, /* normalized gradient, such that fields are multiplied by (1+gradient*x) */
 	      int Nstep,   /* number of integration steps (per period?) */
 	      int Nmeth,   /* integration method (2 or 4 for integration order) */
 	      int NHharm,  /* number of horizontal harmonics (By) */
@@ -70,7 +71,8 @@ void GWigInit(struct gwig *Wig,
   Wig->zEndH = zEndPointH[1];
   Wig->zStartV = zEndPointV[0];
   Wig->zEndV = zEndPointV[1];
-  
+  Wig->normGradient = normGradient;
+
   if ((Wig->sr = synchRad))
     Wig->srCoef = sqr(particleCharge)*ipow(pCentral, 3)/(6*PI*epsilon_o*particleMass*sqr(c_mks));
 
@@ -167,6 +169,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   
   GWigInit(&Wig, cwiggler->length, cwiggler->length/cwiggler->periods, 
            cwiggler->BMax, cwiggler->ByMax, cwiggler->BxMax, 
+           cwiggler->tgu?cwiggler->tguGradient:0,
            cwiggler->stepsPerPeriod, 
            cwiggler->integrationOrder,
            cwiggler->ByHarmonics, cwiggler->BxHarmonics,
@@ -326,10 +329,23 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
       cwiggler->fieldOutputInitialized = 1;
     }
     if (cwiggler->sinusoidal) {
-      if (cwiggler->BxFile || cwiggler->ByFile)
-        printf("*** Warning: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
+      if (cwiggler->BxFile || cwiggler->ByFile) {
+        printf("*** Error: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
+        exitElegant(1);
+      }
       cwiggler->BxHarmonics = 0;
       cwiggler->BxData = NULL;
+      if (cwiggler->tgu) {
+        if (!cwiggler->BMax && !cwiggler->ByMax) {
+          printf("*** Error: CWIGGLER element has TGU=1, but also has B_MAX=%le and BY_MAX=%le\n",
+                 cwiggler->BMax, cwiggler->ByMax);
+          exitElegant(1);
+        }
+        if (cwiggler->vertical || cwiggler->helical) {
+          printf("*** Error: CWIGGLER element has TGU=1, but also has VERTICAL=1 or HELICAL=1\n");
+          exitElegant(1);
+        }
+      }
       if (!cwiggler->vertical || cwiggler->helical) {
         cwiggler->ByHarmonics = 1;
         cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
@@ -354,6 +370,10 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
           cwiggler->BxData[5] = 0;
       }
     } else {
+      if (cwiggler->tgu) {
+        printf("*** Error: CWIGGLER element has TGU=1, but doesn't have SINUSOIDAL=1\n");
+        exitElegant(1);
+      }
       if (cwiggler->helical) {
         printf("*** Error: CWIGGLER element has HELICAL=1, but doesn't have SINUSOIDAL=1\n");
         exitElegant(1);

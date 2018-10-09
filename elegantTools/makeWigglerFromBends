@@ -14,16 +14,17 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 APSStandardSetup
 set tclPrecision 17
 
-set usage {usage: makeWigglerFromBends -rootname <rootname> {-K <value> | -B <value>} -parts <nPerPole> -period <cm> -length <m> -name <string>}
+set usage {usage: makeWigglerFromBends -rootname <rootname> {-K <value> | -B <Tesla>} [-b1 <1/m>] -parts <nPerPole> -period <cm> -length <m> -name <string>}
 set name ""
 set period 3.30
 set rootname ""
 set K 2.8
 set B 0
+set b1 0
 set parts 6
 set length 4.8
 set args $argv
-if {[APSStrictParseArguments {period rootname K B parts length name}] || ![string length $rootname] || ![string length $name]} {
+if {[APSStrictParseArguments {period rootname K B b1 parts length name}] || ![string length $rootname] || ![string length $name]} {
     return -code error "$usage"
 }
 if [expr int($parts/2)*2-$parts]!=0 {
@@ -71,7 +72,7 @@ foreach sign {-1 1} type {P N} {
         set e2 [expr $angle-$e1]
         set elementName ${name}${type}[format %03d $index]
         lappend elementList $elementName
-        puts $fdl "$elementName: CSBEN,N_KICKS=4,INTEGRATION_ORDER=2,ISR=1,SYNCH_RAD=1,L=$dl,ANGLE=$angle,E1=$e1,E2=$e2,EDGE_ORDER=1"
+        puts $fdl "$elementName: CSBEN,N_KICKS=4,INTEGRATION_ORDER=2,ISR=1,SYNCH_RAD=1,L=$dl,ANGLE=$angle,E1=$e1,E2=$e2,EDGE_ORDER=1,B1=$b1"
         if [expr $index<$parts/2] {
             lappend element2List $elementName
         } else {

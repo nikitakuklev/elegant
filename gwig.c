@@ -282,8 +282,15 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
         cx  = cos(kx*x);
         chy = cosh(ky * y);
         sz  = sin(kz * z + tz);
-        ax  = ax + (pWig->HCw[i])*(kw/kz)*cx*chy*sz;
-        
+
+        if (pWig->normGradient && i==0)
+          /* Ax = (B0/ku)*((1 + a*x)*Cosh[ku*y]*Sin[ku*z] - (a*z)*(B0*e/(me*c*k))/(2*betaGamma) */
+          /* We assume kw=kz, ky=kz, kx=0 */
+          ax  = ax + (pWig->HCw[i])*((1+x*pWig->normGradient)*chy*sz -
+                                     pWig->normGradient*z*pWig->Aw/(2*beta0*gamma0));
+        else 
+          ax  = ax + (pWig->HCw[i])*(kw/kz)*cx*chy*sz;
+
         shy = sinh(ky * y);
         if ( abs(kx/kw) > GWIG_EPS ) {
           sxkx = sin(kx * x)/kx;	
@@ -291,7 +298,12 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
           sxkx = x*sinc(kx*x);
         }
         
-        axpy = axpy + pWig->HCw[i]*(kw/kz)*ky*sxkx*shy*sz;
+        if (pWig->normGradient && i==0)
+          /* axpy = B0 (x + a*x^2/2) Sin[ku z] Sinh[ku y] */
+          /* We assume kw=kz, ky=kz, kx=0 */ 
+          axpy = axpy + pWig->HCw[i]*kw*x*(1+pWig->normGradient*x/2)*shy*sz;
+        else
+          axpy = axpy + pWig->HCw[i]*(kw/kz)*ky*sxkx*shy*sz;
       }
     } else {
       /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
@@ -386,7 +398,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
     if (!pWig->HSplitPole) {
       /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
-      for ( i = 0; i < pWig->NHharm; i++ ){
+      for ( i = 0; i < pWig->NHharm; i++) {
         pWig->HCw[i] = (pWig->HCw_raw[i])*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Hkx[i];
         ky = pWig->Hky[i];
@@ -396,8 +408,14 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
         sx = sin(kx * x);
         shy = sinh(ky * y);
         sz  = sin(kz * z + tz);
-        ay  = ay + (pWig->HCw[i])*(kw/kz)*(kx/ky)*sx*shy*sz;
         
+        if (pWig->normGradient && i==0)
+          /* Ay = a B0 Sin[ku z] Sinh[ku y]/k^2 */
+          /* We assume kw=kz, ky=kz, kx=0 */
+          ay = ay - (pWig->HCw[i])*pWig->normGradient*sz*shy/kw;
+        else 
+          ay = ay + (pWig->HCw[i])*(kw/kz)*(kx/ky)*sx*shy*sz;
+
         cx  = cos(kx * x);
         chy = cosh(ky * y);
         
