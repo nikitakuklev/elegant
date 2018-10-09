@@ -14,7 +14,7 @@ set auto_path [linsert $auto_path 0  $env(OAG_TOP_DIR)/oag/apps/lib/$env(HOST_AR
 APSStandardSetup
 set tclPrecision 17
 
-set usage {usage: makeWigglerFromBends -rootname <rootname> {-K <value> | -B <Tesla>} [-b1 <1/m>] -parts <nPerPole> -period <cm> -length <m> -name <string>}
+set usage {usage: makeWigglerFromBends -rootname <rootname> {-K <value> | -B <Tesla>} -energy <MeV> [-b1 <1/m>] -parts <nPerPole> -period <cm> -length <m> -name <string>}
 set name ""
 set period 3.30
 set rootname ""
@@ -23,12 +23,16 @@ set B 0
 set b1 0
 set parts 6
 set length 4.8
+set energy 0.0
 set args $argv
-if {[APSStrictParseArguments {period rootname K B b1 parts length name}] || ![string length $rootname] || ![string length $name]} {
+if {[APSStrictParseArguments {period rootname energy K B b1 parts length name}] || ![string length $rootname] || ![string length $name]} {
     return -code error "$usage"
 }
 if [expr int($parts/2)*2-$parts]!=0 {
     return -code error "parts per pole must be even"
+}
+if [expr $energy==0] {
+    return -code error "give beam energy in MeV\n$usage"
 }
 
 foreach ext {lte} {
@@ -51,7 +55,7 @@ for {set part 0} {$part<$parts} {incr part} {
 if [expr $B!=0] {
     set K [expr 93.4*$B*($period/100.0)]
 }
-set theta [expr $K/(7e3/0.511)]
+set theta [expr $K/($energy/0.51099906)]
 set totalBend [expr $theta*2]
 set dl [expr $period/100.0/2/$parts]
 
