@@ -50,7 +50,8 @@ struct gwig {
   double zEndH, zEndV;      /* based on the phase of the first harmonic to get matched dispersion. */
   short sr, isr;    /* flags for classical and incoherent SR */
   double srCoef, isrCoef;
-  double normGradient;  /* normalized gradient, such that fields are multiplied by (1+gradient*x) */
+  double z1, z2, z3; /* cut-over positions for entrance poles */
+  double z4, z5, z6; /* cut-over positions for exit poles */
 
   int HSplitPole, VSplitPole;
   double HCw[WHmax];
@@ -68,12 +69,12 @@ struct gwig {
   CWIGGLER *cwiggler;
 };
 
-void GWigGauge(struct gwig *pWig, double *X, int flag);
+double GWigPoleFactor(struct gwig *pWig, double Z);
 void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep);
 void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep);
-void GWigMap_2nd(struct gwig *pWig, double *X, double dl);
-void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy);
-void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx);
+void GWigMap_2nd(struct gwig *pWig, double *X, double dl, double poleFactor);
+void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy, double poleFactor);
+void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx, double poleFactor);
 double sinc(double x );
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
 long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long vertical,

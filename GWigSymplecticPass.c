@@ -71,7 +71,15 @@ void GWigInit(struct gwig *Wig,
   Wig->zEndH = zEndPointH[1];
   Wig->zStartV = zEndPointV[0];
   Wig->zEndV = zEndPointV[1];
-  Wig->normGradient = normGradient;
+
+  /* Boundaries of first, second, penultimate, and last poles */
+  Wig->z1 = Wig->zStartH + Wig->Lw/4.0;
+  Wig->z2 = Wig->zStartH + 3*Wig->Lw/4.0;
+  Wig->z3 = Wig->zStartH + 5*Wig->Lw/4.0;
+  /* The 0.25 Lw/N term ensures that rounding error doesn't mess things up in comparisons in GWigPoleFactor() */
+  Wig->z4 = Wig->zEndH - 5*Wig->Lw/4.0 - 0.25*Wig->Lw/Nstep;
+  Wig->z5 = Wig->zEndH - 3*Wig->Lw/4.0 - 0.25*Wig->Lw/Nstep;
+  Wig->z6 = Wig->zEndH - Wig->Lw/4.0 - 0.25*Wig->Lw/Nstep;
 
   if ((Wig->sr = synchRad))
     Wig->srCoef = sqr(particleCharge)*ipow(pCentral, 3)/(6*PI*epsilon_o*particleMass*sqr(c_mks));
@@ -156,7 +164,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 {	
 
   int c;
-  double r6[6], denom;
+  double r6[6], denom, ZwEnd, pf;
   static struct gwig Wig;
   MALIGN malign;
   TRACKING_CONTEXT tContext;
@@ -183,7 +191,11 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 
   if (ZwStart && (*ZwStart-cwiggler->length)>1e-6*cwiggler->length)
     bombElegant("ZwStart>cwiggler->length  This is a bug!", NULL);
-  
+  if (ZwStart) 
+    ZwEnd = *ZwStart + (singleStep ? cwiggler->length/(cwiggler->periods*cwiggler->stepsPerPeriod) : cwiggler->length);
+  else
+    ZwEnd = cwiggler->length;
+
   if (cwiggler->tilt)
     rotateBeamCoordinates(coord, num_particles, cwiggler->tilt);
   if (cwiggler->dx || cwiggler->dy || cwiggler->dz) {
@@ -222,8 +234,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
       Wig.Zw = *ZwStart;
       if (singleStep && Wig.Zw!=0) {
         double ax, ay, axpy, aypx;
-        GWigAx(&Wig, r6, &ax, &axpy);
-        GWigAy(&Wig, r6, &ay, &aypx);
+        GWigAx(&Wig, r6, &ax, &axpy, pf=GWigPoleFactor(&Wig, *ZwStart));
+        GWigAy(&Wig, r6, &ay, &aypx, pf);
         r6[1] += ax;
         r6[3] += ay;
       }
@@ -248,8 +260,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     if (singleStep) {
       /* convert back to elegant coordinates (special code for interior of device to account for vector potential) */
       double ax, ay, axpy, aypx;
-      GWigAx(&Wig, r6, &ax, &axpy);
-      GWigAy(&Wig, r6, &ay, &aypx);
+      GWigAx(&Wig, r6, &ax, &axpy, pf=GWigPoleFactor(&Wig, ZwEnd));
+      GWigAy(&Wig, r6, &ay, &aypx, pf);
       coord[c][0] = r6[0];
       coord[c][2] = r6[2];
       coord[c][5] = r6[4]; 
@@ -275,8 +287,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
       denom = sqrt(sqr(1+coord[c][5])-sqr(r6[1])-sqr(r6[3]));
       coord[c][1] = r6[1]/denom;
       coord[c][3] = r6[3]/denom;
-  }
-    
+    }
+   
   }
 
   if (!singleStep && cwiggler->fieldOutputInitialized) {

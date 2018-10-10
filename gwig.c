@@ -32,37 +32,16 @@
 #include <stdio.h>
 
 void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl, double *sigmaDelta2);
-void GWigB(struct gwig *pWig, double *Xvec, double *B);
+void GWigB(struct gwig *pWig, double *Xvec, double *B, double poleFactor);
 void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B);
 
 #define FIELD_OUTPUT 0
-
-void GWigGauge(struct gwig *pWig, double *X, int flag)
-
-{
-  double ax, ay, axpy, aypx;
-
-  GWigAx(pWig, X, &ax, &axpy);
-  GWigAy(pWig, X, &ay, &aypx);
- 
-  if ((flag = Elem_Entrance)) {
-    /* At the entrance of the wiggler */
-    X[1] = X[1] + ax;
-    X[3] = X[3] + ay;
-  } else if ((flag = Elem_Exit)) {
-    /* At the exit of the wiggler */
-    X[1] = X[1] - ax;
-    X[3] = X[3] - ay;
-  } else {
-    printf("  GWigGauge: Unknown flag = %i\n", flag);
-  }
-}
-
 
 void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long singleStep)
 {
   int    i, Nstep;
   double dl;
+
 #if FIELD_OUTPUT
   static FILE *fpd = NULL;
   static long index = 0;
@@ -88,9 +67,9 @@ void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long single
   if ((pWig->sr || pWig->isr || FIELD_OUTPUT) && pWig->Zw==0)  {
     double B[2];
     double ax, ay, axpy, aypx;
-    GWigAx(pWig, X, &ax, &axpy);
-    GWigAy(pWig, X, &ay, &aypx);
-    GWigB(pWig, X, B);
+    GWigAx(pWig, X, &ax, &axpy, pWig->cwiggler->poleFactor[0]);
+    GWigAy(pWig, X, &ay, &aypx, pWig->cwiggler->poleFactor[0]);
+    GWigB(pWig, X, B, pWig->cwiggler->poleFactor[0]);
     X[1] -= ax;
     X[3] -= ay;
     if (pWig->sr || pWig->isr)
@@ -105,13 +84,15 @@ void GWigPass_2nd(struct gwig *pWig, double *X, double *sigmaDelta2, long single
   }
   
   for (i = 1; i <= Nstep; i++ ) {
-    GWigMap_2nd(pWig, X, dl);
+    double pf;
+    pf = GWigPoleFactor(pWig, ((i-1)*pWig->cwiggler->length)/Nstep);
+    GWigMap_2nd(pWig, X, dl, pf);
     if (pWig->sr || pWig->isr || pWig->cwiggler->fieldOutputInitialized) {
       double B[2];
       double ax, ay, axpy, aypx;
-      GWigAx(pWig, X, &ax, &axpy);
-      GWigAy(pWig, X, &ay, &aypx);
-      GWigB(pWig, X, B);
+      GWigAx(pWig, X, &ax, &axpy, pf);
+      GWigAy(pWig, X, &ay, &aypx, pf);
+      GWigB(pWig, X, B, pf);
       X[1] -= ax;
       X[3] -= ay;
       if (pWig->sr || pWig->isr)
@@ -140,8 +121,9 @@ void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long single
 
   int    i, Nstep;
   double dl, dl1, dl0;
- 
+
   Nstep = pWig->PN*(pWig->Nw);
+
   dl = pWig->Lw/(pWig->PN);
 
   dl1 = x1*dl;
@@ -150,9 +132,9 @@ void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long single
   if ((pWig->sr || pWig->isr || FIELD_OUTPUT) && pWig->Zw==0)  {
     double B[2];
     double ax, ay, axpy, aypx;
-    GWigAx(pWig, X, &ax, &axpy);
-    GWigAy(pWig, X, &ay, &aypx);
-    GWigB(pWig, X, B);
+    GWigAx(pWig, X, &ax, &axpy, pWig->cwiggler->poleFactor[0]);
+    GWigAy(pWig, X, &ay, &aypx, pWig->cwiggler->poleFactor[0]);
+    GWigB(pWig, X, B, pWig->cwiggler->poleFactor[0]);
     X[1] -= ax;
     X[3] -= ay;
     GWigRadiationKicks(pWig, X, B, dl, sigmaDelta2);
@@ -161,15 +143,17 @@ void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long single
   }
   
   for (i = 1; i <= Nstep; i++ ) {
-    GWigMap_2nd(pWig, X, dl1);
-    GWigMap_2nd(pWig, X, dl0);
-    GWigMap_2nd(pWig, X, dl1);
+    double pf;
+    pf = GWigPoleFactor(pWig, ((i-1)*pWig->cwiggler->length)/Nstep);
+    GWigMap_2nd(pWig, X, dl1, pf);
+    GWigMap_2nd(pWig, X, dl0, pf);
+    GWigMap_2nd(pWig, X, dl1, pf);
     if (pWig->sr || pWig->isr || pWig->cwiggler->fieldOutputInitialized) {
       double B[2];
       double ax, ay, axpy, aypx;
-      GWigAx(pWig, X, &ax, &axpy);
-      GWigAy(pWig, X, &ay, &aypx);
-      GWigB(pWig, X, B);
+      GWigAx(pWig, X, &ax, &axpy, pf);
+      GWigAy(pWig, X, &ay, &aypx, pf);
+      GWigB(pWig, X, B, pf);
       X[1] -= ax;
       X[3] -= ay;
       if (pWig->sr || pWig->isr)
@@ -185,7 +169,7 @@ void GWigPass_4th(struct gwig *pWig, double *X, double *sigmaDelta2, long single
 }
 
 
-void GWigMap_2nd(struct gwig *pWig, double *X, double dl) 
+void GWigMap_2nd(struct gwig *pWig, double *X, double dl, double poleFactor) 
 {
 
   double dld, dl2, dl2d;
@@ -199,19 +183,19 @@ void GWigMap_2nd(struct gwig *pWig, double *X, double dl)
   pWig->Zw = pWig->Zw + dl2;
 
   /* Step2: a half drift in y */
-  GWigAy(pWig, X, &ay, &aypx);
+  GWigAy(pWig, X, &ay, &aypx, poleFactor);
   X[1] = X[1] - aypx;
   X[3] = X[3] - ay;
 
   X[2] = X[2] + dl2d*X[3];
   X[5] = X[5] + 0.5e0*dl2d*(X[3]*X[3])/(1.0e0+X[4]);
    
-  GWigAy(pWig, X, &ay, &aypx);
+  GWigAy(pWig, X, &ay, &aypx, poleFactor);
   X[1] = X[1] + aypx;
   X[3] = X[3] + ay;
 
   /* Step3: a full drift in x */
-  GWigAx(pWig, X, &ax, &axpy);
+  GWigAx(pWig, X, &ax, &axpy, poleFactor);
   X[1] = X[1] - ax;
   X[3] = X[3] - axpy;
 
@@ -222,19 +206,19 @@ void GWigMap_2nd(struct gwig *pWig, double *X, double dl)
   X[5] = X[5] + 0.5e0*dld*(X[1]*X[1])/(1.0e0+X[4]);
    */
 
-  GWigAx(pWig, X, &ax, &axpy);
+  GWigAx(pWig, X, &ax, &axpy, poleFactor);
   X[1] = X[1] + ax;
   X[3] = X[3] + axpy;
 
   /* Step4: a half drift in y */
-  GWigAy(pWig, X, &ay, &aypx);
+  GWigAy(pWig, X, &ay, &aypx, poleFactor);
   X[1] = X[1] - aypx;
   X[3] = X[3] - ay;
 
   X[2] = X[2] + dl2d*X[3];
   X[5] = X[5] + 0.5e0*dl2d*(X[3]*X[3])/(1.0e0+X[4]);
    
-  GWigAy(pWig, X, &ay, &aypx);
+  GWigAy(pWig, X, &ay, &aypx, poleFactor);
   X[1] = X[1] + aypx;
   X[3] = X[3] + ay;
 
@@ -244,7 +228,7 @@ void GWigMap_2nd(struct gwig *pWig, double *X, double dl)
 }
 
 
-void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy) 
+void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy, double poleFactor) 
 {
 
   int    i;
@@ -267,9 +251,9 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
   beta0    = sqrt(1e0 - 1e0/(gamma0*gamma0));
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
     if (pWig->PB0H!=0)
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H) * poleFactor;
     else
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0) * poleFactor;
     if (!pWig->HSplitPole) {
       /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for (i = 0; i < pWig->NHharm; i++) {
@@ -283,11 +267,11 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
         chy = cosh(ky * y);
         sz  = sin(kz * z + tz);
 
-        if (pWig->normGradient && i==0)
+        if (pWig->cwiggler->tguGradient && i==0)
           /* Ax = (B0/ku)*((1 + a*x)*Cosh[ku*y]*Sin[ku*z] - (a*z)*(B0*e/(me*c*k))/(2*betaGamma) */
           /* We assume kw=kz, ky=kz, kx=0 */
-          ax  = ax + (pWig->HCw[i])*((1+x*pWig->normGradient)*chy*sz -
-                                     pWig->normGradient*z*pWig->Aw/(2*beta0*gamma0));
+          ax  = ax + (pWig->HCw[i])*((1+x*pWig->cwiggler->tguGradient)*chy*sz -
+                                     pWig->cwiggler->tguCompFactor*pWig->cwiggler->tguGradient*z*pWig->Aw/(2*beta0*gamma0));
         else 
           ax  = ax + (pWig->HCw[i])*(kw/kz)*cx*chy*sz;
 
@@ -298,10 +282,10 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
           sxkx = x*sinc(kx*x);
         }
         
-        if (pWig->normGradient && i==0)
+        if (pWig->cwiggler->tguGradient && i==0)
           /* axpy = B0 (x + a*x^2/2) Sin[ku z] Sinh[ku y] */
           /* We assume kw=kz, ky=kz, kx=0 */ 
-          axpy = axpy + pWig->HCw[i]*kw*x*(1+pWig->normGradient*x/2)*shy*sz;
+          axpy = axpy + pWig->HCw[i]*kw*x*(1+pWig->cwiggler->tguGradient*x/2)*shy*sz;
         else
           axpy = axpy + pWig->HCw[i]*(kw/kz)*ky*sxkx*shy*sz;
       }
@@ -328,9 +312,9 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
   
   if (pWig->NVharm && z>=pWig->zStartV && z<=pWig->zEndV) {
     if (pWig->PB0V!=0)
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0V);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0V) * poleFactor;
     else
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0) * poleFactor;
     if (!pWig->VSplitPole) {
       /* Normal Vertical Wiggler: note that one potentially could have: ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
@@ -370,7 +354,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
 }
 
 
-void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
+void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx, double poleFactor)
 {
   int    i;
   double x, y, z;
@@ -393,9 +377,9 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
      
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
     if (pWig->PB0H!=0)
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H)* poleFactor;
     else
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0) * poleFactor;
     if (!pWig->HSplitPole) {
       /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for ( i = 0; i < pWig->NHharm; i++) {
@@ -409,10 +393,10 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
         shy = sinh(ky * y);
         sz  = sin(kz * z + tz);
         
-        if (pWig->normGradient && i==0)
+        if (pWig->cwiggler->tguGradient && i==0)
           /* Ay = a B0 Sin[ku z] Sinh[ku y]/k^2 */
           /* We assume kw=kz, ky=kz, kx=0 */
-          ay = ay - (pWig->HCw[i])*pWig->normGradient*sz*shy/kw;
+          ay = ay - (pWig->HCw[i])*pWig->cwiggler->tguGradient*sz*shy/kw;
         else 
           ay = ay + (pWig->HCw[i])*(kw/kz)*(kx/ky)*sx*shy*sz;
 
@@ -440,9 +424,9 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
   
   if (pWig->NVharm && z>=pWig->zStartV && z<=pWig->zEndV) {
     if (pWig->PB0V!=0)
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0V);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0V) * poleFactor;
     else
-      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
+      pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0) * poleFactor;
     if (!pWig->VSplitPole) {
       /* Normal Vertical Wiggler, could have ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
@@ -496,7 +480,7 @@ double sinc(double x)
   return result;
 }
 
-void GWigB(struct gwig *pWig, double *Xvec, double *B) 
+void GWigB(struct gwig *pWig, double *Xvec, double *B, double poleFactor) 
 /* Compute magnetic field at particle location.
  * Added by M. Borland, August 2007.
  */
@@ -509,6 +493,8 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   double cy, sy, chy, shy;
   double cz;
   double B0;
+
+  poleFactor = 1;
   
   x = Xvec[0];
   y = Xvec[2];
@@ -519,7 +505,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   B[0] = B[1] = 0;
 
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
-    B0 = pWig->PB0H ? pWig->PB0H : pWig->PB0;
+    B0 = (pWig->PB0H ? pWig->PB0H : pWig->PB0)*poleFactor;
     if (!pWig->HSplitPole) {
       /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for (i = 0; i < pWig->NHharm; i++) {
@@ -559,7 +545,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   }
   
   if (pWig->NVharm && z>=pWig->zStartV && z<=pWig->zEndV) {
-    B0 = pWig->PB0V ? pWig->PB0V : pWig->PB0;
+    B0 = (pWig->PB0V ? pWig->PB0V : pWig->PB0)*poleFactor;
     if (!pWig->VSplitPole) {
       /* Normal Vertical Wiggler: note that one potentially could have: ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
@@ -677,3 +663,20 @@ void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B)
 }
 
 
+double GWigPoleFactor(struct gwig *pWig, double z)
+{
+  if (z<pWig->z3) {
+    if (z<pWig->z1)
+      return pWig->cwiggler->poleFactor[0];
+    if (z<pWig->z2)
+      return pWig->cwiggler->poleFactor[1];
+    return pWig->cwiggler->poleFactor[2];
+  }
+  if (z<pWig->z4)
+    return 1;
+  if (z<pWig->z5)
+    return pWig->cwiggler->poleFactor[2];
+  if (z<pWig->z6)
+    return pWig->cwiggler->poleFactor[1];
+  return pWig->cwiggler->poleFactor[0];
+}
