@@ -521,8 +521,20 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B, double poleFactor)
         cz = cos(kz*z+tz);
         
         /* Accumulate field values in user-supplied array (Bx, By) */
-        B[0] += B0*pWig->HCw_raw[i]*kx/ky*sx*shy*cz;
-        B[1] -= B0*pWig->HCw_raw[i]*cx*chy*cz;
+        if (i==0 && pWig->cwiggler->tguGradient) {
+          /* Bx = (a*B0*Cos(ku*z)*Sinh(ku*y))/ku */
+          /* By = (a*Power(B0,2)*CF*e)/(2.*betaGamma*c*Power(ku,2)*me) + B0*(1 + a*x)*Cos(ku*z)*Cosh(ku*y) */
+          shy = sinh(ky*y);
+          B[0] += B0*pWig->HCw_raw[i]*pWig->cwiggler->tguGradient*cz*shy/kz;
+          B[1] -= B0*pWig->HCw_raw[i]*(chy*cz*(1 + pWig->cwiggler->tguGradient*x) +
+                                       pWig->cwiggler->tguCompFactor*
+                                       pWig->cwiggler->tguGradient*
+                                       (B0*pWig->HCw_raw[i]*q_e/(2*m_e*clight*pWig->Po*sqr(kz))));
+                                       
+        } else {
+          B[0] += B0*pWig->HCw_raw[i]*kx/ky*sx*shy*cz;
+          B[1] -= B0*pWig->HCw_raw[i]*cx*chy*cz;
+        }
       }
     } else {
       /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
