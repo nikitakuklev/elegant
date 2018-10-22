@@ -225,7 +225,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
           Vtime[nb] = 0;
           convolveArrays(Vtime, nb, 
                          posItime[plane], nb,
-                         wakeData->W[plane], wakeData->wakePoints);
+                         wakeData->W[plane], wakeData->wakePoints, wakeData->i0);
 
           for (ib=0; ib<nb; ib++)
             Vtime[ib] *= factor;
@@ -494,9 +494,32 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 #endif
   if (tmin==tmax)
     bombElegant("no time span in TRWAKE data", NULL);
-  if (tmin!=0)
-    bombElegant("TRWAKE function does not start at t=0.\n", NULL);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
+  wakeData->i0 = 0;
+  if (tmin!=0) {
+    if (!wakeData->acausalAllowed) {
+      fprintf(stderr, "Error: TRWAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
+      fprintf(stderr, "If you really want this, set ACAUSAL_ALLOWED=1\n");
+      exitElegant(1);
+    } else {
+      wakeData->i0 = -1;
+      for (iw=0; iw<wakeData->wakePoints; iw++) {
+        if (fabs(wakeData->t[iw])<1e-6*wakeData->dt) {
+          wakeData->i0 = iw;
+          break;
+        }
+      }
+      if (wakeData->i0 == -1) {
+        fprintf(stderr, "Error: TRWAKE function does have value at t=0 (within 1e-6*dt) for file %s\n",  wakeData->inputFile);
+        exitElegant(1);
+      }
+      if (fabs(tmin)>tmax) {
+        fprintf(stderr, "Error: acausal WAKE function has |tmin|>tmax for file %s\n",  wakeData->inputFile);
+        exitElegant(1);
+      }
+    }
+  }
+
 }
 
 void computeTimeCoordinatesOnly(double *time, double Po, double **part, long np)

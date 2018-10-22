@@ -1751,6 +1751,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&wake_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&wake_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+    {"ACAUSAL_ALLOWED", "", IS_LONG, 0, (long)((char *)&wake_example.acausalAllowed), NULL, 0.0, 0, "If non-zero, then an acausal wake is allowed."},
     };
 
 CORGPIPE corgpipe_example;
@@ -1818,6 +1819,7 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"Y_PROBE_EXPONENT", "", IS_LONG, 0, (long)((char *)&trwake_example.yProbeExponent), NULL, 0.0, 0, "Exponent applied to y coordinates of probe particles"},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     {"BUNCHED_BEAM_MODE", "", IS_LONG, 0, (long)((char *)&trwake_example.bunchedBeamMode), NULL, 0.0, 1, "If non-zero, then do calculations bunch-by-bunch."},
+    {"ACAUSAL_ALLOWED", "", IS_LONG, 0, (long)((char *)&trwake_example.acausalAllowed), NULL, 0.0, 0, "If non-zero, then an acausal wake is allowed."},
     };
 
 CHARGE charge_example;

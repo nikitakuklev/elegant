@@ -14,6 +14,10 @@ particle with $q>0$ will impart a positive kick ($\Delta q^\prime >
 0$) to a trailing particle following $t$ seconds behind if $W_q(t)>0$.
 A physical wake function should be zero at $t=0$ and also be initially
 positive as $t$ increases from 0.
+Causality requires that $W_q(t)=0$ for $t<0$. Acasual wakes are supported, 
+provided the user sets \verb|ACAUSAL_ALLOWED=0|. The data file must contain
+a value of $W(t)$ at $t=0$, and should have equal spans of time to the
+negative and positive side of $t=0$.
 
 Use of the {\tt CHARGE} parameter on the {\tt TRWAKE} element is
 disparaged.  It is preferred to use the {\tt CHARGE} element as part

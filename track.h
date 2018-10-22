@@ -977,8 +977,8 @@ extern char *entity_text[N_TYPES];
 #define N_IBSCATTER_PARAMS 12
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 7
-#define N_WAKE_PARAMS 14
-#define N_TRWAKE_PARAMS 22
+#define N_WAKE_PARAMS 15
+#define N_TRWAKE_PARAMS 23
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 3
 #define N_PFILTER_PARAMS 6
@@ -2722,9 +2722,10 @@ typedef struct {
     long change_p0, allowLongBeam;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     long bunchedBeamMode;          /* If nonzero, then do calculations bunch-by-bunch */
+    long acausalAllowed;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
-    long wakePoints, isCopy;
+    long wakePoints, isCopy, i0;
     double *W, *t, macroParticleCharge, dt;
   } WAKE;
 
@@ -2777,9 +2778,10 @@ typedef struct {
     long xProbeExponent, yProbeExponent;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     long bunchedBeamMode;          /* If nonzero, then do calculations bunch-by-bunch */
+    long acausalAllowed;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
-    long wakePoints, isCopy;
+    long wakePoints, isCopy, i0;
     double *W[2], *t, macroParticleCharge, dt;
   } TRWAKE;
 
@@ -4091,7 +4093,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
                                      double *binSize, long *nBins, long maxBins);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
-                    double *a2, long n2);
+                    double *a2, long n2, long di2);
 void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,
                                 double *Vtime, long nb, double tmin, double dt,
                                 long interpolate);

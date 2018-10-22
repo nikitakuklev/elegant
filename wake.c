@@ -18,7 +18,7 @@
 void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
-                    double *a2, long n2);
+                    double *a2, long n2, long di2);
 
 
 void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInput,
@@ -237,7 +237,7 @@ else if (isSlave) {
         Vtime[nb] = 0;
         convolveArrays(Vtime, nb,
                        Itime, nb, 
-                       wakeData->W, wakeData->wakePoints);
+                       wakeData->W, wakeData->wakePoints, wakeData->i0);
 
         factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor*rampFactor;
         for (ib=0; ib<nb; ib++)
@@ -449,29 +449,48 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     fprintf(stderr, "Error: zero or negative time span in WAKE file %s\n",  wakeData->inputFile);
     exitElegant(1);
   }
-  if (tmin!=0) {
-    fprintf(stderr, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
-    exitElegant(1);
-  }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
+  wakeData->i0 = 0;
+  if (tmin!=0) {
+    if (!wakeData->acausalAllowed) {
+      fprintf(stderr, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
+      fprintf(stderr, "If you really want this, set ACAUSAL_ALLOWED=1\n");
+      exitElegant(1);
+    } else {
+      wakeData->i0 = -1;
+      for (iw=0; iw<wakeData->wakePoints; iw++) {
+        if (fabs(wakeData->t[iw])<1e-6*wakeData->dt) {
+          wakeData->i0 = iw;
+          break;
+        }
+      }
+      if (wakeData->i0 == -1) {
+        fprintf(stderr, "Error: WAKE function does have value at t=0 (within 1e-6*dt) for file %s\n",  wakeData->inputFile);
+        exitElegant(1);
+      }
+      if (fabs(tmin)>tmax) {
+        fprintf(stderr, "Error: acausal WAKE function has |tmin|>tmax for file %s\n",  wakeData->inputFile);
+        exitElegant(1);
+      }
+    }
+  }
 }
 
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
-                    double *a2, long n2)
+                    double *a2, long n2, long di2)
 {
   long ib, ib1, ib2;
   for (ib=0; ib<outputs; ib++) {
     output[ib] = 0;
-    ib2 = ib;
-    ib1 = 0;
+    ib2 = ib + di2;
     if (ib2>=n2) {
-      ib2 = n2-1;
-      ib1 = ib-ib2;
-      if (ib1>=n1)
-        continue;
+      long di;
+      di = ib2-n2+1;
+      ib1 += di;
+      ib2 -= di;
     }
-    for (; ib1<=ib; ib1++, ib2--)
+    for (ib1=0; ib1<n1 && ib2>=0; ib1++, ib2--)
       output[ib] += a1[ib1]*a2[ib2];
   }
 }

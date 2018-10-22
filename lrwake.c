@@ -13,9 +13,6 @@
 #include "fftpackC.h"
 
 void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge, long nBuckets);
-void convolveArrays(double *output, long outputs, 
-                    double *a1, long n1,
-                    double *a2, long n2);
 
 void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
                                   long *nBuckets, 
