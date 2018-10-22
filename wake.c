@@ -480,17 +480,17 @@ void convolveArrays(double *output, long outputs,
                     double *a1, long n1,
                     double *a2, long n2, long di2)
 {
-  long ib, ib1, ib2;
+  long ib, ib1, ib2, di;
   for (ib=0; ib<outputs; ib++) {
     output[ib] = 0;
     ib2 = ib + di2;
+    ib1 = 0;
     if (ib2>=n2) {
-      long di;
       di = ib2-n2+1;
       ib1 += di;
       ib2 -= di;
     }
-    for (ib1=0; ib1<n1 && ib2>=0; ib1++, ib2--)
+    for (; ib1<n1 && ib2>=0; ib1++, ib2--)
       output[ib] += a1[ib1]*a2[ib2];
   }
 }
