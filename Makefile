@@ -7,49 +7,50 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.18 2010-10-04 22:28:06 borland Exp $
+# $Id: Makefile.Pelegant,v 1.13 2010-10-04 22:28:06 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
-# Revision 1.17  2010/03/24 14:29:27  borland
+# Revision 1.12  2010/03/24 14:29:27  borland
 # Added modulate_elements command.
 #
-# Revision 1.16  2008/10/31 14:20:00  xiaoam
+# Revision 1.11  2008/10/31 14:20:00  xiaoam
 # Add replace_elements command to elegant
 #
-# Revision 1.15  2008/03/18 16:45:08  xiaoam
+# Revision 1.10  2008/03/18 16:45:08  xiaoam
 # Add insert_elements and touschekScatter into elegant
 #
-# Revision 1.14  2008/01/21 17:38:41  borland
+# Revision 1.9  2008/01/21 17:38:41  borland
 # Added moments.c and moments.nl.
 #
-# Revision 1.13  2007/05/21 16:43:57  ywang25
-# Added hash table functions according to Bob Jenkins's code in public domain. Customized for elegant to improve parameter loading.
+# Revision 1.8  2007/09/28 17:41:01  ywang25
+# When building Pelegant, if there is an error or interuppted by user, the Makefile can't be recovered to the original one. This version of Makefile.Pelegant fixed the problem.
 #
-# Revision 1.12  2007/03/30 16:55:00  soliday
+# Revision 1.7  2007/03/30 16:55:00  soliday
 # Removed a bunch of scripts and programs that have been moved to elegantTools.
 #
-# Revision 1.11  2007/02/08 17:09:54  ywang25
+# Revision 1.6  2007/02/08 17:09:54  ywang25
 # Impoved Makefile to build Pelegant and elegant more conveniently.
 #
-# Revision 1.10  2006/03/23 00:05:45  borland
+# Revision 1.5  2006/03/23 00:05:45  borland
 # Added coupled twiss parameter computation using code by V. Sajaev.
 # Added momentum aperture computation to elegantRingAnalysis.
 #
-# Revision 1.9  2005/11/28 22:07:09  borland
+# Revision 1.4  2005/11/28 22:07:09  borland
 # Added aperture input via an SDDS file using the new aperture_input command.
 #
-# Revision 1.8  2005/11/22 23:21:19  borland
+# Revision 1.3  2005/11/22 23:21:19  borland
 # Added momentum aperture search, which necessitated adding an argument to
 # do_tracking, resulting in changes in many files.
 # Also improved convergence of orbit finder, adding a second iteration using
 # tracking if the matrix-based method fails.
 #
-# Revision 1.7  2005/11/04 16:27:05  borland
-# Added Xiao's code for space charge element SCMULT.
+# Revision 1.2  2005/11/18 22:14:28  soliday
+# Updated so that the build will still work if the last build stopped
+# while compiling elegant.
 #
-# Revision 1.6  2005/09/29 20:50:43  ywang25
-# Modifications for parallelization.  Verified to be identical to sequential version when run in non-MPI mode.
+# Revision 1.1  2005/09/29 20:54:49  ywang25
+# First version for parallel elegant
 #
 # Revision 1.5  2004/04/08 16:09:36  soliday
 # Build rules are now compatible with Base 3.14
@@ -71,9 +72,39 @@
 #
 
 TOP=../..
+
+ifneq ($(MPI), 1)
+ifneq ($(NOMPI), 1)
+
+include $(TOP)/configure/CONFIG
+
+LEFTOVER_MAKEFILE=1
+
+all buildInstall:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile
+
+Selegant:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile Selegant
+
+Pelegant:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile Pelegant
+endif
+endif
+
+ifneq ($(LEFTOVER_MAKEFILE), 1)
+
 include $(TOP)/configure/CONFIG
 include $(TOP)/src/elegant/Makefile.OAG
 include $(TOP)/configure/RULES
+
+sddsbrightness$(OBJ):
+	$(MAKE) -f ../Makefile.Host.brightness
 
 alter$(OBJ): alter.h
 
@@ -315,78 +346,6 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp -suppressSummaryVariables ../fitTraces.nl fitTraces.h
 
-elegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/elegant elegant)
-PelegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/Pelegant Pelegant)
-
-elegant = $(words $(notdir $(elegantLocation)))
-Pelegant = $(words $(notdir $(PelegantLocation)))
-
-
-PelegantNewer=0
-ifeq ($(Pelegant), 1)
-PelegantTime=$(shell stat --format=%Y $(PelegantLocation))
-ifeq ($(elegant), 1)
-elegantTime=$(shell stat --format=%Y $(elegantLocation))
-PelegantNewer=$(shell rpnl "$(elegantTime) $(PelegantTime) < ? 1 : 0 $$")
-else
-PelegantNewer=1
-endif
-endif
-
-
-ifeq ($(PelegantNewer), 0)
-Pelegant:
-	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o O.$(EPICS_HOST_ARCH)/*.h
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) MPI=1 -f Makefile
-	$(RM) O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-elegant:
-	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) NOMPI=1 -f Makefile
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-all buildInstall:
-	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) NOMPI=1 -f Makefile
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-else
-Pelegant:
-	$(RM) O.$(EPICS_HOST_ARCH)/link_date.o O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) MPI=1 -f Makefile
-	$(RM) O.$(EPICS_HOST_ARCH)/insertSCeffects.o O.$(EPICS_HOST_ARCH)/drand_oag.o O.$(EPICS_HOST_ARCH)/mad_parse.o
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-elegant:
-	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) NOMPI=1 -f Makefile
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-all buildInstall:
-	$(RM) *.o O.$(EPICS_HOST_ARCH)/*.o O.$(EPICS_HOST_ARCH)/*.h
-	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
-	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
-	$(MAKE) NOMPI=1 -f Makefile
-	$(RM) $(TOP)/src/elegant/Makefile
-	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
-
-endif
 
 
 
@@ -395,7 +354,7 @@ clean:
 else
 clean::
 endif
-	$(RM) fitTraces.h vary.h twiss.h tune.h tuneFootprint.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h ignoreElements.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h ramp.h chaosMap.h ionEffects.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h tuneFootprint.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h ignoreElements.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h chaosMap.h ionEffects.h
 
 
-
+endif

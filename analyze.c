@@ -855,7 +855,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double maximumValue[6];
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
-  long nPoints1 = 5;
+  long nPoints1 = trackingMatrixPoints;
   long maxFitOrder = 4;
   /* We'll store some of the matrices to avoid recomputing them */
 #define MAX_N_STORED_MATRICES 1000
@@ -864,7 +864,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static VMATRIX **storedMatrix=NULL;
   long my_nTrack, my_offset, n_leftTotal, *nToTrackCounts;
   long k, nWorking;
-
+  
+  if (nPoints1%2==0)
+    nPoints1 += 1;
+  if (nPoints1<5)
+    nPoints1 = 5;
+  
   /*
 #if USE_MPI
   if (fpdeb==NULL) {

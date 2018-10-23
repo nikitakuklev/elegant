@@ -89,6 +89,7 @@ extern long exactNormalizedEmittance;
 extern long shareTrackingBasedMatrices;
 extern long parallelTrackingBasedMatrices;
 extern double trackingMatrixStepFactor;
+extern long trackingMatrixPoints;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;

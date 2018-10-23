@@ -83,7 +83,11 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
 \item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
   now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
-  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|.
+  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|. The \verb|global_settings| command also
+  now offers the ability to control the number of points per phase space dimension that are used in matrix fitting, 
+  via the \verb|tracking_matrix_points| parameter.
+\item The \verb|global_settings| command now has user overriding of default values, which means that whenever the user
+  changes a value, it becomes the new default for any subsequent instances of the command in that run.
 \item The \verb|RFMODE| element has additional features that help refine the agreement between the voltage obtained by 
   rf feedback and the effective voltage seen by the beam.
 \item The \verb|WAKE| and \verb|TRWAKE| elements now accept acausal wakes, provided the user explicitly allows it with the 
@@ -2240,6 +2244,9 @@ programs such as TRACY and MAD \cite{BuesingPC}.
  One way to use the \verb|global_settings| command is in a configuration file, which can be supplied via the 
  \verb|-configuration| option or \verb|ELEGANT_CONFIGURATION| environment variable; an example of using this
  would be to set MPI I/O options an a per-system basis.
+ N.B.: unlike other commands, values given for parameters in \verb|global_settings| commands become the
+ new default for subsequent invocations of the command during the same run. Hence multiple commands can be used
+ to set individual values without overriding previously-given settings.
 \end{itemize}
 
 \begin{verbatim}
@@ -2252,12 +2259,14 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     long inhibit_seed_permutation = 0;
     STRING log_file = NULL;
     STRING error_log_file = NULL;
-    long share_tracking_based_matrices = 1;
-    long parallel_tracking_based_matrices = 1;
     long mpi_io_force_file_sync = 0;
     long usleep_mpi_io_kludge = 0;
     long mpi_io_read_buffer_size = 0;
     long mpi_io_write_buffer_size = 0;
+    long parallel_tracking_based_matrices = 1;
+    long share_tracking_based_matrices = 1;
+    double tracking_matrix_step_factor = 1;
+    double tracking_matrix_points = 5;
 &end
 \end{verbatim}
 
@@ -2282,12 +2291,6 @@ programs such as TRACY and MAD \cite{BuesingPC}.
 \item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
   (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
   This can save considerable computation time.
-\item \verb|parallel_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
-  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed using parallel resources in \verb|Pelegant|. 
-  This can save considerable wall clock time.
-  N.B.: This is set to zero when using \verb|parallel_optimization_setup|.
-\item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
-  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
 \item \verb|mpi_randomization_mode| --- Controls how the random numbers are seeded on multiple processors
   \begin{itemize}
     \item[1] --- This is the original default, which showed issues in some simulations. The seed on the $i^{th}$ processor is $s_0+2*i$.
@@ -2312,6 +2315,16 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   or files in which zeros appear in place of the expected data.
   It may give better performance than setting \verb|mpi_io_force_file_sync=1|.
   A value of 100 is suggested as a starting point, but this will be highly system-dependent.
+\item \verb|parallel_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
+  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed using parallel resources in \verb|Pelegant|. 
+  This can save considerable wall clock time.
+  N.B.: This is set to zero when using \verb|parallel_optimization_setup|.
+\item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
+  (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
+\item \verb|tracking_matrix_step_factor| --- The default step size for tracking-based matrices is $10^{-5}$ (in the appropriate units
+  for each corodinate). This can be increased or decreased by supplying a value for \verb|tracking_matrix_step_factor|.
+\item \verb|tracking_matrix_points| --- By default, five grid points are used in each dimension for tracking-based matrix determination.
+  This can be increased by setting \verb|tracking_matrix_points| to a larger, odd value, at the expense of longer running time.
 \end{itemize}
 
 

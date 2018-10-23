@@ -37,6 +37,7 @@ long exactNormalizedEmittance = 0;
 long shareTrackingBasedMatrices = 1;
 long parallelTrackingBasedMatrices = 1;
 double trackingMatrixStepFactor = 1;
+long trackingMatrixPoints = 5;
 #if USE_MPI
 short mpiAbort = 0;
 #endif

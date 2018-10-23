@@ -2769,7 +2769,7 @@ void process_particle_command(NAMELIST_TEXT *nltext)
 
 void processGlobalSettings(NAMELIST_TEXT *nltext)
 {
-  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  /* set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS); */
   set_print_namelist_flags(0);
   if (processNamelist(&global_settings, nltext)==NAMELIST_ERROR)
     bombElegant(NULL, NULL);
@@ -2783,6 +2783,7 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   inhibitRandomSeedPermutation(inhibit_seed_permutation);
   shareTrackingBasedMatrices = share_tracking_based_matrices;
   trackingMatrixStepFactor = tracking_matrix_step_factor;
+  trackingMatrixPoints = tracking_matrix_points;
   parallelTrackingBasedMatrices = parallel_tracking_based_matrices;
 #if SDDS_MPI_IO
   SDDS_MPI_SetWriteKludgeUsleep(usleep_mpi_io_kludge);
