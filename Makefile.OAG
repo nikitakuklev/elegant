@@ -51,7 +51,7 @@ else
     #USER_MPI_FLAGS+= -DMPI_DEBUG # -DDEBUG        # print debugging information for MPI 
     #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mvapich2-2.3b/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.2.1/bin/ ))
+    MPI_PATH = $(firstword $(wildcard /lustre/3rdPartySoftware/mvapich2-2.2/bin/ /usr/lib64/mvapich2/1.2-gcc/bin/ /soft/compilers/wrappers/xl/ /soft/libraries/mpi/mvapich2/gcc/bin/ /usr/lib64/mpich/bin/ /clhome/asd_tools/mvapich2-2.0/bin/ /Users/soliday/mpich-3.2/bin/ ))
 
 ifeq ($(HOST_ARCH),linux-ppc-bgp-ibm)
   CC += $(USER_MPI_FLAGS)
@@ -120,7 +120,6 @@ endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS)/src/SDDS/lzma -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib -DWL=32 -DSVN_VERSION=\"$(SVN_VERSION)\"
-#USR_CFLAGS += CHECK_BEAM_STRUCTURE=1
 USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
@@ -313,27 +312,22 @@ ifeq ($(EPICS_HOST_ARCH),linux-phi)
  endif
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
- INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/lib/intel64
- INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.3.222/linux/mkl/include/
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
+  INTEL_MKL_LIB = /clhome/asd_tools/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64
+  INTEL_MKL_INCLUDE = /clhome/asd_tools/IntelMKL_2017/compilers_and_libraries_2017.4.196/linux/mkl/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
   INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
+  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
+ endif
+ ifeq ($(INTEL_MKL_FOUND), 0)
+  INTEL_MKL_LIB = /clhome/asd_tools/intel/compilers_and_libraries_2016.1.150/linux/mkl/lib/intel64
+  INTEL_MKL_INCLUDE = /clhome/asd_tools/intel/compilers_and_libraries_2016.1.150/linux/mkl/include/
   INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
  endif
  ifeq ($(INTEL_MKL_FOUND), 0)
@@ -351,14 +345,9 @@ ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
  endif
 endif
 ifeq ($(EPICS_HOST_ARCH),linux-x86)
- INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/lib/ia32
- INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL_2018/compilers_and_libraries_2018.0.128/linux/mkl/include/
+ INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/ia32
+ INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- ifeq ($(INTEL_MKL_FOUND), 0)
-  INTEL_MKL_LIB = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/lib/ia32
-  INTEL_MKL_INCLUDE = /usr/local/oag/3rdParty/IntelMKL-11.3/compilers_and_libraries_2016.1.150/linux/mkl/include/
-  INTEL_MKL_FOUND = $(words $(wildcard $(INTEL_MKL_LIB)))
- endif
  ifneq ($(INTEL_MKL_FOUND), 0)
   INTEL_MKL = 1
  endif
@@ -562,7 +551,7 @@ lzma_DIR = $(EPICS_EXTENSIONS_LIB)
 elegant_SRCS = 	ignoreElements.c alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
 		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \
 		compute_centroids.c compute_matrices.c concat_beamline.c concat_mat.c counter.c \
-		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c ccbend.c \
+		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c \
 		do_tracking.c elegant.c error.c extend_list.c final_props.c find_elem.c floor.c \
 		generate_bunch.c get_beamline.c kicker.c kick_poly.c kick_sbend.c \
 		limit_amplitudes.c link_date.c link_elements.c load_parameters.c lorentz.c mad_parse.c \
@@ -574,7 +563,7 @@ elegant_SRCS = 	ignoreElements.c alpha_data.c alpha_matrix.c amplif.c analyze.c 
 		ztransverse.c twiss.cc vary.c zlongit.c SReffects.c mod_rfca.c \
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
-		frfmode.c ftrfmode.c tfeedback.cc engeCoef.c lsc.c frequencyMap.c \
+		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c moments.c \
                 insert_elements.c regexCode.cc touschekScatter.c chbook.c kickmap.c matrixOp.c \
@@ -606,20 +595,20 @@ endif
 
 ifeq ($(GPU),1)
 ifdef WIN32
-CUDA_LIBDIR = D:/Cuda9.1/lib/x64
+CUDA_LIBDIR = D:/Cuda8.0/lib/x64
 elegantto_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 elegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 Pelegant_LDFLAGS = $(CUDA_LIBDIR)/cudart_static.lib $(CUDA_LIBDIR)/curand.lib
 OBJJ =obj
 else 
 OBJJ = o
-CUDART = $(words $(wildcard /usr/lib/x86_64-linux-gnu/libcudart.so /usr/lib64/libcudart.so ))
+CUDART = $(words $(wildcard /usr/lib/x86_64-linux-gnu/libcudart.so /usr/lib64/libcudart.so))
 ifneq ($(CUDART), 0)
 elegantto_SYS_LIBS += cudart curand
 elegant_SYS_LIBS += cudart curand
 Pelegant_SYS_LIBS += cudart curand
 else 
-CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda-9.2/lib64 /usr/local/cuda-9.1/lib64 /usr/local/cuda-9.0/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/local/cuda/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-9.2/lib /Developer/NVIDIA/CUDA-9.1/lib /Developer/NVIDIA/CUDA-9.0/lib /Developer/NVIDIA/CUDA-8.0/lib /soft/cudatoolkit/6.5.14/lib64 ))
+CUDA_LIBDIR = $(firstword $(wildcard /usr/local/cuda/lib64 /usr/local/cuda-8.0/lib64 /usr/local/cuda-7.5/lib64 /usr/lib/x86_64-linux-gnu /Developer/NVIDIA/CUDA-8.0/lib))
 elegantto_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 elegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
 Pelegant_LDFLAGS = -L$(CUDA_LIBDIR) -Wl,-rpath,$(CUDA_LIBDIR) -lcudart -lcurand
@@ -685,11 +674,10 @@ elegantto_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
 elegant_OBJS += ../gpuElegant/gpu_verify.$(OBJJ)
 endif
 
-abrat_LIBS += $(GSLLIB)
-abrat_SYS_LIBS += $(SYS_GSLLIB)
+
 elegantto_LIBS += $(GSLLIB)
-elegantto_SYS_LIBS += $(SYS_GSLLIB) $(EXTRAGPULIBS)
+elegantto_SYS_LIBS += $(SYS_GSLLIB)
 elegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
-elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB) $(EXTRAGPULIBS)
+elegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB)
 Pelegant_LIBS += $(GSLLIB) $(LEVMARLIB) 
 Pelegant_SYS_LIBS += $(SYS_GSLLIB) $(SYS_LEVMARLIB) $(EXTRAMPILIBS)
