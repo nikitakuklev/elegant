@@ -178,7 +178,7 @@ static long xMotionCenterVar = -1;
 
 static double radCoef = 0;
 static double isrCoef = 0;
-static double P_central;
+static double P_central, gamma_central;
 
 #define LSRMDLTR_IDEAL 0
 #define LSRMDLTR_EXACT 1
@@ -227,7 +227,8 @@ long motion(
 #endif
     change_p0 = 0;
     P_central = *pCentral;
-    
+    gamma_central = sqrt(sqr(P_central)+1);
+
     radCoef = sqr(particleCharge)*pow3(P_central)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3.0))*pow5(P_central)*137.0359895);
 
@@ -2535,9 +2536,9 @@ void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, do
       FieldB[1] = Bfactor*cos(kuz)*cosh(kuy);
       FieldB[2] = -Bfactor*sin(kuz)*sinh(kuy);
       if (a!=0) {
-        FieldB[0] = Bfactor*a/ku*cos(kux)*sinh(kuy);
+        FieldB[0] = Bfactor*a/ku*cos(kuz)*sinh(kuy);
         FieldB[1] *= (1+a*x);
-        FieldB[1] += CF*sqr(Bfactor)*a*e_mks/(2*P_central*me_mks*c_mks*sqr(ku));
+        FieldB[1] += CF*sqr(Bfactor)*a*e_mks/(2*gamma_central*me_mks*c_mks*sqr(ku));
         FieldB[2] = -Bfactor*(1+a*x)*sin(kuz)*sinh(kuy);
       }
 #if defined(DEBUG1) && !USE_MPI
