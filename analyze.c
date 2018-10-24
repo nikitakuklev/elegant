@@ -199,7 +199,7 @@ void do_transport_analysis(
       makeInitialParticleEnsemble(&initialCoord,
 				  (orbit && center_on_orbit? orbit: NULL),
 				  &finalCoord, &coordError,
-				  7, stepSize);
+				  9, stepSize);
 #if DEBUG
     if (1) {
       long i, j;
@@ -403,7 +403,7 @@ void do_transport_analysis(
     }
     
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
-				    maximumValue, 7, n_track, 8, verbosity>1?1:0);
+				    maximumValue, 9, n_track, 8, verbosity>1?1:0);
     
     performChromaticAnalysisFromMap(M, &twiss, &chromDeriv);
 
