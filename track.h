@@ -1004,7 +1004,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 48
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
-#define N_LSRMDLTR_PARAMS 25
+#define N_LSRMDLTR_PARAMS 27
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 16
 #define N_CWIGGLER_PARAMS 30
@@ -3124,7 +3124,7 @@ typedef struct {
 /* PLanar Undulator with optional laser heater */
 extern PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS];
 typedef struct {
-  double length, Bu;
+  double length, Bu, tguGradient, tguCompFactor;
   long periods;
   char *method, *fieldExpansion;
   double accuracy; 

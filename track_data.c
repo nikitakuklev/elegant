@@ -2477,6 +2477,8 @@ LSRMDLTR lsrMdltr_example;
 PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
     {"BU", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
+    {"TGU_GRADIENT", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.tguGradient), NULL, 0.0, 0, "Transverse gradient divided by maximum on-axis field."},
+    {"TGU_COMP_FACTOR", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.tguCompFactor), NULL, 1.0, 0, "Use to adjust constant field component to reduce trajectory error."},
     {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
     {"METHOD", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.method), "non-adaptive runge-kutta", 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
     {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.fieldExpansion), "leading terms", 0.0, 0, "ideal, exact, or \"leading terms\""},

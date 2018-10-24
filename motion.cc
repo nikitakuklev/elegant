@@ -504,6 +504,8 @@ void (*set_up_derivatives(
         printf((char*)"    %s\n", lsrMdltrFieldExpansion[i]);
       exitElegant(1);
     }
+    if (lsrMdltr->fieldCode!=1 && lsrMdltr->tguGradient!=0)
+      bombElegant("non-zero TGU_GRADIENT is only supported for LSRMDLTR with \"exact\" field model", NULL);
     if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
       bombElegant((char*)"LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
     if (lsrMdltr->usersLaserWavelength)
@@ -2304,7 +2306,8 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   }
 }
 
-void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz);
+void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz,
+                                  double a, double ku, double x, double tguCompFactor);
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *tValue, double *amplitudeValue, long profilePoints, double tForProfile,
@@ -2319,6 +2322,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   LSRMDLTR *lsrMdltr; 
   double gamma, *P, *Pp;
   double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
+  double Bscale;
   double x, y, z, factor_inner_scope, Bfactor, kuz, kuy, kux;
   long i, poleNumber;
   
@@ -2371,7 +2375,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   else 
     factor_inner_scope = lsrMdltr->poleFactor3;
 
-  Bfactor = factor_inner_scope*lsrMdltr->Bu*lsrMdltr->Bscale/gamma;
+  Bfactor = factor_inner_scope*lsrMdltr->Bu;
   kuz = lsrMdltr->ku*z;
   kuy = lsrMdltr->ku*y;
   kux = lsrMdltr->ku*x;
@@ -2403,17 +2407,19 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     }
   }
   */
-  laserModulatorUndulatorField(BOverGamma, Bfactor, kux, kuy, kuz);
-  
+  laserModulatorUndulatorField(BOverGamma, Bfactor, kux, kuy, kuz, lsrMdltr->tguGradient, lsrMdltr->ku, x, 
+                               lsrMdltr->tguCompFactor); 
+  Bscale = lsrMdltr->Bscale/gamma;
+  for (i=0; i<3; i++)
+    BOverGamma[i] *= Bscale;
+
   if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
-    double Bscale;
     computeLaserField(E, Blaser, -tau + q[2] - Z_center + lsrMdltr->laserPhase,
                       lsrMdltr->Ef0Laser, lsrMdltr->ZRayleigh, lsrMdltr->k, lsrMdltr->laserW0,
                       x-lsrMdltr->laserX0, y-lsrMdltr->laserY0, z-lsrMdltr->laserZ0-Z_center/lsrMdltr->k,
                       lsrMdltr->timeValue, lsrMdltr->amplitudeValue, lsrMdltr->tProfilePoints,
                       (tau/lsrMdltr->omega-lsrMdltr->t0) - (q[2]-Z_center)/(lsrMdltr->k*c_mks),
                       lsrMdltr->laserM, lsrMdltr->laserN, lsrMdltr->laserTilt);
-    Bscale = lsrMdltr->Bscale/gamma;
     for (i=0; i<3; i++) {
       E[i] *= lsrMdltr->Escale;
       BOverGamma[i] += Blaser[i]*Bscale;
@@ -2482,7 +2488,8 @@ void stochastic_laserModulator(double *q, double tau, double h)
     B[0] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
     B[1] = Bfactor*sin(kuz)*kuy;
   } */
-  laserModulatorUndulatorField(B, Bfactor, kux, kuy, kuz);
+  laserModulatorUndulatorField(B, Bfactor, kux, kuy, kuz, lsrMdltr->tguGradient, lsrMdltr->ku, x,
+                               lsrMdltr->tguCompFactor);
   
   B2 = sqr(B[0]) + sqr(B[1]) + sqr(B[2]);
   /* 1/rho^2 for central momentum */
@@ -2498,9 +2505,25 @@ void stochastic_laserModulator(double *q, double tau, double h)
   
   }
 
-void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz)
+#define DEBUG1 1
+void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz,
+                                  double a, double ku, double x, double CF)
 {
   LSRMDLTR *lsrMdltr; 
+#if defined(DEBUG1) && !USE_MPI
+  static FILE *fpdeb = NULL;
+  if (fpdeb==NULL) {
+    fpdeb = fopen("lsrmdltr.fld", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=x type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=y type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=z type=double units=m &end\n");
+    fprintf(fpdeb, "&column name=Bx type=double units=T &end\n");
+    fprintf(fpdeb, "&column name=By type=double units=T &end\n");
+    fprintf(fpdeb, "&column name=Bz type=double units=T &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+#endif
 
   lsrMdltr = (LSRMDLTR*)field_global;
 
@@ -2511,6 +2534,15 @@ void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, do
     } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
       FieldB[1] = Bfactor*cos(kuz)*cosh(kuy);
       FieldB[2] = -Bfactor*sin(kuz)*sinh(kuy);
+      if (a!=0) {
+        FieldB[0] = Bfactor*a/ku*cos(kux)*sinh(kuy);
+        FieldB[1] *= (1+a*x);
+        FieldB[1] += CF*sqr(Bfactor)*a*e_mks/(2*P_central*me_mks*c_mks*sqr(ku));
+        FieldB[2] = -Bfactor*(1+a*x)*sin(kuz)*sinh(kuy);
+      }
+#if defined(DEBUG1) && !USE_MPI
+      fprintf(fpdeb, "%le %le %le %le %le %le\n", x, kuy/ku, kuz/ku, FieldB[0], FieldB[1], FieldB[2]);
+#endif
     } else {
       /* leading terms only */
       FieldB[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
