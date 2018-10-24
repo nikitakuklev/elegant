@@ -65,6 +65,23 @@ B_y & = & - \left|B_0\right| \cos (k_x x) \cos (k_z z + \phi) \cosh (k_y y)
 \end{eqnarray}
 where $k_y^2 = k_x^2 + k_z^2$.
 
+Horizontal wiggler, normal poles, with transverse gradient, produces $B_y$ only on-axis.   Specified
+by setting {\tt BY\_SPLIT\_POLE=0}, {\tt SINUSOIDAL=1}, {\tt TGU=1}, {\tt VERTICAL=0}.
+The TGU normalized gradient is given using the \verb|TGU_GRADIENT| parameter.
+Taking $a$ as the normalized gradient, the fields are\cite{RLindbergPC}
+\begin{eqnarray}
+B_x & = & \frac{a \left|B_0\right| \sinh k_u y \cos k_u z}{k_u} \\
+B_y & = & \left|B_0\right| \left((1 + a x) \cosh k_u y \cos k_u z + \frac{a C }{2 k_u^2}\frac{e \left|B_0\right|}{\gamma m_e c }\right) \\
+B_z & = & -\left|B_0\right| (1 + a x) \sinh k_u y \sin k_u z,
+\end{eqnarray}
+where $k_u = k_y = k_z$, $k_x = 0$ is assumed, $\gamma$ is the central relativistic factor for the beam and $C$ is given by the
+\verb|TGU_COMP_FACTOR| parameter.
+This factor, and the term it multiplies, is present in order to help suppress the 
+trajectory error at the end of the device.
+It may require adjustment in order to achieve the desired level of correction.
+In addition, the user may need to adjust the pole-strength factors and include external misalignments
+and steering magnets in order to supress not only the trajectory error, but also dispersion errors.
+
 Horizontal wiggler, split poles, produces $B_y$ only on-axis.   Specified
 by setting {\tt BY\_SPLIT\_POLE=1}, and giving {\tt BY\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=0}.
 \begin{eqnarray}

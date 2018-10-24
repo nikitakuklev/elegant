@@ -23,6 +23,27 @@ B_z = -B_0 \sinh k_u y \sin k_u z ,
 where $k_u = 2\pi/\lambda_u$ and $\lambda_u$ is the undulator period.
 This is the most precise method, but also the slowest.  
 
+One may also model a transverse gradient undulator (TGU) by setting the \verb|TGU_GRADIENT| parameter
+to a non-zero value.
+In this case, taking $a$ as the normalized gradient, the fields are \cite{RLindbergPC}
+\begin{equation}
+B_x = \frac{a B_0 \sinh k_u y \cos k_u z}{k_u},
+\end{equation}
+\begin{equation}
+B_y = B_0 \left((1 + a x) \cosh k_u y \cos k_u z + \frac{a C }{2 k_u^2}\frac{e B_0}{\gamma m_e c }\right)
+\end{equation}
+and
+\begin{equation}
+B_z = -B_0 (1 + a x) \sinh k_u y \sin k_u z,
+\end{equation}
+where $\gamma$ is the central relativistic factor for the beam and $C$ is given by the
+\verb|TGU_COMP_FACTOR| parameter.
+This factor, and the term it multiplies, is present in order to help suppress the 
+trajectory error at the end of the device.
+It may require adjustment in order to achieve the desired level of correction.
+In addition, the user may need to adjust the pole-strength factors and include external misalignments
+and steering magnets in order to supress not only the trajectory error, but also dispersion errors.
+
 \item The field expanded to leading order in $y$:
 \begin{equation}
 B_y = B_0 ( 1 + \frac{1}{2}(k_u y)^2 ) \cos k_u z,
