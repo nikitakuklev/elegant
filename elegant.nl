@@ -21,7 +21,7 @@
      long mpi_io_write_buffer_size = 0;
      long usleep_mpi_io_kludge = 0;
      double tracking_matrix_step_factor = 1;
-     double tracking_matrix_points = 5;
+     double tracking_matrix_points = 9;
 #end
 
 #namelist run_setup static

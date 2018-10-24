@@ -81,11 +81,6 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   skew quadrupole error. The utility of this was pointed out by Y.-P. Sun (APS) and X. Huang (SLAC).
 \item The \verb|BRANCH| element now provides periodic branching, which permits modeling a periodic bypass, for
   example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
-\item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
-  now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
-  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|. The \verb|global_settings| command also
-  now offers the ability to control the number of points per phase space dimension that are used in matrix fitting, 
-  via the \verb|tracking_matrix_points| parameter.
 \item The \verb|global_settings| command now has user overriding of default values, which means that whenever the user
   changes a value, it becomes the new default for any subsequent instances of the command in that run.
 \item The \verb|RFMODE| element has additional features that help refine the agreement between the voltage obtained by 
@@ -107,6 +102,13 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   is updated during correction. The need for this arose from a problem encountered by I. Agapov (DESY).
 \item The \verb|chromaticity| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
   is updated during correction.
+\item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
+  now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
+  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|. The \verb|global_settings| command also
+  now offers the ability to control the number of points per phase space dimension that are used in matrix fitting, 
+  via the \verb|tracking_matrix_points| parameter. The default value of this parameter has been set to 9---an increase from
+  the minimalist value of 5 used in previous versions---in order to improve accuracy. Forum posts
+  by J. Bj{\"o}rklund Svensson (MAX-Lab) helped spur work on these features.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -2266,7 +2268,7 @@ programs such as TRACY and MAD \cite{BuesingPC}.
     long parallel_tracking_based_matrices = 1;
     long share_tracking_based_matrices = 1;
     double tracking_matrix_step_factor = 1;
-    double tracking_matrix_points = 5;
+    double tracking_matrix_points = 9;
 &end
 \end{verbatim}
 
@@ -2325,6 +2327,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   for each corodinate). This can be increased or decreased by supplying a value for \verb|tracking_matrix_step_factor|.
 \item \verb|tracking_matrix_points| --- By default, five grid points are used in each dimension for tracking-based matrix determination.
   This can be increased by setting \verb|tracking_matrix_points| to a larger, odd value, at the expense of longer running time.
+  (The run time scales approximately as the sixth power of this value.)
 \end{itemize}
 
 
