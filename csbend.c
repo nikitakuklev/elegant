@@ -954,7 +954,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
-  if (isSlave || !notSinglePart) {
+
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
       printf("error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
@@ -1149,7 +1149,6 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
-  }
   }
   
   if (distributionBasedRadiation) {
