@@ -2506,7 +2506,6 @@ void stochastic_laserModulator(double *q, double tau, double h)
   
   }
 
-#define DEBUG1 1
 void laserModulatorUndulatorField(double *FieldB, double Bfactor, double kux, double kuy, double kuz,
                                   double a, double ku, double x, double CF)
 {
