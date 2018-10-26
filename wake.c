@@ -484,7 +484,7 @@ void convolveArrays(double *output, long outputs,
   for (ib=0; ib<outputs; ib++) {
     output[ib] = 0;
     ib2 = ib + di2;
-    ib1 = 0;
+    ib1 = di = 0;
     if (ib2>=n2) {
       di = ib2-n2+1;
       ib1 += di;
@@ -629,6 +629,7 @@ void track_through_corgpipe(double **part, long np, CORGPIPE *corgpipe, double *
   wakeData.SGOrder = corgpipe->SGOrder;
   wakeData.change_p0 = corgpipe->change_p0;
   wakeData.allowLongBeam = corgpipe->allowLongBeam;
+  wakeData.acausalAllowed = wakeData.i0 = 0;
   wakeData.rampPasses = corgpipe->rampPasses;
   wakeData.initialized = 1;
   wakeData.wakePoints = n_bins;
