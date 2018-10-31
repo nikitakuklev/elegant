@@ -443,7 +443,8 @@ void BRAT_optimize_magnet(unsigned long flags)
   x[1] = dXOffset;
   x[2] = dZOffset;
   x[3] = magnetYaw;
-  dx[0] = dx[1] = dx[2] = dx[3] = 1e-4;
+  x[4] = 0;
+  dx[0] = dx[1] = dx[2] = dx[3] = dx[4] = 1e-4;
   xlo[0] = fseLimit[0]; 
   xhi[0] = fseLimit[1];
   xlo[1] = dxLimit[0]; 
@@ -452,6 +453,8 @@ void BRAT_optimize_magnet(unsigned long flags)
   xhi[2] = dzLimit[1];
   xlo[3] = yawLimit[0]; 
   xhi[3] = yawLimit[1];
+  xlo[4] = -1;
+  xhi[4] = 1;
   if (length2dMapList>1) {
     double range;
     find_min_max(&xlo[4], &xhi[4], interpolationParameterValue, length2dMapList);
