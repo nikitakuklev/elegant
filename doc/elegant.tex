@@ -137,6 +137,8 @@ Users are encouraged to check results against the serial or parallel versions an
 \item For the \verb|longitCalcs| script, the calculation of rf bucket height sometimes failed when a harmonic voltage
   was present; this was fixed. Also, the option to run without the GUI and put all results in a file was added.
 \item The \verb|makeWigglerFromBends| script now includes the ability to add a gradient and specify the beam energy.
+\item A new program, \verb|sdds4x4sigmaproc| is included that allows processing beam moments measurements from a
+  quadrupole scan in a transport line to determine the 4x4 sigma matrix. 
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -5654,6 +5656,12 @@ up-to-date than these manual pages.
         The file may, for example, be the file produced
         by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
         executed inside of {\tt elegant} using {\tt vary\_elements}. (Program by M. Borland.)
+\item {\tt sdds4x4sigmaproc} --- Analyzes quadrupole scan beam moment measurement data to determine
+  the initial 4x4 sigma matrix of the beam.  Accepts a
+  file containing the transport matrix for each point and measured beam sizes.  
+  The file may, for example, be the file produced
+  by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
+  executed inside of {\tt elegant} using {\tt vary\_elements}. (Program by M. Borland.)
 \item {\tt sddsfindresonances} --- Uses output from frequency map analysis to find and identify resonance lines.
  (Program by H. Shang, M. Borland.)
 \item {\tt sddsfluxcurve} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
