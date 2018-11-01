@@ -53,14 +53,19 @@ int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double 
 
 int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta)
 {
+  static short warningCounter = 100;
   if (expandHamiltonian) {
     *xp = qx/(1+delta);
     *yp = qy/(1+delta);
   } else {
     double denom;
     if ((denom=sqr(1+delta)-sqr(qx)-sqr(qy))<=0) {
-      printf("Warning: particle acquired undefined slopes when integrating through kick multipole\n");
-      fflush(stdout);
+      if (warningCounter) {
+        printf("Warning: particle acquired undefined slopes when integrating through kick multipole\n");
+        if (--warningCounter==0)
+          printf("         No further warnings of this type will be issued.\n");
+        fflush(stdout);
+      }
       return 0;
     }
     denom = sqrt(denom);
