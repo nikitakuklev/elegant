@@ -16,6 +16,8 @@ chromTracking
 
 frequencyMap
         Tracks particles to make a frequency map
+frequencyMap-x-delta
+        Tracks particles to make a frequency map in (x, delta)
 
 dynamicAperture
         dynamic aperture vs energy offset
