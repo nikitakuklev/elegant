@@ -9,7 +9,7 @@ ifdef WIN32
 NVCC = nvcc
 OBJ = obj
 else
-NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda-9.2/bin/nvcc /usr/local/cuda-9.1/bin/nvcc /usr/local/cuda-9.0/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /usr/local/cuda/bin/nvcc /Developer/NVIDIA/CUDA-9.2/bin/nvcc /Developer/NVIDIA/CUDA-9.1/bin/nvcc /Developer/NVIDIA/CUDA-9.0/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc /soft/cudatoolkit/6.5.14/bin/nvcc))
+NVCC = $(firstword $(wildcard /usr/bin/nvcc /usr/local/cuda-10.0/bin/nvcc /usr/local/cuda-9.2/bin/nvcc /usr/local/cuda-9.1/bin/nvcc /usr/local/cuda-9.0/bin/nvcc /usr/local/cuda-8.0/bin/nvcc /usr/local/cuda-7.5/bin/nvcc /usr/local/cuda/bin/nvcc /Developer/NVIDIA/CUDA-9.2/bin/nvcc /Developer/NVIDIA/CUDA-9.1/bin/nvcc /Developer/NVIDIA/CUDA-9.0/bin/nvcc /Developer/NVIDIA/CUDA-8.0/bin/nvcc /soft/cudatoolkit/6.5.14/bin/nvcc))
 OBJ = o
 endif
 
