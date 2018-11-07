@@ -54,13 +54,16 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|). In addition,
   the interpretation of the \verb|INSERT_FROM=''x''| and \verb|INSERT_FROM=''y''| was incorrect, since these were
   supposed to correspond to a scraper inserted from both sides. Both problems were reported by forum user 
-  \verb|Youssef| and have been fixed.
+  \verb|Youssef|.
 \item The \verb|SPEEDBUMP| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
   made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
 \item The \verb|RFCA| element would bomb if no particles per present on a processor and \verb|CHANGE_T=1|. This
   was found upon investigating a problem reported by G. Penn (ALS).
 \item The transport matrix for \verb|BGGEXP| was being computed only to first order, which resulted in erroneous
   values for chromaticity, for example. This was reported by R. Linbdberg (APS).
+\item When \verb|CSRDRIFT| elements were divided using the \verb|divide_elements| command or \verb|element_divisions|
+  parameter of the \verb|run_setup| command, the length was saved incorrectly to the \verb|parameters| file (requested
+  from \verb|run_setup|). This was reported by Pau Gonzalez.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
