@@ -1881,7 +1881,7 @@ PARAMETER mhistogram_param[N_MHISTOGRAM_PARAMS] = {
 CSRDRIFT csrdrift_example;
 /* CSR drift length physical parameters */
 PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0, "length"},
     {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0, "exponential attenuation length for wake"},
     {"DZ", "", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0, "interval between kicks"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1, "number of kicks (if DZ is zero)"},
