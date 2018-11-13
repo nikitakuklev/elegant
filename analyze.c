@@ -907,11 +907,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->referenceData[2] = crbptr0->referenceData[2];
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
 	  copied = 1;
-          /* 
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
+	  printf("optimized = %ld, fseOffset=%le, dxOffset=%le, KnDelta=%le\n",
+                 crbptr1->optimized,
+                 crbptr1->fseOffset,
+                 crbptr1->dxOffset,
+                 crbptr1->KnDelta);
+	  printf("refData = %le, %le, %le, %le\n", 
+                 crbptr1->referenceData[0],
+                 crbptr1->referenceData[1],
+                 crbptr1->referenceData[2],
+                 crbptr1->referenceData[3]);
 	  fflush(stdout);
-          */
 	  break;
 	case T_CSBEND:
 	  copied = 1;
@@ -2112,6 +2120,7 @@ long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
       break;
     }
   }
+  
   if (e1->type==T_CSBEND) {
     CSBEND *csb1, *csb2;
     csb1 = (CSBEND*)e1->p_elem;
@@ -2120,6 +2129,14 @@ long compareElements(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
       /* elements are reflections of each other */
       return -1;
     }
+  }
+  if (e1->type==T_CCBEND) {
+    CCBEND *ccb1, *ccb2;
+    ccb1 = (CCBEND*)e1->p_elem;
+    ccb2 = (CCBEND*)e2->p_elem;
+    if (ccb1->edgeFlip!=ccb2->edgeFlip)
+      /* elements are reflections of each other */
+      return -1;
   }
   return 0;
 }
