@@ -1208,11 +1208,13 @@ void copy_p_elem(char *target, char *source, long type)
     ((CCBEND*)target)->optimized = ((CCBEND*)source)->optimized;
     ((CCBEND*)target)->fseOffset = ((CCBEND*)source)->fseOffset;
     ((CCBEND*)target)->dxOffset = ((CCBEND*)source)->dxOffset;
+    ((CCBEND*)target)->xAdjust = ((CCBEND*)source)->xAdjust;
     ((CCBEND*)target)->KnDelta = ((CCBEND*)source)->KnDelta;
     ((CCBEND*)target)->referenceData[0] = ((CCBEND*)source)->referenceData[0];
     ((CCBEND*)target)->referenceData[1] = ((CCBEND*)source)->referenceData[1];
     ((CCBEND*)target)->referenceData[2] = ((CCBEND*)source)->referenceData[2];
     ((CCBEND*)target)->referenceData[3] = ((CCBEND*)source)->referenceData[3];
+    ((CCBEND*)target)->referenceData[4] = ((CCBEND*)source)->referenceData[4];
     ((CCBEND*)target)->edgeFlip = ((CCBEND*)source)->edgeFlip;
     break;
   case T_BRAT:

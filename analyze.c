@@ -901,12 +901,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->optimized = crbptr0->optimized;
 	  crbptr1->fseOffset = crbptr0->fseOffset;
 	  crbptr1->dxOffset = crbptr0->dxOffset;
+	  crbptr1->xAdjust = crbptr0->xAdjust;
 	  crbptr1->KnDelta = crbptr0->KnDelta;
 	  crbptr1->referenceData[0] = crbptr0->referenceData[0];
 	  crbptr1->referenceData[1] = crbptr0->referenceData[1];
 	  crbptr1->referenceData[2] = crbptr0->referenceData[2];
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
+	  crbptr1->referenceData[4] = crbptr0->referenceData[4];
 	  copied = 1;
+	  /*
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  printf("optimized = %ld, fseOffset=%le, dxOffset=%le, KnDelta=%le\n",
@@ -914,12 +917,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
                  crbptr1->fseOffset,
                  crbptr1->dxOffset,
                  crbptr1->KnDelta);
-	  printf("refData = %le, %le, %le, %le\n", 
+	  printf("refData = %le, %le, %le, %le, %le\n", 
                  crbptr1->referenceData[0],
                  crbptr1->referenceData[1],
                  crbptr1->referenceData[2],
-                 crbptr1->referenceData[3]);
+                 crbptr1->referenceData[3],
+                 crbptr1->referenceData[4]);
 	  fflush(stdout);
+	  */
 	  break;
 	case T_CSBEND:
 	  copied = 1;
