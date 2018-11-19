@@ -690,7 +690,7 @@ typedef struct {
   long nskip, verbosity;
   long horizontal, vertical, longitudinal, uniform;
   long nonlinear;
-  double center[3];
+  double averagingFactor, center[3];
   double sigmax, sigmay, sigmaz, sigmap; 
   double c0;   			/* c0=re*np/(2*Pi)^(3/2) -> calculate once.  */
   double c1;	 			/* c1=c0/p0^3/sigmaz -> calculate every turn */
@@ -2861,6 +2861,7 @@ typedef struct {
 typedef struct {
     /* values for internal use: */
     long flag;
+  double lastSigma[3]; /* values of sigmax, sigmay, sigmaz on last pass */
 } SCMULT;          
 
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
@@ -4299,7 +4300,7 @@ void clearSCSpecs();
 long getSCMULTSpecCount();
 char *getSCMULTName();
 long insertSCMULT(char *name, long type, long *occurrence);
-void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr);
+void trackThroughSCMULT(double **part, long np, long iPass, ELEMENT_LIST *eptr);
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass );
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 double computeRmsCoordinate(double **coord, long i1, long np, double *mean, long *countReturn);

@@ -19,4 +19,5 @@
         long nonlinear = 0;
 	long uniform_distribution = 0; 
         long verbosity = 0;
+        double averaging_factor = 1;
 #end

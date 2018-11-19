@@ -152,6 +152,11 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   if (skip)
     sc->nskip = skip;
 
+  if ((sc->averagingFactor=averaging_factor)<=0 || averaging_factor>1)
+    bombElegant("averaging_factor must be on (0, 1]", NULL);
+  if (averaging_factor<1 && !nonlinear)
+    bombElegant("averaging_factor is ignore for linear mode", NULL);
+
   if (vertical)
     sc->vertical = vertical;
 
@@ -169,7 +174,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 }
 
 /* track through space charge element */
-void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
+void trackThroughSCMULT(double **part, long np, long iPass, ELEMENT_LIST *eptr)
 {
   long i;
 #if USE_MPI
@@ -217,6 +222,15 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
     sigmax = computeRmsCoordinate(part, 0, np, &center[0], NULL);
     sigmay = computeRmsCoordinate(part, 2, np, &center[1], NULL);
     sc->sigmaz = computeRmsCoordinate(part, 4, np, &center[2], NULL);
+    if (!(iPass==0 || sc->averagingFactor==1)) {
+      sigmax     = (1-sc->averagingFactor)*((SCMULT*)eptr->p_elem)->lastSigma[0] + sc->averagingFactor*    sigmax;
+      sigmay     = (1-sc->averagingFactor)*((SCMULT*)eptr->p_elem)->lastSigma[1] + sc->averagingFactor*    sigmay;
+      sc->sigmaz = (1-sc->averagingFactor)*((SCMULT*)eptr->p_elem)->lastSigma[2] + sc->averagingFactor*sc->sigmaz;
+    }
+    /* Save values in case we need them for averaging */
+    ((SCMULT*)eptr->p_elem)->lastSigma[0] = sigmax;
+    ((SCMULT*)eptr->p_elem)->lastSigma[1] = sigmax;
+    ((SCMULT*)eptr->p_elem)->lastSigma[2] = sc->sigmaz;
     for(i=0; i<np; i++) {
       coord = part[i];
       /* remove linear kick approximation.

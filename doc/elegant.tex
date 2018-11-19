@@ -114,6 +114,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   via the \verb|tracking_matrix_points| parameter. The default value of this parameter has been set to 9---an increase from
   the minimalist value of 5 used in previous versions---in order to improve accuracy. Forum posts
   by J. Bj{\"o}rklund Svensson (MAX-Lab) helped spur work on these features.
+\item The \verb|insert_sceffects| command now supports averaging of beam size data turn-by-turn to reduce noise in 
+  transverse space charge simulation in rings, via the new \verb|averaging_factor| parameter.  This was suggested by 
+  V. Kornilov (GSI).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -2535,6 +2538,7 @@ be set to zero  and the {\bf name} must be the exact name (no wild-card matching
         long nonlinear = 0;
 	long uniform_distribution = 0;
         long verbosity = 0;
+        double averaging_factor = 1;
 &end
 \end{verbatim}
 
@@ -2555,6 +2559,18 @@ included in the plane in question.
 \item \verb|uniform_distribution| --- Used for bi-Gaussian distributed beam (coasting beam), i.e., beam that is
   uniform in z but gaussian in x and y.
 \item \verb|verbosity| --- Larger non-zero values request greater amounts of detail in printouts.
+\item \verb|averaging_factor| --- For nonlinear space charge mode only, this parameter allows applying an infinite-impulse-response 
+  (IIR) filter to the turn-by-turn beam size data in order to reduce the effects of noise. 
+  A value of 1 means that only data from the present turn
+  is used, while values approaching 0 will tend to use the initial beam sizes only.
+  In more detail, the effective rms beam size $\hat{\sigma}$ used in the calculation of the kicks for the $i^{th}$ turn is 
+  \begin{equation}
+    \hat{\sigma}_i = f\sigma_i + (1-f) \hat{\sigma}_i,
+  \end{equation}
+  where $\sigma_i$ is the actual rms beam size.
+  N.B.: strictly speaking, simulations performed with $f\ne 1$ are invalid, as the effect of strong space charge could
+  be understated. However, judicious use of this parameter may allow valid simulations with fewer particles.
+  The user should vary the parameter to ensure that results are insenstive to the value.
 \end{itemize}
 
 {\bf Important notes:}
