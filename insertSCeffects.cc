@@ -206,41 +206,17 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   }
 #endif
 
-  /* compute bunch center */
-  for(i=center[0]=center[1]=center[2]=0; i<np; i++) {
-    coord = part[i];
-    center[0] += coord[0];
-    center[1] += coord[2];
-    center[2] += coord[4];
-  }
-#if USE_MPI
-  if (USE_MPI) {
-    double center_sum[3];
-    MPI_Allreduce (center, center_sum, 3, MPI_DOUBLE, MPI_SUM, workers);
-    center[0] = center_sum[0]/np_total;
-    center[1] = center_sum[1]/np_total;
-    center[2] = center_sum[2]/np_total;
-  } 
-#ifdef DEBUG
-  printf("center[0,1,2] = %le, %le, %le\n", center[0], center[1], center[2]);
-  fflush(stdout);
-#endif
-#else
-  center[0] /= np;
-  center[1] /= np;
-  center[2] /= np;
-#endif
- 
   /* apply kick to particles */
   if (!sc->nonlinear) {
     for(i=0; i<np; i++) {
       coord = part[i];
-      linearSCKick(coord, eptr, center,totalCharge);
+      linearSCKick(coord, eptr, sc->center, totalCharge);
     }
   }
   else {
-    sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
-    sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
+    sigmax = computeRmsCoordinate(part, 0, np, &center[0], NULL);
+    sigmay = computeRmsCoordinate(part, 2, np, &center[1], NULL);
+    sc->sigmaz = computeRmsCoordinate(part, 4, np, &center[2], NULL);
     for(i=0; i<np; i++) {
       coord = part[i];
       /* remove linear kick approximation.
@@ -252,7 +228,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 
       if (sigmax/sigmay>0.99 && sigmax/sigmay < 1.01) {
         sx = 0.99 * sigmay;
-        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick,totalCharge); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick, totalCharge); 
         if(!flag) {
           linearSCKick(coord, eptr, center,totalCharge);
           continue;
@@ -260,7 +236,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
         kx = kick[0];
         ky = kick[1];
         sx = 1.01 * sigmay;
-        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick,totalCharge); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick, totalCharge); 
         if(!flag) {
           linearSCKick(coord, eptr, center,totalCharge);
           continue;
@@ -271,7 +247,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
         coord[3] += ky / 2.0;
       }
       else {
-        flag = nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick,totalCharge); 
+        flag = nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick, totalCharge); 
         if(!flag) {
           linearSCKick(coord, eptr, center,totalCharge);
           continue;
@@ -429,11 +405,13 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   dmux = twiss0->betax / sc->sigmax / temp;
   dmuy = twiss0->betay / sc->sigmay / temp;
 #if USE_MPI
-  sc->sigmax = computeRmsCoordinate_p(part, 0, np, NULL, NULL, entity_description[eptr->type].flags);
-  sc->sigmay = computeRmsCoordinate_p(part, 2, np, NULL, NULL, entity_description[eptr->type].flags);
+  sc->sigmax = computeRmsCoordinate_p(part, 0, np, &(sc->center[0]), NULL, entity_description[eptr->type].flags);
+  sc->sigmay = computeRmsCoordinate_p(part, 2, np, &(sc->center[1]), NULL, entity_description[eptr->type].flags);
+  sc->sigmaz = computeRmsCoordinate_p(part, 4, np, &(sc->center[2]), NULL, entity_description[eptr->type].flags);
 #else
-  sc->sigmax = computeRmsCoordinate(part, 0, np, NULL, NULL);
-  sc->sigmay = computeRmsCoordinate(part, 2, np, NULL, NULL);
+  sc->sigmax = computeRmsCoordinate(part, 0, np, &(sc->center[0]), NULL);
+  sc->sigmay = computeRmsCoordinate(part, 2, np, &(sc->center[1]), NULL);
+  sc->sigmaz = computeRmsCoordinate(part, 4, np, &(sc->center[2]), NULL);
 #endif
   twiss0 = eptr->twiss;
   temp = sc->sigmax + sc->sigmay;
