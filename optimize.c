@@ -989,7 +989,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	fflush(fpdebug);
 #endif
 #if MPI_DEBUG
-        fprintf (stdout, "minimal value is %g on %d\n", result, myid);
+        fprintf (stdout, "minimal value is %21.15e on %d\n", result, myid);
         fflush(stdout);
 #endif
           if (population_log) {
@@ -1000,6 +1000,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             fprintf (stdout, "Computing statistics across cores\n");
             fflush(stdout);
 #endif
+            MPI_Barrier(MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	    if (isMaster) {
@@ -2368,7 +2369,7 @@ double optimization_function(double *value, long *invalid)
 	optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
       if (!*invalid && bestResult>result) {
 	if (optimization_data->verbose && optimization_data->fp_log)
-	  fprintf(optimization_data->fp_log, "** Result is new best\n");
+	  fprintf(optimization_data->fp_log, "** Result %21.15e is new best\n", result);
 	bestResult = result;
       }
       variables->varied_quan_value[variables->n_variables+2] = 
@@ -2576,10 +2577,19 @@ void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm) {
       double val;
       int rank;
     } in, out;
-
+#ifdef MPI_DEBUG
+    static int fgmiCounter = 0;
+    fgmiCounter++;
+    printf("Call %d to find_global_min_index...\n", fgmiCounter);
+    fflush(stdout);
+#endif
     in.val = *min;
     MPI_Comm_rank(comm, &(in.rank));
     MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
+#ifdef MPI_DEBUG
+    printf("...call succeeded\n");
+    fflush(stdout);
+#endif
     *min = out.val;
     *processor_ID = out.rank;
 }
