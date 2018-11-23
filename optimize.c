@@ -34,6 +34,8 @@ void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
 void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variable, long dimensions); 
 /* Print statistics after each iteration */
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
+FILE *fpSimplexLog = NULL;
+static long simplexLogStep = 0;
 #endif
 
 static time_t interrupt_file_mtime = 0;
@@ -788,7 +790,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     for (i=0; i<MAX_OPTIM_RECORDS; i++)
       optimRecord[i].variableValue = tmalloc(sizeof(*optimRecord[i].variableValue)*
                                              variables->n_variables);
-    
+
+   
     /* set the end-of-optimization hidden variable to 0 */
     variables->varied_quan_value[variables->n_variables] = 0;
     /* set the optimization function hidden variable to 0 */
@@ -822,6 +825,20 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     if (summarize_setup)
         summarize_optimization_setup(optimization_data);
 
+#if USE_MPI
+    if (simplex_log) {
+      char buffer[2048];
+      if (fpSimplexLog) fclose(fpSimplexLog);
+      snprintf(buffer, 2048, "%s-%04d", simplex_log, myid);
+      fpSimplexLog = fopen(buffer, "w");
+      fprintf(fpSimplexLog, "SDDS1\n&column name=Step type=long &end\n");
+      fprintf(fpSimplexLog, "&column name=optimizationFunction type=double &end\n");
+      fprintf(fpSimplexLog, "&column name=invalid type=short &end\n");
+      fprintf(fpSimplexLog, "&column name=state type=short &end\n");
+      simplexLogStep = 0;
+    }
+#endif
+
     for (i=0; i<variables->n_variables; i++) {
         if (!get_parameter_value(variables->varied_quan_value+i, 
 				 variables->element[i], 
@@ -839,6 +856,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	    exitElegant(1);
 	  }
 	}
+#if USE_MPI
+        if (fpSimplexLog)
+            fprintf(fpSimplexLog, "&column name=%s.%s type=double &end\n", 
+                variables->element[i], variables->item[i]);
+#endif
 	if (variables->initial_value[i]<variables->lower_limit[i]) {
 	  if (force_inside) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->lower_limit[i];
@@ -868,6 +890,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     }
 
 #if USE_MPI
+    if (fpSimplexLog)
+      fprintf(fpSimplexLog, "&data mode=ascii no_row_counts=1 &end\n");
     if (scale_factor != 1.0)
       for (i=0; i<variables->n_variables; i++) {
 	variables->step[i] *= scale_factor;	
@@ -1791,6 +1815,10 @@ double optimization_function(double *value, long *invalid)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
       assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
+#if DEBUG
+  printf("optimization_function: Computed %ld matrices\n", i);
+  fflush(stdout);
+#endif
   if (beamline->flags&BEAMLINE_CONCAT_DONE)
     free_elements1(&(beamline->ecat));
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
@@ -2395,6 +2423,13 @@ double optimization_function(double *value, long *invalid)
     if (notSinglePart) {
       MPI_Bcast(invalid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
       MPI_Bcast(&result, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+    if (fpSimplexLog) {
+      fprintf(fpSimplexLog, "%ld %21.15le %ld 0 ", ++simplexLogStep, result, *invalid);
+      for (i=0; i<variables->n_variables; i++)
+        fprintf(fpSimplexLog, "%21.15le ", value[i]);
+      fprintf(fpSimplexLog, "\n");
+      fflush(fpSimplexLog);
     }
 #endif
  

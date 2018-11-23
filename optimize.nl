@@ -68,6 +68,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     STRING population_log = NULL;	
     STRING interrupt_file = "%s.interrupt";
     long inhibit_tracking = 0;
+    STRING simplex_log = NULL;
 #end
 
 #namelist optimization_variable static

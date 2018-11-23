@@ -1120,81 +1120,84 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
 #if USE_MPI
     if (parallelTrackingBasedMatrices) {
-    /* Gather final particles back to master */
-    MPI_Barrier(MPI_COMM_WORLD);
-    nToTrackCounts = tmalloc(sizeof(long)*n_processors);
-    MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-    if (myid==0) {
-      MPI_Status status;
-      long nItems;
-      /* Copy data from each slave */
-      my_nTrack += my_offset; /* to account for the fiducial particle */
-      for (i=1; i<nWorking; i++) {
-	if (verbosity>2) {
-	  printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
-	  fflush(stdout);
-	}
-	nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
-	MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
-	my_nTrack += nToTrackCounts[i];
+      /* Gather final particles back to master */
+      MPI_Barrier(MPI_COMM_WORLD);
+      nToTrackCounts = tmalloc(sizeof(long)*n_processors);
+      MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+      if (myid==0) {
+        MPI_Status status;
+        long nItems;
+        /* Copy data from each slave */
+        my_nTrack += my_offset; /* to account for the fiducial particle */
+        for (i=1; i<nWorking; i++) {
+          if (verbosity>2) {
+            printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
+            fflush(stdout);
+          }
+          nItems = nToTrackCounts[i]*COORDINATES_PER_PARTICLE;
+          MPI_Recv(&finalCoord[my_nTrack][0], nItems, MPI_DOUBLE, i, 100, MPI_COMM_WORLD, &status); 
+          my_nTrack += nToTrackCounts[i];
+        }
+      } else {
+        /* Send data to master */
+        if (my_nTrack)
+          MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
       }
-    } else {
-      /* Send data to master */
-      if (my_nTrack)
-        MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+      free(nToTrackCounts);
+      nToTrackCounts = NULL;
     }
-    free(nToTrackCounts);
-    nToTrackCounts = NULL;
-  }
 
     if (!parallelTrackingBasedMatrices || myid==0) {
-      /* In MPI mode, only master does analysis */
+      /* In this case, only master does analysis */
 #endif
 
-
-  /* Set errors as fraction of the absolute maximum coordinate */
-  for (i=0; i<6; i++) {
-    double min, max;
-    max = -(min = DBL_MAX);
-    maximumValue[i] = -DBL_MAX;
-    for (j=0; j<n_track; j++) {
-      if (max<finalCoord[j][i])
-        max = finalCoord[j][i];
-      if (min>finalCoord[j][i])
-        min = finalCoord[j][i];
-      if (maximumValue[i]<initialCoord[j][i])
-        maximumValue[i] = initialCoord[j][i];
-    }
-    max = fabs(max);
-    min = fabs(min);
-    max = max>min ? max : min;
-    for (j=0; j<n_track; j++)
-      coordError[j][i] = max*accuracy_factor;
-  }
+      /* Set errors as fraction of the absolute maximum coordinate */
+      for (i=0; i<6; i++) {
+        double min, max;
+        max = -(min = DBL_MAX);
+        maximumValue[i] = -DBL_MAX;
+        for (j=0; j<n_track; j++) {
+          if (max<finalCoord[j][i])
+            max = finalCoord[j][i];
+          if (min>finalCoord[j][i])
+            min = finalCoord[j][i];
+          if (maximumValue[i]<initialCoord[j][i])
+            maximumValue[i] = initialCoord[j][i];
+        }
+        max = fabs(max);
+        min = fabs(min);
+        max = max>min ? max : min;
+        for (j=0; j<n_track; j++)
+          coordError[j][i] = max*accuracy_factor;
+      }
   
-  M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
-                                  maximumValue, nPoints1, n_track, maxFitOrder, 0);
-
-  free_matrices_above_order(M, order);
+      M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
+                                      maximumValue, nPoints1, n_track, maxFitOrder, 0);
+      
+      free_matrices_above_order(M, order);
 
 #if USE_MPI 
-  } else {
-    /* distribute matrices to other processors */
-      M = tmalloc(sizeof(*M));
-      initialize_matrices(M, M->order=order);
-    }
-    MPI_Bcast(M->C, 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    for (i=0; i<6; i++)
-      MPI_Bcast(M->R[i], 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    if (order>=2) {
+    } 
+
+    if (parallelTrackingBasedMatrices) {
+      if (myid!=0) {
+        /* distribute matrices to other processors */
+        M = tmalloc(sizeof(*M));
+        initialize_matrices(M, M->order=order);
+      }
+      MPI_Bcast(M->C, 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       for (i=0; i<6; i++)
-        for (j=0; j<6; j++)
-          MPI_Bcast(M->T[i][j], j+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      if (order>=3)
+        MPI_Bcast(M->R[i], 6, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      if (order>=2) {
         for (i=0; i<6; i++)
           for (j=0; j<6; j++)
-            for (k=0; k<=j; k++)
-              MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(M->T[i][j], j+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        if (order>=3)
+          for (i=0; i<6; i++)
+            for (j=0; j<6; j++)
+              for (k=0; k<=j; k++)
+                MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      }
     }
 #endif
 
