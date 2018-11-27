@@ -25,6 +25,7 @@ extern "C"
     double *d_Itime = NULL; /* array for histogram of particle density */
     double *Itime = NULL;   /* array for histogram of particle density */
     double *d_Vtime = NULL; /* array for voltage acting on each bin */
+    double *Vtime = NULL; /* array for voltage acting on each bin */
     double *d_time = NULL;  /* array to record arrival time of each particle */
     long *npBucket = NULL;  /* array to record how many particles are in each bucket */
     short shortBunchWarning = 0;
@@ -271,8 +272,21 @@ extern "C"
                   } 
                 else 
                   {
-                    /*FIX THIS*/
-                    exit(0);
+                    Itime = (double *)malloc(sizeof(double) * nb);
+                    Vtime = (double *)malloc(sizeof(double) * nb);
+
+                    cudaMemcpy(Itime, d_Itime, sizeof(double) * nb, cudaMemcpyDeviceToHost);
+                    gpuErrorHandler("gpu_track_through_wake::cudaMemcpy d_Itime");
+
+                    convolveArrays(Vtime, nb, Itime, nb, wakeData->W, wakeData->wakePoints, wakeData->i0);
+
+                    cudaMemcpy(d_Vtime, Vtime, sizeof(double) * nb, cudaMemcpyHostToDevice);
+                    gpuErrorHandler("gpu_track_through_wake::cudaMemcpy d_Vtime");
+
+                    free(Itime);
+                    free(Vtime);
+                    Itime = NULL;
+                    Vtime = NULL;
                   }
                 
                 factor = wakeData->macroParticleCharge * particleRelSign * wakeData->factor * rampFactor;

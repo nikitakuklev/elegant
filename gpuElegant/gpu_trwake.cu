@@ -315,9 +315,11 @@ extern "C"
                         gpuErrorHandler("gpu_track_through_trwake::gpuConvolveArrays");
                       } 
                     else 
-                      {
-                        /*FIX THIS*/
-                        exit(0);
+                      {                        
+                        convolveArrays(Vtime, nb, posItime[plane], nb, wakeData->W[plane], wakeData->wakePoints, wakeData->i0);
+                        
+                        cudaMemcpy(d_Vtime, Vtime, sizeof(double) * nb, cudaMemcpyHostToDevice);
+                        gpuErrorHandler("gpu_track_through_wake::cudaMemcpy d_Vtime");
                       }
 
                     /* change particle transverse momenta to reflect voltage in relevant bin */
