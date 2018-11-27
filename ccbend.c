@@ -264,26 +264,26 @@ long track_through_ccbend(
     if ((ccbend->edge1_multipoles && !ccbend->edgeFlip) || (ccbend->edge2_multipoles && ccbend->edgeFlip)) {
         readErrorMultipoleData(&(ccbend->edge1MultipoleData), 
                                ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles, 0);
-        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles))
+        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles) && eptr)
           printf("Using file %s for edge 1 of %s#%ld\n",
                  ccbend->edgeFlip?ccbend->edge2_multipoles:ccbend->edge1_multipoles,
                  eptr->name, eptr->occurence);
     } else {
       readErrorMultipoleData(&(ccbend->edge1MultipoleData), ccbend->edge_multipoles, 0);
-      if (ccbend->verbose && ccbend->edge_multipoles)
+      if (ccbend->verbose && ccbend->edge_multipoles && eptr)
         printf("Using file %s for edge 1 of %s#%ld\n",
                ccbend->edge_multipoles, eptr->name, eptr->occurence);
     }
     if ((ccbend->edge2_multipoles && !ccbend->edgeFlip) || (ccbend->edge1_multipoles && ccbend->edgeFlip)) {
         readErrorMultipoleData(&(ccbend->edge2MultipoleData), 
                                ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles, 0);
-        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles))
+        if (ccbend->verbose && (ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles) && eptr)
           printf("Using file %s for edge 2 of %s#%ld\n",
                  ccbend->edgeFlip?ccbend->edge1_multipoles:ccbend->edge2_multipoles,
                  eptr->name, eptr->occurence);
     } else {
       readErrorMultipoleData(&(ccbend->edge2MultipoleData), ccbend->edge_multipoles, 0);
-      if (ccbend->verbose && ccbend->edge_multipoles)
+      if (ccbend->verbose && ccbend->edge_multipoles && eptr)
         printf("Using file %s for edge 2 of %s#%ld\n",
                ccbend->edge_multipoles, eptr->name, eptr->occurence);
     }
