@@ -1289,7 +1289,7 @@ long do_tracking(
                   if (((SCRAPER*)eptr->p_elem)->direction&DIRECTION_X) {
                     dflag[0] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_PLUS_X ? 1 : 0;
                     dflag[1] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_MINUS_X ? 1 : 0;
-                  } else if {
+                  } else if (((SCRAPER*)eptr->p_elem)->direction&DIRECTION_Y) {
                     dflag[0] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_PLUS_Y ? 1 : 0;
                     dflag[1] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_MINUS_Y ? 1 : 0;
                   }
