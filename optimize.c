@@ -36,6 +36,9 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variab
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
 FILE *fpSimplexLog = NULL;
 static long simplexLogStep = 0;
+static long simplexComparisonStep = 0, simplexComparisonInterval=10;
+static short targetReached = 0;
+void checkTarget(double myResult);
 #endif
 
 static time_t interrupt_file_mtime = 0;
@@ -94,6 +97,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         bombElegant("hybrid_simplex_tolerance == 0", NULL);
     if ((optimization_data->hybrid_simplex_tolerance_count=hybrid_simplex_tolerance_count)<=0)
         bombElegant("hybrid_simplex_tolerance_count <= 0", NULL);
+    optimization_data->hybrid_simplex_comparison_interval = hybrid_simplex_comparison_interval;
 #endif 
    if (log_file) {
         if (str_in(log_file, "%s"))
@@ -745,6 +749,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     int min_location = 0;
     double worst_result, median, average, spread = 0.0;
     static double *covariables_global = NULL, *result_array;
+    simplexComparisonStep = 0;
+    targetReached = 0;
+    simplexComparisonInterval = 0;
 #endif
 
 #if MPI_DEBUG
@@ -962,6 +969,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	fputs("Starting simplex optimization.\n", stdout);
 #if USE_MPI
       case OPTIM_METHOD_HYBSIMPLEX:
+        simplexComparisonInterval = optimization_data1->hybrid_simplex_comparison_interval;
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
 	  fputs("Starting hybrid simplex optimization.\n", stdout);
 	  for (i=0; i<variables->n_variables; i++)
@@ -1803,6 +1811,9 @@ double optimization_function(double *value, long *invalid)
       fprintf(optimization_data->fp_log, "Using previously computed value %23.15e\n\n", 
               optimRecord[iRec].result);
     *invalid = optimRecord[iRec].invalid;
+#if USE_MPI
+    checkTarget(optimRecord[iRec].result);
+#endif
     return optimRecord[iRec].result;
   }
   
@@ -2441,8 +2452,33 @@ double optimization_function(double *value, long *invalid)
 #endif
 
     log_exit("optimization_function");
+#if USE_MPI
+    checkTarget(result);
+#endif
     return(result);
 }
+
+#if USE_MPI
+void checkTarget(double myResult) {
+  if (simplexComparisonInterval<=0 || targetReached)
+    return;
+  simplexComparisonStep++;
+  if (simplexComparisonStep%simplexComparisonInterval) {
+    short sum;
+    targetReached = 0;
+    if (optimization_data->target > myResult) 
+      targetReached = 1;
+    MPI_Allreduce(&targetReached, &sum, 1, MPI_SHORT, MPI_SUM, MPI_COMM_WORLD);
+    if (targetReached=sum) {
+      if (myid==0) {
+        printf("target reached on %hd processors---initiating termination of all simplex searches\n", targetReached);
+        fflush(stdout);
+      }
+      simplexMinAbort(1);
+    }
+  }
+}
+#endif
 
 long checkForOptimRecord(double *value, long values, long *again)
 {

@@ -628,7 +628,7 @@ typedef struct {
     long population_size;
     long print_all_individuals;
     double hybrid_simplex_tolerance;
-    long hybrid_simplex_tolerance_count;
+    long hybrid_simplex_tolerance_count, hybrid_simplex_comparison_interval;
     SDDS_TABLE popLog;
     long crossover_type;          /* For genetic optimization only */
     } OPTIMIZATION_DATA;

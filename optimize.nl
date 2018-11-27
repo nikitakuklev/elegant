@@ -39,6 +39,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     double tolerance = -0.01;
     double hybrid_simplex_tolerance = -0.01;
     double hybrid_simplex_tolerance_count = 2;
+    long hybrid_simplex_comparison_interval = 0;
     double target = -DBL_MAX;
     long center_on_orbit = 0;
     long center_momentum_also = 1;
