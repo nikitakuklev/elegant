@@ -38,7 +38,6 @@ FILE *fpSimplexLog = NULL;
 static long simplexLogStep = 0;
 static long simplexComparisonStep = 0, simplexComparisonInterval=10;
 static short targetReached = 0;
-static double bestResult;
 void checkTarget(double myResult);
 #endif
 
@@ -753,7 +752,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     simplexComparisonStep = 0;
     targetReached = 0;
     simplexComparisonInterval = 0;
-    bestResult = DBL_MAX;
 #endif
 
 #if MPI_DEBUG
@@ -2464,34 +2462,83 @@ double optimization_function(double *value, long *invalid)
 
 #if USE_MPI
 void checkTarget(double myResult) {
-  if (simplexComparisonInterval<=0 || targetReached)
+  short sum;
+  double bestResult;
+  MPI_Status status;
+  static int *targetBuffer = NULL;
+  int targetTag = 1;
+#if MPI_DEBUG
+  printf("checkTarget(%le) called\n", myResult);
+  fflush(stdout);
+#endif
+  if (simplexComparisonInterval<=0)
     return;
-  simplexComparisonStep++;
-  if (simplexComparisonStep%simplexComparisonInterval==0) {
-    short sum;
-    double bestResult;
-    targetReached = 0;
-    if (optimization_data->target > myResult) 
-      targetReached = 1;
-    if (myid==0) {
-      printf("Comparing results to target on step %ld\n", simplexComparisonStep);
-      fflush(stdout);
-    }
-    MPI_Allreduce(&targetReached, &sum, 1, MPI_SHORT, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&myResult, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    if (myid==0) {
-      printf("Best result so far is %21.15e step %ld\n", bestResult, simplexComparisonStep);
-      printf("target reached on %hd processors on step %ld\n", targetReached, simplexComparisonStep);
-      fflush(stdout);
-    }
-    if (targetReached=sum) {
-      if (myid==0) {
-        printf("target reached on %hd processors---initiating termination of all simplex searches\n", targetReached);
-        fflush(stdout);
-      }
-      simplexMinAbort(1);
+  if (!targetBuffer)
+    targetBuffer = tmalloc(sizeof(*targetBuffer)*n_processors);
+  if (targetReached) {
+    simplexMinAbort(1);
+    return;
+  }
+#if MPI_DEBUG
+  printf("checkTarget (1), optimization_data->target = %le\n", optimization_data->target);
+  fflush(stdout);
+#endif
+  if (optimization_data->target > myResult) {
+    int i;
+    MPI_Request request;
+#if MPI_DEBUG
+    printf("Sending message on step %ld from %d: I dominate!\n", simplexComparisonStep, myid);
+    fflush(stdout);
+#endif
+    targetReached = 1;
+    /* send message to other processors */
+    for (i=0; i<n_processors; i++) {
+      targetBuffer[i] = targetReached; /* Isend operations can't share memory */
+      if (i!=myid)
+        MPI_Isend(&targetBuffer[i], 1, MPI_SHORT, i, targetTag, MPI_COMM_WORLD, &request);
     }
   }
+  if (!targetReached && simplexComparisonStep%simplexComparisonInterval==0) {
+    int i, flag;
+    /* check for messages from other processors */
+#if MPI_DEBUG
+    printf("Probing for messages on step %ld\n", simplexComparisonStep);
+    fflush(stdout);
+#endif
+    targetReached = 0;
+    for (i=0; i<n_processors; i++) {
+      if (i!=myid) {
+#if MPI_DEBUG
+        printf("Probing for message from %d\n", i);
+        fflush(stdout);
+#endif
+        MPI_Iprobe(i, targetTag, MPI_COMM_WORLD, &flag, &status);
+        if (flag) {
+#if MPI_DEBUG
+          printf("Receiving message from %d\n", i);
+          fflush(stdout);
+#endif
+          MPI_Recv(&targetBuffer[i], 1, MPI_SHORT, i, targetTag, MPI_COMM_WORLD, &status);
+          targetReached += targetBuffer[i];
+#if MPI_DEBUG
+          printf("Message from %d is %hd\n", i, targetBuffer[i]);
+          fflush(stdout);
+#endif
+        } else {
+#if MPI_DEBUG
+          printf("No message\n");
+          fflush(stdout);
+#endif
+        }
+      }
+    }
+  }
+#if MPI_DEBUG
+  printf("targetReached (global) = %hd\n", targetReached);
+#endif
+  if (targetReached)
+    simplexMinAbort(1);
+  simplexComparisonStep++;  
 }
 #endif
 
