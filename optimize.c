@@ -1016,6 +1016,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fprintf (stdout, "minimal value is %21.15e on %d\n", result, myid);
         fflush(stdout);
 #endif
+        MPI_Barrier(MPI_COMM_WORLD);
           if (population_log) {
 	    if (optimization_data->print_all_individuals) 
 	      SDDS_PrintPopulations(&(optimization_data->popLog), result, variables->varied_quan_value, variables->n_variables);
@@ -1024,7 +1025,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             fprintf (stdout, "Computing statistics across cores\n");
             fflush(stdout);
 #endif
-            MPI_Barrier(MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &worst_result, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	    MPI_Reduce(&result, &average, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 	    if (isMaster) {
@@ -1070,7 +1070,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	    optimization_report (result, variables->varied_quan_value, optimization_data->n_restarts+1-startsLeft, n_evaluations_made, variables->n_variables);
 	}
 #endif
-        if (simplexMinAbort(0))
+        if (simplexMinAbort(0) || result<optimization_data->target)
           stopOptimization = 1;
 #if USE_MPI
         if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX && optimization_data->hybrid_simplex_tolerance>0) {
