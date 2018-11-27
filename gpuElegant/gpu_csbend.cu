@@ -929,8 +929,6 @@ extern "C"
       *sigmaDelta2 = 0;
     double *d_sigmaDelta2 = NULL;
 
-    if (isSlave || !notSinglePart)
-      {
         unsigned int particlePitch = gpuBase->gpu_array_pitch;
         unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
         cudaError_t err;
@@ -1019,7 +1017,7 @@ extern "C"
             cudaFree(d_gauss_rn_p2);
             cudaFree(d_gauss_rn_p3);
           }
-      }
+      
     if (distributionBasedRadiation)
       {
         radiansTotal += fabs(csbend->angle);

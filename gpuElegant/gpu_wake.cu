@@ -264,9 +264,17 @@ extern "C"
             */
             if (isSlave || !notSinglePart)
               {
-                gpuConvolveArrays(d_Vtime, nb, d_Itime, nb, d_WakeData_W, wakeData->wakePoints);
-                gpuErrorHandler("gpu_track_through_wake::gpuConvolveArrays");
-
+                if (wakeData->i0 == 0) 
+                  {
+                    gpuConvolveArrays(d_Vtime, nb, d_Itime, nb, d_WakeData_W, wakeData->wakePoints);
+                    gpuErrorHandler("gpu_track_through_wake::gpuConvolveArrays");
+                  } 
+                else 
+                  {
+                    /*FIX THIS*/
+                    exit(0);
+                  }
+                
                 factor = wakeData->macroParticleCharge * particleRelSign * wakeData->factor * rampFactor;
 
                 gpu_applyLongitudinalWakeKicksWithFactor(d_particles + offset, particlePitch, np,

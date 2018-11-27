@@ -308,9 +308,17 @@ extern "C"
                     cudaMemcpy(d_wakeData, wakeData->W[plane],
                                sizeof(double) * wakeData->wakePoints, cudaMemcpyHostToDevice);
                     gpuErrorHandler("gpu_track_through_trwake::cudaMemcpy d_wakeData");
-                    gpuConvolveArrays(d_Vtime, nb, d_posItime[plane], nb, d_wakeData,
-                                      wakeData->wakePoints);
-                    gpuErrorHandler("gpu_track_through_trwake::gpuConvolveArrays");
+                    if (wakeData->i0 == 0)
+                      {
+                        gpuConvolveArrays(d_Vtime, nb, d_posItime[plane], nb, d_wakeData,
+                                          wakeData->wakePoints);
+                        gpuErrorHandler("gpu_track_through_trwake::gpuConvolveArrays");
+                      } 
+                    else 
+                      {
+                        /*FIX THIS*/
+                        exit(0);
+                      }
 
                     /* change particle transverse momenta to reflect voltage in relevant bin */
                     gpuDriver(np,

@@ -718,7 +718,7 @@ extern "C"
     timeOffset = 0;
     if (isSlave || !notSinglePart)
       {
-        if (omega && rfca->change_t)
+        if (omega && rfca->change_t && np!=0)
           {
             getParticleFromGPU(coord, 0, 5, d_particles, particlePitch);
             P = *P_central * (1 + coord[5]);
@@ -1007,6 +1007,7 @@ extern "C"
     /* misalignment is taken care of by code before and after wake call */
     rfcw->trwake.dx = 0;
     rfcw->trwake.dy = 0;
+    rfcw->trwake.acausalAllowed = rfcw->trwake.i0 = 0;
     rfcw->trwake.xDriveExponent = rfcw->trwake.yDriveExponent = 1;
     rfcw->trwake.xProbeExponent = rfcw->trwake.yProbeExponent = 0;
     if (!rfcw->initialized && rfcw->includeTrWake)
@@ -1039,6 +1040,7 @@ extern "C"
 
     rfcw->wake.charge = 0;
     rfcw->wake.n_bins = rfcw->n_bins;
+    rfcw->wake.acausalAllowed = rfcw->wake.i0 = 0;
     rfcw->wake.interpolate = rfcw->interpolate;
     rfcw->wake.smoothing = rfcw->smoothing;
     rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
