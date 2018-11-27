@@ -38,6 +38,7 @@ FILE *fpSimplexLog = NULL;
 static long simplexLogStep = 0;
 static long simplexComparisonStep = 0, simplexComparisonInterval=10;
 static short targetReached = 0;
+static double bestResult;
 void checkTarget(double myResult);
 #endif
 
@@ -752,6 +753,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     simplexComparisonStep = 0;
     targetReached = 0;
     simplexComparisonInterval = 0;
+    bestResult = DBL_MAX;
 #endif
 
 #if MPI_DEBUG
@@ -2453,7 +2455,9 @@ double optimization_function(double *value, long *invalid)
 
     log_exit("optimization_function");
 #if USE_MPI
-    checkTarget(result);
+    if (result<bestResult)
+      bestResult = result;
+    checkTarget(bestResult);
 #endif
     return(result);
 }
@@ -2463,12 +2467,23 @@ void checkTarget(double myResult) {
   if (simplexComparisonInterval<=0 || targetReached)
     return;
   simplexComparisonStep++;
-  if (simplexComparisonStep%simplexComparisonInterval) {
+  if (simplexComparisonStep%simplexComparisonInterval==0) {
     short sum;
+    double bestResult;
     targetReached = 0;
     if (optimization_data->target > myResult) 
       targetReached = 1;
+    if (myid==0) {
+      printf("Comparing results to target on step %ld\n", simplexComparisonStep);
+      fflush(stdout);
+    }
     MPI_Allreduce(&targetReached, &sum, 1, MPI_SHORT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&myResult, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    if (myid==0) {
+      printf("Best result so far is %21.15e step %ld\n", bestResult, simplexComparisonStep);
+      printf("target reached on %hd processors on step %ld\n", targetReached, simplexComparisonStep);
+      fflush(stdout);
+    }
     if (targetReached=sum) {
       if (myid==0) {
         printf("target reached on %hd processors---initiating termination of all simplex searches\n", targetReached);
