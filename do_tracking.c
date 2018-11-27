@@ -1282,6 +1282,23 @@ long do_tracking(
 	      break;
 	    case T_SCRAPER:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+
+#ifdef HAVE_GPU
+                {
+                  long dflag[2] = {0, 0};
+                  if (((SCRAPER*)eptr->p_elem)->direction&DIRECTION_X) {
+                    dflag[0] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_PLUS_X ? 1 : 0;
+                    dflag[1] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_MINUS_X ? 1 : 0;
+                  } else if {
+                    dflag[0] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_PLUS_Y ? 1 : 0;
+                    dflag[1] = ((SCRAPER*)eptr->p_elem)->direction&DIRECTION_MINUS_Y ? 1 : 0;
+                  }
+                  if (dflag[0] && dflag[1]) {
+                    coord = forceParticlesToCpu("beam_scraper");
+                  }
+                }
+#endif
+
 		nLeft = beam_scraper(coord, (SCRAPER*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
 	      } else {
 		exactDrift(coord, nToTrack, ((SCRAPER*)eptr->p_elem)->length);
