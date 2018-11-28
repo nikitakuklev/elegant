@@ -36,7 +36,7 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result,  double *variab
 void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_value, double worst_value, double median, double avarage, double spread, double *variable, long n_variables, double *covariable, long n_covariables, long print_all);
 FILE *fpSimplexLog = NULL;
 static long simplexLogStep = 0;
-static long simplexComparisonStep = 0, simplexComparisonInterval=10;
+static long simplexComparisonStep = 0;
 static short targetReached = 0;
 void checkTarget(double myResult);
 #endif
@@ -195,6 +195,9 @@ void do_parallel_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELI
     interrupt_file = NULL;
     interrupt_file_mtime = 0;
   }
+
+  if (simplex_log)
+    simplex_log = compose_filename(simplex_log, run->rootname);
 
   if (optimization_data->method==OPTIM_METHOD_GENETIC)
     /* The crossover type defined in PGAPACK started from 1, instead of 0. */ 
@@ -623,10 +626,11 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
             optimization_data->equation, constraints->n_constraints,
             constraints->n_constraints>0?':':'.');
          fflush(stdout);
-        for (i=0; i<constraints->n_constraints; i++)
+	 for (i=0; i<constraints->n_constraints; i++) {
             printf("        %13.6e <= %10s <= %13.6e\n",
                 constraints->lower[i], constraints->quantity[i], constraints->upper[i]);
             fflush(stdout);
+	 }
         printf("    The following variables will be used in the optimization:\n");
         fflush(stdout);
         printf("    name      initial value   lower limit    upper limit     step size\n");
@@ -659,9 +663,10 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
             fflush(stdout);
             printf("--------------------------------------------------------------------------\n");
             fflush(stdout);
-            for (i=0; i<covariables->n_covariables; i++)
+            for (i=0; i<covariables->n_covariables; i++) {
                 printf("%12s  %s\n", covariables->varied_quan_name[i], covariables->equation[i]);
                 fflush(stdout);
+	    }
             fputc('\n', stdout);
             }
         fputc('\n', stdout);
@@ -751,7 +756,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     static double *covariables_global = NULL, *result_array;
     simplexComparisonStep = 0;
     targetReached = 0;
-    simplexComparisonInterval = 0;
 #endif
 
 #if MPI_DEBUG
@@ -839,7 +843,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       snprintf(buffer, 2048, "%s-%04d", simplex_log, myid);
       fpSimplexLog = fopen(buffer, "w");
       fprintf(fpSimplexLog, "SDDS1\n&column name=Step type=long &end\n");
+      fprintf(fpSimplexLog, "&column name=ElapsedTime type=float units=s &end\n");
       fprintf(fpSimplexLog, "&column name=optimizationFunction type=double &end\n");
+      fprintf(fpSimplexLog, "&column name=bestOptimizationFunction type=double &end\n");
       fprintf(fpSimplexLog, "&column name=invalid type=short &end\n");
       fprintf(fpSimplexLog, "&column name=state type=short &end\n");
       simplexLogStep = 0;
@@ -888,11 +894,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	      printf("Note: step size for %s set to %e.\n", 
                         variables->varied_quan_name[i], 
                         variables->orig_step[i] = variables->step[i] = 1);
-            else
-	      printf("Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
-                        variables->orig_step[i] = variables->step[i] = 
-                        (variables->upper_limit[i]-variables->lower_limit[i])/10);
-            fflush(stdout);
+	  else 
+	    printf("Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
+		   variables->orig_step[i] = variables->step[i] = 
+		   (variables->upper_limit[i]-variables->lower_limit[i])/10);
+	  fflush(stdout);
 	}
     }
 
@@ -969,7 +975,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 	fputs("Starting simplex optimization.\n", stdout);
 #if USE_MPI
       case OPTIM_METHOD_HYBSIMPLEX:
-        simplexComparisonInterval = optimization_data1->hybrid_simplex_comparison_interval;
+        hybrid_simplex_comparison_interval = optimization_data1->hybrid_simplex_comparison_interval;
 	if (optimization_data->method==OPTIM_METHOD_HYBSIMPLEX) {
 	  fputs("Starting hybrid simplex optimization.\n", stdout);
 	  for (i=0; i<variables->n_variables; i++)
@@ -1800,7 +1806,7 @@ double optimization_function(double *value, long *invalid)
 #endif
   if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
 #if USE_MPI
-  if (!runInSinglePartMode) /* For parallel genetic optimization, all the individuals for the first iteration are same */
+    if (!runInSinglePartMode) { /* For parallel genetic optimization, all the individuals for the first iteration are same */
 #endif
     if (recordUsedAgain>20) {
       printf("record used too many times---stopping optimization\n");
@@ -1812,6 +1818,7 @@ double optimization_function(double *value, long *invalid)
               optimRecord[iRec].result);
     *invalid = optimRecord[iRec].invalid;
 #if USE_MPI
+    }
     checkTarget(optimRecord[iRec].result);
 #endif
     return optimRecord[iRec].result;
@@ -2435,8 +2442,9 @@ double optimization_function(double *value, long *invalid)
       MPI_Bcast(invalid, 1, MPI_LONG, 0, MPI_COMM_WORLD);
       MPI_Bcast(&result, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
-    if (fpSimplexLog) {
-      fprintf(fpSimplexLog, "%ld %21.15le %ld 0 ", ++simplexLogStep, result, *invalid);
+    ++simplexLogStep;
+    if (fpSimplexLog && (simplex_log_interval<=0 || (simplexLogStep-1)%simplex_log_interval==0)) {
+      fprintf(fpSimplexLog, "%ld %21.15le %21.15le %21.15le %ld 0 ", simplexLogStep, delapsed_time(), result, bestResult, *invalid);
       for (i=0; i<variables->n_variables; i++)
         fprintf(fpSimplexLog, "%21.15le ", value[i]);
       fprintf(fpSimplexLog, "\n");
@@ -2462,8 +2470,6 @@ double optimization_function(double *value, long *invalid)
 
 #if USE_MPI
 void checkTarget(double myResult) {
-  short sum;
-  double bestResult;
   MPI_Status status;
   static int *targetBuffer = NULL;
   int targetTag = 1;
@@ -2471,7 +2477,7 @@ void checkTarget(double myResult) {
   printf("checkTarget(%le) called\n", myResult);
   fflush(stdout);
 #endif
-  if (simplexComparisonInterval<=0)
+  if (hybrid_simplex_comparison_interval<=0)
     return;
   if (!targetBuffer)
     targetBuffer = tmalloc(sizeof(*targetBuffer)*n_processors);
@@ -2498,7 +2504,7 @@ void checkTarget(double myResult) {
         MPI_Isend(&targetBuffer[i], 1, MPI_SHORT, i, targetTag, MPI_COMM_WORLD, &request);
     }
   }
-  if (!targetReached && simplexComparisonStep%simplexComparisonInterval==0) {
+  if (!targetReached && simplexComparisonStep%hybrid_simplex_comparison_interval==0) {
     int i, flag;
     /* check for messages from other processors */
 #if MPI_DEBUG
@@ -2777,11 +2783,15 @@ void SDDS_PrintPopulations(SDDS_TABLE *popLogPtr, double result, double *variabl
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
     for(row=0; row<pop_size; row++) {
-      if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row, 0, results[row], -1))
-	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); fflush(stderr);
+      if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row, 0, results[row], -1)) {
+	SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); 
+	fflush(stderr);
+      }
       for(j=0; j<dimensions; j++) {
-	if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,  j+1, individuals[row][j], -1))
-	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); fflush(stderr);	
+	if (!SDDS_SetRowValues(popLogPtr, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,  j+1, individuals[row][j], -1)) {
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors); 
+	  fflush(stderr);	
+	}
       }
     }
   }
