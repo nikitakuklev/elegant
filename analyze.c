@@ -958,6 +958,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
           */
           copied = 1;
           break;
+        case T_MKPOLY:
+          copied = 1;
+          break;
 	default:
 	  break;
 	}
@@ -1095,6 +1098,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       break;
     case T_FMULT:
       fmultipole_tracking(finalCoord+my_offset, my_nTrack, (FMULT*)eptr->p_elem, 0, run->p_central, NULL, 0);
+      break;
+    case T_MKPOLY:
+      multipolynomial_kicks(finalCoord+my_offset, my_nTrack, (MKPOLY*)eptr->p_elem, 0, run->p_central, NULL, 0);
       break;
     default:
       printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");

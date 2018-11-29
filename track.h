@@ -907,7 +907,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_SLICE_POINT 119
 #define T_SPEEDBUMP 120
 #define T_CCBEND 121
-#define N_TYPES  122
+#define T_MKPOLY 122
+#define N_TYPES  123
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1036,6 +1037,7 @@ extern char *entity_text[N_TYPES];
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
+#define N_MKPOLY_PARAMS 22
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2137,6 +2139,17 @@ typedef struct {
     /* for internal use only: */
     long yplane; 
     } KPOLY;
+
+/* names and storage structure for polynomial kick terms */
+extern PARAMETER mkpoly_param[N_MKPOLY_PARAMS];
+
+typedef struct {
+    double coefficient[16]; /* i = ix + 4*iy, ix=0,1,2,3 iy=0,1,2,3 */
+    double tilt, dx, dy, dz, factor;
+    char *plane;    
+    /* for internal use only: */
+    short initialized, kickVertical;
+    } MKPOLY;
 
 /* names and storage structure for numerically integrated bending magnet physical parameters */
 extern PARAMETER nibend_param[N_NIBEND_PARAMS];

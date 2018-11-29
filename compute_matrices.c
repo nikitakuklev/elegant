@@ -1631,8 +1631,6 @@ VMATRIX *compute_matrix(
       case T_FMULT:
         fmult = (FMULT*)elem->p_elem;
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, 3);
-        if (fmult->dx || fmult->dy || fmult->dz)
-          misalign_matrix(elem->matrix, fmult->dx, fmult->dy, fmult->dz, 0.0);
         break;
       case T_EHCOR:
         ehcor = (EHCOR*) elem->p_elem;
@@ -1651,6 +1649,12 @@ VMATRIX *compute_matrix(
         elem->matrix = hvcorrector_matrix(ehvcor->length, ehvcor->xkick, ehvcor->ykick, 
                                           ehvcor->tilt, 0, ehvcor->xcalibration, ehvcor->ycalibration, 
                                           0, run->default_order);
+        break;
+      case T_MKPOLY:
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
+        run->p_central = pSave;
         break;
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 

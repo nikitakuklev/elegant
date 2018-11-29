@@ -131,3 +131,117 @@ long polynomial_kicks(
     log_exit("polynomial_kicks");
     return(i_top+1);
     }
+
+long multipolynomial_kicks(
+    double **particle,  /* initial/final phase-space coordinates */
+    long n_part,        /* number of particles */
+    MKPOLY *mkpoly,     /* kick-polynomial structure */
+    double p_error,     /* p_nominal/p_central */
+    double Po,
+    double **accepted,
+    double z_start
+    )
+{
+  double dx, dy, dz;  /* offsets of the multipole center */
+  long i_part, i_top, yplane, ic, ix, iy;
+  double *coord, kick;
+  double cos_tilt, sin_tilt;
+  double x, xp, y, yp;
+  
+  if (!particle)
+    bombElegant("particle array is null (multipolynomial_kicks)", NULL);
+  
+  if (!mkpoly)
+    bombElegant("null MKPOLY pointer (multipolynomial_kicks)", NULL);
+  
+  if (!mkpoly->initialized) {
+    if (mkpoly->plane && (mkpoly->plane[0]=='y' || mkpoly->plane[0]=='Y'))
+      mkpoly->kickVertical = 1;
+    else {
+      if (mkpoly->plane && !(mkpoly->plane[0]=='x' || mkpoly->plane[0]=='X')) {
+        fputs("warning: MKPOLY plane not recognized--x plane assumed.", stdout);
+        mkpoly->kickVertical = 0;
+      }
+    }
+    mkpoly->initialized = 1;
+  }
+  yplane = mkpoly->kickVertical;
+    
+  cos_tilt = cos(mkpoly->tilt);
+  sin_tilt = sin(mkpoly->tilt);
+  dx = mkpoly->dx;
+  dy = mkpoly->dy;
+  dz = mkpoly->dz;
+
+  i_top = n_part-1;
+  for (i_part=0; i_part<=i_top; i_part++) {
+    if (!(coord = particle[i_part])) {
+      printf("null coordinate pointer for particle %ld (multipolynomial_kicks)", i_part);
+      fflush(stdout);
+      abort();
+    }
+    if (accepted && !accepted[i_part]) {
+      printf("null accepted coordinates pointer for particle %ld (multipolynomial_kicks)", i_part);
+      fflush(stdout);
+      abort();
+    }
+    
+    /* calculate coordinates in rotated and offset frame */
+    coord[4] += dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+    coord[0] += -dx + dz*coord[1];
+    coord[2] += -dy + dz*coord[3];
+    
+    x  =   cos_tilt*coord[0] + sin_tilt*coord[2];
+    y  = - sin_tilt*coord[0] + cos_tilt*coord[2];
+    xp =   cos_tilt*coord[1] + sin_tilt*coord[3];
+    yp = - sin_tilt*coord[1] + cos_tilt*coord[3];
+    
+    if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+        FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+      swapParticles(particle[i_part], particle[i_top]);
+      if (accepted)
+        swapParticles(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+
+#if defined(IEEE_MATH)
+    if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+      swapParticles(particle[i_part], particle[i_top]);
+      if (accepted)
+        swapParticles(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+#endif
+
+    for (ic=0; ic<16; ic++) {
+      if (mkpoly->coefficient[ic]) {
+        ix = ic%4;
+        iy = ic/4;
+        kick = mkpoly->factor*mkpoly->coefficient[ic]/(1+coord[5])*ipow(x, ix)*ipow(y, iy);
+        if (yplane)
+          yp += kick;
+        else
+          xp += kick;
+      }
+    }
+                
+    /* undo the rotation and store in place of initial coordinates */
+    /* don't need to change coord[0] or coord[2] since x and y are unchanged */
+    coord[1] = cos_tilt*xp - sin_tilt*yp;
+    coord[3] = sin_tilt*xp + cos_tilt*yp;
+
+    /* remove the coordinate offsets */
+    coord[0] += dx - coord[1]*dz;
+    coord[2] += dy - coord[3]*dz;
+    coord[4] -= dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+  }
+  return(i_top+1);
+}
