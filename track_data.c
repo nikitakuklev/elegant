@@ -197,7 +197,8 @@ char *entity_text[N_TYPES] = {
     "Simulates ionization of residual gas and interaction with the beam.",
     "Performs slice-by-slice analysis of the beam for output to a file.",
     "Simulates a semi-circular protuberance from one or both walls of the chamber.",
-    "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates."
+    "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates.",
+    "Applies kicks to beam using multiple polynomial terms"
     } ;
 
 QUAD quad_example;
