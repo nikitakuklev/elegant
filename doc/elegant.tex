@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 35.0.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 35.1.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,35 +35,15 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 35.0.1}
+\section{Highlights of What's New in Version 35.1.0}
 
-Here is a summary of what's changed since release 34.4.0.
+Here is a summary of what's changed since release 35.0.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The order of edge transformations for the \verb|CCBEND| element was revised to make more physical sense.
-\item A bug was fixed in the expressions for integral-based fringe field effects in \verb|QUAD| and \verb|KQUAD|.
-  The bug resulted in very small inconsistencies between the matrices when $K_1 \rightarrow -K_1$.
-\item Some small errors were found and fixed in the linear fringe treatment for the \verb|KQUAD| and \verb|QUAD| elements.
-  Thanks to X. Huang (SLAC) for pointing out the problem.
-\item A bug was fixed in the \verb|NIBEND| element that resulted in incorrect edge effects for \verb|ANGLE<0|.
-  This bug was apparently introduced in release 33.0.
-\item The \verb|SCRAPER| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
-  made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|). In addition,
-  the interpretation of the \verb|INSERT_FROM=''x''| and \verb|INSERT_FROM=''y''| was incorrect, since these were
-  supposed to correspond to a scraper inserted from both sides. Both problems were reported by forum user 
-  \verb|Youssef|.
-\item The \verb|SPEEDBUMP| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
-  made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
-\item The \verb|RFCA| element would bomb if no particles per present on a processor and \verb|CHANGE_T=1|. This
-  was found upon investigating a problem reported by G. Penn (ALS).
-\item The transport matrix for \verb|BGGEXP| was being computed only to first order, which resulted in erroneous
-  values for chromaticity, for example. This was reported by R. Linbdberg (APS).
-\item When \verb|CSRDRIFT| elements were divided using the \verb|divide_elements| command or \verb|element_divisions|
-  parameter of the \verb|run_setup| command, the length was saved incorrectly to the \verb|parameters| file (requested
-  from \verb|run_setup|). This was reported by Pau Gonzalez.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -73,50 +53,12 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CCBEND| element now was a \verb|YAW| parameter that permits changing the entrance and exit
-  angles in a coordinated fashion. It also supports the \verb|FINT1|, \verb|FINT2|, and \verb|HGAP| parameters
-  for soft-fringe effects, as well as explicit multipoles from octupole to 18-pole (in addition to the
-  existing support for systematic multipole errors). The multipoles at the entrance and exit can now be
-  specified separately, using the \verb|EDGE1_MULTIPOLES| and \verb|EDGE2_MULTIPOLES| parameters.
-\item The \verb|FMULT| element, which provides a general multipole with content specified by an SDDS file, now
-  affects matrix-based computations (e.g., twiss parameters, chromaticities, and transfer matrix).
-\item The \verb|KSEXT| element now provides a parameter for a normal quadrupole error, in addition to the existing
-  skew quadrupole error. The utility of this was pointed out by Y.-P. Sun (APS) and X. Huang (SLAC).
-\item The \verb|BRANCH| element now provides periodic branching, which permits modeling a periodic bypass, for
-  example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
-\item The \verb|global_settings| command now has user overriding of default values, which means that whenever the user
-  changes a value, it becomes the new default for any subsequent instances of the command in that run.
-\item The \verb|RFMODE| element has additional features that help refine the agreement between the voltage obtained by 
-  rf feedback and the effective voltage seen by the beam.
-\item The \verb|WAKE| and \verb|TRWAKE| elements now accept acausal wakes, provided the user explicitly allows it with the 
-  \verb|ACAUSAL_ALLOWED| parameter. This feature will be requested by R. Lindberg (APS).
-\item The \verb|LSRMDLTR| and \verb|CWIGGLER| elements now include {\em experimental} capabilities providing a
-  transverse gradient in undulators or wigglers. In both cases, hard-to-correct residual trajectory and dispersion 
-  effects are seen, which are not yet understood. For this reason, these features are considered experimental.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|matrix_output| command has two new parameters
-  \begin{itemize}
-    \item \verb|print_element_data| controls whether the element data is printed in addition to the matrices. 
-    \item \verb|printout_format| allows controlling the format of the printed elements.
-    \end{itemize}
-\item The \verb|analyze_map| command has a new parameter, \verb|printout_format|, allows controlling the format of the printed elements.
-\item The \verb|correct_tunes| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
-  is updated during correction. The need for this arose from a problem encountered by I. Agapov (DESY).
-\item The \verb|chromaticity| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
-  is updated during correction.
-\item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
-  now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
-  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|. The \verb|global_settings| command also
-  now offers the ability to control the number of points per phase space dimension that are used in matrix fitting, 
-  via the \verb|tracking_matrix_points| parameter. The default value of this parameter has been set to 9---an increase from
-  the minimalist value of 5 used in previous versions---in order to improve accuracy. Forum posts
-  by J. Bj{\"o}rklund Svensson (MAX-Lab) helped spur work on these features.
-\item The \verb|insert_sceffects| command now supports averaging of beam size data turn-by-turn to reduce noise in 
-  transverse space charge simulation in rings, via the new \verb|averaging_factor| parameter.  This was suggested by 
-  V. Kornilov (GSI).
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -137,17 +79,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|abrat|
-  program via the \verb|-ftable| commandline option. Previously, the control existed but resulted in no transformation
-  of particles taking place.
-\item The program \verb|abrat| now supports interpolation among multiple 2D field maps, which
-  can be used, for example, to find the operating point in a magnet for which the field scales differently with
-  current in different regions.
-\item For the \verb|longitCalcs| script, the calculation of rf bucket height sometimes failed when a harmonic voltage
-  was present; this was fixed. Also, the option to run without the GUI and put all results in a file was added.
-\item The \verb|makeWigglerFromBends| script now includes the ability to add a gradient and specify the beam energy.
-\item A new program, \verb|sdds4x4sigmaproc| is included that allows processing beam moments measurements from a
-  quadrupole scan in a transport line to determine the 4x4 sigma matrix. 
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7511,6 +7443,121 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 35.0.1}
+
+Here is a summary of what's changed since release 34.4.0.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The order of edge transformations for the \verb|CCBEND| element was revised to make more physical sense.
+\item A bug was fixed in the expressions for integral-based fringe field effects in \verb|QUAD| and \verb|KQUAD|.
+  The bug resulted in very small inconsistencies between the matrices when $K_1 \rightarrow -K_1$.
+\item Some small errors were found and fixed in the linear fringe treatment for the \verb|KQUAD| and \verb|QUAD| elements.
+  Thanks to X. Huang (SLAC) for pointing out the problem.
+\item A bug was fixed in the \verb|NIBEND| element that resulted in incorrect edge effects for \verb|ANGLE<0|.
+  This bug was apparently introduced in release 33.0.
+\item The \verb|SCRAPER| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
+  made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|). In addition,
+  the interpretation of the \verb|INSERT_FROM=''x''| and \verb|INSERT_FROM=''y''| was incorrect, since these were
+  supposed to correspond to a scraper inserted from both sides. Both problems were reported by forum user 
+  \verb|Youssef|.
+\item The \verb|SPEEDBUMP| element was not respecting changes to the \verb|DIRECTION| or \verb|INSERT_FROM| parameters 
+  made outside the lattice definition (e.g., using \verb|alter_elements| or \verb|load_parameters|).
+\item The \verb|RFCA| element would bomb if no particles per present on a processor and \verb|CHANGE_T=1|. This
+  was found upon investigating a problem reported by G. Penn (ALS).
+\item The transport matrix for \verb|BGGEXP| was being computed only to first order, which resulted in erroneous
+  values for chromaticity, for example. This was reported by R. Linbdberg (APS).
+\item When \verb|CSRDRIFT| elements were divided using the \verb|divide_elements| command or \verb|element_divisions|
+  parameter of the \verb|run_setup| command, the length was saved incorrectly to the \verb|parameters| file (requested
+  from \verb|run_setup|). This was reported by Pau Gonzalez.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CCBEND| element now was a \verb|YAW| parameter that permits changing the entrance and exit
+  angles in a coordinated fashion. It also supports the \verb|FINT1|, \verb|FINT2|, and \verb|HGAP| parameters
+  for soft-fringe effects, as well as explicit multipoles from octupole to 18-pole (in addition to the
+  existing support for systematic multipole errors). The multipoles at the entrance and exit can now be
+  specified separately, using the \verb|EDGE1_MULTIPOLES| and \verb|EDGE2_MULTIPOLES| parameters.
+\item The \verb|FMULT| element, which provides a general multipole with content specified by an SDDS file, now
+  affects matrix-based computations (e.g., twiss parameters, chromaticities, and transfer matrix).
+\item The \verb|KSEXT| element now provides a parameter for a normal quadrupole error, in addition to the existing
+  skew quadrupole error. The utility of this was pointed out by Y.-P. Sun (APS) and X. Huang (SLAC).
+\item The \verb|BRANCH| element now provides periodic branching, which permits modeling a periodic bypass, for
+  example. This improvement was triggered by a question from forum user \verb|simone.dimitri|.
+\item The \verb|global_settings| command now has user overriding of default values, which means that whenever the user
+  changes a value, it becomes the new default for any subsequent instances of the command in that run.
+\item The \verb|RFMODE| element has additional features that help refine the agreement between the voltage obtained by 
+  rf feedback and the effective voltage seen by the beam.
+\item The \verb|WAKE| and \verb|TRWAKE| elements now accept acausal wakes, provided the user explicitly allows it with the 
+  \verb|ACAUSAL_ALLOWED| parameter. This feature will be requested by R. Lindberg (APS).
+\item The \verb|LSRMDLTR| and \verb|CWIGGLER| elements now include {\em experimental} capabilities providing a
+  transverse gradient in undulators or wigglers. In both cases, hard-to-correct residual trajectory and dispersion 
+  effects are seen, which are not yet understood. For this reason, these features are considered experimental.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|matrix_output| command has two new parameters
+  \begin{itemize}
+    \item \verb|print_element_data| controls whether the element data is printed in addition to the matrices. 
+    \item \verb|printout_format| allows controlling the format of the printed elements.
+    \end{itemize}
+\item The \verb|analyze_map| command has a new parameter, \verb|printout_format|, allows controlling the format of the printed elements.
+\item The \verb|correct_tunes| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
+  is updated during correction. The need for this arose from a problem encountered by I. Agapov (DESY).
+\item The \verb|chromaticity| command has a new parameter, \verb|update_orbit|, which allows controlling whether the orbit
+  is updated during correction.
+\item The tracking used for matrix determination for elements, such as \verb|CCBEND|, \verb|BGGEXP|, and others, that rely on this,
+  now takes advantage of parallel resources if \verb|Pelegant| is used. This feature can be controlled using the newly-added
+  \verb|parallel_tracking_based_matrices| control in \verb|global_settings|. The \verb|global_settings| command also
+  now offers the ability to control the number of points per phase space dimension that are used in matrix fitting, 
+  via the \verb|tracking_matrix_points| parameter. The default value of this parameter has been set to 9---an increase from
+  the minimalist value of 5 used in previous versions---in order to improve accuracy. Forum posts
+  by J. Bj{\"o}rklund Svensson (MAX-Lab) helped spur work on these features.
+\item The \verb|insert_sceffects| command now supports averaging of beam size data turn-by-turn to reduce noise in 
+  transverse space charge simulation in rings, via the new \verb|averaging_factor| parameter.  This was suggested by 
+  V. Kornilov (GSI).
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|FTABLE| method for integration through 3D magnetic field maps now works in the \verb|abrat|
+  program via the \verb|-ftable| commandline option. Previously, the control existed but resulted in no transformation
+  of particles taking place.
+\item The program \verb|abrat| now supports interpolation among multiple 2D field maps, which
+  can be used, for example, to find the operating point in a magnet for which the field scales differently with
+  current in different regions.
+\item For the \verb|longitCalcs| script, the calculation of rf bucket height sometimes failed when a harmonic voltage
+  was present; this was fixed. Also, the option to run without the GUI and put all results in a file was added.
+\item The \verb|makeWigglerFromBends| script now includes the ability to add a gradient and specify the beam energy.
+\item A new program, \verb|sdds4x4sigmaproc| is included that allows processing beam moments measurements from a
+  quadrupole scan in a transport line to determine the 4x4 sigma matrix. 
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 34.4.0}
 
