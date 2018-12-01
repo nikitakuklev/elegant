@@ -1790,8 +1790,8 @@ long do_tracking(
 	      nLeft = polynomial_kicks(coord, nToTrack, (KPOLY*)eptr->p_elem, 0.0,
 				       *P_central, accepted, z);
 	      break;
-	    case T_MKPOLY:
-	      nLeft = multipolynomial_kicks(coord, nToTrack, (MKPOLY*)eptr->p_elem, 0.0, *P_central, accepted, z);
+	    case T_HKPOLY:
+	      nLeft = polynomial_hamiltonian(coord, nToTrack, (HKPOLY*)eptr->p_elem, 0.0, *P_central, accepted, z);
 	      break;
 	    case T_RAMPRF:
 	      ramped_rf_cavity(coord, nToTrack, (RAMPRF*)eptr->p_elem, *P_central, beamline->revolution_length,

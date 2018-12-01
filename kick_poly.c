@@ -132,10 +132,10 @@ long polynomial_kicks(
     return(i_top+1);
     }
 
-long multipolynomial_kicks(
+long polynomial_hamiltonian(
     double **particle,  /* initial/final phase-space coordinates */
     long n_part,        /* number of particles */
-    MKPOLY *mkpoly,     /* kick-polynomial structure */
+    HKPOLY *hkpoly,     /* kick-polynomial structure */
     double p_error,     /* p_nominal/p_central */
     double Po,
     double **accepted,
@@ -143,45 +143,42 @@ long multipolynomial_kicks(
     )
 {
   double dx, dy, dz;  /* offsets of the multipole center */
-  long i_part, i_top, yplane, ic, ix, iy;
+  long i_part, i_top, ic, ix, iy;
   double *coord, kick;
   double cos_tilt, sin_tilt;
-  double x, xp, y, yp;
-  
-  if (!particle)
-    bombElegant("particle array is null (multipolynomial_kicks)", NULL);
-  
-  if (!mkpoly)
-    bombElegant("null MKPOLY pointer (multipolynomial_kicks)", NULL);
-  
-  if (!mkpoly->initialized) {
-    if (mkpoly->plane && (mkpoly->plane[0]=='y' || mkpoly->plane[0]=='Y'))
-      mkpoly->kickVertical = 1;
-    else {
-      if (mkpoly->plane && !(mkpoly->plane[0]=='x' || mkpoly->plane[0]=='X')) {
-        fputs("warning: MKPOLY plane not recognized--x plane assumed.", stdout);
-        mkpoly->kickVertical = 0;
-      }
-    }
-    mkpoly->initialized = 1;
-  }
-  yplane = mkpoly->kickVertical;
-    
-  cos_tilt = cos(mkpoly->tilt);
-  sin_tilt = sin(mkpoly->tilt);
-  dx = mkpoly->dx;
-  dy = mkpoly->dy;
-  dz = mkpoly->dz;
+  double x, xp, y, yp, qx, qy;
+  double dl;
+  long ik, nk;
 
+  if (!particle)
+    bombElegant("particle array is null (polynomial_hamiltonian)", NULL);
+  
+  if (!hkpoly)
+    bombElegant("null HKPOLY pointer (polynomial_hamiltonian)", NULL);
+  if (hkpoly->nKicks<=0)
+    bombElegant("HKPOLY N_KICKS must be positive (polynomial_hamiltonian)", NULL);
+  if (hkpoly->length<0)
+    bombElegant("HKPOLY length (L) must be non-negative (polynomial_hamiltonian)", NULL);
+
+  cos_tilt = cos(hkpoly->tilt);
+  sin_tilt = sin(hkpoly->tilt);
+  dx = hkpoly->dx;
+  dy = hkpoly->dy;
+  dz = hkpoly->dz;
+
+  nk = hkpoly->nKicks;
+  if ((dl = hkpoly->length/hkpoly->nKicks)==0)
+    nk = 1;
+  
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
-      printf("null coordinate pointer for particle %ld (multipolynomial_kicks)", i_part);
+      printf("null coordinate pointer for particle %ld (polynomial_hamiltonian)", i_part);
       fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      printf("null accepted coordinates pointer for particle %ld (multipolynomial_kicks)", i_part);
+      printf("null accepted coordinates pointer for particle %ld (polynomial_hamiltonian)", i_part);
       fflush(stdout);
       abort();
     }
@@ -221,18 +218,31 @@ long multipolynomial_kicks(
     }
 #endif
 
-    for (ic=0; ic<16; ic++) {
-      if (mkpoly->coefficient[ic]) {
-        ix = ic%4;
-        iy = ic/4;
-        kick = mkpoly->factor*mkpoly->coefficient[ic]/(1+coord[5])*ipow(x, ix)*ipow(y, iy);
-        if (yplane)
-          yp += kick;
-        else
-          xp += kick;
+    convertSlopesToMomenta(&qx, &qy, xp, yp, coord[5]);
+    for (ik=0; ik<nk; ik++) {
+      if (dl) {
+        x += xp*dl/2;
+        y += yp*dl/2;
+      }
+      for (ic=0; ic<24; ic++) {
+        if (hkpoly->coefficient[ic]) {
+          ix = (ic+1)%5;
+          iy = (ic+1)/5;
+          if (ix || iy) {
+            if (ix)
+              qx -= hkpoly->factor*hkpoly->coefficient[ic]*ix/(1+coord[5])*ipow(x, ix-1)*ipow(y, iy  )/hkpoly->nKicks;
+            if (iy)
+              qy -= hkpoly->factor*hkpoly->coefficient[ic]*iy/(1+coord[5])*ipow(x, ix  )*ipow(y, iy-1)/hkpoly->nKicks;
+            convertMomentaToSlopes(&xp, &yp, qx, qy, coord[5]);
+          }
+        }
+      }
+      if (dl) {
+        x += xp*dl/2;
+        y += yp*dl/2;
       }
     }
-                
+         
     /* undo the rotation and store in place of initial coordinates */
     /* don't need to change coord[0] or coord[2] since x and y are unchanged */
     coord[1] = cos_tilt*xp - sin_tilt*yp;

@@ -1650,7 +1650,7 @@ VMATRIX *compute_matrix(
                                           ehvcor->tilt, 0, ehvcor->xcalibration, ehvcor->ycalibration, 
                                           0, run->default_order);
         break;
-      case T_MKPOLY:
+      case T_HKPOLY:
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));

@@ -68,7 +68,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "MKPOLY"
+    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY"
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -198,7 +198,7 @@ char *entity_text[N_TYPES] = {
     "Performs slice-by-slice analysis of the beam for output to a file.",
     "Simulates a semi-circular protuberance from one or both walls of the chamber.",
     "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates.",
-    "Applies kicks to beam using multiple polynomial terms"
+    "Applies kicks to beam according to a Hamiltonian that's a polynomial function of x and y"
     } ;
 
 QUAD quad_example;
@@ -1210,31 +1210,40 @@ PARAMETER kpoly_param[N_KPOLY_PARAMS] = {
     {"PLANE", "", IS_STRING, 0, (long)((char *)&kpoly_example.plane), "x", 0.0, 0, "plane to kick (x, y)"}
     };
 
-MKPOLY mkpoly_example;
+HKPOLY hkpoly_example;
 /* kick-polynomial physical parameters */
-PARAMETER mkpoly_param[N_MKPOLY_PARAMS] = {
-    {"C00", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 0]), NULL, 0.0, 0, "coefficient C00 of polynomial"},
-    {"C10", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 1]), NULL, 0.0, 0, "coefficient C10 of polynomial"},
-    {"C20", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 2]), NULL, 0.0, 0, "coefficient C20 of polynomial"},
-    {"C30", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 3]), NULL, 0.0, 0, "coefficient C30 of polynomial"},
-    {"C01", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 4]), NULL, 0.0, 0, "coefficient C01 of polynomial"},
-    {"C11", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 5]), NULL, 0.0, 0, "coefficient C11 of polynomial"},
-    {"C21", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 6]), NULL, 0.0, 0, "coefficient C21 of polynomial"},
-    {"C31", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 7]), NULL, 0.0, 0, "coefficient C31 of polynomial"},
-    {"C02", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 8]), NULL, 0.0, 0, "coefficient C02 of polynomial"},
-    {"C12", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[ 9]), NULL, 0.0, 0, "coefficient C12 of polynomial"},
-    {"C22", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[10]), NULL, 0.0, 0, "coefficient C22 of polynomial"},
-    {"C32", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[11]), NULL, 0.0, 0, "coefficient C32 of polynomial"},
-    {"C03", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[12]), NULL, 0.0, 0, "coefficient C03 of polynomial"},
-    {"C13", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[13]), NULL, 0.0, 0, "coefficient C13 of polynomial"},
-    {"C23", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[14]), NULL, 0.0, 0, "coefficient C23 of polynomial"},
-    {"C33", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.coefficient[15]), NULL, 0.0, 0, "coefficient C33 of polynomial"},
-    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkpoly_example.factor), NULL, 1.0, 0, "additional factor to apply"},
-    {"PLANE", "", IS_STRING, 0, (long)((char *)&mkpoly_example.plane), "x", 0.0, 0, "plane to kick (x, y)"}
+PARAMETER hkpoly_param[N_HKPOLY_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.length), NULL, 0.0, 0, "length"},
+    {"C10", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 0]), NULL, 0.0, 0, "coefficient C10 of polynomial"},
+    {"C20", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 1]), NULL, 0.0, 0, "coefficient C20 of polynomial"},
+    {"C30", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 2]), NULL, 0.0, 0, "coefficient C30 of polynomial"},
+    {"C40", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 3]), NULL, 0.0, 0, "coefficient C40 of polynomial"},
+    {"C01", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 4]), NULL, 0.0, 0, "coefficient C01 of polynomial"},
+    {"C11", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 5]), NULL, 0.0, 0, "coefficient C11 of polynomial"},
+    {"C21", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 6]), NULL, 0.0, 0, "coefficient C21 of polynomial"},
+    {"C31", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 7]), NULL, 0.0, 0, "coefficient C31 of polynomial"},
+    {"C41", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 8]), NULL, 0.0, 0, "coefficient C41 of polynomial"}, 
+    {"C02", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[ 9]), NULL, 0.0, 0, "coefficient C02 of polynomial"},
+    {"C12", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[10]), NULL, 0.0, 0, "coefficient C12 of polynomial"},
+    {"C22", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[11]), NULL, 0.0, 0, "coefficient C22 of polynomial"},
+    {"C32", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[12]), NULL, 0.0, 0, "coefficient C32 of polynomial"},
+    {"C42", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[13]), NULL, 0.0, 0, "coefficient C42 of polynomial"},
+    {"C03", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[14]), NULL, 0.0, 0, "coefficient C03 of polynomial"},
+    {"C13", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[15]), NULL, 0.0, 0, "coefficient C13 of polynomial"},
+    {"C23", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[16]), NULL, 0.0, 0, "coefficient C23 of polynomial"},
+    {"C33", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[17]), NULL, 0.0, 0, "coefficient C33 of polynomial"},
+    {"C43", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[18]), NULL, 0.0, 0, "coefficient C43 of polynomial"},
+    {"C04", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[19]), NULL, 0.0, 0, "coefficient C04 of polynomial"},
+    {"C14", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[20]), NULL, 0.0, 0, "coefficient C14 of polynomial"},
+    {"C24", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[21]), NULL, 0.0, 0, "coefficient C24 of polynomial"},
+    {"C34", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[22]), NULL, 0.0, 0, "coefficient C34 of polynomial"},
+    {"C44", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[23]), NULL, 0.0, 0, "coefficient C44 of polynomial"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.factor), NULL, 1.0, 0, "additional factor to apply"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&hkpoly_example.nKicks), NULL, 0.0, 1, "number of kicks"},
     };
 
 NISEPT nisept_example;
@@ -3082,7 +3091,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
     { N_CCBEND_PARAMS, MAT_LEN_NCAT, sizeof(CCBEND),    ccbend_param   }, 
-    { N_MKPOLY_PARAMS, HAS_MATRIX|DONT_CONCAT, sizeof(MKPOLY),    mkpoly_param   }, 
+    { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   }, 
 } ;
 
 void compute_offsets()
