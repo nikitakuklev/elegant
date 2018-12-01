@@ -244,22 +244,18 @@ long polynomial_hamiltonian(
         x += xp*dl/2;
         y += yp*dl/2;
       }
-      for (ix=xpow1=0; ix<=ixMax; ix++) {
-        if (ix)
-          xpow1 = ix*ipow(x, ix-1);
-        xpow = ipow(x, ix);
-        for (iy=ypow1=0; iy<=iyMax; iy++) {
-          if (iy)
-            ypow1 = iy*ipow(y, iy-1);
-          ypow = ipow(y, iy);
-          for (iqx=qxpow1=0; iqx<=iqxMax; iqx++) {
-            if (iqx)
-              qxpow1 = iqx*ipow(qx, iqx-1);
-            qxpow = ipow(qx, iqx);
-            for (iqy=qypow1=0; iqy<=iqyMax; iqy++) {
-              if (iqy)
-                qypow1 = iqy*ipow(qy, iqy-1);
-              qypow = ipow(qy, iqy);
+      xpow = 1;
+      xpow1 = 0;
+      for (ix=0; ix<=ixMax; ix++) {
+        ypow = 1;
+        ypow1 = 0;
+        for (iy=0; iy<=iyMax; iy++) {
+          qxpow = 1;
+          qxpow1 = 0;
+          for (iqx=0; iqx<=iqxMax; iqx++) {
+            qypow = 1;
+            qypow1 = 0;
+            for (iqy=0; iqy<=iqyMax; iqy++) {
               if (ix)
                 qx -= factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow1*ypow*qxpow*qypow;
               if (iy)
@@ -271,10 +267,18 @@ long polynomial_hamiltonian(
                 y += factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow*ypow*qxpow*qypow1;
 
               convertMomentaToSlopes(&xp, &yp, qx, qy, coord[5]);
-            }
-          }
-        }
-      }
+              qypow1 = qypow*(iqy+1);
+              qypow *= qy;
+            } /* qy */
+            qxpow1 = qxpow*(iqx+1);
+            qxpow *= qx;
+          } /* qx */
+          ypow1 = ypow*(iy+1);
+          ypow *= y;
+        } /* y */
+        xpow1 = xpow*(ix+1);
+        xpow *= x;
+      } /* x */
       if (dl) {
         x += xp*dl/2;
         y += yp*dl/2;
