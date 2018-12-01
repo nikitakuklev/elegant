@@ -86,7 +86,8 @@ int makeInitialParticleEnsemble(
 	  (*initial)[i][3]==(*initial)[j][3] &&
 	  (*initial)[i][4]==(*initial)[j][4] &&
 	  (*initial)[i][5]==(*initial)[j][5] ) {
-	memcpy((*initial)[j], (*initial)[n_points_total-1], COORDINATES_PER_PARTICLE*sizeof(double));
+        if (j!=(n_points_total-1)) 
+          memcpy((*initial)[j], (*initial)[n_points_total-1], COORDINATES_PER_PARTICLE*sizeof(double));
 	j -= 1;
 	n_points_total -= 1;
 	n_duplicates += 1;
