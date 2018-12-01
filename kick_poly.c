@@ -145,7 +145,7 @@ long polynomial_hamiltonian(
   double dx, dy, dz;  /* offsets of the multipole center */
   long i_part, i_top, ix, iy, iqx, iqy;
   long ixMax, iyMax, iqxMax, iqyMax;
-  double *coord, kick;
+  double *coord, backDrift;
   double cos_tilt, sin_tilt;
   double x, xp, y, yp, qx, qy;
   double dl, factor;
@@ -162,6 +162,10 @@ long polynomial_hamiltonian(
     bombElegant("HKPOLY N_KICKS must be positive (polynomial_hamiltonian)", NULL);
   if (hkpoly->length<0)
     bombElegant("HKPOLY length (L) must be non-negative (polynomial_hamiltonian)", NULL);
+  if (hkpoly->hiddenLength<0)
+    bombElegant("HKPOLY HIDDEN_LENGTH must be non-negative (polynomial_hamiltonian)", NULL);
+  if (hkpoly->length>0 && hkpoly->hiddenLength>0)
+    bombElegant("HKPOLY can only have one of L and HIDDEN_LENGTH nonzero (polynomial_hamiltonian)", NULL);
 
   cos_tilt = cos(hkpoly->tilt);
   sin_tilt = sin(hkpoly->tilt);
@@ -186,9 +190,18 @@ long polynomial_hamiltonian(
   }
 
   nk = hkpoly->nKicks;
-  if ((dl = hkpoly->length/hkpoly->nKicks)==0)
+  backDrift = 0;
+  if (hkpoly->length)
+    dl = hkpoly->length/nk;
+  else if (hkpoly->hiddenLength) {
+    dl = hkpoly->hiddenLength/nk;
+    backDrift = -hkpoly->hiddenLength/2;
+  } else 
     nk = 1;
-  
+
+  if (backDrift)
+    exactDrift(particle, n_part, backDrift);
+
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
@@ -295,5 +308,9 @@ long polynomial_hamiltonian(
     coord[2] += dy - coord[3]*dz;
     coord[4] -= dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
+
+  if (backDrift)
+    exactDrift(particle, i_top+1, backDrift);
+
   return(i_top+1);
 }

@@ -1214,6 +1214,7 @@ HKPOLY hkpoly_example;
 /* kick-polynomial physical parameters */
 PARAMETER hkpoly_param[N_HKPOLY_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.length), NULL, 0.0, 0, "length"},
+    {"HIDDEN_LENGTH", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.hiddenLength), NULL, 0.0, 0, "If non-zero, element has length but is bracketed by negative drifts to hide that length."},
 {"C0000", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[0][0][0][0]), NULL, 0.0, 0, "Coefficient of polynomial---ignored"},
 {"C0001", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[0][0][0][1]), NULL, 0.0, 0, "Coefficient of polynomial"},
 {"C0002", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hkpoly_example.coefficient[0][0][0][2]), NULL, 0.0, 0, "Coefficient of polynomial"},

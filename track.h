@@ -1037,7 +1037,7 @@ extern char *entity_text[N_TYPES];
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
-#define N_HKPOLY_PARAMS (625+7)
+#define N_HKPOLY_PARAMS (625+8)
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2144,7 +2144,7 @@ typedef struct {
 extern PARAMETER hkpoly_param[N_HKPOLY_PARAMS];
 
 typedef struct {
-  double length;
+  double length, hiddenLength;
   double coefficient[5][5][5][5];
   double tilt, dx, dy, dz, factor;
   long nKicks;
