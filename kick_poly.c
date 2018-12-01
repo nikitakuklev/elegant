@@ -190,7 +190,7 @@ long polynomial_hamiltonian(
   }
 
   nk = hkpoly->nKicks;
-  backDrift = 0;
+  backDrift = dl = 0;
   if (hkpoly->length)
     dl = hkpoly->length/nk;
   else if (hkpoly->hiddenLength) {
