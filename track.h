@@ -1037,7 +1037,7 @@ extern char *entity_text[N_TYPES];
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
-#define N_HKPOLY_PARAMS 31
+#define N_HKPOLY_PARAMS (625+7)
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2145,7 +2145,7 @@ extern PARAMETER hkpoly_param[N_HKPOLY_PARAMS];
 
 typedef struct {
   double length;
-  double coefficient[24]; /* ix = (i+1)%5, iy = floor((i+1)/5) */
+  double coefficient[5][5][5][5];
   double tilt, dx, dy, dz, factor;
   long nKicks;
   } HKPOLY;
@@ -3865,6 +3865,8 @@ typedef struct {
 extern void setupMultApertureData(MULT_APERTURE_DATA *apertureData, MAXAMP *maxamp, double tilt, 
                                   APERTURE_DATA *apFileData, double zPosition);
 extern long checkMultAperture(double x, double y, MULT_APERTURE_DATA *apData);
+extern int convertSlopesToMomenta(double *qx, double *qy, double xp, double yp, double delta);
+extern int convertMomentaToSlopes(double *xp, double *yp, double qx, double qy, double delta);
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start,
                                 MAXAMP *maxamp, APERTURE_DATA *apData, double *sigmaDelta2);

@@ -1,26 +1,13 @@
 This element imposes kicks on the beam according
 to a Hamiltonian that is a polynomial function of x and y 
 \begin{equation}
-H\Delta s = \sum_{i=0}^{4} \sum_{j=0}^{4} C_{ij} x^i y^j,
+H\Delta s = \sum_{i=0}^{4} \sum_{j=0}^{4} \sum_{k=0}^4 \sum_{l=0}^4 C_{ijkl} x^i y^j q_x^k q_y^l,
 \end{equation}
-where $C_{00} = 0$.
+where $C_{0000} = 0$.
+The changes to the momenta and positions are determined via Hamilton's equations.
 
-The changes to the momenta are
-\begin{equation}
-\Delta q_x = -\frac{\partial H}{\partial x}\Delta s = \sum_{i=1}^4 \sum_{j-0}^4 C_{ij} i x^{i-1} y^j
-\end{equation}
-and
-\begin{equation}
-\Delta q_y = -\frac{\partial H}{\partial y}\Delta s = \sum_{i=0}^4 \sum_{j=1}^4 C_{ij} j x^i y^{j-1}
-\end{equation}
-where
-\begin{equation}
-  q_x = \frac{(1+\delta) x^\prime}{\sqrt{1 + x^{\prime 2} + y^{\prime 2}}},
-\end{equation}
-and similarly for $q_y$.
-
-For example, a quadrupole with integrated strength $K_1 L$  could be specified by setting $C_{20} = -C_{02} = K_1 L/2$.
-A sextupole with integrated strength $K_2 L$ could be specified by setting $C_{30} = K_2 L/6$ and $C_{12} = K_2 L/2$.
+For example, a quadrupole with integrated strength $K_1 L$  could be specified by setting $C_{2000} = -C_{0200} = K_1 L/2$.
+A sextupole with integrated strength $K_2 L$ could be specified by setting $C_{3000} = K_2 L/6$ and $C_{1200} = K_2 L/2$.
 The purpose, however, is not to simulate such elements, since they can be more conveniently simulated with 
 \verb|KQUAD| or \verb|KSEXT|.
 It is rather to simulate elements that may not be described by the usual multipoles.

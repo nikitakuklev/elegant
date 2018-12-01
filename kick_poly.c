@@ -143,11 +143,14 @@ long polynomial_hamiltonian(
     )
 {
   double dx, dy, dz;  /* offsets of the multipole center */
-  long i_part, i_top, ic, ix, iy;
+  long i_part, i_top, ix, iy, iqx, iqy;
+  long ixMax, iyMax, iqxMax, iqyMax;
   double *coord, kick;
   double cos_tilt, sin_tilt;
   double x, xp, y, yp, qx, qy;
-  double dl;
+  double dl, factor;
+  double xpow, ypow, qxpow, qypow;
+  double xpow1, ypow1, qxpow1, qypow1;
   long ik, nk;
 
   if (!particle)
@@ -165,6 +168,22 @@ long polynomial_hamiltonian(
   dx = hkpoly->dx;
   dy = hkpoly->dy;
   dz = hkpoly->dz;
+
+  ixMax = iyMax = iqxMax = iqyMax = -1;
+  for (ix=0; ix<5; ix++) {
+    for (iy=0; iy<5; iy++) {
+      for (iqx=0; iqx<5; iqx++) {
+        for (iqy=0; iqy<5; iqy++) {
+          if (hkpoly->coefficient[ix][iy][iqx][iqy]!=0) {
+            if (ix>ixMax) ixMax = ix;
+            if (iy>iyMax) iyMax = iy;
+            if (iqx>iqxMax) iqxMax = iqx;
+            if (iqy>iqyMax) iqyMax = iqy;
+          }
+        }
+      }
+    }
+  }
 
   nk = hkpoly->nKicks;
   if ((dl = hkpoly->length/hkpoly->nKicks)==0)
@@ -219,21 +238,40 @@ long polynomial_hamiltonian(
 #endif
 
     convertSlopesToMomenta(&qx, &qy, xp, yp, coord[5]);
+    factor = hkpoly->factor/(1+coord[5])/hkpoly->nKicks;
     for (ik=0; ik<nk; ik++) {
       if (dl) {
         x += xp*dl/2;
         y += yp*dl/2;
       }
-      for (ic=0; ic<24; ic++) {
-        if (hkpoly->coefficient[ic]) {
-          ix = (ic+1)%5;
-          iy = (ic+1)/5;
-          if (ix || iy) {
-            if (ix)
-              qx -= hkpoly->factor*hkpoly->coefficient[ic]*ix/(1+coord[5])*ipow(x, ix-1)*ipow(y, iy  )/hkpoly->nKicks;
-            if (iy)
-              qy -= hkpoly->factor*hkpoly->coefficient[ic]*iy/(1+coord[5])*ipow(x, ix  )*ipow(y, iy-1)/hkpoly->nKicks;
-            convertMomentaToSlopes(&xp, &yp, qx, qy, coord[5]);
+      for (ix=xpow1=0; ix<=ixMax; ix++) {
+        if (ix)
+          xpow1 = ix*ipow(x, ix-1);
+        xpow = ipow(x, ix);
+        for (iy=ypow1=0; iy<=iyMax; iy++) {
+          if (iy)
+            ypow1 = iy*ipow(y, iy-1);
+          ypow = ipow(y, iy);
+          for (iqx=qxpow1=0; iqx<=iqxMax; iqx++) {
+            if (iqx)
+              qxpow1 = iqx*ipow(qx, iqx-1);
+            qxpow = ipow(qx, iqx);
+            for (iqy=qypow1=0; iqy<=iqyMax; iqy++) {
+              if (iqy)
+                qypow1 = iqy*ipow(qy, iqy-1);
+              qypow = ipow(qy, iqy);
+              if (ix)
+                qx -= factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow1*ypow*qxpow*qypow;
+              if (iy)
+                qy -= factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow*ypow1*qxpow*qypow;
+
+              if (iqx)
+                x += factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow*ypow*qxpow1*qypow;
+              if (iy)
+                y += factor*hkpoly->coefficient[ix][iy][iqx][iqy]*xpow*ypow*qxpow*qypow1;
+
+              convertMomentaToSlopes(&xp, &yp, qx, qy, coord[5]);
+            }
           }
         }
       }
