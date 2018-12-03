@@ -762,7 +762,7 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
   }
   
   best_fit->chi_squared = HUGE_VAL;
-  best_fit->order_of_fit = 0;
+  best_fit->order_of_fit = -1;
   order_of_fit = lowest_order_of_fit;
 
   do {
@@ -787,16 +787,20 @@ int findBestFit(FIT *best_fit, double **set_i, double **set_f, double **set_erro
     }
   } while (++order_of_fit<=highest_order_of_fit);
 
-  for (k=0; k<=best_fit->order_of_fit; k++) {
-    if (fabs(best_fit->coefficient[k])<best_fit->coefficient_error[k])
-      best_fit->coefficient[k] = 0;
-  }
-  
   free(xdata);
   free(ydata);
   free(sigmay);
   free(fit.coefficient);
   free(fit.coefficient_error);
+
+  if (best_fit->order_of_fit==-1)
+    return 0;
+
+  for (k=0; k<=best_fit->order_of_fit; k++) {
+    if (fabs(best_fit->coefficient[k])<best_fit->coefficient_error[k])
+      best_fit->coefficient[k] = 0;
+  }
+  
   return(best_fit->order_of_fit);
 }
 
