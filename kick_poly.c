@@ -171,7 +171,7 @@ long polynomial_hamiltonian(
   ixMax = iyMax = -1;
   for (ix=0; ix<5; ix++) {
     for (iy=0; iy<5; iy++) {
-      if (hkpoly->C[ix][iy]!=0) {
+      if (hkpoly->K[ix][iy]!=0) {
         if (ix>ixMax) ixMax = ix;
         if (iy>iyMax) iyMax = iy;
       }
@@ -263,9 +263,9 @@ long polynomial_hamiltonian(
         ypow1 = 0;
         for (iy=0; iy<=iyMax; iy++) {
           if (ix)
-            qx -= factor*hkpoly->C[ix][iy]*xpow1*ypow;
+            qx -= factor*hkpoly->K[ix][iy]*xpow1*ypow;
           if (iy)
-            qy -= factor*hkpoly->C[ix][iy]*xpow*ypow1;
+            qy -= factor*hkpoly->K[ix][iy]*xpow*ypow1;
           ypow1 = ypow*(iy+1);
           ypow *= y;
         }

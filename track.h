@@ -2145,7 +2145,7 @@ extern PARAMETER hkpoly_param[N_HKPOLY_PARAMS];
 
 typedef struct {
   double length;
-  double C[5][5], D[5][5];
+  double K[5][5], D[5][5];
   double tilt, dx, dy, dz, factor;
   long nRepeats;
   } HKPOLY;
