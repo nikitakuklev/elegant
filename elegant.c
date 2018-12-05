@@ -180,7 +180,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define ELASTIC_SCATTERING 66
 #define INELASTIC_SCATTERING 67
 #define IGNORE_ELEMENTS 68
-#define N_COMMANDS      69
+#define SET_REFERENCE_PARTICLE_OUTPUT 69
+#define N_COMMANDS      70
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -195,7 +196,8 @@ char *command[N_COMMANDS] = {
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
-    "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements"
+    "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
+    "set_reference_particle_output",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -267,7 +269,8 @@ char *description[N_COMMANDS] = {
     "ion_effects                      command to set up modeling of ion effects"
     "elastic_scattering               determine x', y' aperture from tracking as a function of position in the ring",
     "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
-    "ignore_elements                  declare that elements with certain names and types should be ignored in tracking"
+    "ignore_elements                  declare that elements with certain names and types should be ignored in tracking",
+    "set_reference_particle_output    set reference particle coordinates to be matched via optimization"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1392,6 +1395,11 @@ char **argv;
       if (beam_type!=-1)
         bombElegant("optimization statements must come before beam definition", NULL);
       add_optimization_covariable(&optimize, &namelist_text, &run_conditions, beamline);
+      break;
+    case SET_REFERENCE_PARTICLE_OUTPUT:
+      if (beam_type!=-1)
+        bombElegant("optimization statements must come before beam definition", NULL);
+      do_set_reference_particle_output(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case OPTIMIZATION_TERM:
       if (beam_type!=-1)

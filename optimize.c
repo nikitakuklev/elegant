@@ -615,13 +615,14 @@ void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAME
     (double**)czarray_2d(sizeof(double), optimization_data->nParticlesToMatch, COORDINATES_PER_PARTICLE);
 
   for (i=0; i<COORDINATES_PER_PARTICLE; i++) {
+    long j;
     if (!(coord = SDDS_GetColumnInDoubles(&SDDSin, name[i]))) {
       sprintf(s, "Problem getting column data from %s", set_reference_particle_output_struct.match_to);
       SDDS_SetError(s);
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-    memcpy(optimization_data->coordinatesToMatch[i], coord,
-           sizeof(optimization_data->coordinatesToMatch[i][0])*optimization_data->nParticlesToMatch);
+    for (j=0; j<optimization_data->nParticlesToMatch; j++)
+      optimization_data->coordinatesToMatch[j][i] = coord[j];
     free(coord);
   }
   
@@ -2961,7 +2962,7 @@ double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimDat
     return 0;
   }
 
-  for (i=0; i<6; i++) {
+  for (i=0; i<optimData->nParticlesToMatch; i++) {
     if (beam->particle[i][6]!=optimData->coordinatesToMatch[i][6]) {
       printf("Mismatch of particle ID for particle %ld: %.0lf expected but %.0lf found\n",
              i, beam->particle[i][6], optimData->coordinatesToMatch[i][6]);
