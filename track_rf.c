@@ -14,7 +14,6 @@
  */
 #include "mdb.h"
 #include "track.h"
-#define DEBUG 1
 
 void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
 void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central, double zEnd);
