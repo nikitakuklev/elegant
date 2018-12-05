@@ -13,6 +13,7 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "SDDS.h"
 #if defined(__BORLANDC__)
 #define DBL_MAX         1.7976931348623158e+308 /* max value */
 #endif
@@ -26,6 +27,7 @@ static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
 void storeOptimRecord(double *value, long values, long invalid, double result);
 void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
+double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimData, long *invalid);
 
 #if USE_MPI
 /* Find the global minimal value and its location across all the processors */
@@ -550,6 +552,92 @@ void add_optimization_constraint(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     constraints->n_constraints += 1;
     log_exit("add_optimization_constraint");
     }
+
+void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+{
+  SDDS_DATASET SDDSin;
+  char s[16834];
+  double *coord, beta, maxWeight;
+  long i;
+  char *name[COORDINATES_PER_PARTICLE] = {"x", "xp", "y", "yp", "t", "p", "particleID"};
+
+  /* process namelist text */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  if (processNamelist(&set_reference_particle_output, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  if (echoNamelists) print_namelist(stdout, &set_reference_particle_output);
+  
+  /* check for valid input */
+  if (set_reference_particle_output_struct.weight<=0)
+    return;
+  if (!set_reference_particle_output_struct.match_to)
+    bombElegant("Provide fileame with match_to parameter", NULL);
+
+  maxWeight = 0;
+  for (i=0; i<6; i++) {
+    if ((optimization_data->particleMatchingWeight[i] = set_reference_particle_output_struct.weight[i])<0)
+      bombElegant("weight cannot be negative", NULL);
+    if (optimization_data->particleMatchingWeight[i]>maxWeight)
+      maxWeight = optimization_data->particleMatchingWeight[i];
+  }
+  if (maxWeight==0)
+      bombElegant("weights cannot all be zero", NULL);
+
+  printf("Reading reference particle data from %s\n", set_reference_particle_output_struct.match_to);
+  fflush(stdout);
+
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, set_reference_particle_output_struct.match_to)) {
+    sprintf(s, "Problem opening beam input file %s", set_reference_particle_output_struct.match_to);
+    SDDS_SetError(s);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+
+  if (!check_sdds_column(&SDDSin, "x", "m") ||
+      !check_sdds_column(&SDDSin, "y", "m") ||
+      !check_sdds_column(&SDDSin, "xp", NULL) ||
+      !check_sdds_column(&SDDSin, "yp", NULL) ||
+      !check_sdds_column(&SDDSin, "t", "s") ||
+      (!check_sdds_column(&SDDSin, "p", "m$be$nc") && !check_sdds_column(&SDDSin, "p", NULL)) ||
+      !check_sdds_column(&SDDSin, "particleID", NULL)) {
+    sprintf(s, "Problem with existence or units of columns in beam input file %s", set_reference_particle_output_struct.match_to);
+    SDDS_SetError(s);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  
+  if (SDDS_ReadPage(&SDDSin)!=1 || (optimization_data->nParticlesToMatch=SDDS_RowCount(&SDDSin))<=0) {
+    sprintf(s, "Problem with empty or nonexistent data page in %s", set_reference_particle_output_struct.match_to);
+    SDDS_SetError(s);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+
+  optimization_data->coordinatesToMatch = 
+    (double**)czarray_2d(sizeof(double), optimization_data->nParticlesToMatch, COORDINATES_PER_PARTICLE);
+
+  for (i=0; i<COORDINATES_PER_PARTICLE; i++) {
+    if (!(coord = SDDS_GetColumnInDoubles(&SDDSin, name[i]))) {
+      sprintf(s, "Problem getting column data from %s", set_reference_particle_output_struct.match_to);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    memcpy(optimization_data->coordinatesToMatch[i], coord,
+           sizeof(optimization_data->coordinatesToMatch[i][0])*optimization_data->nParticlesToMatch);
+    free(coord);
+  }
+  
+  /* convert (t, p) to (s, delta) */
+  for (i=0; i<optimization_data->nParticlesToMatch; i++) {
+    beta = optimization_data->coordinatesToMatch[i][5]/sqrt(sqr(optimization_data->coordinatesToMatch[i][5])+1);
+    optimization_data->coordinatesToMatch[i][4] *= beta*c_mks;
+    optimization_data->coordinatesToMatch[i][5] = optimization_data->coordinatesToMatch[i][5]/run->p_central - 1;
+  }
+
+  SDDS_Terminate(&SDDSin);
+
+  printf("%ld particles read from first page of %s\n\n", optimization_data->nParticlesToMatch,
+         set_reference_particle_output_struct.match_to);
+  fflush(stdout);
+}
 
 
 void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
@@ -1576,6 +1664,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     for (i=0; i<variables->n_variables; i++)
         variables->initial_value[i] = variables->varied_quan_value[i];
     control->i_step = i_step_saved;
+
+    if (optimization_data->coordinatesToMatch) {
+      free_czarray_2d((void**)optimization_data->coordinatesToMatch, optimization_data->nParticlesToMatch, COORDINATES_PER_PARTICLE);
+      optimization_data->coordinatesToMatch = NULL;
+    }
+
     log_exit("do_optimize");
     }
 
@@ -1722,7 +1816,7 @@ double optimization_function(double *value, long *invalid)
   OPTIM_VARIABLES *variables;
   OPTIM_CONSTRAINTS *constraints;
   OPTIM_COVARIABLES *covariables;
-  double conval, result=0;
+  double conval, result=0, psum;
   long i, iRec, recordUsedAgain;
   unsigned long unstable;
   VMATRIX *M;
@@ -2307,13 +2401,16 @@ double optimization_function(double *value, long *invalid)
 	printf("optimization_function: Computing rpn function\n");
 	fflush(stdout);
 #endif
-	result = 0;
+	result = psum = 0;
 	rpn_clear();
+        if (optimization_data->nParticlesToMatch)
+          psum = particleComparisonForOptimization(beam, optimization_data, invalid);
 	if (!*invalid) {
 	  long i=0, terms=0;
 	  double value, sum;
+          sum = 0;
 	  if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
-	    for (i=sum=0; i<optimization_data->terms; i++) {
+	    for (i=0; i<optimization_data->terms; i++) {
 	      rpn_clear();
 	      if ((value=rpn(optimization_data->term[i]))!=0) {
 		optimization_data->termWeight[i] = 1/fabs(value);
@@ -2350,7 +2447,8 @@ double optimization_function(double *value, long *invalid)
 	  /* compute and return quantity to be optimized */
 	  if (optimization_data->terms) {
 	    long i;
-	    for (i=result=0; i<optimization_data->terms; i++)  {
+            result = psum;
+	    for (i=0; i<optimization_data->terms; i++)  {
 	      rpn_clear();
 	      result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
 	      if (rpn_check_error()) {
@@ -2362,7 +2460,7 @@ double optimization_function(double *value, long *invalid)
 	  }
 	  else {
 	    rpn_clear();    /* clear rpn stack */
-	    result = rpn(optimization_data->UDFname);
+	    result = rpn(optimization_data->UDFname) + psum;
 	    if (rpn_check_error()) {
 	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 	      rpnError++;
@@ -2381,7 +2479,11 @@ double optimization_function(double *value, long *invalid)
 	      fflush(optimization_data->fp_log);
 	      if (optimization_data->terms && !*invalid) {
 		fprintf(optimization_data->fp_log, "Terms of equation: \n");
-		for (i=sum=0; i<optimization_data->terms; i++) {
+                sum = psum;
+                if (optimization_data->nParticlesToMatch)
+		  fprintf(optimization_data->fp_log, "1*(particle comparison): %23.15e\n",
+                          psum);
+		for (i=0; i<optimization_data->terms; i++) {
 		  rpn_clear();
 		  fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
 			  optimization_data->termWeight[i],
@@ -2846,3 +2948,36 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
 }
 #endif
 
+double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimData, long *invalid) 
+{
+  double sum, sum1;
+  long i, j;
+
+  *invalid = 0;
+  if (beam->n_to_track!=optimData->nParticlesToMatch) {
+    printf("Mismatch in comparison of particles after tracking: %ld needed but %ld present\n",
+           beam->n_to_track, optimData->nParticlesToMatch);
+    *invalid = 1;
+    return 0;
+  }
+
+  for (i=0; i<6; i++) {
+    if (beam->particle[i][6]!=optimData->coordinatesToMatch[i][6]) {
+      printf("Mismatch of particle ID for particle %ld: %.0lf expected but %.0lf found\n",
+             i, beam->particle[i][6], optimData->coordinatesToMatch[i][6]);
+      *invalid = 1;
+      return 0;
+    }
+  }
+
+  sum = 0;
+  for (j=0; j<6; j++) {
+    if (!optimData->particleMatchingWeight[j])
+      continue;
+    sum1 = 0;
+    for (i=0; i<optimData->nParticlesToMatch; i++) 
+      sum1 += sqr(beam->particle[i][j]-optimData->coordinatesToMatch[i][j]);
+    sum += sum1*optimData->particleMatchingWeight[j];
+  }
+  return sum;
+}

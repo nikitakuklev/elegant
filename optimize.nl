@@ -92,3 +92,8 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
 #namelist optimize static
      long summarize_setup = 0;
 #end
+
+#namelist set_reference_particle_output,struct
+          STRING match_to = NULL;
+          double weight[6] = {1, 1, 1, 1, 0, 1};
+#end

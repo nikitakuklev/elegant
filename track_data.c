@@ -1098,6 +1098,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"EDGE2_NONLINEAR_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.edge2NonlinearFactor), NULL, 1.0, 0, "Use to selectively scale nonlinear exit edge effects if EDGE2_EFFECTS>1"},
     {"RADIAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.radial), NULL, 0.0, 0, "If non-zero, converts the quadrupole into a radially-focusing lens"},
     {"EXPAND_HAMILTONIAN", "", IS_SHORT, 0, (long)((char *)&kquad_example.expandHamiltonian), NULL, 0.0, 0, "If 1, Hamiltonian is expanded to leading order."},
+    {"TRACKING_MATRIX", "", IS_SHORT, 0, (long)((char *)&kquad_example.trackingBasedMatrix), NULL, 0.0, 0, "If nonzero, gives order of tracking-based matrix up to third order to be used for twiss parameters etc.  If zero, 2nd-order analytical matrix is used."},
     };
 
 MAGNIFY magnify_example;

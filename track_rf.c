@@ -14,6 +14,7 @@
  */
 #include "mdb.h"
 #include "track.h"
+#define DEBUG 1
 
 void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
 void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central, double zEnd);
@@ -112,7 +113,7 @@ void track_through_rf_deflector(
 	    )*PI/180.0 
     + omega*(rf_param->time_offset - t_first);
 #ifdef DEBUG
-  fprintf(stderr, "t_first = %e s, Ephase = %e deg\n", t_first, Ephase*180/PI);
+  fprintf(stdout, "t_first = %21.15e s, Ephase = %21.15e deg\n", t_first, Ephase*180/PI);
 #endif
   if (!rf_param->standingWave)  {
     dtLight = length/c_mks/2;
@@ -121,7 +122,7 @@ void track_through_rf_deflector(
     Ephase -= omega*rf_param->length/2/c_mks;
   }
 #ifdef DEBUG
-  fprintf(stderr, "dtLight=%e, length=%e, omega*dtLight=%e, Ephase = %e deg\n", dtLight, length, omega*dtLight*180/PI, Ephase*180/PI);
+  fprintf(stdout, "dtLight=%21.15e, length=%21.15e, omega*dtLight=%21.15e, Ephase = %21.15e deg\n", dtLight, length, omega*dtLight*180/PI, Ephase*180/PI);
 #endif
 
   Estrength = voltFactor*(particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
@@ -144,7 +145,7 @@ void track_through_rf_deflector(
       t_part = initial[ip][4]/(c_mks*beta);
       tLight = 0;
 #ifdef DEBUG
-      fprintf(stderr, "start coord[%ld] = %21.15e, %21.15e, %21.15e, %21.15e, %21.15e, %21.15e\n",
+      fprintf(stdout, "start coord[%ld] = %21.15e, %21.15e, %21.15e, %21.15e, %21.15e, %21.15e\n",
 	      ip, x, xp, y, yp, initial[ip][4], initial[ip][5]);
 #endif
       for (is=0; is<=n_kicks; is++) {
@@ -164,7 +165,7 @@ void track_through_rf_deflector(
 	  y += yp*length;
 	}
 #ifdef DEBUG
-	printf("ip=%ld  is=%ld  dphase=%f, phase=%f\n",
+	printf("ip=%ld  is=%ld  dphase=%21.15e, phase=%21.15e\n",
 		ip, is, omega*(t_part-tLight)*180/PI, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
 	cos_phase = cos((t_part-tLight)*omega + Ephase);
@@ -187,7 +188,7 @@ void track_through_rf_deflector(
       final[ip][5] = (pc-pc_central)/pc_central;
       final[ip][6] = initial[ip][6];
 #ifdef DEBUG
-      fprintf(stderr, "stop  coord[%ld] = %21.15e, %21.15e, %21.15e, %21.15e, %21.15e, %21.15e\n",
+      fprintf(stdout, "stop  coord[%ld] = %21.15e, %21.15e, %21.15e, %21.15e, %21.15e, %21.15e\n",
 	      ip, final[ip][0], final[ip][1], final[ip][2], final[ip][3],
 	      final[ip][4], final[ip][5]);
 #endif
@@ -458,14 +459,14 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
       rf_param->phase_reference = unused_phase_reference();
     }
 #ifdef DEBUG
-    fprintf(stderr, "Finding fiducial for RFDF, phase_reference=%ld\n", rf_param->phase_reference);
+    fprintf(stdout, "Finding fiducial for RFDF, phase_reference=%ld\n", rf_param->phase_reference);
 #endif
     /* length = rf_param->length; */
     omega = PIx2*rf_param->frequency;
     switch (get_phase_reference(&phase, rf_param->phase_reference)) {
     case REF_PHASE_RETURNED:
 #ifdef DEBUG
-      fprintf(stderr, "Using previous reference phase\n");
+      fprintf(stdout, "Using previous reference phase\n");
 #endif
       rf_param->t_first_particle = phase/(-omega);
       break;
@@ -477,7 +478,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
           bombElegant("invalid fiducial mode for RF_PARAM element", NULL);
         rf_param->t_first_particle = findFiducialTime(initial, n_particles, zEnd-rf_param->length, 0.0, pc_central, mode);
 #ifdef DEBUG
-        fprintf(stderr, "tMean = %le s\n", rf_param->t_first_particle);
+        fprintf(stdout, "tMean = %21.15le s\n", rf_param->t_first_particle);
 #endif
       }
       t0 = rf_param->t_first_particle;
@@ -488,7 +489,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
       break;
     }
 #ifdef DEBUG
-    fprintf(stderr, "phase=%le, t0=%le\n", phase, phase/(-omega));
+    fprintf(stdout, "phase=%21.15le, t0=%21.15le\n", phase, phase/(-omega));
 #endif
     rf_param->fiducial_seen = 1;
   }

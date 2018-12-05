@@ -1172,7 +1172,7 @@ VMATRIX *compute_matrix(
       case T_BGGEXP:
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
-        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         run->p_central = pSave;
         break;
       case T_RBEN: case T_SBEN:
@@ -1354,21 +1354,27 @@ VMATRIX *compute_matrix(
             kquad->k1 = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (kquad->n_kicks<1)
             bombElegant("n_kicks must by > 0 for KQUAD element", NULL);
-        elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
-                                         (run->default_order?run->default_order:1), kquad->tilt, 
-                                         kquad->fse, kquad->xkick*kquad->xKickCalibration, kquad->ykick*kquad->yKickCalibration,
-                                         kquad->edge1Linear?kquad->edge1_effects:0, 
-                                         kquad->edge2Linear?kquad->edge2_effects:0,
-                                         "integrals", 0.0, kquad->lEffective,
-                                         kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
-        if (kquad->dx || kquad->dy || kquad->dz)
-            misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),
                                   kquad->systematic_multipoles, 0);
         readErrorMultipoleData(&(kquad->randomMultipoleData),
                                   kquad->random_multipoles, 0);
         readErrorMultipoleData(&(kquad->steeringMultipoleData),
                                   kquad->steering_multipoles, 1);
+        if (kquad->trackingBasedMatrix<=0) {
+          elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
+                                           (run->default_order?run->default_order:1), kquad->tilt, 
+                                           kquad->fse, kquad->xkick*kquad->xKickCalibration, kquad->ykick*kquad->yKickCalibration,
+                                           kquad->edge1Linear?kquad->edge1_effects:0, 
+                                           kquad->edge2Linear?kquad->edge2_effects:0,
+                                           "integrals", 0.0, kquad->lEffective,
+                                           kquad->fringeIntM, kquad->fringeIntP, kquad->radial);
+          if (kquad->dx || kquad->dy || kquad->dz)
+            misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
+        } else {
+          if (kquad->trackingBasedMatrix>3)
+            kquad->trackingBasedMatrix = 3;
+          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, kquad->trackingBasedMatrix));
+        }
         break;
       case T_KSEXT:
         ksext = (KSEXT*)elem->p_elem;
@@ -1489,13 +1495,13 @@ VMATRIX *compute_matrix(
         break;
       case T_BRAT:
         /* brat = (BRAT*)elem->p_elem; */
-        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CCBEND:
         ccbend = (CCBEND*)elem->p_elem;
         if (ccbend->n_kicks<1)
             bombElegant("n_kicks must be > 0 for CCBEND element", NULL);
-        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 2));
+        elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CSRCSBEND:
         csrcsbend = (CSRCSBEND*)elem->p_elem;

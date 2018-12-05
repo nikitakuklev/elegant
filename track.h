@@ -631,6 +631,8 @@ typedef struct {
     long hybrid_simplex_tolerance_count, hybrid_simplex_comparison_interval;
     SDDS_TABLE popLog;
     long crossover_type;          /* For genetic optimization only */
+    long nParticlesToMatch;
+    double **coordinatesToMatch, particleMatchingWeight[6];
     } OPTIMIZATION_DATA;
 
 typedef struct {
@@ -957,7 +959,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 14
 #define N_KSEXT_PARAMS 31
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 47
+#define N_KQUAD_PARAMS 48
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -2007,7 +2009,7 @@ typedef struct {
     double fringeIntP[5], fringeIntM[5];
     short edge1Linear, edge2Linear;
     double edge1NonlinearFactor, edge2NonlinearFactor;
-    short radial, expandHamiltonian;
+    short radial, expandHamiltonian, trackingBasedMatrix;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -4045,6 +4047,8 @@ void lorentz_report(void);
 /* prototypes for kick_poly.c */
 long polynomial_kicks(double **particle, long n_part, KPOLY *kpoly, double p_error, double Po,
     double **accepted, double z_start);
+long polynomial_hamiltonian(double **particle,  long n_part, HKPOLY *hkpoly, double p_error, double Po,
+                            double **accepted, double z_start);
 
 /* prototypes for ramp_p.c */
 void ramp_momentum(double **coord, long np, RAMPP *rampp, double *P_central, long pass);

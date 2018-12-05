@@ -961,6 +961,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
         case T_HKPOLY:
           copied = 1;
           break;
+        case T_KQUAD:
+          copied = 1;
+          break;
 	default:
 	  break;
 	}
@@ -1102,6 +1105,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     case T_HKPOLY:
       polynomial_hamiltonian(finalCoord+my_offset, my_nTrack, (HKPOLY*)eptr->p_elem, 0, run->p_central, NULL, 0);
       break;
+    case T_KQUAD:
+      ltmp1 = ((KQUAD*)eptr->p_elem)->isr;
+      ltmp2 = ((KQUAD*)eptr->p_elem)->synch_rad;
+      ((KQUAD*)eptr->p_elem)->isr = 0;
+      ((KQUAD*)eptr->p_elem)->synch_rad = 0;
+      multipole_tracking2(finalCoord+my_offset, my_nTrack, eptr, 0, run->p_central, NULL, 0.0, NULL, NULL, NULL);
+      ((KQUAD*)eptr->p_elem)->isr = ltmp1;
+      ((KQUAD*)eptr->p_elem)->synch_rad = ltmp2;
+      break;
     default:
       printf("*** Error: determineMatrixHigherOrder called for element that is not supported!\n");
       printf("***        Seek professional help!\n");
@@ -1208,7 +1220,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 #endif
 
   if (shareTrackingBasedMatrices) {
-    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_CSBEND) {
+    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD) {
       ELEMENT_LIST *eptrCopy;
       VMATRIX *matrixCopy;
       
