@@ -317,6 +317,9 @@ long do_tracking(
   }
   else /* single partticle case where all the processors track the same particle(s), or particles are on master when the first beam is fiducial */
     total_nOriginal = nOriginal;
+#if MPI_DEBUG
+  printf("nOriginal = %ld, total_nOriginal = %ld\n", nOriginal, total_nOriginal);
+#endif
 #endif
   
 #ifdef WATCH_MEMORY
