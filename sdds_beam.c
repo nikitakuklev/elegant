@@ -702,8 +702,10 @@ long new_sdds_beam(
 #ifdef MPI_DEBUG
   printf("Exiting new_sdds_beam\n");
 #endif
+
 #ifdef SDDS_MPI_IO
-  MPI_Barrier(MPI_COMM_WORLD);
+  if (!partOnMaster)
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
   log_exit("new_sdds_beam");
