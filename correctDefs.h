@@ -61,7 +61,7 @@ typedef struct {
 #define ORBIT_CORRECTION 1
     long method, verbose, track_before_and_after, n_iterations, n_xy_cycles, minimum_cycles;
     long prezero_correctors, start_from_centroid, use_actual_beam, response_only, disable;
-    long xplane, yplane;
+    long xplane, yplane, forceAlternation;
     long use_response_from_computed_orbits;
     long use_altered_matrices[2];
     double clorb_accuracy, clorb_iterations, clorb_iter_fraction, clorb_fraction_multiplier;

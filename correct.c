@@ -61,7 +61,7 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
 				     ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index, short **pegged, double **weight,
 				     long plane, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, long recircs);
 ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
-ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, 
+ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
                                     long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end);
 long find_parameter_offset(char *param_name, long elem_type);
 long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
@@ -82,7 +82,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
                              char *element_type, double tweek, double limit,
                              long start_occurence, long end_occurence, long occurence_step,
                              double s_start, double s_end, 
-                             LINE_LIST *beamline, RUN *run, long forceQuads);
+                             LINE_LIST *beamline, RUN *run, long forceQuads, long verbose);
 long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
                              LINE_LIST *beamline, RUN *run, long forceQuads);
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run);
@@ -216,6 +216,7 @@ void correction_setup(
     if ((_correct->n_xy_cycles = n_xy_cycles)<0)
         bombElegant("n_xy_cycles < 0", NULL);
     _correct->minimum_cycles = minimum_cycles;
+    _correct->forceAlternation = force_alternation;
     if (threading_divisor[0]<=1 ||  threading_divisor[1]<=1)
       bombElegant("threading_divisors must be >1", NULL);
     _correct->xplane = do_correction[0];
@@ -459,8 +460,10 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
         printf("Element %s found in beamline more than once.\n", after);
         exitElegant(1);
       }
-      printf("%s found at s = %le m\n", after, s_start);
-      fflush(stdout);
+      if (verbose) {
+        printf("'after' element %s found at s = %le m\n", after, s_start);
+        fflush(stdout);
+      }
     }
     context = NULL;
     if (before && strlen(before)) {
@@ -473,8 +476,10 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
         printf("Element %s found in beamline more than once.\n", before);
         exitElegant(1);
       }
-      printf("%s found at s = %le m\n", before, s_end);
-      fflush(stdout);
+      if (verbose) {
+        printf("'before' element %s found at s = %le m\n", before, s_end);
+        fflush(stdout);
+      }
     }
     if (s_start>s_end) 
       bombElegant("'after' element follows 'before' element!", NULL);
@@ -486,13 +491,13 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
   if (plane[0]=='h' || plane[0]=='H')  {
     if (!add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, 
                                  start_occurence, end_occurence, occurence_step, s_start, s_end,
-                                 beamline, run, 1))
+                                 beamline, run, 1, verbose))
       bombElegant("no match to given element name or type", NULL);
   }
   else if (plane[0]=='v' || plane[0]=='V') {
     if (!add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, 
                                  start_occurence, end_occurence, occurence_step, s_start, s_end,
-                                 beamline, run, 1))
+                                 beamline, run, 1, verbose))
       bombElegant("no match to given element name or type", NULL);
   }
   else
@@ -507,7 +512,7 @@ long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *ite
   context = &(beamline->elem);
   while (context && (context=next_element_of_type(context, type))) {
     found += add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, 
-                                     0, 0, 1, -1, -1, beamline, run, forceQuads);
+                                     0, 0, 1, -1, -1, beamline, run, forceQuads, 0);
     context = context->succ;
   }
   return found;
@@ -517,10 +522,10 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
                              char *element_type, double tweek, double limit, 
                              long start_occurence, long end_occurence, long occurence_step, 
                              double s_start, double s_end, 
-                             LINE_LIST *beamline, RUN *run, long forceQuads)
+                             LINE_LIST *beamline, RUN *run, long forceQuads, long verbose)
 {
   ELEMENT_LIST *context;
-  long param_number, i, found;
+  long param_number, i, found, n_corr_types_start, notNeeded;
 
   if (SL->n_corr_types==0) {
     if (SL->corr_name)    tfree(SL->corr_name);
@@ -570,47 +575,128 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
 
   context = NULL;
   found = 0;
-  
+
+  n_corr_types_start = SL->n_corr_types;
+
   while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+    if (verbose>1) {
+      printf("Checking %s #%ld at s=%le m\n", context->name, context->occurence, context->end_pos);
+      fflush(stdout);
+    }
     if (element_type &&
-        !wild_match(entity_name[context->type], element_type))
+        !wild_match(entity_name[context->type], element_type)) {
+      if (verbose>1) {
+        printf("Type (%s) doesn't match required type %s\n", entity_name[context->type], element_type);
+        fflush(stdout);
+      }
       continue;
+    }
     if (start_occurence!=0 && end_occurence!=0) {
       if (context->occurence<start_occurence || context->occurence>end_occurence ||
-          (context->occurence-start_occurence)%occurence_step!=0)
+          (context->occurence-start_occurence)%occurence_step!=0) {
+        if (verbose>1) {
+          printf("Occurence %ld out of range [%ld, %ld]\n", context->occurence, start_occurence, end_occurence);
+          fflush(stdout);
+        }
         continue;
+      }
     }
-    if (s_start>=0 && s_end>=0 && (context->end_pos<s_start || context->end_pos>s_end))
+    if (s_start>=0 && s_end>=0 && (context->end_pos<s_start || context->end_pos>s_end)) {
+      if (verbose>1) {
+        printf("Position %le out of range [%le, %le]\n", context->end_pos, s_start, s_end);
+        fflush(stdout);
+      }
       continue;
+    }
+    if (verbose) {
+      printf("Found matching element (%s #%ld at s=%le m).\n", context->name, context->occurence, context->end_pos);
+      fflush(stdout);
+    }
 
+    notNeeded = 1;
     switch (context->type) {
     case T_QUAD:
-      if (plane) {
+      if (!plane) {
         if (!((QUAD*)(context->p_elem))->xSteering)
           ((QUAD*)(context->p_elem))->xSteering = forceQuads;
-      }
-      else {
+        notNeeded = !((QUAD*)(context->p_elem))->xSteering;
+      } else {
         if (!((QUAD*)(context->p_elem))->ySteering)
           ((QUAD*)(context->p_elem))->ySteering = forceQuads;
+        notNeeded = !((QUAD*)(context->p_elem))->ySteering;
       }
       break;
     case T_KQUAD:
       if (plane) {
         if (!((KQUAD*)(context->p_elem))->xSteering)
           ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
-      }
-      else {
+        notNeeded = !((KQUAD*)(context->p_elem))->xSteering;
+      } else {
         if (!((KQUAD*)(context->p_elem))->ySteering)
           ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
+        notNeeded = !((KQUAD*)(context->p_elem))->ySteering;
       }
       break;
     default:
+      notNeeded = 0;
       break;
     }
-    
-    for (i=0; i<SL->n_corr_types; i++)
+
+    if (notNeeded)
+      continue;
+
+    for (i=0; i<n_corr_types_start; i++) {
+      long need_s_limit;
+      need_s_limit = 0;
+      if (strcmp(context->name, SL->corr_name[i])==0) {
+        if (!(SL->start_occurence[i]==0 && SL->end_occurence[i]==0)) {
+          /* saved spec has occurence data */
+          if (!(start_occurence==0 && end_occurence==0)) {
+            /* new spec has occurence data --- they can't overlap */
+            if (!(end_occurence<SL->start_occurence[i] || start_occurence>SL->end_occurence[i])) {
+              printf("Error: steering element selection overlaps with previous selection (1). Not supported.\n");
+              exit(1);
+            }
+            need_s_limit = 0;
+          } else {
+            /* new spec has no occurence data, so s limits must prevent overlap */
+            need_s_limit = 1;
+          }
+        } else {
+          /* saved spec has no occurence data, so s limits must prevent overlap */
+          need_s_limit = 1;
+        }
+        if (need_s_limit) {
+          if (!(SL->s_start[i]<0 && SL->s_end[i]<0 && SL->s_start[i]<=SL->s_end[i])) {
+            /* saved spec has s limits */
+            if (!(s_start<0 && s_end<0 && s_start<=s_end)) {
+              /* new spec has s limits */
+              if (!(s_end<SL->s_start[i] || s_start>SL->s_end[i])) {
+                printf("Error: steering element selection overlaps with previous selection (2, %s, %s). Not supported.\n",
+                       context->name, SL->corr_name[i]);
+                exit(1);
+              }
+            } else {
+              /* new spec has no s limits, but we need them */
+              printf("Error: steering element selection overlaps with previous selection (3). Not supported.\n");
+              exit(1);
+            }
+          } else {
+            if (!(s_start<0 && s_end<0 && s_start<=s_end)) {
+              /* saved spec has s limits, which means we have an overlap issue */
+              printf("Error: steering element selection overlaps with previous selection (4). Not supported.\n");
+              exit(1);
+            }
+          }
+        }
+      }
+    }
+    if (i!=n_corr_types_start) 
+      continue;
+    for (; i<SL->n_corr_types; i++) {
       if (strcmp(context->name, SL->corr_name[i])==0)
         break;
+    }
     if (i!=SL->n_corr_types)
       continue;
 
@@ -864,8 +950,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMFx->corr_accuracy && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION) {
+          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles &&
+              correct->method!=THREAD_CORRECTION && !correct->forceAlternation) {
             x_failed = 1;
             if (correct->verbose)
               fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
@@ -926,8 +1012,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMFy->corr_accuracy && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION) {
+          if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
+              correct->method!=THREAD_CORRECTION && !correct->forceAlternation) {
             y_failed = 1;
             if (correct->verbose)
               fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
@@ -1039,7 +1125,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMFx->corr_accuracy) {
+          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && !correct->forceAlternation) {
             x_failed = 1;
             if (correct->verbose)
               fputs("orbit not improved--discontinuing horizontal correction\n", stdout);
@@ -1095,7 +1181,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMy->corr_accuracy) {
+          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && !correct->forceAlternation) {
             y_failed = 1;
             if (correct->verbose)
               fputs("orbit not improved--discontinuing vertical correction\n", stdout);
@@ -2076,10 +2162,10 @@ ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_in
   do {
     /* advance to position of next corrector */
     if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index,
-                                       SL->start_occurence, SL->end_occurence, SL->occurence_step,
+                                       SL->corr_name, SL->start_occurence, SL->end_occurence, SL->occurence_step,
                                        SL->s_start, SL->s_end)))
       break;
-    if (steering_corrector(corr, SL, plane) && (index=match_string(corr->name, SL->corr_name, SL->n_corr_types, WILDCARD_MATCH))>=0) {
+    if (steering_corrector(corr, SL, plane)) {
       printf("Adding %s#%ld at %e m to %c plane steering\n",
              corr->name, corr->occurence, corr->end_pos, plane?'v':'h');
       *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
@@ -2826,12 +2912,14 @@ ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type)
   return(elem);
 }
 
-ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, 
+ ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index, char **corr_name,
                                     long *start_occurence, long *end_occurence, long *occurence_step, double *s_start, double *s_end)
 {
   register long i;
   while (elem) {
     for (i=0; i<n_types; i++) {
+      if (corr_name[i] && strlen(corr_name[i]) && !wild_match(elem->name, corr_name[i]))
+          continue;
       if (elem->type==type[i]) {
         if (start_occurence[i]!=0 && end_occurence[i]!=0 &&
             (elem->occurence<start_occurence[i] || elem->occurence>end_occurence[i] ||

@@ -33,6 +33,7 @@
     long fixed_length_matrix = 0;
     long n_xy_cycles = 2;
     long minimum_cycles = 1;
+    long force_alternation = 0;
     long n_iterations = 10;
     long prezero_correctors = 1;
     long track_before_and_after = 0;
