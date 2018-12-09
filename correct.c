@@ -951,9 +951,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         else
 #endif
           if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION && !correct->forceAlternation) {
+              correct->method!=THREAD_CORRECTION) {
             x_failed = 1;
-            if (correct->verbose)
+            if (correct->verbose  && !correct->forceAlternation)
               fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
           }
         if (!(flags&NO_OUTPUT_CORRECTION)) {
@@ -1013,9 +1013,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         else
 #endif
           if (rms_before<=(rms_after+correct->CMFy->corr_accuracy) && i_cycle>correct->minimum_cycles &&
-              correct->method!=THREAD_CORRECTION && !correct->forceAlternation) {
+              correct->method!=THREAD_CORRECTION) {
             y_failed = 1;
-            if (correct->verbose)
+            if (correct->verbose && !correct->forceAlternation)
               fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
           }
         if (!(flags&NO_OUTPUT_CORRECTION)) {
@@ -1036,11 +1036,13 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 
           && ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
         dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
-      if (x_failed && y_failed) {
+      if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
           fputs("trajectory correction discontinued\n", stdout);
         break;
       }
+      if (correct->forceAlternation)
+	x_failed = y_failed = 0;
     }
     if (!(flags&NO_OUTPUT_CORRECTION) && (flags&FINAL_CORRECTION) && 
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
@@ -1125,9 +1127,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && !correct->forceAlternation) {
+          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles) {
             x_failed = 1;
-            if (correct->verbose)
+            if (correct->verbose && !correct->forceAlternation)
               fputs("orbit not improved--discontinuing horizontal correction\n", stdout);
           }
         if (!(flags&NO_OUTPUT_CORRECTION)) {
@@ -1181,9 +1183,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && !correct->forceAlternation) {
+          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && i_cycle>correct->minimum_cycles) {
             y_failed = 1;
-            if (correct->verbose)
+            if (correct->verbose && !correct->forceAlternation)
               fputs("orbit not improved--discontinuing vertical correction\n", stdout);
           }
         if (!(flags&NO_OUTPUT_CORRECTION)) {
@@ -1204,11 +1206,13 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
           ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
         dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
-      if (x_failed && y_failed) {
+      if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
           fputs("orbit correction discontinued\n", stdout);
         break;
       }
+      if (correct->forceAlternation)
+	x_failed = y_failed = 0;
     }
     if (!(flags&NO_OUTPUT_CORRECTION) && !bombed && (flags&FINAL_CORRECTION) && 
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
