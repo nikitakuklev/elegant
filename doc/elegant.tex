@@ -65,6 +65,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|correct| command has a new parameter, \verb|force_alternation| that forces orbit or trajectory correction
   to continue with x/y alternation regardless of whether one plane appears to have converged.
+\item The \verb|set_reference_particle_output| command was added. It allows defining a reference set of particle coordinates
+  to which tracked coordinates will be compared for purposes of optimization.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -726,6 +728,7 @@ Command name & Type & Description \\\hline
 \hyperref[subsec:savelattice]{\tt save\_lattice} & action & Save new lattice file. \\ \hline
 \hyperref[subsec:sddsbeam]{\tt sdds\_beam} & setup & Define loading of particles from SDDS file. \\ \hline
 \hyperref[subsec:semaphores]{\tt semaphores} & setup & Define file semaphores for start/end of run. \\ \hline
+\hyperref[subsec:setreferenceparticleoutput]{\tt set\_reference\_particle\_output} & setup  & Define reference particle distribution for optimization \\ \hline
 \hyperref[subsec:sliceanalysis]{\tt slice\_analysis} & setup & Perform slice analysis along beamline. \\ \hline
 \hyperref[subsec:subprocess]{\tt subprocess} & action & Execute a command in the shell. \\ \hline
 \hyperref[subsec:steeringelement]{\tt steering\_element} & setup & Define element parameters as steering correctors. \\ \hline
@@ -4570,6 +4573,45 @@ and is useful for tracking very large numbers of particles.
         exits with an error.  If the file exists, it is deleted when a valid {\tt run\_setup}
         command is given.
 \end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|set_reference_particle_output|}\end{center}
+%\end{latexonly}
+\subsection{set\_reference\_particle\_output \label{subsec:setreferenceparticleoutput}}
+
+\begin{itemize}
+\item type: setup command.
+\item function: Allows defining a reference set of particle coordinates
+  to which tracked coordinates will be compared for purposes of optimization.
+\item sequence: must follow \verb|optimization_setup|.
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item Usage notes: The purpose of this command is to allow optimization of a transport system to produce the same
+  particle distribution as was obtained by tracking through some other system. For example, one might track a 
+  collection of particles through a \verb|CWIGGLER| or \verb|BGGEXP| element, then attempt to match the output 
+  particles with a different element or set of elements that offer faster tracking.
+  In this case, the optimization run must use the same input distribution as the run that is being matched.
+\end{itemize}
+
+\begin{verbatim}
+&set_reference_particle_output
+          STRING match_to = NULL;
+          double weight[6] = {1, 1, 1, 1, 0, 1};
+          STRING comparison_mode = NULL;
+&end
+
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|match_to| --- Name of an SDDS file from which a particle distribution will be read. The coordinates
+  of this distribution will be compared to those from tracking to compute a contribution to the optimization
+  penalty function.
+\item \verb|weight| --- Weight to be assigned to each plane. By default, path-length coordinates are not compared.
+\item \verb|comparison_mode| --- May be one of ``max-ad'', ``sum-ad'', and ``sum-sqr'', corresponding to
+  maximum absolute deviation, sum of absolute deviations, and sum of squared deviations.
+  The default is maximum absolute deviation.
+\end{itemize}
+
 
 %\begin{latexonly}
 \newpage
