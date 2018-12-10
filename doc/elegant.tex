@@ -48,7 +48,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The filter parameters (\verb|start_occurence|, \verb|end_occurence|, \verb|s_start|, \verb|s_end|, 
+  \verb|after|, and \verb|before|)  of the \verb|steering_element| command now work better when multiple
+  such commands are given. In particular, overlapping intervals are detected and non-overlapping intervals
+  are correctly implemented.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -60,7 +63,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|correct| command has a new parameter, \verb|force_alternation| that forces orbit or trajectory correction
+  to continue with x/y alternation regardless of whether one plane appears to have converged.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1401,6 +1405,7 @@ during the computations.
     long fixed_length_matrix = 0;
     long n_xy_cycles = 1;
     long minimum_cycles = 1;
+    long force_alternation = 0;
     long n_iterations = 1;
     long prezero_correctors = 1;
     long track_before_and_after = 0;
@@ -1470,6 +1475,8 @@ length by changing the momentum offset of the beam.
 \item \verb|fixed_length_matrix| --- Indicates that for fixed-length orbit correction, the fixed-length
 matrix should be computed and used.  This will improve convergence but isn't always needed.
 \item \verb|n_xy_cycles| --- Number of times to alternate between correcting the x and y planes.
+\item \verb|force_alternation| --- Forces alternation between x and y correction even if one plane appears to 
+  have converged.
 \item \verb|minimum_cycles| --- The minimum number of x-y cycles to perform, even if the correction does not improve.
 \item \verb|n_iterations| --- Number of iterations of the correction in each plane for each x/y cycle.
 \item \verb|prezero_correctors| --- Flag indicating whether to set the correctors to zero before starting.
