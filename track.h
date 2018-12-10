@@ -633,6 +633,7 @@ typedef struct {
     long crossover_type;          /* For genetic optimization only */
     long nParticlesToMatch;
     double **coordinatesToMatch, particleMatchingWeight[6];
+    unsigned long particleMatchingMode;
     } OPTIMIZATION_DATA;
 
 typedef struct {

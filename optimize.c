@@ -17,11 +17,20 @@
 #if defined(__BORLANDC__)
 #define DBL_MAX         1.7976931348623158e+308 /* max value */
 #endif
+
 #include "optimize.h"
 #include "match_string.h"
 #include "chromDefs.h"
 #include "tuneDefs.h"
 #include "correctDefs.h"
+
+#define COMPARE_PARTICLE_SUM_ABSDEV 0x0001UL
+#define COMPARE_PARTICLE_MAX_ABSDEV 0x0002UL
+#define COMPARE_PARTICLE_SUM_SQR    0x0004UL
+#define N_PARTICLE_COMPARISON_MODES 3
+static char *particleDeviationComparisonMode[N_PARTICLE_COMPARISON_MODES] = {
+       "sum-ad", "max-ad", "sum-sqr", 
+} ;
 
 static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
@@ -583,6 +592,19 @@ void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAME
   }
   if (maxWeight==0)
       bombElegant("weights cannot all be zero", NULL);
+
+  optimization_data->particleMatchingMode = COMPARE_PARTICLE_SUM_ABSDEV;
+  if (set_reference_particle_output_struct.comparison_mode && strlen(set_reference_particle_output_struct.comparison_mode)) {
+    if ((i=match_string(set_reference_particle_output_struct.comparison_mode,
+                        particleDeviationComparisonMode, N_PARTICLE_COMPARISON_MODES, EXACT_MATCH))<0) {
+      fprintf(stderr, "unknown comparison mode \"%s\".  Known modes are ", set_reference_particle_output_struct.comparison_mode);
+      for (i=0; i<N_PARTICLE_COMPARISON_MODES; i++)
+        fprintf(stderr, "\"%s\"%s", particleDeviationComparisonMode[i],
+                i==(N_PARTICLE_COMPARISON_MODES-1)?"\n":", ");
+      exit(1);
+    }
+    optimization_data->particleMatchingMode = COMPARE_PARTICLE_SUM_ABSDEV<<i;
+  }
 
   printf("Reading reference particle data from %s\n", set_reference_particle_output_struct.match_to);
   fflush(stdout);
@@ -2951,7 +2973,6 @@ void SDDS_PrintStatistics(SDDS_TABLE *popLogPtr, long iteration, double best_val
 
 double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimData, long *invalid) 
 {
-  double sum, sum1;
   long i, j;
 
   *invalid = 0;
@@ -2971,14 +2992,45 @@ double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimDat
     }
   }
 
-  sum = 0;
-  for (j=0; j<6; j++) {
-    if (!optimData->particleMatchingWeight[j])
-      continue;
-    sum1 = 0;
-    for (i=0; i<optimData->nParticlesToMatch; i++) 
-      sum1 += sqr(beam->particle[i][j]-optimData->coordinatesToMatch[i][j]);
-    sum += sum1*optimData->particleMatchingWeight[j];
+  if (optimData->particleMatchingMode&COMPARE_PARTICLE_MAX_ABSDEV) {
+    /* maximum absolute deviation */
+    double maxAbsDev, absDev;
+    maxAbsDev = 0;
+    for (j=0; j<6; j++) {
+      if (!optimData->particleMatchingWeight[j])
+        continue;
+      for (i=0; i<optimData->nParticlesToMatch; i++) {
+        absDev = fabs(beam->particle[i][j]-optimData->coordinatesToMatch[i][j])*optimData->particleMatchingWeight[j];
+        if (absDev>maxAbsDev)
+          maxAbsDev = absDev;
+      }
+    }
+    return maxAbsDev;
+  } else if (optimData->particleMatchingMode&COMPARE_PARTICLE_SUM_ABSDEV) {
+    /* sum of absolute deviations */
+    double sum, sum1;
+    sum = 0;
+    for (j=0; j<6; j++) {
+      if (!optimData->particleMatchingWeight[j])
+        continue;
+      sum1 = 0;
+      for (i=0; i<optimData->nParticlesToMatch; i++) 
+        sum1 += fabs(beam->particle[i][j]-optimData->coordinatesToMatch[i][j]);
+      sum += sum1*optimData->particleMatchingWeight[j];
+    }
+    return sum;
+  } else {
+    /* sum of squared deviations */
+    double sum, sum1;
+    sum = 0;
+    for (j=0; j<6; j++) {
+      if (!optimData->particleMatchingWeight[j])
+        continue;
+      sum1 = 0;
+      for (i=0; i<optimData->nParticlesToMatch; i++) 
+        sum1 += sqr(beam->particle[i][j]-optimData->coordinatesToMatch[i][j]);
+      sum += sum1*optimData->particleMatchingWeight[j];
+    }
+    return sum;
   }
-  return sum;
 }
