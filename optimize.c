@@ -2339,6 +2339,16 @@ double optimization_function(double *value, long *invalid)
 #endif
     }
 
+#if USE_MPI
+#if DEBUG
+    printMessageAndTime(stdout, "Waiting on post-tracking barrier\n");
+#endif
+    MPI_Barrier(MPI_COMM_WORLD);
+#if DEBUG
+    printMessageAndTime(stdout, "Done waiting on post-tracking barrier\n");
+#endif
+#endif
+
     if (doFindAperture) {
       double area;
       do_aperture_search(run, control, startingOrbitCoord, error, beamline, &area);
@@ -2355,8 +2365,7 @@ double optimization_function(double *value, long *invalid)
 
       /* compute final parameters and store in rpn memories */
 #if DEBUG
-      printf("optimization_function: Computing final parameters\n");
-      fflush(stdout);
+      printMessageAndTime(stdout, "Computing final parameters\n");
 #endif
       if (!output->sums_vs_z)
 	bombElegant("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
@@ -2383,6 +2392,23 @@ double optimization_function(double *value, long *invalid)
 	  abort();
 	}
 
+#if DEBUG
+        printf("Done computing final parameters, invalid = %ld\n", *invalid);
+        fflush(stdout);
+#endif
+
+      psum = 0;
+#if USE_MPI
+      if (!partOnMaster)
+#endif
+        if (optimization_data->nParticlesToMatch) {
+          psum = particleComparisonForOptimization(beam, optimization_data, invalid);
+#if DEBUG
+          printf("optimization_function: returned from particleComparisonForOptimization, invalid = %ld\n", *invalid);
+          fflush(stdout);
+#endif
+        }
+
       if (isMaster || !notSinglePart) { /* Only the master will execute the block */
 	rpn_store_final_properties(final_property_value, final_property_values);
 	if (optimization_data->matrix_order>1)
@@ -2392,8 +2418,8 @@ double optimization_function(double *value, long *invalid)
 	free_matrices(M); free(M); M = NULL;
 
 #if DEBUG
-	printf("optimization_function: Checking constraints\n");
-	fflush(stdout);
+	printf("optimization_function: Checking constraints, invalid = %ld\n", *invalid);
+        fflush(stdout);
 #endif
 	/* check constraints */
 	if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
@@ -2406,6 +2432,9 @@ double optimization_function(double *value, long *invalid)
 		    final_property_value[constraints->index[i]]);
 	  if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
 	      conval>constraints->upper[i]) {
+#if DEBUG
+            printMessageAndTime(stdout, "optimization_function: constraint violated\n");
+#endif
 	    *invalid = 1;
 	    if (optimization_data->verbose && optimization_data->fp_log) {
 	      fprintf(optimization_data->fp_log, " ---- invalid\n\n");
@@ -2421,13 +2450,24 @@ double optimization_function(double *value, long *invalid)
 	}
       
 #if DEBUG
-	printf("optimization_function: Computing rpn function\n");
+	printf("optimization_function: Computing rpn function, invalid = %ld\n", *invalid);
 	fflush(stdout);
 #endif
-	result = psum = 0;
+	result = 0;
 	rpn_clear();
-        if (optimization_data->nParticlesToMatch)
-          psum = particleComparisonForOptimization(beam, optimization_data, invalid);
+#if USE_MPI
+        if (partOnMaster)
+#endif
+          if (optimization_data->nParticlesToMatch) {
+#if DEBUG
+            printMessageAndTime(stdout, "optimization_function: Computing sum over particle coordinates\n");
+#endif
+            psum = particleComparisonForOptimization(beam, optimization_data, invalid);
+#if DEBUG
+            printf("psum =  %le, invalid = %ld\n", psum, *invalid);
+            fflush(stdout);
+#endif
+          }
 	if (!*invalid) {
 	  long i=0, terms=0;
 	  double value, sum;
@@ -2976,21 +3016,94 @@ double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimDat
   long i, j;
 
   *invalid = 0;
-  if (beam->n_to_track!=optimData->nParticlesToMatch) {
-    printf("Mismatch in comparison of particles after tracking: %ld needed but %ld present\n",
-           beam->n_to_track, optimData->nParticlesToMatch);
-    *invalid = 1;
-    return 0;
-  }
 
-  for (i=0; i<optimData->nParticlesToMatch; i++) {
-    if (beam->particle[i][6]!=optimData->coordinatesToMatch[i][6]) {
-      printf("Mismatch of particle ID for particle %ld: %.0lf expected but %.0lf found\n",
-             i, beam->particle[i][6], optimData->coordinatesToMatch[i][6]);
+  /* determine if number of particles is correct and if particle IDs match up */
+#if USE_MPI
+  if (!partOnMaster) {
+    long k, nLeft, nTotalLeft, globalInvalid;
+    double particleStat[6] = {0, 0, 0, 0, 0, 0}, value;
+    double globalValue;
+    if (myid==0)
+      nLeft = 0;
+    else 
+      nLeft = beam->n_to_track;
+    MPI_Allreduce(&nLeft, &nTotalLeft, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    fflush(stdout);
+    if (nTotalLeft!=optimData->nParticlesToMatch) {
       *invalid = 1;
       return 0;
     }
+
+    for (i=0; i<nLeft; i++) {
+      for (j=0; j<optimData->nParticlesToMatch; j++) {
+        if (beam->particle[i][6]==optimData->coordinatesToMatch[j][6]) {
+          for (k=0; k<6; k++) {
+            if (optimData->particleMatchingWeight[j]) {
+              if (optimData->particleMatchingMode&COMPARE_PARTICLE_MAX_ABSDEV) {
+                if ((value = fabs(beam->particle[i][k] - optimData->coordinatesToMatch[j][k]))>particleStat[k])
+                  particleStat[k] = value;
+              } else if (optimData->particleMatchingMode&COMPARE_PARTICLE_SUM_ABSDEV) {
+                particleStat[k] += fabs(beam->particle[i][k] - optimData->coordinatesToMatch[j][k]);
+              } else { 
+                particleStat[k] += sqr(beam->particle[i][k] - optimData->coordinatesToMatch[j][k]);
+              }
+            }
+          }
+          break;
+        }
+      }
+      if (j==optimData->nParticlesToMatch) {
+        printf("No particle found for ID = %.0lf\n", beam->particle[i][6]);
+        *invalid = 1;
+        break;
+      }
+    }
+    MPI_Allreduce(invalid, &globalInvalid, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (globalInvalid) {
+      *invalid = 1;
+      return 0;
+    }
+    *invalid = 0;
+    for (k=0; k<6; k++) {
+      value = particleStat[k]*optimData->particleMatchingWeight[k];
+      if (optimData->particleMatchingMode&COMPARE_PARTICLE_MAX_ABSDEV)
+        MPI_Allreduce(&value, &globalValue, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      else 
+        MPI_Allreduce(&value, &globalValue, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      particleStat[k] = globalValue;
+    }
+    if (optimData->particleMatchingMode&COMPARE_PARTICLE_MAX_ABSDEV) {
+      find_min_max(NULL, &value, particleStat, 6);
+    } else {
+      for (k=value=0; k<6; k++)
+        value += particleStat[k];
+    }
+    return value;
+  } else {
+#endif
+    /* In this case, each processor (maybe only 1) tracks all the particles */
+
+    if (beam->n_to_track!=optimData->nParticlesToMatch) {
+      printf("Mismatch in comparison of particles after tracking: %ld needed but %ld present\n",
+             optimData->nParticlesToMatch, beam->n_to_track);
+      fflush(stdout);
+      *invalid = 1;
+      return 0;
+    }
+    
+    for (i=0; i<optimData->nParticlesToMatch; i++) {
+      if (beam->particle[i][6]!=optimData->coordinatesToMatch[i][6]) {
+        printf("Mismatch of particle ID for particle %ld: %.0lf expected but %.0lf found\n",
+               i, beam->particle[i][6], optimData->coordinatesToMatch[i][6]);
+        fflush(stdout);
+        *invalid = 1;
+        return 0;
+      }
+    }
+
+#if USE_MPI
   }
+#endif
 
   if (optimData->particleMatchingMode&COMPARE_PARTICLE_MAX_ABSDEV) {
     /* maximum absolute deviation */
