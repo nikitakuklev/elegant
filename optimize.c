@@ -53,6 +53,7 @@ void checkTarget(double myResult);
 #endif
 
 static time_t interrupt_file_mtime = 0;
+static long interrupt_file_step = 0;
 time_t get_mtime(char *filename)
 {
   struct stat statbuf;
@@ -146,7 +147,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       interrupt_file = NULL;
       interrupt_file_mtime = 0;
     }
-    
+
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
         set_element_flags(beamline, optimization_data->variables.element, NULL, NULL, 
@@ -1863,7 +1864,18 @@ double optimization_function(double *value, long *invalid)
 
   if (restart_random_numbers)
     seedElegantRandomNumbers(0, RESTART_RN_ALL);
-  
+
+  if (interrupt_file) {
+    if (interrupt_file_check_interval>0 && interrupt_file_step%interrupt_file_check_interval==0) {
+      if (fexists(interrupt_file) && 
+          (interrupt_file_mtime==0 || interrupt_file_mtime<get_mtime(interrupt_file))) {
+        printf("Interrupt file %s was created or changed---beginning termination of optimization loop\n", interrupt_file);
+        simplexMinAbort(1);
+      }
+    }
+    interrupt_file_step++;
+  }
+
   *invalid = 0;
   unstable = 0;
   n_evaluations_made++;

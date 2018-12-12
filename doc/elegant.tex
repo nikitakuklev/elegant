@@ -67,6 +67,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   to continue with x/y alternation regardless of whether one plane appears to have converged.
 \item The \verb|set_reference_particle_output| command was added. It allows defining a reference set of particle coordinates
   to which tracked coordinates will be compared for purposes of optimization.
+\item The \verb|optimization_setup| command now allows setting the interval (in terms of function evaluations) 
+  between checks of the interrupt semaphore file. Previously, the file was checked only at the end of a simplex pass.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3441,6 +3443,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long start_from_simplex_vertex1 = 0;
     long restart_random_numbers = 0;
     STRING interrupt_file = "%s.interrupt";
+    long interrupt_file_check_interval = 0;
 &end
 \end{verbatim}
 
@@ -3645,6 +3648,11 @@ a significant difference in the optimization speed.
 \item \verb|interrupt_file| --- Gives the name of a file that will be monitored by the program as it runs.
   If the file is created or modified while optimization is running, the optimizer will complete the present
   step and cleanly terminate, allowing subsequent commands, if any, to proceed.
+\item \verb|interrupt_file_check_interval| --- If nonzero, then gives the interval in function evaluations between
+  checks of the interrupt file. If zero, the interrupt file is only
+  checked at the end of a simplex pass.
+  N.B.: Depending on the responsiveness of the file system and the time required for a function evaluation, setting
+  this to a small value could have a significant adverse impact on the run time. 
 \end{itemize}
 
 %\begin{latexonly}
