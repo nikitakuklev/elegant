@@ -2339,16 +2339,6 @@ double optimization_function(double *value, long *invalid)
 #endif
     }
 
-#if USE_MPI
-#if DEBUG
-    printMessageAndTime(stdout, "Waiting on post-tracking barrier\n");
-#endif
-    MPI_Barrier(MPI_COMM_WORLD);
-#if DEBUG
-    printMessageAndTime(stdout, "Done waiting on post-tracking barrier\n");
-#endif
-#endif
-
     if (doFindAperture) {
       double area;
       do_aperture_search(run, control, startingOrbitCoord, error, beamline, &area);
