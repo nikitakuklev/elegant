@@ -1041,6 +1041,7 @@ extern char *entity_text[N_TYPES];
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
 #define N_HKPOLY_PARAMS (2*49+7)
+  /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -3251,6 +3252,9 @@ typedef struct {
   /* Internal parameters --- See SCRAPER element for the direction codes */
   unsigned long direction;
 } SPEEDBUMP;
+
+
+  /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
