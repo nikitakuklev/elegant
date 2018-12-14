@@ -3022,6 +3022,8 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
     };
 
+/* END OF ELEMENT DICTIONARY ARRAYS */
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
