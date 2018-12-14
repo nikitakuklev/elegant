@@ -892,7 +892,14 @@ int integrate_kick_KnL(double *coord, /* coordinates of the particle */
       xp = qx/(denom=sqrt(denom));
       yp = qy/denom;
       /* these three quantities are needed for radiation integrals */
-      lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
+      if (nTerms==1)
+        lastRho = 1/(KnL[0]/drift);
+      else if (nTerms==2)
+        lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift));
+      else if (nTerms>2)
+        lastRho = 1/(KnL[0]/drift + x*(KnL[1]/drift) + x*x*(KnL[2]/drift)/2);
+      else 
+        bombElegant("nTerms apparently less than zero in CCBEND", NULL);
       lastX = x;
       lastXp = xp;
       if ((rad_coef || isr_coef) && drift) {
