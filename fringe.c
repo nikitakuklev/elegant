@@ -42,16 +42,18 @@ void quadFringe(double **coord, long np, double K1,
     M2 = tmalloc(sizeof(*M2));
     initialize_matrices(M2, 1);
     
-    /* determine first linear matrix for this delta */
-    quadPartialFringeMatrix(M1, K1, -1, inFringe==-1?fringeIntP0:fringeIntM0, inFringe==-1?1:2);
-    if (inFringe!=-1) {
+    /* determine linear matrix for this delta */
+    quadPartialFringeMatrix(M1, K1, 1, fringeIntM0, 1);
+    quadPartialFringeMatrix(M2, K1, 1, fringeIntP0, 2);
+    if (inFringe==-1) {
+      VMATRIX *Mtmp;
       SWAP_DOUBLE(M1->R[0][0], M1->R[1][1]);
       SWAP_DOUBLE(M1->R[2][2], M1->R[3][3]);
-    }
-    quadPartialFringeMatrix(M2, K1, -1, inFringe!=-1?fringeIntP0:fringeIntM0, inFringe!=-1?1:2);
-    if (inFringe!=-1) {
       SWAP_DOUBLE(M2->R[0][0], M2->R[1][1]);
       SWAP_DOUBLE(M2->R[2][2], M2->R[3][3]);
+      Mtmp = M1;
+      M1 = M2;
+      M2 = Mtmp;
     }
   }
 
