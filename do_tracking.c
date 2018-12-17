@@ -2124,6 +2124,7 @@ long do_tracking(
 	      if ((!USE_MPI || !notSinglePart) || (USE_MPI && (myid!=0)))
                 trackThroughExactCorrector(coord, nToTrack, eptr, *P_central, accepted, last_z, NULL);
 	      break;
+              /* INSERT ENTRIES FOR NEW ELEMENTS ABOVE THIS LINE */
 	    default:
 	      printf("programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);

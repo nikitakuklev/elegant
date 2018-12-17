@@ -1662,6 +1662,7 @@ VMATRIX *compute_matrix(
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         run->p_central = pSave;
         break;
+        /* INSERT NEW CASES ABOVE THIS POINT */
       case T_KPOLY: case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
       case T_ECOL: case T_TRCOUNT: case T_RECIRC: case T_SCRAPER: case T_CENTER: 
