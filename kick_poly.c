@@ -248,7 +248,7 @@ long polynomial_hamiltonian(
         for (iqy=0; iqy<=iqyMax; iqy++) {
           if (iqx)
             x += factor*hkpoly->D[iqx][iqy]*qxpow1*qypow/2;
-          if (iy)
+          if (iqy)
             y += factor*hkpoly->D[iqx][iqy]*qxpow*qypow1/2;
           qypow1 = qypow*(iqy+1);
           qypow *= qy;
@@ -286,7 +286,7 @@ long polynomial_hamiltonian(
         for (iqy=0; iqy<=iqyMax; iqy++) {
           if (iqx)
             x += factor*hkpoly->D[iqx][iqy]*qxpow1*qypow/2;
-          if (iy)
+          if (iqy)
             y += factor*hkpoly->D[iqx][iqy]*qxpow*qypow1/2;
           qypow1 = qypow*(iqy+1);
           qypow *= qy;
