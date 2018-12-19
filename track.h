@@ -1040,7 +1040,7 @@ extern char *entity_text[N_TYPES];
 #define N_IONEFFECTS_PARAMS 8
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
-#define N_HKPOLY_PARAMS (2*49+7)
+#define N_HKPOLY_PARAMS (2*49+7*7*7+8)
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2149,9 +2149,10 @@ extern PARAMETER hkpoly_param[N_HKPOLY_PARAMS];
 
 typedef struct {
   double length;
-  double K[7][7], D[7][7];
+  double K[7][7], D[7][7], E[7][7][7];
   double tilt, dx, dy, dz, factor;
   long nRepeats;
+  short driftType;
   } HKPOLY;
 
 /* names and storage structure for numerically integrated bending magnet physical parameters */

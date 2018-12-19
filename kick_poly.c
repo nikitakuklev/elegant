@@ -143,13 +143,13 @@ long polynomial_hamiltonian(
     )
 {
   double dx, dy, dz;  /* offsets of the multipole center */
-  long i_part, i_top, ix, iy, iqx, iqy, ir;
-  long ixMax, iyMax, iqxMax, iqyMax;
+  long i_part, i_top, ix, iy, iqx, iqy, ir, idelta;
+  long ixMax, iyMax, iqxMax, iqyMax, ideltaMax;
   double *coord;
   double cos_tilt, sin_tilt;
-  double x, xp, y, yp, qx, qy;
-  double factor;
-  double xpow, ypow, qxpow, qypow;
+  double x, xp, y, yp, qx, qy, delta;
+  double factor, dfactor;
+  double xpow, ypow, qxpow, qypow, deltapow;
   double xpow1, ypow1, qxpow1, qypow1;
 
   if (!particle)
@@ -177,16 +177,54 @@ long polynomial_hamiltonian(
       }
     }
   }
-  iqxMax = iqyMax = -1;
-  for (iqx=0; iqx<7; iqx++) {
-    for (iqy=0; iqy<7; iqy++) {
-      if (hkpoly->D[iqx][iqy]!=0) {
-        if (iqx>iqxMax) iqxMax = iqx;
-        if (iqy>iqyMax) iqyMax = iqy;
+
+  if (hkpoly->driftType==1) {
+    for (iqx=0; iqx<7; iqx++) {
+      for (iqy=0; iqy<7; iqy++) {
+	for (idelta=0; idelta<7; idelta++) {
+	  if (hkpoly->E[iqx][iqy][idelta]!=0) {
+	    bombElegantVA("E[%ld][%ld][%ld] is nonzero but DRIFT_TYPE=1 in HKPOLY",
+			  iqx, iqy, idelta);
+	  }
+	}
       }
     }
-  }
+ 
+    iqxMax = iqyMax = -1;
+    for (iqx=0; iqx<7; iqx++) {
+      for (iqy=0; iqy<7; iqy++) {
+	if (hkpoly->D[iqx][iqy]!=0) {
+	  if (iqx>iqxMax) iqxMax = iqx;
+	  if (iqy>iqyMax) iqyMax = iqy;
+	}
+      }
+    }
+  } else if (hkpoly->driftType==2) {
+    for (iqx=0; iqx<7; iqx++) {
+      for (iqy=0; iqy<7; iqy++) {
+	if (hkpoly->D[iqx][iqy]!=0) {
+	  bombElegantVA("D[%ld][%ld] is nonzero but DRIFT_TYPE=2 in HKPOLY",
+			iqx, iqy);
+	}
+      }
+    }
 
+    iqxMax = iqyMax = ideltaMax = -1;
+    for (iqx=0; iqx<7; iqx++) {
+      for (iqy=0; iqy<7; iqy++) {
+	for (idelta=0; idelta<7; idelta++) {
+	  if (hkpoly->E[iqx][iqy][idelta]!=0) {
+	    if (iqx>iqxMax) iqxMax = iqx;
+	    if (iqy>iqyMax) iqyMax = iqy;
+	    if (idelta>ideltaMax) ideltaMax = idelta;
+	  }
+	}
+      }
+    }
+  } else {
+    bombElegant("DRIFT_TYPE must be 1 or 2 for HKPOLY", NULL);
+  }
+  
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
@@ -236,28 +274,58 @@ long polynomial_hamiltonian(
 #endif
 
     factor = hkpoly->factor/hkpoly->nRepeats;
-    convertSlopesToMomenta(&qx, &qy, xp, yp, coord[5]);
-    for (ir=0; ir<hkpoly->nRepeats; ir++) {
-      qx /= (1+coord[5]);
-      qy /= (1+coord[5]);
-      qxpow = 1;
-      qxpow1 = 0;
-      for (iqx=0; iqx<=iqxMax; iqx++) {
-        qypow = 1;
-        qypow1 = 0;
-        for (iqy=0; iqy<=iqyMax; iqy++) {
-          if (iqx)
-            x += factor*hkpoly->D[iqx][iqy]*qxpow1*qypow/2;
-          if (iqy)
-            y += factor*hkpoly->D[iqx][iqy]*qxpow*qypow1/2;
-          qypow1 = qypow*(iqy+1);
-          qypow *= qy;
-        }
-        qxpow1 = qxpow*(iqx+1);
-        qxpow *= qx;
+    delta = coord[5];
+    convertSlopesToMomenta(&qx, &qy, xp, yp, delta);
+    for (ir=0; ir<=hkpoly->nRepeats; ir++) {
+      dfactor = 1;
+      if (ir==0 || ir==hkpoly->nRepeats)
+	dfactor = 0.5;
+      if (hkpoly->driftType==1) {
+	qx /= (1+delta);
+	qy /= (1+delta);
+	qxpow = 1;
+	qxpow1 = 0;
+	for (iqx=0; iqx<=iqxMax; iqx++) {
+	  qypow = 1;
+	  qypow1 = 0;
+	  for (iqy=0; iqy<=iqyMax; iqy++) {
+	    if (iqx)
+	      x += factor*hkpoly->D[iqx][iqy]*qxpow1*qypow*dfactor;
+	    if (iqy)
+	      y += factor*hkpoly->D[iqx][iqy]*qxpow*qypow1*dfactor;
+	    qypow1 = qypow*(iqy+1);
+	    qypow *= qy;
+	  }
+	  qxpow1 = qxpow*(iqx+1);
+	  qxpow *= qx;
+	}
+	qx *= (1+delta);
+	qy *= (1+delta);
+      } else {
+	qxpow = 1;
+	qxpow1 = 0;
+	for (iqx=0; iqx<=iqxMax; iqx++) {
+	  qypow = 1;
+	  qypow1 = 0;
+	  for (iqy=0; iqy<=iqyMax; iqy++) {
+	    deltapow = 1;
+	    for (idelta=0; idelta<=ideltaMax; idelta++) {
+	      if (iqx)
+		x += factor*hkpoly->E[iqx][iqy][idelta]*qxpow1*qypow*deltapow*dfactor;
+	      if (iqy)
+		y += factor*hkpoly->E[iqx][iqy][idelta]*qxpow*qypow1*deltapow*dfactor;
+	      deltapow *= delta;
+	    }
+	    qypow1 = qypow*(iqy+1);
+	    qypow *= qy;
+	  }
+	  qxpow1 = qxpow*(iqx+1);
+	  qxpow *= qx;
+	}
       }
-      qx *= (1+coord[5]);
-      qy *= (1+coord[5]);
+
+      if (ir==hkpoly->nRepeats)
+	break;
       
       xpow = 1;
       xpow1 = 0;
@@ -276,28 +344,8 @@ long polynomial_hamiltonian(
         xpow *= x;
       }
       
-      qx /= (1+coord[5]);
-      qy /= (1+coord[5]);
-      qxpow = 1;
-      qxpow1 = 0;
-      for (iqx=0; iqx<=iqxMax; iqx++) {
-        qypow = 1;
-        qypow1 = 0;
-        for (iqy=0; iqy<=iqyMax; iqy++) {
-          if (iqx)
-            x += factor*hkpoly->D[iqx][iqy]*qxpow1*qypow/2;
-          if (iqy)
-            y += factor*hkpoly->D[iqx][iqy]*qxpow*qypow1/2;
-          qypow1 = qypow*(iqy+1);
-          qypow *= qy;
-        }
-        qxpow1 = qxpow*(iqx+1);
-        qxpow *= qx;
-      }
-      qx *= (1+coord[5]);
-      qy *= (1+coord[5]);
-    }
-    convertMomentaToSlopes(&xp, &yp, qx, qy, coord[5]);
+    } /* loop over repeats */
+    convertMomentaToSlopes(&xp, &yp, qx, qy, delta);
 
     /* undo the rotation and store in place of initial coordinates */
     coord[0] = cos_tilt*x - sin_tilt*y;
