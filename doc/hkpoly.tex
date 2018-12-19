@@ -11,7 +11,7 @@ The changes to the momenta are determined via Hamilton's equations, e.g.,
 
 It also implements a generalized drift that is described by another Hamiltonian
 \begin{equation}
-H_d\Delta s = \sum_{i=0}^{6} \sum_{j=0}^{6} D_{ij} q_x^i q_y^j 
+H_d\Delta s = (1+\delta) \sum_{i=0}^{6} \sum_{j=0}^{6} D_{ij} \left(\frac{q_x}{1+\delta}\right)^i \left(\frac{q_y}{1+\delta}\right)^j
 \end{equation}
 where $K_{00} = 0$.
 Again, the changes to the positions are determined via Hamilton's equations, e.g., 
