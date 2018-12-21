@@ -851,7 +851,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double **initialCoord, **finalCoord, **coordError;
   long n_track, i, j, n_left;
   VMATRIX *M;
-  double defaultStep[6] = {1e-4, 1e-4, 1e-4, 1e-4, 1e-4, 1e-4};
+  double defaultStep[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
   double maximumValue[6];
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
