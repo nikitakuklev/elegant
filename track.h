@@ -634,6 +634,7 @@ typedef struct {
     long nParticlesToMatch;
     double **coordinatesToMatch, particleMatchingWeight[6];
     unsigned long particleMatchingMode;
+    long statistic;
     } OPTIMIZATION_DATA;
 
 typedef struct {

@@ -13,6 +13,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     "simplex", "grid", "sample", "powell", "randomsample", "randomwalk", "genetic", "hybridsimplex", "swarm"
     } ;
 
+      
 #if USE_MPI
 /* This is needed by the parallel version. There will be a warning that it is unused when compiling the serial version */
 static char *crossover_type[N_CROSSOVER_TYPES] = {
@@ -36,6 +37,7 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     STRING equation = NULL;
     STRING mode = "minimize";
     STRING method = "simplex";
+    STRING statistic = "sum";
     double tolerance = -0.01;
     double hybrid_simplex_tolerance = -0.01;
     double hybrid_simplex_tolerance_count = 2;

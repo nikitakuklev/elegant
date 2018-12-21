@@ -32,11 +32,24 @@ static char *particleDeviationComparisonMode[N_PARTICLE_COMPARISON_MODES] = {
        "sum-ad", "max-ad", "sum-sqr", 
 } ;
 
+#define STATISTIC_SUM_ABS  0
+#define STATISTIC_MAXIMUM  1
+#define STATISTIC_MINIMUM  2
+#define STATISTIC_SUM_SQR 3
+#define N_OPTIM_STATS 4
+static char *optimize_statistic[N_OPTIM_STATS] = {
+  "sum-absolute-value", "maximum", "minimum", "sum-squares"
+   };
+
 static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
 void storeOptimRecord(double *value, long values, long invalid, double result);
 void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
 double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimData, long *invalid);
+
+void initializeOptimizationStatistics(double *sum, double *sum2, double *min, double *max);
+void updateOptimizationStatistics(double *sum, double *sum2, double *min, double *max, double value);
+double chooseOptimizationStatistic(double sum, double sum2, double min, double max, long stat);
 
 #if USE_MPI
 /* Find the global minimal value and its location across all the processors */
@@ -68,7 +81,6 @@ long myid=0;
 
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-
     log_entry("do_optimization_setup");
 
     /* process the namelist text */
@@ -84,6 +96,13 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->equation = equation;
     if ((optimization_data->method=match_string(method, optimize_method, N_OPTIM_METHODS, EXACT_MATCH))<0)
         bombElegant("unknown optimization method", NULL);
+    if (statistic==NULL || 
+	(optimization_data->statistic=match_string(statistic, optimize_statistic, N_OPTIM_STATS, EXACT_MATCH))<0) {
+      long i;
+      fprintf(stderr, "Unknown optimization statistic: %s.  Known values are ", statistic);
+      for (i=0; i<N_OPTIM_STATS; i++)
+	fprintf(stderr, "\"%s\"%s", optimize_statistic[i], i==(N_OPTIM_STATS-1)?"\n":", ");
+    }
     if ((optimization_data->tolerance=tolerance)==0)
         bombElegant("tolerance == 0", NULL);
     if ((optimization_data->n_passes=n_passes)<=0)
@@ -2399,7 +2418,7 @@ double optimization_function(double *value, long *invalid)
         fflush(stdout);
 #endif
 
-      psum = 0;
+      psum = -1;
 #if USE_MPI
       if (!partOnMaster)
 #endif
@@ -2472,8 +2491,8 @@ double optimization_function(double *value, long *invalid)
           }
 	if (!*invalid) {
 	  long i=0, terms=0;
-	  double value, sum;
-          sum = 0;
+	  double value, sum, min, max, sum2;
+	  initializeOptimizationStatistics(&sum, &sum2, &min, &max);
 	  if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
 	    for (i=0; i<optimization_data->terms; i++) {
 	      rpn_clear();
@@ -2483,7 +2502,7 @@ double optimization_function(double *value, long *invalid)
 	      }
 	      else
 		optimization_data->termWeight[i] = 0;
-	      sum += fabs(value);
+	      updateOptimizationStatistics(&sum, &sum2, &min, &max, value);
 	      if (rpn_check_error()) {
 		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 		rpn_clear_error();
@@ -2512,20 +2531,31 @@ double optimization_function(double *value, long *invalid)
 	  /* compute and return quantity to be optimized */
 	  if (optimization_data->terms) {
 	    long i;
-            result = psum;
+	    double value, sum, min, max, sum2;
+	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
+	    if (psum>=0)
+	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
 	    for (i=0; i<optimization_data->terms; i++)  {
 	      rpn_clear();
-	      result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+	      value = optimization_data->termValue[i]
+		= optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
+	      updateOptimizationStatistics(&sum, &sum2, &min, &max, value);
 	      if (rpn_check_error()) {
 		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 		rpn_clear_error();
 		rpnError++;
 	      }
 	    }
+	    result = chooseOptimizationStatistic(sum, sum2, min, max, optimization_data->statistic);
 	  }
 	  else {
+	    double value, sum, min, max, sum2;
+	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
+	    if (psum>=0)
+	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
 	    rpn_clear();    /* clear rpn stack */
-	    result = rpn(optimization_data->UDFname) + psum;
+	    updateOptimizationStatistics(&sum, &sum2, &min, &max, rpn(optimization_data->UDFname));
+	    result = chooseOptimizationStatistic(sum, sum2, min, max, optimization_data->statistic);
 	    if (rpn_check_error()) {
 	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 	      rpnError++;
@@ -2544,7 +2574,6 @@ double optimization_function(double *value, long *invalid)
 	      fflush(optimization_data->fp_log);
 	      if (optimization_data->terms && !*invalid) {
 		fprintf(optimization_data->fp_log, "Terms of equation: \n");
-                sum = psum;
                 if (optimization_data->nParticlesToMatch)
 		  fprintf(optimization_data->fp_log, "1*(particle comparison): %23.15e\n",
                           psum);
@@ -2554,7 +2583,6 @@ double optimization_function(double *value, long *invalid)
 			  optimization_data->termWeight[i],
 			  optimization_data->term[i],
 			  optimization_data->termValue[i]);
-		  sum += optimization_data->termValue[i];
 		}
 	      }
 	      fprintf(optimization_data->fp_log, "\n\n");
@@ -2790,14 +2818,12 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
 #endif
     n_passes_made = pass;
     if (optimization_data->terms) {
-      double sum;
       fprintf(optimization_data->fp_log, "Terms of equation: \n");
-      for (i=sum=0; i<optimization_data->terms; i++) {
+      for (i=0; i<optimization_data->terms; i++) {
         rpn_clear();
         fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
                 optimization_data->termWeight[i], optimization_data->term[i],
                 rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
-        sum += rpn(optimization_data->term[i])*optimization_data->termWeight[i];
       }
     }
     
@@ -3148,4 +3174,44 @@ double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimDat
     }
     return sum;
   }
+}
+
+void initializeOptimizationStatistics(double *sum, double *sum2, double *min, double *max)
+{
+  *sum = *sum2 = 0;
+  *min = DBL_MAX;
+  *max = -DBL_MAX;
+}
+
+void updateOptimizationStatistics(double *sum, double *sum2, double *min, double *max, double value)
+{
+  *sum += fabs(value);
+  *sum2 += sqr(value);
+  if (value>*max)
+    *max = value;
+  if (value<*min)
+    *min = value;
+}
+
+double chooseOptimizationStatistic(double sum, double sum2, double min, double max, long stat)
+{
+  double result;
+  switch (stat) {
+  case STATISTIC_SUM_ABS:
+    result = sum;
+    break;
+  case STATISTIC_MAXIMUM:
+    result = max;
+    break;
+  case STATISTIC_MINIMUM:
+    result = min;
+    break;
+  case STATISTIC_SUM_SQR:
+    result = sum2;
+    break;
+  default:
+    result = sum;
+    break;
+  }
+  return result;
 }
