@@ -1127,7 +1127,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>correct->minimum_cycles) {
+          if (rms_before<=(rms_after+correct->CMFx->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
             x_failed = 1;
             if (correct->verbose && !correct->forceAlternation)
               fputs("orbit not improved--discontinuing horizontal correction\n", stdout);
@@ -1183,7 +1183,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && i_cycle>correct->minimum_cycles) {
+          if (rms_before<=(rms_after+correct->CMy->corr_accuracy) && i_cycle>=correct->minimum_cycles) {
             y_failed = 1;
             if (correct->verbose && !correct->forceAlternation)
               fputs("orbit not improved--discontinuing vertical correction\n", stdout);
