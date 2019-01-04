@@ -467,11 +467,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
          definition of insertions */
       if ((code=insertElem(eptr->name, eptr->type, &skip, eptr->occurence, eptr->end_pos))) {
         if (code==1) {
+          /* insert after */
           add_element(eptr, eptr_add); 
           eptr = eptr->succ;		/* move pointer to new added element */
         } else if (eptr->pred) {
-          add_element(eptr->pred, eptr_add); 
-          eptr = eptr->succ;		/* move pointer to next element */
+          /* insert before */
+          add_element(eptr->pred, eptr_add);
         }
         nelem++;
       }
@@ -623,19 +624,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     fflush(stdout);
   }
 
-  /* create a hash table with the size of 2^12, it can grow automatically if necessary */
-  if (!load_hash)
-     load_hash = hcreate(12);  
+  create_load_hash(&(lptr->elem));
 
-  eptr = &(lptr->elem);
-  while (eptr) {
-    /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
-      sprintf (occurence_s, "#%ld", eptr->occurence);
-      strcpy (eptr_name, eptr->name);
-      strcat (eptr_name, occurence_s);
-      hadd (load_hash, eptr_name, strlen(eptr_name), (void*)eptr);
-      eptr = eptr->succ;
-  }
   if (echo) {
     printf("Step 3 done.\n");
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
@@ -657,6 +647,27 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   }
 
   return(lptr);
+}
+
+void create_load_hash(ELEMENT_LIST *elem) 
+{
+  ELEMENT_LIST *eptr;
+  char occurence_s[8], eptr_name[1024];
+
+  /* create/recreate a hash table with the size of 2^12, it can grow automatically if necessary */
+  if (load_hash)
+    hdestroy(load_hash);
+  load_hash = hcreate(12);  
+  
+  eptr = elem;
+  while (eptr) {
+    /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
+    sprintf (occurence_s, "#%ld", eptr->occurence);
+    strcpy (eptr_name, eptr->name);
+    strcat (eptr_name, occurence_s);
+    hadd (load_hash, eptr_name, strlen(eptr_name), (void*)eptr);
+    eptr = eptr->succ;
+  }
 }
 
 static long negativeLengthWarningsLeft = 100;

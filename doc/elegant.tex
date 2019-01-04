@@ -54,12 +54,18 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   \verb|after|, and \verb|before|)  of the \verb|steering_element| command now work better when multiple
   such commands are given. In particular, overlapping intervals are detected and non-overlapping intervals
   are correctly implemented.
+\item The \verb|load_parameters| command with \verb|change_defined_values=0| 
+  did not work correctly when combined with \verb|insert_elements| or \verb|replace_elements|.
+  This was reported by G. Penn (LBNL).
+\item The \verb|insert_elements| command would sometimes fail to insert all the intended elements when 
+  \verb|insert_before=1| when insertion between consecutive elements was required.
+  This was reported by G. Penn (LBNL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item The \verb|HKPOLY| element was added. It allows imparting kicks to the beam according to 
-  a Hamiltonians that are polynomial functions of $(x, y)$ and $(qx, qy)$. R. Lindberg (APS) helped develop the
+  a Hamiltonians that are polynomial functions of $(x, y)$ and $(qx, qy, \delta)$. R. Lindberg (APS) helped develop the
   concept for this element.
 \end{itemize}
 
@@ -2425,6 +2431,7 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
         double s_end = -1;
         long skip = 1;
         long disable = 0;
+        long insert_before = 0;
         long add_at_end = 0;
         long add_at_start = 0;
         STRING element_def = NULL;
@@ -2445,6 +2452,8 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   Note that the s locations are not updated as elements are inserted, but only after completion of all insertions covered by
   a single command.
 \item \verb|disable| --- If nonzero, the command is ignored.
+\item \verb|insert_before| --- If nonzero, the insertions are before the selected elements. By default, insertion is after
+  the selected elements.
 \item \verb|add_at_end| --- If nonzero, the element is also inserted to the end of the beamline.
 \item \verb|add_at_start| --- If nonzero, the element is also inserted to the start of the beamline, ahead of all other elements.
 \item \verb|element_def| --- The definition of the new element should be just as it would be entered in 

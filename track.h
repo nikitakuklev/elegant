@@ -3770,6 +3770,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
                                      long checkDiv);
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 extern void delete_matrix_data(LINE_LIST *beamline);
+extern void create_load_hash(ELEMENT_LIST *elem);
 
 extern void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1);
 extern ELEMENT_LIST *rm_element(ELEMENT_LIST *elem); 
