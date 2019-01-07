@@ -10,7 +10,8 @@ typedef struct {
   double dz;           /* z spacing */
   double zMin, zMax;   /* minimum and maximum z values */
   long order;          /* order of derivative. 1 = quadrupole */
-  double *dBnDxn;      /* data: d^nB/dx^n in T/m^n */
+  long nDz1;           /* (number of z derivatives)+1 */
+  double **fieldData;  /* data: Dz^m[Dx^n B] in T/m^(n+m), n=order */
 } STORED_BOFFAXE_DATA;
 
 static STORED_BOFFAXE_DATA *storedBOFFAXEData = NULL;
@@ -82,7 +83,24 @@ long addBOFFAXEData(char *filename, char *zColumn, char *dataColumn, long order)
   storedBOFFAXEData[nBOFFAXEDataSets].zMin = DBL_MAX;
   storedBOFFAXEData[nBOFFAXEDataSets].zMax = -DBL_MAX;
   storedBOFFAXEData[nBOFFAXEDataSets].order = 0;
-  storedBOFFAXEData[nBOFFAXEDataSets].dBnDxn = NULL;
+  storedBOFFAXEData[nBOFFAXEDataSets].fieldData = NULL;
+  storedBOFFAXEData[nBOFFAXEDataSets].nDz1 = 1;
+  
+  /* find z-derivative columns, with names of form <dataColumn>Deriv, <dataColumn>Deriv2, <dataColumn>Deriv3,  ... */
+  while (1) {
+    if (storedBOFFAXEData[nBOFFAXEDataSets].nDz1==1)
+      sprintf(buffer, "%sDeriv", dataColumn);
+    else 
+      sprintf(buffer, "%sDeriv%ld", dataColumn, storedBOFFAXEData[nBOFFAXEDataSets].nDz1);
+    if (SDDS_CheckColumn(&SDDSin, buffer, NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+      printf("Found %ldth derivative in column %s\n", storedBOFFAXEData[nBOFFAXEDataSets].nDz1, buffer);
+      fflush(stdout);
+      storedBOFFAXEData[nBOFFAXEDataSets].nDz1++;
+    } else 
+      break;
+  } 
+  storedBOFFAXEData[nBOFFAXEDataSets].fieldData 
+    = tmalloc(sizeof(*(storedBOFFAXEData[nBOFFAXEDataSets].fieldData))*storedBOFFAXEData[nBOFFAXEDataSets].nDz1);
 
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (readCode==1) {
@@ -112,9 +130,18 @@ long addBOFFAXEData(char *filename, char *zColumn, char *dataColumn, long order)
       }
       free(z);
       storedBOFFAXEData[nBOFFAXEDataSets].dz = dz0;
-      if (!(storedBOFFAXEData[nBOFFAXEDataSets].dBnDxn = SDDS_GetColumnInDoubles(&SDDSin, dataColumn)))
+      if (!(storedBOFFAXEData[nBOFFAXEDataSets].fieldData[0] = SDDS_GetColumnInDoubles(&SDDSin, dataColumn)))
         bombElegantVA("Problem reading column \"%s\" from file %s for BOFFAXE %s#%ld\n", 
                       dataColumn, filename, tcontext.elementName, tcontext.elementOccurrence);
+      for (iz=1; iz<storedBOFFAXEData[nBOFFAXEDataSets].nDz1; iz++) {
+        if (iz==1)
+          sprintf(buffer, "%sDeriv", dataColumn);
+        else 
+          sprintf(buffer, "%sDeriv%ld", dataColumn, iz);
+      if (!(storedBOFFAXEData[nBOFFAXEDataSets].fieldData[iz] = SDDS_GetColumnInDoubles(&SDDSin, buffer)))
+        bombElegantVA("Problem reading column \"%s\" from file %s for BOFFAXE %s#%ld\n", 
+                      buffer, filename, tcontext.elementName, tcontext.elementOccurrence);
+      }
     } else {
       bombElegantVA("Input file %s for BOFFAXE %s#%ld has more than one page", 
                     filename, tcontext.elementName, tcontext.elementOccurrence);
@@ -368,13 +395,38 @@ void computeMagneticFieldFromOffAxisExpansion
  BOFFAXE *boa,
  STORED_BOFFAXE_DATA *boaData
  ) {
+  long id;
   if (boa->order!=1)
     bombElegant("Only order=1 implemented for BOFFAXE", NULL);
   if (iz<0 || iz>=boaData->nz)
     B[0] = B[1] = B[2] = 0;
   else {
-    B[0] = boaData->dBnDxn[iz]*y;
-    B[1] = boaData->dBnDxn[iz]*x;
-    B[2] = 0;
+    B[0] = boaData->fieldData[0][iz]*y;
+    B[1] = boaData->fieldData[0][iz]*x;
+    /* Probably the dumbest possible way to do this... */
+    if (boaData->nDz1>1) {
+      B[2] = boaData->fieldData[1][iz]*x*y;
+      if (boaData->nDz1>2) {
+        B[0] -= boaData->fieldData[2][iz]*(x*x*y/2     + ipow(y,3)/6)/2;
+        B[1] -= boaData->fieldData[2][iz]*(ipow(x,3)/6 + x*y*y/2)/2;
+        if (boaData->nDz1>3) {
+          B[2] -= boaData->fieldData[3][iz]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
+          if (boaData->nDz1>4) {
+            B[0] += boaData->fieldData[4][iz]*(ipow(x, 4)*y/48 + ipow(y, 5)/240);
+            B[1] += boaData->fieldData[4][iz]*(ipow(x, 5)/240  + x*ipow(y, 4)/48);
+            if (boaData->nDz1>5) {
+              B[2] += boaData->fieldData[5][iz]*(ipow(x, 5)*y + x*ipow(y, 5))/240;
+              if (boaData->nDz1>6) {
+                B[0] -= boaData->fieldData[6][iz]*(ipow(x, 6)*y/1440 + ipow(y, 7)/10080);
+                B[1] -= boaData->fieldData[6][iz]*(ipow(x, 7)/10080  + x*ipow(y, 6)/1440);
+                if (boaData->nDz1>7) {
+                  B[2] -= boaData->fieldData[7][iz]*(ipow(x, 7)*y + x*ipow(y, 7))/10080;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
