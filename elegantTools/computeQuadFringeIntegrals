@@ -95,9 +95,10 @@ exec sddsprocess $output.tmp1 -pipe=out -filter=col,$zColumn,$s0,$s2 \
   | sddsxref -pipe $output.tmp2 -take=g0 -equate=$zColumn \
   | sddsprocess -pipe=in $output.tmp4 \
   "-define=column,I2,h1Integ1 g0Integ1 $zColumn * - g0 *" \
-  -process=I2,gminteg,LAMBDA2P,functionOf=$zColumn
+  -process=I2,gminteg,LAMBDA2P,functionOf=$zColumn \
+  "-define=parameter,zCenter,$zCenter"
   
-exec sddsxref $output.tmp2 $output.tmp3 $output.tmp4 -leave=* -transfer=param,LAMBDA2? $output
+exec sddsxref $output.tmp2 $output.tmp3 $output.tmp4 -leave=* -transfer=param,LAMBDA2?,zCenter $output
 file delete $output.tmp1 $output.tmp2 $output.tmp3 $output.tmp4 
 
 set paramFileList ""
