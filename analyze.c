@@ -865,6 +865,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double dgamma, dtmp1, dP[3];
   long nPoints1 = trackingMatrixPoints;
   long maxFitOrder = 4;
+#if USE_MPI
+  long nWorking, n_leftTotal, k, *nToTrackCounts;
+#endif
   /* We'll store some of the matrices to avoid recomputing them */
 #define MAX_N_STORED_MATRICES 1000
   static long nStoredMatrices = 0, iStoredMatrices = -1;
