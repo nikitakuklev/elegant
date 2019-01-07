@@ -167,7 +167,10 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
   double length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
-  double zMin, zMax, zEntry, zExit, zPOOffset;
+  double zMin, zMax, zEntry, zExit;
+#if !USE_MPI
+  double zPOOffset;
+#endif
 
   double B[3], p[3], B2Max, pErr[3];
   double pOrig;
@@ -294,7 +297,9 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     x -= (zEntry - zMin)*xp;
     y -= (zEntry - zMin)*yp;
     s -= (zEntry - zMin)*sqrt(1.0 + xp*xp + yp*yp);
+#if !USE_MPI
     zPOOffset = zMin - zEntry;
+#endif
 
     /* compute momenta (x, y, z) */
     denom = sqrt(1 + sqr(xp) + sqr(yp));
@@ -310,8 +315,6 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     B[0] = B[1] = B[2] = 0;
     dz = boaData->dz*boa->zInterval;
     for (iz=irow=0; iz<boaData->nz-1; iz+=boa->zInterval) {
-#if !USE_MPI
-#endif
       denom = sqrt(1 + sqr(xp) + sqr(yp));
       p[2] = pCentral*(1+delta)/denom;
       p[0] = xp*p[2];
