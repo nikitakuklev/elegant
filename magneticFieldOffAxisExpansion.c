@@ -168,9 +168,6 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
   double zMin, zMax, zEntry, zExit;
-#if !USE_MPI
-  double zPOOffset;
-#endif
 
   double B[3], p[3], B2Max, pErr[3];
   double pOrig;
@@ -297,9 +294,6 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     x -= (zEntry - zMin)*xp;
     y -= (zEntry - zMin)*yp;
     s -= (zEntry - zMin)*sqrt(1.0 + xp*xp + yp*yp);
-#if !USE_MPI
-    zPOOffset = zMin - zEntry;
-#endif
 
     /* compute momenta (x, y, z) */
     denom = sqrt(1 + sqr(xp) + sqr(yp));
@@ -331,7 +325,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
                              boa->poIndex[1], p[0]*pCentral,
                              boa->poIndex[2], y,
                              boa->poIndex[3], p[1]*pCentral,
-                             boa->poIndex[4], iz*dz+zPOOffset,
+                             boa->poIndex[4], iz*dz+boaData->zMin,
                              boa->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(p[0])+sqr(p[1]))*sqr(pCentral)),
                              boa->poIndex[6], B[0],
                              boa->poIndex[7], B[1],
@@ -434,7 +428,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
                              boa->poIndex[1], p[0],
                              boa->poIndex[2], y,
                              boa->poIndex[3], p[1],
-                             boa->poIndex[4], iz*dz+zPOOffset,
+                             boa->poIndex[4], iz*dz+boaData->zMin,
                              boa->poIndex[5], p[2],
                              boa->poIndex[6], B[0],
                              boa->poIndex[7], B[1],
@@ -473,6 +467,7 @@ void computeMagneticFieldFromOffAxisExpansion
  BOFFAXE *boa,
  STORED_BOFFAXE_DATA *boaData
  ) {
+  long i;
   if (boa->order!=1)
     bombElegant("Only order=1 implemented for BOFFAXE", NULL);
   if (iz<0 || iz>=boaData->nz)
@@ -506,4 +501,6 @@ void computeMagneticFieldFromOffAxisExpansion
       }
     }
   }
+  for (i=0; i<3; i++)
+    B[i] *= boa->strength;
 }
