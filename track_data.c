@@ -3266,7 +3266,7 @@ PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"SYMPLECTIC", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.symplectic), NULL, 0.0, 0, "if nonzero, use implicit symplectic integrator. At minimum, should always be used to validate the sufficiency of the non-symplectic integrator."},
     {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
     {"ISR", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
-    {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&bggexp_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output. Use for debugging only!"},
+    {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&bggexp_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space and field output. Use for debugging only!"},
     {"IS_BEND", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.isBend), NULL, 0.0, 0, "if nonzero, magnet is a bending magnet; vertex, entry, and exit points should be defined."},
     {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.xVertex), NULL, 0.0, 0, "For dipoles: x position of vertex in coordinate system of the fields."},
     {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.zVertex), NULL, 0.0, 0, "For dipoles: z position of vertex in coordinate system of the fields."},
@@ -3387,6 +3387,7 @@ PARAMETER boffaxe_param[N_BOFFAXE_PARAMS] = {
     {"Z_INTERVAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},
     {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&boffaxe_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
+    {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&boffaxe_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space and field output. Use for debugging only!"},
 };  
 
 /* END OF ELEMENT DICTIONARY ARRAYS */

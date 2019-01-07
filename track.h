@@ -1043,7 +1043,7 @@ extern char *entity_text[N_TYPES];
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
-#define N_BOFFAXE_PARAMS 17
+#define N_BOFFAXE_PARAMS 18
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2984,9 +2984,12 @@ typedef struct {
   double Bx, By;          /* stray field */
   short zInterval;        /* interval between z points used */
   short synchRad, isr;
+  char *particleOutputFile;  
   /* these are set by the program when the file is read */
   short initialized;
   long dataIndex;
+  SDDS_DATASET *SDDSpo;
+  long poIndex[9];
 } BOFFAXE;
 
 /* names and storage structure for CHARGE element */

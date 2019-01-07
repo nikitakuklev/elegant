@@ -167,7 +167,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
   double length;
   TRACKING_CONTEXT tcontext;
   double radCoef=0, isrCoef=0;
-  double zMin, zMax, zEntry, zExit;
+  double zMin, zMax, zEntry, zExit, zPOOffset;
 
   double B[3], p[3], B2Max, pErr[3];
   double pOrig;
@@ -219,6 +219,30 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     if (boa->zInterval<1)
       bombElegantVA("Z_INTERVAL<1 given for BOFFAXE %s#%ld\n", tcontext.elementName, tcontext.elementOccurrence);
     boa->dataIndex = addBOFFAXEData(boa->filename, boa->zColumn, boa->fieldColumn, boa->order);
+#if !USE_MPI
+    if (boa->particleOutputFile && !boa->SDDSpo) {
+      boa->SDDSpo = tmalloc(sizeof(*(boa->SDDSpo)));
+      boa->particleOutputFile = compose_filename(boa->particleOutputFile, tcontext.rootname);
+      if (!SDDS_InitializeOutput(boa->SDDSpo, SDDS_BINARY, 1, 
+                                 NULL, NULL, boa->particleOutputFile) ||
+          0>SDDS_DefineParameter(boa->SDDSpo, "SVNVersion", NULL, NULL, "SVN version number", NULL, SDDS_STRING, SVN_VERSION) ||
+          !SDDS_DefineSimpleParameter(boa->SDDSpo, "particleID", NULL, SDDS_LONG) ||
+          !SDDS_DefineSimpleParameter(boa->SDDSpo, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+          (boa->poIndex[0]=SDDS_DefineColumn(boa->SDDSpo, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+          (boa->poIndex[1]=SDDS_DefineColumn(boa->SDDSpo, "px", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[2]=SDDS_DefineColumn(boa->SDDSpo, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+          (boa->poIndex[3]=SDDS_DefineColumn(boa->SDDSpo, "py", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[4]=SDDS_DefineColumn(boa->SDDSpo, "z", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[5]=SDDS_DefineColumn(boa->SDDSpo, "pz", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[6]=SDDS_DefineColumn(boa->SDDSpo, "Bx", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[7]=SDDS_DefineColumn(boa->SDDSpo, "By", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (boa->poIndex[8]=SDDS_DefineColumn(boa->SDDSpo, "Bz", NULL, "T", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          !SDDS_WriteLayout(boa->SDDSpo)) {
+        SDDS_SetError("Problem setting up particle output file for BOAEXP");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+#endif
   }
   boaData = storedBOFFAXEData+boa->dataIndex;
   if (boaData->nz%boa->zInterval!=0) 
@@ -248,6 +272,16 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
 
   /* Non-symplectic integrator by R. Lindberg, taken from BGGEXP code */
   for (ip=0; ip<np; ip++) {
+#if !USE_MPI
+    if (boa->SDDSpo) {
+      if (!SDDS_StartPage(boa->SDDSpo, boaData->nz+1) ||
+          !SDDS_SetParameters(boa->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                              "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
+        SDDS_SetError("Problem setting up particle output page for BOFFAXE");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+#endif
     B2Max = 0;
     x = part[ip][0];
     xp = part[ip][1];
@@ -260,6 +294,7 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     x -= (zEntry - zMin)*xp;
     y -= (zEntry - zMin)*yp;
     s -= (zEntry - zMin)*sqrt(1.0 + xp*xp + yp*yp);
+    zPOOffset = zMin - zEntry;
 
     /* compute momenta (x, y, z) */
     denom = sqrt(1 + sqr(xp) + sqr(yp));
@@ -275,6 +310,8 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
     B[0] = B[1] = B[2] = 0;
     dz = boaData->dz*boa->zInterval;
     for (iz=irow=0; iz<boaData->nz-1; iz+=boa->zInterval) {
+#if !USE_MPI
+#endif
       denom = sqrt(1 + sqr(xp) + sqr(yp));
       p[2] = pCentral*(1+delta)/denom;
       p[0] = xp*p[2];
@@ -284,6 +321,24 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
       /* Compute fields */
       computeMagneticFieldFromOffAxisExpansion(B, x, y, iz, boa, boaData);
         
+#if !USE_MPI
+      if (boa->SDDSpo &&
+          !SDDS_SetRowValues(boa->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
+                             boa->poIndex[0], x,
+                             boa->poIndex[1], p[0]*pCentral,
+                             boa->poIndex[2], y,
+                             boa->poIndex[3], p[1]*pCentral,
+                             boa->poIndex[4], iz*dz+zPOOffset,
+                             boa->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(p[0])+sqr(p[1]))*sqr(pCentral)),
+                             boa->poIndex[6], B[0],
+                             boa->poIndex[7], B[1],
+                             boa->poIndex[8], B[2],
+                             -1)) {
+        SDDS_SetError("Problem setting particle output data for BGGEXP");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+#endif
+
       preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
       preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
 
@@ -368,6 +423,26 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
       part[ip][4] *= beta1/beta0;
       part[ip][5] = p1/pCentral - 1;
     }
+
+#if !USE_MPI
+    if (boa->SDDSpo) {
+      if (!SDDS_SetRowValues(boa->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
+                             boa->poIndex[0], x,
+                             boa->poIndex[1], p[0],
+                             boa->poIndex[2], y,
+                             boa->poIndex[3], p[1],
+                             boa->poIndex[4], iz*dz+zPOOffset,
+                             boa->poIndex[5], p[2],
+                             boa->poIndex[6], B[0],
+                             boa->poIndex[7], B[1],
+                             boa->poIndex[8], B[2],
+                             -1) ||
+          !SDDS_WritePage(boa->SDDSpo)) {
+        SDDS_SetError("Problem setting particle output data for BGGEXP");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+#endif
   }
 
   if (sigmaDelta2 && np)
@@ -395,7 +470,6 @@ void computeMagneticFieldFromOffAxisExpansion
  BOFFAXE *boa,
  STORED_BOFFAXE_DATA *boaData
  ) {
-  long id;
   if (boa->order!=1)
     bombElegant("Only order=1 implemented for BOFFAXE", NULL);
   if (iz<0 || iz>=boaData->nz)
