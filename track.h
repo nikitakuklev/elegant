@@ -912,7 +912,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_SPEEDBUMP 120
 #define T_CCBEND 121
 #define T_HKPOLY 122
-#define N_TYPES  123
+#define T_BOFFAXE 123
+#define N_TYPES  124
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1042,6 +1043,7 @@ extern char *entity_text[N_TYPES];
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
+#define N_BOFFAXE_PARAMS 17
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2965,6 +2967,28 @@ typedef struct {
   long poIndex[9];
 } BGGEXP;
 
+/* magnetic field from on-axis data */
+extern PARAMETER boffaxe_param[N_BOFFAXE_PARAMS];
+
+typedef struct {
+  double length;          /* for floor coorindates, s coordinate, etc */
+  double fieldLength;     /* expected length of the field map */
+  char *filename;         /* filename for generalized gradients vs z */
+  char *zColumn;          /* name of column containing z data */
+  char *fieldColumn;      /* name of column containing field data */
+  short order;            /* 1=quadrupole, 2=sextupole, ... */
+  short expansionOrder;   /* maximum order of expansion in (x, y) */
+  double strength;        /* multiply fields by a factor */
+  double tilt;            /* roll angle */
+  double dx, dy, dz;      /* misalignments */
+  double Bx, By;          /* stray field */
+  short zInterval;        /* interval between z points used */
+  short synchRad, isr;
+  /* these are set by the program when the file is read */
+  short initialized;
+  long dataIndex;
+} BOFFAXE;
+
 /* names and storage structure for CHARGE element */
 extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
@@ -4153,6 +4177,8 @@ long binTimeDistribution(double *Itime, long *pbin, double tmin,
                          double dt, long nb, double *time, double **part, double Po, long np);
 
 long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, double **accepted, double *sigmaDelta2);
+
+long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, double pCentral, double **accepted, double *sigmaDelta2);
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
                      TWISS *twiss, RADIATION_INTEGRALS *radIntegrals,

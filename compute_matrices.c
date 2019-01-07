@@ -1170,6 +1170,7 @@ VMATRIX *compute_matrix(
         run->p_central = pSave;
         break;
       case T_BGGEXP:
+      case T_BOFFAXE:
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));

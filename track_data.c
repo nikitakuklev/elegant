@@ -68,7 +68,7 @@ char *entity_name[N_TYPES] = {
     "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
-    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY"
+    "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -192,13 +192,14 @@ char *entity_text[N_TYPES] = {
     "A combined horizontal/vertical steering dipole implemented using an exact hard-edge model",
     "A map of (Bx, By, Bz) vs (x, y, z), for straight elements only",
     "Bending magnet RAy Tracing using (Bx, By, Bz) vs (x, y, z).",
-    "A straight magnetic field element using generalized gradient expansion.",
+    "A magnetic field element using generalized gradient expansion.",
     "Conditional branch instruction to jump to another part of the beamline",
     "Simulates ionization of residual gas and interaction with the beam.",
     "Performs slice-by-slice analysis of the beam for output to a file.",
     "Simulates a semi-circular protuberance from one or both walls of the chamber.",
     "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates.",
-    "Applies kick according to a Hamiltonian that's a polynomial function of x and y together with a generalized drift also given as a polynomial of qx and qy"
+    "Applies kick according to a Hamiltonian that's a polynomial function of x and y together with a generalized drift also given as a polynomial of qx and qy",
+    "A straight magnetic field element using off-axis expansion from an on-axis derivative.",
     } ;
 
 QUAD quad_example;
@@ -3367,6 +3368,27 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"VERBOSE", "", IS_SHORT, 0, (long)((char *)&ccbend_example.verbose), NULL, 0.0, 0, "If nonzero, print messages showing optimized FSE and x offset."},
     };
 
+BOFFAXE boffaxe_example;
+PARAMETER boffaxe_param[N_BOFFAXE_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&boffaxe_example.length), NULL, 0.0, 0, "insertion length"},
+    {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&boffaxe_example.fieldLength), NULL, -1.0, 0, "expected length of the field map for verification purposes only."},
+    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&boffaxe_example.filename), NULL, 0.0, 0, "name of file containing derivative data"},
+    {"Z_COLUMN", NULL, IS_STRING, 0, (long)((char*)&boffaxe_example.zColumn), "z", 0.0, 0, "name of longitunidal coordinate column in the data file"},
+    {"FIELD_COLUMN", NULL, IS_STRING, 0, (long)((char*)&boffaxe_example.fieldColumn), NULL, 0.0, 0, "name of derivative column in the data file"},
+    {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.order), NULL, 0.0, 1, "order of transverse derivative"},
+    {"EXPANSION_ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.expansionOrder), NULL, 0.0, 5, "order of expansion in x and y"},
+    {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&boffaxe_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"BX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.Bx), NULL, 0.0, 0, "add BX*STRENGTH to Bx field"},
+    {"BY", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.By), NULL, 0.0, 0, "add BY*STRENGTH to By field"},
+    {"Z_INTERVAL", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.zInterval), NULL, 0.0, 1, "input z data is sampled at this interval"},
+    {"SYNCH_RAD", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&boffaxe_example.synchRad), NULL, 0.0, 0, "if nonzero, include classical, single-particle synchrotron radiation"},
+    {"ISR", "", IS_SHORT, 0, (long)((char *)&boffaxe_example.isr), NULL, 0.0, 0, "if nonzero, include incoherent synchrotron radiation (quantum excitation)"},
+};  
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -3513,7 +3535,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT, sizeof(SPEEDBUMP),    speedbump_param   }, 
     { N_CCBEND_PARAMS, MAT_LEN_NCAT, sizeof(CCBEND),    ccbend_param   }, 
-    { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   }, 
+    { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   },
+    { N_BOFFAXE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,   sizeof(BOFFAXE),  boffaxe_param  },
 } ;
 
 void compute_offsets()

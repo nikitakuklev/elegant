@@ -1533,6 +1533,9 @@ long do_tracking(
             case T_BGGEXP:
               trackBGGExpansion(coord, nToTrack, (BGGEXP*)eptr->p_elem, *P_central, accepted, NULL);
               break;
+            case T_BOFFAXE:
+              trackMagneticFieldOffAxisExpansion(coord, nToTrack, (BOFFAXE*)eptr->p_elem, *P_central, accepted, NULL);
+              break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
 	      if (malign->on_pass==-1 || malign->on_pass==i_pass)

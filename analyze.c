@@ -737,6 +737,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
     ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
     break;
+  case T_BOFFAXE:
+    ltmp1 = ((BOFFAXE*)eptr->p_elem)->isr;
+    ltmp2 = ((BOFFAXE*)eptr->p_elem)->synchRad;
+    ((BOFFAXE*)eptr->p_elem)->isr = ((BOFFAXE*)eptr->p_elem)->synchRad = 0;
+    trackMagneticFieldOffAxisExpansion(coord, n_track, (BOFFAXE*)eptr->p_elem, run->p_central, NULL, NULL);
+    ((BOFFAXE*)eptr->p_elem)->isr = ltmp1;
+    ((BOFFAXE*)eptr->p_elem)->synchRad = ltmp2;
+    break;
   case T_SCRIPT:
 #if USE_MPI
     if (myid==0) {
@@ -862,8 +870,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
-  long my_nTrack, my_offset, n_leftTotal, *nToTrackCounts;
-  long k, nWorking;
+  long my_nTrack, my_offset;
   
   if (nPoints1%2==0)
     nPoints1 += 1;
@@ -1074,6 +1081,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       trackBGGExpansion(finalCoord+my_offset, my_nTrack, (BGGEXP*)eptr->p_elem, run->p_central, NULL, NULL);
       ((BGGEXP*)eptr->p_elem)->isr = ltmp1;
       ((BGGEXP*)eptr->p_elem)->synchRad = ltmp2;
+      break;
+    case T_BOFFAXE:
+      ltmp1 = ((BOFFAXE*)eptr->p_elem)->isr;
+      ltmp2 = ((BOFFAXE*)eptr->p_elem)->synchRad;
+      ((BOFFAXE*)eptr->p_elem)->isr = ((BOFFAXE*)eptr->p_elem)->synchRad = 0;
+      trackMagneticFieldOffAxisExpansion(finalCoord+my_offset, my_nTrack, (BOFFAXE*)eptr->p_elem, run->p_central, NULL, NULL);
+      ((BOFFAXE*)eptr->p_elem)->isr = ltmp1;
+      ((BOFFAXE*)eptr->p_elem)->synchRad = ltmp2;
       break;
     case T_TWMTA:
     case T_MAPSOLENOID:
@@ -1286,7 +1301,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long sliceEtilted, long order)
 {
   CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend; WIGGLER *wig; CCBEND ccbend;
-  KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp;
+  KQUAD kquad;  QUAD *quad; CWIGGLER cwig; BGGEXP bggexp; BOFFAXE boffaxe;
   KSEXT ksext; SEXT *sext;
   HCOR hcor; VCOR vcor; HVCOR hvcor;
   EHCOR ehcor; EVCOR evcor; EHVCOR ehvcor;
@@ -1679,6 +1694,15 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         elem.p_elem = (void*)&bggexp;
       }
       break;
+    case T_BOFFAXE:
+      if (slice==0) {
+        nSlices = 1;
+        memcpy(&boffaxe, (BOFFAXE*)eptr->p_elem, sizeof(BOFFAXE));
+        boffaxe.isr = 0;
+        elem.type = T_BOFFAXE;
+        elem.p_elem = (void*)&boffaxe;
+      }
+      break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
       printf("***        Seek professional help!\n");
@@ -1828,6 +1852,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
     break;
   case T_BGGEXP:
     trackBGGExpansion(coord, n_track, (BGGEXP*)elem->p_elem, run->p_central, NULL, &sigmaDelta2);
+    break;
+  case T_BOFFAXE:
+    trackMagneticFieldOffAxisExpansion(coord, n_track, (BOFFAXE*)elem->p_elem, run->p_central, NULL, &sigmaDelta2);
     break;
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
