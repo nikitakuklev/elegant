@@ -2,8 +2,8 @@ This somewhat experimental element simulates transport through a 3D magnetic fie
 an off-axis expansion.
 At present, it is restricted to non-bending elements and in fact to quadrupoles.
 
-Unlike the generalized gradient expansion used by \verb|BGGEXP|, this method of expanding the fields is
-prone to corruption by noise.
+This method of expanding the fields is prone to corruption by noise, to a much greater degree than
+the generalized gradient expansion used by \verb|BGGEXP|.
 However, it uses data that can very readily be obtained from magnetic measurements with a Hall probe.
 Users are cautioned to take care in deciding how far to trust the expansion.
 
@@ -51,8 +51,8 @@ sddsderiv gradient.sdds gradient2.sdds -differ=Gradient -versus=z -savitzky=7,7,
 sddsderiv gradient.sdds gradient3.sdds -differ=Gradient -versus=z -savitzky=7,7,7,3
 sddsxref gradient.sdds gradient[123].sdds gradients.sdds -take=*Deriv* 
 \end{verbatim}
-(In this case, we use a Savitzky-Golay filter to compute the derivatives using a 7$^{th}$ order
-fit with 7 points ahead of and behind the evaluation location.)
+(In this example, we use a Savitzky-Golay filter to compute the first three z derivatives of $g(z)$
+using a 7$^{th}$ order fit with 7 points ahead of and behind the evaluation location.)
 The file \verb|gradients.sdds| would then be given as the value of \verb|FILENAME|.
 
 High-order numerical derivative are of course prone to corruption by measurement noise. 
