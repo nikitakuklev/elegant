@@ -1,0 +1,35 @@
+This element simulates transport through a 3D magnetic field constructed from
+an off-axis expansion.
+At present, it is restricted to non-bending elements and in fact to quadrupoles.
+
+For quadrupoles, we use the on-axis gradient $g(z)$ and its derivatives.
+The scalar potential can be written 
+\begin{eqnarray}
+\Phi & \approx & \frac{1}{2} \left(-\frac{x^7 y g^{(6)}(z)}{5040}+\frac{1}{120} x^5 y g^{(4)}(z)-\frac{1}{6} x^3 y g''(z)\right) \\
+ & &  +\frac{1}{2} \left(-\frac{x y^7 g^{(6)}(z)}{5040}+\frac{1}{120} x y^5 g^{(4)}(z)-\frac{1}{6} x y^3 g''(z)\right) \\
+ & & + x y g(z)
+\end{eqnarray}
+From which we find
+\begin{eqnarray}
+B_x & = & \frac{1}{2} \left(-\frac{1}{720} x^6 y g^{(6)}(z)+\frac{1}{24} x^4 y g^{(4)}(z)-\frac{1}{2} x^2 y g''(z)\right) \\
+ & & + \frac{1}{2} \left(-\frac{y^7 g^{(6)}(z)}{5040}+\frac{1}{120} y^5 g^{(4)}(z)-\frac{1}{6} y^3 g''(z)\right) \\ 
+ & & +y g(z),
+\end{eqnarray}
+\begin{eqnarray}
+B_y & = & \frac{1}{2} \left(-\frac{x^7 g^{(6)}(z)}{5040}+\frac{1}{120} x^5 g^{(4)}(z)-\frac{1}{6} x^3 g''(z)\right) \\
+& & + \frac{1}{2}  \left(-\frac{1}{720} x y^6 g^{(6)}(z)+\frac{1}{24} x y^4 g^{(4)}(z)-\frac{1}{2} x y^2 g''(z)\right) \\
+& & +x g(z),
+\end{eqnarray}
+and
+\begin{eqnarray}
+B_z & = & \frac{1}{2} \left(-\frac{x^7 y g^{(7)}(z)}{5040}+\frac{1}{120} x^5 y g^{(5)}(z)-\frac{1}{6} x^3 y g^{(3)}(z)\right) \\
+& &  + \frac{1}{2} \left(-\frac{x y^7 g^{(7)}(z)}{5040}+\frac{1}{120} x y^5 g^{(5)}(z)-\frac{1}{6} x y^3 g^{(3)}(z)\right) \\
+& & + x y g'(z).
+\end{eqnarray}
+
+These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to high order.
+In particular
+\begin{equation}
+\vec{\nabla} \cdot \vec{B} = -\frac{x^7 y g^{(8)}(z)}{10080}-\frac{x y^7 g^{(8)}(z)}{10080}.
+\end{equation}
+
