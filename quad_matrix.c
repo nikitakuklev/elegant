@@ -348,15 +348,6 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         short hasFringeIntegrals = 0, i;
         Mtot = tmalloc(sizeof(*Mtot));
         initialize_matrices(Mtot, M->order);
-        if (lEdge!=0) {
-          /* drift from nominal entrance to beginning of field */
-          Md = drift_matrix(lEdge, M->order);
-          concat_matrices(Mtot, M, Md, 0);
-          tmp = M;
-          M = Mtot;
-          Mtot = tmp;
-          free_matrices(Md); free(Md); Md = NULL;
-        }
         if (fringeCode==INTEGRALS_FRINGE && (edge1_effects || edge2_effects)) {
           for (i=0; i<5; i++) 
             if (fringeIntM[i] || fringeIntP[i]) {
@@ -383,10 +374,18 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         if (lEdge!=0) {
           /* drift from nominal entrance to beginning of field */
           Md = drift_matrix(lEdge, M->order);
+          concat_matrices(Mtot, M, Md, 0);
+          tmp = M;
+          M = Mtot;
+          Mtot = tmp;
+
+          /* drift from nominal entrance to beginning of field */
+          Md = drift_matrix(lEdge, M->order);
           concat_matrices(Mtot, Md, M, 0);
           tmp = M;
           M = Mtot;
           Mtot = tmp;
+
           free_matrices(Md); free(Md); Md = NULL;
         }
         free_matrices(Mtot); free(Mtot); Mtot = NULL;
