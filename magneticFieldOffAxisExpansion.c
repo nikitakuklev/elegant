@@ -18,7 +18,8 @@ static STORED_BOFFAXE_DATA *storedBOFFAXEData = NULL;
 static long nBOFFAXEDataSets = 0;
 static htab *fileHashTable = NULL;
 
-void computeMagneticFieldFromOffAxisExpansion(double *B, double x, double y, long iz, BOFFAXE *boa, STORED_BOFFAXE_DATA *boaData);
+void computeMagneticFieldFromOffAxisExpansion(double *B, double x, double y, long iz, long is, 
+                                              BOFFAXE *boa, STORED_BOFFAXE_DATA *boaData);
 
 #define BUFSIZE 16834
 
@@ -307,97 +308,95 @@ long trackMagneticFieldOffAxisExpansion(double **part, long np, BOFFAXE *boa, do
 
     /* Integrate through the magnet */
     B[0] = B[1] = B[2] = 0;
-    dz = boaData->dz*boa->zInterval;
+    dz = boaData->dz*boa->zInterval/boa->zSubdivisions;
     for (iz=irow=0; iz<boaData->nz-1; iz+=boa->zInterval) {
-      denom = sqrt(1 + sqr(xp) + sqr(yp));
-      p[2] = pCentral*(1+delta)/denom;
-      p[0] = xp*p[2];
-      p[1] = yp*p[2];
-      /* gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1); */
+      long is;
+      for (is=0; is<boa->zSubdivisions; is++) {
+        denom = sqrt(1 + sqr(xp) + sqr(yp));
+        p[2] = pCentral*(1+delta)/denom;
+        p[0] = xp*p[2];
+        p[1] = yp*p[2];
+        /* gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1); */
       
-      /* Compute fields */
-      computeMagneticFieldFromOffAxisExpansion(B, x, y, iz, boa, boaData);
+        /* Compute fields */
+        computeMagneticFieldFromOffAxisExpansion(B, x, y, iz, is, boa, boaData);
         
 #if !USE_MPI
-      if (boa->SDDSpo &&
-          !SDDS_SetRowValues(boa->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
-                             boa->poIndex[0], x,
-                             boa->poIndex[1], p[0]*pCentral,
-                             boa->poIndex[2], y,
-                             boa->poIndex[3], p[1]*pCentral,
-                             boa->poIndex[4], iz*dz+boaData->zMin,
-                             boa->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(p[0])+sqr(p[1]))*sqr(pCentral)),
-                             boa->poIndex[6], B[0],
-                             boa->poIndex[7], B[1],
-                             boa->poIndex[8], B[2],
-                             -1)) {
-        SDDS_SetError("Problem setting particle output data for BGGEXP");
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
+        if (is==0 && boa->SDDSpo &&
+            !SDDS_SetRowValues(boa->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
+                               boa->poIndex[0], x,
+                               boa->poIndex[1], p[0]*pCentral,
+                               boa->poIndex[2], y,
+                               boa->poIndex[3], p[1]*pCentral,
+                               boa->poIndex[4], iz*dz+boaData->zMin,
+                               boa->poIndex[5], sqrt(sqr(pCentral*(1+delta))-(sqr(p[0])+sqr(p[1]))*sqr(pCentral)),
+                               boa->poIndex[6], B[0],
+                               boa->poIndex[7], B[1],
+                               boa->poIndex[8], B[2],
+                               -1)) {
+          SDDS_SetError("Problem setting particle output data for BGGEXP");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
 #endif
 
-      preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
-      preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
+        preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
+        preFactorDz =  preFactorDz*sqrt(1.0 + xp*xp + yp*yp);
 
-      /* Apply prediction step */
-      xTemp = x + dz*xp;
-      yTemp = y + dz*yp;
-      xpTemp = xp + preFactorDz*( (yp*B[2] - (1.0+xp*xp)*B[1]) + xp*yp*B[0] );
-      ypTemp = yp + preFactorDz*( ((1.0+yp*yp)*B[0] - xp*B[2]) - xp*yp*B[1] );
-      ds = dz*sqrt(1+sqr(xp)+sqr(yp));
+        /* Apply prediction step */
+        xTemp = x + dz*xp;
+        yTemp = y + dz*yp;
+        xpTemp = xp + preFactorDz*( (yp*B[2] - (1.0+xp*xp)*B[1]) + xp*yp*B[0] );
+        ypTemp = yp + preFactorDz*( ((1.0+yp*yp)*B[0] - xp*B[2]) - xp*yp*B[1] );
+        ds = dz*sqrt(1+sqr(xp)+sqr(yp));
       
-      /* Compute fields at next z location */
-      computeMagneticFieldFromOffAxisExpansion(B, x, y, iz+boa->zInterval, boa, boaData);
-
-      preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
-      preFactorDz =  preFactorDz*sqrt(1.0 + xpTemp*xpTemp + ypTemp*ypTemp);
-      /* Apply correction step */
-      xNew = 0.5*(x + xTemp + dz*xpTemp);
-      yNew = 0.5*(y + yTemp + dz*ypTemp);
-      xpNew = 0.5*(xp + xpTemp + preFactorDz*( (ypTemp*B[2] - (1.0+xpTemp*xpTemp)*B[1]) + xpTemp*ypTemp*B[0] ));
-      ypNew = 0.5*(yp + ypTemp + preFactorDz*( ((1.0+ypTemp*ypTemp)*B[0] - xpTemp*B[2]) - xpTemp*ypTemp*B[1] ));
-      ds = 0.5*( ds + dz*sqrt(1+sqr(xpTemp)+sqr(ypTemp)) );
+        /* Compute fields at next z location */
+        if (is==(boa->zSubdivisions-1))
+          computeMagneticFieldFromOffAxisExpansion(B, x, y, iz+boa->zInterval, 0, boa, boaData);
+        else
+          computeMagneticFieldFromOffAxisExpansion(B, x, y, iz, is+1, boa, boaData);
+          
+        preFactorDz = -dz*particleCharge*particleRelSign/(pCentral*particleMass*c_mks*(1.0+delta));
+        preFactorDz =  preFactorDz*sqrt(1.0 + xpTemp*xpTemp + ypTemp*ypTemp);
+        /* Apply correction step */
+        xNew = 0.5*(x + xTemp + dz*xpTemp);
+        yNew = 0.5*(y + yTemp + dz*ypTemp);
+        xpNew = 0.5*(xp + xpTemp + preFactorDz*( (ypTemp*B[2] - (1.0+xpTemp*xpTemp)*B[1]) + xpTemp*ypTemp*B[0] ));
+        ypNew = 0.5*(yp + ypTemp + preFactorDz*( ((1.0+ypTemp*ypTemp)*B[0] - xpTemp*B[2]) - xpTemp*ypTemp*B[1] ));
+        ds = 0.5*( ds + dz*sqrt(1+sqr(xpTemp)+sqr(ypTemp)) );
       
-      x = xNew;
-      y = yNew;
-      xp = xpNew;
-      yp = ypNew;
-      s += ds;
+        x = xNew;
+        y = yNew;
+        xp = xpNew;
+        yp = ypNew;
+        s += ds;
       
-      denom = sqrt(1 + sqr(xp) + sqr(yp));
-      p[2] = pCentral*(1+delta)/denom;
-      p[0] = xp*p[2];
-      p[1] = yp*p[2];
+        denom = sqrt(1 + sqr(xp) + sqr(yp));
+        p[2] = pCentral*(1+delta)/denom;
+        p[0] = xp*p[2];
+        p[1] = yp*p[2];
         
-#ifdef DEBUG
-      fprintf(fpdebug, "%.0f %le %le %le %le %le %le %le %le %le %le\n", 
-              part[ip][6], ds, x, y, iz*boaData->dz, 
-              B[0], B[1], B[2], 
-              p[0], p[1], p[2]);
-#endif
-
-      if (boa->synchRad) {
-        /* This is only valid for ultra-relatistic particles */
-        double B2, F;
-        B2 = sqr(B[0])+sqr(B[1]);
-        if (B2>B2Max)
-          B2Max = B2;
-        deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
-        F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
-        if (boa->isr && np!=1)
-          deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
-        if (sigmaDelta2)
-          *sigmaDelta2 += sqr(F);
-        delta = deltaTemp;
+        if (boa->synchRad) {
+          /* This is only valid for ultra-relatistic particles */
+          double B2, F;
+          B2 = sqr(B[0])+sqr(B[1]);
+          if (B2>B2Max)
+            B2Max = B2;
+          deltaTemp = delta - radCoef*pCentral*(1.0+delta)*B2*ds;
+          F = isrCoef*pCentral*(1.0 + delta)*sqrt(ds)*pow(B2, 3./4.);
+          if (boa->isr && np!=1)
+            deltaTemp += F*gauss_rn_lim(0.0, 1.0, srGaussianLimit, random_2);
+          if (sigmaDelta2)
+            *sigmaDelta2 += sqr(F);
+          delta = deltaTemp;
+        }
       }
     }
-    if (iz<boaData->nz-1) {
+    if (iz<(boaData->nz-1)) {
       /* Drift forward */
       x += xp*boaData->dz*(boaData->nz-(iz-1));
       y += yp*boaData->dz*(boaData->nz-(iz-1));
       s += boaData->dz*(boaData->nz-(iz-1))*sqrt(1+sqr(xp)+sqr(yp));
     }
-      
 
     /* Drift backward from end of field map to exit plane */
     x -= (zMax - zExit)*xp;
@@ -464,35 +463,50 @@ void computeMagneticFieldFromOffAxisExpansion
  double x,
  double y,
  long iz,
+ long is,
  BOFFAXE *boa,
  STORED_BOFFAXE_DATA *boaData
  ) {
   long i;
+  double delz = 0;
+  double *fieldData;
+
   if (boa->order!=1)
     bombElegant("Only order=1 implemented for BOFFAXE", NULL);
   if (iz<0 || iz>=boaData->nz)
     B[0] = B[1] = B[2] = 0;
   else {
-    B[0] = boaData->fieldData[0][iz]*y;
-    B[1] = boaData->fieldData[0][iz]*x;
+    fieldData = tmalloc(sizeof(*fieldData)*boaData->nDz1);
+    if (is && boa->zSubdivisions>1) 
+      delz = (1.0*is)/boa->zSubdivisions*boaData->dz;
+    for (i=0; i<boaData->nDz1; i++) {
+      long j;
+      fieldData[i] = boaData->fieldData[i][iz];
+      if (delz)
+        for (j=i+1; j<boaData->nDz1; j++)
+          fieldData[i] += boaData->fieldData[j][iz]*ipow(delz, j-i)/dfactorial(j-i);
+    }
+    B[0] = fieldData[0]*y;
+    B[1] = fieldData[0]*x;
+    B[2] = 0;
     /* Probably the dumbest possible way to do this... */
-    if (boaData->nDz1>1) {
-      B[2] = boaData->fieldData[1][iz]*x*y;
-      if (boaData->nDz1>2) {
-        B[0] -= boaData->fieldData[2][iz]*(x*x*y/2     + ipow(y,3)/6)/2;
-        B[1] -= boaData->fieldData[2][iz]*(ipow(x,3)/6 + x*y*y/2)/2;
-        if (boaData->nDz1>3) {
-          B[2] -= boaData->fieldData[3][iz]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
-          if (boaData->nDz1>4) {
-            B[0] += boaData->fieldData[4][iz]*(ipow(x, 4)*y/48 + ipow(y, 5)/240);
-            B[1] += boaData->fieldData[4][iz]*(ipow(x, 5)/240  + x*ipow(y, 4)/48);
-            if (boaData->nDz1>5) {
-              B[2] += boaData->fieldData[5][iz]*(ipow(x, 5)*y + x*ipow(y, 5))/240;
-              if (boaData->nDz1>6) {
-                B[0] -= boaData->fieldData[6][iz]*(ipow(x, 6)*y/1440 + ipow(y, 7)/10080);
-                B[1] -= boaData->fieldData[6][iz]*(ipow(x, 7)/10080  + x*ipow(y, 6)/1440);
-                if (boaData->nDz1>7) {
-                  B[2] -= boaData->fieldData[7][iz]*(ipow(x, 7)*y + x*ipow(y, 7))/10080;
+    if (boaData->nDz1>1 && (boa->expansionOrder==0 || boa->expansionOrder>1)) {
+      B[2] = fieldData[1]*x*y;
+      if (boaData->nDz1>2 && (boa->expansionOrder==0 || boa->expansionOrder>2)) {
+        B[0] -= fieldData[2]*(x*x*y/2     + ipow(y,3)/6)/2;
+        B[1] -= fieldData[2]*(ipow(x,3)/6 + x*y*y/2)/2;
+        if (boaData->nDz1>3 && (boa->expansionOrder==0 || boa->expansionOrder>3)) {
+          B[2] -= fieldData[3]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
+          if (boaData->nDz1>4 && (boa->expansionOrder==0 || boa->expansionOrder>4)) {
+            B[0] += fieldData[4]*(ipow(x, 4)*y/48 + ipow(y, 5)/240);
+            B[1] += fieldData[4]*(ipow(x, 5)/240  + x*ipow(y, 4)/48);
+            if (boaData->nDz1>5 && (boa->expansionOrder==0 || boa->expansionOrder>5)) {
+              B[2] += fieldData[5]*(ipow(x, 5)*y + x*ipow(y, 5))/240;
+              if (boaData->nDz1>6 && (boa->expansionOrder==0 || boa->expansionOrder>6)) {
+                B[0] -= fieldData[6]*(ipow(x, 6)*y/1440 + ipow(y, 7)/10080);
+                B[1] -= fieldData[6]*(ipow(x, 7)/10080  + x*ipow(y, 6)/1440);
+                if (boaData->nDz1>7 && (boa->expansionOrder==0 || boa->expansionOrder>7)) {
+                  B[2] -= fieldData[7]*(ipow(x, 7)*y + x*ipow(y, 7))/10080;
                 }
               }
             }
@@ -500,6 +514,7 @@ void computeMagneticFieldFromOffAxisExpansion
         }
       }
     }
+    free(fieldData);
   }
   for (i=0; i<3; i++)
     B[i] *= boa->strength;
