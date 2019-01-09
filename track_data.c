@@ -2127,13 +2127,13 @@ PARAMETER modrf_param[N_MODRF_PARAMS] = {
 
 BMAPXY bmapxy_example;
 PARAMETER bmapxy_param[N_BMAPXY_PARAMS] = {
-{"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxy_example.length), NULL, 0.0, 0, "length"},
-{"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxy_example.strength), NULL, 0.0, 0, "factor by which to multiply field"},
-{"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxy_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
-{"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
-{"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, Fx, Fy) giving normalized field (Fx, Fy) vs (x, y)"},
-{"FX", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.FxRpn), NULL, 0.0, 0, "rpn expression for Fx in terms of x and y"},
-{"FY", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.FyRpn), NULL, 0.0, 0, "rpn expression for Fy in terms of x and y"},
+  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxy_example.length), NULL, 0.0, 0, "length"},
+  {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxy_example.strength), NULL, 0.0, 0, "factor by which to multiply field"},
+  {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxy_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
+  {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxy_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
+  {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxy_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, Fx, Fy) giving normalized field (Fx, Fy) vs (x, y)"},
+  {"FX", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxy_example.FxRpn), NULL, 0.0, 0, "rpn expression for Fx in terms of x and y"},
+  {"FY", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxy_example.FyRpn), NULL, 0.0, 0, "rpn expression for Fy in terms of x and y"},
 };  
 
 ZTRANSVERSE ztransverse_example;
@@ -3211,16 +3211,16 @@ PARAMETER ehvcor_param[N_EHVCOR_PARAMS] = {
 
 BMAPXYZ bmapxyz_example;
 PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "insertion length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.length), NULL, 0.0, 0, "insertion length"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dxError), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dyError), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dzError), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
-    {"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
-    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
-    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
+    {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
+    {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
+    {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
+    {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"CHECK_FIELDS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.checkFields), NULL, 0.0, 0, "check fields by computing divB and curlB errors?"},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
@@ -3228,23 +3228,23 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
 
 BRAT brat_example;
 PARAMETER brat_param[N_BRAT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.length), NULL, 0.0, 0, "length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.angle), NULL, 0.0, 0, "Nominal bending angle. Will be refined to match geometry specified by input/output and vertex coordinates"},
-    {"FSE", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&brat_example.method), NULL, 0.0, 0, "Ignored. Method defaults to Bulirsch-Stoer."},
-    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
-    {"XVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
-    {"ZVERTEX", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
-    {"XENTRY", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
-    {"ZENTRY", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zEntry), NULL, 0.0, 0, "z coordinate of nominal entry point"},
-    {"XEXIT", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
-    {"ZEXIT", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
-    {"DXMAP", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.dxMap), NULL, 0.0, 0, "x displacement of map"},
-    {"DZMAP", "M", IS_DOUBLE, 0, (long)((char *)&brat_example.dzMap), NULL, 0.0, 0, "z displacement of map"},
-    {"YAWMAP", "RAD", IS_DOUBLE, 0, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
-    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
-    {"USE_FTABLE", "", IS_SHORT, 0, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.length), NULL, 0.0, 0, "length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.angle), NULL, 0.0, 0, "Nominal bending angle. Will be refined to match geometry specified by input/output and vertex coordinates"},
+    {"FSE", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
+    {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.method), NULL, 0.0, 0, "Ignored. Method defaults to Bulirsch-Stoer."},
+    {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&brat_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z, Bx, By, Bz)"},
+    {"XVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xVertex), NULL, 0.0, 0, "x coordinate of vertex point"},
+    {"ZVERTEX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zVertex), NULL, 0.0, 0, "z coordinate of vertex point"},
+    {"XENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xEntry), NULL, 0.0, 0, "x coordinate of nominal entry point"},
+    {"ZENTRY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zEntry), NULL, 0.0, 0, "z coordinate of nominal entry point"},
+    {"XEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.xExit), NULL, 0.0, 0, "x coordinate of nominal exit point"},
+    {"ZEXIT", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.zExit), NULL, 0.0, 0, "z coordinate of nominal exit point"},
+    {"DXMAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.dxMap), NULL, 0.0, 0, "x displacement of map"},
+    {"DZMAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.dzMap), NULL, 0.0, 0, "z displacement of map"},
+    {"YAWMAP", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.yawMap), NULL, 0.0, 0, "yaw of map about x=z=0"},
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.fieldFactor), NULL, 1.0, 0, "factor by which to multiply fields"},
+    {"USE_FTABLE", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&brat_example.useFTABLE), NULL, 0.0, 0, "If nonzero, use FTABLE method for integration. Value gives the number of kicks."},
 };  
 
 
@@ -3252,7 +3252,7 @@ BGGEXP bggexp_example;
 PARAMETER bggexp_param[N_BGGEXP_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.length), NULL, 0.0, 0, "insertion length"},
     {"LFIELD", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
-    {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file generalized gradient data"},
+    {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bggexp_example.filename), NULL, 0.0, 0, "name of file generalized gradient data"},
     {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bggexp_example.dx), NULL, 0.0, 0, "misalignment"},
@@ -3471,7 +3471,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_ZLONGIT_PARAMS,          0,     sizeof(ZLONGIT),  zlongit_param    },
     { N_SREFFECTS_PARAMS,        HAS_MATRIX|DONT_CONCAT,   sizeof(SREFFECTS),  sreffects_param  },
     { N_MODRF_PARAMS, MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM,       sizeof(MODRF),    modrf_param     }, 
-    { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
+    { N_BMAPXY_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,   sizeof(BMAPXY),  bmapxy_param      },
     { N_ZTRANSVERSE_PARAMS,      0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
     { N_IBSCATTER_PARAMS,        MPALGORITHM,   sizeof(IBSCATTER),  ibscatter_param  },
     { N_FMULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(FMULT),    fmult_param     }, 
@@ -3529,7 +3529,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_EHCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHCOR),    ehcor_param     }, 
     {    N_EVCOR_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,        sizeof(EVCOR),    evcor_param     }, 
     {    N_EHVCOR_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,        sizeof(EHVCOR),   ehvcor_param     }, 
-    { N_BMAPXYZ_PARAMS,     HAS_LENGTH,   sizeof(BMAPXYZ),  bmapxyz_param      },
+    { N_BMAPXYZ_PARAMS,    MAT_LEN_NCAT|IS_MAGNET,   sizeof(BMAPXYZ),  bmapxyz_param      },
     { N_BRAT_PARAMS,     MAT_LEN_NCAT|IS_MAGNET,   sizeof(BRAT),  brat_param      },
     { N_BGGEXP_PARAMS,   MAT_LEN_NCAT|IS_MAGNET,   sizeof(BGGEXP),  bggexp_param      },
     { N_BRANCH_PARAMS,   0, sizeof(BRANCH),  branch_param      },

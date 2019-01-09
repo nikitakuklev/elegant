@@ -1019,13 +1019,11 @@ VMATRIX *compute_matrix(
     MULT *mult; FMULT *fmult;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; CCBEND *ccbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
-    /* BRAT *brat; */
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler; APPLE *apple;
     UKICKMAP *ukmap; SCRIPT *script; 
-    /* FTABLE *ftable; */
     EHCOR *ehcor; EVCOR *evcor; EHVCOR *ehvcor;
     double ks, Pref_output, pSave;
     VARY rcContext;
@@ -1495,7 +1493,8 @@ VMATRIX *compute_matrix(
         }
         break;
       case T_BRAT:
-        /* brat = (BRAT*)elem->p_elem; */
+      case T_BMAPXY:
+      case T_BMAPXYZ:
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CCBEND:

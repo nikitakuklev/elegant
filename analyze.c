@@ -969,9 +969,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
           copied = 1;
           break;
         case T_HKPOLY:
-          copied = 1;
-          break;
         case T_KQUAD:
+        case T_BMAPXY:
+        case T_BMAPXYZ:
           copied = 1;
           break;
 	default:
@@ -1057,6 +1057,18 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       printf("Computing tracking-based matrix for BRAT %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
       n_left = trackBRAT(finalCoord+my_offset, my_nTrack, (BRAT*)eptr->p_elem, run->p_central, NULL);
+      break;
+    case T_BMAPXY:
+      printf("Computing tracking-based matrix for BMAPXY %s#%ld\n", eptr->name, eptr->occurence);
+      fflush(stdout);
+      n_left = lorentz(finalCoord+my_offset, my_nTrack, (BMAPXY*)eptr->p_elem, T_BMAPXY, run->p_central, NULL);
+      break;
+    case T_BMAPXYZ:
+      printf("Computing tracking-based matrix for BMXYZ %s#%ld\n", eptr->name, eptr->occurence);
+      fflush(stdout);
+      ltmp1 = ((BMAPXYZ*)eptr->p_elem)->synchRad;
+      n_left = lorentz(finalCoord+my_offset, my_nTrack, (BMAPXYZ*)eptr->p_elem, T_BMAPXYZ, run->p_central, NULL);
+      ((BMAPXYZ*)eptr->p_elem)->synchRad = ltmp1;
       break;
     case T_APPLE:
       ltmp1 = ((APPLE*)eptr->p_elem)->isr;
@@ -1238,7 +1250,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 #endif
 
   if (shareTrackingBasedMatrices) {
-    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD) {
+    if (eptr->type==T_CCBEND || eptr->type==T_BRAT || eptr->type==T_BMAPXY || eptr->type==T_BMAPXYZ || 
+        eptr->type==T_CSBEND || eptr->type==T_FMULT || eptr->type==T_KQUAD) {
       ELEMENT_LIST *eptrCopy;
       VMATRIX *matrixCopy;
       
