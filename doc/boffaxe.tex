@@ -9,41 +9,32 @@ Users are cautioned to take care in deciding how far to trust the expansion.
 
 For quadrupoles, we use the on-axis gradient $g(z)$ and its z derivatives $g^{(n)}(z)$
 The scalar potential can be written 
-\begin{eqnarray}
-\Phi & \approx & \frac{1}{2} \left(-\frac{x^7 y g^{(6)}(z)}{5040}+\frac{1}{120} x^5 y g^{(4)}(z)-\frac{1}{6} x^3 y g^{(2)}(z)\right) \\
- & &  +\frac{1}{2} \left(-\frac{x y^7 g^{(6)}(z)}{5040}+\frac{1}{120} x y^5 g^{(4)}(z)-\frac{1}{6} x y^3 g^{(2)}(z)\right) \\
- & & + x y g(z)
-\end{eqnarray}
-From which we find
-\begin{eqnarray}
-B_x & = & \frac{1}{2} \left(-\frac{1}{720} x^6 y g^{(6)}(z)+\frac{1}{24} x^4 y g^{(4)}(z)-\frac{1}{2} x^2 y g^{(2)}(z)\right) \\
- & & + \frac{1}{2} \left(-\frac{y^7 g^{(6)}(z)}{5040}+\frac{1}{120} y^5 g^{(4)}(z)-\frac{1}{6} y^3 g^{(2)}(z)\right) \\ 
- & & +y g(z),
-\end{eqnarray}
-\begin{eqnarray}
-B_y & = & \frac{1}{2} \left(-\frac{x^7 g^{(6)}(z)}{5040}+\frac{1}{120} x^5 g^{(4)}(z)-\frac{1}{6} x^3 g^{(2)}(z)\right) \\
-& & + \frac{1}{2}  \left(-\frac{1}{720} x y^6 g^{(6)}(z)+\frac{1}{24} x y^4 g^{(4)}(z)-\frac{1}{2} x y^2 g^{(2)}(z)\right) \\
-& & +x g(z),
-\end{eqnarray}
-and
-\begin{eqnarray}
-B_z & = & \frac{1}{2} \left(-\frac{x^7 y g^{(7)}(z)}{5040}+\frac{1}{120} x^5 y g^{(5)}(z)-\frac{1}{6} x^3 y g^{(3)}(z)\right) \\
-& &  + \frac{1}{2} \left(-\frac{x y^7 g^{(7)}(z)}{5040}+\frac{1}{120} x y^5 g^{(5)}(z)-\frac{1}{6} x y^3 g^{(3)}(z)\right) \\
-& & + x y g^{(1)}(z).
-\end{eqnarray}
-
-These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to high order.
-In particular
 \begin{equation}
-\vec{\nabla} \cdot \vec{B} = -\frac{x^7 y g^{(8)}(z)}{10080}-\frac{x y^7 g^{(8)}(z)}{10080}.
+\Phi = -\frac{1}{12} x^3 y g''(z)\right) -\frac{1}{12} x y^3 g''(z) + x y g(z)
 \end{equation}
+From which we find
+\begin{equation}
+B_x = -\frac{1}{4} x^2 y g''(z)-\frac{1}{12} y^3 g''(z)+y g(z),
+\end{equation}
+\begin{equation}
+B_y = -\frac{1}{12} x^3 g''(z)-\frac{1}{4} x y^2 g''(z)+x g(z),
+\end{equation}
+and
+\begin{equation}
+B_z = -\frac{1}{12} x^3 y g^{(3)}(z)-\frac{1}{12} x y^3 g^{(3)}(z)+x y g'(z).
+\end{equation}
+These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to 
+4$^{th}$ order.
 
 The gradient $g(z)$ is specified in the column named by the \verb|GRADIENT_COLUMN| parameter.
 The names for the columns containing z derivatives of $g(z)$ are constructed from the name of the gradient.
 Assume for concreteness that \verb|GRADIENT_COLUMN="Gradient"|. 
 {\tt elegant} looks for $g^{(1)}(z)$ in column \verb|GradientDeriv| and 
 $g^{(n)}(z)$ for $n>1$ in columns \verb|GradientDeriv2|, \verb|GradientDeriv3|,  etc.
+Also the expansion is limited to using $g^{(3)}(z)$, higher derivatives, if given, will be used
+for interpolation with respect to $z$ if the \verb|Z_SUBDIVISIONS| parameter is larger than 1.
 The expansion is truncated if the needed columns do not exist in the input file.
+
 The needed derivatives can be obtained using the program \verb|sddsderiv|, e.g.,
 \begin{verbatim}
 sddsderiv gradient.sdds gradient1.sdds -differ=Gradient -versus=z -savitzky=7,7,7,1
