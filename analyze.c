@@ -859,7 +859,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   double **initialCoord, **finalCoord, **coordError;
   long n_track, i, j, n_left;
   VMATRIX *M;
-  double defaultStep[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
+  double defaultStep[6];
   double maximumValue[6];
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
@@ -874,7 +874,9 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
   long my_nTrack, my_offset;
-  
+
+  memcpy(defaultStep, trackingMatrixStepSize, sizeof(double)*6);
+
   if (nPoints1%2==0)
     nPoints1 += 1;
   if (nPoints1<5)
