@@ -307,7 +307,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
     /* Element body */
     for (ip=0; ip<np; ip++) {
 #if !USE_MPI
-      if (bgg->SDDSpo) {
+      if (bgg->SDDSpo && np<1000) {
         if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
@@ -364,7 +364,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
      /* Integrate through the magnet */
       for (iz=irow=0; iz<bggData->nz; iz+=bgg->zInterval) {
 #if !USE_MPI
-        if (bgg->SDDSpo &&
+        if (bgg->SDDSpo && np<1000 &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], px*pCentral,
@@ -572,7 +572,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
  
 #if !USE_MPI
-      if (bgg->SDDSpo) {
+      if (bgg->SDDSpo && np<1000) {
         if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], px*pCentral,
@@ -674,7 +674,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       pErr[0] = pErr[1] = pErr[2] = 0;
 
 #if !USE_MPI
-      if (bgg->SDDSpo) {
+      if (bgg->SDDSpo && np<1000) {
         if (!SDDS_StartPage(bgg->SDDSpo, bggData->nz+1) ||
             !SDDS_SetParameters(bgg->SDDSpo, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                 "particleID", (long)(part[ip][6]), "pCentral", pCentral, NULL)) {
@@ -693,7 +693,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
 	p[1] = yp*p[2];
 	/* gamma = sqrt(sqr(p[0]) + sqr(p[1]) + sqr(p[2]) + 1); */
 #if !USE_MPI
-        if (bgg->SDDSpo &&
+        if (bgg->SDDSpo && np<1000 &&
             !SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], p[0],
@@ -820,7 +820,7 @@ long trackBGGExpansion(double **part, long np, BGGEXP *bgg, double pCentral, dou
       }
       
 #if !USE_MPI
-      if (bgg->SDDSpo) {
+      if (bgg->SDDSpo && np<1000) {
         if (!SDDS_SetRowValues(bgg->SDDSpo, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, irow++,
                                bgg->poIndex[0], x,
                                bgg->poIndex[1], p[0],
