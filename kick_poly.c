@@ -178,6 +178,7 @@ long polynomial_hamiltonian(
     }
   }
 
+  iqxMax = iqyMax = ideltaMax = -1;
   if (hkpoly->driftType==1) {
     for (iqx=0; iqx<7; iqx++) {
       for (iqy=0; iqy<7; iqy++) {
@@ -190,7 +191,6 @@ long polynomial_hamiltonian(
       }
     }
  
-    iqxMax = iqyMax = -1;
     for (iqx=0; iqx<7; iqx++) {
       for (iqy=0; iqy<7; iqy++) {
 	if (hkpoly->D[iqx][iqy]!=0) {
@@ -209,7 +209,6 @@ long polynomial_hamiltonian(
       }
     }
 
-    iqxMax = iqyMax = ideltaMax = -1;
     for (iqx=0; iqx<7; iqx++) {
       for (iqy=0; iqy<7; iqy++) {
 	for (idelta=0; idelta<7; idelta++) {
