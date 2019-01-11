@@ -38,6 +38,7 @@ long shareTrackingBasedMatrices = 1;
 long parallelTrackingBasedMatrices = 1;
 double trackingMatrixStepFactor = 1;
 long trackingMatrixPoints = 9;
+double trackingMatrixStepSize[6] = {5e-5, 5e-5, 5e-5, 5e-5, 5e-5, 5e-5};
 #if USE_MPI
 short mpiAbort = 0;
 #endif
@@ -3216,13 +3217,14 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dyError), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.dzError), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, use L."},
+    {"LFIELD", "M", IS_DOUBLE, 0, (long)((char *)&bmapxyz_example.fieldLength), NULL, -1.0, 0, "expected length of the field map. If negative, determined from field data."},
     {"STRENGTH", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.strength), NULL, 1.0, 0, "factor by which to multiply field"},
     {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bmapxyz_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
     {"METHOD", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
     {"FILENAME", NULL, IS_STRING, PARAM_CHANGES_MATRIX, (long)((char*)&bmapxyz_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, z) and either (Bx, By, Bz) or (Fx, Fy, Fz)"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"CHECK_FIELDS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.checkFields), NULL, 0.0, 0, "check fields by computing divB and curlB errors?"},
+    {"INJECT_AT_Z0", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.injectAtZero), NULL, 0.0, 0, "By default, particles are placed at the entrance to the field map regardless of the z coordinate values. If nonzero, particles start at z=0."},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
 };  
 
