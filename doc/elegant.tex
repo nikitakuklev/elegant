@@ -2293,12 +2293,13 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   N.B.: This is set to zero when using \verb|parallel_optimization_setup|.
 \item \verb|share_tracking_based_matrices| --- If non-zero, then the matrices determined by tracking for various elements
   (e.g., \verb|BRAT|, \verb|BGGEXP|, \verb|CCBEND|) are computed only once for a set of identical elements, then shared.
-\item \verb|tracking_matrix_step_factor| --- The default step size for tracking-based matrices is $10^{-5}$ (in the appropriate units
-  for each corodinate). This can be increased or decreased by supplying a value for \verb|tracking_matrix_step_factor|.
+\item \verb|tracking_matrix_step_factor| --- The default step size for tracking-based matrices is $5 \times 10^{-5}$ 
+  (in the appropriate units for each corodinate). This can be increased or decreased by supplying a value for 
+  \verb|tracking_matrix_step_factor|.
 \item \verb|tracking_matrix_points| --- By default, five grid points are used in each dimension for tracking-based matrix determination.
   This can be increased by setting \verb|tracking_matrix_points| to a larger, odd value, at the expense of longer running time.
   (The run time scales approximately as the sixth power of this value.)
-\item verb|tracking_matrix_step_size| --- Sets the step sizes, in each of the six coordinates,
+\item \verb|tracking_matrix_step_size| --- Sets the step sizes, in each of the six coordinates,
   used for tracking-based matrix determination
 \end{itemize}
 

@@ -10,21 +10,29 @@ Users are cautioned to take care in deciding how far to trust the expansion.
 For quadrupoles, we use the on-axis gradient $g(z)$ and its z derivatives $g^{(n)}(z)$
 The scalar potential can be written 
 \begin{equation}
-\Phi = -\frac{1}{12} x^3 y g''(z)\right) -\frac{1}{12} x y^3 g''(z) + x y g(z)
+\Phi = \frac{x^5 y^5 g^{(8)}(z)}{86400}-\frac{g^{(6)}(z) \left(x^5 y^3+x^3 y^5\right)}{4320}+\frac{1}{720}
+    g^{(4)}(z) \left(x^5 y+x y^5\right)+\frac{1}{108} x^3 y^3 g^{(4)}(z)-\frac{1}{12} \left(x^3 y+x y^3\right)
+    g''(z)+x y g(z)
 \end{equation}
 From which we find
 \begin{equation}
-B_x = -\frac{1}{4} x^2 y g''(z)-\frac{1}{12} y^3 g''(z)+y g(z),
+B_x = \frac{x^4 y^5 g^{(8)}(z)}{17280}-\frac{g^{(6)}(z) \left(5 x^4 y^3+3 x^2
+    y^5\right)}{4320}+\frac{1}{720} g^{(4)}(z) \left(5 x^4 y+y^5\right)+\frac{1}{36} x^2 y^3 g^{(4)}(z)-\frac{1}{12}
+    \left(3 x^2 y+y^3\right) g''(z)+y g(z)
 \end{equation}
 \begin{equation}
-B_y = -\frac{1}{12} x^3 g''(z)-\frac{1}{4} x y^2 g''(z)+x g(z),
+B_y = \frac{x^5 y^4 g^{(8)}(z)}{17280}-\frac{g^{(6)}(z) \left(3 x^5 y^2+5 x^3
+    y^4\right)}{4320}+\frac{1}{720} g^{(4)}(z) \left(x^5+5 x y^4\right)+\frac{1}{36} x^3 y^2 g^{(4)}(z)-\frac{1}{12}
+    \left(x^3+3 x y^2\right) g''(z)+x g(z)
 \end{equation}
 and
 \begin{equation}
-B_z = -\frac{1}{12} x^3 y g^{(3)}(z)-\frac{1}{12} x y^3 g^{(3)}(z)+x y g'(z).
+B_z = \frac{x^5 y^5 g^{(9)}(z)}{86400}-\frac{g^{(7)}(z) \left(x^5 y^3+x^3 y^5\right)}{4320}+\frac{1}{720}
+    g^{(5)}(z) \left(x^5 y+x y^5\right)+\frac{1}{108} x^3 y^3 g^{(5)}(z)-\frac{1}{12} g^{(3)}(z) \left(x^3 y+x
+    y^3\right)+x y g'(z)
 \end{equation}
 These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to 
-4$^{th}$ order.
+10$^{th}$ order.
 
 The gradient $g(z)$ is specified in the column named by the \verb|GRADIENT_COLUMN| parameter.
 The names for the columns containing z derivatives of $g(z)$ are constructed from the name of the gradient.

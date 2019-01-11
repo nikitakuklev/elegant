@@ -493,26 +493,24 @@ void computeMagneticFieldFromOffAxisExpansion
     if (boaData->nDz1>1 && (boa->expansionOrder==0 || boa->expansionOrder>1)) {
       B[2] = fieldData[1]*x*y;
       if (boaData->nDz1>2 && (boa->expansionOrder==0 || boa->expansionOrder>2)) {
-        B[0] -= fieldData[2]*(x*x*y/2     + ipow(y,3)/6)/2;
-        B[1] -= fieldData[2]*(ipow(x,3)/6 + x*y*y/2)/2;
+        B[0] -= fieldData[2]*(x*x*y/4     + ipow(y,3)/12);
+        B[1] -= fieldData[2]*(ipow(x,3)/12 + x*y*y/4);
         if (boaData->nDz1>3 && (boa->expansionOrder==0 || boa->expansionOrder>3)) {
           B[2] -= fieldData[3]*(ipow(x, 3)*y + x*ipow(y, 3))/12;
-#if 0==1
           if (boaData->nDz1>4 && (boa->expansionOrder==0 || boa->expansionOrder>4)) {
-            B[0] += fieldData[4]*(ipow(x, 4)*y/48 + ipow(y, 5)/240);
-            B[1] += fieldData[4]*(ipow(x, 5)/240  + x*ipow(y, 4)/48);
+            B[0] += fieldData[4]*(ipow(x, 2)*ipow(y, 3)/36 + (5*ipow(x, 4)*y + ipow(y, 5))/720);
+            B[1] += fieldData[4]*(ipow(x, 3)*ipow(y, 2)/36 + (ipow(x, 5) + 5*x*ipow(y, 4))/720);
             if (boaData->nDz1>5 && (boa->expansionOrder==0 || boa->expansionOrder>5)) {
-              B[2] += fieldData[5]*(ipow(x, 5)*y + x*ipow(y, 5))/240;
+              B[2] += fieldData[5]*(ipow(x*y, 3)/108 + (ipow(x, 5)*y + x*ipow(y, 5))/720);
               if (boaData->nDz1>6 && (boa->expansionOrder==0 || boa->expansionOrder>6)) {
-                B[0] -= fieldData[6]*(ipow(x, 6)*y/1440 + ipow(y, 7)/10080);
-                B[1] -= fieldData[6]*(ipow(x, 7)/10080  + x*ipow(y, 6)/1440);
+                B[0] -= fieldData[6]*(5*ipow(x, 4)*ipow(y, 3) + 3*ipow(x, 2)*ipow(y, 5))/4320;
+                B[1] -= fieldData[6]*(3*ipow(x, 5)*ipow(y, 2) + 5*ipow(x, 3)*ipow(y, 4))/4320;
                 if (boaData->nDz1>7 && (boa->expansionOrder==0 || boa->expansionOrder>7)) {
-                  B[2] -= fieldData[7]*(ipow(x, 7)*y + x*ipow(y, 7))/10080;
+                  B[2] -= fieldData[7]*(ipow(x, 5)*ipow(y, 3) + ipow(x, 3)*ipow(y, 5))/4320;
                 }
               }
             }
           }
-#endif
         }
       }
     }
