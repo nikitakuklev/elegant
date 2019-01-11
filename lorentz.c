@@ -295,7 +295,7 @@ long lorentz(
     if (field_type==T_BMAPXYZ) {
       BMAPXYZ *bmxyz;
       bmxyz = (BMAPXYZ*)field;
-      if (bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength)
+      if ((bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength) && !bmxyz->injectAtZero)
         exactDrift(part, n_part, (bmxyz->length-bmxyz->fieldLength)/2);
     }
     
@@ -329,7 +329,7 @@ long lorentz(
     if (field_type==T_BMAPXYZ) {
       BMAPXYZ *bmxyz;
       bmxyz = (BMAPXYZ*)field;
-      if (bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength)
+      if ((bmxyz->fieldLength>0 && bmxyz->length!=bmxyz->fieldLength) && !bmxyz->injectAtZero) 
         exactDrift(part, n_part, (bmxyz->length-bmxyz->fieldLength)/2);
     }
 
@@ -803,13 +803,13 @@ void lorentz_setup(
             exit_function = bmapxyz_exit_function;
             deriv_function = bmapxyz_deriv_function;
             coord_transform = bmapxyz_coord_transform;
-            central_length = bmapxyz->fieldLength>0 ? bmapxyz->fieldLength : bmapxyz->length ;
             select_lorentz_integrator(bmapxyz->method);
             tolerance = bmapxyz->accuracy;
 	    if (!bmapxyz->filename)
 	      bombElegant("Specify filename for BMXYZ", NULL);
             if (!bmapxyz->data)
               bmapxyz_field_setup(bmapxyz);
+            central_length = bmapxyz->fieldLength>0 ? bmapxyz->fieldLength : bmapxyz->length ;
             rad_coef = 0;
             if (bmapxyz->synchRad) 
               rad_coef = sqr(particleCharge/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*particleMass);
@@ -2027,7 +2027,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
       break;
     ny++;
   }
-  if (ny==data->points) {
+  if (ny==data->points/nx) {
     printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data (y)\n",
             bmapxyz->filename);
     printf("Use sddssort -column=z -column=y -column=x to sort the file\n");
@@ -2036,7 +2036,8 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   data->ymax = y[(ny-1)*nx];
   data->dy = (data->ymax-data->ymin)/(ny-1);
 
-  if ((data->nx=nx)<=1 || (data->ny=ny)<=1 || (data->nz = data->points/(nx*ny))<=1) {
+  if ((data->nx=nx)<=1 || (data->ny=ny)<=1 || (data->nz = data->points/(nx*ny))<=1 || 
+      (data->nx*data->ny*data->nz!=data->points)) {
     printf("file %s for BMAPXYZ element doesn't have correct structure or amount of data\n",
             bmapxyz->filename);
     printf("nx = %ld, ny=%ld, nz=%ld, points=%ld\n", data->nx, data->ny, data->nz, data->points);
@@ -2053,6 +2054,17 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
           data->ymin, data->ymax,
           data->zmin, data->zmax
           );
+  if (data->zmin<0) {
+    if (bmapxyz->injectAtZero) {
+      printf("**************** WARNING ****************\n");
+      printf("zmin<0 in BMAPXYZ data and INJECT_AT_Z0 is non-zero. Be aware that particles will start inside the element!\n");
+      printf("The insertion length (L) and any difference from the field length is ignored.\n");
+      fflush(stdout);
+    } else {
+      data->zmax = data->zmax - data->zmin;
+      data->zmin = 0;
+    }
+  }
   free(x);
   free(y);
   free(z);
@@ -2060,6 +2072,17 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   data->Fy = Fy;
   data->Fz = Fz;
 
+  if (bmapxyz->fieldLength>0) {
+    if (fabs(bmapxyz->fieldLength-(data->zmax-data->zmin))/bmapxyz->fieldLength>1e-12) {
+      fprintf(stderr, "Error: Mismatch of LFIELD (%21.15e) and data from file %s (range %21.15le)\n", 
+              bmapxyz->fieldLength, bmapxyz->filename, data->zmax-data->zmin);
+      exit(1);
+    }
+  } else {
+    bmapxyz->fieldLength = data->zmax-data->zmin;
+    printf("Set LFIELD for %s to %21.15e\n", bmapxyz->filename, bmapxyz->fieldLength);
+  }
+  
   if (bmapxyz->checkFields) {
     /* compute the maximum values of |div B| and |curl B| */
     double divB, curlB[3], magCurlB, maxDivB, maxCurlB;
@@ -2128,6 +2151,10 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   
 }
 
+/*
+static FILE *fpdeb = NULL;
+*/
+
 long interpolate_bmapxyz(double *F0, double *F1, double *F2,
                          BMAPXYZ *bmapxyz, 
                          double x, double y, double z)
@@ -2136,7 +2163,7 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
   double fx, fy, fz;  
   double Finterp1[2][2], Finterp2[2];
   double *Fq[3], Freturn[3];
-  
+
   ix = (x-bmapxyz->data->xmin)/bmapxyz->data->dx;
   iy = (y-bmapxyz->data->ymin)/bmapxyz->data->dy;
   iz = (z-bmapxyz->data->zmin)/bmapxyz->data->dz;
@@ -2180,7 +2207,37 @@ long interpolate_bmapxyz(double *F0, double *F1, double *F2,
     *F0 = bmapxyz->strength*Freturn[0];
     *F1 = bmapxyz->strength*Freturn[1];
     *F2 = bmapxyz->strength*Freturn[2];
+
+    /*
+    if (!fpdeb) {
+      fpdeb = fopen("bmapxyz.deb", "w");
+      fprintf(fpdeb, "SDDS1\n");
+      fprintf(fpdeb, "&column name=ix type=short &end\n");
+      fprintf(fpdeb, "&column name=iy type=short &end\n");
+      fprintf(fpdeb, "&column name=iz type=short &end\n");
+      fprintf(fpdeb, "&column name=x type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=y type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=z type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=fx type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=fy type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=fz type=float units=m &end\n");
+      fprintf(fpdeb, "&column name=Bx type=float  &end\n");
+      fprintf(fpdeb, "&column name=By type=float  &end\n");
+      fprintf(fpdeb, "&column name=Bz type=float  &end\n");
+      fprintf(fpdeb, "&column name=S type=float  &end\n");
+      fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+    }
+   
+  if (x>0)
+    fprintf(fpdeb, "%ld %ld %ld %le %le %le %le %le %le %le %le %le %le\n",
+            ix, iy, iz,
+            x, y, z,
+            fx, fy, fz,
+            *F1, *F2,*F0, bmapxyz->strength);
+  */
+
   }
+
   return 1;
 }
 
