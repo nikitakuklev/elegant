@@ -50,6 +50,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The matrix for misaligned \verb|FMULT| elements was incorrect. The misalignment was applied twice.
 \item The edge effects for \verb|KQUAD| were broken for tracking only (not for matrix-based computations)
   in version 35.0.1. This was fixed.  Y.P. Sun (APS) helped discover this problem.
+\item The \verb|BMXYZ| element previously would inject particles at $z=0$ by default, which is usually not
+  the desired behavior. Now, it injects at the start of the field map by default. The new \verb|INJECT_AT_Z0|
+  parameter can be used to recover the old behavior. In addition, drift spaces are now automatically included
+  to compensate for differences between the length of the field map and the user-defined insertion length.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -83,6 +87,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   to which tracked coordinates will be compared for purposes of optimization.
 \item The \verb|optimization_setup| command now allows setting the interval (in terms of function evaluations) 
   between checks of the interrupt semaphore file. Previously, the file was checked only at the end of a simplex pass.
+\item The \verb|global_settings| command now allows setting the default step sizes for tracking-based determination
+  of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
+  the same as those used by the \verb|analyze_map| command.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1331,6 +1338,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     double iteration_fraction = 0.9;
     double fraction_multiplier = 1.05;
     double multiplier_interval = 5;
+    long output_monitors_only = 0;
     long tracking_turns = 0;
     long disable = 0;
 &end
@@ -1378,9 +1386,12 @@ during the computations.
   iteration is converging.
 \item \verb|multiplier_interval| --- Interval in number of iterations at which to adjust
   the interation fraction.
+\item \verb|output_monitors_only|  --- If non-zero, output file contains data only at beam position monitors,
+  i.e., at \verb|MONI|, \verb|HMON|, and \verb|VMON| elements.
 \item \verb|tracking_turns| --- If non-zero, the number of turns to track for detemination 
   of the closed orbit by averaging. This may be useful if the regular closed orbit algorithm
   complains about convergence issues.
+\item \verb|disable| --- If non-zero, disables the command.
 \end{itemize}
 
 %\begin{latexonly}
@@ -2286,6 +2297,8 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
 \item \verb|tracking_matrix_points| --- By default, five grid points are used in each dimension for tracking-based matrix determination.
   This can be increased by setting \verb|tracking_matrix_points| to a larger, odd value, at the expense of longer running time.
   (The run time scales approximately as the sixth power of this value.)
+\item verb|tracking_matrix_step_size| --- Sets the step sizes, in each of the six coordinates,
+  used for tracking-based matrix determination
 \end{itemize}
 
 
