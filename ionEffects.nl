@@ -21,6 +21,9 @@
           long multiple_ionization_interval = 100;
           double x_span = 0;
           double y_span = 0;
+	  long x_ion_bins = 0;
+	  long y_ion_bins = 0;
+	  STRING ion_histogram_output = NULL;
           long verbosity = 0;
 #end
 

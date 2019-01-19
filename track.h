@@ -1040,7 +1040,7 @@ extern char *entity_text[N_TYPES];
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
 #define N_SLICE_POINT_PARAMS 12
-#define N_IONEFFECTS_PARAMS 8
+#define N_IONEFFECTS_PARAMS 10
 #define N_SPEEDBUMP_PARAMS 8
 #define N_CCBEND_PARAMS 42
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
@@ -3258,7 +3258,8 @@ extern PARAMETER ionEffects_param[N_IONEFFECTS_PARAMS];
 typedef struct {
   long disable;
   long macroIons, generationInterval;
-  double xSpan, ySpan;
+  double span[2]; /* Actually the x, y half-span, centered on the center of the chamber */
+  long ionBins[2];   /* x, y value. Used if fitting of multiple gaussians is wanted for field calculation */
   long startPass, endPass, passInterval;
   /* internal parameters */
   double sLocation;                /* location of the element */
@@ -3271,7 +3272,11 @@ typedef struct {
   double ***coordinate;            /* coordinate[i][j][k] is the kth coordinate of the jth ion of species i */
                                    /* coordinate order is (x, vx, y, vy, charge) */
   long *nIons;                     /* nIons[i] is the number of ions of species i */
-
+  double *ionHistogram[2];         /* If bins[0] or bins[1] non-zero, make x, y ion histograms */
+  double ionHistogramMissed[2];    /* Number of ions that are left out of the histogram */
+  /* These are for convenience in ion histogram output */
+  double ionDelta[2];              /* delta x or y for ion histogram bins */
+  double *xyIonHistogram[2];       /* values for ion histogram independent coordinates (x, y) */
 } IONEFFECTS ;
 
 /* names and storage structure for speed bump physical parameters */

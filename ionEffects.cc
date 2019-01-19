@@ -55,8 +55,13 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
+void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies);
+void allocateIonHistograms(IONEFFECTS *ionEffects);
+void shareIonHistograms(IONEFFECTS *ionEffects);
+
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
+static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
 
 static double sStartFirst = -1;
 static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonDensityOutput;
@@ -187,7 +192,42 @@ void setUpIonEffectsOutputFiles(long nPasses)
     }
 #endif
   }
-  
+
+  if (ion_histogram_output) {
+    /* Setup the ion histogram output file */
+#if USE_MPI 
+    if (myid==0) {
+#endif
+      if (!SDDS_ionHistogramOutput) {
+        SDDS_ionHistogramOutput = (SDDS_DATASET*)tmalloc(sizeof(*SDDS_ionHistogramOutput));
+        if (!SDDS_InitializeOutput(SDDS_ionHistogramOutput, SDDS_BINARY, 1,
+				   "ion histogram output", NULL, ion_histogram_output)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+        if (!SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Pass", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Bunch", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "t", "s", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "s", "m", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Plane", NULL, SDDS_STRING) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nIonsOutside", NULL, SDDS_DOUBLE)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+	if (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exitElegant(1);
+        }
+        if (!SDDS_SaveLayout(SDDS_ionHistogramOutput) || !SDDS_WriteLayout(SDDS_ionHistogramOutput)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exitElegant(1);
+        }
+      }
+#if USE_MPI
+    }
+#endif
+  }  
 }
 
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
@@ -214,6 +254,8 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     beam_output = compose_filename(beam_output, run->rootname);
   if (ion_density_output)
     ion_density_output = compose_filename(ion_density_output, run->rootname);
+  if (ion_histogram_output)
+    ion_histogram_output = compose_filename(ion_histogram_output, run->rootname);
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
@@ -302,7 +344,8 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   ELEMENT_LIST *eptr, *eptrLast;
   IONEFFECTS *ionEffects;
   short chargeSeen = 0;
-
+  long iPlane, ixy;
+  
   eptr = &(beamline->elem);
   eptrLast = eptr;
   if (eptr->type == T_IONEFFECTS) 
@@ -363,10 +406,44 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       ionEffects->t = 0;
       if (ionEffects->macroIons<=0)
         ionEffects->macroIons = macro_ions;
-      if (ionEffects->xSpan<=0)
-        ionEffects->xSpan = x_span;
-      if (ionEffects->ySpan<=0)
-        ionEffects->ySpan = y_span;
+      if (ionEffects->span[0]<=0)
+        ionEffects->span[0] = x_span;
+      if (ionEffects->span[1]<=0)
+        ionEffects->span[1] = y_span;
+      if (ionEffects->ionBins[0]<=0)
+        ionEffects->ionBins[0] = x_ion_bins;
+      if (ionEffects->ionBins[1]<=0)
+        ionEffects->ionBins[1] = y_ion_bins;
+      for (iPlane=0; iPlane<2; iPlane++) {
+	if (ionEffects->span[iPlane]<=0 && ionEffects->ionBins[iPlane]>0) {
+	  fprintf(stderr, "ION_EFFECTS issue for %s#%ld: %c_span is non-positive but %c_ion_bins is postive",
+			eptr->name, eptr->occurence, iPlane==0?'x':'y', iPlane==0?'x':'y');
+	  exit(1);
+	}
+	if (ionEffects->ionBins[iPlane]>0 && ionEffects->ionBins[iPlane]<10) {
+	  fprintf(stderr, "ION_EFFECTS issue for %s#%ld: %c_ion_bins is postive but less than 10, which is invalid",
+		  eptr->name, eptr->occurence, iPlane==0?'x':'y');
+	  exit(1);
+	}
+      }
+      if ((ionEffects->ionBins[0]>0 && ionEffects->ionBins[1]<=0) ||
+	  (ionEffects->ionBins[0]<=0 && ionEffects->ionBins[1]>0)) {
+	fprintf(stderr,
+		"ION_EFFECTS issue for %s#%ld: number of ion bins must be non-zero for both planes, or zero for both planes",
+		      eptr->name, eptr->occurence);
+	exit(1);
+      }
+      if (ionEffects->ionBins[0]>0) {
+	for (iPlane=0; iPlane<2; iPlane++) {
+	  ionEffects->xyIonHistogram[iPlane] =
+	    (double*)tmalloc(sizeof(**ionEffects->xyIonHistogram)*ionEffects->ionBins[iPlane]);
+	  ionEffects->ionDelta[iPlane] = 2*ionEffects->span[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
+	  for (ixy=0; ixy<ionEffects->ionBins[iPlane]; ixy++)
+	    ionEffects->xyIonHistogram[iPlane][ixy] =
+	      -ionEffects->span[iPlane] + ixy*ionEffects->ionDelta[iPlane];
+	}
+      } else 
+	ionEffects->xyIonHistogram[0] = ionEffects->xyIonHistogram[1] = NULL;
       if (ionEffects->generationInterval<=0)
         ionEffects->generationInterval = generation_interval;
     }
@@ -425,6 +502,8 @@ void trackWithIonEffects
   /* converts Torr to 1/m^3 and mBarns to m^2 */
   unitsFactor = 1e-22/(7.5006e-3*k_boltzmann_mks*pressureData.temperature);
     
+  allocateIonHistograms(ionEffects);
+
   if (isSlave || !notSinglePart) {
     /* Determine which bunch each particle is in */
     determine_bucket_assignments(part0, np0, charge?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBunch, &npBunch, &nBunches, -1);
@@ -593,12 +672,12 @@ void trackWithIonEffects
       }
       ionEffects->t = tNow;
       
-      if (ionEffects->xSpan || ionEffects->ySpan) {
+      if (ionEffects->span[0] || ionEffects->span[1]) {
         /*** Eliminate ions that are outside the simulation region */
         for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
           for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-            if ((ionEffects->xSpan && fabs(ionEffects->coordinate[iSpecies][iIon][0])>ionEffects->xSpan) ||
-                (ionEffects->ySpan && fabs(ionEffects->coordinate[iSpecies][iIon][2])>ionEffects->ySpan)) {
+            if ((ionEffects->span[0] && fabs(ionEffects->coordinate[iSpecies][iIon][0])>ionEffects->span[0]) ||
+                (ionEffects->span[1] && fabs(ionEffects->coordinate[iSpecies][iIon][2])>ionEffects->span[1])) {
               if (ionEffects->nIons[iSpecies]>1) {
                 /* Move ion at the top of the array into this slot in the array */
                 long k;
@@ -621,8 +700,8 @@ void trackWithIonEffects
       /*
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
         for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-          if ((ionEffects->xSpan && fabs(ionEffects->coordinate[iSpecies][iIon][0])>ionEffects->xSpan) ||
-              (ionEffects->ySpan && fabs(ionEffects->coordinate[iSpecies][iIon][2])>ionEffects->ySpan)) {
+          if ((ionEffects->span[0] && fabs(ionEffects->coordinate[iSpecies][iIon][0])>ionEffects->span[0]) ||
+              (ionEffects->span[1] && fabs(ionEffects->coordinate[iSpecies][iIon][2])>ionEffects->span[1])) {
             long k;
             k = 0;
           }
@@ -814,20 +893,22 @@ void trackWithIonEffects
     
     /*** Compute field due to ions */
     if (isSlave || !notSinglePart) {
+      makeIonHistogram(ionEffects, ionProperties.nSpecies);
+      
       /* Compute charge-weighted centroids */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        /* Relevant quantities:
-         * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
-         * ionEffects->nIons[index] --- Number of ions of the source species
-         * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
-         */
-        
+	/* Relevant quantities:
+	 * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
+	 * ionEffects->nIons[index] --- Number of ions of the source species
+	 * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
+	 */
+	
 	int jMacro = 0;
-        if (ion_species_output) {
-          speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
-          speciesCharge[iSpecies] = 0;
-          speciesCount[iSpecies] = 0;
-        }
+	if (ion_species_output) {
+	  speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
+	  speciesCharge[iSpecies] = 0;
+	  speciesCount[iSpecies] = 0;
+	}
 	for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
 	  if ((ionEffects->coordinate[iSpecies][jMacro][0] > bx1) && (ionEffects->coordinate[iSpecies][jMacro][0] < bx2) &&
 	      (ionEffects->coordinate[iSpecies][jMacro][2] > by1) && (ionEffects->coordinate[iSpecies][jMacro][2] < by2)) {
@@ -842,20 +923,21 @@ void trackWithIonEffects
 	    qIon += ionEffects->coordinate[iSpecies][jMacro][4];
 	    mTot++;
 	  }
-        }
+	}
       }
     } else {
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        if (ion_species_output) {
-          speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
-          speciesCharge[iSpecies] = 0;
-          speciesCount[iSpecies] = 0;
-        }
+	if (ion_species_output) {
+	  speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
+	  speciesCharge[iSpecies] = 0;
+	  speciesCount[iSpecies] = 0;
+	}
       }
     }
-
+    
     long mTotTotal = 0;
 #if USE_MPI
+    shareIonHistograms(ionEffects);
     /* Sum ion centroid and charge data over all nodes */
     long mTotMin, mTotMax;
     double qIonTotal, ionCentroidTotal[2];
@@ -917,6 +999,33 @@ void trackWithIonEffects
       }
     }
 #endif
+
+    if (SDDS_ionHistogramOutput) {
+      long iPlane;
+      /* output ion density histogram */
+#if USE_MPI
+      if (myid==0) {
+#endif
+	for (iPlane=0; iPlane<2; iPlane++) {
+	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, ionEffects->ionBins[iPlane]) ||
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
+				  "nIonsOutside", ionEffects->ionHistogramMissed[iPlane],
+				  "Plane", iPlane==0?"x":"y", 
+				  NULL) ||
+	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->xyIonHistogram[iPlane], ionEffects->ionBins[iPlane], "Position") ||
+	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane], "Charge") ||
+	      !SDDS_WritePage(SDDS_ionHistogramOutput)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	}
+#if USE_MPI
+      }
+#endif	
+    }
     
     if (isSlave || !notSinglePart) {
       /* Compute charge-weighted rms size */
@@ -1066,7 +1175,7 @@ void trackWithIonEffects
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
-          double kick[2], sigFudge[2];	  
+          double kick[2];
 
 	  /*
 	  if ((ionSigma[0] > 0.99*ionSigma[1]) && (ionSigma[0] < 1.01*ionSigma[1])) {
@@ -1267,10 +1376,71 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
     //ionEffects->qIon[iSpecies][iNew] = qToAdd;
   }
 
-
   
 }
 
+void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies)
+{
+  long iSpecies, iBin, iPlane;
+  long iIon;
+  double delta, span;
+
+  for (iPlane=0; iPlane<2; iPlane++) {
+    if (ionEffects->ionBins[iPlane]<=0)
+      continue;
+    ionEffects->ionHistogramMissed[iPlane] = 0;
+    /* zero array */
+    memset(ionEffects->ionHistogram[iPlane], 0,
+	   sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+    /* histogram ion charge */
+    for (iSpecies=0; iSpecies<nSpecies; iSpecies++) {
+      delta = ionEffects->ionDelta[iPlane];
+      span = ionEffects->span[iPlane];
+      for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+	iBin = (ionEffects->coordinate[iSpecies][iIon][2*iPlane] + span)/delta;
+	if (iBin<0 || iBin>(ionEffects->ionBins[iPlane]-1))
+	  ionEffects->ionHistogramMissed[iPlane]++;
+	else
+	  ionEffects->ionHistogram[iPlane][iBin] += ionEffects->coordinate[iSpecies][iIon][4];
+      }
+    }
+  }
+}
+
+void allocateIonHistograms(IONEFFECTS *ionEffects)
+{
+  long iPlane;
+  if (ionEffects->ionBins[0]<=0)
+    return;
+  for (iPlane=0; iPlane<2; iPlane++) {
+    if (!ionEffects->ionHistogram[iPlane])
+      ionEffects->ionHistogram[iPlane] = (double*)
+	tmalloc(sizeof(ionEffects->ionHistogram[iPlane][0])*ionEffects->ionBins[iPlane]);
+  }
+}
+
+#if USE_MPI
+void shareIonHistograms(IONEFFECTS *ionEffects)
+{
+  double *buffer;
+  long iPlane;
+  if (ionEffects->ionBins[0]<=0)
+    return;
+  MPI_Barrier(MPI_COMM_WORLD);
+  for (iPlane=0; iPlane<2; iPlane++) {
+    buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
+    if (myid==0)
+      /* master has no ions */
+      memset(ionEffects->ionHistogram[iPlane], 0,
+	     sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+    MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
+		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(ionEffects->ionHistogram[iPlane], buffer, sizeof(*buffer)*ionEffects->ionBins[iPlane]);
+    free(buffer);
+  }
+}
+#endif
+  
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y)
 {
