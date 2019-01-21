@@ -20,7 +20,8 @@
     double accuracy_factor = 1e-12;
     long center_on_orbit = 0;
     long verbosity = 0;
-    long n_points = 3;  /* backward compatibility. ignored */
+    long n_points = 9;
+    long max_fit_order = 8;
     long canonical_variables = 0;
     long periodic = 1;
     double beta_x = 1;

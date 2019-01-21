@@ -98,6 +98,8 @@ void setup_transport_analysis(
       printf("warning: maximum printout_order is 3\n");
       printout_order = 3;
     }
+    if (n_points<=max_fit_order)
+      bombElegant("n_points <= max_fit_order", NULL);
 
     n_output_columns = N_ANALYSIS_COLUMNS + control->n_elements_to_vary + errcon->n_items;
 
@@ -199,7 +201,7 @@ void do_transport_analysis(
       makeInitialParticleEnsemble(&initialCoord,
 				  (orbit && center_on_orbit? orbit: NULL),
 				  &finalCoord, &coordError,
-				  9, stepSize);
+				  n_points, stepSize);
 #if DEBUG
     if (1) {
       long i, j;
@@ -403,7 +405,7 @@ void do_transport_analysis(
     }
     
     M = computeMatricesFromTracking(stdout, initialCoord, finalCoord, coordError, stepSize,
-				    maximumValue, 9, n_track, 8, verbosity>1?1:0);
+				    maximumValue, n_points, n_track, max_fit_order, verbosity>1?1:0);
     
     performChromaticAnalysisFromMap(M, &twiss, &chromDeriv);
 
