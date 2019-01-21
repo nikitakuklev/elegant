@@ -91,6 +91,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|global_settings| command now allows setting the default step sizes for tracking-based determination
   of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
   the same as those used by the \verb|analyze_map| command.
+\item The \verb|analyze_map| command now allows changing the number of points in each dimension and the maximum fit order.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -936,6 +937,8 @@ Recommended value: ``\%s.kaf''.
     double alpha_y = 0;
     double eta_y = 0;
     double etap_y = 0;
+    long n_points = 9;
+    long max_fit_order = 8;
 &end
 \end{verbatim}
 
@@ -961,6 +964,8 @@ Recommended value: ``\%s.kaf''.
 \item \verb|periodic| --- If non-zero, system is assumed to be periodic and lattice functions, tunes, chromaticities, etc are computed.
 \item \verb|beta_x|, \verb|alpha_x|, \verb|eta_x|, \verb|etap_x|, \verb|beta_y|, \verb|alpha_y|, \verb|eta_y|, \verb|etap_y| ---
   If \verb|periodic=0|, these are the starting values for the lattice functions.
+\item \verb|n_points| --- Number of points in each phase-space dimension.
+\item \verb|max_fit_order| --- Maximum order of fits using in determining the matrix elements.
 \end{itemize}
 
 %\begin{latexonly}
@@ -4019,6 +4024,9 @@ Note that $i=0$ on the first pass.
     double bucket_half_height = 0;
     double over_voltage = 0;
     double total_voltage = 0;
+    long disable = 0;
+    long output_only = 0;
+    long track_for_frequency = 0;
 &end
 \end{verbatim}
 
@@ -4066,6 +4074,10 @@ and $q$ is the overvoltage factor, related to the rf voltage by $q = V/U_0$. (Se
 energy loss per turn.
 \item \verb|total_voltage| --- If nonzero, the total rf voltage is set to the given value. The frequency and
   phase are computed for this voltage.
+\item \verb|disable| --- If nonzero, command does nothing.
+\item \verb|output_only| --- If nonzero, command generates output file but does not change rf cavity settings.
+\item \verb|track_for_frequency| --- If nonzero, particle tracking is used to determine the rf frequency. If zero,
+  the ideal length of the lattice is used.
 \end{itemize}
 
 %\begin{latexonly}
