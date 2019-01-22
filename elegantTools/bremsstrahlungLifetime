@@ -83,8 +83,8 @@ if [string length $gasMix] {
         set fGas($gas) $frac
         set fracSum [expr $fracSum+$frac]
     }
-    if [expr $fracSum!=1] {
-        puts stderr "Gas fractions don't sum to 1"
+    if [expr abs($fracSum-1)>1e-6] {
+        puts stderr "Gas fractions don't sum to 1 to within 1e-6"
         exit 1
     }
 }
