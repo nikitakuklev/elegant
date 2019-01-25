@@ -34,12 +34,12 @@ B_z = \frac{x^5 y^5 g^{(9)}(z)}{86400}-\frac{g^{(7)}(z) \left(x^5 y^3+x^3 y^5\ri
 These equations satisfy Maxwell's curl equation exactly while satisfying the divergence equation to 
 10$^{th}$ order.
 
-The gradient $g(z)$ is specified in the column named by the \verb|GRADIENT_COLUMN| parameter.
+The gradient $g(z)$ is specified in the column named by the \verb|FIELD_COLUMN| parameter.
 The names for the columns containing z derivatives of $g(z)$ are constructed from the name of the gradient.
-Assume for concreteness that \verb|GRADIENT_COLUMN="Gradient"|. 
+Assume for concreteness that \verb|FIELD_COLUMN="Gradient"|. 
 {\tt elegant} looks for $g^{(1)}(z)$ in column \verb|GradientDeriv| and 
 $g^{(n)}(z)$ for $n>1$ in columns \verb|GradientDeriv2|, \verb|GradientDeriv3|,  etc.
-Also the expansion is limited to using $g^{(3)}(z)$, higher derivatives, if given, will be used
+Even if the expansion is limited by the \verb|ORDER| parameter, all gradients will be used
 for interpolation with respect to $z$ if the \verb|Z_SUBDIVISIONS| parameter is larger than 1.
 The expansion is truncated if the needed columns do not exist in the input file.
 
