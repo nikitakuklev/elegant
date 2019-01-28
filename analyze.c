@@ -258,6 +258,10 @@ void do_transport_analysis(
     else
       nWorking = n_processors;
     my_nTrack = (1.0*n_left)/nWorking+0.5;
+    if (my_nTrack*nWorking>n_left) {
+      nWorking = n_left/my_nTrack;
+      my_nTrack = n_left/nWorking;
+    }
     my_offset = myid*my_nTrack + 1;
     if (myid==(nWorking-1))
       my_nTrack = n_left - my_offset + 1;
@@ -1012,6 +1016,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     n_left = n_track;
     nWorking = n_track<n_processors ? n_track : n_processors;
     my_nTrack = (1.0*n_track)/nWorking+0.5;
+    if (my_nTrack*nWorking>n_track) {
+      nWorking = n_track/my_nTrack;
+      my_nTrack = nWorking/n_track;
+    }
     my_offset = myid*my_nTrack;
     if (myid==(nWorking-1))
       my_nTrack = n_track - my_offset;
