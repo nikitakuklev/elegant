@@ -32,7 +32,7 @@ void compute_amplification_factors(
   long type_code, iparam=0, iplane, n_part, i, nsum=0, n_kicks;
   double start[COORDINATES_PER_PARTICLE], p, max_pos, max_kick, max_Ac, max_Au, rms_pos, rms_kick, original_value;
   static double **one_part = NULL;
-  static TRAJECTORY *traj = NULL, *trajc = NULL;
+  static TRAJECTORY *traj = NULL, *trajc = NULL, *traj0 = NULL;
   static long n_traj = 0;
   static FILE *fpout = NULL, *fpcof = NULL, *fpuof = NULL, *fpkf = NULL;
   double *kick, *CijRMS, actuatorPosition;
@@ -275,6 +275,19 @@ void compute_amplification_factors(
   fflush(stdout);
   */
 
+  if (do_closed_orbit) {    
+    long i;
+    run_closed_orbit(run, beamline, start, NULL, 1);
+    traj0 = tmalloc(sizeof(*traj0)*(beamline->n_elems+1));
+    for (i=0; i<=beamline->n_elems; i++) {
+      traj0[i].n_part = beamline->closed_orbit[i].n_part;
+      traj0[i].elem = beamline->closed_orbit[i].elem;
+      memcpy(traj0[i].centroid, beamline->closed_orbit[i].centroid, 6*sizeof(double));
+    }
+  } else {
+    /* should do something for no-closed-orbit case */
+  }
+
   if (!name)
     eptr = &(beamline->elem);
   else
@@ -316,9 +329,16 @@ void compute_amplification_factors(
       traj  = correct->traj[0];
       trajc = correct->traj[2];
     }
-    else if (do_closed_orbit) {
+    else if (do_closed_orbit) {    
       run_closed_orbit(run, beamline, start, NULL, 1);
       traj = beamline->closed_orbit;
+      if (traj0) {
+	long i, j;
+	for (i=0; i<=beamline->n_elems; i++) {
+	  for (j=0; j<4; j++)
+	    traj[i].centroid[j] -= traj0[i].centroid[j];
+	}
+      }
     }
     else {
       if (n_traj && n_traj<(beamline->n_elems+1)) {
@@ -537,6 +557,9 @@ void compute_amplification_factors(
   }
   if (CijRMS)
     tfree(CijRMS);
+
+  if (traj0)
+    free(traj0);
 
   log_exit("compute_amplification_factors");
 }
