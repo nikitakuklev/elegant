@@ -858,7 +858,12 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   return M;
 }
 
-/* static FILE *fpdeb = NULL; */
+#define DEBUG 1
+#if USE_MPI
+#ifdef DEBUG
+static FILE *fpdeb = NULL;
+#endif
+#endif
 
 VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize, long order)
 {
@@ -888,16 +893,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   if (nPoints1<5)
     nPoints1 = 5;
   
-  /*
 #if USE_MPI
+#ifdef DEBUG
   if (fpdeb==NULL) {
     char s[100];
     sprintf(s, "debug-%03d.txt", myid);
     fpdeb = fopen(s, "w");
   }
 #endif
-  */
-
+#endif
   if (shareTrackingBasedMatrices) {
     if (storedElement==NULL) {
       storedElement = tmalloc(sizeof(*storedElement)*MAX_N_STORED_MATRICES);
@@ -1009,23 +1013,53 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   n_track = makeInitialParticleEnsemble(&initialCoord, startingCoord, &finalCoord, &coordError, nPoints1, stepSize);
   n_left = n_track;
 #if USE_MPI
+#ifdef DEBUG
+  if (fpdeb) {
+    fprintf(fpdeb, "Tracking %ld particles in total for matrix determination\n", n_track);
+    fflush(fpdeb);
+  }
+#endif
   /* We partition by processor in MPI mode.
      The arrays are oversized, but not so large that it will hurt. 
   */
   if (parallelTrackingBasedMatrices) {
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "Doing parallel matrix determination (n_track=%ld)\n", n_track);
+      fflush(fpdeb);
+    }
+#endif
     n_left = n_track;
     nWorking = n_track<n_processors ? n_track : n_processors;
     my_nTrack = (1.0*n_track)/nWorking+0.5;
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "1: nWorking = %ld, my_nTrack = %ld\n", nWorking, my_nTrack);
+      fflush(fpdeb);
+    }
+#endif
     if (my_nTrack*nWorking>n_track) {
       nWorking = n_track/my_nTrack;
-      my_nTrack = nWorking/n_track;
+      my_nTrack = n_track/nWorking;
     }
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "2: nWorking = %ld, my_nTrack = %ld\n", nWorking, my_nTrack);
+      fflush(fpdeb);
+    }
+#endif
     my_offset = myid*my_nTrack;
     if (myid==(nWorking-1))
       my_nTrack = n_track - my_offset;
     else if (myid>=nWorking)
       my_nTrack = my_offset = 0;
     n_left = my_nTrack;  /* In case tracking routine doesn't set this */
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "Tracking %ld particles (offset %ld) for matrix determination\n", my_nTrack, my_offset);
+      fflush(fpdeb);
+    }
+#endif
   } else {
 #endif
     my_offset = 0;
@@ -1165,7 +1199,19 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   }
 #if USE_MPI
   if (parallelTrackingBasedMatrices) {
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "Collecting particle counts\n");
+      fflush(fpdeb);
+    }
+#endif
     MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+    if (fpdeb) {
+      fprintf(fpdeb, "Total number left is %ld, expected %ld\n", n_leftTotal, n_track);
+      fflush(fpdeb);
+    }
+#endif
     if (n_leftTotal!=n_track)
       bombElegantVA("lost particles (%ld -> %ld) when tracking to determine matrix for %s\n", 
                     n_track, n_leftTotal, eptr->name);
@@ -1182,6 +1228,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     if (parallelTrackingBasedMatrices) {
       /* Gather final particles back to master */
       MPI_Barrier(MPI_COMM_WORLD);
+#ifdef DEBUG
+      if (fpdeb) {
+	fprintf(fpdeb, "Passed barrier just before particle collection\n");
+	fflush(fpdeb);
+      }
+#endif
       nToTrackCounts = tmalloc(sizeof(long)*n_processors);
       MPI_Gather(&my_nTrack, 1, MPI_LONG, nToTrackCounts, 1, MPI_LONG, 0, MPI_COMM_WORLD);
       if (myid==0) {
@@ -1190,6 +1242,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
         /* Copy data from each slave */
         my_nTrack += my_offset; /* to account for the fiducial particle */
         for (i=1; i<nWorking; i++) {
+#ifdef DEBUG
+	  if (fpdeb) {
+	    fprintf(fpdeb, "Trying to get %ld particles from core %ld\n", nToTrackCounts[i], i);
+	    fflush(fpdeb);
+	  }
+#endif
           if (verbosity>2) {
             printf("Pulling %ld particles from processor %ld\n", nToTrackCounts[i], i);
             fflush(stdout);
@@ -1200,8 +1258,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
         }
       } else {
         /* Send data to master */
-        if (my_nTrack)
+        if (my_nTrack) {
+#ifdef DEBUG
+	  if (fpdeb) {
+	    fprintf(fpdeb, "Trying to send %ld particles to master core\n", my_nTrack);
+	    fflush(fpdeb);
+	  }
+#endif
           MPI_Send (&finalCoord[my_offset][0], my_nTrack*COORDINATES_PER_PARTICLE, MPI_DOUBLE, 0, 100, MPI_COMM_WORLD);
+	}
       }
       free(nToTrackCounts);
       nToTrackCounts = NULL;
@@ -1240,6 +1305,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     } 
 
     if (parallelTrackingBasedMatrices) {
+#ifdef DEBUG
+      if (fpdeb) {
+	fprintf(fpdeb, "Preparing to share matrices with workers\n");
+	fflush(fpdeb);
+      }
+#endif
       if (myid!=0) {
         /* distribute matrices to other processors */
         M = tmalloc(sizeof(*M));
@@ -1258,6 +1329,12 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
               for (k=0; k<=j; k++)
                 MPI_Bcast(M->Q[i][j][k], k+1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       }
+#ifdef DEBUG
+      if (fpdeb) {
+	fprintf(fpdeb, "Done sharing matrices with workers\n");
+	fflush(fpdeb);
+      }
+#endif
     }
 #endif
 
@@ -1315,14 +1392,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   free_czarray_2d((void**)finalCoord, n_track, COORDINATES_PER_PARTICLE);
   free_czarray_2d((void**)coordError, n_track, COORDINATES_PER_PARTICLE);
 
-  /*
 #if USE_MPI
+#ifdef DEBUG
   print_matrices1(fpdeb, eptr->name, "%13.8e ", M);
 #endif
-  */
+#endif
 
   return M;
 }
+#undef DEBUG
 
 /* FILE *fpdeb = NULL; */
 
