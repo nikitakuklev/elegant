@@ -858,7 +858,6 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   return M;
 }
 
-#define DEBUG 1
 #if USE_MPI
 #ifdef DEBUG
 static FILE *fpdeb = NULL;
@@ -1400,7 +1399,6 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 
   return M;
 }
-#undef DEBUG
 
 /* FILE *fpdeb = NULL; */
 
