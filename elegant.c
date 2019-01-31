@@ -1949,10 +1949,11 @@ double find_beam_p_central(char *input)
   }
   for (i=psum=0; i<rows; i++) 
     psum += p[i];
-  if (SDDS_ReadPage(&SDDSin)>0)
+  if (SDDS_ReadPage(&SDDSin)>0) {
     printf("Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
             input);
     fflush(stdout);
+  }
   SDDS_Terminate(&SDDSin);
   printf("Expanding about p = %21.15e\n", psum/rows);
   fflush(stdout);
