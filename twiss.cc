@@ -1054,7 +1054,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define N_PARAMETERS IP_U0+1
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {(char*)"Step", (char*)"&parameter name=Step, type=long, description=\"Simulation step\" &end"},
-{(char*)"SVNVersion", (char*)"&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value="SVN_VERSION" &end"},
+{(char*)"SVNVersion", (char*)"&parameter name=SVNVersion, type=string, description=\"SVN version number\", fixed_value=" SVN_VERSION " &end"},
 {(char*)"nux", (char*)"&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
 {(char*)"dnux/dp", (char*)"&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
 {(char*)"dnux/dp2", (char*)"&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
@@ -1959,12 +1959,14 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     fflush(stdout);
   }
 
-  if (beamline->acc_limit_name[0])
+  if (beamline->acc_limit_name[0]) {
     printf((char*)"x acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[0], beamline->acc_limit_name[0], beamline->acceptance[2]);
     fflush(stdout);
-  if (beamline->acc_limit_name[1])
+  }
+  if (beamline->acc_limit_name[1]) {
     printf((char*)"y acceptance limited to %e by %s ending at %e m\n", beamline->acceptance[1], beamline->acc_limit_name[1], beamline->acceptance[3]);
     fflush(stdout);
+  }
 
   if (SDDS_twiss_initialized) {
     dump_twiss_parameters(beamline, n_elem,
