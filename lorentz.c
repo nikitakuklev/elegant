@@ -240,13 +240,10 @@ void lorentz_report(void)
 {
     if (n_lorentz_calls) {
         printf("\nStatistics for numerical integrations by lorentz() module:\n");
-        fflush(stdout);
         printf("    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
             n_lorentz_calls, n_deriv_calls, n_particles_done);
-        fflush(stdout);
-        if (length_mult_sum && n_particles_done && !integrator) 
+        if (length_mult_sum && n_particles_done && !integrator)
             printf("    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
-            fflush(stdout);
         printf("    %ld calls to derivative module had invalid particles\n",
                n_invalid_particles);
         fflush(stdout);
@@ -382,10 +379,9 @@ long do_lorentz_integration(double *coord, void *field)
             case DIFFEQ_OUTSIDE_INTERVAL:
             case DIFFEQ_XI_GT_XF:
                 printf("Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
-                fflush(stdout);
                 for (i=0; i<6; i++) 
                     printf("%11.4e  ", coord[i]);
-                    fflush(stdout);
+		fflush(stdout);
                 exitElegant(1);
                 break;
             case DIFFEQ_END_OF_INTERVAL:
@@ -910,12 +906,10 @@ void select_lorentz_integrator(char *desired_method)
             break;
         default:
             printf("error: unknown integration method %s requested.\n", desired_method);
-            fflush(stdout);
             printf("Available methods are:\n");
-            fflush(stdout);
             for (i=0; i<N_METHODS; i++)
                 printf("    %s\n", method[i]);
-                fflush(stdout);
+	    fflush(stdout);
             exitElegant(1);
             break;
         }
