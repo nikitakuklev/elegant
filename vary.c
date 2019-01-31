@@ -561,13 +561,15 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
         if (!elem_name[i_elem]) {
             printf("error: name missing for element %ld (set_element_flags)\n", i_elem);
             fflush(stdout);
-            if (i_elem!=0)
+            if (i_elem!=0) {
                 printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
-            if (i_elem!=n_elems-1)
+	    }
+            if (i_elem!=n_elems-1) {
                 printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
-            }
+	    }
+	}
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
             if (elem_perturb_flags && !(elem_perturb_flags[i_elem]&permit_flags))
                 continue;
@@ -608,13 +610,15 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
         if (!elem_name[i_elem]) {
             printf("error: name missing for element %ld (reset_parameter_values)\n", i_elem);
             fflush(stdout);
-            if (i_elem!=0)
+            if (i_elem!=0) {
                 printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
-            if (i_elem!=n_elems-1)
+	    }
+            if (i_elem!=n_elems-1) {
                 printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
-            }
+	    }
+	}
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
             p_elem = eptr->p_elem;
             p_elem0 = eptr->p_elem0;
@@ -668,13 +672,15 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
         if (!elem_name[i_elem]) {
             printf("error: name missing for element %ld (assert_parameter_values)\n", i_elem);
             fflush(stdout);
-            if (i_elem!=0)
+            if (i_elem!=0) {
                 printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
-            if (i_elem!=n_elems-1)
+	    }
+            if (i_elem!=n_elems-1) {
                 printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
-            }
+	    }
+	}
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
             p_elem = eptr->p_elem;
             switch (data_type) {
@@ -787,13 +793,15 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
         if (!elem_name[i_elem]) {
             printf("error: name missing for element %ld (assert_perturbations)\n", i_elem);
             fflush(stdout);
-            if (i_elem!=0)
+            if (i_elem!=0) {
                 printf("preceeding element is %s\n", elem_name[i_elem-1]);
                 fflush(stdout);
-            if (i_elem!=n_elems-1)
+	    }
+            if (i_elem!=n_elems-1) {
                 printf("suceeding element is %s\n", elem_name[i_elem+1]);
                 fflush(stdout);
-            }
+	    }
+	}
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
             p_elem = eptr->p_elem;
             if (!(elem_perturb_flags[i_elem]&permit_flags))
