@@ -51,11 +51,10 @@ void ramp_momentum(
         if (isnan(t) || isinf(t)) {
             long i;
             printf("error: bad time coordinate for particle %ld\n", ip);
-            fflush(stdout);
             for (i=0; i<6; i++)
                 printf("%15.8e ", coord[ip][i]);
-                fflush(stdout);
             fputc('\n', stdout);
+	    fflush(stdout);
             abort();
             }
 #endif
