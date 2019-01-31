@@ -66,7 +66,7 @@ void setup_matrix_output(
   long i, j, k, l;
   char *denom[4], *numer[4];
   long n_denom, n_numer;
-  char s[100], t[100];
+  char s[100], t[200];
   char buffer[SDDS_MAXLINE];
  
   log_entry("setup_matrix_output");
