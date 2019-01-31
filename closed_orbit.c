@@ -189,11 +189,10 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     /* do output, if required */
     if (verbosity && !bad_orbit && do_output) {
         printf("closed orbit: \n");
-        fflush(stdout);
         for (i=0; i<6; i++)
             printf("%.8e ", starting_coord[i]);
-            fflush(stdout);
         fputc('\n', stdout);
+	fflush(stdout);
         }
 
     if (do_output && SDDS_clorb_initialized)
