@@ -34,7 +34,7 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
     EVCOR *evcor;
     EHVCOR *ehvcor;
     FILE *fpi, *fp;
-    char s[32768], name[1024];
+    char s[32768], buffer[32768], name[1024];
     htab *hash_table;
     long count, lcount;
 
@@ -187,8 +187,11 @@ void convert_to_mad8(char *outputfile, LINE_LIST *beamline, char *header_file, c
     for (count=1; count<lcount; count++) {
       if (count==1)
         sprintf(s, "bl: line=(BL%04ld", count);
-      else
-        sprintf(s, "%s,BL%04ld", s, count);
+      else {
+	sprintf(buffer, ",BL%04ld", count);
+	strcat(s, buffer);
+        /* sprintf(s, "%s,BL%04ld", s, count); */
+      }
     }
     strcat(s, ")");
     print_with_continuation(fp, s, 79);
