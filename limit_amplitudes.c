@@ -1278,6 +1278,7 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
       if (!dflag[idir]) continue;
       offset = iplane==0 ? speedbump->dx : speedbump->dy;
       hit = 0;
+      dxPlane = 2*speedbump->length; /* by default, we miss */
       /* 1. Check for intersection of the ray with the substrate plane upstream of the bump */
       if (dsign[idir]*ini[iplane]>=(speedbump->position+speedbump->height+offset*dsign[idir])) {
         /* hit the leading edge */
