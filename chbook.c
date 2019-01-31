@@ -179,7 +179,7 @@ ntuple *readbookn(char *inputfile, long i_page)
   SDDS_DATASET mhist;
   PARAMETER_DEFINITION *para;
   int32_t nD;
-  char buffer[100], dimensionString[10];
+  char buffer[1024], dimensionString[100];
 
   if (!SDDS_InitializeInput(&mhist, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -460,7 +460,7 @@ void chprint1(book1 *bName, char *filename, char *description, char *frequencyUn
   SDDS_DATASET outPage;
   double value;
   long i, last_index, index;
-  char buffer[100];
+  char buffer[1024];
 
   last_index = -1;
   if (!append) {
@@ -556,7 +556,7 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append)
 {
   SDDS_DATASET outPage;
-  char buffer[100];
+  char buffer[1024];
   long i, last_index, index;
 
   last_index = -1;
@@ -667,7 +667,7 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append)
 {
   SDDS_DATASET outPage;
-  char buffer[100], dimensionString[4];
+  char buffer[1024], dimensionString[100];
   long i, Index[5], last_index, index;
  
   last_index = -1;
@@ -789,7 +789,7 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
                void **sdds_value, long n_parameters, long normalize, long verbosity, long append)
 {
   SDDS_DATASET outPage;
-  char name[100], units[100], freq[100], buffer[100], dimensionString[4];
+  char name[100], units[100], freq[100], buffer[1024], dimensionString[100];
   long i, j, Index[5], last_index, index;
   double *value1, *value2;
 
