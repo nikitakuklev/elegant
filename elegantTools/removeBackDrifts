@@ -11,11 +11,12 @@ APSStandardSetup
 # Remove negative or backward drifts
 #
 
-set usage {usage: removeBackDrifts -input <filename> -output <filename>}
+set usage {usage: removeBackDrifts -input <filename> -output <filename> [-removeZeroLength 1(0)]}
 set args $argv
 set input ""
 set output ""
-if {[APSStrictParseArguments {input output}] || ![string length $input] || ![string length $output]} {
+set removeZeroLength 0
+if {[APSStrictParseArguments {input output removeZeroLength}] || ![string length $input] || ![string length $output]} {
     return -code error "$usage"
 }
 
@@ -26,10 +27,16 @@ if [file exists $output] {
     return -code error "$output: already exists"
 }
 
-exec sddsprocess $input -pipe=out \
-     -process=s,min,%sMinBackDrift \
-     "-rpnexpression=sMinBackDrift -1 + sto sHighWaterMark,repeat" \
-     "-define=column,keepFlagBackDrift,s sHighWaterMark < ? 0 : s sto sHighWaterMark 1 $" \
-     -filter=column,keepFlagBackDrift,1,1 \
-     | sddsconvert -pipe=in $output -delete=parameter,sMinBackDrift -delete=column,keepFlagBackDrift
+if $removeZeroLength {
+    set cmd "sddssort -column=s -pipe -unique"
+} else {
+    set cmd "cat"
+}
 
+eval exec sddsprocess $input -pipe=out \
+    -process=s,min,%sMinBackDrift \
+    "{-rpnexpression=sMinBackDrift -1 + sto sHighWaterMark,repeat}" \
+    "{-define=column,keepFlagBackDrift,s sHighWaterMark < ? 0 : s sto sHighWaterMark 1 $}" \
+    -filter=column,keepFlagBackDrift,1,1 \
+    | $cmd \
+    | sddsconvert -pipe=in $output -delete=parameter,sMinBackDrift -delete=column,keepFlagBackDrift
