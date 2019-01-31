@@ -46,9 +46,10 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     if (summarize_error_settings) {
         printf("summary of random error settings: \n");
         fflush(stdout);
-        if (errcon->no_errors_first_step)
+        if (errcon->no_errors_first_step) {
           printf("No errors will be generated for the first step.\n");
           fflush(stdout);
+	}
         for (i=0; i<errcon->n_items; i++) {
             switch (errcon->error_type[i]) {
                 case UNIFORM_ERRORS:
@@ -272,14 +273,16 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->unperturbed_value[n_items] 
                 = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                             beamline);
-            if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
+            if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS) {
                 printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                     errcon->name[n_items], errcon->item[n_items]);
                 fflush(stdout);
-            if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
-                printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
+	    }
+	    if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items])) {
+	      printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                     errcon->name[n_items], errcon->item[n_items]);
-                fflush(stdout);
+	      fflush(stdout);
+	    }
             errcon->n_items = ++n_items;
             n_added++;
             if (firstIndexInGroup==-1)
@@ -341,15 +344,16 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->unperturbed_value[n_items] 
             = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                         beamline);
-        if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
+        if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS) {
             printf("***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                 errcon->name[n_items], errcon->item[n_items]);
             fflush(stdout);
-
-        if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
+	}
+        if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items])) {
             printf("***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                 errcon->name[n_items], errcon->item[n_items]);
             fflush(stdout);
+	}
         errcon->n_items = ++n_items;
         n_added++;
         }
