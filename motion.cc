@@ -1581,7 +1581,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
         fputs((char*)"error: no known mode listed for fiducialization--must be one of:\n", stdout);
         for (i=0; i<N_KNOWN_MODES; i++)
           printf((char*)"    %s\n", known_mode[i]);
-          fflush(stdout);
+	fflush(stdout);
         exitElegant(1);
       }
     }
@@ -1795,12 +1795,10 @@ void select_integrator(char *desired_method)
         break;
       default:
         printf((char*)"error: unknown integration method %s requested.\n", desired_method);
-        fflush(stdout);
         printf((char*)"Available methods are:\n");
-        fflush(stdout);
         for (i=0; i<N_METHODS; i++)
             printf((char*)"    %s\n", method[i]);
-            fflush(stdout);
+	fflush(stdout);
         exitElegant(1);
         break;
         }
