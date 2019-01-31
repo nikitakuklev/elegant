@@ -618,13 +618,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           }
           if (eptr->divisions>1 && (entity_description[eptr->type].parameter[param].flags&PARAM_DIVISION_RELATED))
             newValue /= eptr->divisions;
-          if (verbose && printingEnabled)
+          if (verbose && printingEnabled) {
             printf("Changing %s.%s #%" PRId32 "  from %21.15e to ",
                     eptr->name, 
                     entity_description[eptr->type].parameter[param].name, 
                     occurence?occurence[j]:numberChanged,
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
+	  }
           load_request[i].starting_value[load_request[i].values]
             = *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_DOUBLE;
@@ -642,11 +643,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
 	      *((double*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
 	  }
-          if (verbose && printingEnabled)
+          if (verbose && printingEnabled) {
             printf("%21.15e (%21.15e)\n",
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
+	  }
           break;
         case IS_LONG:
         case IS_SHORT:
