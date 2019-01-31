@@ -1230,9 +1230,8 @@ void selectPartGauss(TSCATTER *tsptr, double *p1, double *p2,
     V1[i] = (ran1[i+3]-0.5) * tsSpec->range[i]*sqrt(tsSpec->emitN[i]/tsptr->gamma);
     V2[i] = (ran1[i+6]-0.5) * tsSpec->range[i]*sqrt(tsSpec->emitN[i]/tsptr->gamma);
     densa[i] = exp(-0.5*(U[i]*U[i]+V1[i]*V1[i])/tsSpec->emitN[i]*tsptr->gamma);
-    if (i==2)
-      densb[i] = exp(-0.5*(U[i]*U[i]+V2[i]*V2[i])/tsSpec->emitN[i]*tsptr->gamma);
   }
+  densb[2] = exp(-0.5*(U[2]*U[2]+V2[2]*V2[2])/tsSpec->emitN[2]*tsptr->gamma);
   /* Change particle's parameter from normal phase space to real phase space */
   for (i=0; i<3; i++) {
     p1[i] = p2[i] = sqrt(tsptr->twiss[i][1])*U[i];
