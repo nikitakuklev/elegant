@@ -465,76 +465,76 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
   if (rfmode->n_bins<2)
     bombElegant("too few bins for FRFMODE", NULL);
 
-    if (!rfmode->filename ||
-	!SDDS_InitializeInput(&SDDSin, rfmode->filename))
-      bombElegant("unable to open file for FRFMODE element", NULL);
-    /* check existence and properties of required columns  */
-    if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
-			 stdout)!=SDDS_CHECK_OK) {
-      printf("Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exitElegant(1);
-    }
-    if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
-			 stdout)!=SDDS_CHECK_OK) {
-      printf("Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exitElegant(1);
-    }
-    if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
-			 stdout)!=SDDS_CHECK_OK) {
-      printf("Error: problem with Q column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exitElegant(1);
-    }
+  if (!rfmode->filename ||
+      !SDDS_InitializeInput(&SDDSin, rfmode->filename))
+    bombElegant("unable to open file for FRFMODE element", NULL);
+  /* check existence and properties of required columns  */
+  if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
+		       stdout)!=SDDS_CHECK_OK) {
+    printf("Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    exitElegant(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
+		       stdout)!=SDDS_CHECK_OK) {
+    printf("Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    exitElegant(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
+		       stdout)!=SDDS_CHECK_OK) {
+    printf("Error: problem with Q column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+    exitElegant(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
+		       NULL)!=SDDS_CHECK_NONEXISTENT) {
     if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
-			 NULL)!=SDDS_CHECK_NONEXISTENT) {
-      if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK) {
-	printf("Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
-	exit(1);
-      }
+			 NULL)!=SDDS_CHECK_OK) {
+      printf("Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
+      exit(1);
     }
-    if (rfmode->useSymmData) {
-      if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK &&
-	  SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK &&
-	  SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohm", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK) {
-	printf("Error: problem with ShuntImpedanceSymm column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-	exit(1);
-      }
+  }
+  if (rfmode->useSymmData) {
+    if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK &&
+	SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK &&
+	SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohm", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK) {
+      printf("Error: problem with ShuntImpedanceSymm column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      exit(1);
     }
-    else {
-      if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK &&
-	  SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK &&
-	  SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohm", SDDS_ANY_FLOATING_TYPE,
-			   NULL)!=SDDS_CHECK_OK) {
-	printf("Error: problem with ShuntImpedance column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-	exit(1);
-      }
+  }
+  else {
+    if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK &&
+	SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK &&
+	SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohm", SDDS_ANY_FLOATING_TYPE,
+			 NULL)!=SDDS_CHECK_OK) {
+      printf("Error: problem with ShuntImpedance column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      exit(1);
+    }
   }
 
-    if (!SDDS_ReadPage(&SDDSin))
-      SDDS_Bomb("unable to read page from file for FRFMODE element");
-    if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
-      printf("Error: no data in FRFMODE file %s\n", rfmode->filename);
-      exitElegant(1);
-    }
-    if (!(rfmode->omega = SDDS_GetColumnInDoubles(&SDDSin, "Frequency")) ||
-	!(rfmode->Q = SDDS_GetColumnInDoubles(&SDDSin, "Q")) ||
-	(rfmode->useSymmData &&
-	 !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedanceSymm"))) ||
-	(!rfmode->useSymmData &&
-	 !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedance")))) 
-      SDDS_Bomb("Problem getting data from FRFMODE file");
-    if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
-      if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
-	bombElegant("memory allocation failure (FRFMODE)", NULL);
-      for (imode=0; imode<rfmode->modes; imode++)
-	rfmode->beta[imode] = 0;
-    }
-    
+  if (!SDDS_ReadPage(&SDDSin))
+    SDDS_Bomb("unable to read page from file for FRFMODE element");
+  if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
+    printf("Error: no data in FRFMODE file %s\n", rfmode->filename);
+    exitElegant(1);
+  }
+  if (!(rfmode->omega = SDDS_GetColumnInDoubles(&SDDSin, "Frequency")) ||
+      !(rfmode->Q = SDDS_GetColumnInDoubles(&SDDSin, "Q")) ||
+      (rfmode->useSymmData &&
+       !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedanceSymm"))) ||
+      (!rfmode->useSymmData &&
+       !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedance")))) 
+    SDDS_Bomb("Problem getting data from FRFMODE file");
+  if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
+    if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
+      bombElegant("memory allocation failure (FRFMODE)", NULL);
+    for (imode=0; imode<rfmode->modes; imode++)
+      rfmode->beta[imode] = 0;
+  }
+  
   if (!(rfmode->V  = malloc(sizeof(*(rfmode->V ))*rfmode->modes)) ||
       !(rfmode->Vr = malloc(sizeof(*(rfmode->Vr))*rfmode->modes)) ||
       !(rfmode->Vi = malloc(sizeof(*(rfmode->Vi))*rfmode->modes)) ||
