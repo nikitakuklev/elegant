@@ -873,11 +873,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e1_kick_limit *= rho0/rho_actual;
     e2_kick_limit *= rho0/rho_actual;
   }
-  if (e1_kick_limit>0 || e2_kick_limit>0)
+  if (e1_kick_limit>0 || e2_kick_limit>0) {
     printf("rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
     fflush(stdout);
-  
+  }
   /* angles for fringe-field effects */
   Kg1  = 2*csbend->hgap*(csbend->fint[csbend->e1Index]>=0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
   psi1 = Kg1/rho_actual/cos(e1)*(1+sqr(sin(e1)));
@@ -4202,7 +4202,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
     }    
 
-    if (csrDrift->LSCBins>0)
+  if (csrDrift->LSCBins>0)
     addLSCKick(part, np, &lscKick, Po, charge, dz, 0.0);
 
   csrWake.zLast = zStart + length;
