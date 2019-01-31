@@ -2138,7 +2138,7 @@ long addMatrixOutputColumns(SDDS_DATASET *SDDSout, long output_order)
   long n_numer, n_denom;
   long i, j, k, l;
   char *denom[4], *numer[4];
-  char s[100], t[100];
+  char s[100], t[1024];
   char buffer[SDDS_MAXLINE];
   long nTotal=0;
 
