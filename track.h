@@ -4049,6 +4049,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  long doResponse);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 double optimization_function(double *values, long *invalid);
+void do_set_reference_particle_output(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 #if USE_MPI
   long geneticMin(double *yReturn, double *xGuess, double *xLowerLimit, double *xUpperLimit, double *xStep,
 		  long dimensions, double target, double (*func)(double *x, long *invalid), long maxIterations,
