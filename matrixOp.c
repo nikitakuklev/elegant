@@ -604,12 +604,15 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
     delete vector given in the -deleteVectors option
     by setting the inverse singular values to 0*/
   if (deleteVector) {
+    char buffer[100];
     for (i=0;i<deleteVectors;i++) {
       if (0<=deleteVector[i] && deleteVector[i]<n) {
         if (firstdelete)
           sprintf(deletedVectors,"%d",deleteVector[i]);
-        else
-          sprintf(deletedVectors,"%s %d",deletedVectors,deleteVector[i]);
+        else {
+	  sprintf(buffer, " %d", deleteVector[i]);
+	  strcat(deletedVectors, buffer);
+	}
         firstdelete=0;
         InvSValue->ve[deleteVector[i]] = 0;
         SValueUsed->ve[deleteVector[i]] = 0;
