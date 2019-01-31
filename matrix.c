@@ -820,9 +820,11 @@ long check_matrix(VMATRIX *M, char *comment)
         abort();
         }
     for (i=0; i<6; i++) {
-        if (M->R[i]==NULL)
+        if (M->R[i]==NULL) {
             printf("error: NULL R[%ld] row---%s\n", i, comment);
             fflush(stdout);
+	    abort();
+            }
         }
     if (M->order==1) {
         return(1);
