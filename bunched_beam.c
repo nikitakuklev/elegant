@@ -758,34 +758,39 @@ void do_track_beam_output(RUN *run, VARY *control,
   if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->output_initialized)
       bombElegant("'output' file is uninitialized (track_beam)", NULL);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("Dumping output beam data..."); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping output beam data...");
       fflush(stdout);
+    }
     dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central,
                      finalCharge, beam->id_slots_per_bunch);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("done.\n"); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
       fflush(stdout);
+    }
   }
 
   if (run->acceptance && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->accept_initialized)
       bombElegant("'acceptance' file is uninitialized (track_beam)", NULL);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("Dumping acceptance output..."); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping acceptance output..."); 
       fflush(stdout);
+    }
     dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0,
                      finalCharge, beam->id_slots_per_bunch);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("done.\n"); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
       fflush(stdout);
+    }
   }
 
   if (run->losses && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->losses_initialized)
       bombElegant("'losses' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) {
-      printf("Dumping lost-particle data...\n"); fflush(stdout);
+      printf("Dumping lost-particle data...\n");
+      fflush(stdout);
 #if SDDS_MPI_IO
       if (SDDS_MPI_IO) {
 	long total_lost, n_lost;
@@ -812,9 +817,10 @@ void do_track_beam_output(RUN *run, VARY *control,
       free_czarray_2d((void**)beam->lostBeam.particle, beam->lostBeam.nLostMax, COORDINATES_PER_PARTICLE);
     beam->lostBeam.particle = NULL;
     beam->lostBeam.nLost =  beam->lostBeam.nLostMax = 0;
-    if (!(flags&SILENT_RUNNING)) 
-      printf("done.\n"); fflush(stdout);
-    fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
+      fflush(stdout);
+    }
   }
 
   if (run->centroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -822,13 +828,15 @@ void do_track_beam_output(RUN *run, VARY *control,
       bombElegant("'centroid' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
       bombElegant("missing beam sums pointer (track_beam)", NULL);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("Dumping centroid data..."); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping centroid data...");
       fflush(stdout);
+    }
     dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("done.\n"); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
       fflush(stdout);
+    }
   }
 
   if (run->sigma && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY) && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -836,13 +844,15 @@ void do_track_beam_output(RUN *run, VARY *control,
       bombElegant("'sigma' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
       bombElegant("missing beam sums pointer (track_beam)", NULL);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("Dumping sigma data..."); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping sigma data...");
       fflush(stdout);
+    }
     dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("done.\n"); fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("done.\n");
       fflush(stdout);
+    }
   }
 
   
@@ -855,9 +865,10 @@ void do_track_beam_output(RUN *run, VARY *control,
       bombElegant("'final' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
       bombElegant("beam sums array for final output is NULL", NULL);
-    if (!(flags&SILENT_RUNNING)) 
-      printf("Dumping final properties data..."); fflush(stdout);
-    fflush(stdout);
+    if (!(flags&SILENT_RUNNING)) {
+      printf("Dumping final properties data...");
+      fflush(stdout);
+    }
 #if !USE_MPI
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
@@ -889,9 +900,10 @@ void do_track_beam_output(RUN *run, VARY *control,
   }
 
   if (output->sasefel.active && output->sasefel.filename) {
-    if (!(flags&SILENT_RUNNING)) 
+    if (!(flags&SILENT_RUNNING)) {
       printf("Dumping SASE FEL data...");
       fflush(stdout);
+    }
     doSASEFELAtEndOutput(&(output->sasefel), control->i_step);
     if (!(flags&SILENT_RUNNING)) {
       printf("done.\n");
