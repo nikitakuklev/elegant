@@ -371,8 +371,7 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   sprintf(buffer, "alphayBeam%s", sliceNumString);
   if ((sasefelOutput->alphayBeamIndex[slice] = 
-       SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0)
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+       SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0) 
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   sprintf(buffer, "enx%s", sliceNumString);
