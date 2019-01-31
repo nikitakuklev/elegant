@@ -111,12 +111,14 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                                  NULL, beamline->elem_twiss, run, NULL,
 				 beamline->couplingFactor);
-      if (tune->tunex<0)
+      if (tune->tunex<0) {
         printf("horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
         fflush(stdout);
-      if (tune->tuney<0)
+      }
+      if (tune->tuney<0) {
         printf("vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
         fflush(stdout);
+      }
     }
     
 #if USE_MPI
@@ -184,10 +186,10 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
             fflush(stdout);
             exitElegant(1);
             }
-        if (printout)
+        if (printout) {
           printf("%ld instances of %s found\n", count, tune->name[i]); 
           fflush(stdout);
-        
+        }
         C->a[0][i] = betax_L_sum/(4*PI);
         C->a[1][i] = -betay_L_sum/(4*PI);
         if (C->a[0][i]==0 || C->a[1][i]==0) {
@@ -203,7 +205,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
 
       for (i=0; i<tune->n_families; i++)
         printf("%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
-        fflush(stdout);
+      fflush(stdout);
     }
     
     for (i=0; i<tune->n_families; i++)
@@ -216,10 +218,8 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
 
     if (printout) {
       printf("\nfamily               dK1/dNUx                  dK1/dNUy\n");
-      fflush(stdout);
       for (i=0; i<tune->n_families; i++)
         printf("%10s:    %22.15e     %22.15e\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
-        fflush(stdout);
       printf("\n");
       fflush(stdout);
     }
