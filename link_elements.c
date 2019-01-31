@@ -39,9 +39,10 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
     if (summarize_links) {
         printf("\nsummary of element links:\n");
         fflush(stdout);
-        if (!links->n_links)
+        if (!links->n_links) {
             printf("    no links defined\n");
             fflush(stdout);
+	}
         if (!links->target_name || !links->item || !links->source_name || !links->equation ||
                 !links->n_targets || !links->target_elem || !links->source_elem)
             bombElegant("link structure has null pointers", NULL);
@@ -59,11 +60,12 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
                     links->minimum[i], links->maximum[i], links->equation[i],
                     links->n_targets[i]);
             fflush(stdout);
-            for (j=0; j<links->n_targets[i]; j++)
+            for (j=0; j<links->n_targets[i]; j++) {
                 printf("   %s#%ld at z=%.15gm linked to %s#%ld at z=%.15gm\n", 
                     links->target_elem[i][j]->name, links->target_elem[i][j]->occurence, links->target_elem[i][j]->end_pos,
                     links->source_elem[i][j]->name, links->source_elem[i][j]->occurence, links->source_elem[i][j]->end_pos);
                 fflush(stdout);
+	        }
             }
         fputc('\n', stdout);
         log_exit("element_link_control");
