@@ -95,7 +95,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
   char *s, *t=NULL, *ptr=NULL;
-  char occurence_s[8], eptr_name[1024];
   ntuple *nBx, *nBy, *nBz;
   double ftable_length;
   htab *occurence_htab;
