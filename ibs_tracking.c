@@ -543,17 +543,17 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
   if (i_pass==n_passes-1)
     free_IBS(IBS);
 
-    if (time && time!=time0) 
-      free(time);
-    if (time0) 
-      free(time0);
-    if (ibParticle) 
-      free(ibParticle);
-    if (ipBucket)
-      free_czarray_2d((void**)ipBucket, nBuckets, np0);
-    if (npBucket)
-      free(npBucket);
-
+  if (time && time!=time0) 
+    free(time);
+  if (time0) 
+    free(time0);
+  if (ibParticle) 
+    free(ibParticle);
+  if (ipBucket)
+    free_czarray_2d((void**)ipBucket, nBuckets, np0);
+  if (npBucket)
+    free(npBucket);
+  
   if (IBS->verbose) {
 #if USE_MPI
     if (myid==0) {
