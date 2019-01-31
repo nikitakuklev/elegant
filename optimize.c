@@ -2531,7 +2531,7 @@ double optimization_function(double *value, long *invalid)
 	  /* compute and return quantity to be optimized */
 	  if (optimization_data->terms) {
 	    long i;
-	    double value, sum, min, max, sum2;
+	    double sum, min, max, sum2;
 	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
 	    if (psum>=0)
 	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
@@ -2549,7 +2549,7 @@ double optimization_function(double *value, long *invalid)
 	    result = chooseOptimizationStatistic(sum, sum2, min, max, optimization_data->statistic);
 	  }
 	  else {
-	    double value, sum, min, max, sum2;
+	    double sum, min, max, sum2;
 	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
 	    if (psum>=0)
 	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
