@@ -24,7 +24,7 @@ void quadFringe(double **coord, long np, double K1,
                 double *fringeIntM0,  /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
                 double *fringeIntP0,  /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
                 int inFringe,        /* -1 = entrance, +1 = exit */
-                int higherOrder, 
+                int higherOrder,     /* +/-1=linear, +/-2=linear+3rd order, +/-3=linear+higher order */
                 int linearFlag,
                 double nonlinearFactor)
 {
@@ -84,23 +84,19 @@ void quadFringe(double **coord, long np, double K1,
 
     dx = dpx = dy = dpy = ds = 0;
     
-    if (higherOrder>0) {
+    if (fabs(higherOrder)>1) {
       double xpow[9], ypow[9], apow[4];
       long i;
       xpow[0] = ypow[0] = 1;
       apow[0] = 1;
 
-      if (higherOrder>1) {
+      if (fabs(higherOrder)>2) {
         for (i=1; i<9; i++) {
           xpow[i] = xpow[i-1]*x;
           ypow[i] = ypow[i-1]*y;
         }
         for (i=1; i<4; i++)
           apow[i] = apow[i-1]*a;
-        dx  = (a*x*(8*(xpow[2] + 3*ypow[2]) + 4*apow[2]*(5*xpow[6] + 21*xpow[4]*ypow[2] 
-		  - 25*xpow[2]*ypow[4] - ypow[6]) + apow[3]*(35*xpow[8] + 84*xpow[6]*ypow[2] 
-		  + 498*xpow[4]*ypow[4] - 108*xpow[2]*ypow[6] + 3*ypow[8]) + 12*a*ipow(xpow[2]
-		  - ypow[2],2)))/8;
         dpx = (a*(12*a*(-4*py*x*y + px*(xpow[2] - 5*ypow[2]))*(xpow[2] - ypow[2]) 
 		  - 24*(-2*py*x*y + px*(xpow[2] + ypow[2])) + 4*apow[2]*(-2*py*x*y*(3*xpow[4] 
 		  + 50*xpow[2]*ypow[2] - 21*ypow[4]) + px*(xpow[6] + 75*xpow[4]*ypow[2] 
@@ -108,10 +104,6 @@ void quadFringe(double **coord, long np, double K1,
 		  - 27*xpow[4]*ypow[2] + 83*xpow[2]*ypow[4] + 7*ypow[6]) + px*(xpow[8] 
 		  - 108*xpow[6]*ypow[2] + 830*xpow[4]*ypow[4] + 196*xpow[2]*ypow[6] 
 		  + 105*ypow[8]))))/8;
-        dy  = (a*y*(-8*(3*xpow[2] + ypow[2]) + 4*apow[2]*(xpow[6] + 25*xpow[4]*ypow[2] 
-		  - 21*xpow[2]*ypow[4] - 5*ypow[6]) + apow[3]*(3*xpow[8] - 108*xpow[6]*ypow[2] 
-		  + 498*xpow[4]*ypow[4] + 84*xpow[2]*ypow[6] + 35*ypow[8]) + 12*a*ipow(xpow[2] 
-		  - ypow[2],2)))/8;
         dpy = (a*(-8*px*x*y*(6 - 6*a*(xpow[2] - ypow[2]) + apow[2]*(21*xpow[4] 
 		  - 50*xpow[2]*ypow[2] - 3*ypow[4]) + 3*apow[3]*(7*xpow[6] + 83*xpow[4]*ypow[2]
 		  - 27*xpow[2]*ypow[4] + ypow[6])) + py*(315*apow[3]*xpow[8] 
@@ -119,16 +111,27 @@ void quadFringe(double **coord, long np, double K1,
 		  + 83*apow[2]*ypow[4]) + ypow[2]*(24 + 12*a*ypow[2] - 4*apow[2]*ypow[4]
 		  + 3*apow[3]*ypow[6]) - 12*xpow[2]*(-2 + 6*a*ypow[2] + 25*apow[2]*ypow[4] 
 		  + 27*apow[3]*ypow[6]))))/8;
-
+        if (higherOrder>0) {
+          dx  = (a*x*(8*(xpow[2] + 3*ypow[2]) + 4*apow[2]*(5*xpow[6] + 21*xpow[4]*ypow[2] 
+		  - 25*xpow[2]*ypow[4] - ypow[6]) + apow[3]*(35*xpow[8] + 84*xpow[6]*ypow[2] 
+		  + 498*xpow[4]*ypow[4] - 108*xpow[2]*ypow[6] + 3*ypow[8]) + 12*a*ipow(xpow[2]
+		  - ypow[2],2)))/8;
+          dy  = (a*y*(-8*(3*xpow[2] + ypow[2]) + 4*apow[2]*(xpow[6] + 25*xpow[4]*ypow[2] 
+		  - 21*xpow[2]*ypow[4] - 5*ypow[6]) + apow[3]*(3*xpow[8] - 108*xpow[6]*ypow[2] 
+		  + 498*xpow[4]*ypow[4] + 84*xpow[2]*ypow[6] + 35*ypow[8]) + 12*a*ipow(xpow[2] 
+		  - ypow[2],2)))/8;
+        }
       } else {
         for (i=1; i<4; i++) {
           xpow[i] = xpow[i-1]*x;
           ypow[i] = ypow[i-1]*y;
         }
-        dx  = a*(xpow[3] + 3*x*ypow[2]);
         dpx = 3*a*(-px*xpow[2] + 2*py*x*y - px*ypow[2]);
-        dy  = a*(-3*xpow[2]*y - ypow[3]);
         dpy = 3*a*(py*xpow[2] - 2*px*x*y + py*ypow[2]);
+        if (higherOrder>0) {
+          dx  = a*(xpow[3] + 3*x*ypow[2]);
+          dy  = a*(-3*xpow[2]*y - ypow[3]);
+        }
       }
       ds  = (a/(1+delta))*(3*py*y*xpow[2] - px*xpow[3] - 3*px*x*ypow[2] + py*ypow[3]);
     }
