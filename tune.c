@@ -70,6 +70,15 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     tune->update_orbit = update_orbit;
     alter_defined_values = change_defined_values;
 
+    tune->exclude = NULL;
+    tune->n_exclude = 0;
+    if (exclude) {
+      tune->exclude = tmalloc(sizeof(*tune->exclude)*(tune->n_exclude=1));
+      while ((tune->exclude[tune->n_exclude-1] = get_token(exclude))) 
+        tune->exclude = trealloc(tune->exclude, sizeof(*tune->exclude)*(tune->n_exclude+=1));
+      tune->n_exclude --;
+    }
+
     if (!beamline->twiss0 || !beamline->matrix) {
         if (!beamline->twiss0)
             beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
@@ -168,6 +177,16 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         context = NULL;
         betax_L_sum = betay_L_sum = 0;
         while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+          if (tune->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<tune->n_exclude; j++) 
+              if (wild_match(context->name, tune->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
             if (count==0) {
 	      long K1_param;
 	      if (!(K1_param=confirm_parameter("K1", context->type))) {
@@ -351,6 +370,16 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       has_wc = has_wildcards(tune->name[i]);
       K1_param = -1;
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+          if (tune->n_exclude) {
+            long j, excluded;
+            for (j=excluded=0; j<tune->n_exclude; j++) 
+              if (wild_match(context->name, tune->exclude[j])) {
+                excluded = 1;
+                break;
+              }
+            if (excluded)
+              continue;
+          }
 	if (!(K1_param=confirm_parameter("K1", context->type))) {
 	  printf("error: element %s does not have K1 parameter\n", 
 		  context->name);
@@ -448,6 +477,16 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
       while ((context=wfind_element(tune->name[i], &context, &(beamline->elem)))) {
+        if (tune->n_exclude) {
+          long j, excluded;
+          for (j=excluded=0; j<tune->n_exclude; j++) 
+            if (wild_match(context->name, tune->exclude[j])) {
+              excluded = 1;
+              break;
+            }
+          if (excluded)
+            continue;
+        }
         K1_param = confirm_parameter("K1", context->type);
 	if (!(K1ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K1_param].offset)))
 	  bombElegant("K1ptr NULL in do_tune_correction", NULL);

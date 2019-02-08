@@ -92,6 +92,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
   the same as those used by the \verb|analyze_map| command.
 \item The \verb|analyze_map| command now allows changing the number of points in each dimension and the maximum fit order.
+\item the \verb|correct_tunes| command now allows specifying a list of quadrupoles to be excluded from the tune knob.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -1608,6 +1609,7 @@ matrix.
 
 &correct_tunes
     STRING quadrupoles = NULL;
+    STRING exclude = NULL;
     double tune_x = 0;
     double tune_y = 0;
     long n_iterations = 5;
@@ -1628,7 +1630,9 @@ matrix.
 \item \verb|quadrupoles| --- List of names of quadrupoles to be used.  Several names may be given and the names may include
   wildcards. If so, then quadrupoles in each group are changed by the same amount for each iteration.
   This would typically be used when the quadrupoles are nominally identical (though perhaps differing in strength because of
-  introduced errors). If that's not the case, the iteration may fail to converge.
+  introduced errors). If that's not the case, the iteration may fail to converge
+\item \verb|exclude| --- List of names of elements to exclude. This may be used to exclude some 
+  quadrupoles that are matched by wildcards in the \verb|quadrupoles| list.
 \item \verb|dK1_weight| --- Weighting factor that is used to minimize the mean-square changes in $K_1$ values in the
   event that there are more than two families.
 \item \verb|tune_x|, \verb|tune_y| --- Desired x and y tune values.  If not given, the desired values are

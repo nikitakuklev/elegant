@@ -7,6 +7,7 @@
 
 #namelist correct_tunes
     STRING quadrupoles = NULL;
+    STRING exclude = NULL;
     double tune_x = -1;
     double tune_y = -1;
     long n_iterations = 5;

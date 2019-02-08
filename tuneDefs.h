@@ -14,6 +14,8 @@ typedef struct {
     double tunex, tuney;    /* desired tunes */
     char **name;            /* names of quadrupole families */
     long n_families;        /* number of families */
+    char **exclude;
+    long n_exclude;
     long n_iterations;      /* number of times to repeat correction */
     double gain;            /* gain for correction */
     long use_perturbed_matrix;
