@@ -31,7 +31,9 @@ VMATRIX *bend_matrix(
     double fint1,           /* FINT in MAD format, K in SLAC-75 notation */
     double fint2,           /* FINT in MAD format, K in SLAC-75 notation */
     double gap,             /* full gap */
-    double fse,             /* Fractional Strength Error = (h_actual-h_coord)/h_coord */
+    double fse,             /* Fractional Strength Error of all components */
+    double fseDipole,       /* Fractional Strength Error of dipole component */
+    double fseQuadrupole,   /* Fractional Strength Error of quadrupole component */
     double etilt,           /* error tilt angle--changes y, y' for reference trajectory */
     long order,
     long edge_order,
@@ -53,17 +55,21 @@ VMATRIX *bend_matrix(
     if (angle<0) {
         /* Note that k2 gets a minus sign here because beta has a rho^3 in it. */
         M = bend_matrix(length, -angle, -ea1, -ea2, hPole1, hPole2, k1, -k2, tilt, 
-                        fint1, fint2, gap, fse, etilt, order, edge_order, flags, TRANSPORT);
+                        fint1, fint2, gap, fse, fseDipole, fseQuadrupole, etilt, order, edge_order, flags, TRANSPORT);
         tilt_matrices(M, PI);
         log_exit("bend_matrix");
         return(M);
         }
 
     /* calculate constants */
-    h     = angle/length;            /* coordinate system curvature */
-    ha    = h*(1+fse);               /* actual curvature due to bending field */
-    n     = -k1/sqr(h);              /* field index */
-    beta  = k2/2/pow3(h);            /* sextupole index */
+    h     = angle/length;                      /* coordinate system curvature */
+    ha    = h*(1+fse+fseDipole);               /* actual curvature due to bending field */
+    /* field index --- this complex expression is needed to ensure that FSE works out right in sbend_matrix() */
+    /* i.e., we get ky2 = -K1*(1+fse+fseQuadrupole) */
+    n     = -k1*(1+fse+fseQuadrupole)/(1+fse+fseDipole)/sqr(h);  
+    /* sextupole index --- complex expression again ensures that fseDipole doesn't affect sextupole strength */
+    /* in sbend_matrix() we compute beta*h^2*ha for use in expressions */
+    beta  = k2*(1+fse)/(1+fse+fseDipole)/2/pow3(h);
     gamma = 0;
 
     M = sbend_matrix(length, h, ha, n*h, beta*sqr(h), gamma*pow3(h), order);

@@ -78,6 +78,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|BOFFAXE| element was added. It allows integrating through a magnetic field defined by an off-axis
   expansion from on-axis gradients. 
 \item Transfer matrices are now automatically computed for \verb|BMXYZ| and \verb|BGGEXP| elements.
+\item The \verb|CSBEND| and \verb|SBEND| elements now support separate fractional strength errors (FSE) for
+  the dipole and quadrupole terms.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -3726,6 +3728,7 @@ a significant difference in the optimization speed.
     long output_sparsing_factor = 1;
     STRING crossover = "twopoint";
     STRING simplex_log = NULL;
+    long simplex_log_interval = 1;
 &end
 \end{verbatim}
 
@@ -3749,6 +3752,7 @@ a significant difference in the optimization speed.
 
 \item \verb|simplex_log| --- For the parallel ``hybridsimplex'' method, rootname for files to which data from each simplex
   optimization will be written. Intended only for debugging as it will adversely impact performance.
+\item \verb|simplex_log_interval| --- Interval at which \verb|simplex_log| files will be updated.
 
 \item \verb|n_iterations| --- The maximal number of generations/iterations for the parallel genetic and particle swarm optimization. 
 

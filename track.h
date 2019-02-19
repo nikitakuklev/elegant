@@ -924,7 +924,7 @@ extern char *entity_text[N_TYPES];
  * a zero indicates an unsupported element
  */
 #define N_QUAD_PARAMS 30
-#define N_BEND_PARAMS 24
+#define N_BEND_PARAMS 26
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 11
 #define N_OCTU_PARAMS 8
@@ -974,7 +974,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 72
+#define N_CSBEND_PARAMS 74
 #define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 55
 #define N_TRFMODE_PARAMS 25
@@ -1158,7 +1158,7 @@ typedef struct {
     double length, angle, k1, e[2], tilt;
     double k2, h[2], hgap, fint;
     double dx, dy, dz;
-    double fse;     /* Fractional Strength Error */
+    double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
     short edge_effects[2];
     short order, edge_order, TRANSPORT;
@@ -2262,7 +2262,7 @@ typedef struct {
     double e[2], tilt;
     double h[2], hgap, fintBoth, fint[2];
     double dx, dy, dz;
-    double fse;     /* Fractional Strength Error */
+    double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
     long n_kicks;
     short nonlinear, synch_rad;
@@ -3397,7 +3397,8 @@ void adjust_arrival_time_data(double **coord, long np, double Po, long center_t,
  
 /* prototypes for bend_matrix6.c: */
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
-                            double k1, double k2, double tilt, double fint1, double fint2, double gap, double fse, double etilt,
+                            double k1, double k2, double tilt, double fint1, double fint2, double gap, 
+                            double fse, double fseDipole, double fseQuadrupole, double etilt,
                             long order, long edge_order, long flags, long TRANSPORT);
 extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,             
     double gK, long order, long all_terms, long TRANSPORT);

@@ -760,6 +760,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       term *= (i+2)/csbend->xReference;
     }    
   }
+  /* these adjustments ensure that we don't apply FSE+FSEDIPOLE twice for quadrupole and sextupole terms */
+  csbend->b[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
+  csbend->c[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
+  csbend->b[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
+  csbend->c[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
   
   he1 = csbend->h[csbend->e1Index];
   he2 = csbend->h[csbend->e2Index];
@@ -851,7 +856,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
   }
   
-  fse = csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
+  fse = csbend->fse + csbend->fseDipole + (csbend->fseCorrection?csbend->fseCorrectionValue:0);
   h = 1/rho0;
   n = -csbend->b[0]/h;
   if (fse>-1)
@@ -2151,7 +2156,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
                            angle/csbend->n_kicks, 0.0, 0.0, 
                            0.0, 0.0, csbend->b[0]*h,  0.0,
-                           0.0, 0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
+                           0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0, 
+                           csbend->etilt, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
   }
   computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
