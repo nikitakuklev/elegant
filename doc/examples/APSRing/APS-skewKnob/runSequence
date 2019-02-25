@@ -2,12 +2,17 @@
 
 elegant aps.ele
 makeSkewValues
-for file in scanSkew*.ele ; do elegant $file; done
+for file in scanSkew*.ele ; do
+    elegant $file
+done
 
-sddsplot -column=s,ey scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
-         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+for mom in scanSkew*.mom ; do 
+    sddsprocess $mom -process=[se]*,first,%sID -process=[se]*,ave,%sAve 
+    \rm ${mom}~
+done
 
-sddsplot -column=s,s36 scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
-         -graph=line,vary -legend=filename,edit=Zw%/.mom//
-
+sddsplot -param=Step,eyID scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
+sddsplot -param=Step,s3ID scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
+sddsplot -param=Step,s36ID scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
+sddsplot -param=Step,s4ID scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
 sddsplot -param=Step,e2 scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//

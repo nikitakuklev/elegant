@@ -21,27 +21,18 @@ scanSkewSineNondisp.ele
 scanSkewUniformDisp.ele
         Run moments calculations for the series defined by makeSkewValues
 
+runSequence
+        Runs everything and plots results
+cleanUp
+        Cleans up results
 
-=============
 
-Sequence
-elegant aps.ele
-makeSkewValues
-for file in scanSkew*.ele ; do elegant $file; done
+Exciting the dispersive skew quadrupoles with a sinusoidal variation vs position gives a large vertical beamsize (s4),
+but also excites the vertical dispersion (s36=etay*Sdelta^2). We are adding both x-y coupling and vertical dispersion.
 
-sddsplot -column=s,ey scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
-         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+Exciting the non-dispersive skew quadrupoles with a sinusoidal variation vs position gives a significant
+vertical beamsize with very modest excitation of vertical dispersion. Thus, we are adding x-y coupling primarily.
 
-sddsplot -column=s,s36 scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
-         -graph=line,vary -legend=filename,edit=Zw%/.mom//
-
-sddsplot -param=Step,e2 scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
-
-What we see is that exciting the dispersive skew quadrupoles with a sinusoidal variation vs position
-gives a large vertical emittance, but also excites the vertical dispersion (s36=etay*Sdelta^2).
-
-Exciting the non-dispersive skew quadrupoles with a sinusoidal variation vs position gives a smaller, but
-still significant, vertical emittance with very modest excitation of vertical dispersion.
-
-Exciting the dispersive skews with a uniform pattern does not increase the vertical emittance and 
+Exciting the dispersive skews with a uniform pattern does not increase the vertical emittance much and 
 gives intermediate vertical dispersion.
+
