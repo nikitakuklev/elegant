@@ -1,0 +1,13 @@
+#!/bin/bash
+
+elegant aps.ele
+makeSkewValues
+for file in scanSkew*.ele ; do elegant $file; done
+
+sddsplot -column=s,ey scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
+         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+
+sddsplot -column=s,s36 scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
+         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+
+sddsplot -param=Step,e2 scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//

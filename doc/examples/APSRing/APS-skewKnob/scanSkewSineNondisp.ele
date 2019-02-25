@@ -1,0 +1,34 @@
+&run_setup
+   lattice = "aps.lte",
+   use_beamline = "S2T40"
+   p_central_mev = 7e3,
+   default_order = 1,
+   semaphore_file = %s.done,
+&end
+
+&load_parameters
+        filename = "skewSineNondisp.sdds",
+&end
+
+&run_control
+        n_steps = 101
+&end
+
+&twiss_output 
+   matched = 1,
+   radiation_integrals = 1,
+&end
+
+&rf_setup
+        total_voltage = 9e6
+        harmonic = 1296
+&end
+
+&moments_output
+        filename = %s.mom
+        output_at_each_step = 1
+&end
+
+&bunched_beam &end
+
+&track &end

@@ -1,0 +1,47 @@
+Example of using skew quadrupoles driven at the coupling harmonic to
+increase the vertical emittance without increasing the vertical 
+dispersion too much.
+
+M. Borland, 2019
+
+aps.ele
+aps.lte
+        Basic run for aps zero-dispersion lattice (40-fold symmetry)
+        For purposes of illustration, added 80 skew quadrupoles, half in
+        the straight sections and half in the dispersion region.
+
+makeSkewValues
+        Script to make two files containing patterns of skew quadrupoles.
+        skewSineDisp.sdds --- nux-nuy harmonic excitation of dispersive skews
+        skewSineNondisp.sdds --- nux-nuy harmonic excitation of non-dispersive skews
+        skewUniformDisp.sdds --- Uniform excitation of dispersive skews
+
+scanSkewSineDisp.ele
+scanSkewSineNondisp.ele
+scanSkewUniformDisp.ele
+        Run moments calculations for the series defined by makeSkewValues
+
+
+=============
+
+Sequence
+elegant aps.ele
+makeSkewValues
+for file in scanSkew*.ele ; do elegant $file; done
+
+sddsplot -column=s,ey scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
+         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+
+sddsplot -column=s,s36 scanSkew*.mom -split=page -group=page -separate=page -layout=3,3 \
+         -graph=line,vary -legend=filename,edit=Zw%/.mom//
+
+sddsplot -param=Step,e2 scanSkew*.mom -graph=line,vary -legend=file,edit=Zw%/.mom//
+
+What we see is that exciting the dispersive skew quadrupoles with a sinusoidal variation vs position
+gives a large vertical emittance, but also excites the vertical dispersion (s36=etay*Sdelta^2).
+
+Exciting the non-dispersive skew quadrupoles with a sinusoidal variation vs position gives a smaller, but
+still significant, vertical emittance with very modest excitation of vertical dispersion.
+
+Exciting the dispersive skews with a uniform pattern does not increase the vertical emittance and 
+gives intermediate vertical dispersion.
