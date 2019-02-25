@@ -2137,7 +2137,7 @@ char *makeTexSafeString(char *source, long checkMath);
 
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form)
 {
-  char *type_name[3] = {"double", "long", "STRING", };
+  char *type_name[4] = {"double", "long", "STRING", "short"};
   char *description;
   long j, texLines, specialEntry, xyWaveforms;
   char buffer[16384];
