@@ -1,3 +1,4 @@
 #!/bin/bash
 
-\rm *.twi *.mom skew*.sdds *.done
+\rm *.twi *.mom skew*.sdds *.done *.ctwi *.w1 *.momproc
+
