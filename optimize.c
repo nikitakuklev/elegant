@@ -62,7 +62,7 @@ FILE *fpSimplexLog = NULL;
 static long simplexLogStep = 0;
 static long simplexComparisonStep = 0;
 static short targetReached = 0;
-void checkTarget(double myResult);
+void checkTarget(double myResult, long invalid);
 #endif
 
 static time_t interrupt_file_mtime = 0;
@@ -1967,7 +1967,7 @@ double optimization_function(double *value, long *invalid)
     *invalid = optimRecord[iRec].invalid;
 #if USE_MPI
     }
-    checkTarget(optimRecord[iRec].result);
+    checkTarget(optimRecord[iRec].result, *invalid);
 #endif
     return optimRecord[iRec].result;
   }
@@ -2656,20 +2656,20 @@ double optimization_function(double *value, long *invalid)
 
     log_exit("optimization_function");
 #if USE_MPI
-    if (result<bestResult)
+    if (result<bestResult && !*invalid)
       bestResult = result;
-    checkTarget(bestResult);
+    checkTarget(bestResult, *invalid);
 #endif
     return(result);
 }
 
 #if USE_MPI
-void checkTarget(double myResult) {
+void checkTarget(double myResult, long invalid) {
   MPI_Status status;
   static int *targetBuffer = NULL;
   int targetTag = 1;
 #if MPI_DEBUG
-  printf("checkTarget(%le) called\n", myResult);
+  printf("checkTarget(%le, %ld) called\n", myResult, invalid);
   fflush(stdout);
 #endif
   if (hybrid_simplex_comparison_interval<=0)
@@ -2684,7 +2684,7 @@ void checkTarget(double myResult) {
   printf("checkTarget (1), optimization_data->target = %le\n", optimization_data->target);
   fflush(stdout);
 #endif
-  if (optimization_data->target > myResult) {
+  if (!invalid && optimization_data->target > myResult) {
     int i;
     MPI_Request request;
 #if MPI_DEBUG

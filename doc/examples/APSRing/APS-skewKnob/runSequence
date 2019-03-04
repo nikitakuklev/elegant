@@ -6,7 +6,7 @@ for file in skew*isp.sdds ; do
     elegant scanSkewMomentsTemplate.ele -macro=rootname=${file/.sdds/Moments},parameters=$file
     n=`sdds2stream -npage=bare $file`
     skip=$((n-1))
-    elegant scanSkewTrackTemplate.ele -macro=rootname=${file/.sdds/Track},parameters=$file,skip=$skip
+    elegant scanSkewTrack1Template.ele -macro=rootname=${file/.sdds/Track1},parameters=$file,skip=$skip
 done
 
 for twi in skew*.twi ; do 

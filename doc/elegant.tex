@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.1.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2019.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,21 +35,14 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2019.1.0}
+\section{Highlights of What's New in Version 2019.2.0}
 
-Note that as of this release, version numbers are now of the form {\em year}.{\em release}.{\em minor},
-where {\em year} is the four-digit year, {\em release} is the consecutive release number for the year,
-and {\em minor} is for internal APS use.
-
-Here is a summary of what's changed since release 35.0.1.
+Here is a summary of what's changed since release 2019.1.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The matrix for misaligned \verb|FMULT| elements was incorrect. The misalignment was applied twice.
-\item The edge effects for \verb|KQUAD| were broken for tracking only (not for matrix-based computations)
-  in version 35.0.1. This was fixed.  Y.P. Sun (APS) helped discover this problem.
 \item The \verb|BMXYZ| element previously would inject particles at $z=0$ by default, which is usually not
   the desired behavior. Now, it injects at the start of the field map by default. The new \verb|INJECT_AT_Z0|
   parameter can be used to recover the old behavior. In addition, drift spaces are now automatically included
@@ -58,10 +51,6 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The filter parameters (\verb|start_occurence|, \verb|end_occurence|, \verb|s_start|, \verb|s_end|, 
-  \verb|after|, and \verb|before|)  of the \verb|steering_element| command now work better when multiple
-  such commands are given. In particular, overlapping intervals are detected and non-overlapping intervals
-  are correctly implemented.
 \item The \verb|load_parameters| command with \verb|change_defined_values=0| 
   did not work correctly when combined with \verb|insert_elements| or \verb|replace_elements|.
   This was reported by G. Penn (LBNL).
@@ -72,9 +61,6 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|HKPOLY| element was added. It allows imparting kicks to the beam according to 
-  a Hamiltonians that are polynomial functions of $(x, y)$ and $(qx, qy, \delta)$. R. Lindberg (APS) helped develop the
-  concept for this element.
 \item The \verb|BOFFAXE| element was added. It allows integrating through a magnetic field defined by an off-axis
   expansion from on-axis gradients. 
 \item Transfer matrices are now automatically computed for \verb|BMXYZ| and \verb|BGGEXP| elements.
@@ -84,12 +70,6 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|correct| command has a new parameter, \verb|force_alternation| that forces orbit or trajectory correction
-  to continue with x/y alternation regardless of whether one plane appears to have converged.
-\item The \verb|set_reference_particle_output| command was added. It allows defining a reference set of particle coordinates
-  to which tracked coordinates will be compared for purposes of optimization.
-\item The \verb|optimization_setup| command now allows setting the interval (in terms of function evaluations) 
-  between checks of the interrupt semaphore file. Previously, the file was checked only at the end of a simplex pass.
 \item The \verb|global_settings| command now allows setting the default step sizes for tracking-based determination
   of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
   the same as those used by the \verb|analyze_map| command.
@@ -101,6 +81,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item Fixed a bug that resulted in crashing of tracking-based matrix computation for certain numbers of processors.
+\item Fixed a bug in parallel hybrid simplex optimization, which would cause optimization to terminate prematurely if
+  one processor encountered an invalid condition (e.g., undefined tunes).
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
