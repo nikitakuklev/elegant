@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2019.1.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -37,7 +37,7 @@ at a high level.
 
 \section{Highlights of What's New in Version 2019.1.0}
 
-Note that following release 35.0.1, version numbers changed to the form {\em year}.{\em release}.{\em minor},
+Note that following release 35.1.0, version numbers changed to the form {\em year}.{\em release}.{\em minor},
 where {\em year} is the four-digit year, {\em release} is the consecutive release number for the year,
 and {\em minor} is for internal APS use.
 
@@ -70,6 +70,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Transfer matrices are now automatically computed for \verb|BMXYZ| and \verb|BGGEXP| elements.
 \item The \verb|CSBEND| and \verb|SBEND| elements now support separate fractional strength errors (FSE) for
   the dipole and quadrupole terms.
+\item The \verb|HKPOLY| element now supports and alternative, more general form for the drift Hamiltonian.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -7540,6 +7541,64 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 35.1.0}
+
+Here is a summary of what's changed since release 35.0.1.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The matrix for misaligned \verb|FMULT| elements was incorrect. The misalignment was applied twice.
+\item The edge effects for \verb|KQUAD| were broken for tracking only in version 35.0.1. This was fixed.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The filter parameters (\verb|start_occurence|, \verb|end_occurence|, \verb|s_start|, \verb|s_end|, 
+  \verb|after|, and \verb|before|)  of the \verb|steering_element| command now work better when multiple
+  such commands are given. In particular, overlapping intervals are detected and non-overlapping intervals
+  are correctly implemented.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|HKPOLY| element was added. It allows imparting kicks to the beam according to 
+  a Hamiltonians that are polynomial functions of $(x, y)$ and $(qx, qy)$. R. Lindberg (APS) helped develop the
+  concept for this element.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|correct| command has a new parameter, \verb|force_alternation| that forces orbit or trajectory correction
+  to continue with x/y alternation regardless of whether one plane appears to have converged.
+\item The \verb|set_reference_particle_output| command was added. It allows defining a reference set of particle coordinates
+  to which tracked coordinates will be compared for purposes of optimization.
+\item The \verb|optimization_setup| command now allows setting the interval (in terms of function evaluations) 
+  between checks of the interrupt semaphore file. Previously, the file was checked only at the end of a simplex pass.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item None.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 35.0.1}
 
