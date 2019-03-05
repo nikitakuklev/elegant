@@ -159,9 +159,14 @@ long trackUndulatorKickMap(
           ip--;
         } else {
           H = pRef*(1+coord[5])/eomc;
-          coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks;
-          coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks;
-          
+	  if (map->singlePeriodMap) {
+	    coord[1] += dxpFactor*sqr(fieldFactor/H);
+	    coord[3] += dypFactor*sqr(fieldFactor/H);
+          } else {
+	    coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks;
+	    coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks;
+	  }
+
           /* 3. go through another half length */
           coord[0] += coord[1]*length/2.0;
           coord[2] += coord[3]*length/2.0;

@@ -3085,6 +3085,7 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"YAW_END", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.yawEnd), NULL, 0.0, 0, "-1=Entrance, 0=Center, 1=Exit"},
+    {"SINGLE_PERIOD_MAP", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.singlePeriodMap), NULL, 0.0, 0, "if non-zero, the map file is for a single period. L still pertains to the full device. Set N_KICKS to the number of periods."},
     };
 
 FTABLE ftable_example;
