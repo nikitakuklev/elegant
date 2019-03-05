@@ -141,8 +141,9 @@ long track_through_ccbend(
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
         eptrCopy = eptr;
-        ccbendCopy.fse = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = ccbendCopy.etilt = ccbendCopy.tilt = 
-          ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = ccbendCopy.KnDelta = 0;
+        ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = 
+          ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = 
+          ccbendCopy.KnDelta = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -204,11 +205,11 @@ long track_through_ccbend(
   if ((angle = ccbend->angle)!=0) {
     rho0 = arcLength/angle;
     length = 2*rho0*sin(angle/2);
-    KnL[0] = (1+fse)/rho0*length;
+    KnL[0] = (1+fse+ccbend->fseDipole)/rho0*length;
   }
   else
     bombTracking("Can't have zero ANGLE for CCBEND.");
-  KnL[1] = (1+fse)*ccbend->K1*length/(1-ccbend->KnDelta);
+  KnL[1] = (1+fse+ccbend->fseQuadrupole)*ccbend->K1*length/(1-ccbend->KnDelta);
   KnL[2] = (1+fse)*ccbend->K2*length/(1-ccbend->KnDelta);
   KnL[3] = (1+fse)*ccbend->K3*length/(1-ccbend->KnDelta);
   KnL[4] = (1+fse)*ccbend->K4*length/(1-ccbend->KnDelta);

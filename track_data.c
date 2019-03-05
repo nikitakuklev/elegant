@@ -3353,6 +3353,8 @@ PARAMETER ccbend_param[N_CCBEND_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
+    {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ccbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ccbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"INTEGRATION_ORDER", "", IS_SHORT, 0, (long)((char *)&ccbend_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
