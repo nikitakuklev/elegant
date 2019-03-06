@@ -2191,7 +2191,10 @@ the tracking is appropriate to simulation of dynamics from a touschek scattering
 \begin{equation}
   d = \log_{10} \left(\Delta\nu_x^2 + \Delta\nu_y^2\right)
 \end{equation}
-Use of this feature results in a doubling of the number of turns tracked. The diffusion rate, 
+where $\Delta\nu_x$ and $\Delta\nu_y$ are respectively the differences in x and y tunes
+from the first and second half of the tracking (the total number of turns is equal to the
+value set in \verb|run_setup|).
+The diffusion rate, 
 \begin{equation}
   d_r = \log_{10} \left(\frac{\sqrt{\Delta\nu_x^2 + \Delta\nu_y^2}}{N}\right),
 \end{equation} is also computed. $d_r$ is the more conventional quantity, computed by
