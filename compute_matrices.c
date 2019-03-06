@@ -1137,13 +1137,18 @@ VMATRIX *compute_matrix(
         break;
       case T_UKICKMAP:
         ukmap = ((UKICKMAP*)elem->p_elem);
-        if (ukmap->Kreference && ukmap->fieldFactor) {
+	ukmap->radiusInternal = -1;
+        if (ukmap->Kreference || ukmap->Kactual) {
+	  double K;
+	  if (ukmap->Kreference && ukmap->Kactual)
+            bombElegant("UKICKMAP has nonzero value for both KREF and KACTUAL", NULL);
           if (ukmap->periods<=0)
             bombElegant("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
-          ukmap->radiusInternal = 
-            elem->Pref_input*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
-        } else 
-          ukmap->radiusInternal = -1;
+	  if ((K = ukmap->Kreference ? ukmap->Kreference*ukmap->fieldFactor : ukmap->Kactual)>0) {
+	    ukmap->radiusInternal = 
+	      elem->Pref_input*(ukmap->length/ukmap->periods)/(PIx2*K);
+	  }
+        }
         pSave = run->p_central;
         run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);

@@ -3082,6 +3082,7 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
     {"PERIODS", "", IS_LONG, 0, (long)((char *)&ukickmap_example.periods), NULL, 0.0, 0, "Number of periods (for radiation integral computations only)."},
     {"KREF", "", IS_DOUBLE, 0, (long)((char *)&ukickmap_example.Kreference), NULL, 0.0, 0, "Reference value of undulator parameter. K=KREF*FIELD_FACTOR is used for radiation integral calculations only assuming period=L/PERIODS."},
+    {"KACTUAL", "", IS_DOUBLE, 0, (long)((char *)&ukickmap_example.Kactual), NULL, 0.0, 0, "Value of undulator parameter, used for radiation integral calculations only assuming period=L/PERIODS."},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"ISR", "", IS_SHORT, 0, (long)((char *)&ukickmap_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (quantum excitation)?"},
     {"YAW_END", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.yawEnd), NULL, 0.0, 0, "-1=Entrance, 0=Center, 1=Exit"},

@@ -38,15 +38,19 @@ long trackUndulatorKickMap(
   double length, fieldFactor;
   double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta=0, deltaFactor, delta;
   double I1, I2, I3, I4, I5;
-  double sqrtI3, sqrtI5, dist, tan_yaw, yawOffset;
+  double sqrtI3, sqrtI5, dist, tan_yaw, yawOffset, K;
   
   length = map->length;
   fieldFactor = map->fieldFactor;
   if (!map->initialized)
     initializeUndulatorKickMap(map);
 
+  if (map->Kreference && map->Kactual)
+    bombElegant("Give Kreference or Kactual for UKICKMAP, not both", NULL);
   if ((nKicks=map->nKicks)<1)
     bombElegant("N_KICKS must be >=1 for UKICKMAP", NULL);
+
+  K = map->Kreference ? map->Kreference*fieldFactor : map->Kactual;
 
   radCoef = isrCoef = sxpCoef = 0;
   if (map->synchRad)
@@ -119,10 +123,10 @@ long trackUndulatorKickMap(
         alpha = 0;
       }
 
-      if (map->periods && map->Kreference) {
+      if (map->periods && K) {
         double radius;
         radius = 
-          sqrt(sqr(pRef)+1)*(map->length/map->periods)/(PIx2*map->Kreference*map->fieldFactor);
+          sqrt(sqr(pRef)+1)*(map->length/map->periods)/(PIx2*K);
         AddWigglerRadiationIntegrals(map->length/map->periods, 2, radius, 
                                      0.0, 0.0, beta, alpha,
                                      &I1, &I2, &I3, &I4, &I5);

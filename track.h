@@ -1021,7 +1021,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 46
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 16
-#define N_UKICKMAP_PARAMS 16
+#define N_UKICKMAP_PARAMS 17
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
 #define N_MHISTOGRAM_PARAMS 12
@@ -3225,7 +3225,7 @@ typedef struct {
   double length, tilt, dx, dy, dz, fieldFactor, xyFactor, yaw;
   char *inputFile;
   long nKicks, periods;
-  double Kreference;
+  double Kreference, Kactual;
   short synchRad, isr, yawEnd, singlePeriodMap;
   /* for internal use only */
   short initialized;
