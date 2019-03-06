@@ -947,7 +947,7 @@ extern "C"
         if (kquad->edge1_effects > 0)
           //TODO quadFringe
           std::cout << "Implement gpu_quadFringe" << std::endl;
-        //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects-1, kquad->edge1Linear, kquad->edge1NonlinearFactor);
+        //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, kquad->edge1_effects, kquad->edge1Linear, kquad->edge1NonlinearFactor);
         break;
       default:
         break;
@@ -1061,7 +1061,7 @@ extern "C"
         if (kquad->edge2_effects > 0)
           bombTracking("gpu_multipole_tracking2: quadFringe not implemented");
         //TODO quadFringe
-        //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects-1, kquad->edge2Linear, kquad->edge2NonlinearFactor);
+        //quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, kquad->edge2_effects, kquad->edge2Linear, kquad->edge2NonlinearFactor);
         break;
       default:
         break;
