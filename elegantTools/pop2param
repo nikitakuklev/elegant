@@ -33,5 +33,5 @@ exec sddscollapse $input -pipe=out \
   | sddsconvert -pipe -retain=column,*.* \
   | sddstranspose -pipe -oldColumnNames=NameString -root=ParameterValue \
   | sddsprocess -pipe=in $output \
-    "-edit=column,ElementName,NameString,S/./100D" \
-    "-edit=column,ElementParameter,NameString,Z." \
+    "-edit=column,ElementName,NameString,eR/./1000D" \
+    "-edit=column,ElementParameter,NameString,1000Z." \
