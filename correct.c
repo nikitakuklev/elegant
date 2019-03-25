@@ -961,8 +961,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, NULL, 
                             correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
+          /*
           if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed))
             dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+          */
         }
 	if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
 	  /* Compute new matrices for next iteratoin */
@@ -1023,8 +1025,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, NULL, 
                             correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
+          /*
           if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
             dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+          */
         }    
 	if (newly_pegged && correct->CMy->remove_pegged && correct->CMy->n_cycles_done!=correct->n_xy_cycles) {
 	  /* Compute new matrices for next iteration */
@@ -1048,6 +1052,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
       dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+      dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+      dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
     }
     if (starting_coord)
       for (i=0; i<6; i++)
@@ -1137,8 +1143,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             correct->CMFx->ncor, correct->CMFx->posi, correct->CMFx->nmon, Cdp, 
                             correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
+          /*
           if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
             dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+          */
         }
 	if (newly_pegged && correct->CMx->remove_pegged && correct->CMx->n_cycles_done!=correct->n_xy_cycles) {
 	  /* Compute new matrices for next iteratoin */
@@ -1193,8 +1201,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             correct->CMFy->ncor, correct->CMFy->posi, correct->CMFy->nmon, Cdp, 
                             correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
                             sim_step, !(flags&FINAL_CORRECTION));
+          /*
           if ((flags&FINAL_CORRECTION) && (i_cycle==correct->n_xy_cycles-1 || y_failed))
             dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+          */
         }
 	if (newly_pegged && correct->CMFy->remove_pegged && correct->CMFy->n_cycles_done!=correct->n_xy_cycles) {
 	  /* Compute new matrices for next iteratoin */
@@ -1218,6 +1228,8 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) {
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
       dump_bpm_data(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+      dump_corrector_data(correct->CMFx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+      dump_corrector_data(correct->CMFy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
     }
     break;
   }

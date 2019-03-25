@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.1.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2019.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,62 +35,37 @@ available that demonstrates many features of {\tt elegant}.  A \htmladdnormallin
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2019.1.1}
+\section{Highlights of What's New in Version 2019.2.0}
 
-Note that following release 35.1.0, version numbers changed to the form {\em year}.{\em release}.{\em minor},
-where {\em year} is the four-digit year, {\em release} is the consecutive release number for the year,
-and {\em minor} is for internal APS use.
-
-Here is a summary of what's changed since release 35.1.0.
+Here is a summary of what's changed since release 2019.1.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|BMXYZ| element previously would inject particles at $z=0$ by default, which is usually not
-  the desired behavior. Now, it injects at the start of the field map by default. The new \verb|INJECT_AT_Z0|
-  parameter can be used to recover the old behavior. In addition, drift spaces are now automatically included
-  to compensate for differences between the length of the field map and the user-defined insertion length.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|load_parameters| command with \verb|change_defined_values=0| 
-  did not work correctly when combined with \verb|insert_elements| or \verb|replace_elements|.
-  This was reported by G. Penn (LBNL).
-\item The \verb|insert_elements| command would sometimes fail to insert all the intended elements when 
-  \verb|insert_before=1| when insertion between consecutive elements was required.
-  This was reported by G. Penn (LBNL).
+\item The \verb|correct| command, which performs trajectory or orbit correction, would fail to output corrector
+  data for both planes in some cases. This was fixed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|BOFFAXE| element was added. It allows integrating through a magnetic field defined by an off-axis
-  expansion from on-axis gradients. 
-\item Transfer matrices are now automatically computed for \verb|BMXYZ| and \verb|BGGEXP| elements.
-\item The \verb|CSBEND|, \verb|SBEND|, and \verb|CCBEND| elements now support separate fractional strength errors (FSE) for
-  the dipole and quadrupole terms.
-\item The \verb|HKPOLY| element now supports and alternative, more general form for the drift Hamiltonian.
-\item The \verb|UKICKMAP| element now has a flag to indicate that the kickmap is for a single period of an insertion
-  device, which makes it easier to configure. It also has a new parameter, \verb|KACTUAL|, for giving the $K$ value
-  independent of the field factor (which is applied to the kickmap).
+\item None
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|global_settings| command now allows setting the default step sizes for tracking-based determination
-  of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
-  the same as those used by the \verb|analyze_map| command.
-\item The \verb|analyze_map| command now allows changing the number of points in each dimension and the maximum fit order.
-\item the \verb|correct_tunes| command now allows specifying a list of quadrupoles to be excluded from the tune knob.
+\item None
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item Fixed a bug that resulted in crashing of tracking-based matrix computation for certain numbers of processors.
-\item Fixed a bug in parallel hybrid simplex optimization, which would cause optimization to terminate prematurely if
-  one processor encountered an invalid condition (e.g., undefined tunes).
+\item None
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -7547,6 +7522,79 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2019.1.1}
+
+Note that following release 35.1.0, version numbers changed to the form {\em year}.{\em release}.{\em minor},
+where {\em year} is the four-digit year, {\em release} is the consecutive release number for the year,
+and {\em minor} is for internal APS use.
+
+Here is a summary of what's changed since release 35.1.0.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|BMXYZ| element previously would inject particles at $z=0$ by default, which is usually not
+  the desired behavior. Now, it injects at the start of the field map by default. The new \verb|INJECT_AT_Z0|
+  parameter can be used to recover the old behavior. In addition, drift spaces are now automatically included
+  to compensate for differences between the length of the field map and the user-defined insertion length.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|load_parameters| command with \verb|change_defined_values=0| 
+  did not work correctly when combined with \verb|insert_elements| or \verb|replace_elements|.
+  This was reported by G. Penn (LBNL).
+\item The \verb|insert_elements| command would sometimes fail to insert all the intended elements when 
+  \verb|insert_before=1| when insertion between consecutive elements was required.
+  This was reported by G. Penn (LBNL).
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|BOFFAXE| element was added. It allows integrating through a magnetic field defined by an off-axis
+  expansion from on-axis gradients. 
+\item Transfer matrices are now automatically computed for \verb|BMXYZ| and \verb|BGGEXP| elements.
+\item The \verb|CSBEND|, \verb|SBEND|, and \verb|CCBEND| elements now support separate fractional strength errors (FSE) for
+  the dipole and quadrupole terms.
+\item The \verb|HKPOLY| element now supports and alternative, more general form for the drift Hamiltonian.
+\item The \verb|UKICKMAP| element now has a flag to indicate that the kickmap is for a single period of an insertion
+  device, which makes it easier to configure. It also has a new parameter, \verb|KACTUAL|, for giving the $K$ value
+  independent of the field factor (which is applied to the kickmap).
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|global_settings| command now allows setting the default step sizes for tracking-based determination
+  of element-by-element matrices using the new \verb|tracking_matrix_step_size| parameter. The default values are
+  the same as those used by the \verb|analyze_map| command.
+\item The \verb|analyze_map| command now allows changing the number of points in each dimension and the maximum fit order.
+\item the \verb|correct_tunes| command now allows specifying a list of quadrupoles to be excluded from the tune knob.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item Fixed a bug that resulted in crashing of tracking-based matrix computation for certain numbers of processors.
+\item Fixed a bug in parallel hybrid simplex optimization, which would cause optimization to terminate prematurely if
+  one processor encountered an invalid condition (e.g., undefined tunes).
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item None.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 35.1.0}
 
