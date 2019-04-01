@@ -366,7 +366,7 @@ MAT *matrix_mult(MAT *mat1, MAT *mat2)
   lda = MAX(1, mat1->m);
   ldb = MAX(1, mat2->m);
   new_mat = matrix_get(mat1->m, mat2->n);
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(CLAPACK)
   f2c_dgemm("N", "N",
             &new_mat->m, &new_mat->n, &kk, &alpha, mat1->base,
             &lda, mat2->base, &ldb, &beta, new_mat->base, &new_mat->m);
@@ -647,7 +647,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
   kk =  MIN(U->n, V->m);
   lda = MAX(1, U->m);
   ldb = MAX(1, V->m);
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(CLAPACK)
   f2c_dgemm("N", "N",
             &U->m, &V->n, &kk, &alpha, U->base,
             &lda, V->base, &ldb, &beta, Invt->base, &U->m);

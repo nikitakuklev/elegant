@@ -368,7 +368,24 @@ ifeq ($(EPICS_HOST_ARCH),linux-x86)
   INTEL_MKL = 1
  endif
 endif
-
+ifeq ($(EPICS_HOST_ARCH),windows-x64)
+ ifdef MKLROOT
+  MKLROOT2 = $(subst \,/,$(MKLROOT))
+  MKLROOT2 := $(subst Program Files (x86),Program\ Files\ \(x86\),$(MKLROOT2))
+  INTEL_MKL_LIB = $(MKLROOT2)/lib/intel64
+  INTEL_MKL_INCLUDE = $(MKLROOT2)/include/
+  INTEL_MKL = 1
+ endif
+endif
+ifeq ($(EPICS_HOST_ARCH),win32-x86)
+ ifdef MKLROOT
+  MKLROOT2 = $(subst \,/,$(MKLROOT))
+  MKLROOT2 := $(subst Program Files (x86),Program\ Files\ \(x86\),$(MKLROOT2))
+  INTEL_MKL_LIB = $(MKLROOT2)/lib/ia32
+  INTEL_MKL_INCLUDE = $(MKLROOT2)/include/
+  INTEL_MKL = 1
+ endif
+endif
 
 LAPACK = 0
 #Use LAPACK on Linux if INTEL MKL is not found
@@ -490,8 +507,20 @@ ifneq ($(INTEL_MKL), 0)
    USR_CPPFLAGS += -DMKL -mkl=sequential
    OP_SYS_LDLIBS += -mkl=sequential
   else
-   USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
-   OP_SYS_LDLIBS += -Wl,--start-group $(INTEL_MKL_LIB)/libmkl_intel_lp64.a $(INTEL_MKL_LIB)/libmkl_sequential.a $(INTEL_MKL_LIB)/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
+   ifeq ($(EPICS_HOST_ARCH),windows-x64)
+    USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+    elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
+    Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
+   else
+    ifeq ($(EPICS_HOST_ARCH),win32-x86)
+       USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+       elegant_LDFLAGS_WIN32 +=  mkl_rt.lib
+       Pelegant_LDFLAGS_WIN32 +=  mkl_rt.lib
+    else
+     USR_CPPFLAGS += -DMKL -I$(INTEL_MKL_INCLUDE)
+     OP_SYS_LDLIBS += -Wl,--start-group $(INTEL_MKL_LIB)/libmkl_intel_lp64.a $(INTEL_MKL_LIB)/libmkl_sequential.a $(INTEL_MKL_LIB)/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl
+    endif
+   endif
   endif
  endif
 else
