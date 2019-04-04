@@ -976,7 +976,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 74
 #define N_MATTER_PARAMS 18
-#define N_RFMODE_PARAMS 55
+#define N_RFMODE_PARAMS 56
 #define N_TRFMODE_PARAMS 25
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 28
@@ -2472,6 +2472,7 @@ typedef struct {
     long binless;              /* If nonozero, then use particle-by-particle algorithm. */
     long reset_for_each_step;  /* If nonzero (default), then mode voltage and phase are reset for each step */
     long long_range_only;      /* If nonzero, then only "long-range" effect is included (from previous passes) */
+    long allowUnbinnedParticles; /* If nonzero, then program will keep running even if particles fall outside binning region. */
     long n_cavities;           /* multiply effect by this number */
     long bunchedBeamMode;
     double bunchInterval;      /* use when bunchedBeamMode>1 indicating pseudo bunches */

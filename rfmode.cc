@@ -60,7 +60,7 @@ void track_through_rfmode(
     static FILE *fpdeb2 = NULL;
     */
     
-    long ip, ib, lastBin=0, firstBin=0, n_binned=0;
+    long ip, ib, lastBin=0, firstBin=0, n_binned=0, n_binned_global=0;
     double tmin=0, tmax, last_tmax, tmean, dt=0;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
@@ -117,7 +117,16 @@ void track_through_rfmode(
     runBinlessRfMode(part0, np0, rfmode, Po, element_name, element_z, pass, n_passes, charge);
     return;
     }
-    
+
+#if USE_MPI
+    MPI_Allreduce(&np0, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+    if (myid==0) {
+      printf("np_total = %ld\n", np_total);
+      fflush(stdout);
+    }
+#endif
+#endif
     if (charge) {
       rfmode->mp_charge = charge->macroParticleCharge;
     } else if (pass==0) {
@@ -129,7 +138,6 @@ void track_through_rfmode(
         rfmode->mp_charge = rfmode->charge/np0;
 #else
       if (notSinglePart) {
-	MPI_Allreduce(&np0, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	if (np_total)
 	  rfmode->mp_charge = rfmode->charge/np_total; 
       } else {
@@ -628,23 +636,6 @@ void track_through_rfmode(
 	    printf("Ihist[%ld] = %ld\n", ib, Ihist[ib]);
 	  */
 #endif
-
-          if (n_binned!=np) {
-	    TRACKING_CONTEXT tcontext;
-	    getTrackingContext(&tcontext);
-#if USE_MPI
-            dup2(fd,fileno(stdout)); 
-            printf("%ld of %ld particles outside of binning region in RFMODE %s #%ld. Consider increasing number of bins.\n", 
-                   np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
-            printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
-            fflush(stdout);
-            close(fd);
-            mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_RFMODE;
-            MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
-#else 
-            bombElegantVA((char*)"%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
-#endif
-          }
           V_sum = Vr_sum = Vi_sum = Q_sum = Vg_sum = Vgr_sum = Vgi_sum = Vci_sum = Vcr_sum = Vc_sum = 0;
           n_summed = max_hist = n_occupied = 0;
     
@@ -696,6 +687,47 @@ void track_through_rfmode(
         }
       }
     
+#if USE_MPI
+#ifdef DEBUG
+      printf("Checking for unbinned particles\n");
+      fflush(stdout);
+#endif
+      if (myid==0)
+	n_binned = np = 0;
+      MPI_Allreduce(&n_binned, &n_binned_global, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG
+      printf("n_binned = %ld, n_binned_global = %ld, np = %ld, np_total = %ld\n",
+	     n_binned, n_binned_global, np, np_total);
+      fflush(stdout);
+#endif
+      if (n_binned_global!=np_total) {
+	TRACKING_CONTEXT tcontext;
+	getTrackingContext(&tcontext);
+	if (myid==0) {
+	  printf("%ld of %ld particles outside of binning region in RFMODE %s #%ld. Consider increasing number of bins.\n", 
+		 np_total-n_binned_global, 
+		 np_total, tcontext.elementName, tcontext.elementOccurrence);
+	  printf("Also, check particleID assignments for bunch identification. Bunches should be on separate pages of the input file.\n");
+	  fflush(stdout);
+	}
+	if (!rfmode->allowUnbinnedParticles) {
+	  mpiAbort = MPI_ABORT_BUNCH_TOO_LONG_RFMODE;
+	  MPI_Abort(MPI_COMM_WORLD, T_RFMODE);
+	}
+      }
+#else
+      if (n_binned!=np) {
+	TRACKING_CONTEXT tcontext;
+	getTrackingContext(&tcontext);
+	if (!rfmode->allowUnbinnedParticles) {
+	  bombElegantVA((char*)"%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
+	} else {
+	  printf("%ld of %ld particles  outside of binning region in RFMODE %s #%ld. Consider increasing number of bins. Also, particleID assignments should be checked.", np-n_binned, np, tcontext.elementName, tcontext.elementOccurrence);
+	  fflush(stdout);
+	}
+      }
+#endif
       
 #if USE_MPI
 #ifdef DEBUG
