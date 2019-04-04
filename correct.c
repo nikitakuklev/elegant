@@ -973,6 +973,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  correct->CMx = correct->CMAx;
 	}
       }
+      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 
+          && ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
+        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {                    
         final_traj = 2;
 	newly_pegged = NULL;
@@ -1037,9 +1040,6 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  correct->CMy = correct->CMAy;
 	}
       }
-      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 
-          && ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon)))
-        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
           fputs("trajectory correction discontinued\n", stdout);
@@ -1155,6 +1155,9 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  correct->CMx = correct->CMAx;
 	}
       }
+      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
+          ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
+        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if (!y_failed && correct->CMy->ncor && correct->CMy->nmon && correct->yplane) {
         final_traj = 2;
 	newly_pegged = NULL;
@@ -1213,9 +1216,6 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
 	  correct->CMy = correct->CMAy;
 	}
       }      
-      if (!(flags&NO_OUTPUT_CORRECTION) && (flags&INITIAL_CORRECTION) && i_cycle==0 && 
-          ((correct->CMFx->ncor && correct->CMFx->nmon) || (correct->CMFy->ncor && correct->CMFy->nmon))) 
-        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if ((x_failed && y_failed) || ((x_failed || y_failed) && correct->forceAlternation)) {
         if (correct->verbose && !(flags&NO_OUTPUT_CORRECTION))
           fputs("orbit correction discontinued\n", stdout);
@@ -1535,8 +1535,6 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       bombElegant("monitor readout array for this iteration is NULL (global_trajcor_plane)", NULL);
     if (!CM->kick[iteration])
       bombElegant("corrector value array for this iteration is NULL (global_trajcor_plane)", NULL);
-    if (!(traj = traject[iteration?1:0]))
-      bombElegant("trajectory array for this iteration is NULL (global_trajcor_plane)", NULL);
 
     /* find trajectory */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1572,7 +1570,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
     n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
-                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                         traj=traject[iteration==0?0:1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (beam) {
       printf("%ld particles survived tracking", n_part);
       fflush(stdout);
@@ -1738,8 +1736,6 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       bombElegant("monitor readout array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
     if (!CM->kick[iteration])
       bombElegant("corrector value array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
-    if (!(traj = traject[iteration?1:0]))
-      bombElegant("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
 
     /* record the starting trajectory */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1756,7 +1752,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       copy_particles(particle, beam->particle, n_part=beam->n_to_track);
     n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
-                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                         traj=traject[iteration==0?0:1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       if (!(eptr=traj[CM->mon_index[i_moni]].elem))
         bombElegant("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
@@ -1817,7 +1813,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       
       n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                            (BEAM_SUMS**)NULL, (long*)NULL,
-                           traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                           traj=traject[1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
       if (traj[CM->mon_index[i_moni]].n_part==0) {
         printf("beam lost at position %e m\n", traj[CM->mon_index[i_moni]].elem->end_pos);
         break;
@@ -1935,8 +1931,6 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
       bombElegant("monitor readout array for this iteration is NULL (thread__trajcor_plane)", NULL);
     if (!CM->kick[iteration])
       bombElegant("corrector value array for this iteration is NULL (thread__trajcor_plane)", NULL);
-    if (!(traj = traject[iteration?1:0]))
-      bombElegant("trajectory array for this iteration is NULL (thread__trajcor_plane)", NULL);
 
     /* Establish baseline distance traveled before loss */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1954,7 +1948,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     
     n_left = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
-                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                         traj=traject[iteration==0?0:1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (verbose>1) {
       printf("%ld particles left after tracking through beamline\n",  n_left);
       fflush(stdout);
@@ -2046,7 +2040,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                 copy_particles(particle, beam->particle, n_part=beam->n_to_track);
               n_left = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                                    (BEAM_SUMS**)NULL, (long*)NULL,
-                                   traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+                                   traj=traject[1], run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
               /* Determine if this is better than the previous best */
               if (n_left!=n_part) {
                 for (iElem=0; iElem<nElems; iElem++) {
