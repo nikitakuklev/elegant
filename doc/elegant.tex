@@ -2262,9 +2262,9 @@ If this variable is set to a non-zero value, \verb|elegant| instead uses a slowe
   an SDDS file. This can {\em significantly} impact performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
 \item \verb|mpi_io_read_buffer_size|  --- If non-zero, \verb|Pelegant| will change the read buffer size to the given value. 
-  May be allow improving read performance, but should be used with care.
+  May allow improving read performance, but should be used with care.
 \item \verb|mpi_io_write_buffer_size|  --- If non-zero, \verb|Pelegant| will change the write buffer size to the given value. 
-  May be allow improving write performance, but should be used with care.
+  May allow improving write performance, but should be used with care.
 \item \verb|usleep_mpi_io_kludge|  --- If non-zero, \verb|Pelegant| will sleep for the given number of microseconds after
   writing each row of an SDDS file. This can impact performance, but can solve problems on some filesystems that result in corrupted files
   or files in which zeros appear in place of the expected data.
