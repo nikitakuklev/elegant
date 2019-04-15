@@ -2208,7 +2208,7 @@ programs such as TRACY and MAD \cite{BuesingPC}.
 &global_settings
     long inhibit_fsync = 0;
     long echo_namelists = 1;
-    long mpi_randomization_mode = 1;
+    long mpi_randomization_mode = 3;
     long exact_normalized_emittance = 0;
     double SR_gaussian_limit = 3.0;
     long inhibit_seed_permutation = 0;
@@ -2248,10 +2248,10 @@ programs such as TRACY and MAD \cite{BuesingPC}.
   This can save considerable computation time.
 \item \verb|mpi_randomization_mode| --- Controls how the random numbers are seeded on multiple processors
   \begin{itemize}
-    \item[1] --- This is the original default, which showed issues in some simulations. The seed on the $i^{th}$ processor is $s_0+2*i$.
-    \item[2] --- The seed on the $i^{th}$ processor is $s_0+2*i^2$.
-    \item[3] --- This is the new default. The seed on the $i^{th}$ processor is $s_0+i*(i+1)$.
-    \item[4] --- The seed on the $i^{th}$ processor is $s_0+R_i$, where $R_i$ is the $i^{th}$ random integer returned by
+    \item 1 --- This is the original default, which showed issues in some simulations. The seed on the $i^{th}$ processor is $s_0+2*i$.
+    \item 2 --- The seed on the $i^{th}$ processor is $s_0+2*i^2$.
+    \item 3 --- This is the new default. The seed on the $i^{th}$ processor is $s_0+i*(i+1)$.
+    \item 4 --- The seed on the $i^{th}$ processor is $s_0+R_i$, where $R_i$ is the $i^{th}$ random integer returned by
       the system rand() function.
     \end{itemize}
 \item \verb|exact_normalized_emittance| --- By default, \verb|elegant| uses an approximate computation for the normalized emittance, namely,
