@@ -2992,7 +2992,8 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
     memset(coord[0], 0, sizeof(**coord)*6);
   coord[0][6] = 1;
   pCentral = run->p_central;
-  printf("Tracking fiducial particle\n");
+  printf("Tracking fiducial particle (runFiducialParticle)\n");
+  fflush(stdout);
   if (!(code=do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                          NULL, NULL, NULL, NULL, run, control->i_step, 
                          (control->fiducial_flag&
@@ -3007,6 +3008,9 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
     } else {
       printf("Warning: Fiducial particle lost!\n");
     }
+  } else  {
+    printf("Tracking fiducial particle completed.\n");
+    fflush(stdout);
   }
 #if USE_MPI
   notSinglePart = notSinglePart0;

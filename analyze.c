@@ -232,8 +232,10 @@ void do_transport_analysis(
     /* Track the reference particle for fiducialization. In MPI mode, all cores do this */
     beamline->fiducial_flag = 0;
     p_central = run->p_central;
-    if (verbosity>0) 
-      printf("Tracking fiducial particle\n");
+    if (verbosity>0) {
+      printf("Tracking fiducial particle (do_transport_analysis)\n");
+      fflush(stdout);
+    }
     code = do_tracking(NULL, finalCoord, 1, NULL, beamline, &p_central, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT,
@@ -243,9 +245,11 @@ void do_transport_analysis(
       printf("Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     }
-    if (verbosity>0)
+    if (verbosity>0) {
       printf("Fiducialization completed\n");
-    
+      fflush(stdout);
+    }
+
     /* Track the other particles. */
     p_central = run->p_central;
 #if USE_MPI

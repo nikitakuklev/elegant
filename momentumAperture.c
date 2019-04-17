@@ -409,6 +409,7 @@ long doMomentumApertureSearch(
     if ((2*nElem)%n_processors!=0 && (myid==0)) {
       printf("Warning: for best parallel efficiency in output_mode=1, the number of tasks (twice the number of elements) divided by the number of processors should be an integer or slightly below an integer. \nThe number of tasks is %ld. The number of processors is %d.\n", 
              2*nElem, n_processors);
+      fflush(stdout);
     }    
     break;
   case 2:
@@ -417,6 +418,7 @@ long doMomentumApertureSearch(
     if (nElem%n_processors!=0 && (myid==0)) {
       printf("Warning: for best parallel efficiency in output_mode=%ld, the number of elements divided by the number of processors should be an integer or slightly below an integer. \nThe number of elements is %ld. The number of processors is %d.\n", 
              output_mode, nElem, n_processors);
+      fflush(stdout);
     }    
     break;
   }
@@ -425,17 +427,20 @@ long doMomentumApertureSearch(
     verbosity = 0;
     if (myid == 0)
       printf ("Warning: In parallel version, limited intermediate information will be provided\n");
+      fflush(stdout);
   }
 #endif
 
   if (output_mode==2) {
     printf("Branching multiple particle mode\n");
+    fflush(stdout);
     multiparticleLocalMomentumAcceptance(run, control, errcon, beamline, startingCoord);
     printf("Returning from LMA search main routine.\n");
     fflush(stdout);
     return 1;
   }
   printf("Running in search mode\n");
+  fflush(stdout);
   
   /* allocate arrays for tracking */
   coord = (double**)czarray_2d(sizeof(**coord), 1, COORDINATES_PER_PARTICLE);
@@ -489,8 +494,10 @@ long doMomentumApertureSearch(
       memset(coord[0], 0, sizeof(**coord)*6);
     coord[0][6] = 1;
     pCentral = run->p_central;
-    if (verbosity>1) 
+    if (verbosity>1) {
       printf("Tracking fiducial particle\n");
+      fflush(stdout);
+    }
     delete_phase_references();
     reset_special_elements(beamline, RESET_INCLUDE_ALL&~RESET_INCLUDE_RANDOM);
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
@@ -498,12 +505,16 @@ long doMomentumApertureSearch(
                        FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostParticles, NULL);
     if (!code) {
       printf("Fiducial particle lost. Don't know what to do.\n");
+      fflush(stdout);
       exitElegant(1);
     }
     printf("Fiducialization completed\n");
-    if (verbosity>2)
+    fflush(stdout);
+    if (verbosity>2) {
       for (i=0; i<6; i++) 
         printf("%le%s", coord[0][i], i==5?"\n":", ");
+      fflush(stdout);
+    }
   }
 
   outputRow = -1;
@@ -518,6 +529,7 @@ long doMomentumApertureSearch(
   while (elem && processElements>0) {
 #ifdef DEBUG
     printf("checking element %s#%ld\n", elem->name, elem->occurence); fflush(stdout);
+    fflush(stdout);
 #endif
     if ((!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
         (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern))) {
@@ -525,6 +537,7 @@ long doMomentumApertureSearch(
         break;
 #ifdef DEBUG
       printf("including element %s#%ld\n", elem->name, elem->occurence); fflush(stdout);
+      fflush(stdout);
 #endif
       if (output_mode==0) {
 #if USE_MPI
@@ -617,10 +630,13 @@ long doMomentumApertureSearch(
 	                     control->n_passes, 0, NULL, NULL, NULL, lostParticles, NULL);
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             printf("Fiducial particle tune is undefined.\n");
+	    fflush(stdout);
             exitElegant(1);
           }
-          if (verbosity>3)
+          if (verbosity>3) {
             printf("  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
+	    fflush(stdout);
+	  }
         }
         
         deltaLimit = deltaLimit1[side];
@@ -672,15 +688,19 @@ long doMomentumApertureSearch(
                   code = 0; /* lost */
                 }
               } else {
-                if (verbosity>3) 
+                if (verbosity>3) {
                   printf("   Tunes: %e, %e\n", tune[0], tune[1]);
+		  fflush(stdout);
+		}
                 if (forbid_resonance_crossing &&
                     ( (((long)(2*tune[0])) - ((long)(2*nominalTune[0])))!=0 ||
                      (((long)(2*tune[1])) - ((long)(2*nominalTune[1])))!=0) ) {
                   /* crossed integer or half integer */
-                  if (verbosity>3)
+                  if (verbosity>3) {
                     printf("   Resonance crossing detected (%e, %e -> %e, %e).  Particle lost\n",
-                            nominalTune[0], nominalTune[1], tune[0], tune[1]);
+			   nominalTune[0], nominalTune[1], tune[0], tune[1]);
+		    fflush(stdout);
+		  }
                   code = 0;
                 }
               }
@@ -705,11 +725,15 @@ long doMomentumApertureSearch(
               loserFound[slot][outputRow] = 1;
               break;
             } else {
-              if (verbosity>2)
+              if (verbosity>2) {
                 printf("  Particle survived with delta0 = %e\n", delta);
-              if (verbosity>3)
+		fflush(stdout);
+	      }
+              if (verbosity>3) {
                 printf("     Final coordinates: %le, %le, %le, %le, %le, %le\n",
                         coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
+		fflush(stdout);
+	      }
               deltaSurvived[slot][outputRow] = delta;
               survivorFound[slot][outputRow] = 1;
               xTuneSurvived[slot][outputRow] = tune[0];
@@ -724,6 +748,7 @@ long doMomentumApertureSearch(
 		exit(1);
 	      }
               printf("Warning: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+	      fflush(stdout);
 	      deltaSurvived[slot][outputRow] = 0;
 	      survivorFound[slot][outputRow] = 1;
 	      split = splits;
@@ -916,6 +941,7 @@ long multiparticleLocalMomentumAcceptance(
   if (nTotal%n_working_processors!=0) {
     printf("Warning: The number of working processors (%ld) does not evenly divide into the number of particles (nDelta=%ld, nElem=%ld)\n",
             n_working_processors, nDelta, nElem);
+    fflush(stdout);
     nEachProcessor =  (nTotal/n_working_processors)+1;
   } else {
     nEachProcessor = nTotal/n_working_processors;
@@ -924,6 +950,7 @@ long multiparticleLocalMomentumAcceptance(
 #ifdef DEBUG
   fprintf(fpd, "nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
           nTotal, n_working_processors, nDelta, deltaStep, nElements, nEachProcessor);
+  fflush(fpd);
 #endif
   if (myid==0) {
     printf("nTotal = %ld, n_working_processors = %ld, nDelta = %ld, deltaStep = %le, nElements = %ld, nEachProcessor = %ld\n",
@@ -978,6 +1005,7 @@ long multiparticleLocalMomentumAcceptance(
   
 #ifdef DEBUG
   fprintf(fpd, "Fiducialized\n"); fflush(fpd);
+  fflush(fpd);
 #endif
   MPI_Barrier(MPI_COMM_WORLD);
   printf("Fiducalization completed\n");
