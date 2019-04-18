@@ -2318,7 +2318,9 @@ long do_tracking(
 #if USE_MPI
       if (flags&ALLOW_MPI_ABORT_TRACKING && !runInSinglePartMode) {
 #ifdef DEBUG_CRASH 
-        printMessageAndTime(stdout, "do_tracking checkpoint 16.1, mpiAbort=%d\n");
+        printMessageAndTime(stdout, "do_tracking checkpoint 16.1, mpiAbort=");
+	printf("%d\n", mpiAbort);
+	fflush(stdout);
 #endif
 	/* When performing regular parallel tracking, certain elements with MPALGORITHM=0 may need to abort, but master has no way 
 	   to know because it doesn't run the procedure. Here we check for setting of the mpiAbort variable on any processor */

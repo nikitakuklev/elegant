@@ -1062,7 +1062,9 @@ VMATRIX *compute_matrix(
     if (timingActive)
       tStart = getTimeInSecs();
 #if DEBUG
-    printf("computing matrix for %s\n", elem->name);
+    printf("computing matrix for %s#%ld, type %s\n", elem->name, elem->occurence,
+	   entity_name[elem->type]);
+    fflush(stdout);
 #endif
     switch (elem->type) {
       case T_DRIF:
@@ -1507,6 +1509,11 @@ VMATRIX *compute_matrix(
         break;
       case T_CCBEND:
         ccbend = (CCBEND*)elem->p_elem;
+#ifdef DEBUG_CCBEND
+	printf("Computing matrix for CCBEND %s#%ld\n", elem->name, elem->occurence);
+	printf("optimized = %hd\n", ccbend->optimized);
+	fflush(stdout);
+#endif
         if (ccbend->n_kicks<1)
             bombElegant("n_kicks must be > 0 for CCBEND element", NULL);
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));

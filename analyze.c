@@ -891,7 +891,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
-  long my_nTrack, my_offset;
+  long my_nTrack, my_offset, fiducialOnly;
 
   memcpy(defaultStep, trackingMatrixStepSize, sizeof(double)*6);
 
@@ -938,7 +938,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
 	  crbptr1->referenceData[4] = crbptr0->referenceData[4];
 	  copied = 1;
-	  /*
+#ifdef DEBUG_CCBEND
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
 	  printf("optimized = %ld, fseOffset=%le, dxOffset=%le, KnDelta=%le\n",
@@ -953,14 +953,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
                  crbptr1->referenceData[3],
                  crbptr1->referenceData[4]);
 	  fflush(stdout);
-	  */
+#endif
 	  break;
 	case T_CSBEND:
 	  copied = 1;
-	  /*
-          csbptr0 = (CCBEND*)storedElement[i]->p_elem;
-	  csbptr1 = (CCBEND*)eptr->p_elem;
-          */
           /*
 	  printf("Using stored matrix for CSBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
@@ -1060,10 +1056,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
     }
 #endif
     my_offset = myid*my_nTrack;
+    fiducialOnly = 0;
     if (myid==(nWorking-1))
       my_nTrack = n_track - my_offset;
-    else if (myid>=nWorking)
-      my_nTrack = my_offset = 0;
+    else if (myid>=nWorking) {
+      /* Force tracking of at least one particle in case the element has internal fiducialization etc. */
+      my_nTrack = 1;
+      my_offset = 0;
+      fiducialOnly = 1;
+    }
     n_left = my_nTrack;  /* In case tracking routine doesn't set this */
 #ifdef DEBUG
     if (fpdeb) {
@@ -1095,8 +1096,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       ltmp1 = ((CCBEND*)eptr->p_elem)->isr;
       ltmp2 = ((CCBEND*)eptr->p_elem)->synch_rad;
       ((CCBEND*)eptr->p_elem)->isr = ((CCBEND*)eptr->p_elem)->synch_rad = 0;
-      /* printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence); */
+#ifdef DEBUG_CCBEND
+      printf("Computing tracking-based matrix for CCBEND %s#%ld\n", eptr->name, eptr->occurence);
       fflush(stdout);
+#endif
       n_left = track_through_ccbend(finalCoord+my_offset, my_nTrack, eptr, (CCBEND*)eptr->p_elem, run->p_central, NULL, 0.0,
                                     NULL, NULL, NULL, NULL, -1, -1);
       ((CCBEND*)eptr->p_elem)->isr = ltmp1;
@@ -1216,6 +1219,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       fflush(fpdeb);
     }
 #endif
+    if (fiducialOnly)
+      n_left = my_nTrack = 0;
     MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 #ifdef DEBUG
     if (fpdeb) {
@@ -1364,10 +1369,10 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  iStoredMatrices = 0;
       }
       
-      /* 
-	 printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
-	 fflush(stdout);
-      */
+#ifdef DEBUG_CCBEND
+      printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+      fflush(stdout);
+#endif
       
       if (storedElement[iStoredMatrices]) {
 	fflush(stdout);
