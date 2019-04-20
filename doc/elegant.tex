@@ -43,7 +43,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item None.
+\item Fixed a bug in tracking-based matrix computation for \verb|CCBEND| that would result in the program hanging under
+  some circumstances.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -57,10 +58,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item Added the \verb|APCONTOUR| element, which provides an aperture defined by an $(x, y)$ contour in an SDDS file.
 \item \verb|RFMODE| now allows ignoring particles that are outside the binning region, using the \verb|ALLOW_UNBINNED_PARTICLES|
   parameter.
-\item Fixed a bug in tracking-based matrix computation for \verb|CCBEND| that would result in the program hanging under
-  some circumstances.
 \end{itemize}
 
 \subsection{New and Modified Commands}
