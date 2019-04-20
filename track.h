@@ -914,7 +914,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CCBEND 121
 #define T_HKPOLY 122
 #define T_BOFFAXE 123
-#define N_TYPES  124
+#define T_APCONTOUR 124
+#define N_TYPES  125
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1045,6 +1046,7 @@ extern char *entity_text[N_TYPES];
 #define N_CCBEND_PARAMS 44
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
+#define N_APCONTOUR_PARAMS 10
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -3290,6 +3292,23 @@ typedef struct {
   unsigned long direction;
 } SPEEDBUMP;
 
+/* aperture from a file giving (x, y) */
+extern PARAMETER apcontour_param[N_APCONTOUR_PARAMS];
+
+typedef struct {
+  double length;
+  double tilt;            /* roll angle */
+  double dx, dy, dz;      /* misalignments */
+  long nSegments;         /* segments to break length into */
+  short invert;           /* If non-zero, the shape is an obstruction not an aperture */
+  char *filename;         /* filename for generalized gradients vs z */
+  char *xColumn;          /* name of column containing x data */
+  char *yColumn;          /* name of column containing y data */
+  /* these are set by the program when the file is read */
+  short initialized;
+  double *x, *y;
+  long nPoints;
+} APCONTOUR;
 
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
@@ -3836,7 +3855,9 @@ long imposeApertureData(double **coord, long np, double **accepted,
 void resetApertureData(APERTURE_DATA *apData);
 long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, double **accepted, double z,
                              double Po);
-
+int pointIsInsideContour(double x0, double y0, double *x, double *y, long n);
+long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
+                           double Po);
 
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);

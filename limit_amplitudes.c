@@ -1365,3 +1365,93 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 
   return(np);
 }
+
+int pointIsInsideContour(double x0, double y0, double *x, double *y, long n);
+
+long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double **accepted, double z,
+                           double Po
+                           )
+{
+  long iz, ip, i_top;
+  double dz;
+  short lost;
+  int lossCode;
+  
+  if (!apcontour->initialized) {
+    SDDS_DATASET SDDSin;
+    SDDSin.parallel_io = 0;
+    if (apcontour->x) free(apcontour->x);
+    if (apcontour->y) free(apcontour->y);
+    apcontour->x = apcontour->y = NULL;
+    apcontour->nPoints = 0;
+    if (!apcontour->filename || !strlen(apcontour->filename))
+      bombElegantVA("Error: No filename given for APCONTOUR", apcontour->filename);
+    if (!apcontour->xColumn || !strlen(apcontour->xColumn))
+      bombElegantVA("Error: No XCOLUMN given for APCONTOUR", apcontour->xColumn);
+    if (!apcontour->yColumn || !strlen(apcontour->yColumn))
+      bombElegantVA("Error: No YCOLUMN given for APCONTOUR", apcontour->yColumn);
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, apcontour->filename) ||
+	SDDS_ReadPage(&SDDSin)!=1 ||
+	(apcontour->nPoints = SDDS_RowCount(&SDDSin))<0 ||
+	apcontour->nPoints<3)
+      bombElegantVA("Error: APCONTOUR file %s is unreadable, or has insufficient data (<3 points)\n", apcontour->filename);
+    if (SDDS_CheckColumn(&SDDSin, apcontour->xColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
+      bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type", 
+		    apcontour->xColumn, apcontour->filename);
+    if (SDDS_CheckColumn(&SDDSin, apcontour->yColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
+      bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type", 
+		    apcontour->yColumn, apcontour->filename);
+    if (!(apcontour->x = SDDS_GetColumnInDoubles(&SDDSin, apcontour->xColumn)) ||
+	!(apcontour->y = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
+      bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s", apcontour->filename);
+    SDDS_Terminate(&SDDSin);
+    if (apcontour->nSegments<=0)
+      bombElegant("Error: APCONTOUR has N_SEGMENTS<=0", NULL);
+    printf("Read aperture contour data from file %s\n", apcontour->filename);
+    fflush(stdout);
+    apcontour->initialized = 1;
+  }
+
+  /* misalignments */
+  if (apcontour->dx || apcontour->dy || apcontour->dz)
+    offsetBeamCoordinates(coord, np, apcontour->dx, apcontour->dy, apcontour->dz);
+  if (apcontour->tilt)
+    rotateBeamCoordinates(coord, np, apcontour->tilt);
+
+  lossCode = 0;
+  if (apcontour->invert)
+    lossCode = 1;
+  i_top = np - 1;
+  dz = apcontour->length/apcontour->nSegments;
+  for (ip=0; ip<=i_top; ip++) {
+    lost = 0;
+    for (iz=0; iz<=apcontour->nSegments; iz++) {
+      if (pointIsInsideContour(coord[ip][0], coord[ip][2], apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
+	lost = 1;
+	break;
+      } else if (iz!=apcontour->nSegments) {
+	coord[ip][0] += coord[ip][1]*dz;
+	coord[ip][2] += coord[ip][3]*dz;
+	coord[ip][4] += dz*sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
+      }
+    }
+    if (lost) {
+      coord[ip][4] = z + iz*dz;
+      coord[ip][5] = Po*(1+coord[ip][5]);
+      swapParticles(coord[ip], coord[i_top]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[i_top]);
+      --i_top;
+      --ip;
+    }
+  }
+
+  /* misalignments */
+  if (apcontour->tilt)
+    rotateBeamCoordinates(coord, np, -apcontour->tilt);
+  if (apcontour->dx || apcontour->dy || apcontour->dz)
+    offsetBeamCoordinates(coord, np, -apcontour->dx, -apcontour->dy, -apcontour->dz);
+
+  return i_top+1;
+}
+

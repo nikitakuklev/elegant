@@ -70,6 +70,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
+    "APCONTOUR"
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -201,6 +202,7 @@ char *entity_text[N_TYPES] = {
     "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates.",
     "Applies kick according to a Hamiltonian that's a polynomial function of x and y together with a generalized drift also given as a polynomial of qx and qy",
     "A straight magnetic field element using off-axis expansion from an on-axis derivative.",
+    "An aperture (or its inverse) defined by (x, y) points in an SDDS file."
     } ;
 
 QUAD quad_example;
@@ -3406,6 +3408,22 @@ PARAMETER boffaxe_param[N_BOFFAXE_PARAMS] = {
     {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&boffaxe_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space and field output. Use for debugging only!"},
 };  
 
+APCONTOUR apcontour_example;
+/* aperture-contour physical parameters */
+PARAMETER apcontour_param[N_APCONTOUR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&apcontour_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"N_SEGMENTS", "", IS_LONG, 0, (long)((char *)&apcontour_example.nSegments), NULL, 0.0, 1, "number of segments to break into for improved resolution of loss point"},
+    {"INVERT", "", IS_LONG, 0, (long)((char *)&apcontour_example.invert), NULL, 0.0, 0, "if non-zero, contour defines an obstruction rather than an aperture"},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&apcontour_example.filename), NULL, 0.0, 0, "name of file containing contour data"},
+    {"XCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.xColumn), NULL, 0.0, 0, "name of column containing x data"},
+    {"YCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.yColumn), NULL, 0.0, 0, "name of containing y data"},
+    };
+
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -3554,6 +3572,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CCBEND_PARAMS, MAT_LEN_NCAT, sizeof(CCBEND),    ccbend_param   }, 
     { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   },
     { N_BOFFAXE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,   sizeof(BOFFAXE),  boffaxe_param  },
+    { N_APCONTOUR_PARAMS, MAT_LEN_NCAT, sizeof(APCONTOUR), apcontour_param},
 } ;
 
 void compute_offsets()
