@@ -1385,28 +1385,31 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
     apcontour->x = apcontour->y = NULL;
     apcontour->nPoints = 0;
     if (!apcontour->filename || !strlen(apcontour->filename))
-      bombElegantVA("Error: No filename given for APCONTOUR", apcontour->filename);
+      bombElegantVA("Error: No filename given for APCONTOUR\n", apcontour->filename);
     if (!apcontour->xColumn || !strlen(apcontour->xColumn))
-      bombElegantVA("Error: No XCOLUMN given for APCONTOUR", apcontour->xColumn);
+      bombElegantVA("Error: No XCOLUMN given for APCONTOUR\n", apcontour->xColumn);
     if (!apcontour->yColumn || !strlen(apcontour->yColumn))
-      bombElegantVA("Error: No YCOLUMN given for APCONTOUR", apcontour->yColumn);
+      bombElegantVA("Error: No YCOLUMN given for APCONTOUR\n", apcontour->yColumn);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, apcontour->filename) ||
 	SDDS_ReadPage(&SDDSin)!=1 ||
 	(apcontour->nPoints = SDDS_RowCount(&SDDSin))<0 ||
 	apcontour->nPoints<3)
       bombElegantVA("Error: APCONTOUR file %s is unreadable, or has insufficient data (<3 points)\n", apcontour->filename);
     if (SDDS_CheckColumn(&SDDSin, apcontour->xColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
-      bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type", 
+      bombElegantVA("Error: problem with x column (%s) for APCONTOUR file %s---check existence, units, and type\n", 
 		    apcontour->xColumn, apcontour->filename);
     if (SDDS_CheckColumn(&SDDSin, apcontour->yColumn, "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) 
-      bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type", 
+      bombElegantVA("Error: problem with y column (%s) for APCONTOUR file %s---check existence, units, and type\n", 
 		    apcontour->yColumn, apcontour->filename);
     if (!(apcontour->x = SDDS_GetColumnInDoubles(&SDDSin, apcontour->xColumn)) ||
 	!(apcontour->y = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
-      bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s", apcontour->filename);
+      bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
     SDDS_Terminate(&SDDSin);
     if (apcontour->nSegments<=0)
       bombElegant("Error: APCONTOUR has N_SEGMENTS<=0", NULL);
+    if (apcontour->x[0]!=apcontour->x[apcontour->nPoints-1] ||
+	apcontour->y[0]!=apcontour->y[apcontour->nPoints-1])
+      bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
     printf("Read aperture contour data from file %s\n", apcontour->filename);
     fflush(stdout);
     apcontour->initialized = 1;
