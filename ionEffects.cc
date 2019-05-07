@@ -1696,6 +1696,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   //cindex = nData / 2;
   //peakVal = yData[cindex];
 
+  result = find_min_max(&minVal, &peakVal, yData, nData);
 
   paramValue[0] = ionSigma[1] * 0.08;
   paramValue[1] = ionCentroid[1];
