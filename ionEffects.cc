@@ -20,11 +20,13 @@
 #include "ionEffects.h"
 #include "constants.h"
 #include "pressureData.h"
+//#include <algorithm>
 
 #define ION_FIELD_GAUSSIAN 0
-#define N_ION_FIELD_METHODS 1
+#define N_ION_FIELD_METHODS 2
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
-  (char*)"gaussian"
+  (char*)"gaussian",
+  (char*)"bigaussian"
 };
 
 static long ionFieldMethod = -1;
@@ -69,6 +71,15 @@ static IONEFFECTS *firstIonEffects = NULL; /* first in the lattice */
 #if USE_MPI
 static long leftIonCounter = 0;
 #endif
+
+//for bi-gaussian fit
+static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, *yResidual=NULL;
+static long nData = 0;
+
+void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
+double biGaussianFunction(double *param, long *invalid);
+//void report();
+void report(double res, double *a, long pass, long n_eval, long n_dimen);
 
 char speciesNameBuffer[100];
 char *makeSpeciesName(const char *prefix, char *suffix)
@@ -267,6 +278,11 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 
 
   setUpIonEffectsOutputFiles(control->n_passes);
+
+
+ 
+    
+
 }
 
 void readIonProperties(char *filename)
@@ -451,6 +467,11 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   }
 
   ionsInitialized = 1;
+
+  yFit = (double*)malloc(sizeof(double) * ionEffects->ionBins[0]);
+  yResidual = (double*)malloc(sizeof(double) * ionEffects->ionBins[0]);
+ 
+  
 }
 
 void trackWithIonEffects
@@ -614,19 +635,6 @@ void trackWithIonEffects
     }
 #endif
 
-    // avoid divergence of beam kick when sigma_x ~= sigma_y
-    /*
-    if (sigma[0]/sigma[1]>0.9 && sigma[0]/sigma[1] < 1.0) {
-      sigmatemp[0] = 0.9 * sigma[1];
-      sigmatemp[1] = sigma[1];
-    } else if (sigma[0]/sigma[1]>1.0 && sigma[0]/sigma[1] < 1.1) {
-      sigmatemp[0] = 1.1 * sigma[1];
-      sigmatemp[1] = sigma[1];
-    } else {
-      sigmatemp[0] = sigma[0];
-      sigmatemp[1] = sigma[1];
-    }
-    */
 
     if (verbosity>30) {
       printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
@@ -697,17 +705,7 @@ void trackWithIonEffects
         }
       }
       
-      /*
-      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-          if ((ionEffects->span[0] && fabs(ionEffects->coordinate[iSpecies][iIon][0])>ionEffects->span[0]) ||
-              (ionEffects->span[1] && fabs(ionEffects->coordinate[iSpecies][iIon][2])>ionEffects->span[1])) {
-            long k;
-            k = 0;
-          }
-        }
-      }
-      */
+
       
       if (((iPass-ionEffects->startPass)*nBunches+iBunch)%ionEffects->generationInterval==0) {
         /*** Generate ions */
@@ -718,9 +716,6 @@ void trackWithIonEffects
             /* this is a singly-ionized molecule, so use source gas 
                nToAdd =  someFunctionOfPressure(ionEffects->pressure[index], ...);
             */
-            /* Shouldn't there be some statistics here ? -- MB */
-            
-
 #if USE_MPI
             /* The macroIons parameter is the number for all processors, so we need to 
              * apportion the ions among the working processors 
@@ -774,7 +769,7 @@ void trackWithIonEffects
 		// Initial kinetic energy
 		double vmag, ionMass, vx, vy, rangle, Emi;	      
 		ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
-		Emi = fabs(gauss_rn_lim(0, 1, 3, random_4));
+		Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
 		//Emi = 0;
 		vmag = sqrt(2 * Emi * e_mks / ionMass);
 		rangle = random_2(0) * 2 * PI;
@@ -839,14 +834,6 @@ void trackWithIonEffects
           */
 	  coord = ionEffects->coordinate[iSpecies][iIon];
           
-	  /*
-	  if ((sigma[1] > 0.99*sigma[0]) && (sigma[1] < 1.01*sigma[0])) {
-	    roundGaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
-	  } else {
-	    gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
-	  }
-	  */
-	  
 	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
 
 
@@ -1000,7 +987,7 @@ void trackWithIonEffects
     }
 #endif
 
-    if (SDDS_ionHistogramOutput) {
+    if ((SDDS_ionHistogramOutput) && (iPass%1000 == 0) && (ionEffects->sLocation < 10)) {
       long iPlane;
       /* output ion density histogram */
 #if USE_MPI
@@ -1146,61 +1133,96 @@ void trackWithIonEffects
   }
 #endif
 
+
+//for bi-gaussian kick
+    double paramValueX[6], paramValueY[6];
+    double tempCentroid[4][2], tempSigma[4][2], tempkick[2], tempQ[4];
+    double normX, normY;
+    if (ionFieldMethod == 1) {
+     
+      //biGaussianFit(sigma[0], centroid[0], paramValueX, paramValueY);
+      biGaussianFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
+
+      normX = 2 * e_mks * ionEffects->span[0] / ionEffects->ionBins[0];
+      normY = 2 * e_mks * ionEffects->span[1] / ionEffects->ionBins[1];
+
+      tempCentroid[0][0] = paramValueX[1];
+      tempCentroid[0][1] = paramValueY[1];
+      tempSigma[0][0] = paramValueX[0];
+      tempSigma[0][1] = paramValueY[0];
+      tempQ[0] = paramValueX[2] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[0] * paramValueY[0] * sqr(e_mks) / qIon;
+
+      tempCentroid[1][0] = paramValueX[4];
+      tempCentroid[1][1] = paramValueY[1];
+      tempSigma[1][0] = paramValueX[3];
+      tempSigma[1][1] = paramValueY[0];
+      tempQ[1] = paramValueX[5] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[3] * paramValueY[0] * sqr(e_mks) / qIon;
+
+      tempCentroid[2][0] = paramValueX[1];
+      tempCentroid[2][1] = paramValueY[4];
+      tempSigma[2][0] = paramValueX[0];
+      tempSigma[2][1] = paramValueY[3];
+      tempQ[2] = paramValueX[2] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[0] * paramValueY[3] * sqr(e_mks) / qIon;
+
+      tempCentroid[3][0] = paramValueX[4];
+      tempCentroid[3][1] = paramValueY[4];
+      tempSigma[3][0] = paramValueX[3];
+      tempSigma[3][1] = paramValueY[3];
+      tempQ[3] = paramValueX[5] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[3] * paramValueY[3] * sqr(e_mks) / qIon;
+
+
+    }
+
     if (isSlave || !notSinglePart) {
 
-      /*
-      if (ionSigma[0]/ionSigma[1]>0.9 && ionSigma[0]/ionSigma[1] < 1.0) {
-#if DEBUG
-	printf("ion sigx = sigy (sx=%e, sy=%e): bunch %d, Pass %d, s=%f \n",  ionSigma[0], ionSigma[1], iBunch, iPass, ionEffects->sLocation);
-#endif
-	ionSigma[0] = 0.9 * ionSigma[1];
-      } else if (ionSigma[0]/ionSigma[1]>1.0 && ionSigma[0]/ionSigma[1] < 1.1) {
-	ionSigma[0] = 1.1 * ionSigma[1];
-	//	printf("ion sigx = sigy");
-      }
-      */
-
-      double tempkick[2], maxkick[2], tempart[4];
-      tempart[0] = ionSigma[0] + ionCentroid[0];
-      tempart[2] = 0;
-      gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
-      maxkick[0] = 2*abs(tempkick[0]);
-
-      tempart[2] = ionSigma[1] + ionCentroid[1];
-      tempart[0] = 0;
-      gaussianBeamKick(tempart, ionCentroid, ionSigma, tempkick, qIon, me_mks, 1);
-      maxkick[1] = 2*abs(tempkick[1]);
-      
 
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
           double kick[2];
+	  //, oldkick[2];
+	    //, binsize, normX, normY;
+	  //binsize = ionEffects->span[0] / ionEffects->ionBins[0] *ionEffects->span[1] / ionEffects->ionBins[1];
+	  //normX = 2 * e_mks * ionEffects->span[0] / ionEffects->ionBins[0];
+	  //normY = 2 * e_mks * ionEffects->span[1] / ionEffects->ionBins[1];
 
-	  /*
-	  if ((ionSigma[0] > 0.99*ionSigma[1]) && (ionSigma[0] < 1.01*ionSigma[1])) {
-	    roundGaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
-	  } else {
+	  if (ionFieldMethod == 0) {
+	  //if (true) {
 	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
 	  }
-	  */
-	  //	  sigFudge[0] = ionSigma[0] * sqrt(2);
-	  //sigFudge[1] = ionSigma[1] * sqrt(2);
+	    //	  } else 
+	  else if (ionFieldMethod == 1)  {
+	    //	    double tempCentroid[2], tempSigma[2], tempkick[2], tempQ;
+	    
 
-	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
-	  //gaussianBeamKick(part[ip], ionCentroid, sigFudge, kick, qIon, me_mks, 1);
+	    //oldkick[0] = kick[0];
+	    //oldkick[1] = kick[1];
+	   
+	    // Gx1 * Gy1
+	    gaussianBeamKick(part[ip], tempCentroid[0], tempSigma[0], tempkick, tempQ[0], me_mks, 1);
+	    kick[0] = tempkick[0];
+	    kick[1] = tempkick[1];
 
-	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
-	    part[ip][1] += kick[0] / c_mks / Po;
-	    part[ip][3] += kick[1] / c_mks / Po; 
-	  } 
-	  //else {
-	  //  printf("bad kick");
-	  //}
+	    //Gx2 * Gy1 
+	    gaussianBeamKick(part[ip], tempCentroid[1], tempSigma[1], tempkick, tempQ[1], me_mks, 1);
+	    kick[0] += tempkick[0];
+	    kick[1] += tempkick[1];
 
-	  //if (abs(kick[1]) > 1e6) {
-	  //  printf("kick wrong");
-	  //}
+	    //Gx1 * Gy2	    
+	    gaussianBeamKick(part[ip], tempCentroid[2], tempSigma[2], tempkick, tempQ[2], me_mks, 1);
+	    kick[0] += tempkick[0];
+	    kick[1] += tempkick[1];
+
+	    //Gx2 * Gy2
+	    gaussianBeamKick(part[ip], tempCentroid[3], tempSigma[3], tempkick, tempQ[3], me_mks, 1);
+	    kick[0] += tempkick[0];
+	    kick[1] += tempkick[1];
+
+	  }
+
+	  //if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
+	  part[ip][1] += kick[0] / c_mks / Po;
+	  part[ip][3] += kick[1] / c_mks / Po; 
 
         }
       }
@@ -1566,4 +1588,208 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
   kick[0] = -dp * cos(theta) / ionMass;
   kick[1] = -dp * sin(theta) / ionMass;
 
+}
+
+
+
+//static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, *yResidual=NULL;
+//static long nData = 0;
+
+//, double* xData, double* yData, long nData
+
+void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
+  double result = 0;
+  double nVariables = 6;
+  double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
+  //, stepSize[6];
+  double tolerance, target;
+  int32_t nEvalMax=5000, nPassMax=10;
+  unsigned long simplexFlags = 0;
+  double peakVal, minVal;
+  long cindex, fitResult;
+  //double delta, span;
+  long verbosity = 0;
+
+  tolerance = 1e-3;
+  target = 0.1;
+
+  //peakVal = max(yData); //???
+
+  
+  //X Plane
+  nData = x_ion_bins;
+
+  xData = ionEffects->xyIonHistogram[0];
+  yData = ionEffects->ionHistogram[0];
+  cindex = nData / 2;
+  //peakVal = yData[cindex];
+  //peakVal = *std::max_element(yData,yData+nData);
+  result = find_min_max(&minVal, &peakVal, yData, nData);
+
+  /*
+  paramValue[0] = beamSigma[0] * 0.5;
+  paramValue[1] = beamCentroid[0];
+  paramValue[2] = peakVal * 0.5;
+  paramValue[3] = beamSigma[0] * 2;
+  paramValue[4] = beamCentroid[0];
+  paramValue[5] = peakVal * 0.5;
+  */
+  paramValue[0] = ionSigma[0] * 0.08;
+  paramValue[1] = ionCentroid[0];
+  //paramValue[2] = peakVal * 0.7;
+  paramValue[2] = peakVal * 0.47;
+  paramValue[3] = ionSigma[0] * 0.56;
+  paramValue[4] = ionCentroid[0];
+  //paramValue[5] = peakVal * 0.34;/
+  paramValue[5] = peakVal * 0.23;
+  
+
+  lowerLimit[0] = ionSigma[0] * 0.008;
+  lowerLimit[1] = ionCentroid[0] - 3 * ionSigma[0];
+  lowerLimit[2] = peakVal * 0.05;
+  lowerLimit[3] = ionSigma[0] * 0.056;
+  lowerLimit[4] = ionCentroid[0] - 3 * ionSigma[0];
+  lowerLimit[5] = peakVal * 0.034;
+
+  upperLimit[0] = ionSigma[0] * 1.0;
+  upperLimit[1] = ionCentroid[0] + 3 * ionSigma[0];
+  upperLimit[2] = peakVal * 5;
+  upperLimit[3] = ionSigma[0] * 20;
+  upperLimit[4] = ionCentroid[0] + 3 * ionSigma[0];
+  upperLimit[5] = peakVal * 5;
+
+  paramDelta[0] = ionSigma[0] * 0.008;
+  paramDelta[1] = ionCentroid[0] / 5;
+  paramDelta[2] = peakVal * 0.07;
+  paramDelta[3] = ionSigma[0] * 0.056;
+  paramDelta[4] = ionCentroid[0] / 5;
+  paramDelta[5] = peakVal * 0.034;
+
+  
+  fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+			  NULL, nVariables, target, tolerance, biGaussianFunction, 
+			 (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+  
+
+
+  //paramValueX = paramValue;
+  /*
+  if (ionEffects->sStart < 1) {
+    FILE * fionFit;
+    fionFit = fopen("ion_fit_comp.dat", "a");
+    // time, element s, charge
+    for (int i=0; i<nData; i++) {
+      fprintf(fionFit, "%e  %e %e \n", xData[i], yData[i], yFit[i]);
+    }
+    fclose(fionFit);
+  }
+  */
+
+  for (int i=0; i<6; i++) {
+    paramValueX[i] = paramValue[i];
+  }
+
+ //Y Plane
+  nData = y_ion_bins;
+  xData = ionEffects->xyIonHistogram[1];
+  yData = ionEffects->ionHistogram[1];
+  //cindex = nData / 2;
+  //peakVal = yData[cindex];
+
+
+  paramValue[0] = ionSigma[1] * 0.08;
+  paramValue[1] = ionCentroid[1];
+  //paramValue[2] = peakVal * 0.7;
+  paramValue[2] = peakVal * 0.47;
+  paramValue[3] = ionSigma[1] * 0.56;
+  paramValue[4] = ionCentroid[1];
+  //paramValue[5] = peakVal * 0.34;/
+  paramValue[5] = peakVal * 0.23;
+  
+
+  lowerLimit[0] = ionSigma[1] * 0.008;
+  lowerLimit[1] = ionCentroid[1] - 3 * ionSigma[1];
+  lowerLimit[2] = peakVal * 0.05;
+  lowerLimit[3] = ionSigma[1] * 0.056;
+  lowerLimit[4] = ionCentroid[1] - 3 * ionSigma[1];
+  lowerLimit[5] = peakVal * 0.034;
+
+  upperLimit[0] = ionSigma[1] * 1.0;
+  upperLimit[1] = ionCentroid[1] + 3 * ionSigma[1];
+  upperLimit[2] = peakVal * 5;
+  upperLimit[3] = ionSigma[1] * 20;
+  upperLimit[4] = ionCentroid[1] + 3 * ionSigma[1];
+  upperLimit[5] = peakVal * 5;
+
+  paramDelta[0] = ionSigma[1] * 0.008;
+  paramDelta[1] = ionCentroid[1] / 5;
+  paramDelta[2] = peakVal * 0.07;
+  paramDelta[3] = ionSigma[1] * 0.056;
+  paramDelta[4] = ionCentroid[1] / 5;
+  paramDelta[5] = peakVal * 0.034;
+
+  
+  fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+			  NULL, nVariables, target, tolerance, biGaussianFunction, 
+			  (verbosity>0?report:NULL), nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+  
+
+
+  for (int i=0; i<6; i++) {
+    paramValueY[i] = paramValue[i];
+  }
+
+  /*
+  if (ionEffects->sStart < 1) {
+    FILE * fionFitY;
+    fionFitY = fopen("ion_fit_comp_y.dat", "a");
+    // time, element s, charge
+    for (int i=0; i<nData; i++) {
+      fprintf(fionFitY, "%e  %e %e \n", xData[i], yData[i], yFit[i]);
+    }
+    fclose(fionFitY);
+  }
+  */
+
+
+}
+
+
+double biGaussianFunction(double *param, long *invalid) {
+
+  double sum = 0, tmp = 0, norm = 0;
+
+  *invalid = 0;
+
+  //param[0] = sig1
+  //param[1] = cen1
+  //param[2] = h1
+  //param[3] = sig2
+  //param[4] = cen2
+  //param[5] = h2
+
+  for (int i=0; i<nData; i++) {
+    yFit[i] = param[2] * exp(-sqr(xData[i]-param[1]) / 2 / sqr(param[0])) +
+      param[5] * exp(-sqr(xData[i]-param[4]) / 2 / sqr(param[3]));
+    tmp = (yFit[i]-yData[i]);
+    yResidual[i] = tmp;
+    //sum += sqr(tmp);
+    sum += abs(tmp);
+    norm += yData[i];
+  }
+
+  //sum = sqrt(sum);
+  return(sum/norm);
+
+}
+
+
+void report(double y, double *x, long pass, long nEval, long n_dimen)
+{
+  long i;
+
+  fprintf(stderr, "pass %ld, after %ld evaluations: result = %.16e\na = ", pass, nEval, y);
+  for (i=0; i<n_dimen; i++)
+    fprintf(stderr, "%.8e ", x[i]);
+  fputc('\n', stderr);
 }
