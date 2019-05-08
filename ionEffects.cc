@@ -78,7 +78,7 @@ extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm
 #endif
 
 //for bi-gaussian fit
-static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, bigaussianFitTarget = 0.1;
+static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, bigaussianFitTarget = 0.1, yDataSum;
 static long nData = 0;
 
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
@@ -1688,6 +1688,9 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
     xData = ionEffects->xyIonHistogram[plane];
     yData = ionEffects->ionHistogram[plane];
+    yDataSum = 0;
+    for (int i=0; i<nData; i++)
+      yDataSum += yData[i];
     result = find_min_max(&minVal, &peakVal, yData, nData);
 
     paramDelta[0] = ionSigma[plane] * 0.008;
@@ -1806,7 +1809,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
 double biGaussianFunction(double *param, long *invalid) {
 
-  double sum = 0, tmp = 0, norm = 0;
+  double sum = 0, tmp = 0;
 
   *invalid = 0;
 
@@ -1818,14 +1821,19 @@ double biGaussianFunction(double *param, long *invalid) {
   //param[5] = h2
 
   for (int i=0; i<nData; i++) {
-    yFit[i] = param[2] * exp(-sqr(xData[i]-param[1]) / 2 / sqr(param[0])) +
-      param[5] * exp(-sqr(xData[i]-param[4]) / 2 / sqr(param[3]));
+    double z;
+    yFit[i] = 0;
+    z = (xData[i]-param[1])/param[0];
+    if (z<6 && z>-6)
+      yFit[i] += param[2] * exp(-z*z/2);
+    z = (xData[i]-param[4])/param[3];
+    if (z<6 && z>-6)
+      yFit[i] += param[5] * exp(-z*z/2);
     tmp = (yFit[i]-yData[i]);
     sum += abs(tmp);
-    norm += yData[i];
   }
 
-  return(sum/norm);
+  return(sum/yDataSum);
 }
 
 void report(double y, double *x, long pass, long nEval, long n_dimen)
