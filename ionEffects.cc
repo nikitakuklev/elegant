@@ -1662,185 +1662,82 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 
 //, double* xData, double* yData, long nData
 
+
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
-  //, stepSize[6];
   double tolerance, target;
   int32_t nEvalMax=5000, nPassMax=10;
   unsigned long simplexFlags = 0;
   double peakVal, minVal;
-  long cindex, fitResult, dummy;
-  //double delta, span;
-  long verbosity = 0;
+  long fitResult, dummy;
+  long verbosity = 0, plane;
 
   tolerance = 1e-3;
   target = 0.1;
 
-  //peakVal = max(yData); //???
+  for (plane=0; plane<2; plane++) {
+    nData = plane==0 ? x_ion_bins : y_ion_bins;
 
+    xData = ionEffects->xyIonHistogram[plane];
+    yData = ionEffects->ionHistogram[plane];
+    result = find_min_max(&minVal, &peakVal, yData, nData);
+
+    paramValue[0] = ionSigma[plane] * 0.08;
+    paramValue[1] = ionCentroid[plane];
+    paramValue[2] = peakVal * 0.47;
+    paramValue[3] = ionSigma[plane] * 0.56;
+    paramValue[4] = ionCentroid[plane];
+    paramValue[5] = peakVal * 0.23;
+
+    lowerLimit[0] = ionSigma[plane] * 0.008;
+    lowerLimit[1] = ionCentroid[plane] - 3 * ionSigma[plane];
+    lowerLimit[2] = peakVal * 0.05;
+    lowerLimit[3] = ionSigma[plane] * 0.056;
+    lowerLimit[4] = ionCentroid[plane] - 3 * ionSigma[plane];
+    lowerLimit[5] = peakVal * 0.034;
+
+    upperLimit[0] = ionSigma[plane] * 1.0;
+    upperLimit[1] = ionCentroid[plane] + 3 * ionSigma[plane];
+    upperLimit[2] = peakVal * 5;
+    upperLimit[3] = ionSigma[plane] * 20;
+    upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
+    upperLimit[5] = peakVal * 5;
+    
+    paramDelta[0] = ionSigma[plane] * 0.008;
+    paramDelta[1] = ionCentroid[plane] / 5;
+    paramDelta[2] = peakVal * 0.07;
+    paramDelta[3] = ionSigma[plane] * 0.056;
+    paramDelta[4] = ionCentroid[plane] / 5;
+    paramDelta[5] = peakVal * 0.034;
   
-  //X Plane
-  nData = x_ion_bins;
-
-  xData = ionEffects->xyIonHistogram[0];
-  yData = ionEffects->ionHistogram[0];
-  cindex = nData / 2;
-  //peakVal = yData[cindex];
-  //peakVal = *std::max_element(yData,yData+nData);
-  result = find_min_max(&minVal, &peakVal, yData, nData);
-
-  /*
-  paramValue[0] = beamSigma[0] * 0.5;
-  paramValue[1] = beamCentroid[0];
-  paramValue[2] = peakVal * 0.5;
-  paramValue[3] = beamSigma[0] * 2;
-  paramValue[4] = beamCentroid[0];
-  paramValue[5] = peakVal * 0.5;
-  */
-  paramValue[0] = ionSigma[0] * 0.08;
-  paramValue[1] = ionCentroid[0];
-  //paramValue[2] = peakVal * 0.7;
-  paramValue[2] = peakVal * 0.47;
-  paramValue[3] = ionSigma[0] * 0.56;
-  paramValue[4] = ionCentroid[0];
-  //paramValue[5] = peakVal * 0.34;/
-  paramValue[5] = peakVal * 0.23;
-  
-
-  lowerLimit[0] = ionSigma[0] * 0.008;
-  lowerLimit[1] = ionCentroid[0] - 3 * ionSigma[0];
-  lowerLimit[2] = peakVal * 0.05;
-  lowerLimit[3] = ionSigma[0] * 0.056;
-  lowerLimit[4] = ionCentroid[0] - 3 * ionSigma[0];
-  lowerLimit[5] = peakVal * 0.034;
-
-  upperLimit[0] = ionSigma[0] * 1.0;
-  upperLimit[1] = ionCentroid[0] + 3 * ionSigma[0];
-  upperLimit[2] = peakVal * 5;
-  upperLimit[3] = ionSigma[0] * 20;
-  upperLimit[4] = ionCentroid[0] + 3 * ionSigma[0];
-  upperLimit[5] = peakVal * 5;
-
-  paramDelta[0] = ionSigma[0] * 0.008;
-  paramDelta[1] = ionCentroid[0] / 5;
-  paramDelta[2] = peakVal * 0.07;
-  paramDelta[3] = ionSigma[0] * 0.056;
-  paramDelta[4] = ionCentroid[0] / 5;
-  paramDelta[5] = peakVal * 0.034;
-
-  
-  fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-			  NULL, nVariables, target, tolerance, biGaussianFunction, 
-			 (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
-  
-  if (fitResult>0) {
-    ionEffects->xyBigaussianSet[0] = 1;
-    for (int i=0; i<6; i++)
-      ionEffects->xyBigaussianParameter[0][i] = paramValue[i];
-    biGaussianFunction(paramValue, &dummy);
-    for (int i=0; i<nData; i++)
-      ionEffects->ionHistogramFit[0][i] = yFit[i];
-  } else {
-    for (int i=0; i<nData; i++)
-      ionEffects->ionHistogramFit[0][i] = -1;
-  }
-  ionEffects->xyBigaussianFitResidual[0] = result;
-  ionEffects->xyBigaussianFitReturnCode[0] = fitResult;
-
-  //paramValueX = paramValue;
-  /*
-  if (ionEffects->sStart < 1) {
-    FILE * fionFit;
-    fionFit = fopen("ion_fit_comp.dat", "a");
-    // time, element s, charge
-    for (int i=0; i<nData; i++) {
-      fprintf(fionFit, "%e  %e %e \n", xData[i], yData[i], yFit[i]);
+    fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+			    NULL, nVariables, target, tolerance, biGaussianFunction, 
+			    (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+    
+    if (fitResult>0) {
+      ionEffects->xyBigaussianSet[plane] = 1;
+      for (int i=0; i<6; i++)
+	ionEffects->xyBigaussianParameter[plane][i] = paramValue[i];
+      biGaussianFunction(paramValue, &dummy);
+      for (int i=0; i<nData; i++)
+	ionEffects->ionHistogramFit[plane][i] = yFit[i];
+    } else {
+      for (int i=0; i<nData; i++)
+	ionEffects->ionHistogramFit[plane][i] = -1;
     }
-    fclose(fionFit);
-  }
-  */
-
-  for (int i=0; i<6; i++) {
-    paramValueX[i] = paramValue[i];
-  }
-
- //Y Plane
-  nData = y_ion_bins;
-  xData = ionEffects->xyIonHistogram[1];
-  yData = ionEffects->ionHistogram[1];
-  //cindex = nData / 2;
-  //peakVal = yData[cindex];
-
-  result = find_min_max(&minVal, &peakVal, yData, nData);
-
-  paramValue[0] = ionSigma[1] * 0.08;
-  paramValue[1] = ionCentroid[1];
-  //paramValue[2] = peakVal * 0.7;
-  paramValue[2] = peakVal * 0.47;
-  paramValue[3] = ionSigma[1] * 0.56;
-  paramValue[4] = ionCentroid[1];
-  //paramValue[5] = peakVal * 0.34;/
-  paramValue[5] = peakVal * 0.23;
-  
-
-  lowerLimit[0] = ionSigma[1] * 0.008;
-  lowerLimit[1] = ionCentroid[1] - 3 * ionSigma[1];
-  lowerLimit[2] = peakVal * 0.05;
-  lowerLimit[3] = ionSigma[1] * 0.056;
-  lowerLimit[4] = ionCentroid[1] - 3 * ionSigma[1];
-  lowerLimit[5] = peakVal * 0.034;
-
-  upperLimit[0] = ionSigma[1] * 1.0;
-  upperLimit[1] = ionCentroid[1] + 3 * ionSigma[1];
-  upperLimit[2] = peakVal * 5;
-  upperLimit[3] = ionSigma[1] * 20;
-  upperLimit[4] = ionCentroid[1] + 3 * ionSigma[1];
-  upperLimit[5] = peakVal * 5;
-
-  paramDelta[0] = ionSigma[1] * 0.008;
-  paramDelta[1] = ionCentroid[1] / 5;
-  paramDelta[2] = peakVal * 0.07;
-  paramDelta[3] = ionSigma[1] * 0.056;
-  paramDelta[4] = ionCentroid[1] / 5;
-  paramDelta[5] = peakVal * 0.034;
-
-  
-  fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-			  NULL, nVariables, target, tolerance, biGaussianFunction, 
-			  (verbosity>0?report:NULL), nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);  
-  if (fitResult>0) {
-    ionEffects->xyBigaussianSet[1] = 1;
-    for (int i=0; i<6; i++)
-      ionEffects->xyBigaussianParameter[1][i] = paramValue[i];
-    biGaussianFunction(paramValue, &dummy);
-    for (int i=0; i<nData; i++)
-      ionEffects->ionHistogramFit[1][i] = yFit[i];
-  } else {
-    for (int i=0; i<nData; i++)
-      ionEffects->ionHistogramFit[1][i] = -1;
-  }
-  ionEffects->xyBigaussianFitResidual[1] = result;
-  ionEffects->xyBigaussianFitReturnCode[1] = fitResult;
-
-  for (int i=0; i<6; i++) {
-    paramValueY[i] = paramValue[i];
-  }
-
-  /*
-  if (ionEffects->sStart < 1) {
-    FILE * fionFitY;
-    fionFitY = fopen("ion_fit_comp_y.dat", "a");
-    // time, element s, charge
-    for (int i=0; i<nData; i++) {
-      fprintf(fionFitY, "%e  %e %e \n", xData[i], yData[i], yFit[i]);
+    ionEffects->xyBigaussianFitResidual[plane] = result;
+    ionEffects->xyBigaussianFitReturnCode[plane] = fitResult;
+    
+    
+    for (int i=0; i<6; i++) {
+      if (plane==0)
+	paramValueX[i] = paramValue[i];
+      else
+	paramValueY[i] = paramValue[i];
     }
-    fclose(fionFitY);
   }
-  */
-
-
 }
 
 
