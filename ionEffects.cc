@@ -74,16 +74,31 @@ static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonD
 static IONEFFECTS *firstIonEffects = NULL; /* first in the lattice */
 #if USE_MPI
 static long leftIonCounter = 0;
+extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
 #endif
 
 //for bi-gaussian fit
-static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, *yResidual=NULL;
+static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL;
 static long nData = 0;
 
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
 double biGaussianFunction(double *param, long *invalid);
 //void report();
 void report(double res, double *a, long pass, long n_eval, long n_dimen);
+
+#if USE_MPI
+void findGlobalMinIndex (double *min, int *processor_ID, MPI_Comm comm) {
+    struct {
+      double val;
+      int rank;
+    } in, out;
+    in.val = *min;
+    MPI_Comm_rank(comm, &(in.rank));
+    MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
+    *min = out.val;
+    *processor_ID = out.rank;
+}
+#endif
 
 char speciesNameBuffer[100];
 char *makeSpeciesName(const char *prefix, char *suffix)
@@ -234,7 +249,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 	if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
 	    (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "evaluationCount", NULL, SDDS_LONG) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluations", NULL, SDDS_LONG) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma1", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid1", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q1", "C", SDDS_DOUBLE) ||
@@ -486,9 +501,6 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   ionsInitialized = 1;
 
   yFit = (double*)malloc(sizeof(double) * ionEffects->ionBins[0]);
-  yResidual = (double*)malloc(sizeof(double) * ionEffects->ionBins[0]);
- 
-  
 }
 
 void trackWithIonEffects
@@ -1034,7 +1046,7 @@ void trackWithIonEffects
 			       ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
 	       !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				   "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
-				   "evaluationCount", ionEffects->xyBigaussianFitReturnCode[iPlane],
+				   "nEvaluations", ionEffects->xyBigaussianFitReturnCode[iPlane],
 				   "sigma1", ionEffects->xyBigaussianParameter[iPlane][0],
 				   "sigma2", ionEffects->xyBigaussianParameter[iPlane][3],
 				   "centroid1", ionEffects->xyBigaussianParameter[iPlane][1],
@@ -1657,25 +1669,19 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 
 
 
-//static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, *yResidual=NULL;
-//static long nData = 0;
-
-//, double* xData, double* yData, long nData
-
-
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
   double tolerance, target;
-  int32_t nEvalMax=5000, nPassMax=10;
+  int32_t nEvalMax=1500, nPassMax=3;
   unsigned long simplexFlags = 0;
   double peakVal, minVal;
   long fitResult, dummy;
   long verbosity = 0, plane;
 
-  tolerance = 1e-3;
-  target = 0.1;
+  tolerance = 1e-4;
+  target = 0.01;
 
   for (plane=0; plane<2; plane++) {
     nData = plane==0 ? x_ion_bins : y_ion_bins;
@@ -1684,12 +1690,12 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     yData = ionEffects->ionHistogram[plane];
     result = find_min_max(&minVal, &peakVal, yData, nData);
 
-    paramValue[0] = ionSigma[plane] * 0.08;
-    paramValue[1] = ionCentroid[plane];
-    paramValue[2] = peakVal * 0.47;
-    paramValue[3] = ionSigma[plane] * 0.56;
-    paramValue[4] = ionCentroid[plane];
-    paramValue[5] = peakVal * 0.23;
+    paramDelta[0] = ionSigma[plane] * 0.008;
+    paramDelta[1] = ionCentroid[plane] / 5;
+    paramDelta[2] = peakVal * 0.07;
+    paramDelta[3] = ionSigma[plane] * 0.056;
+    paramDelta[4] = ionCentroid[plane] / 5;
+    paramDelta[5] = peakVal * 0.034;
 
     lowerLimit[0] = ionSigma[plane] * 0.008;
     lowerLimit[1] = ionCentroid[plane] - 3 * ionSigma[plane];
@@ -1704,23 +1710,54 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     upperLimit[3] = ionSigma[plane] * 20;
     upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
     upperLimit[5] = peakVal * 5;
-    
-    paramDelta[0] = ionSigma[plane] * 0.008;
-    paramDelta[1] = ionCentroid[plane] / 5;
-    paramDelta[2] = peakVal * 0.07;
-    paramDelta[3] = ionSigma[plane] * 0.056;
-    paramDelta[4] = ionCentroid[plane] / 5;
-    paramDelta[5] = peakVal * 0.034;
-  
+
+    paramValue[0] = ionSigma[plane] * 0.08;
+    paramValue[1] = ionCentroid[plane];
+    paramValue[2] = peakVal * 0.47;
+    paramValue[3] = ionSigma[plane] * 0.56;
+    paramValue[4] = ionCentroid[plane];
+    paramValue[5] = peakVal * 0.23;
+
+    /*
+    if (ionEffects->xyBigaussianSet[plane] && ionEffects->xyBigaussianFitResidual[plane]<0.02) {
+      for (int j=0; j<6; j++)
+	paramValue[j] = ionEffects->xyBigaussianParameter[plane][j];
+      for (int i=0; i<6; i++) {
+	if (fabs(paramValue[i])>fabs(upperLimit[i]) || paramValue[i]>upperLimit[i])
+	  upperLimit[i] = 10*fabs(paramValue[i]);
+	if (fabs(paramValue[i])<fabs(lowerLimit[i]) || paramValue[i]<lowerLimit[i])
+	  lowerLimit[i] = -10*fabs(paramValue[i]);
+	if (paramValue[i]!=0)
+	  paramDelta[i] = fabs(paramValue[i])/10;
+      }
+    }
+    */
+
+#if USE_MPI
+    /* Randomize step sizes and starting points */
+    for (int i=0; i<6; i++) {
+      paramDelta[i] *= random_2(0)*1.9+0.1;
+      paramValue[i] *= (1+(random_2(0)-0.5)/10);
+    }
+#endif
+
     fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 			    NULL, nVariables, target, tolerance, biGaussianFunction, 
 			    (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+    int min_location;
+    findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+    MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+#endif
+
+    biGaussianFunction(paramValue, &dummy);
     
     if (fitResult>0) {
       ionEffects->xyBigaussianSet[plane] = 1;
       for (int i=0; i<6; i++)
 	ionEffects->xyBigaussianParameter[plane][i] = paramValue[i];
-      biGaussianFunction(paramValue, &dummy);
       for (int i=0; i<nData; i++)
 	ionEffects->ionHistogramFit[plane][i] = yFit[i];
     } else {
@@ -1728,8 +1765,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 	ionEffects->ionHistogramFit[plane][i] = -1;
     }
     ionEffects->xyBigaussianFitResidual[plane] = result;
-    ionEffects->xyBigaussianFitReturnCode[plane] = fitResult;
-    
+    ionEffects->xyBigaussianFitReturnCode[plane] = fitResult;    
     
     for (int i=0; i<6; i++) {
       if (plane==0)
@@ -1758,17 +1794,12 @@ double biGaussianFunction(double *param, long *invalid) {
     yFit[i] = param[2] * exp(-sqr(xData[i]-param[1]) / 2 / sqr(param[0])) +
       param[5] * exp(-sqr(xData[i]-param[4]) / 2 / sqr(param[3]));
     tmp = (yFit[i]-yData[i]);
-    yResidual[i] = tmp;
-    //sum += sqr(tmp);
     sum += abs(tmp);
     norm += yData[i];
   }
 
-  //sum = sqrt(sum);
   return(sum/norm);
-
 }
-
 
 void report(double y, double *x, long pass, long nEval, long n_dimen)
 {
