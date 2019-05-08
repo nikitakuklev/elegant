@@ -61,6 +61,7 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies);
 void allocateIonHistograms(IONEFFECTS *ionEffects);
 void shareIonHistograms(IONEFFECTS *ionEffects);
+void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins);
 
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
@@ -1012,22 +1013,25 @@ void trackWithIonEffects
       if (myid==0) {
 #endif
 	for (iPlane=0; iPlane<2; iPlane++) {
-	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, ionEffects->ionBins[iPlane]) ||
+	  long binOffset, activeBins;
+	  determineOffsetAndActiveBins(ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane],
+				       &binOffset, &activeBins);
+	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				  "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
 				  "nIonsOutside", ionEffects->ionHistogramMissed[iPlane],
 				  "Plane", iPlane==0?"x":"y", 
 				  NULL) ||
 	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->xyIonHistogram[iPlane], ionEffects->ionBins[iPlane], "Position") ||
+			      ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
 	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane], "Charge")) {
+			      ionEffects->ionHistogram[iPlane]+binOffset, activeBins, "Charge")) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
 	  }
 	  if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
 	      (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			       ionEffects->ionHistogramFit[iPlane], ionEffects->ionBins[iPlane], "ChargeFit") ||
+			       ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
 	       !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				   "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
 				   "evaluationCount", ionEffects->xyBigaussianFitReturnCode[iPlane],
@@ -1463,6 +1467,23 @@ void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies)
 	  ionEffects->ionHistogram[iPlane][iBin] += ionEffects->coordinate[iSpecies][iIon][4];
       }
     }
+  }
+}
+
+void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins)
+{
+  long i, j;
+  for (i=0; i<nBins; i++)
+    if (histogram[i])
+      break;
+  for (j=nBins-1; j>i; j--)
+    if (histogram[j])
+      break;
+  *activeBins = j-i+1;
+  *binOffset = i;
+  if (*activeBins==0) {
+    *binOffset = 0;
+    *activeBins = 2;
   }
 }
 
