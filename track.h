@@ -3276,10 +3276,16 @@ typedef struct {
                                    /* coordinate order is (x, vx, y, vy, charge) */
   long *nIons;                     /* nIons[i] is the number of ions of species i */
   double *ionHistogram[2];         /* If bins[0] or bins[1] non-zero, make x, y ion histograms */
+  double *ionHistogramFit[2];      /* If bi-gaussian fitting is invoked, stores the fit */
   double ionHistogramMissed[2];    /* Number of ions that are left out of the histogram */
   /* These are for convenience in ion histogram output */
   double ionDelta[2];              /* delta x or y for ion histogram bins */
   double *xyIonHistogram[2];       /* values for ion histogram independent coordinates (x, y) */
+  /* save bigaussian parameters between calls to speed up subsequent fitting, and for output */
+  double xyBigaussianParameter[2][6]; 
+  short xyBigaussianSet[2];           /* if nonzero, bigaussian parameter values are valid */
+  double xyBigaussianFitResidual[2];
+  long xyBigaussianFitReturnCode[2];
 } IONEFFECTS ;
 
 /* names and storage structure for speed bump physical parameters */

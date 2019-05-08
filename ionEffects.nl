@@ -24,6 +24,9 @@
 	  long x_ion_bins = 0;
 	  long y_ion_bins = 0;
 	  STRING ion_histogram_output = NULL;
+	  double ion_histogram_output_s_start = 0;
+	  double ion_histogram_output_s_end = 10;
+	  long ion_histogram_output_interval = 1000;
           long verbosity = 0;
 #end
 

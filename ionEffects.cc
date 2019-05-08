@@ -23,6 +23,7 @@
 //#include <algorithm>
 
 #define ION_FIELD_GAUSSIAN 0
+#define ION_FIELD_BIGAUSSIAN 1
 #define N_ION_FIELD_METHODS 2
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
@@ -64,6 +65,8 @@ void shareIonHistograms(IONEFFECTS *ionEffects);
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
+static long ionHistogramOutputInterval;
+static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
 static double sStartFirst = -1;
 static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonDensityOutput;
@@ -221,15 +224,25 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "t", "s", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "s", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Plane", NULL, SDDS_STRING) ||
-            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nIonsOutside", NULL, SDDS_DOUBLE)) {
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          exitElegant(1);
-        }
-	if (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nIonsOutside", NULL, SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
         }
+	if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
+	    (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "evaluationCount", NULL, SDDS_LONG) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma1", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid1", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q1", "C", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma2", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid2", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q2", "C", SDDS_DOUBLE))) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exitElegant(1);
+	}
         if (!SDDS_SaveLayout(SDDS_ionHistogramOutput) || !SDDS_WriteLayout(SDDS_ionHistogramOutput)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
@@ -265,8 +278,17 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     beam_output = compose_filename(beam_output, run->rootname);
   if (ion_density_output)
     ion_density_output = compose_filename(ion_density_output, run->rootname);
-  if (ion_histogram_output)
+  if (ion_histogram_output) {
     ion_histogram_output = compose_filename(ion_histogram_output, run->rootname);
+    if (ion_histogram_output_s_start>ion_histogram_output_s_end)
+      bombElegantVA((char*)"ion_histogram_s_start (%le) is > ion_histogram_s_end (%le)", ion_histogram_output_s_start,
+		    ion_histogram_output_s_end);
+    if (ion_histogram_output_interval<=0)
+      bombElegantVA((char*)"ion_histogram_s_interval (%ld) is <=0", ion_histogram_output_interval);
+    ionHistogramOutputInterval = ion_histogram_output_interval;
+    ionHistogramOutput_sStart = ion_histogram_output_s_start;
+    ionHistogramOutput_sEnd= ion_histogram_output_s_end;
+  }
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
@@ -276,13 +298,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 
   readIonProperties(ion_properties);
 
-
   setUpIonEffectsOutputFiles(control->n_passes);
-
-
- 
-    
-
 }
 
 void readIonProperties(char *filename)
@@ -987,7 +1003,9 @@ void trackWithIonEffects
     }
 #endif
 
-    if ((SDDS_ionHistogramOutput) && (iPass%1000 == 0) && (ionEffects->sLocation < 10)) {
+    if ((SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
+	&& (ionEffects->sLocation >= ionHistogramOutput_sStart) 
+	&& (ionEffects->sLocation <= ionHistogramOutput_sEnd)) {
       long iPlane;
       /* output ion density histogram */
 #if USE_MPI
@@ -1003,8 +1021,27 @@ void trackWithIonEffects
 	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
 			      ionEffects->xyIonHistogram[iPlane], ionEffects->ionBins[iPlane], "Position") ||
 	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane], "Charge") ||
-	      !SDDS_WritePage(SDDS_ionHistogramOutput)) {
+			      ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane], "Charge")) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	  if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
+	      (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			       ionEffects->ionHistogramFit[iPlane], ionEffects->ionBins[iPlane], "ChargeFit") ||
+	       !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				   "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
+				   "evaluationCount", ionEffects->xyBigaussianFitReturnCode[iPlane],
+				   "sigma1", ionEffects->xyBigaussianParameter[iPlane][0],
+				   "sigma2", ionEffects->xyBigaussianParameter[iPlane][3],
+				   "centroid1", ionEffects->xyBigaussianParameter[iPlane][1],
+				   "centroid2", ionEffects->xyBigaussianParameter[iPlane][4],
+				   "q1", ionEffects->xyBigaussianParameter[iPlane][2],
+				   "q2", ionEffects->xyBigaussianParameter[iPlane][5],
+				   NULL))) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	  if (!SDDS_WritePage(SDDS_ionHistogramOutput)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
 	  }
@@ -1138,7 +1175,7 @@ void trackWithIonEffects
     double paramValueX[6], paramValueY[6];
     double tempCentroid[4][2], tempSigma[4][2], tempkick[2], tempQ[4];
     double normX, normY;
-    if (ionFieldMethod == 1) {
+    if (ionFieldMethod == ION_FIELD_BIGAUSSIAN) {
      
       //biGaussianFit(sigma[0], centroid[0], paramValueX, paramValueY);
       biGaussianFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
@@ -1438,6 +1475,11 @@ void allocateIonHistograms(IONEFFECTS *ionEffects)
     if (!ionEffects->ionHistogram[iPlane])
       ionEffects->ionHistogram[iPlane] = (double*)
 	tmalloc(sizeof(ionEffects->ionHistogram[iPlane][0])*ionEffects->ionBins[iPlane]);
+    if (ionFieldMethod==ION_FIELD_BIGAUSSIAN)
+      ionEffects->ionHistogramFit[iPlane] = (double*)
+	tmalloc(sizeof(ionEffects->ionHistogramFit[iPlane][0])*ionEffects->ionBins[iPlane]);
+    else
+      ionEffects->ionHistogramFit[iPlane] = NULL;
   }
 }
 
@@ -1606,7 +1648,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   int32_t nEvalMax=5000, nPassMax=10;
   unsigned long simplexFlags = 0;
   double peakVal, minVal;
-  long cindex, fitResult;
+  long cindex, fitResult, dummy;
   //double delta, span;
   long verbosity = 0;
 
@@ -1670,7 +1712,19 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 			  NULL, nVariables, target, tolerance, biGaussianFunction, 
 			 (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
   
-
+  if (fitResult>0) {
+    ionEffects->xyBigaussianSet[0] = 1;
+    for (int i=0; i<6; i++)
+      ionEffects->xyBigaussianParameter[0][i] = paramValue[i];
+    biGaussianFunction(paramValue, &dummy);
+    for (int i=0; i<nData; i++)
+      ionEffects->ionHistogramFit[0][i] = yFit[i];
+  } else {
+    for (int i=0; i<nData; i++)
+      ionEffects->ionHistogramFit[0][i] = -1;
+  }
+  ionEffects->xyBigaussianFitResidual[0] = result;
+  ionEffects->xyBigaussianFitReturnCode[0] = fitResult;
 
   //paramValueX = paramValue;
   /*
@@ -1732,9 +1786,20 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   
   fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 			  NULL, nVariables, target, tolerance, biGaussianFunction, 
-			  (verbosity>0?report:NULL), nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
-  
-
+			  (verbosity>0?report:NULL), nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);  
+  if (fitResult>0) {
+    ionEffects->xyBigaussianSet[1] = 1;
+    for (int i=0; i<6; i++)
+      ionEffects->xyBigaussianParameter[1][i] = paramValue[i];
+    biGaussianFunction(paramValue, &dummy);
+    for (int i=0; i<nData; i++)
+      ionEffects->ionHistogramFit[1][i] = yFit[i];
+  } else {
+    for (int i=0; i<nData; i++)
+      ionEffects->ionHistogramFit[1][i] = -1;
+  }
+  ionEffects->xyBigaussianFitResidual[1] = result;
+  ionEffects->xyBigaussianFitReturnCode[1] = fitResult;
 
   for (int i=0; i<6; i++) {
     paramValueY[i] = paramValue[i];
