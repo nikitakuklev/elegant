@@ -1674,10 +1674,10 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
   double tolerance, target;
-  int32_t nEvalMax=1500, nPassMax=3;
+  int32_t nEvalMax=1000, nPassMax=1;
   unsigned long simplexFlags = 0;
   double peakVal, minVal;
-  long fitResult, dummy;
+  long fitReturn, dummy, nEvaluations;
   long verbosity = 0, plane;
 
   tolerance = 1e-4;
@@ -1740,21 +1740,47 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
       paramValue[i] *= (1+(random_2(0)-0.5)/10);
     }
 #endif
-
-    fitResult =  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-			    NULL, nVariables, target, tolerance, biGaussianFunction, 
-			    (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+    int nTries = 2;
+    nEvaluations = 0;
+    while (nTries--) {
+      double bestResult;
+#if USE_MPI
+      // printf("Waiting on barrier before simplexMin, nTries=%d\n", nTries); fflush(stdout);
+#endif
+      fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+			      NULL, nVariables, target, tolerance, biGaussianFunction, 
+			      (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+      if (fitReturn>=0)
+	nEvaluations += fitReturn;
+#if USE_MPI
+      //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      //printf("bestResult = %le\n", bestResult); fflush(stdout);
+      if (bestResult<target) {
+	//printf("exiting optimization loop\n");
+	break;
+      }
+#else
+      if (result<target)
+	break;
+#endif
+    }
 
 #if USE_MPI
+    //printf("Waiting on barrier after optimization loop, result=%le, fitReturn=%ld\n", result, fitReturn); fflush(stdout);
     MPI_Barrier(MPI_COMM_WORLD);
     int min_location;
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
     MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+    MPI_Bcast(&nEvaluations, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
+    //printf("min_location = %d\n", min_location); fflush(stdout);
 #endif
 
-    biGaussianFunction(paramValue, &dummy);
+    result = biGaussianFunction(paramValue, &dummy);
+    //printf("result = %le\n", result); fflush(stdout);
     
-    if (fitResult>0) {
+    if (fitReturn>0) {
       ionEffects->xyBigaussianSet[plane] = 1;
       for (int i=0; i<6; i++)
 	ionEffects->xyBigaussianParameter[plane][i] = paramValue[i];
@@ -1765,7 +1791,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 	ionEffects->ionHistogramFit[plane][i] = -1;
     }
     ionEffects->xyBigaussianFitResidual[plane] = result;
-    ionEffects->xyBigaussianFitReturnCode[plane] = fitResult;    
+    ionEffects->xyBigaussianFitReturnCode[plane] = nEvaluations;    
     
     for (int i=0; i<6; i++) {
       if (plane==0)
