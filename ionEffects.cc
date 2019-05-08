@@ -78,7 +78,7 @@ extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm
 #endif
 
 //for bi-gaussian fit
-static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL;
+static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, bigaussianFitTarget = 0.1;
 static long nData = 0;
 
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
@@ -309,6 +309,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
+  bigaussianFitTarget = bigaussian_fit_target;
 
   readGasPressureData(pressure_profile, &pressureData);
 
@@ -1673,7 +1674,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   double result = 0;
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
-  double tolerance, target;
+  double tolerance;
   int32_t nEvalMax=1000, nPassMax=1;
   unsigned long simplexFlags = 0;
   double peakVal, minVal;
@@ -1681,7 +1682,6 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   long verbosity = 0, plane;
 
   tolerance = 1e-4;
-  target = 0.01;
 
   for (plane=0; plane<2; plane++) {
     nData = plane==0 ? x_ion_bins : y_ion_bins;
@@ -1718,26 +1718,27 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     paramValue[4] = ionCentroid[plane];
     paramValue[5] = peakVal * 0.23;
 
-    /*
-    if (ionEffects->xyBigaussianSet[plane] && ionEffects->xyBigaussianFitResidual[plane]<0.02) {
-      for (int j=0; j<6; j++)
-	paramValue[j] = ionEffects->xyBigaussianParameter[plane][j];
-      for (int i=0; i<6; i++) {
-	if (fabs(paramValue[i])>fabs(upperLimit[i]) || paramValue[i]>upperLimit[i])
-	  upperLimit[i] = 10*fabs(paramValue[i]);
-	if (fabs(paramValue[i])<fabs(lowerLimit[i]) || paramValue[i]<lowerLimit[i])
-	  lowerLimit[i] = -10*fabs(paramValue[i]);
-	if (paramValue[i]!=0)
-	  paramDelta[i] = fabs(paramValue[i])/10;
-      }
-    }
-    */
-
 #if USE_MPI
-    /* Randomize step sizes and starting points */
-    for (int i=0; i<6; i++) {
-      paramDelta[i] *= random_2(0)*1.9+0.1;
-      paramValue[i] *= (1+(random_2(0)-0.5)/10);
+    if (myid==0) { 
+      /* master will just try the values from the last successful fit */
+     if (ionEffects->xyBigaussianSet[plane] && ionEffects->xyBigaussianFitResidual[plane]<0.1) {
+	for (int j=0; j<6; j++)
+	  paramValue[j] = ionEffects->xyBigaussianParameter[plane][j];
+	for (int i=0; i<6; i++) {
+	  if (fabs(paramValue[i])>fabs(upperLimit[i]) || paramValue[i]>upperLimit[i])
+	    upperLimit[i] = 10*fabs(paramValue[i]);
+	  if (fabs(paramValue[i])<fabs(lowerLimit[i]) || paramValue[i]<lowerLimit[i])
+	    lowerLimit[i] = -10*fabs(paramValue[i]);
+	  if (paramValue[i]!=0)
+	    paramDelta[i] = fabs(paramValue[i])/10;
+	}
+      }
+    } else {
+      /* Randomize step sizes and starting points */
+      for (int i=0; i<6; i++) {
+	paramDelta[i] *= random_2(0)*1.9+0.1;
+	paramValue[i] *= (1+(random_2(0)-0.5)/10);
+      }
     }
 #endif
     int nTries = 2;
@@ -1748,7 +1749,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
       // printf("Waiting on barrier before simplexMin, nTries=%d\n", nTries); fflush(stdout);
 #endif
       fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-			      NULL, nVariables, target, tolerance, biGaussianFunction, 
+			      NULL, nVariables, bigaussianFitTarget, tolerance, biGaussianFunction, 
 			      (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
       if (fitReturn>=0)
 	nEvaluations += fitReturn;
@@ -1757,12 +1758,12 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
       //printf("bestResult = %le\n", bestResult); fflush(stdout);
-      if (bestResult<target) {
+      if (bestResult<bigaussianFitTarget) {
 	//printf("exiting optimization loop\n");
 	break;
       }
 #else
-      if (result<target)
+      if (result<bigaussianFitTarget)
 	break;
 #endif
     }

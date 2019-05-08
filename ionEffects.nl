@@ -16,6 +16,7 @@
           long grid_points_x = 0;
           long grid_points_y = 0;
           STRING field_calculation_method = NULL;
+	  double bigaussian_fit_target = 0.1;
           long macro_ions = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;
