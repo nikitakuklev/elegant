@@ -79,8 +79,17 @@ The \verb|IONEFFECTS| element also supports multiple ionization.  In the \verb|i
 
 The kick on the ions from the beam is calculated using the
 Basetti-Erskine formula~\cite{Bassetti}, which assumes the beam is
-Gaussian in both transverse dimensions.  The change in momentum of an
-ion due to the bunch passage is:
+Gaussian in both transverse dimensions.  This may be a poor assumption for
+the ions, in which case the \verb|field_calculation_method| parameter can be
+set to \verb|bigaussian|, which uses a sum of two gaussians. This provides
+a much better model for the actual distribution, at the expense of a considerable
+increase in run time. The \verb|x_ion_bins| and \verb|y_ion_bins| parameters can
+be used to control the binning of the ion distribution, which is needed for this model.
+The \verb|ion_histogram_output| parameter and related parameters can be used to 
+request output of the ion distribution and the bi-gaussian fit, which is advisable
+when setting the binning parameters.
+
+The change in momentum of an ion due to the bunch passage is:
 \begin{equation}
 %\begin{split}
 \Delta p_y + i \Delta p_x  = \frac{c N_b r_e m_e }{\gamma} \sqrt{\frac{2 \pi}{\sigma_x^2 - \sigma_y^2}} \left[ w\left(\frac{x + i y}{\sqrt{2 (\sigma_x^2 - \sigma_y^2)}}\right) 
