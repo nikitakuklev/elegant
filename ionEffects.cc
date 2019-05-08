@@ -1479,8 +1479,10 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
   for (j=nBins-1; j>i; j--)
     if (histogram[j])
       break;
-  *activeBins = j-i+1;
-  *binOffset = i;
+  if ((*binOffset = i-1)<0)
+    *binOffset = 0;
+  if ((*activeBins = j-i+3)>nBins)
+    *activeBins = nBins;
   if (*activeBins==0) {
     *binOffset = 0;
     *activeBins = 2;
