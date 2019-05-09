@@ -1493,19 +1493,25 @@ void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies)
 void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins)
 {
   long i, j;
+  double min, max, threshold;
+  
+  find_min_max(&min, &max, histogram, nBins);
+  threshold = max/1000;
+
   for (i=0; i<nBins; i++)
-    if (histogram[i])
+    if (histogram[i]>threshold)
       break;
-  for (j=nBins-1; j>i; j--)
-    if (histogram[j])
-      break;
-  if ((*binOffset = i-1)<0)
+  if ((*binOffset = i-10)<0)
     *binOffset = 0;
-  if ((*activeBins = j-i+3)>nBins)
-    *activeBins = nBins;
+
+  for (j=nBins-10; j>i; j--)
+    if (histogram[j]>threshold)
+      break;
+  *activeBins = j + 10 - *binOffset;
+
   if (*activeBins==0) {
-    *binOffset = 0;
-    *activeBins = 2;
+    *binOffset = nBins/2;
+    *activeBins = 4;
   }
 }
 
