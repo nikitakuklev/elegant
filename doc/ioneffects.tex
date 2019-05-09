@@ -18,8 +18,11 @@ Modeling of residual ions has these features:
 
 Some limitations of the model include:
 \begin{itemize}
-\item Fields from electron bunches and ions are computed based on gaussian parameters. 
-      This is a good approximation for the former, but not terribly good for the latter.
+\item Fields from electron bunches are computed based on gaussian parameters, which is a reasonably good
+  approximation.
+\item By default, fields from ions are computed based on gaussian parameters, which is often a somewhat
+  poor approximation. Alternatively, a bi-gaussian form may be used, which uses a sum of two gaussians.
+  This is a much better approximation to the typical distribution, which often has a hot core and long tails.
 \item Ions move only transversely and exist only outside of magnets.
 \end{itemize}
 
@@ -83,8 +86,9 @@ Gaussian in both transverse dimensions.  This may be a poor assumption for
 the ions, in which case the \verb|field_calculation_method| parameter can be
 set to \verb|bigaussian|, which uses a sum of two gaussians. This provides
 a much better model for the actual distribution, at the expense of a considerable
-increase in run time. The \verb|x_ion_bins| and \verb|y_ion_bins| parameters can
-be used to control the binning of the ion distribution, which is needed for this model.
+increase in run time. The \verb|ion_bin_divisor| and \verb|ion_range_multiplier| parameters can
+be used to control the bin size and range, respectively, of the histogram used to 
+approximate the ion charge distribution.
 The \verb|ion_histogram_output| parameter and related parameters can be used to 
 request output of the ion distribution and the bi-gaussian fit, which is advisable
 when setting the binning parameters.
@@ -102,10 +106,3 @@ the electron mass, $\gamma$ is the relativistic factor ($\sim$ 1 for
 the ions), $\sigma_{x,y}$ are the horizontal and vertical beam sizes,
 $w$ is the complex error function, and $x$ and $y$ are the distance
 from the ion to the bunch center.
-
-At the moment, the same formula is used to calculate the kick that the
-ion cloud gives to electrons in the bunch (where $\sigma_x$ and
-$\sigma_y$ are the standard deviations of the ion positions).  This is
-not a very good assumption, since the ion distribution is not in
-general Gaussian.  In the future this calculation will be replaced by
-a Poisson solver.
