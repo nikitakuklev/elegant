@@ -58,8 +58,8 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
-void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies);
-void allocateIonHistograms(IONEFFECTS *ionEffects);
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentroid, double *beamSigma, 
+		       double *ionCentroid, double *ionSigma);
 void shareIonHistograms(IONEFFECTS *ionEffects);
 void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins);
 
@@ -78,7 +78,7 @@ extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm
 #endif
 
 //for bi-gaussian fit
-static double *xData=NULL, *yData=NULL, *syData=NULL, *yFit=NULL, bigaussianFitTarget = 0.1, yDataSum;
+static double *xData=NULL, *yData=NULL, *yFit=NULL, bigaussianFitTarget = 0.1, yDataSum;
 static long nData = 0;
 
 void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
@@ -241,6 +241,9 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "s", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Plane", NULL, SDDS_STRING) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nIonsOutside", NULL, SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binSize", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binRange", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nBins", NULL, SDDS_LONG) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -310,6 +313,20 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
   bigaussianFitTarget = bigaussian_fit_target;
+
+  for (int iPlane=0; iPlane<2; iPlane++) {
+    if (ion_span[iPlane]<=0)
+      bombElegantVA("ion_span must be positive for both planes---%le given for %s plane\n", 
+                    ion_span[iPlane], iPlane?"y":"x");
+
+    if (ion_bin_divisor[iPlane]<=0)
+      bombElegantVA("ion_bin_divisor must be positive for both planes---%le given for %s plane\n", 
+                    ion_bin_divisor[iPlane], iPlane?"y":"x");
+
+    if (ion_range_multiplier[iPlane]<=0)
+      bombElegantVA("ion_range_multiplier must be positive for both planes---%le given for %s plane\n", 
+                    ion_range_multiplier[iPlane], iPlane?"y":"x");
+  }
 
   readGasPressureData(pressure_profile, &pressureData);
 
@@ -393,7 +410,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   ELEMENT_LIST *eptr, *eptrLast;
   IONEFFECTS *ionEffects;
   short chargeSeen = 0;
-  long iPlane, ixy;
+  long iPlane;
   
   eptr = &(beamline->elem);
   eptrLast = eptr;
@@ -421,6 +438,9 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       eptrLast = eptr;
       if (nIonEffectsElements==0)
         sStartFirst = ionEffects->sStart;
+      for (iPlane=0; iPlane<2; iPlane++)
+        ionEffects->xyIonHistogram[iPlane] = ionEffects->ionHistogram[iPlane] = 
+          ionEffects->ionHistogramFit[iPlane] = NULL;
       nIonEffectsElements++;
     } 
     eptr = eptr->succ;
@@ -455,46 +475,16 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
       ionEffects->t = 0;
       if (ionEffects->macroIons<=0)
         ionEffects->macroIons = macro_ions;
-      if (ionEffects->span[0]<=0)
-        ionEffects->span[0] = x_span;
-      if (ionEffects->span[1]<=0)
-        ionEffects->span[1] = y_span;
-      if (ionEffects->ionBins[0]<=0)
-        ionEffects->ionBins[0] = x_ion_bins;
-      if (ionEffects->ionBins[1]<=0)
-        ionEffects->ionBins[1] = y_ion_bins;
-      for (iPlane=0; iPlane<2; iPlane++) {
-	if (ionEffects->span[iPlane]<=0 && ionEffects->ionBins[iPlane]>0) {
-	  fprintf(stderr, "ION_EFFECTS issue for %s#%ld: %c_span is non-positive but %c_ion_bins is postive",
-			eptr->name, eptr->occurence, iPlane==0?'x':'y', iPlane==0?'x':'y');
-	  exit(1);
-	}
-	if (ionEffects->ionBins[iPlane]>0 && ionEffects->ionBins[iPlane]<10) {
-	  fprintf(stderr, "ION_EFFECTS issue for %s#%ld: %c_ion_bins is postive but less than 10, which is invalid",
-		  eptr->name, eptr->occurence, iPlane==0?'x':'y');
-	  exit(1);
-	}
-      }
-      if ((ionEffects->ionBins[0]>0 && ionEffects->ionBins[1]<=0) ||
-	  (ionEffects->ionBins[0]<=0 && ionEffects->ionBins[1]>0)) {
-	fprintf(stderr,
-		"ION_EFFECTS issue for %s#%ld: number of ion bins must be non-zero for both planes, or zero for both planes",
-		      eptr->name, eptr->occurence);
-	exit(1);
-      }
-      if (ionEffects->ionBins[0]>0) {
-	for (iPlane=0; iPlane<2; iPlane++) {
-	  ionEffects->xyIonHistogram[iPlane] =
-	    (double*)tmalloc(sizeof(**ionEffects->xyIonHistogram)*ionEffects->ionBins[iPlane]);
-	  ionEffects->ionDelta[iPlane] = 2*ionEffects->span[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
-	  for (ixy=0; ixy<ionEffects->ionBins[iPlane]; ixy++)
-	    ionEffects->xyIonHistogram[iPlane][ixy] =
-	      -ionEffects->span[iPlane] + ixy*ionEffects->ionDelta[iPlane];
-	}
-      } else 
-	ionEffects->xyIonHistogram[0] = ionEffects->xyIonHistogram[1] = NULL;
       if (ionEffects->generationInterval<=0)
         ionEffects->generationInterval = generation_interval;
+      for (iPlane=0; iPlane<2; iPlane++) {
+        if (ionEffects->span[iPlane]<=0)
+          ionEffects->span[iPlane] = ion_span[iPlane];
+        if (ionEffects->binDivisor[iPlane]<=0)
+          ionEffects->binDivisor[iPlane] = ion_bin_divisor[iPlane];
+        if (ionEffects->rangeMultiplier[iPlane]<=0)
+          ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
+      }
     }
     eptr = eptr->succ;
   }
@@ -552,8 +542,6 @@ void trackWithIonEffects
   /* converts Torr to 1/m^3 and mBarns to m^2 */
   unitsFactor = 1e-22/(7.5006e-3*k_boltzmann_mks*pressureData.temperature);
     
-  allocateIonHistograms(ionEffects);
-
   if (isSlave || !notSinglePart) {
     /* Determine which bunch each particle is in */
     determine_bucket_assignments(part0, np0, charge?charge->idSlotsPerBunch:0, Po, &time0, &ibParticle, &ipBunch, &npBunch, &nBunches, -1);
@@ -595,12 +583,6 @@ void trackWithIonEffects
 #if USE_MPI
   }
 #endif
-
-  yFit = NULL;
-  if (ionEffects->ionBins[0]>0)
-    yFit = (double*)malloc(sizeof(double) * 
-			   (ionEffects->ionBins[0]>ionEffects->ionBins[1] ? 
-			    ionEffects->ionBins[0] : ionEffects->ionBins[1] ));
 
   for (iBunch=0; iBunch<nBunches; iBunch++) {
     np = 0;
@@ -915,7 +897,6 @@ void trackWithIonEffects
     
     /*** Compute field due to ions */
     if (isSlave || !notSinglePart) {
-      makeIonHistogram(ionEffects, ionProperties.nSpecies);
       
       /* Compute charge-weighted centroids */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -959,7 +940,6 @@ void trackWithIonEffects
     
     long mTotTotal = 0;
 #if USE_MPI
-    shareIonHistograms(ionEffects);
     /* Sum ion centroid and charge data over all nodes */
     long mTotMin, mTotMax;
     double qIonTotal, ionCentroidTotal[2];
@@ -1022,57 +1002,6 @@ void trackWithIonEffects
     }
 #endif
 
-    if ((SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
-	&& (ionEffects->sLocation >= ionHistogramOutput_sStart) 
-	&& (ionEffects->sLocation <= ionHistogramOutput_sEnd)) {
-      long iPlane;
-      /* output ion density histogram */
-#if USE_MPI
-      if (myid==0) {
-#endif
-	for (iPlane=0; iPlane<2; iPlane++) {
-	  long binOffset, activeBins;
-	  determineOffsetAndActiveBins(ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane],
-				       &binOffset, &activeBins);
-	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
-	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
-				  "nIonsOutside", ionEffects->ionHistogramMissed[iPlane],
-				  "Plane", iPlane==0?"x":"y", 
-				  NULL) ||
-	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
-	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->ionHistogram[iPlane]+binOffset, activeBins, "Charge")) {
-	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	    SDDS_Bomb((char*)"Problem writing ion histogram data");
-	  }
-	  if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
-	      (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			       ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
-	       !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				   "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
-				   "nEvaluations", ionEffects->xyBigaussianFitReturnCode[iPlane],
-				   "sigma1", ionEffects->xyBigaussianParameter[iPlane][0],
-				   "sigma2", ionEffects->xyBigaussianParameter[iPlane][3],
-				   "centroid1", ionEffects->xyBigaussianParameter[iPlane][1],
-				   "centroid2", ionEffects->xyBigaussianParameter[iPlane][4],
-				   "q1", ionEffects->xyBigaussianParameter[iPlane][2],
-				   "q2", ionEffects->xyBigaussianParameter[iPlane][5],
-				   NULL))) {
-	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	    SDDS_Bomb((char*)"Problem writing ion histogram data");
-	  }
-	  if (!SDDS_WritePage(SDDS_ionHistogramOutput)) {
-	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	    SDDS_Bomb((char*)"Problem writing ion histogram data");
-	  }
-	}
-#if USE_MPI
-      }
-#endif	
-    }
-    
     if (isSlave || !notSinglePart) {
       /* Compute charge-weighted rms size */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
@@ -1191,15 +1120,14 @@ void trackWithIonEffects
 #if USE_MPI
   }
 #endif
-
-
+    
 //for bi-gaussian kick
     double paramValueX[6], paramValueY[6];
     double tempCentroid[4][2], tempSigma[4][2], tempkick[2], tempQ[4];
     double normX, normY;
     if (ionFieldMethod == ION_FIELD_BIGAUSSIAN) {
-     
-      //biGaussianFit(sigma[0], centroid[0], paramValueX, paramValueY);
+      makeIonHistograms(ionEffects, ionProperties.nSpecies, centroid, sigma, ionCentroid, ionSigma);
+
       biGaussianFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
 
       normX = 2 * e_mks * ionEffects->span[0] / ionEffects->ionBins[0];
@@ -1228,34 +1156,17 @@ void trackWithIonEffects
       tempSigma[3][0] = paramValueX[3];
       tempSigma[3][1] = paramValueY[3];
       tempQ[3] = paramValueX[5] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[3] * paramValueY[3] * sqr(e_mks) / qIon;
-
-
     }
 
     if (isSlave || !notSinglePart) {
-
-
       /*** Determine and apply kicks to beam from the total ion field */
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
           double kick[2];
-	  //, oldkick[2];
-	    //, binsize, normX, normY;
-	  //binsize = ionEffects->span[0] / ionEffects->ionBins[0] *ionEffects->span[1] / ionEffects->ionBins[1];
-	  //normX = 2 * e_mks * ionEffects->span[0] / ionEffects->ionBins[0];
-	  //normY = 2 * e_mks * ionEffects->span[1] / ionEffects->ionBins[1];
 
-	  if (ionFieldMethod == 0) {
-	  //if (true) {
+	  if (ionFieldMethod != ION_FIELD_BIGAUSSIAN) {
 	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
-	  }
-	    //	  } else 
-	  else if (ionFieldMethod == 1)  {
-	    //	    double tempCentroid[2], tempSigma[2], tempkick[2], tempQ;
-	    
-
-	    //oldkick[0] = kick[0];
-	    //oldkick[1] = kick[1];
+	  } else {
 	   
 	    // Gx1 * Gy1
 	    gaussianBeamKick(part[ip], tempCentroid[0], tempSigma[0], tempkick, tempQ[0], me_mks, 1);
@@ -1291,6 +1202,60 @@ void trackWithIonEffects
         for (ip=0; ip<np; ip++)
           memcpy(part0[ipBunch[iBunch][ip]], part[ip], sizeof(double)*7);
       }
+    }
+
+    if (ionFieldMethod == ION_FIELD_BIGAUSSIAN &&
+	(SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
+	&& (ionEffects->sLocation >= ionHistogramOutput_sStart) 
+	&& (ionEffects->sLocation <= ionHistogramOutput_sEnd)) {
+      long iPlane;
+      /* output ion density histogram */
+#if USE_MPI
+      if (myid==0) {
+#endif
+	for (iPlane=0; iPlane<2; iPlane++) {
+	  long binOffset, activeBins;
+	  determineOffsetAndActiveBins(ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane],
+				       &binOffset, &activeBins);
+	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
+				  "nIonsOutside", ionEffects->ionHistogramMissed[iPlane],
+				  "binSize", ionEffects->ionDelta[iPlane],
+				  "binRange", ionEffects->ionRange[iPlane],
+				  "nBins", ionEffects->ionBins[iPlane],
+				  "Plane", iPlane==0?"x":"y", 
+				  NULL) ||
+	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
+	      !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->ionHistogram[iPlane]+binOffset, activeBins, "Charge")) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	  if (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
+				  "nEvaluations", ionEffects->xyBigaussianFitReturnCode[iPlane],
+				  "sigma1", ionEffects->xyBigaussianParameter[iPlane][0],
+				  "sigma2", ionEffects->xyBigaussianParameter[iPlane][3],
+				  "centroid1", ionEffects->xyBigaussianParameter[iPlane][1],
+				  "centroid2", ionEffects->xyBigaussianParameter[iPlane][4],
+				  "q1", ionEffects->xyBigaussianParameter[iPlane][2],
+				  "q2", ionEffects->xyBigaussianParameter[iPlane][5],
+				  NULL)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	  if (!SDDS_WritePage(SDDS_ionHistogramOutput)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	}
+#if USE_MPI
+      }
+#endif	
     }
 
 #if USE_MPI
@@ -1409,8 +1374,6 @@ void trackWithIonEffects
     }
 #endif
 
-  if (yFit)
-    free(yFit);
   if (time0) 
     free(time0);
   if (time && time!=time0)
@@ -1458,29 +1421,46 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
     
     //ionEffects->qIon[iSpecies][iNew] = qToAdd;
   }
-
   
 }
 
-void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies)
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentroid, double *beamSigma, 
+		       double *ionCentroid, double *ionSigma)
 {
   long iSpecies, iBin, iPlane;
   long iIon;
-  double delta, span;
 
   for (iPlane=0; iPlane<2; iPlane++) {
-    if (ionEffects->ionBins[iPlane]<=0)
-      continue;
+    ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
+    ionEffects->ionRange[iPlane] = ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
+    ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
+
+    /* allocate and set x or y coordinates of histogram (for output to file) */
+    if (ionEffects->xyIonHistogram[iPlane])
+      free(ionEffects->xyIonHistogram[iPlane]);
+    ionEffects->xyIonHistogram[iPlane] = (double*)tmalloc(sizeof(*ionEffects->xyIonHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+    for (int ixy=0; ixy<ionEffects->ionBins[iPlane]; ixy++)
+      ionEffects->xyIonHistogram[iPlane][ixy] = ixy*ionEffects->ionDelta[iPlane] - ionEffects->ionRange[iPlane]/2;
+
+    if (ionEffects->ionHistogram[iPlane])
+      free(ionEffects->ionHistogram[iPlane]);
+    ionEffects->ionHistogram[iPlane] = (double*)tmalloc(sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+    memset(ionEffects->ionHistogram[iPlane], 0, sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+
+    if (ionEffects->ionHistogramFit[iPlane])
+      free(ionEffects->ionHistogramFit[iPlane]);
+    ionEffects->ionHistogramFit[iPlane] = (double*)tmalloc(sizeof(*ionEffects->ionHistogramFit[iPlane])*ionEffects->ionBins[iPlane]);
+
     ionEffects->ionHistogramMissed[iPlane] = 0;
-    /* zero array */
-    memset(ionEffects->ionHistogram[iPlane], 0,
-	   sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
+
+    double delta, xyStart;
+    delta = ionEffects->ionDelta[iPlane];
+    xyStart = -ionEffects->ionRange[iPlane]/2;
+
     /* histogram ion charge */
     for (iSpecies=0; iSpecies<nSpecies; iSpecies++) {
-      delta = ionEffects->ionDelta[iPlane];
-      span = ionEffects->span[iPlane];
       for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-	iBin = (ionEffects->coordinate[iSpecies][iIon][2*iPlane] + span)/delta;
+	iBin = (ionEffects->coordinate[iSpecies][iIon][2*iPlane] - xyStart)/delta;
 	if (iBin<0 || iBin>(ionEffects->ionBins[iPlane]-1))
 	  ionEffects->ionHistogramMissed[iPlane]++;
 	else
@@ -1488,8 +1468,30 @@ void makeIonHistogram(IONEFFECTS *ionEffects, long nSpecies)
       }
     }
   }
+
+#if USE_MPI
+  shareIonHistograms(ionEffects);
+#endif
 }
 
+#if USE_MPI
+void shareIonHistograms(IONEFFECTS *ionEffects)
+{
+  double *buffer;
+  long iPlane;
+  if (ionEffects->ionBins[0]<=0)
+    return;
+  MPI_Barrier(MPI_COMM_WORLD);
+  for (iPlane=0; iPlane<2; iPlane++) {
+    buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
+    MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
+		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(ionEffects->ionHistogram[iPlane], buffer, sizeof(*buffer)*ionEffects->ionBins[iPlane]);
+    free(buffer);
+  }
+}
+#endif
+  
 void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins)
 {
   long i, j;
@@ -1515,45 +1517,6 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
   }
 }
 
-void allocateIonHistograms(IONEFFECTS *ionEffects)
-{
-  long iPlane;
-  if (ionEffects->ionBins[0]<=0)
-    return;
-  for (iPlane=0; iPlane<2; iPlane++) {
-    if (!ionEffects->ionHistogram[iPlane])
-      ionEffects->ionHistogram[iPlane] = (double*)
-	tmalloc(sizeof(ionEffects->ionHistogram[iPlane][0])*ionEffects->ionBins[iPlane]);
-    if (ionFieldMethod==ION_FIELD_BIGAUSSIAN)
-      ionEffects->ionHistogramFit[iPlane] = (double*)
-	tmalloc(sizeof(ionEffects->ionHistogramFit[iPlane][0])*ionEffects->ionBins[iPlane]);
-    else
-      ionEffects->ionHistogramFit[iPlane] = NULL;
-  }
-}
-
-#if USE_MPI
-void shareIonHistograms(IONEFFECTS *ionEffects)
-{
-  double *buffer;
-  long iPlane;
-  if (ionEffects->ionBins[0]<=0)
-    return;
-  MPI_Barrier(MPI_COMM_WORLD);
-  for (iPlane=0; iPlane<2; iPlane++) {
-    buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
-    if (myid==0)
-      /* master has no ions */
-      memset(ionEffects->ionHistogram[iPlane], 0,
-	     sizeof(*ionEffects->ionHistogram[iPlane])*ionEffects->ionBins[iPlane]);
-    MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
-		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    memcpy(ionEffects->ionHistogram[iPlane], buffer, sizeof(*buffer)*ionEffects->ionBins[iPlane]);
-    free(buffer);
-  }
-}
-#endif
-  
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y)
 {
@@ -1697,10 +1660,11 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   tolerance = 1e-4;
 
   for (plane=0; plane<2; plane++) {
-    nData = plane==0 ? x_ion_bins : y_ion_bins;
+    nData = ionEffects->ionBins[plane];
 
     xData = ionEffects->xyIonHistogram[plane];
     yData = ionEffects->ionHistogram[plane];
+    yFit = ionEffects->ionHistogramFit[plane];
     yDataSum = 0;
     for (int i=0; i<nData; i++)
       yDataSum += yData[i];
@@ -1759,8 +1723,8 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 #endif
     int nTries = 2;
     nEvaluations = 0;
+    fitReturn = 0;
     while (nTries--) {
-      double bestResult;
 #if USE_MPI
       // printf("Waiting on barrier before simplexMin, nTries=%d\n", nTries); fflush(stdout);
 #endif
@@ -1771,6 +1735,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 	nEvaluations += fitReturn;
 #if USE_MPI
       //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+      double bestResult;
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
       //printf("bestResult = %le\n", bestResult); fflush(stdout);
