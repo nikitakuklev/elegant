@@ -501,7 +501,6 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
 
   ionsInitialized = 1;
 
-  yFit = (double*)malloc(sizeof(double) * ionEffects->ionBins[0]);
 }
 
 void trackWithIonEffects
@@ -596,6 +595,12 @@ void trackWithIonEffects
 #if USE_MPI
   }
 #endif
+
+  yFit = NULL;
+  if (ionEffects->ionBins[0]>0)
+    yFit = (double*)malloc(sizeof(double) * 
+			   (ionEffects->ionBins[0]>ionEffects->ionBins[1] ? 
+			    ionEffects->ionBins[0] : ionEffects->ionBins[1] ));
 
   for (iBunch=0; iBunch<nBunches; iBunch++) {
     np = 0;
@@ -1404,6 +1409,8 @@ void trackWithIonEffects
     }
 #endif
 
+  if (yFit)
+    free(yFit);
   if (time0) 
     free(time0);
   if (time && time!=time0)
