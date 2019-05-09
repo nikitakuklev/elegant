@@ -1130,8 +1130,8 @@ void trackWithIonEffects
 
       biGaussianFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
 
-      normX = 2 * e_mks * ionEffects->span[0] / ionEffects->ionBins[0];
-      normY = 2 * e_mks * ionEffects->span[1] / ionEffects->ionBins[1];
+      normX = e_mks * ionEffects->ionRange[0] / ionEffects->ionBins[0];
+      normY = e_mks * ionEffects->ionRange[1] / ionEffects->ionBins[1];
 
       tempCentroid[0][0] = paramValueX[1];
       tempCentroid[0][1] = paramValueY[1];
