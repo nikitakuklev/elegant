@@ -1699,26 +1699,10 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     paramValue[5] = peakVal * 0.23;
 
 #if USE_MPI
-    if (myid==0) { 
-      /* master will just try the values from the last successful fit */
-     if (ionEffects->xyBigaussianSet[plane] && ionEffects->xyBigaussianFitResidual[plane]<0.1) {
-	for (int j=0; j<6; j++)
-	  paramValue[j] = ionEffects->xyBigaussianParameter[plane][j];
-	for (int i=0; i<6; i++) {
-	  if (fabs(paramValue[i])>fabs(upperLimit[i]) || paramValue[i]>upperLimit[i])
-	    upperLimit[i] = 10*fabs(paramValue[i]);
-	  if (fabs(paramValue[i])<fabs(lowerLimit[i]) || paramValue[i]<lowerLimit[i])
-	    lowerLimit[i] = -10*fabs(paramValue[i]);
-	  if (paramValue[i]!=0)
-	    paramDelta[i] = fabs(paramValue[i])/10;
-	}
-      }
-    } else {
-      /* Randomize step sizes and starting points */
-      for (int i=0; i<6; i++) {
-	paramDelta[i] *= random_2(0)*1.9+0.1;
-	paramValue[i] *= (1+(random_2(0)-0.5)/10);
-      }
+    /* Randomize step sizes and starting points */
+    for (int i=0; i<6; i++) {
+      paramDelta[i] *= random_2(0)*1.9+0.1;
+      paramValue[i] *= (1+(random_2(0)-0.5)/10);
     }
 #endif
     int nTries = 2;
