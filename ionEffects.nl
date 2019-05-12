@@ -15,6 +15,7 @@
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
 	  double bigaussian_fit_target = 0.1;
+	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;

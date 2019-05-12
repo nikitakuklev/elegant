@@ -29,8 +29,19 @@ static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
   (char*)"bigaussian"
 };
-
 static long ionFieldMethod = -1;
+
+#define ION_FIT_RESIDUAL_ABS_ERROR 0
+#define ION_FIT_RESIDUAL_RMS_ERROR 1
+#define ION_FIT_RESIDUAL_MAX_ABS_ERROR 2
+#define N_ION_FIT_RESIDUAL_OPTIONS 3
+static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
+  (char*)"sum-absolute-deviation",
+  (char*)"rms-deviation",
+  (char*)"max-absolute-deviation",
+};
+
+static long residualType = -1;
 
 static long ionsInitialized = 0;
 
@@ -313,6 +324,11 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
   bigaussianFitTarget = bigaussian_fit_target;
+
+  if (!fit_residual_type || !strlen(fit_residual_type))
+    residualType = ION_FIT_RESIDUAL_RMS_ERROR;
+  else if ((residualType = match_string(fit_residual_type, ionFitResidualOption, N_ION_FIT_RESIDUAL_OPTIONS, EXACT_MATCH))<0)
+    bombElegantVA((char*)"fit_residual_type=\"%s\" not recognized", fit_residual_type);
 
   for (int iPlane=0; iPlane<2; iPlane++) {
     if (ion_span[iPlane]<=0)
@@ -1769,8 +1785,8 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 }
 
 
-double biGaussianFunction(double *param, long *invalid) {
-
+double biGaussianFunction(double *param, long *invalid) 
+{
   double sum = 0, tmp = 0;
 
   *invalid = 0;
@@ -1792,10 +1808,35 @@ double biGaussianFunction(double *param, long *invalid) {
     if (z<6 && z>-6)
       yFit[i] += param[5] * exp(-z*z/2);
     tmp = (yFit[i]-yData[i]);
-    sum += abs(tmp);
+    switch (residualType) {
+    case ION_FIT_RESIDUAL_RMS_ERROR:
+      sum += sqr(tmp);
+      break;
+    case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
+      tmp = abs(tmp);
+      if (sum<tmp)
+	sum = tmp;
+      break;
+    case ION_FIT_RESIDUAL_ABS_ERROR:
+    default:
+      sum += abs(tmp);
+      break;
+    }
   }
 
-  return(sum/yDataSum);
+  switch (residualType) {
+    case ION_FIT_RESIDUAL_RMS_ERROR:
+      return sqrt(sum)/yDataSum;
+      break;
+    case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
+      return sum/yDataSum;
+      break;
+    case ION_FIT_RESIDUAL_ABS_ERROR:
+    default:
+      return sum/yDataSum;
+      break;
+    }
+    
 }
 
 void report(double y, double *x, long pass, long nEval, long n_dimen)
