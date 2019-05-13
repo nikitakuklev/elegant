@@ -77,7 +77,7 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
-static long ionHistogramOutputInterval;
+static long ionHistogramOutputInterval, ionHistogramMaxBins;
 static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
 static double sStartFirst = -1;
@@ -318,6 +318,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     ionHistogramOutputInterval = ion_histogram_output_interval;
     ionHistogramOutput_sStart = ion_histogram_output_s_start;
     ionHistogramOutput_sEnd= ion_histogram_output_s_end;
+    ionHistogramMaxBins = ion_histogram_max_bins;
   }
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
@@ -1512,7 +1513,13 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
 {
   long i, j;
   double min, max, threshold;
-  
+
+  if (nBins<ionHistogramMaxBins || nBins<20) {
+    *binOffset = 0;
+    *activeBins = nBins;
+    return;
+  }
+
   find_min_max(&min, &max, histogram, nBins);
   threshold = max/1000;
 
@@ -1527,9 +1534,9 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
       break;
   *activeBins = j + 10 - *binOffset;
 
-  if (*activeBins==0) {
-    *binOffset = nBins/2;
-    *activeBins = 4;
+  if (*activeBins<=0) {
+    *binOffset = 0;
+    *activeBins = nBins;
   }
 }
 

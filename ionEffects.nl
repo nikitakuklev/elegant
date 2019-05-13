@@ -26,6 +26,7 @@
 	  double ion_histogram_output_s_start = 0;
 	  double ion_histogram_output_s_end = 10;
 	  long ion_histogram_output_interval = 1000;
+	  long ion_histogram_max_bins = 200;
           long verbosity = 0;
 #end
 
