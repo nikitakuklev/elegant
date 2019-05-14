@@ -1477,7 +1477,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
     /* histogram ion charge */
     for (iSpecies=0; iSpecies<nSpecies; iSpecies++) {
       for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-	iBin = (ionEffects->coordinate[iSpecies][iIon][2*iPlane] - xyStart)/delta;
+	iBin = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] - xyStart)/delta);
 	if (iBin<0 || iBin>(ionEffects->ionBins[iPlane]-1))
 	  ionEffects->ionHistogramMissed[iPlane]++;
 	else
