@@ -3282,7 +3282,8 @@ typedef struct {
   double *xyIonHistogram[2];       /* values for ion histogram independent coordinates (x, y) */
   double *ionHistogram[2];         /* charge histogram */
   double *ionHistogramFit[2];      /* fit to same */
-  double ionHistogramMissed[2];    /* Number of ions that are left out of the histogram */
+  double ionHistogramMissed[2];    /* Charge of ions that are left out of the histogram */
+  double qTotal;                   /* for normalization of ionHistogramMissed */
   /* save bigaussian parameters between calls to speed up subsequent fitting, and for output */
   double xyBigaussianParameter[2][6]; 
   short xyBigaussianSet[2];           /* if nonzero, bigaussian parameter values are valid */

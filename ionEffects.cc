@@ -71,7 +71,9 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentroid, double *beamSigma, 
 		       double *ionCentroid, double *ionSigma);
+#if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects);
+#endif
 void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins);
 
 static SDDS_DATASET *SDDS_beamOutput = NULL;
@@ -251,7 +253,8 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "t", "s", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "s", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Plane", NULL, SDDS_STRING) ||
-            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nIonsOutside", NULL, SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsOutside", "C", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fractionIonChargeOutside", NULL, SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binSize", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binRange", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nBins", NULL, SDDS_LONG) ||
@@ -1237,7 +1240,9 @@ void trackWithIonEffects
 	  if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				  "Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
-				  "nIonsOutside", ionEffects->ionHistogramMissed[iPlane],
+				  "qIonsOutside", ionEffects->ionHistogramMissed[iPlane],
+				  "fractionIonChargeOutside", 
+				  ionEffects->qTotal ? ionEffects->ionHistogramMissed[iPlane]/ionEffects->qTotal : -1,
 				  "binSize", ionEffects->ionDelta[iPlane],
 				  "binRange", ionEffects->ionRange[iPlane],
 				  "nBins", ionEffects->ionBins[iPlane],
@@ -1446,6 +1451,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 {
   long iSpecies, iBin, iPlane;
   long iIon;
+  double qTotal;
 
   for (iPlane=0; iPlane<2; iPlane++) {
     ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
@@ -1475,16 +1481,18 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
     xyStart = -ionEffects->ionRange[iPlane]/2;
 
     /* histogram ion charge */
-    for (iSpecies=0; iSpecies<nSpecies; iSpecies++) {
+    for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++) {
       for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
 	iBin = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] - xyStart)/delta);
 	if (iBin<0 || iBin>(ionEffects->ionBins[iPlane]-1))
-	  ionEffects->ionHistogramMissed[iPlane]++;
+	  ionEffects->ionHistogramMissed[iPlane] += ionEffects->coordinate[iSpecies][iIon][4];
 	else
 	  ionEffects->ionHistogram[iPlane][iBin] += ionEffects->coordinate[iSpecies][iIon][4];
+	qTotal += ionEffects->coordinate[iSpecies][iIon][4];
       }
     }
   }
+  ionEffects->qTotal = qTotal;
 
 #if USE_MPI
   shareIonHistograms(ionEffects);
@@ -1494,15 +1502,23 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 #if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects)
 {
-  double *buffer, missedSum;
+  double *buffer, partBuffer3[3], sumBuffer3[3];
   long iPlane;
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  partBuffer3[0] = ionEffects->qTotal;
+  partBuffer3[1] = ionEffects->ionHistogramMissed[0];
+  partBuffer3[2] = ionEffects->ionHistogramMissed[1];
+  MPI_Allreduce(partBuffer3, sumBuffer3, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  ionEffects->qTotal = sumBuffer3[0];
+  ionEffects->ionHistogramMissed[0] = sumBuffer3[1];
+  ionEffects->ionHistogramMissed[1] = sumBuffer3[2];
+
   if (ionEffects->ionBins[0]<=0)
     return;
-  MPI_Barrier(MPI_COMM_WORLD);
+
   for (iPlane=0; iPlane<2; iPlane++) {
-    missedSum = 0;
-    MPI_Allreduce(&ionEffects->ionHistogramMissed[iPlane], &missedSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    ionEffects->ionHistogramMissed[iPlane] = missedSum;
     buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
     MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
 		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
