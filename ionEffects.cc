@@ -1494,12 +1494,15 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 #if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects)
 {
-  double *buffer;
+  double *buffer, missedSum;
   long iPlane;
   if (ionEffects->ionBins[0]<=0)
     return;
   MPI_Barrier(MPI_COMM_WORLD);
   for (iPlane=0; iPlane<2; iPlane++) {
+    missedSum = 0;
+    MPI_Allreduce(&ionEffects->ionHistogramMissed[iPlane], &missedSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    ionEffects->ionHistogramMissed[iPlane] = missedSum;
     buffer = (double*)calloc(sizeof(*buffer), ionEffects->ionBins[iPlane]);
     MPI_Allreduce(ionEffects->ionHistogram[iPlane], buffer, ionEffects->ionBins[iPlane],
 		  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
