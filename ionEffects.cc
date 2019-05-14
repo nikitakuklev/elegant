@@ -71,6 +71,8 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentroid, double *beamSigma, 
 		       double *ionCentroid, double *ionSigma);
+double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies);
+
 #if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects);
 #endif
@@ -343,9 +345,6 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
       bombElegantVA("ion_bin_divisor must be positive for both planes---%le given for %s plane\n", 
                     ion_bin_divisor[iPlane], iPlane?"y":"x");
 
-    if (ion_range_multiplier[iPlane]<=0)
-      bombElegantVA("ion_range_multiplier must be positive for both planes---%le given for %s plane\n", 
-                    ion_range_multiplier[iPlane], iPlane?"y":"x");
   }
 
   readGasPressureData(pressure_profile, &pressureData);
@@ -504,6 +503,8 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
           ionEffects->binDivisor[iPlane] = ion_bin_divisor[iPlane];
         if (ionEffects->rangeMultiplier[iPlane]<=0)
           ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
+	else
+	  ionEffects->rangeMultiplier[iPlane] = -1; /* indicates auto scaling to include all particles */
       }
     }
     eptr = eptr->succ;
@@ -1455,7 +1456,10 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 
   for (iPlane=0; iPlane<2; iPlane++) {
     ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
-    ionEffects->ionRange[iPlane] = ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
+    if (ionEffects->rangeMultiplier[iPlane]>0)
+      ionEffects->ionRange[iPlane] = ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
+    else
+      ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
 
     /* allocate and set x or y coordinates of histogram (for output to file) */
@@ -1497,6 +1501,92 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 #if USE_MPI
   shareIonHistograms(ionEffects);
 #endif
+}
+
+double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
+{
+  double histogram[100], cdf[100];
+  double min, max, hrange, delta, qTotal;
+  
+  max = -(min=DBL_MAX);
+  for (long iSpecies=0; iSpecies<nSpecies; iSpecies++) {
+    for (long iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+      if (ionEffects->coordinate[iSpecies][iIon][2*iPlane]<min)
+	min = ionEffects->coordinate[iSpecies][iIon][2*iPlane];
+      if (ionEffects->coordinate[iSpecies][iIon][2*iPlane]>max)
+	max = ionEffects->coordinate[iSpecies][iIon][2*iPlane];
+    }
+  }
+#if USE_MPI
+  double gmin, gmax;
+  MPI_Allreduce(&min, &gmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&max, &gmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  min = gmin;
+  max = gmax;
+#endif
+  if (abs(max)>abs(min))
+    hrange = abs(max)+ionEffects->ionDelta[iPlane];
+  else
+    hrange = abs(min)+ionEffects->ionDelta[iPlane];
+  if (hrange>ionEffects->span[iPlane])
+    hrange = ionEffects->span[iPlane];
+  delta = 2*hrange/100;
+
+  for (int i=0; i<100; i++)
+    cdf[i] = histogram[i] = 0;
+
+  /* make charge-weighted histogram */
+  qTotal = 0;
+  for (long iSpecies=0; iSpecies<nSpecies; iSpecies++) {
+    for (long iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+      int iBin;
+      iBin = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] + hrange)/delta);
+      if (iBin>=0 && iBin<100)
+	histogram[iBin] += ionEffects->coordinate[iSpecies][iIon][4];
+      qTotal += ionEffects->coordinate[iSpecies][iIon][4];
+    }
+  }
+
+#if USE_MPI
+  double qTotalGlobal, histogramGlobal[100];
+  MPI_Allreduce(&qTotal, &qTotalGlobal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  qTotal = qTotalGlobal;
+  MPI_Allreduce(histogram, histogramGlobal, 100, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  for (int i=0; i<100; i++)
+    histogram[i] = histogramGlobal[i];
+#endif
+  
+  /* find cumulative distribution */
+  cdf[0] = histogram[0]/qTotal;
+  for (int i=1; i<100; i++)
+    cdf[i] = histogram[i]/qTotal + cdf[i-1];
+
+  /* find 1% and 99% points */
+  min = -hrange;
+  for (int i=0; i<100; i++) {
+    if (cdf[i]<0.01)
+      min = -hrange + i*delta;
+    else
+      break;
+  }
+  max = hrange;
+  for (int i=99; i>=0; i--) {
+    if (cdf[i]>0.99)
+      max = -hrange + i*delta;
+    else
+      break;
+  }
+
+  if (abs(max)>abs(min))
+    hrange = abs(max)+ionEffects->ionDelta[iPlane];
+  else
+    hrange = abs(min)+ionEffects->ionDelta[iPlane];
+  if (ionEffects->rangeMultiplier[iPlane]!=0)
+    hrange *= abs(ionEffects->rangeMultiplier[iPlane]);
+  if (hrange>ionEffects->span[iPlane])
+    hrange = ionEffects->span[iPlane];
+
+  return 2*hrange;
 }
 
 #if USE_MPI
