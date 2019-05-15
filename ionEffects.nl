@@ -21,7 +21,7 @@
           long multiple_ionization_interval = 100;
           double ion_span[2] = {0, 0};
 	  double ion_bin_divisor[2] = {10.0, 10.0};
-	  double ion_range_multiplier[2] = {20.0, 20.0};
+	  double ion_range_multiplier[2] = {2.0, 2.0};
 	  STRING ion_histogram_output = NULL;
 	  double ion_histogram_output_s_start = 0;
 	  double ion_histogram_output_s_end = 10;
