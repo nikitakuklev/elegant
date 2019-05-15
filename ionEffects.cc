@@ -1531,7 +1531,7 @@ double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
     hrange = abs(max) + ionEffects->ionDelta[iPlane];
   else
     hrange = abs(min) + ionEffects->ionDelta[iPlane];
-  printf("nIons = %ld, min = %le, max = %le, hrange = %le\n", nIons, min, max, hrange);
+  /*  printf("nIons = %ld, min = %le, max = %le, hrange = %le\n", nIons, min, max, hrange); */
   if (ionEffects->rangeMultiplier[iPlane]==0) {
     /* printf("Using full range [%le, %le] for ion binning\n", -hrange, hrange); fflush(stdout); */
     return 2*hrange;
@@ -1858,10 +1858,10 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
     upperLimit[0] = ionSigma[plane] * 1.0;
     upperLimit[1] = ionCentroid[plane] + 3 * ionSigma[plane];
-    upperLimit[2] = peakVal * 5;
+    upperLimit[2] = peakVal * 1.5;
     upperLimit[3] = ionSigma[plane] * 20;
     upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
-    upperLimit[5] = peakVal * 5;
+    upperLimit[5] = peakVal * 1.5;
 
     paramValue[0] = ionSigma[plane] * 0.08;
     paramValue[1] = ionCentroid[plane];
