@@ -584,6 +584,11 @@ void trackWithIonEffects
     if (iPass==0 && ionEffects->sStart==sStartFirst) {
       iIonEffectsElement = 0;
       if (SDDS_beamOutput) {
+	if (verbosity>10) {
+	  printf("Starting page (%ld rows) for ion-related electron beam output\n", 
+		 nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches);
+	  fflush(stdout);
+	}
         if (!SDDS_StartPage(SDDS_beamOutput, nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
@@ -591,6 +596,11 @@ void trackWithIonEffects
         iBeamOutput = 0;
       }
       if (SDDS_ionDensityOutput) {
+	if (verbosity>10) {
+	  printf("Starting page (%ld rows) for ion density output\n", 
+		 nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches);
+	  fflush(stdout);
+	}
         if (!SDDS_StartPage(SDDS_ionDensityOutput, nPasses*(ion_output_all_locations?nIonEffectsElements:1)*nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
@@ -1343,10 +1353,20 @@ void trackWithIonEffects
 #endif
       iIonEffectsElement++;
       if (iIonEffectsElement==nIonEffectsElements) {
+	if (verbosity>10 && SDDS_beamOutput) {
+	  printf("Pass %ld, updating output for ion-related electron beam output file following last of %ld IONEFFECTS elements\n", 
+		 iPass, nIonEffectsElements);
+	  fflush(stdout);
+	}
         if (SDDS_beamOutput && !SDDS_UpdatePage(SDDS_beamOutput, FLUSH_TABLE)) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem flushing data for ion_effects beam parameters output file");
         }
+	if (verbosity>10 && SDDS_ionDensityOutput) {
+	  printf("Pass %ld, updating output for ion density output file following last of %ld IONEFFECTS elements\n", 
+		 iPass, nIonEffectsElements);
+	  fflush(stdout);
+	}
         if (SDDS_ionDensityOutput && !SDDS_UpdatePage(SDDS_ionDensityOutput, FLUSH_TABLE)) {
           SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
           SDDS_Bomb((char*)"problem flushing data for ion_effects ion density output file");
