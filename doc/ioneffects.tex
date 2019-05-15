@@ -91,12 +91,17 @@ be used to control the bin size and range, respectively, of the histogram used t
 approximate the ion charge distribution.
 The \verb|ion_bin_divisor| gives the ratio of the rms size of the electron bunch
 in the plane in question to the bin size.
-If positive, \verb|ion_range_multiplier| gives the range of the binned coordinates in 
+
+The \verb|ion_range_multiplier| parameter is used to determine the range of the histogram.
+If positive, a rough histogram of the ion distribution (with ten times the desired bin size) is used to
+estimate the range required to encompass 80\% of the ions; half this value is multiplied
+by the absolute value of \verb|ion_range_multiplier| to get the half range of the
+full histogram; a value of 1.5 is is suggested.
+If zero, the histogram encompasses all of the ions, which may result in a sparse histogram
+when a few ions have large coordinates.
+If negative gives the range of the binned coordinates in 
 units of the rms size of the ion distribution.
-If negative, a rough (100-bin) histogram of the ion distribution is used to
-estimate the range required to encompass 98\% of the ions; this value is multiplied
-by the absolute value of \verb|ion_range_multiplier| to get the range of the
-fill histogram; a value of -1 to -2 is suggested.
+
 The \verb|ion_histogram_output| parameter and related parameters can be used to 
 request output of the ion distribution and the bi-gaussian fit, which is advisable
 when setting the binning parameters.

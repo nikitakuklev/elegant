@@ -501,10 +501,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
           ionEffects->span[iPlane] = ion_span[iPlane];
         if (ionEffects->binDivisor[iPlane]<=0)
           ionEffects->binDivisor[iPlane] = ion_bin_divisor[iPlane];
-        if (ionEffects->rangeMultiplier[iPlane]<=0)
-          ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
-	else
-	  ionEffects->rangeMultiplier[iPlane] = -1; /* indicates auto scaling to include all particles */
+	ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
       }
     }
     eptr = eptr->succ;
@@ -1456,8 +1453,8 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 
   for (iPlane=0; iPlane<2; iPlane++) {
     ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
-    if (ionEffects->rangeMultiplier[iPlane]>0)
-      ionEffects->ionRange[iPlane] = ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
+    if (ionEffects->rangeMultiplier[iPlane]<0)
+      ionEffects->ionRange[iPlane] = -ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
     else
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
@@ -1505,11 +1502,14 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
 
 double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
 {
-  double histogram[100], cdf[100];
-  double min, max, hrange, delta, qTotal;
-  
+  double *histogram;
+  double min, max, hrange, delta;
+  long i, quickBins = 0, nIons, nIonsMissed;
+
   max = -(min=DBL_MAX);
+  nIons = 0;
   for (long iSpecies=0; iSpecies<nSpecies; iSpecies++) {
+    nIons += ionEffects->nIons[iSpecies];
     for (long iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
       if (ionEffects->coordinate[iSpecies][iIon][2*iPlane]<min)
 	min = ionEffects->coordinate[iSpecies][iIon][2*iPlane];
@@ -1519,73 +1519,101 @@ double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
   }
 #if USE_MPI
   double gmin, gmax;
+  long nIonsGlobal;
   MPI_Allreduce(&min, &gmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   MPI_Allreduce(&max, &gmax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&nIons, &nIonsGlobal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   min = gmin;
   max = gmax;
+  nIons = nIonsGlobal;
 #endif
   if (abs(max)>abs(min))
-    hrange = abs(max)+ionEffects->ionDelta[iPlane];
+    hrange = abs(max) + ionEffects->ionDelta[iPlane];
   else
-    hrange = abs(min)+ionEffects->ionDelta[iPlane];
-  if (hrange>ionEffects->span[iPlane])
-    hrange = ionEffects->span[iPlane];
-  delta = 2*hrange/100;
+    hrange = abs(min) + ionEffects->ionDelta[iPlane];
+  printf("nIons = %ld, min = %le, max = %le, hrange = %le\n", nIons, min, max, hrange);
+  if (ionEffects->rangeMultiplier[iPlane]==0) {
+    /* printf("Using full range [%le, %le] for ion binning\n", -hrange, hrange); fflush(stdout); */
+    return 2*hrange;
+  }
+  delta = 10*ionEffects->ionDelta[iPlane];
+  quickBins = (2*hrange)/delta+0.5;
+  if (quickBins<50 || nIons<8) {
+    /* printf("Using full range [%le, %le] for ion binning\n", -hrange, hrange); fflush(stdout); */
+    return 2*hrange;
+  }
 
-  for (int i=0; i<100; i++)
-    cdf[i] = histogram[i] = 0;
+  /* printf("Using %ld bins, delta = %le for quick ion binning over range [%le, %le]\n",
+     quickBins, delta, -hrange, hrange); fflush(stdout); */
+
+  histogram = (double*)calloc(quickBins, sizeof(*histogram));
 
   /* make charge-weighted histogram */
-  qTotal = 0;
+  nIonsMissed = 0;
   for (long iSpecies=0; iSpecies<nSpecies; iSpecies++) {
     for (long iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-      int iBin;
+      long iBin;
       iBin = floor((ionEffects->coordinate[iSpecies][iIon][2*iPlane] + hrange)/delta);
-      if (iBin>=0 && iBin<100)
-	histogram[iBin] += ionEffects->coordinate[iSpecies][iIon][4];
-      qTotal += ionEffects->coordinate[iSpecies][iIon][4];
+      if (iBin>=0 && iBin<quickBins)
+	histogram[iBin] += 1; /* ionEffects->coordinate[iSpecies][iIon][4]; */
+      else
+	nIonsMissed += 1;
     }
   }
 
 #if USE_MPI
-  double qTotalGlobal, histogramGlobal[100];
-  MPI_Allreduce(&qTotal, &qTotalGlobal, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  qTotal = qTotalGlobal;
-  MPI_Allreduce(histogram, histogramGlobal, 100, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  for (int i=0; i<100; i++)
+  double *histogramGlobal;
+  long nIonsMissedGlobal;
+  histogramGlobal = (double*)calloc(quickBins, sizeof(*histogramGlobal));
+  MPI_Allreduce(histogram, histogramGlobal, quickBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&nIonsMissed, &nIonsMissedGlobal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  /* printf("nIonsMissedGlobal = %ld\n", nIonsMissedGlobal); fflush(stdout); */
+  for (i=0; i<quickBins; i++)
     histogram[i] = histogramGlobal[i];
+  free(histogramGlobal);
 #endif
   
   /* find cumulative distribution */
-  cdf[0] = histogram[0]/qTotal;
-  for (int i=1; i<100; i++)
-    cdf[i] = histogram[i]/qTotal + cdf[i-1];
+  /*
+  for (i=0; i<quickBins; i++)
+    printf("histogram[%ld] = %le\n", i, histogram[i]);
+  */
+  for (i=1; i<quickBins; i++)
+    histogram[i] += histogram[i-1];
+  for (i=0; i<quickBins; i++)
+    histogram[i] /= histogram[quickBins-1];
+  /* 
+  for (i=0; i<quickBins; i++)
+    printf("cdf[%ld] = %le\n", i, histogram[i]);
+  */
 
-  /* find 1% and 99% points */
+  /* find 10% and 90% points */
   min = -hrange;
-  for (int i=0; i<100; i++) {
-    if (cdf[i]<0.01)
-      min = -hrange + i*delta;
-    else
-      break;
-  }
   max = hrange;
-  for (int i=99; i>=0; i--) {
-    if (cdf[i]>0.99)
-      max = -hrange + i*delta;
-    else
+  for (i=0; i<quickBins; i++) {
+    if (histogram[i]>0.1) {
+      min = -hrange + (i-1)*delta;
       break;
+    }
+  }
+  for (   ; i<quickBins; i++) {
+    if (histogram[i]>0.9) {
+      max = -hrange + (i-1)*delta;
+      break;
+    }
   }
 
   if (abs(max)>abs(min))
-    hrange = abs(max)+ionEffects->ionDelta[iPlane];
+    hrange = abs(max);
   else
-    hrange = abs(min)+ionEffects->ionDelta[iPlane];
-  if (ionEffects->rangeMultiplier[iPlane]!=0)
-    hrange *= abs(ionEffects->rangeMultiplier[iPlane]);
+    hrange = abs(min);
+  
+  hrange *= abs(ionEffects->rangeMultiplier[iPlane]);
   if (hrange>ionEffects->span[iPlane])
     hrange = ionEffects->span[iPlane];
+  /* printf("Using hrange=%le for ion binning\n", hrange); fflush(stdout); */
 
+  free(histogram);
   return 2*hrange;
 }
 
@@ -1635,18 +1663,30 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
   for (i=0; i<nBins; i++)
     if (histogram[i]>threshold)
       break;
-  if ((*binOffset = i-10)<0)
+  if ((*binOffset = i-1)<0)
     *binOffset = 0;
 
-  for (j=nBins-10; j>i; j--)
+  for (j=nBins-1; j>i; j--)
     if (histogram[j]>threshold)
       break;
-  *activeBins = j + 10 - *binOffset;
-
-  if (*activeBins<=0 || *activeBins<=ionHistogramMinBins) {
+  *activeBins = j - *binOffset;
+  if (*activeBins<=0) {
     *binOffset = 0;
     *activeBins = nBins;
+    return;
   }
+
+  if (*activeBins<ionHistogramMinBins) {
+    j = ionHistogramMinBins - *activeBins;
+    *binOffset -= j/2;
+    *activeBins += j;
+    if (*binOffset<0 || (*binOffset+*activeBins)>=nBins) {
+      *binOffset = 0;
+      *activeBins = ionHistogramMinBins;
+      return;
+    }
+  }
+  return;
 }
 
 
