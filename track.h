@@ -3288,7 +3288,11 @@ typedef struct {
   double xyBigaussianParameter[2][6]; 
   short xyBigaussianSet[2];           /* if nonzero, bigaussian parameter values are valid */
   double xyBigaussianFitResidual[2];
-  long xyBigaussianFitReturnCode[2];
+#if USE_MPI
+  long nEvaluationsBest[2], nEvaluationsMin[2], nEvaluationsMax[2];
+#else
+  long nEvaluations[2];
+#endif
 } IONEFFECTS ;
 
 /* names and storage structure for speed bump physical parameters */
