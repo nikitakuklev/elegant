@@ -1893,10 +1893,10 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
     upperLimit[0] = ionSigma[plane] * 1.0;
     upperLimit[1] = ionCentroid[plane] + 3 * ionSigma[plane];
-    upperLimit[2] = peakVal * 1.5;
+    upperLimit[2] = peakVal;
     upperLimit[3] = ionSigma[plane] * 20;
     upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
-    upperLimit[5] = peakVal * 1.5;
+    upperLimit[5] = peakVal;
 
     paramValue[0] = ionSigma[plane] * 0.08;
     paramValue[1] = ionCentroid[plane];
