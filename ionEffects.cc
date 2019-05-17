@@ -1857,12 +1857,13 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
   int32_t nEvalMax=bigaussian_fit_evaluations, nPassMax=bigaussian_fit_passes;
-  unsigned long simplexFlags = 0;
+  unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal;
   long fitReturn, dummy, nEvaluations;
 #if USE_MPI
   double bestResult, lastBestResult;
   long nEvaluationsMin, nEvaluationsMax;
+  int min_location, max_location;
 #endif
   long verbosity = 0, plane;
 
@@ -1945,12 +1946,23 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 	break;
       lastResult = result;
 #endif
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
+      findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+      MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+      for (int i=0; i<6; i++) {
+	paramValue[i] *= (1+(random_2(0)-0.5)/20);
+	if (paramValue[i]<lowerLimit[i])
+	  paramValue[i] = lowerLimit[i];
+	if (paramValue[i]>upperLimit[i])
+	  paramValue[i] = upperLimit[i];
+      }
+#endif
     }
 
 #if USE_MPI
     //printf("Waiting on barrier after optimization loop, result=%le, fitReturn=%ld\n", result, fitReturn); fflush(stdout);
     MPI_Barrier(MPI_COMM_WORLD);
-    int min_location, max_location;
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMin[plane], 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMax[plane], 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
