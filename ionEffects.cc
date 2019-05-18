@@ -34,11 +34,13 @@ static long ionFieldMethod = -1;
 #define ION_FIT_RESIDUAL_ABS_ERROR 0
 #define ION_FIT_RESIDUAL_RMS_ERROR 1
 #define ION_FIT_RESIDUAL_MAX_ABS_ERROR 2
-#define N_ION_FIT_RESIDUAL_OPTIONS 3
+#define ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR 3
+#define N_ION_FIT_RESIDUAL_OPTIONS 4
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-absolute-deviation",
   (char*)"rms-deviation",
   (char*)"max-absolute-deviation",
+  (char*)"maxabs-plus-rms-deviation",
 };
 
 static long residualType = -1;
@@ -2001,7 +2003,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
 double biGaussianFunction(double *param, long *invalid) 
 {
-  double sum = 0, tmp = 0, result;
+  double sum = 0, tmp = 0, result, max = 0;
 
   *invalid = 0;
 
@@ -2011,7 +2013,7 @@ double biGaussianFunction(double *param, long *invalid)
   //param[3] = sig2
   //param[4] = cen2
   //param[5] = h2
-
+  
   for (int i=0; i<nData; i++) {
     double z;
     yFit[i] = 0;
@@ -2028,8 +2030,14 @@ double biGaussianFunction(double *param, long *invalid)
       break;
     case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
       tmp = abs(tmp);
-      if (sum<tmp)
-	sum = tmp;
+      if (tmp>max)
+	max = tmp;
+      break;
+    case ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR:
+      tmp = abs(tmp);
+      if (tmp>max)
+	max = tmp;
+      sum += sqr(tmp);
       break;
     case ION_FIT_RESIDUAL_ABS_ERROR:
     default:
@@ -2043,7 +2051,10 @@ double biGaussianFunction(double *param, long *invalid)
       result = sqrt(sum)/yDataSum;
       break;
     case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
-      result = sum/yDataSum;
+      result = max/yDataSum;
+      break;
+    case ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR:
+      result = sqrt(sum)/yDataSum + max/yDataSum;
       break;
     case ION_FIT_RESIDUAL_ABS_ERROR:
     default:
