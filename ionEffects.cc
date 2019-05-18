@@ -551,19 +551,40 @@ void trackWithIonEffects
   MPI_Status mpiStatus;
 #endif
 
+  if (verbosity>30) {
+    printf("Running ION_EFFECTS\n");
+    fflush(stdout);
+  }
+
   if (!ionsInitialized) {
     bombElegant("IONEFFECTS element seen, but ion_effects command was not given to initialize ion modeling.", NULL);
   }
-  if (ionEffects->disable)
+  if (ionEffects->disable) {
+    if (verbosity>30) {
+      printf("ION_EFFECTS disabled, returning\n");
+      fflush(stdout);
+    }
     return ;
+  }
 
   if (ionEffects->startPass<0)
     ionEffects->startPass = 0;
 
   if ((ionEffects->startPass>=0 && iPass<ionEffects->startPass) ||
       (ionEffects->endPass>=0 && iPass>ionEffects->endPass) ||
-      (ionEffects->passInterval>=1 && (iPass-ionEffects->startPass)%ionEffects->passInterval!=0))
+      (ionEffects->passInterval>=1 && (iPass-ionEffects->startPass)%ionEffects->passInterval!=0)) {
+    if (verbosity>30) {
+      printf("ION_EFFECTS out of pass range (pass:%ld, start:%ld, end:%ld, interval:%ld), returning\n",
+	     iPass, ionEffects->startPass, ionEffects->endPass, ionEffects->passInterval);
+      fflush(stdout);
+    }
     return;
+  }
+  if (verbosity>40) {
+    printf("ION_EFFECTS within range (pass:%ld, start:%ld, end:%ld, interval:%ld), returning\n",
+	   iPass, ionEffects->startPass, ionEffects->endPass, ionEffects->passInterval);
+    fflush(stdout);
+  }
 
   /* converts Torr to 1/m^3 and mBarns to m^2 */
   unitsFactor = 1e-22/(7.5006e-3*k_boltzmann_mks*pressureData.temperature);
@@ -585,7 +606,11 @@ void trackWithIonEffects
   if (myid==0) 
     MPI_Recv(&nBunches, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
 #endif
-  
+  if (verbosity>30) {
+    printf("Running ION_EFFECTS with %ld bunches\n", nBunches);
+    fflush(stdout);
+  }
+    
 #if USE_MPI
   if (myid==0) {
 #endif
