@@ -509,6 +509,7 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
         if (ionEffects->binDivisor[iPlane]<=0)
           ionEffects->binDivisor[iPlane] = ion_bin_divisor[iPlane];
 	ionEffects->rangeMultiplier[iPlane] = ion_range_multiplier[iPlane];
+	ionEffects->sigmaLimitMultiplier[iPlane] = ion_sigma_limit_multiplier[iPlane];
       }
     }
     eptr = eptr->succ;
@@ -1888,16 +1889,24 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     paramDelta[5] = peakVal * 0.034;
 
     lowerLimit[0] = ionSigma[plane] * 0.008;
+    if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+      lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
     lowerLimit[1] = ionCentroid[plane] - 3 * ionSigma[plane];
     lowerLimit[2] = peakVal * 0.05;
     lowerLimit[3] = ionSigma[plane] * 0.056;
+    if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+      lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
     lowerLimit[4] = ionCentroid[plane] - 3 * ionSigma[plane];
     lowerLimit[5] = peakVal * 0.034;
 
     upperLimit[0] = ionSigma[plane] * 1.0;
+    if (upperLimit[0]<lowerLimit[0])
+      upperLimit[0] = 2*lowerLimit[0];
     upperLimit[1] = ionCentroid[plane] + 3 * ionSigma[plane];
     upperLimit[2] = peakVal;
     upperLimit[3] = ionSigma[plane] * 20;
+    if (upperLimit[3]<lowerLimit[3])
+      upperLimit[3] = 2*lowerLimit[3];
     upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
     upperLimit[5] = peakVal;
 

@@ -3262,8 +3262,9 @@ typedef struct {
   long disable;
   long macroIons, generationInterval;
   double span[2];              /* Actually the x, y half-span, centered on the center of the chamber */
-  double binDivisor[2];        /* x, y value. Used if fitting of multiple gaussians is wanted for field calculation */
-  double rangeMultiplier[2];   /* x, y value. Used if fitting of multiple gaussians is wanted for field calculation */
+  double binDivisor[2];        /* x, y value. Used if bigaussian fitting wanted for field calculation */
+  double rangeMultiplier[2];   /* x, y value. Used if bigaussian fitting wanted for field calculation */
+  double sigmaLimitMultiplier[2]; /* x, y value. Used if bigaussian fitting wanted for field calculation */
   long startPass, endPass, passInterval;
   /* internal parameters */
   double sLocation;                /* location of the element */
