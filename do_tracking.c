@@ -498,15 +498,8 @@ long do_tracking(
 #ifdef HAVE_GPU
         coord = forceParticlesToCpu("stopTrackingParticleLimit reached");
 #endif
-	/* force loss of all the particles */
-	for (i=0; i<nToTrack; i++) {
-	  coord[i][4] = z;
-	  coord[i][5] = *P_central*(1+coord[i][5]);
-	}
-	nLeft = 0;
-	if (nLeft!=nToTrack)
-          recordLostParticles(coord, nLeft, nToTrack, lostBeam, i_pass);
-	nToTrack = 0;
+	n_passes = i_pass-passOffset;
+	break;
       }
     }
 
