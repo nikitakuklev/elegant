@@ -36,8 +36,9 @@ static long ionFieldMethod = -1;
 #define ION_FIT_RESIDUAL_MAX_ABS_DEV 2
 #define ION_FIT_RESIDUAL_MAX_PLUS_RMS_DEV 3
 #define ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV 4
-#define ION_FIT_RMS_DEV_PLUS_ABS_DEV_SUM 5
-#define N_ION_FIT_RESIDUAL_OPTIONS 6
+#define ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM 5
+#define ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM 6
+#define N_ION_FIT_RESIDUAL_OPTIONS 7
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-ad",
   (char*)"rms-dev",
@@ -45,6 +46,7 @@ static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"max-ad-plus-rms-dev",
   (char*)"sum-ad-plus-rms-dev",
   (char*)"rms-dev-plus-ad-sum",
+  (char*)"sum-ad-plus-ad-sum"
 };
 
 static long residualType = -1;
@@ -2084,8 +2086,11 @@ double biGaussianFunction(double *param, long *invalid)
   case ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV:
     result = sqrt(sum2)/yDataSum + sum/yDataSum;
     break;
-  case ION_FIT_RMS_DEV_PLUS_ABS_DEV_SUM:
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM:
     result = sqrt(sum2)/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM:
+    result = sum/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
   default:
