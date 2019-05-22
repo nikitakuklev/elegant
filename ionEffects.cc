@@ -31,16 +31,20 @@ static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
 };
 static long ionFieldMethod = -1;
 
-#define ION_FIT_RESIDUAL_ABS_ERROR 0
-#define ION_FIT_RESIDUAL_RMS_ERROR 1
-#define ION_FIT_RESIDUAL_MAX_ABS_ERROR 2
-#define ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR 3
-#define N_ION_FIT_RESIDUAL_OPTIONS 4
+#define ION_FIT_RESIDUAL_SUM_ABS_DEV 0
+#define ION_FIT_RESIDUAL_RMS_DEV 1
+#define ION_FIT_RESIDUAL_MAX_ABS_DEV 2
+#define ION_FIT_RESIDUAL_MAX_PLUS_RMS_DEV 3
+#define ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV 4
+#define ION_FIT_RMS_DEV_PLUS_ABS_DEV_SUM 5
+#define N_ION_FIT_RESIDUAL_OPTIONS 6
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
-  (char*)"sum-absolute-deviation",
-  (char*)"rms-deviation",
-  (char*)"max-absolute-deviation",
-  (char*)"maxabs-plus-rms-deviation",
+  (char*)"sum-ad",
+  (char*)"rms-dev",
+  (char*)"max-ad",
+  (char*)"max-ad-plus-rms-dev",
+  (char*)"sum-ad-plus-rms-dev",
+  (char*)"rms-dev-plus-ad-sum",
 };
 
 static long residualType = -1;
@@ -339,7 +343,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
 
   if (!fit_residual_type || !strlen(fit_residual_type))
-    residualType = ION_FIT_RESIDUAL_RMS_ERROR;
+    residualType = ION_FIT_RESIDUAL_RMS_DEV;
   else if ((residualType = match_string(fit_residual_type, ionFitResidualOption, N_ION_FIT_RESIDUAL_OPTIONS, EXACT_MATCH))<0)
     bombElegantVA((char*)"fit_residual_type=\"%s\" not recognized", fit_residual_type);
 
@@ -1886,7 +1890,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
   int32_t nEvalMax=bigaussian_fit_evaluations, nPassMax=bigaussian_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
-  double peakVal, minVal;
+  double peakVal, minVal, xMin, xMax;
   long fitReturn, dummy, nEvaluations;
 #if USE_MPI
   double bestResult, lastBestResult;
@@ -1905,42 +1909,44 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     for (int i=0; i<nData; i++)
       yDataSum += yData[i];
     result = find_min_max(&minVal, &peakVal, yData, nData);
+    find_min_max(&xMin, &xMax, xData, nData);
 
-    paramDelta[0] = ionSigma[plane] * 0.008;
-    paramDelta[1] = ionCentroid[plane] / 5;
-    paramDelta[2] = peakVal * 0.07;
-    paramDelta[3] = ionSigma[plane] * 0.056;
-    paramDelta[4] = ionCentroid[plane] / 5;
-    paramDelta[5] = peakVal * 0.034;
+    /* smaller sigma is close to the beam size, larger is close to ion sigma */
+    paramValue[0] = beamSigma[plane];
+    paramValue[1] = beamCentroid[plane];
+    paramValue[2] = peakVal/2;
+    paramValue[3] = ionSigma[plane];
+    paramValue[4] = ionCentroid[plane];
+    paramValue[5] = peakVal/2;
 
-    lowerLimit[0] = ionSigma[plane] * 0.008;
+    paramDelta[0] = paramValue[0]/20;
+    paramDelta[1] = abs(beamCentroid[plane])/20;
+    paramDelta[2] = peakVal/40;
+    paramDelta[3] = paramValue[3]/20;
+    paramDelta[4] = abs(ionCentroid[plane])/20;
+    paramDelta[5] = peakVal/40;
+
+    lowerLimit[0] = paramValue[0]/100;
     if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
       lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
-    lowerLimit[1] = ionCentroid[plane] - 3 * ionSigma[plane];
-    lowerLimit[2] = peakVal * 0.05;
-    lowerLimit[3] = ionSigma[plane] * 0.056;
+    lowerLimit[1] = xMin/10;
+    lowerLimit[2] = peakVal/20;
+    lowerLimit[3] = paramValue[3]/100;
     if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
       lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
-    lowerLimit[4] = ionCentroid[plane] - 3 * ionSigma[plane];
-    lowerLimit[5] = peakVal * 0.034;
+    lowerLimit[4] = xMin/10;
+    lowerLimit[5] = peakVal/20;
 
-    upperLimit[0] = ionSigma[plane] * 1.0;
+    upperLimit[0] = paramValue[0]*10;
     if (upperLimit[0]<lowerLimit[0])
       upperLimit[0] = 2*lowerLimit[0];
-    upperLimit[1] = ionCentroid[plane] + 3 * ionSigma[plane];
+    upperLimit[1] = xMax/10;
     upperLimit[2] = peakVal;
-    upperLimit[3] = ionSigma[plane] * 20;
+    upperLimit[3] = paramValue[3]*10;
     if (upperLimit[3]<lowerLimit[3])
       upperLimit[3] = 2*lowerLimit[3];
-    upperLimit[4] = ionCentroid[plane] + 3 * ionSigma[plane];
+    upperLimit[4] = xMax/10;
     upperLimit[5] = peakVal;
-
-    paramValue[0] = ionSigma[plane] * 0.08;
-    paramValue[1] = ionCentroid[plane];
-    paramValue[2] = peakVal * 0.47;
-    paramValue[3] = ionSigma[plane] * 0.56;
-    paramValue[4] = ionCentroid[plane];
-    paramValue[5] = peakVal * 0.23;
 
 #if USE_MPI
     /* Randomize step sizes and starting points */
@@ -2037,7 +2043,7 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 
 double biGaussianFunction(double *param, long *invalid) 
 {
-  double sum = 0, tmp = 0, result, max = 0;
+  double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
 
   *invalid = 0;
 
@@ -2057,44 +2063,35 @@ double biGaussianFunction(double *param, long *invalid)
     z = (xData[i]-param[4])/param[3];
     if (z<6 && z>-6)
       yFit[i] += param[5] * exp(-z*z/2);
-    tmp = (yFit[i]-yData[i]);
-    switch (residualType) {
-    case ION_FIT_RESIDUAL_RMS_ERROR:
-      sum += sqr(tmp);
-      break;
-    case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
-      tmp = abs(tmp);
-      if (tmp>max)
-	max = tmp;
-      break;
-    case ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR:
-      tmp = abs(tmp);
-      if (tmp>max)
-	max = tmp;
-      sum += sqr(tmp);
-      break;
-    case ION_FIT_RESIDUAL_ABS_ERROR:
-    default:
-      sum += abs(tmp);
-      break;
-    }
+    tmp = abs(yFit[i]-yData[i]);
+    sum += tmp;
+    sum2 += sqr(tmp);
+    yFitSum += yFit[i];
+    if (tmp>max)
+      max = tmp;
   }
-
+  
   switch (residualType) {
-    case ION_FIT_RESIDUAL_RMS_ERROR:
-      result = sqrt(sum)/yDataSum;
-      break;
-    case ION_FIT_RESIDUAL_MAX_ABS_ERROR:
-      result = max/yDataSum;
-      break;
-    case ION_FIT_RESIDUAL_MAX_PLUS_RMS_ERROR:
-      result = sqrt(sum)/yDataSum + max/yDataSum;
-      break;
-    case ION_FIT_RESIDUAL_ABS_ERROR:
-    default:
-      result = sum/yDataSum;
-      break;
-    }
+  case ION_FIT_RESIDUAL_RMS_DEV:
+    result = sqrt(sum2)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_MAX_ABS_DEV:
+    result = max/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_MAX_PLUS_RMS_DEV:
+    result = sqrt(sum2)/yDataSum + max/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV:
+    result = sqrt(sum2)/yDataSum + sum/yDataSum;
+    break;
+  case ION_FIT_RMS_DEV_PLUS_ABS_DEV_SUM:
+    result = sqrt(sum2)/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_DEV:
+  default:
+    result = sum/yDataSum;
+    break;
+  }
     
   return result;
 }
