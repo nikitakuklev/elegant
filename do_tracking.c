@@ -181,6 +181,7 @@ long do_tracking(
   MALIGN *malign;
   TAPERAPC *taperapc;
   TAPERAPE *taperape;
+  TAPERAPR *taperapr;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
   long nToTrack;  /* number of particles being tracked */
   long nLeft;     /* number of those that are left after a tracking routine returns */
@@ -726,6 +727,18 @@ long do_tracking(
             maxamp->openSide = NULL;
             maxamp->exponent  = maxampExponent  = taperape->xExponent;
             maxamp->yExponent = maxampYExponent = taperape->yExponent;
+          }
+        } else if (eptr->type==T_TAPERAPR) {
+          taperapr = (TAPERAPR*)eptr->p_elem;
+          if (taperapr->sticky) {
+            maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+            maxamp->x_max = x_max = taperapr->xmax[taperapr->e2Index];
+            maxamp->y_max = y_max = taperapr->ymax[taperapr->e2Index];
+            maxamp->elliptical = elliptical = 0;
+            maxampOpenCode = 0;
+            maxamp->openSide = NULL;
+            maxamp->exponent  = maxampExponent  = 0;
+            maxamp->yExponent = maxampYExponent = 0;
           }
         } else if (eptr->type==T_CHARGE) {
           if (elementsTracked!=0 && !warnedAboutChargePosition) {
@@ -1330,6 +1343,23 @@ long do_tracking(
                 maxamp->openSide = NULL;
                 maxamp->exponent  = maxampExponent  = taperape->xExponent;
                 maxamp->yExponent = maxampYExponent = taperape->yExponent;
+              }
+	      break;
+	    case T_TAPERAPR:
+              taperapr = (TAPERAPR*)eptr->p_elem;
+	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
+		drift_beam(coord, nToTrack, taperapr->length, run->default_order);
+	      else
+		nLeft = trackThroughTaperApRectangular(coord, taperapr, nToTrack, accepted, last_z, *P_central);
+              if (taperapr->sticky) {
+                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+                maxamp->x_max = x_max = taperapr->xmax[taperapr->e2Index];
+                maxamp->y_max = y_max = taperapr->ymax[taperapr->e2Index];
+                maxamp->elliptical = elliptical = 0;
+                maxampOpenCode = 0;
+                maxamp->openSide = NULL;
+                maxamp->exponent  = maxampExponent  = 0;
+                maxamp->yExponent = maxampYExponent = 0;
               }
 	      break;
 	    case T_CLEAN:

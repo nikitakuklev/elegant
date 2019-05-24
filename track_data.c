@@ -70,7 +70,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR", "TAPERAPC", "TAPERAPE",
+    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -205,6 +205,7 @@ char *entity_text[N_TYPES] = {
     "An aperture (or its inverse) defined by (x, y) points in an SDDS file.",
     "A tapered aperture that is a section of a circular cylinder.",
     "A tapered elliptical aperture.",
+    "A tapered rectangular aperture.",
     } ;
 
 QUAD quad_example;
@@ -3437,7 +3438,7 @@ PARAMETER taperapc_param[N_TAPERAPC_PARAMS] = {
     {"REND", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.r[1]), NULL, 0.0, 0, "radius at the end"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperapc_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, or MAXAMP"},
+    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperapc_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, TAPERAPR, or MAXAMP"},
     };
 
 TAPERAPE taperape_example;
@@ -3454,7 +3455,21 @@ PARAMETER taperape_param[N_TAPERAPE_PARAMS] = {
     {"RESOLUTION", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.resolution), NULL, 1e-6, 0, "z resolution of finding intersection"},
     {"XEXPONENT", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.xExponent), NULL, 0, 2, "super-elliptical exponent (even number)"},
     {"YEXPONENT", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.yExponent), NULL, 0, 2, "super-elliptical exponent (even number)"},
-    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, or MAXAMP"},
+    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, TAPERAPR, or MAXAMP"},
+    };
+
+TAPERAPR taperapr_example;
+/* tapered rectangular aperture physical parameters */
+PARAMETER taperapr_param[N_TAPERAPR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.length), NULL, 0.0, 0, "length"},
+    {"XSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.xmax[0]), NULL, 0.0, 0, "horizontal half-aperture at the start"},
+    {"XEND", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.xmax[1]), NULL, 0.0, 0, "horizontal half-aperture at the end"},
+    {"YSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.ymax[0]), NULL, 0.0, 0, "vertical half-aperture at the start"},
+    {"YEND", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.ymax[1]), NULL, 0.0, 0, "vertical half-aperture at the end"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taperapr_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&taperapr_example.tilt), NULL, 0.0, 0, "misalignment"},
+    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperapr_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, TAPERAPR, or MAXAMP"},
     };
 
 /* END OF ELEMENT DICTIONARY ARRAYS */
@@ -3608,6 +3623,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_APCONTOUR_PARAMS, MAT_LEN_NCAT, sizeof(APCONTOUR), apcontour_param},
     { N_TAPERAPC_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPC), taperapc_param},
     { N_TAPERAPE_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPE), taperape_param},
+    { N_TAPERAPR_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPR), taperapr_param},
 } ;
 
 void compute_offsets()

@@ -74,6 +74,8 @@ static SDDS_DATASET SDDSTswaTunes;
 static long linearChromaticTrackingInitialized = 0;
 void setLinearChromaticTrackingValues(LINE_LIST *beamline) ;
 
+double effectiveEllipticalAperture(double a, double b, double x, double y);
+
 SDDS_TABLE SDDS_SDrivingTerms;
 
 #define TWISS_ANALYSIS_QUANTITIES 8
@@ -2331,11 +2333,14 @@ double find_acceptance(
 {
   double beta, acceptance, tmp;
   double tube_aperture, aperture, centroid, offset;
-  double other_centroid, a, b, a_tube, b_tube, aperture1;
+  double other_centroid, a_tube, b_tube, aperture1;
   long aperture_set, elliptical_tube, tube_set;
   SCRAPER *scraper;
   SPEEDBUMP *speedbump;
   ELEMENT_LIST *ap_elem;
+  TAPERAPC *taperApC;
+  TAPERAPE *taperApE;
+  TAPERAPR *taperApR;
 
   log_entry((char*)"find_acceptance");
 
@@ -2343,6 +2348,7 @@ double find_acceptance(
   elliptical_tube = tube_set = 0;
   *name = NULL;
   *z = -DBL_MAX;
+  aperture = 10;
   while (elem) {
     beta = *(((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0));
     centroid = *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET);
@@ -2407,31 +2413,17 @@ double find_acceptance(
         aperture = aperture - fabs(centroid-offset);
       break;
     case T_ECOL:
-      if (plane) {
-        a = ((ECOL*)ap_elem->p_elem)->y_max;
-        b = ((ECOL*)ap_elem->p_elem)->x_max;
-        if (a>0) {
-          centroid -= ((ECOL*)ap_elem->p_elem)->dy;
-          other_centroid -= ((ECOL*)ap_elem->p_elem)->dx;
-          aperture_set = 1;
-        }
-      } else {
-        a = ((ECOL*)ap_elem->p_elem)->x_max;
-        b = ((ECOL*)ap_elem->p_elem)->y_max;
-        if (a>0) {
-          centroid -= ((ECOL*)ap_elem->p_elem)->dx;
-          other_centroid -= ((ECOL*)ap_elem->p_elem)->dy;
-          aperture_set = 1;
-        }
-      }
-      if (aperture_set) {
-        if (b>0) {
-          if ((aperture = sqr(a)*(1 - sqr(other_centroid/b)))<0)
-            aperture = 0;
-        } else
-          aperture = sqr(a);
-        aperture = sqrt(aperture) - fabs(centroid);
-      }
+      if (plane)
+        aperture = effectiveEllipticalAperture(((ECOL*)ap_elem->p_elem)->y_max, 
+                                               ((ECOL*)ap_elem->p_elem)->x_max,
+                                               centroid - ((ECOL*)ap_elem->p_elem)->dy,
+                                               other_centroid - ((ECOL*)ap_elem->p_elem)->dx);
+      else
+        aperture = effectiveEllipticalAperture(((ECOL*)ap_elem->p_elem)->x_max, 
+                                               ((ECOL*)ap_elem->p_elem)->y_max,
+                                               centroid - ((ECOL*)ap_elem->p_elem)->dx,
+                                               other_centroid - ((ECOL*)ap_elem->p_elem)->dy);
+      aperture_set = 1;
       break;
     case T_SCRAPER:
       scraper = (SCRAPER*)ap_elem->p_elem;
@@ -2444,6 +2436,70 @@ double find_acceptance(
       aperture_set = determineScraperAperture(plane, speedbump->direction,
                                               speedbump->position, plane ? speedbump->dy : speedbump->dx, centroid,
                                               &aperture);
+      break;
+    case T_TAPERAPC:
+      taperApC = ((TAPERAPC*)ap_elem->p_elem);
+      aperture_set = 1;
+      if (plane)
+        aperture = effectiveEllipticalAperture(taperApC->r[taperApC->e2Index],
+                                               taperApC->r[taperApC->e2Index],
+                                               centroid - taperApC->dy,
+                                               other_centroid - taperApC->dx);
+      else
+        aperture = effectiveEllipticalAperture(taperApC->r[taperApC->e2Index],
+                                               taperApC->r[taperApC->e2Index],
+                                               centroid - taperApC->dx,
+                                               other_centroid - taperApC->dy);
+      if (taperApC->sticky) {
+        tube_set = elliptical_tube = 1; 
+        a_tube = b_tube = taperApC->r[taperApC->e2Index];
+      }
+      break;
+    case T_TAPERAPE:
+      taperApE = ((TAPERAPE*)ap_elem->p_elem);
+      aperture_set = 1;
+      if (plane)
+        aperture = effectiveEllipticalAperture(taperApE->b[taperApE->e2Index],
+                                               taperApE->a[taperApE->e2Index],
+                                               centroid - taperApE->dy,
+                                               other_centroid - taperApE->dx);
+      else
+        aperture = effectiveEllipticalAperture(taperApE->a[taperApE->e2Index],
+                                               taperApE->b[taperApE->e2Index],
+                                               centroid - taperApE->dx,
+                                               other_centroid - taperApE->dy);
+      if (taperApE->sticky) {
+        tube_set = elliptical_tube = 1; 
+        if (plane) {
+          a_tube = taperApE->b[taperApE->e2Index];
+          b_tube = taperApE->a[taperApE->e2Index];
+        } else {
+          a_tube = taperApE->a[taperApE->e2Index];
+          b_tube = taperApE->b[taperApE->e2Index];
+        }
+      }
+      break;
+    case T_TAPERAPR:
+      taperApR = ((TAPERAPR*)ap_elem->p_elem);
+      if (plane) {
+        if (taperApR->ymax[taperApR->e2Index]>0) {
+          aperture = taperApR->ymax[taperApR->e2Index];
+          offset = taperApR->dy;
+          aperture_set = 1;
+        }
+      } else {
+        if (taperApR->xmax[taperApR->e2Index]>0) {
+          aperture = taperApR->xmax[taperApR->e2Index];
+          offset = taperApR->dx;
+          aperture_set = 1;
+        }
+      }
+      if (aperture_set)
+        aperture = aperture - fabs(centroid-offset);
+      if (taperApR->sticky) {
+        tube_aperture = aperture;
+        tube_set = 1;
+      }
       break;
     default:
       break;
@@ -5222,3 +5278,17 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
    }
    return aperture_set;
  }
+
+double effectiveEllipticalAperture(double a, double b, double x, double y)
+{
+  double aperture = 0;
+  if (a>0) {
+    if (b>0) {
+      if ((aperture = sqr(a)*(1 - sqr(y/b)))<0)
+        aperture = 0;
+    } else 
+      aperture = sqr(a);
+    aperture = sqrt(aperture) - fabs(x);
+  }
+  return aperture;
+}

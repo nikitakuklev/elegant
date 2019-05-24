@@ -917,7 +917,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_APCONTOUR 124
 #define T_TAPERAPC 125
 #define T_TAPERAPE 126
-#define N_TYPES  127
+#define T_TAPERAPR 127
+#define N_TYPES  128
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1051,6 +1052,7 @@ extern char *entity_text[N_TYPES];
 #define N_APCONTOUR_PARAMS 10
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
+#define N_TAPERAPR_PARAMS 9
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3349,6 +3351,16 @@ typedef struct {
   short e1Index, e2Index;
 } TAPERAPE;
 
+/* tapered rectangular aperture */
+extern PARAMETER taperapr_param[N_TAPERAPR_PARAMS];
+
+typedef struct {
+  double length, xmax[2], ymax[2], dx, dy, tilt;
+  short sticky;
+  /* internal use only */
+  short e1Index, e2Index;
+} TAPERAPR;
+
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
 /* macros for bending magnets */ 
@@ -3900,6 +3912,8 @@ long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, doub
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
                            double Po);
 long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
+                                   double Po);
+long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long np, double **accepted, double zStartElem,
                                    double Po);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);

@@ -1611,3 +1611,117 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
   return itop+1;
 }
 
+long trackThroughTaperApRectangular(double **initial, TAPERAPR *taperApR, long np, double **accepted, double zStartElem,
+                                    double Po)
+{
+  long ip, itop, isLost;
+  double *coord;
+  double x0, y0, xp, yp, zLost, zLost0;
+
+  if (taperApR->length<0)
+    bombElegant("TAPERAPR has negative length, which is not allowed", NULL);
+
+  if (taperApR->dx || taperApR->dy)
+    offsetBeamCoordinates(initial, np, taperApR->dx, taperApR->dy, 0);
+  if (taperApR->tilt)
+    rotateBeamCoordinates(initial, np, taperApR->tilt);
+
+  itop = np-1;
+  for (ip=0; ip<=itop; ip++) {
+    coord = initial[ip];
+    x0 = coord[0];
+    y0 = coord[2];
+    xp = coord[1];
+    yp = coord[3];
+
+    isLost = 0;
+    zLost = zLost0 = DBL_MAX;
+
+    if (taperApR->xmax[taperApR->e1Index]>0 && taperApR->xmax[taperApR->e2Index]>0) {
+      /* x>0 plane */
+      if (x0>taperApR->xmax[taperApR->e1Index]) {
+        isLost = 1;
+        zLost = 0;
+      } else {
+        /* find intersection */
+        zLost0 = (x0 - taperApR->xmax[taperApR->e1Index])*taperApR->length/
+          (taperApR->xmax[taperApR->e2Index] - taperApR->xmax[taperApR->e1Index] - xp*taperApR->length);
+        if (zLost0>=0 && zLost0<=taperApR->length) {
+          isLost = 1;
+          zLost = zLost0;
+        }
+      }
+      if (!isLost || zLost>0) {
+        /* x<0 plane */
+        if (x0 < -taperApR->xmax[taperApR->e1Index]) {
+          isLost = 1;
+          zLost = 0;
+        } else {
+          /* find intersection */
+          zLost0 = (x0 + taperApR->xmax[taperApR->e1Index])*taperApR->length/
+            (-taperApR->xmax[taperApR->e2Index] + taperApR->xmax[taperApR->e1Index] - xp*taperApR->length);
+          if (zLost0>=0 && zLost0<=taperApR->length) {
+            isLost = 1;
+            if (zLost0<zLost)
+              zLost = zLost0;
+          }
+        }
+      }
+    }
+    if (taperApR->ymax[taperApR->e1Index]>0 && taperApR->ymax[taperApR->e2Index]>0) {
+      if (!isLost || zLost>0) {
+        /* y>0 plane */
+        if (y0>taperApR->ymax[taperApR->e1Index]) {
+          isLost = 1;
+          zLost = 0;
+        } else {
+          /* find intersection */
+          zLost0 = (y0 - taperApR->ymax[taperApR->e1Index])*taperApR->length/
+            (taperApR->ymax[taperApR->e2Index] - taperApR->ymax[taperApR->e1Index] - yp*taperApR->length);
+          if (zLost0>=0 && zLost0<=taperApR->length) {
+            isLost = 1;
+            if (zLost0<zLost)
+              zLost = zLost0;
+          }
+        }
+        if (!isLost || zLost>0) {
+          /* y<0 plane */
+          if (y0 < -taperApR->ymax[taperApR->e1Index]) {
+            isLost = 1;
+            zLost = 0;
+          } else {
+            /* find intersection */
+            zLost0 = (y0 + taperApR->ymax[taperApR->e1Index])*taperApR->length/
+              (-taperApR->ymax[taperApR->e2Index] + taperApR->ymax[taperApR->e1Index] - yp*taperApR->length);
+            if (zLost0>=0 && zLost0<=taperApR->length) {
+              isLost = 1;
+              if (zLost0<zLost)
+                zLost = zLost0;
+            }
+          }
+        }
+      }
+    }
+
+    if (isLost) {
+      coord[0] += zLost*xp;
+      coord[2] += zLost*yp;
+      swapParticles(initial[ip], initial[itop]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[itop]);
+      initial[itop][4] = zStartElem+zLost;
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+    } else
+      exactDrift(initial+ip, 1, taperApR->length);
+  }
+
+  if (taperApR->tilt)
+    rotateBeamCoordinates(initial, np, -taperApR->tilt);
+  if (taperApR->dx || taperApR->dy)
+    offsetBeamCoordinates(initial, np, -taperApR->dx, -taperApR->dy, 0);
+
+  return itop+1;
+}
+
