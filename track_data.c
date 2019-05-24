@@ -70,7 +70,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR", "TAPERAPC",
+    "APCONTOUR", "TAPERAPC", "TAPERAPE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -204,6 +204,7 @@ char *entity_text[N_TYPES] = {
     "A straight magnetic field element using off-axis expansion from an on-axis derivative.",
     "An aperture (or its inverse) defined by (x, y) points in an SDDS file.",
     "A tapered aperture that is a section of a circular cylinder.",
+    "A tapered elliptical aperture.",
     } ;
 
 QUAD quad_example;
@@ -3432,12 +3433,29 @@ TAPERAPC taperapc_example;
 /* tapered circular aperture physical parameters */
 PARAMETER taperapc_param[N_TAPERAPC_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.length), NULL, 0.0, 0, "length"},
-    {"RSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.rStart), NULL, 0.0, 0, "radius at the start"},
-    {"REND", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.rEnd), NULL, 0.0, 0, "radius at the end"},
+    {"RSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.r[0]), NULL, 0.0, 0, "radius at the start"},
+    {"REND", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.r[1]), NULL, 0.0, 0, "radius at the end"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperapc_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, or MAXAMP"},
     };
 
+TAPERAPE taperape_example;
+/* tapered elliptical aperture physical parameters */
+PARAMETER taperape_param[N_TAPERAPE_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.length), NULL, 0.0, 0, "length"},
+    {"ASTART", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.a[0]), NULL, 0.0, 0, "horizontal semi-axis at the start"},
+    {"AEND", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.a[1]), NULL, 0.0, 0, "horizontal semi-axis at the end"},
+    {"BSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.b[0]), NULL, 0.0, 0, "vertical semi-axis at the start"},
+    {"BEND", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.b[1]), NULL, 0.0, 0, "vertical semi-axis at the end"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&taperape_example.tilt), NULL, 0.0, 0, "misalignment"},
+    {"RESOLUTION", "M", IS_DOUBLE, 0, (long)((char *)&taperape_example.resolution), NULL, 1e-6, 0, "z resolution of finding intersection"},
+    {"XEXPONENT", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.xExponent), NULL, 0, 2, "super-elliptical exponent (even number)"},
+    {"YEXPONENT", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.yExponent), NULL, 0, 2, "super-elliptical exponent (even number)"},
+    {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperape_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, or MAXAMP"},
+    };
 
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
@@ -3589,6 +3607,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BOFFAXE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,   sizeof(BOFFAXE),  boffaxe_param  },
     { N_APCONTOUR_PARAMS, MAT_LEN_NCAT, sizeof(APCONTOUR), apcontour_param},
     { N_TAPERAPC_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPC), taperapc_param},
+    { N_TAPERAPE_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPE), taperape_param},
 } ;
 
 void compute_offsets()

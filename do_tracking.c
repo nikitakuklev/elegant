@@ -177,8 +177,10 @@ long do_tracking(
   MHISTOGRAM *mhist;
   FTABLE *ftable;
   ENERGY *energy;
-  MAXAMP *maxamp = NULL;
+  MAXAMP *maxamp = NULL, maxampBuf;
   MALIGN *malign;
+  TAPERAPC *taperapc;
+  TAPERAPE *taperape;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
   long nToTrack;  /* number of particles being tracked */
   long nLeft;     /* number of those that are left after a tracking routine returns */
@@ -703,8 +705,29 @@ long do_tracking(
           maxampOpenCode = determineOpenSideCode(maxamp->openSide);
           maxampExponent = maxamp->exponent;
           maxampYExponent = maxamp->yExponent;
-        }
-        if (eptr->type==T_CHARGE) {
+        } else if (eptr->type==T_TAPERAPC) {
+          taperapc = (TAPERAPC*)eptr->p_elem;
+          if (taperapc->sticky) {
+            maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+            maxamp->x_max = maxamp->y_max = x_max = y_max = taperapc->r[taperapc->e2Index];
+            maxamp->elliptical = elliptical = 1;
+            maxampOpenCode = 0;
+            maxamp->openSide = NULL;
+            maxamp->exponent = maxamp->yExponent = maxampExponent = maxampYExponent = 2;
+          }
+        } else if (eptr->type==T_TAPERAPE) {
+          taperape = (TAPERAPE*)eptr->p_elem;
+          if (taperape->sticky) {
+            maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+            maxamp->x_max = x_max = taperape->a[taperape->e2Index];
+            maxamp->y_max = y_max = taperape->b[taperape->e2Index];
+            maxamp->elliptical = elliptical = 1;
+            maxampOpenCode = 0;
+            maxamp->openSide = NULL;
+            maxamp->exponent  = maxampExponent  = taperape->xExponent;
+            maxamp->yExponent = maxampYExponent = taperape->yExponent;
+          }
+        } else if (eptr->type==T_CHARGE) {
           if (elementsTracked!=0 && !warnedAboutChargePosition) {
 	    warnedAboutChargePosition = 1;
             printf("Warning: the CHARGE element is not at the start of the beamline.\n");
@@ -1278,10 +1301,36 @@ long do_tracking(
 		nLeft = trackThroughApContour(coord, (APCONTOUR*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
 	      break;
 	    case T_TAPERAPC:
+              taperapc = (TAPERAPC*)eptr->p_elem;
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
 		drift_beam(coord, nToTrack, ((TAPERAPC*)eptr->p_elem)->length, run->default_order);
 	      else
 		nLeft = trackThroughTaperApCirc(coord, (TAPERAPC*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+              if (taperapc->sticky) {
+                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+                maxamp->x_max = maxamp->y_max = x_max = y_max = taperapc->r[taperapc->e2Index];
+                maxamp->elliptical = elliptical = 1;
+                maxampOpenCode = 0;
+                maxamp->openSide = NULL;
+                maxamp->exponent = maxamp->yExponent = maxampExponent = maxampYExponent = 2;
+              }
+	      break;
+	    case T_TAPERAPE:
+              taperape = (TAPERAPE*)eptr->p_elem;
+	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
+		drift_beam(coord, nToTrack, taperape->length, run->default_order);
+	      else
+		nLeft = trackThroughTaperApElliptical(coord, taperape, nToTrack, accepted, last_z, *P_central);
+              if (taperape->sticky) {
+                maxamp = &maxampBuf; /* needed by KQUAD, CSBEND, etc */
+                maxamp->x_max = x_max = taperape->a[taperape->e2Index];
+                maxamp->y_max = y_max = taperape->b[taperape->e2Index];
+                maxamp->elliptical = elliptical = 1;
+                maxampOpenCode = 0;
+                maxamp->openSide = NULL;
+                maxamp->exponent  = maxampExponent  = taperape->xExponent;
+                maxamp->yExponent = maxampYExponent = taperape->yExponent;
+              }
 	      break;
 	    case T_CLEAN:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))

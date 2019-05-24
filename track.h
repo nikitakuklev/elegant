@@ -916,7 +916,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BOFFAXE 123
 #define T_APCONTOUR 124
 #define T_TAPERAPC 125
-#define N_TYPES  126
+#define T_TAPERAPE 126
+#define N_TYPES  127
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1048,7 +1049,8 @@ extern char *entity_text[N_TYPES];
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 10
-#define N_TAPERAPC_PARAMS 5
+#define N_TAPERAPC_PARAMS 6
+#define N_TAPERAPE_PARAMS 12
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3331,8 +3333,21 @@ typedef struct {
 extern PARAMETER taperapc_param[N_TAPERAPC_PARAMS];
 
 typedef struct {
-  double length, rStart, rEnd, dx, dy;
+  double length, r[2], dx, dy;
+  short sticky;
+  /* internal use only */
+  short e1Index, e2Index;
 } TAPERAPC;
+
+/* tapered elliptical aperture */
+extern PARAMETER taperape_param[N_TAPERAPE_PARAMS];
+
+typedef struct {
+  double length, a[2], b[2], dx, dy, tilt, resolution;
+  short xExponent, yExponent, sticky;
+  /* internal use only */
+  short e1Index, e2Index;
+} TAPERAPE;
 
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
@@ -3884,6 +3899,8 @@ long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, doub
                            double Po);
 long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
                            double Po);
+long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
+                                   double Po);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);
  

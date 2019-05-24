@@ -273,7 +273,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
 
-    if (IS_BEND(type) || type==T_NIBEND)
+    if (IS_BEND(type) || type==T_NIBEND || type==T_TAPERAPC || type==T_TAPERAPE)
       setEdgeIndices(eptr);
 
     switch (type) {
@@ -552,7 +552,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     copy_p_elem(e1->p_elem, e2->p_elem, e1->type);
     copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     e1->divisions = 1;
-    if (reverse && IS_BEND(e1->type))
+    if (reverse && (IS_BEND(e1->type) || e1->type==T_TAPERAPC || e1->type==T_TAPERAPE))
       swapEdgeIndices(e1);
     e1->firstOfDivGroup = 0;
     if (reverse && divisions<=1 && e1->type==T_KQUAD) {
@@ -1252,6 +1252,14 @@ void copy_p_elem(char *target, char *source, long type)
     ((BRAT*)target)->initialized = ((BRAT*)source)->initialized;
     ((BRAT*)target)->dataIndex = ((BRAT*)source)->dataIndex;
     break;
+  case T_TAPERAPC:
+    ((TAPERAPC*)target)->e1Index = ((TAPERAPC*)source)->e1Index;
+    ((TAPERAPC*)target)->e2Index = ((TAPERAPC*)source)->e2Index;
+    break;
+  case T_TAPERAPE:
+    ((TAPERAPE*)target)->e1Index = ((TAPERAPE*)source)->e1Index;
+    ((TAPERAPE*)target)->e2Index = ((TAPERAPE*)source)->e2Index;
+    break;
   case  T_PEPPOT:
     /* Need to modernize pepper-pot element to read data from SDDS file */
     pps = (PEPPOT*)source;
@@ -1328,8 +1336,17 @@ void setEdgeIndices(ELEMENT_LIST *e1)
     csrbptr->e1Index = 0;
     csrbptr->e2Index = 1;
     break;
+  case T_TAPERAPC:
+    ((TAPERAPC*)e1->p_elem)->e1Index = 0;
+    ((TAPERAPC*)e1->p_elem)->e2Index = 1;
+    break;
+  case T_TAPERAPE:
+    ((TAPERAPE*)e1->p_elem)->e1Index = 0;
+    ((TAPERAPE*)e1->p_elem)->e2Index = 1;
+    break;
   case T_CCBEND:
     ((CCBEND*)e1->p_elem)->edgeFlip = 0;
+    break;
   default:
     break;
   }
@@ -1343,6 +1360,8 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   CSRCSBEND *csrbptr;
   NIBEND *nibptr;
   CCBEND *ccbptr;
+  TAPERAPC *taperapc;
+  TAPERAPE *taperape;
 
   switch (e1->type) {
   case T_SBEN:
@@ -1369,6 +1388,14 @@ void swapEdgeIndices(ELEMENT_LIST *e1)
   case T_CCBEND:
     ccbptr = (CCBEND*)e1->p_elem;
     ccbptr->edgeFlip = !ccbptr->edgeFlip;
+    break;
+  case T_TAPERAPC:
+    taperapc = (TAPERAPC*)e1->p_elem;
+    SWAP_SHORT(taperapc->e1Index, taperapc->e2Index);
+    break;
+  case T_TAPERAPE:
+    taperape = (TAPERAPE*)e1->p_elem;
+    SWAP_SHORT(taperape->e1Index, taperape->e2Index);
     break;
   default:
     break;

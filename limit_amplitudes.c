@@ -1467,13 +1467,13 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
 
   rho = rho2 = rStart = rStart2 = r2Limit = 0;
   if (taperApC->length>0) {
-    rho = (taperApC->rEnd-taperApC->rStart)/taperApC->length;
+    rho = (taperApC->r[taperApC->e2Index]-taperApC->r[taperApC->e1Index])/taperApC->length;
     rho2 = sqr(rho);
-    rStart = taperApC->rStart;
-    rStart2 = sqr(taperApC->rStart);
+    rStart = taperApC->r[taperApC->e1Index];
+    rStart2 = sqr(taperApC->r[taperApC->e1Index]);
   } else {
     rho = 0;
-    r = MIN(taperApC->rStart, taperApC->rEnd);
+    r = MIN(taperApC->r[taperApC->e1Index], taperApC->r[taperApC->e2Index]);
     r2Limit = sqr(r);
   }
   dx = taperApC->dx;
@@ -1509,8 +1509,105 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
       initial[itop][5] = Po*(1+initial[itop][5]);
       --itop;
       --ip;
-    }
+    } else
+      exactDrift(initial+ip, 1, taperApC->length);
   }
+  return itop+1;
+}
+
+long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
+                                   double Po)
+{
+  long ip, itop, isLost, wasLost, iz;
+  double *coord;
+  double x, y, x0, y0, xp, yp, r2, zLost, z0, z1, xe, ye, theta;
+  double a, b, dz, dadz, dbdz, re2, ct, st;
+
+  if (taperApE->length<0)
+    bombElegant("TAPERAPE has negative length, which is not allowed", NULL);
+  if (taperApE->length>0) {
+    dadz = (taperApE->a[taperApE->e2Index]-taperApE->a[taperApE->e1Index])/taperApE->length;
+    dbdz = (taperApE->b[taperApE->e2Index]-taperApE->b[taperApE->e1Index])/taperApE->length;
+  } else {
+    dadz = dbdz = 0;
+  }
+
+  if (taperApE->dx || taperApE->dy)
+    offsetBeamCoordinates(initial, np, taperApE->dx, taperApE->dy, 0);
+  if (taperApE->tilt)
+    rotateBeamCoordinates(initial, np, taperApE->tilt);
+
+  itop = np-1;
+  for (ip=0; ip<=itop; ip++) {
+    coord = initial[ip];
+    dz = 0;
+    x0 = coord[0];
+    y0 = coord[2];
+    xp = coord[1];
+    yp = coord[3];
+    z0 = 0;
+    z1 = taperApE->length;
+    dz = (z1-z0)/9;
+    zLost = -1;
+    wasLost = 0;
+    do {
+      isLost = 0;
+      for (iz=0; iz<10; iz++) {
+        x = x0 + xp*(z0+iz*dz);
+        y = y0 + yp*(z0+iz*dz);
+        r2 = sqr(x) + sqr(y);
+        theta = atan2(y, x);
+        a = dadz*(z0+iz*dz) + taperApE->a[taperApE->e1Index];
+        b = dbdz*(z0+iz*dz) + taperApE->b[taperApE->e1Index];
+        ct = cos(theta);
+        st = sin(theta);
+        xe = a*pow(fabs(ct), 2/taperApE->xExponent)*SIGN(ct);
+        ye = b*pow(fabs(st), 2/taperApE->yExponent)*SIGN(st);
+        re2 = sqr(xe)+sqr(ye);
+        if (re2<=r2) {
+          isLost = 1;
+          /* fprintf(stderr, "Particle outside at z = %21.15le\n", z0 + iz*dz); */
+          break;
+        }
+        /* fprintf(stderr, "Particle inside at z = %21.15le\n", z0 + iz*dz); */
+      }
+      if (!isLost)
+        break;
+      if (iz==0) {
+        /* assume lost at iz=0 */
+        zLost = z0;
+        break;
+      }
+      z1 = z0 + iz*dz;
+      z0 = z1 - dz;
+      zLost = (z0+z1)/2;
+      dz /= 5;
+      wasLost = 1;
+      /* fprintf(stderr, "Particle lost between z = %21.15e and %21.15e, dz = %le\n", z0, z1, dz); */
+    } while (dz>taperApE->resolution);
+
+    if (wasLost && !isLost)
+      bombElegant("Problem with TAPERAPE: Particle that was lost is no longer lost. Seek expert help.", NULL);
+
+    if (isLost) {
+      coord[0] += zLost*xp;
+      coord[2] += zLost*yp;
+      swapParticles(initial[ip], initial[itop]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[itop]);
+      initial[itop][4] = zStartElem+zLost;
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+    } else
+      exactDrift(initial+ip, 1, taperApE->length);
+  }
+
+  if (taperApE->tilt)
+    rotateBeamCoordinates(initial, np, -taperApE->tilt);
+  if (taperApE->dx || taperApE->dy)
+    offsetBeamCoordinates(initial, np, -taperApE->dx, -taperApE->dy, 0);
+
   return itop+1;
 }
 
