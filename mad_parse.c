@@ -472,7 +472,7 @@ long expand_phys(
   /* it isn't an element, so search list of beam-lines for occurence
    * of the full name 
    */
-  printf("entity = %s\n", entity); fflush(stdout);
+
   if (trunc_char)
     entity[max_name_length] = trunc_char;
   if ((editCmd=strstr(entity, "<<"))) {
@@ -484,7 +484,7 @@ long expand_phys(
     *editCmd = 0;
     editCmd += 2;
   }
-  printf("entity = %s\n", entity); fflush(stdout);
+
 
   for (il=0; il<nl; il++) {
     if (strcmp(line_list->name, entity)==0) {
