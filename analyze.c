@@ -1391,7 +1391,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       }
       
       eptrCopy = tmalloc(sizeof(*eptrCopy));
-      copy_element(eptrCopy, eptr, 0, 0, 0);
+      copy_element(eptrCopy, eptr, 0, 0, 0, NULL);
       storedElement[iStoredMatrices] = eptrCopy;
       storedElement[iStoredMatrices]->pred = 
 	storedElement[iStoredMatrices]->succ = NULL;

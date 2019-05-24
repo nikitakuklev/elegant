@@ -451,8 +451,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       ELEMENT_LIST *eptr2, *next;
       next = eptr->succ;
       eptr2 = tmalloc(sizeof(*eptr2));
-      copy_element(eptr2, eptr, 0, 0, 0);
-      copy_element(eptr, eptr_add, 0, 0, 0);
+      copy_element(eptr2, eptr, 0, 0, 0, NULL);
+      copy_element(eptr, eptr_add, 0, 0, 0, NULL);
       eptr->pred = NULL;
       eptr->succ = eptr2;
       eptr2->pred = eptr;
@@ -1522,7 +1522,7 @@ void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
   ELEMENT_LIST *eptr;
   printf("Adding %s after %s\n", elem1->name, elem0->name);
   eptr = tmalloc(sizeof(*eptr));
-  copy_element(eptr, elem1, 0, 0, 0);
+  copy_element(eptr, elem1, 0, 0, 0, NULL);
 
   eptr->pred = elem0;
   eptr->succ = elem0->succ;
@@ -1548,7 +1548,7 @@ ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1)
 {
   ELEMENT_LIST *eptr;
   eptr = tmalloc(sizeof(*eptr));
-  copy_element(eptr, elem1, 0, 0, 0);
+  copy_element(eptr, elem1, 0, 0, 0, NULL);
   printf("Replacing occurrence %ld of %s with %s\n",
 	 elem0->occurence, elem0->name, elem1->name);
 

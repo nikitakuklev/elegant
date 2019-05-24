@@ -418,7 +418,7 @@ long expand_phys(
     )
 {
   long ie, il, i, j, comparison, div;
-  char trunc_char;
+  char trunc_char, *editCmd;
   ELEMENT_LIST *elem0;
   double length;
 
@@ -453,7 +453,7 @@ long expand_phys(
       for (i=0; i<multiplier; i++) {
 	long j;
 	for (j=0; j<div; j++) {
-	  copy_element(leptr, elem_list, reverse, j, div);
+	  copy_element(leptr, elem_list, reverse, j, div, NULL);
 	  leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
 #ifdef DEBUG
           printf("expand_phys copied: name=%s divisions=%ld first=%hd j=%ld\n",
@@ -472,13 +472,25 @@ long expand_phys(
   /* it isn't an element, so search list of beam-lines for occurence
    * of the full name 
    */
+  printf("entity = %s\n", entity); fflush(stdout);
   if (trunc_char)
     entity[max_name_length] = trunc_char;
+  if ((editCmd=strstr(entity, "<<"))) {
+    /* extract edit command for this line */
+    if (strlen(editCmd+2)==0) {
+      fprintf(stderr, "Problem with edit command for beamline segment: %s\n", entity);
+      exitElegant(1);
+    }
+    *editCmd = 0;
+    editCmd += 2;
+  }
+  printf("entity = %s\n", entity); fflush(stdout);
+
   for (il=0; il<nl; il++) {
     if (strcmp(line_list->name, entity)==0) {
       ie = 0;
       for (i=0; i<multiplier; i++) {
-	ie += copy_line(leptr, &(line_list->elem), line_list->n_elems, reverse, entity);
+	ie += copy_line(leptr, &(line_list->elem), line_list->n_elems, reverse, entity, editCmd);
 	for (j=0; j<line_list->n_elems; j++) 
 	  leptr = leptr->succ;
       }
@@ -504,13 +516,32 @@ long expand_phys(
  * purpose: copy an element 
  */
 
-void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division, long divisions)
+void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division, long divisions, char *editCmd)
 {
     log_entry("copy_element");
-    cp_str(&e1->name, e2->name);
+    if (editCmd) {
+      char *buffer;
+      buffer = tmalloc(sizeof(*buffer)*(strlen(e2->name)+1)*10);
+      strcpy(buffer, e2->name);
+      edit_string(buffer, editCmd);
+      cp_str(&e1->name, buffer);
+      free(buffer);
+    } else {
+      cp_str(&e1->name, e2->name);
+    }
     e1->group = NULL;
-    if (e2->group)
-      cp_str(&e1->group, e2->group);
+    if (e2->group) {
+      if (editCmd) {
+        char *buffer;
+        buffer = tmalloc(sizeof(*buffer)*(strlen(e2->group)+1)*10);
+        strcpy(buffer, e2->group);
+        edit_string(buffer, editCmd);
+        cp_str(&e1->group, buffer);
+        free(buffer);
+      } else {
+        cp_str(&e1->group, e2->group);
+      }
+    }
     e1->end_pos = 0;
     e1->flags   = 0;
     e1->matrix  = NULL;
@@ -585,7 +616,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
  * purpose: copy a series of elements from a linked-list 
  */
 
-long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of)
+long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of, char *editCmd)
 {
     register long i;
 
@@ -593,7 +624,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
     
     if (!reverse) {
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2, reverse, 0, 0);
+            copy_element(e1, e2, reverse, 0, 0, editCmd);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             e1->divisions = e2->divisions;
             e1->firstOfDivGroup = e2->firstOfDivGroup;
@@ -605,7 +636,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
         for (i=0; i<(ne-1); i++)
             e2 = e2->succ;
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2, reverse, 0, 0);
+            copy_element(e1, e2, reverse, 0, 0, editCmd);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             e1->divisions = e2->divisions;
             e1->firstOfDivGroup = e2->firstOfDivGroup;
