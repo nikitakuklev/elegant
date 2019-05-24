@@ -915,7 +915,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_HKPOLY 122
 #define T_BOFFAXE 123
 #define T_APCONTOUR 124
-#define N_TYPES  125
+#define T_TAPERAPC 125
+#define N_TYPES  126
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1047,6 +1048,8 @@ extern char *entity_text[N_TYPES];
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 10
+#define N_TAPERAPC_PARAMS 5
+
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -3324,6 +3327,13 @@ typedef struct {
   long nPoints;
 } APCONTOUR;
 
+/* aperture from section of right circular cylinder */
+extern PARAMETER taperapc_param[N_TAPERAPC_PARAMS];
+
+typedef struct {
+  double length, rStart, rEnd, dx, dy;
+} TAPERAPC;
+
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
 /* macros for bending magnets */ 
@@ -3872,7 +3882,8 @@ long track_through_speedbump(double **initial, SPEEDBUMP *speedbump, long np, do
 int pointIsInsideContour(double x0, double y0, double *x, double *y, long n);
 long trackThroughApContour(double **initial, APCONTOUR *apcontour, long np, double **accepted, double z,
                            double Po);
-
+long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
+                           double Po);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 long find_nearby_array_entry(double *entry, long n, double key);
  
@@ -3892,9 +3903,9 @@ extern void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input);
 extern long expand_phys(ELEMENT_LIST *leptr, char *entity, ELEMENT_LIST *elem_list,     
     long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of);
 extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division,
-                         long divisions);
+                         long divisions, char *editCmd);
 void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
-extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of);
+  extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of, char *editCmd);
 extern long tell_type(char *s, ELEMENT_LIST *elem);
 extern char *get_param_name(char *s);
 extern char *find_param(char *s, char *param);

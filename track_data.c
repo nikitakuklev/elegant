@@ -70,7 +70,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR"
+    "APCONTOUR", "TAPERAPC",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -202,7 +202,8 @@ char *entity_text[N_TYPES] = {
     "A canonically-integrated straight dipole magnet, assumed to have multipoles defined in Cartesian coordinates.",
     "Applies kick according to a Hamiltonian that's a polynomial function of x and y together with a generalized drift also given as a polynomial of qx and qy",
     "A straight magnetic field element using off-axis expansion from an on-axis derivative.",
-    "An aperture (or its inverse) defined by (x, y) points in an SDDS file."
+    "An aperture (or its inverse) defined by (x, y) points in an SDDS file.",
+    "A tapered aperture that is a section of a circular cylinder.",
     } ;
 
 QUAD quad_example;
@@ -3427,6 +3428,16 @@ PARAMETER apcontour_param[N_APCONTOUR_PARAMS] = {
     {"YCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.yColumn), NULL, 0.0, 0, "name of containing y data"},
     };
 
+TAPERAPC taperapc_example;
+/* tapered circular aperture physical parameters */
+PARAMETER taperapc_param[N_TAPERAPC_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.length), NULL, 0.0, 0, "length"},
+    {"RSTART", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.rStart), NULL, 0.0, 0, "radius at the start"},
+    {"REND", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.rEnd), NULL, 0.0, 0, "radius at the end"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taperapc_example.dy), NULL, 0.0, 0, "misalignment"},
+    };
+
 
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
@@ -3577,6 +3588,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   },
     { N_BOFFAXE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,   sizeof(BOFFAXE),  boffaxe_param  },
     { N_APCONTOUR_PARAMS, MAT_LEN_NCAT, sizeof(APCONTOUR), apcontour_param},
+    { N_TAPERAPC_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPC), taperapc_param},
 } ;
 
 void compute_offsets()

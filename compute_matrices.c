@@ -1683,7 +1683,7 @@ VMATRIX *compute_matrix(
       case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
       case T_KICKER: case T_RFMODE: case T_REMCOR: 
       case T_DSCATTER: case T_MKICKER: case T_SPEEDBUMP:
-      case T_APCONTOUR:
+      case T_APCONTOUR: case T_TAPERAPC:
       default:
         if (entity_description[elem->type].flags&HAS_LENGTH)
             elem->matrix = drift_matrix(*((double*)elem->p_elem), run->default_order);

@@ -1277,6 +1277,12 @@ long do_tracking(
 	      else
 		nLeft = trackThroughApContour(coord, (APCONTOUR*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
 	      break;
+	    case T_TAPERAPC:
+	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
+		drift_beam(coord, nToTrack, ((TAPERAPC*)eptr->p_elem)->length, run->default_order);
+	      else
+		nLeft = trackThroughTaperApCirc(coord, (TAPERAPC*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
+	      break;
 	    case T_CLEAN:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
 		nLeft = remove_outlier_particles(coord, (CLEAN*)eptr->p_elem, 

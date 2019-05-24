@@ -1458,3 +1458,59 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   return i_top+1;
 }
 
+long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, double **accepted, double z,
+                             double Po)
+{
+  long ip, itop, isLost;
+  double *coord, determinant, rho, rho2, r, rStart, rStart2, r2Limit, dz, dx, dy;
+  double x, y, xp, yp;
+
+  rho = rho2 = rStart = rStart2 = r2Limit = 0;
+  if (taperApC->length>0) {
+    rho = (taperApC->rEnd-taperApC->rStart)/taperApC->length;
+    rho2 = sqr(rho);
+    rStart = taperApC->rStart;
+    rStart2 = sqr(taperApC->rStart);
+  } else {
+    rho = 0;
+    r = MIN(taperApC->rStart, taperApC->rEnd);
+    r2Limit = sqr(r);
+  }
+  dx = taperApC->dx;
+  dy = taperApC->dy;
+
+  itop = np-1;
+  for (ip=0; ip<=itop; ip++) {
+    coord = initial[ip];
+    isLost = 0;
+    dz = 0;
+    x = coord[0] - dx;
+    y = coord[2] - dy;
+    xp = coord[1];
+    yp = coord[3];
+    if ((sqr(x)+sqr(y))>=rStart2) 
+      isLost = 1;
+    else if (rho) {
+      double a, b, c;
+      a = sqr(xp) + sqr(yp) - rho2;
+      b = 2*x*xp + 2*y*yp - 2*rStart*rho;
+      c = sqr(x) + sqr(y) - rStart2;
+      if ((determinant = sqr(b)-4*a*c)>=0 && (dz = (-b+sqrt(determinant))/(2*a))>=0 && dz<=taperApC->length)
+        isLost = 1;
+    } else if ((sqr(x)+sqr(y))>=r2Limit)
+      isLost = 1;
+    if (isLost) {
+      coord[0] += dz*xp;
+      coord[2] += dz*yp;
+      swapParticles(initial[ip], initial[itop]);
+      if (accepted)
+        swapParticles(accepted[ip], accepted[itop]);
+      initial[itop][4] = z+dz;
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+    }
+  }
+  return itop+1;
+}
+
