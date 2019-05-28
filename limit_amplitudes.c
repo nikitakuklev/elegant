@@ -1372,9 +1372,9 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
                            double Po
                            )
 {
-  long iz, ip, i_top;
-  double dz;
-  short lost;
+  long ip, i_top;
+  double z0, z1, zLost;
+  short lost0, lost1, lost2;
   int lossCode;
   
   if (!apcontour->initialized) {
@@ -1405,8 +1405,8 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
 	!(apcontour->y = SDDS_GetColumnInDoubles(&SDDSin, apcontour->yColumn)))
       bombElegantVA("Error: failed to get x or y data from APCONTOUR file %s\n", apcontour->filename);
     SDDS_Terminate(&SDDSin);
-    if (apcontour->nSegments<=0)
-      bombElegant("Error: APCONTOUR has N_SEGMENTS<=0", NULL);
+    if (apcontour->resolution<=0)
+      bombElegant("Error: APCONTOUR has RESOLUTION<=0", NULL);
     if (apcontour->x[0]!=apcontour->x[apcontour->nPoints-1] ||
 	apcontour->y[0]!=apcontour->y[apcontour->nPoints-1])
       bombElegantVA("Error: contour provided in file %s for APCONTOUR is not a closed shape\n", apcontour->filename);
@@ -1425,28 +1425,43 @@ long trackThroughApContour(double **coord, APCONTOUR *apcontour, long np, double
   if (apcontour->invert)
     lossCode = 1;
   i_top = np - 1;
-  dz = apcontour->length/apcontour->nSegments;
   for (ip=0; ip<=i_top; ip++) {
-    lost = 0;
-    for (iz=0; iz<=apcontour->nSegments; iz++) {
-      if (pointIsInsideContour(coord[ip][0], coord[ip][2], apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
-	lost = 1;
-	break;
-      } else if (iz!=apcontour->nSegments) {
-	coord[ip][0] += coord[ip][1]*dz;
-	coord[ip][2] += coord[ip][3]*dz;
-	coord[ip][4] += dz*sqrt(1 + sqr(coord[ip][1]) + sqr(coord[ip][3]));
+    z0 = zLost = 0;
+    z1 = apcontour->length;
+    lost0 = lost1 = 0;
+    if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z0,
+			     coord[ip][2]+coord[ip][3]*z0,
+			     apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
+      lost0 = 1;
+    } else if (apcontour->length>0) {
+      if (pointIsInsideContour(coord[ip][0]+coord[ip][1]*z1,
+			       coord[ip][2]+coord[ip][3]*z1,
+			       apcontour->x, apcontour->y, apcontour->nPoints)==lossCode) {
+	lost1 = 1;
+	while ((z1-z0)>apcontour->resolution) {
+	  zLost = (z0+z1)/2;
+	  lost2 = pointIsInsideContour(coord[ip][0]+coord[ip][1]*zLost,
+				       coord[ip][2]+coord[ip][3]*zLost,
+				       apcontour->x, apcontour->y, apcontour->nPoints)==lossCode;
+	  if (lost2==lost1)
+	    z1 = zLost;
+	  else if (lost2==lost0)
+	    z0 = zLost;
+	}
+	zLost = (z0+z1)/2;
       }
     }
-    if (lost) {
-      coord[ip][4] = z + iz*dz;
+    if (lost0+lost1) {
+      exactDrift(coord+ip, 1, zLost);
+      coord[ip][4] = z + zLost;
       coord[ip][5] = Po*(1+coord[ip][5]);
       swapParticles(coord[ip], coord[i_top]);
       if (accepted)
         swapParticles(accepted[ip], accepted[i_top]);
       --i_top;
       --ip;
-    }
+    } else
+      exactDrift(coord+ip, 1, apcontour->length);
   }
 
   /* misalignments */
@@ -1575,7 +1590,7 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
 			      taperApE->xExponent, taperApE->yExponent)) {
       isLost0 = 1;
       zLost = z0;
-    } else {
+    } else if (taperApE->length>0) {
       if (!insideTaperedEllipse(x0, xp, y0, yp, z1,
 				taperApE->a[taperApE->e1Index], dadz, 
 				taperApE->b[taperApE->e1Index],	dbdz,

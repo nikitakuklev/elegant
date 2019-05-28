@@ -3423,7 +3423,7 @@ PARAMETER apcontour_param[N_APCONTOUR_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"N_SEGMENTS", "", IS_LONG, 0, (long)((char *)&apcontour_example.nSegments), NULL, 0.0, 1, "number of segments to break into for improved resolution of loss point"},
+    {"RESOLUTION", "M", IS_DOUBLE, 0, (long)((char *)&apcontour_example.resolution), NULL, 0.0, 0, "z resolution of finding intersection"},
     {"INVERT", "", IS_LONG, 0, (long)((char *)&apcontour_example.invert), NULL, 0.0, 0, "if non-zero, contour defines an obstruction rather than an aperture"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&apcontour_example.filename), NULL, 0.0, 0, "name of file containing contour data"},
     {"XCOLUMN", "", IS_STRING, 0, (long)((char *)&apcontour_example.xColumn), NULL, 0.0, 0, "name of column containing x data"},

@@ -3320,7 +3320,7 @@ typedef struct {
   double length;
   double tilt;            /* roll angle */
   double dx, dy, dz;      /* misalignments */
-  long nSegments;         /* segments to break length into */
+  double resolution;
   short invert;           /* If non-zero, the shape is an obstruction not an aperture */
   char *filename;         /* filename for generalized gradients vs z */
   char *xColumn;          /* name of column containing x data */
