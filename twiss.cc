@@ -2497,6 +2497,7 @@ double find_acceptance(
       if (aperture_set)
         aperture = aperture - fabs(centroid-offset);
       if (taperApR->sticky) {
+        elliptical_tube = 0;
         tube_aperture = aperture;
         tube_set = 1;
       }
