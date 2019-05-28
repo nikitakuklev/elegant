@@ -1,4 +1,4 @@
-/*************************************************************************\
+/************************************************************************* \
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
 * Copyright (c) 2002 The Regents of the University of California, as
@@ -1483,11 +1483,11 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
   for (ip=0; ip<=itop; ip++) {
     coord = initial[ip];
     isLost = 0;
-    dz = 0;
     x = coord[0] - dx;
     y = coord[2] - dy;
     xp = coord[1];
     yp = coord[3];
+    dz = 0;
     if ((sqr(x)+sqr(y))>=rStart2) 
       isLost = 1;
     else if (rho) {
@@ -1515,13 +1515,35 @@ long trackThroughTaperApCirc(double **initial, TAPERAPC *taperApC, long np, doub
   return itop+1;
 }
 
+int insideTaperedEllipse(double x0, double xp, double y0, double yp, double z,
+			 double a0, double dadz, double b0, double dbdz,
+			 long xExponent, long yExponent)
+{
+  double x, y, r2, theta, ct, st, a, b;
+  double xe, ye, re2;
+  
+  x = x0 + xp*z;
+  y = y0 + yp*z;
+  r2 = sqr(x) + sqr(y);
+  theta = atan2(y, x);
+  a = dadz*z + a0;
+  b = dbdz*z + b0;
+  ct = cos(theta);
+  st = sin(theta);
+  xe = a*pow(fabs(ct), 2/xExponent)*SIGN(ct);
+  ye = b*pow(fabs(st), 2/yExponent)*SIGN(st);
+  re2 = sqr(xe)+sqr(ye);
+  if (re2<=r2)
+    return 0;
+  return 1;
+}
+
 long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np, double **accepted, double zStartElem,
                                    double Po)
 {
-  long ip, itop, isLost, wasLost, iz;
+  long ip, itop, isLost0, isLost1, isLost2;
+  double z0, z1, x0, y0, xp, yp, zLost, dadz, dbdz;
   double *coord;
-  double x, y, x0, y0, xp, yp, r2, zLost, z0, z1, xe, ye, theta;
-  double a, b, dz, dadz, dbdz, re2, ct, st;
 
   if (taperApE->length<0)
     bombElegant("TAPERAPE has negative length, which is not allowed", NULL);
@@ -1540,56 +1562,41 @@ long trackThroughTaperApElliptical(double **initial, TAPERAPE *taperApE, long np
   itop = np-1;
   for (ip=0; ip<=itop; ip++) {
     coord = initial[ip];
-    dz = 0;
     x0 = coord[0];
     y0 = coord[2];
     xp = coord[1];
     yp = coord[3];
-    z0 = 0;
+    z0 = zLost = 0;
     z1 = taperApE->length;
-    dz = (z1-z0)/9;
-    zLost = -1;
-    wasLost = 0;
-    do {
-      isLost = 0;
-      for (iz=0; iz<10; iz++) {
-        x = x0 + xp*(z0+iz*dz);
-        y = y0 + yp*(z0+iz*dz);
-        r2 = sqr(x) + sqr(y);
-        theta = atan2(y, x);
-        a = dadz*(z0+iz*dz) + taperApE->a[taperApE->e1Index];
-        b = dbdz*(z0+iz*dz) + taperApE->b[taperApE->e1Index];
-        ct = cos(theta);
-        st = sin(theta);
-        xe = a*pow(fabs(ct), 2/taperApE->xExponent)*SIGN(ct);
-        ye = b*pow(fabs(st), 2/taperApE->yExponent)*SIGN(st);
-        re2 = sqr(xe)+sqr(ye);
-        if (re2<=r2) {
-          isLost = 1;
-          /* fprintf(stderr, "Particle outside at z = %21.15le\n", z0 + iz*dz); */
-          break;
-        }
-        /* fprintf(stderr, "Particle inside at z = %21.15le\n", z0 + iz*dz); */
+    isLost0 = isLost1 = 0;
+    if (!insideTaperedEllipse(x0, xp, y0, yp, z0,
+			      taperApE->a[taperApE->e1Index], dadz, 
+			      taperApE->b[taperApE->e1Index], dbdz, 
+			      taperApE->xExponent, taperApE->yExponent)) {
+      isLost0 = 1;
+      zLost = z0;
+    } else {
+      if (!insideTaperedEllipse(x0, xp, y0, yp, z1,
+				taperApE->a[taperApE->e1Index], dadz, 
+				taperApE->b[taperApE->e1Index],	dbdz,
+				taperApE->xExponent, taperApE->yExponent)) {
+	isLost1 = 1;
+	while ((z1-z0)>taperApE->resolution) {
+	  zLost = (z0+z1)/2;
+	  isLost2 = !insideTaperedEllipse(x0, xp, y0, yp, zLost,
+					 taperApE->a[taperApE->e1Index], dadz, 
+					 taperApE->b[taperApE->e1Index], dbdz,
+					 taperApE->xExponent, taperApE->yExponent);
+	  if (isLost2==isLost1)
+	    z1 = zLost;
+	  else if (isLost2==isLost0)
+	    z0 = zLost;
+	}
+	zLost = (z0+z1)/2;
       }
-      if (!isLost)
-        break;
-      if (iz==0) {
-        /* assume lost at iz=0 */
-        zLost = z0;
-        break;
-      }
-      z1 = z0 + iz*dz;
-      z0 = z1 - dz;
-      zLost = (z0+z1)/2;
-      dz /= 5;
-      wasLost = 1;
-      /* fprintf(stderr, "Particle lost between z = %21.15e and %21.15e, dz = %le\n", z0, z1, dz); */
-    } while (dz>taperApE->resolution);
+    }
 
-    if (wasLost && !isLost)
-      bombElegant("Problem with TAPERAPE: Particle that was lost is no longer lost. Seek expert help.", NULL);
-
-    if (isLost) {
+    if (isLost0+isLost1) {
       coord[0] += zLost*xp;
       coord[2] += zLost*yp;
       swapParticles(initial[ip], initial[itop]);
