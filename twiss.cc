@@ -2334,7 +2334,7 @@ double find_acceptance(
   double beta, acceptance, tmp;
   double tube_aperture, aperture, centroid, offset;
   double other_centroid, a_tube, b_tube, aperture1;
-  long aperture_set, elliptical_tube, tube_set;
+  long aperture_set, elliptical_tube, tube_set, apIndex;
   SCRAPER *scraper;
   SPEEDBUMP *speedbump;
   ELEMENT_LIST *ap_elem;
@@ -2440,56 +2440,60 @@ double find_acceptance(
     case T_TAPERAPC:
       taperApC = ((TAPERAPC*)ap_elem->p_elem);
       aperture_set = 1;
+      apIndex = ap_elem==elem ? taperApC->e2Index : taperApC->e1Index;
       if (plane)
-        aperture = effectiveEllipticalAperture(taperApC->r[taperApC->e2Index],
-                                               taperApC->r[taperApC->e2Index],
+        aperture = effectiveEllipticalAperture(taperApC->r[apIndex],
+                                               taperApC->r[apIndex],
                                                centroid - taperApC->dy,
                                                other_centroid - taperApC->dx);
       else
-        aperture = effectiveEllipticalAperture(taperApC->r[taperApC->e2Index],
-                                               taperApC->r[taperApC->e2Index],
+        aperture = effectiveEllipticalAperture(taperApC->r[apIndex],
+                                               taperApC->r[apIndex],
                                                centroid - taperApC->dx,
                                                other_centroid - taperApC->dy);
       if (taperApC->sticky) {
         tube_set = elliptical_tube = 1; 
-        a_tube = b_tube = taperApC->r[taperApC->e2Index];
+        a_tube = b_tube = taperApC->r[apIndex];
       }
       break;
     case T_TAPERAPE:
       taperApE = ((TAPERAPE*)ap_elem->p_elem);
       aperture_set = 1;
+      apIndex = ap_elem==elem ? taperApE->e2Index : taperApE->e1Index;
       if (plane)
-        aperture = effectiveEllipticalAperture(taperApE->b[taperApE->e2Index],
-                                               taperApE->a[taperApE->e2Index],
+        aperture = effectiveEllipticalAperture(taperApE->b[apIndex],
+                                               taperApE->a[apIndex],
                                                centroid - taperApE->dy,
                                                other_centroid - taperApE->dx);
       else
-        aperture = effectiveEllipticalAperture(taperApE->a[taperApE->e2Index],
-                                               taperApE->b[taperApE->e2Index],
+        aperture = effectiveEllipticalAperture(taperApE->a[apIndex],
+                                               taperApE->b[apIndex],
                                                centroid - taperApE->dx,
                                                other_centroid - taperApE->dy);
       if (taperApE->sticky) {
         tube_set = elliptical_tube = 1; 
         if (plane) {
-          a_tube = taperApE->b[taperApE->e2Index];
-          b_tube = taperApE->a[taperApE->e2Index];
+          a_tube = taperApE->b[apIndex];
+          b_tube = taperApE->a[apIndex];
         } else {
-          a_tube = taperApE->a[taperApE->e2Index];
-          b_tube = taperApE->b[taperApE->e2Index];
+          a_tube = taperApE->a[apIndex];
+          b_tube = taperApE->b[apIndex];
         }
       }
       break;
     case T_TAPERAPR:
       taperApR = ((TAPERAPR*)ap_elem->p_elem);
+      apIndex = ap_elem==elem ? taperApR->e2Index : taperApR->e1Index;
+      aperture_set = 0;
       if (plane) {
-        if (taperApR->ymax[taperApR->e2Index]>0) {
-          aperture = taperApR->ymax[taperApR->e2Index];
+        if (taperApR->ymax[apIndex]>0) {
+          aperture = taperApR->ymax[apIndex];
           offset = taperApR->dy;
           aperture_set = 1;
         }
       } else {
-        if (taperApR->xmax[taperApR->e2Index]>0) {
-          aperture = taperApR->xmax[taperApR->e2Index];
+        if (taperApR->xmax[apIndex]>0) {
+          aperture = taperApR->xmax[apIndex];
           offset = taperApR->dx;
           aperture_set = 1;
         }
@@ -2568,6 +2572,7 @@ long has_aperture(ELEMENT_LIST *elem)
     return(0);
   switch (elem->type) {
   case T_MAXAMP: case T_RCOL: case T_ECOL: case T_SCRAPER:
+  case T_TAPERAPC: case T_TAPERAPR: case T_TAPERAPE:
     return(1);
   default:
     return(0);
