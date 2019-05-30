@@ -260,6 +260,13 @@ typedef struct element_list {
 #define PARAMETERS_ARE_PERTURBED 2
 #define VMATRIX_IS_VARIED 4
 #define VMATRIX_IS_PERTURBED 8
+    short chamberShape;
+#define ROUND_CHAMBER 0
+#define RECTANGULAR_CHAMBER 1
+#define ELLIPTICAL_CHAMBER 2
+#define SUPERELLIPTICAL_CHAMBER 3
+#define UNKNOWN_CHAMBER 4
+#define N_CHAMBER_SHAPES 5
     double Pref_input, Pref_output;
     double Pref_output_fiducial;
     VMATRIX *matrix;      /* pure matrix of this element */
@@ -275,6 +282,8 @@ typedef struct element_list {
     long divisions;    /* if element was subdivided, how many times */
     short firstOfDivGroup, ignore;
     } ELEMENT_LIST;
+
+extern char *chamberShapeChoice[N_CHAMBER_SHAPES];
 
 typedef struct {
     double centroid[6];

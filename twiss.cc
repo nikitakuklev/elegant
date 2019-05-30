@@ -38,6 +38,7 @@ void SetSDrivingTermsRow(SDDS_DATASET *SDDSout, long i, long row, double positio
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune, long n_periods);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
+void findChamberShapes(ELEMENT_LIST *elem);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void reset_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
@@ -940,7 +941,8 @@ static long twiss_count = 0;
 #define IC_ELEMENT 14
 #define IC_OCCURENCE 15
 #define IC_TYPE 16
-#define N_COLUMNS 17
+#define IC_CHAMBER_SHAPE 17
+#define N_COLUMNS 18
 
 #define IC_I1 N_COLUMNS
 #define IC_I2 (N_COLUMNS+1)
@@ -966,6 +968,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 {(char*)"ElementName", (char*)"&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
 {(char*)"ElementOccurence", (char*)"&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
 {(char*)"ElementType", (char*)"&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+{(char*)"ChamberShape", (char*)"&column name=ChamberShape type=string &end"},
 {(char*)"dI1", (char*)"&column name=dI1, type=double, description=\"Contribution to radiation integral 1\", units=m &end"} ,
 {(char*)"dI2", (char*)"&column name=dI2, type=double, description=\"Contribution to radiation integral 2\", units=1/m &end"} ,
 {(char*)"dI3", (char*)"&column name=dI3, type=double, description=\"Contribution to radiation integral 3\", units=1/m$a2$n &end"} ,
@@ -1497,7 +1500,8 @@ void dump_twiss_parameters(
         }
       if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, 
                              IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence, 
-                             IC_TYPE, entity_name[elem->type], -1)) {
+                             IC_TYPE, entity_name[elem->type], 
+                             IC_CHAMBER_SHAPE, chamberShapeChoice[elem->chamberShape], -1)) {
         SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -1545,7 +1549,8 @@ void dump_twiss_parameters(
       }
     if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, 
                            IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence, 
-                           IC_TYPE, entity_name[elem->type], -1)) {
+                           IC_TYPE, entity_name[elem->type], 
+                           IC_CHAMBER_SHAPE, chamberShapeChoice[elem->chamberShape], -1)) {
       SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -2121,6 +2126,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
   beamline->acceptance[0] = find_acceptance(beamline->elem_twiss, 0, run, &x_acc_name, &x_acc_z);
   beamline->acceptance[1] = find_acceptance(beamline->elem_twiss, 1, run, &y_acc_name, &y_acc_z);
+  findChamberShapes(beamline->elem_twiss);
 
   beamline->acceptance[2] = x_acc_z;
   beamline->acceptance[3] = y_acc_z;
@@ -5298,4 +5304,61 @@ double effectiveEllipticalAperture(double a, double b, double x, double y)
     aperture = sqrt(aperture) - fabs(x);
   }
   return aperture;
+}
+
+void findChamberShapes(ELEMENT_LIST *elem)
+{
+  short code;
+  MAXAMP *maxamp;
+  ECOL *ecol;
+  TAPERAPE *tape;
+
+  code = UNKNOWN_CHAMBER;
+  while (elem) {
+    switch (elem->type) {
+    case T_MAXAMP:
+      maxamp = (MAXAMP*)elem->p_elem;
+      if (maxamp->elliptical) {
+        if (maxamp->exponent<=2 && maxamp->yExponent<=2) {
+          if (maxamp->x_max==maxamp->y_max) 
+            code = ROUND_CHAMBER;
+          else
+            code = ELLIPTICAL_CHAMBER;
+        } else
+          code = SUPERELLIPTICAL_CHAMBER;
+      } else
+        code = RECTANGULAR_CHAMBER;
+      break;
+    case T_RCOL:
+      code = RECTANGULAR_CHAMBER;
+      break;
+    case T_ECOL:
+      ecol = (ECOL*)elem->p_elem;
+      if (ecol->exponent<=2 && ecol->yExponent<=2) {
+        if (ecol->x_max==ecol->y_max) 
+          code = ROUND_CHAMBER;
+        else 
+          code = ELLIPTICAL_CHAMBER;
+      } else
+        code = RECTANGULAR_CHAMBER;
+      break;
+    case T_TAPERAPR:
+      code = RECTANGULAR_CHAMBER;
+      break;
+    case T_TAPERAPC:
+      code = ROUND_CHAMBER;
+      break;
+    case T_TAPERAPE:
+      tape = (TAPERAPE*)elem->p_elem;
+      if (tape->xExponent<=2 && tape->yExponent<=2)
+        code = ELLIPTICAL_CHAMBER;
+      else
+        code = SUPERELLIPTICAL_CHAMBER;
+      break;
+    default:
+      break;
+    }
+    elem->chamberShape = code;
+    elem = elem->succ;
+  }
 }

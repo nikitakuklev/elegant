@@ -3709,3 +3709,7 @@ char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
 };
 #endif
 
+char *chamberShapeChoice[N_CHAMBER_SHAPES] = {
+  "round", "rect.", "ellip.", "sup.ellip.", "?",
+};
+
