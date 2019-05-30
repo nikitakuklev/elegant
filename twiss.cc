@@ -2423,7 +2423,8 @@ double find_acceptance(
                                                ((ECOL*)ap_elem->p_elem)->y_max,
                                                centroid - ((ECOL*)ap_elem->p_elem)->dx,
                                                other_centroid - ((ECOL*)ap_elem->p_elem)->dy);
-      aperture_set = 1;
+      if (aperture>0)
+        aperture_set = 1;
       break;
     case T_SCRAPER:
       scraper = (SCRAPER*)ap_elem->p_elem;
