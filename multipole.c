@@ -507,6 +507,7 @@ long multipole_tracking(
 
     if (!multipole)
         bombTracking("null MULT pointer (multipole_tracking)");
+    expandHamiltonian = multipole->expandHamiltonian;
 
     if ((n_kicks=multipole->n_kicks)<=0) 
       bombTracking("n_kicks<=0 in multipole_tracking()");
