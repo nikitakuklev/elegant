@@ -46,11 +46,38 @@ unsigned long parseFiducialMode(char *modeString)
         }
     }
 
+static long fiducializationBunch = -1;
+static int32_t idSlotsPerBunch = -1;
+void setFiducializationBunch(long b, int32_t n)
+{
+  fiducializationBunch = b;
+  idSlotsPerBunch = n;
+#if USE_MPI && MPI_DEBUG
+  printf("Fiducialization will use bunch %ld, idSlotsPerBunch=%ld\n", fiducializationBunch, (long)idSlotsPerBunch);
+  fflush(stdout);
+#endif
+}
+
 double findFiducialTime(double **part, long np, double s0, double sOffset,
                         double p0, unsigned long mode)
 {
   double tFid=0.0;
-  
+  long i;
+  long startPID, endPID;
+
+  if (fiducializationBunch<0 || idSlotsPerBunch<=0 || mode&FID_MODE_FULLBEAM)
+    startPID = endPID = -1;
+  else {
+    startPID = fiducializationBunch*idSlotsPerBunch + 1;
+    endPID = startPID + idSlotsPerBunch - 1;
+  }
+#if USE_MPI
+  mpiAbort = 0;
+#if MPI_DEBUG
+  printf("startPID = %ld, endPID = %ld\n", startPID, endPID);
+#endif
+#endif
+
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -68,24 +95,28 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
     tFid =  (s0+sOffset)/c_mks;
   else if (mode&FID_MODE_FIRST) {
 #if (!USE_MPI) 
-    if (np)
-     tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
-    else
-      bombElegant("0 particle for the FID_MODE_FIRST mode in findFiducialTime", NULL);
+    i = np;
+    if (np) {
+      for (i=0; i<np; i++) {
+        if ((startPID<0 && endPID<0) || (part[i][6]>=startPID && part[i][6]<=endPID))
+          tFid = (part[i][4]+sOffset)/(c_mks*beta_from_delta(p0, part[i][5])); 
+      }
+    }
+    if (i==np)
+      bombElegant("No available particle for the FID_MODE_FIRST mode in findFiducialTime", NULL);
 #else
     if (myid==1) {  /* If the first particle is lost, Pelegant and elegant will not have the same fiducial time */
-      if (np)
-	tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
-      else
-	bombElegant("0 particle for the FID_MODE_FIRST mode in findFiducialTime on processor 1", NULL);
+      i = np;
+      if (np) {
+        for (i=0; i<np; i++) {
+          if ((startPID<0 && endPID<0) || (part[i][6]>=startPID && part[i][6]<=endPID))
+            tFid = (part[i][4]+sOffset)/(c_mks*beta_from_delta(p0, part[i][5])); 
+        }
+      }
+      if (i==np)
+        mpiAbort = MPI_ABORT_RF_FIDUCIALIZATION_ERROR;
     }	
     MPI_Bcast(&tFid, 1, MPI_DOUBLE, 1, MPI_COMM_WORLD);
-    /*
-    printf("FID_MODE_FIRST mode is not supported in the current parallel version.\n");
-    printf("Please use serial version.\n");
-    fflush(stdout);
-    MPI_Abort(MPI_COMM_WORLD, 9);
-    */
 #endif
   }
   else if (mode&FID_MODE_PMAX) {
@@ -94,91 +125,136 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #if (!USE_MPI)
     best = part[0][5];
 #else  /* np could be 0 for some of the slave processors */ 
-    if (notSinglePart) {
-      if (!np || isMaster)
-	best = -DBL_MAX;
-      else
-	best = part[0][5];
-    }
-    else
-      best = part[0][5];     
+    best = -DBL_MAX;
 #endif
-    ibest = 0; 
+    ibest = -1; 
     if (isSlave || !notSinglePart)
-      for (i=1; i<np; i++)
-        if (best<part[i][5]) {
+      for (i=0; i<np; i++) {
+        if (((startPID<0 && endPID<0) || (part[i][6]>=startPID && part[i][6]<=endPID)) && best<part[i][5]) {
           best = part[i][5];
           ibest = i;
         }
+      }
 #if (!USE_MPI)
-    tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+    if (ibest>=0 && ibest<np)
+      tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+    else
+      bombElegant("No available particle for RF cavity fiducialization", NULL);
 #else
     if (notSinglePart) {
-      if (USE_MPI) {
-	double sBest;
-	struct {
-	  double val;
-	  int rank;
-	} in, out;      
-	MPI_Comm_rank(MPI_COMM_WORLD, &(in.rank));
-	in.val = best;
-	/* find the global best value and its location, i.e., on which processor */
-	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
-	best = out.val;
-	/* broadcast the part[ibest][4] corresponding to the global best value */
-	if (in.rank==out.rank)
-	  sBest = part[ibest][4];
-	MPI_Bcast(&sBest, 1, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
-	tFid = (sBest+sOffset)/(c_mks*beta_from_delta(p0, best));
+      double sBest;
+      struct {
+        double val;
+        int rank;
+      } in, out;      
+      MPI_Comm_rank(MPI_COMM_WORLD, &(in.rank));
+      in.val = best;
+      /* find the global best value and its location, i.e., on which processor */
+      MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+      best = out.val;
+      /* broadcast the part[ibest][4] corresponding to the global best value */
+      if (in.rank==out.rank) {
+        if (ibest>=0 && ibest<np)
+          sBest = part[ibest][4];
+        else {
+          sBest = -DBL_MAX;
+          mpiAbort = MPI_ABORT_RF_FIDUCIALIZATION_ERROR;
+        }
+      }
+      MPI_Bcast(&sBest, 1, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+      tFid = (sBest+sOffset)/(c_mks*beta_from_delta(p0, best));
+    }
+    else {
+      if (ibest>=0 && ibest<np)
+        tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+      else {
+        tFid = -DBL_MAX;
+        mpiAbort = MPI_ABORT_RF_FIDUCIALIZATION_ERROR;
       }
     }
-    else
-      tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
 #endif
   }
   else if (mode&FID_MODE_TMEAN) {
     double tsum=0;
-    long ip;
+    long ip, nsum=0;
 #ifdef USE_KAHAN
     double error = 0.0; 
 #endif
+#if USE_MPI && MPI_DEBUG
+    printf("fiducializing using TMEAN, isSlave=%d, notSinglePart=%d\n", isSlave, notSinglePart);
+    fflush(stdout);
+#endif
     
     if (isSlave || !notSinglePart) {
+#if USE_MPI && MPI_DEBUG
+      printf("doing fiducilization sum for %ld particles\n", np);
+      fflush(stdout);
+#endif
       for (ip=tsum=0; ip<np; ip++) {
+        if ((startPID<0 && endPID<0) || (part[ip][6]>=startPID && part[ip][6]<=endPID)) {
 #ifndef USE_KAHAN     
-	tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
+          tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
 #else
-        tsum = KahanPlus(tsum, (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5])), &error); 
+          tsum = KahanPlus(tsum, (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5])), &error); 
 #endif	
+          nsum++;
+        }
       }
     }
 #if (!USE_MPI)
-    tFid = tsum/np;
+    if (nsum>0)
+      tFid = tsum/nsum;
+    else
+      bombElegant("No available particle for RF cavity fiducilization", NULL);
 #else
+#if MPI_DEBUG
+    printf("tsum = %le, nsum = %ld\n", tsum, nsum);
+    fflush(stdout);
+#endif
     if (notSinglePart) {
       if (USE_MPI) {
-	double tmp; 
-	long np_total;
+	double tsum_total; 
+	long nsum_total;
       
 	if (isMaster) {
 	  tsum = 0.0;
-	  np = 0;
+          nsum = 0;
 	}
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+	MPI_Allreduce(&nsum, &nsum_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
 #ifndef USE_KAHAN
-	MPI_Allreduce(&tsum, &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&tsum, &tsum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-	tmp = KahanParallel (tsum, error, MPI_COMM_WORLD);
+	tsum_total = KahanParallel (tsum, error, MPI_COMM_WORLD);
 #endif
-	tFid = tmp/np_total; 
+#if MPI_DEBUG
+        printf("tsum total = %le, nsum total = %ld\n", tsum_total, nsum_total);
+        fflush(stdout);
+#endif
+        if (nsum_total>0)
+          tFid = tsum_total/nsum_total; 
+        else {
+          tFid = -DBL_MAX;
+          mpiAbort = MPI_ABORT_RF_FIDUCIALIZATION_ERROR;
+        }
       }
     }
-    else
-      tFid = tsum/np; 
+    else {
+#if MPI_DEBUG
+      printf("Found %ld particles for fiducialization\n", np);
+      fflush(stdout);
+#endif
+      if (np>0)
+        tFid = tsum/np; 
+      else {
+        tFid = -DBL_MAX;
+        mpiAbort = MPI_ABORT_RF_FIDUCIALIZATION_ERROR;
+      }
+    }
 #endif
   }
   else
     bombElegant("invalid fiducial mode in findFiducialTime", NULL);
+
 #ifdef DEBUG
   printf("Fiducial time (mode %lx): %21.15e\n", mode, tFid);
 #endif

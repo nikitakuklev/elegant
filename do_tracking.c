@@ -493,8 +493,14 @@ long do_tracking(
     if (run->stopTrackingParticleLimit>0) {
 #if !USE_MPI
       if (nToTrack<run->stopTrackingParticleLimit) 
-#else
+#else 
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 0.36\n");
+#endif
       MPI_Allreduce(&nToTrack, &total_nToTrack, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifdef DEBUG_CRASH 
+        printMessageAndTime(stdout, "do_tracking checkpoint 0.37\n");
+#endif
       if (total_nToTrack<run->stopTrackingParticleLimit)
 #endif
       {
@@ -511,14 +517,23 @@ long do_tracking(
 #endif
 
     ResetNoiseGroupValues();
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.41\n");
+#endif
     if (applyElementModulations(&(run->modulationData), *P_central, coord, nToTrack, run, i_pass)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.42\n");
+#endif
     if (applyElementRamps(&(run->rampData), *P_central, run, i_pass)) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
     }
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.43\n");
+#endif
     
     if (beamline->links) {
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
@@ -530,10 +545,16 @@ long do_tracking(
         beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
       }
     }
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.44\n");
+#endif
     if (beamline->flags&BEAMLINE_TWISS_WANTED && !(beamline->flags&BEAMLINE_TWISS_CURRENT)
         && !(flags&TEST_PARTICLES)) {
       update_twiss_parameters(run, beamline, NULL);
     }
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 0.45\n");
+#endif
     if (run->concat_order && !(flags&TEST_PARTICLES) && 
         !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
       /* form concatenated beamline for tracking */
@@ -2730,6 +2751,10 @@ long do_tracking(
         }
 #endif 
 
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 23\n");
+#endif
+
 #if USE_MPI 
   #if  !SDDS_MPI_IO  
    if (notSinglePart)
@@ -2756,6 +2781,10 @@ long do_tracking(
       }
   #endif
 
+#endif
+
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 24\n");
 #endif
 
   /* do this here to get report of CSR drift normalization */
@@ -2816,6 +2845,10 @@ long do_tracking(
     }
   }
 
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 25\n");
+#endif
+
 #ifdef HAVE_GPU      
 #ifdef GPU_VERIFY
   displayTimings();
@@ -2845,7 +2878,11 @@ long do_tracking(
     computeSASEFELAtEnd(sasefel, coord, nToTrack, *P_central, charge->macroParticleCharge*nToTrack);
 #endif
   }
-  
+   
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 26\n");
+#endif
+
   log_exit("do_tracking.3");
   log_entry("do_tracking.4");
   if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)) {
@@ -2870,6 +2907,10 @@ long do_tracking(
 #endif
     fflush(stdout);
   }
+
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 27\n");
+#endif
 
 #ifdef MPI_DEBUG  
   #ifdef CHECKFLAGS 
@@ -2906,6 +2947,10 @@ long do_tracking(
 #endif
   }
 
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 28\n");
+#endif
+
   if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
     eptr = &(beamline->elem);
     while (eptr) {
@@ -2918,6 +2963,12 @@ long do_tracking(
       eptr = eptr->succ;
     }
   }
+
+#ifdef DEBUG_CRASH 
+    printMessageAndTime(stdout, "do_tracking checkpoint 29\n");
+    printf("returning with nToTrack = %ld\n", nToTrack);
+    fflush(stdout);
+#endif
 
   return(nToTrack);
 }

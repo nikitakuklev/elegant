@@ -70,6 +70,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|ion_effects| command now supports calculation of ion fields using a bi-gaussian distribution (sum of two
   gaussians), which allows modeling the core and tails of the distribution more accurately. A number of parameters
   were added for control of fitting and output. J. Calvey (ANL) co-developed this improvement.
+\item The \verb|sdds_beam| command now offers control of which bunch is used for fiducialization of rf systems.
+  It defaults to the first bunch (#0), which is a change from the previous (and frequently confusing) behavior
+  of fiducializing to the entire beam.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -4544,6 +4547,7 @@ together with \verb|insert_elements| and \verb|replace_elements|.
     long prebunched = -1;
     long track_pages_separately = 0;
     long use_bunched_mode = 0;
+    long fiducialization_bunch = 0;
     long sample_interval = 1;
     long n_tables_to_skip = 0;
     long center_transversely = 0;
@@ -4599,6 +4603,8 @@ steps is limited to the number of bunches (e.g., the number of pages in the file
 \item \verb|use_bunched_mode| --- If non-zero, then the \verb|IDSlotsPerBunch| parameter is used to determine the bunch assignment of
   particles in the beam based on values in the \verb|particleID| column. In particular, the bunch number is $\lfloor (I-1)/S \rfloor$, where
   $I$ is the particle ID and $S$=\verb|IDSlotsPerBunch|.
+\item \verb|fiducialization_bunch| --- If non-negative, then rf cavities (e.g., RFCA, RFDF, RAMPRF) are phased to the
+  indicated bunch (0 is the first bunch). Otherwise, rf cavities are phased to the entire beam (which is probably not what is wanted).
 \item \verb|sample_interval| --- If non-zero, only every \verb|sample_interval|$^{\rm th}$ particle is used.
 \item \verb|n_tables_to_skip| --- Number of SDDS pages to skip at the beginning of the file.
 \item \verb|center_transversely| --- If non-zero, the transverse centroids of the distribution are made to be zero.

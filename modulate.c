@@ -216,15 +216,28 @@ long applyElementModulations(MODULATION_DATA *modData, double pCentral, double *
   long type, param;
   char *p_elem;
  
+#if USE_MPI
+  long np_total;
+  if (notSinglePart) {
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (np_total==0)
+      return 0;
+  } else if (np==0)
+    return 0;
+#else
+  if (np==0)
+    return 0;
+#endif
+
   if (modData->nItems<=0)
     return 0;
 
 #ifdef HAVE_GPU
   if (getGpuBase()->elementOnGpu)
-    t = gpu_findFiducialTime(np,0, 0, pCentral, FID_MODE_TMEAN);
+    t = gpu_findFiducialTime(np,0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
   else 
 #endif
-    t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN);
+    t = findFiducialTime(coord, np, 0, 0, pCentral, FID_MODE_TMEAN|FID_MODE_FULLBEAM);
   matricesUpdated = 0;
 
 

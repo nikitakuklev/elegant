@@ -84,6 +84,8 @@ static char *crossover_type[N_CROSSOVER_TYPES] = {
     double step_size = 1;
     long disable = 0;
     long force_inside = 0;
+    long no_element = 0;
+    double initial_value = 0;
 #end
 
 #namelist optimization_constraint static

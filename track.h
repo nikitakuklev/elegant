@@ -133,7 +133,8 @@ extern long enableOutput;
 #define MPI_ABORT_BUCKET_ASSIGNMENT_ERROR 4
 #define MPI_ABORT_POINTER_ISSUE 5
 #define MPI_ABORT_BAD_PARTICLE_ID 6
-#define N_MPI_ABORT_TYPES 7
+#define MPI_ABORT_RF_FIDUCIALIZATION_ERROR 7
+#define N_MPI_ABORT_TYPES 8
 extern char *mpiAbortDescription[N_MPI_ABORT_TYPES];
 void doMpiAbort(int code, char *format, ...);
 #endif
@@ -661,7 +662,7 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
-    int32_t id_slots_per_bunch;       /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
+    int32_t id_slots_per_bunch;     /* if non-zero, the bunch # is (int)((particleID-1)/id_slots_per_bunch) */
 #if SDDS_MPI_IO
   long n_to_track_total;    /* The total number of particles being tracked on all the processors */
   long n_original_total;    /* The total number of particles read from data file */
@@ -771,6 +772,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 
 /* entity type codes */
 #define T_ECOPY -32767 
+#define T_FREEVAR -32766
 #define T_RENAME -5
 #define T_RETURN -4
 #define T_TITLE -3
@@ -3698,10 +3700,11 @@ extern void set_up_kicker(KICKER *kicker);
 void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma);
 
 
-#define FID_MODE_LIGHT   0x001UL
-#define FID_MODE_TMEAN   0x002UL
-#define FID_MODE_FIRST   0x004UL
-#define FID_MODE_PMAX    0x008UL
+#define FID_MODE_LIGHT       0x0001UL
+#define FID_MODE_TMEAN       0x0002UL
+#define FID_MODE_FIRST       0x0004UL
+#define FID_MODE_PMAX        0x0008UL
+#define FID_MODE_FULLBEAM    0x1000UL
 double findFiducialTime(double **part, long np, double s0, double sOffset,
                         double p0, unsigned long mode);
 extern unsigned long parseFiducialMode(char *mode);

@@ -59,6 +59,8 @@ void setup_bunched_beam(
   long i, offset;
   log_entry("setup_bunched_beam");
   
+  setFiducializationBunch(-1, -1);
+
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);

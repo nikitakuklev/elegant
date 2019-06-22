@@ -1291,7 +1291,8 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
 
   for (i_elem=0; i_elem<n_elems; i_elem++) {
     eptr = NULL;
-    elem_type = type[i_elem];
+    if ((elem_type = type[i_elem])==T_FREEVAR)
+      continue;
     param     = param_number[i_elem];
     data_type = entity_description[elem_type].parameter[param].type;
     while (find_element(elem_name[i_elem], &eptr, elem)) {

@@ -169,7 +169,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
-        set_element_flags(beamline, optimization_data->variables.element, NULL, NULL, 
+        set_element_flags(beamline, optimization_data->variables.element, NULL, 
+                          optimization_data->variables.varied_type,
                           NULL, optimization_data->variables.n_variables,
                           PARAMETERS_ARE_STATIC, 0, 1, 0);
 
@@ -289,28 +290,38 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     if (name==NULL)
         bombElegant("element name missing in optimization_variable namelist", NULL);
     str_toupper(name);
-    context = NULL;
-    if (!find_element(name, &context, &(beamline->elem))) {
+    str_toupper(item);
+    if (!no_element) {
+      context = NULL;
+      if (!find_element(name, &context, &(beamline->elem))) {
         printf("error: cannot vary element %s--not in beamline\n", name);
         fflush(stdout);
         exitElegant(1);
-        }
-    cp_str(&variables->element[n_variables], name);
-    variables->varied_type[n_variables] = context->type;
-    if (item==NULL)
+      }
+      cp_str(&variables->element[n_variables], name);
+      variables->varied_type[n_variables] = context->type;
+      if (item==NULL)
         bombElegant("item name missing in optimization_variable list", NULL);
-    str_toupper(item);
-    if ((variables->varied_param[n_variables] = confirm_parameter(item, context->type))<0) {
+
+      if ((variables->varied_param[n_variables] = confirm_parameter(item, context->type))<0) {
         printf("error: cannot vary %s--no such parameter for %s\n",item, name);
         fflush(stdout);
         exitElegant(1);
-        }
-    cp_str(&variables->item[n_variables], item);
-    cp_str(&variables->varied_quan_unit[n_variables], 
-        entity_description[context->type].parameter[variables->varied_param[n_variables]].unit);
-    if (!get_parameter_value(variables->varied_quan_value+n_variables, name, variables->varied_param[n_variables],
-            context->type, beamline))
+      }
+      cp_str(&variables->item[n_variables], item);
+      cp_str(&variables->varied_quan_unit[n_variables], 
+             entity_description[context->type].parameter[variables->varied_param[n_variables]].unit);
+      if (!get_parameter_value(variables->varied_quan_value+n_variables, name, variables->varied_param[n_variables],
+                               context->type, beamline))
         bombElegant("unable to get initial value for parameter", NULL);
+    } else {
+      variables->varied_type[n_variables] = T_FREEVAR;
+      cp_str(&variables->element[n_variables], name);
+      cp_str(&variables->item[n_variables], item);
+      cp_str(&variables->varied_quan_unit[n_variables], "");
+      variables->varied_quan_value[n_variables] = initial_value;
+    }
+
     if (lower_limit>=upper_limit)
         bombElegant("lower_limit >= upper_limit", NULL);
 
@@ -984,12 +995,14 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #endif
 
     for (i=0; i<variables->n_variables; i++) {
-        if (!get_parameter_value(variables->varied_quan_value+i, 
+        if (variables->varied_type[i]!=T_FREEVAR) {
+          if (!get_parameter_value(variables->varied_quan_value+i, 
 				 variables->element[i], 
 				 variables->varied_param[i], 
 				 variables->varied_type[i], beamline))
-            bombElegant("unable to get initial value for parameter", NULL);
-	variables->initial_value[i] = variables->varied_quan_value[i];
+              bombElegant("unable to get initial value for parameter", NULL);
+	  variables->initial_value[i] = variables->varied_quan_value[i];
+        }
 	if (variables->initial_value[i]>variables->upper_limit[i]) {
 	  if (force_inside) 
 	    variables->varied_quan_value[i] = variables->initial_value[i] = variables->upper_limit[i];

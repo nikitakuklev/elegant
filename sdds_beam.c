@@ -707,7 +707,11 @@ long new_sdds_beam(
   if (!partOnMaster)
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
-
+  if (fiducialization_bunch>=0)
+    setFiducializationBunch(fiducialization_bunch, beam->id_slots_per_bunch);
+  else
+    setFiducializationBunch(-1, -1);
+    
   log_exit("new_sdds_beam");
   return(beam->n_to_track);
 }

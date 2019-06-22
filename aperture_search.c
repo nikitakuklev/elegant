@@ -1267,6 +1267,7 @@ long do_aperture_search_line(
 /* Line aperture search that makes use of larger parallel resources by tracking all particles for all
    lines at the same time (if enough processors are available
 */
+#define DEBUG 1
 
 long do_aperture_search_line_p(
 			     RUN *run,
@@ -1435,17 +1436,20 @@ long do_aperture_search_line_p(
 #if DEBUG
 	fprintf(fpd2, "myid=%d, split=%ld, line=%ld, step=%ld, index=%ld, n_processors=%d---", 
 		myid, split, line, step, index, n_processors);
+        fflush(fpd2);
 #endif
 
 	/* decide if we are going to track this particle */
 	if (myid != index%n_processors) {
 #if DEBUG
 	  fprintf(fpd2, "not tracking\n");
+          fflush(fpd2);
 #endif
 	  continue;
 	}
 #if DEBUG
 	fprintf(fpd2, "tracking---");
+        fflush(fpd2);
 #endif
 
 	/* Track a particle */
@@ -1469,21 +1473,28 @@ long do_aperture_search_line_p(
 	  survived[line][step] = 0;
 #if DEBUG
 	  fprintf(fpd2, "lost\n");
+          fflush(fpd2);
 #endif
 	} else {
 	  /* Particle survived */
 	  survived[line][step] = 1;
 #if DEBUG
 	  fprintf(fpd2, "survived\n");
+          fflush(fpd2);
 #endif
 	}
 #if DEBUG
 	fprintf(fpd, "%le %le %.0f %ld %ld %ld %ld %d\n", step*dx[line]+x0[line], step*dy[line]+y0[line], survived[line][step], split, line, step,
 		index, myid);
+        fflush(fpd);
 #endif
       }
     }
     /* Wait for all processors to exit the loop */
+#if MPI_DEBUG
+    printf("Waiting on barrier after loop over all lines\n");
+    fflush(stdout);
+#endif
     MPI_Barrier(MPI_COMM_WORLD);
 
     /* Sum values of arrays over all processors */
@@ -1501,15 +1512,18 @@ long do_aperture_search_line_p(
 
 #if DEBUG
     for (line=0; line<lines; line++)
-      for (step=0; step<nSteps; step++)
+      for (step=0; step<nSteps; step++) {
 	fprintf(fpd3, "%le %le %.0f %ld %ld %ld %ld %d\n", step*dx[line]+x0[line], step*dy[line]+y0[line], survived[line][step], split, line, step,
 		index, myid);
+        fflush(fpd3);
+        }
 #endif
 
     /* Scan array to determine x and y stability limits */
     for (line=0; line<lines; line++) {
 #if DEBUG
       printf("Checking line=%ld\n", line);
+      fflush(stdout);
 #endif
       if (split==0) {
 	if (!survived[line][0])
@@ -1528,6 +1542,7 @@ long do_aperture_search_line_p(
 	}
 #if DEBUG
 	printf("split=%ld, lost at step=%ld of %ld\n", split, step, nSteps);
+        fflush(stdout);
 #endif
 	if (step==0)
 	  continue;
@@ -1538,6 +1553,7 @@ long do_aperture_search_line_p(
       printf("line=%ld, split=%ld, x0=%le, y0=%le, dx=%le, dy=%le\n", line, split,
 	     x0[line], y0[line], dx[line], dy[line]);
       printf("Particle survived at step=%ld, x=%le, y=%le\n", step, x0[line]+step*dx[line], y0[line]+step*dy[line]);
+      fflush(stdout);
 #endif
 
       if ((dx[line]>0 && xLimit[line]<(step*dx[line] + x0[line])) ||
@@ -1546,6 +1562,7 @@ long do_aperture_search_line_p(
 #if DEBUG
 	printf("Change limit from (%le, %le) to (%le, %le)\n",
 	       xLimit[line], yLimit[line], step*dx[line]+x0[line], step*dy[line]+y0[line]);
+      fflush(stdout);
 #endif
 	xLimit[line] = step*dx[line] + x0[line];
 	yLimit[line] = step*dy[line] + y0[line];

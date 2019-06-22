@@ -3705,7 +3705,8 @@ char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
   "Bunch too long in RFMODE element",
   "Bucket assignment error",
   "Error in particle pointer order",
-  "Non-positive particle ID value"
+  "Non-positive particle ID value",
+  "RF cavity fiducialization failed",
 };
 #endif
 
