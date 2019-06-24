@@ -969,7 +969,7 @@ extern char *entity_text[N_TYPES];
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
 #define N_MAXAMP_PARAMS 6
-#define N_ROTATE_PARAMS 1
+#define N_ROTATE_PARAMS 3
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
@@ -1839,6 +1839,7 @@ extern PARAMETER rotate_param[N_ROTATE_PARAMS];
 
 typedef struct {
     double tilt;
+    short excludeFloor, excludeOptics;
     } ROTATE;
 
 /* storage structure for transmission count */

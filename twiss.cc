@@ -596,7 +596,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         }
       }
     }
-    if (elem->type==T_ROTATE) {
+    if (elem->type==T_ROTATE && !(((ROTATE*)elem->p_elem)->excludeOptics)) {
       if (fabs(((ROTATE*)elem->p_elem)->tilt-PI/2.0)<1e-6 ||
           fabs(((ROTATE*)elem->p_elem)->tilt-3*PI/2.0)<1e-6 ||
           fabs(((ROTATE*)elem->p_elem)->tilt+PI/2.0)<1e-6 ||

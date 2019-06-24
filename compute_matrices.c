@@ -1252,7 +1252,10 @@ VMATRIX *compute_matrix(
         break;  
       case T_ROTATE:
         rot = (ROTATE*)elem->p_elem;
-        elem->matrix = rotation_matrix(rot->tilt);
+        if (rot->excludeOptics)
+          elem->matrix = drift_matrix(0.0, 1);
+        else
+          elem->matrix = rotation_matrix(rot->tilt);
         break;
       case T_MONI:
         moni = (MONI*)elem->p_elem;

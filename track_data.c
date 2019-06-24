@@ -854,6 +854,8 @@ ROTATE rotate_example;
 /* names for beam rotation */
 PARAMETER rotate_param[N_ROTATE_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rotate_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"EXCLUDE_FLOOR", "", IS_SHORT, 0, (long)((char *)&rotate_example.excludeFloor), NULL, 0.0, 0, "if non-zero, does not affect the floor coordinates"},
+    {"EXCLUDE_OPTICS", "", IS_SHORT, 0, (long)((char *)&rotate_example.excludeOptics), NULL, 0.0, 0, "if non-zero, does not affect the optics (i.e., transfer matrix is unit matrix)"},
     } ;
 
 /* names for transmission count */

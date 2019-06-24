@@ -362,8 +362,13 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       break;
     case T_ROTATE:
       rotate = (ROTATE*)elem->p_elem;
-      tilt = rotate->tilt;
-      is_rotation = 1;
+      if (!rotate->excludeFloor) {
+        tilt = rotate->tilt;
+        is_rotation = 1;
+      } else {
+        tilt = 0;
+        is_rotation = 0;
+      }
       break;
     case T_LMIRROR:
       angle = PI-2*(((LMIRROR*)elem->p_elem)->theta);
