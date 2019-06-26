@@ -73,7 +73,7 @@
 
 typedef struct {
   char *filename;
-  BMAPXYZ_DATA data;
+  BMAPXYZ_DATA *data;
 } STORED_BMAPXYZ_DATA;
 static STORED_BMAPXYZ_DATA *storedBmapxyzData = NULL;
 static long nStoredBmapxyzData = 0;
@@ -1936,7 +1936,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
       break;
   }
   if (imap<nStoredBmapxyzData) {
-    bmapxyz->data = &(storedBmapxyzData[imap].data);
+    bmapxyz->data = storedBmapxyzData[imap].data;
     return;
   }
 
@@ -1945,13 +1945,13 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
     fflush(stdout);
     exitElegant(1);
   }
-  printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
 
   storedBmapxyzData = SDDS_Realloc(storedBmapxyzData, sizeof(*storedBmapxyzData)*(nStoredBmapxyzData+1));
-  bmapxyz->data = data = &(storedBmapxyzData[imap].data);
+  bmapxyz->data = data = storedBmapxyzData[imap].data = (BMAPXYZ_DATA*)tmalloc(sizeof(*data));
   nStoredBmapxyzData++;
   cp_str(&(storedBmapxyzData[imap].filename), bmapxyz->filename);
 
+  printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxyz->filename) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
       !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
