@@ -377,6 +377,9 @@ char **argv;
 
   semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
 
+  if (!SDDS_CheckDatasetStructureSize(sizeof(SDDS_DATASET)))
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
 #if USE_MPI
   MPI_Init(&argc,&argv);
   /* get the total number of processors */
