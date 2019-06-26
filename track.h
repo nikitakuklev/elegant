@@ -1050,7 +1050,7 @@ extern char *entity_text[N_TYPES];
 #define N_EHCOR_PARAMS 15
 #define N_EVCOR_PARAMS 15
 #define N_EHVCOR_PARAMS 17
-#define N_BMAPXYZ_PARAMS 14
+#define N_BMAPXYZ_PARAMS 15
 #define N_BRAT_PARAMS 17
 #define N_BGGEXP_PARAMS 25
 #define N_BRANCH_PARAMS 7
@@ -2936,7 +2936,7 @@ typedef struct {
   double dxError, dyError, dzError, tilt;
   double fieldLength, strength, accuracy;
   char *method, *filename;
-  short synchRad, checkFields, injectAtZero;
+  short synchRad, checkFields, injectAtZero, driftMatrix;
   char *particleOutputFile;
   /* internal variables */
   BMAPXYZ_DATA *data; 

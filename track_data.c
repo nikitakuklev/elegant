@@ -3241,6 +3241,7 @@ PARAMETER bmapxyz_param[N_BMAPXYZ_PARAMS] = {
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.synchRad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"CHECK_FIELDS", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.checkFields), NULL, 0.0, 0, "check fields by computing divB and curlB errors?"},
     {"INJECT_AT_Z0", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.injectAtZero), NULL, 0.0, 0, "By default, particles are placed at the entrance to the field map regardless of the z coordinate values. If nonzero, particles start at z=0."},
+    {"DRIFT_MATRIX", "", IS_SHORT, 0, (long)((char *)&bmapxyz_example.driftMatrix), NULL, 0.0, 0, "If non-zero, instead of tracking to determine the matrix, just assume a drift-space matrix."},
     {"PARTICLE_OUTPUT_FILE", NULL, IS_STRING, 0, (long)((char*)&bmapxyz_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output inside element. Use for debugging only in serial version."},
 };  
 

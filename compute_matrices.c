@@ -1507,8 +1507,13 @@ VMATRIX *compute_matrix(
         break;
       case T_BRAT:
       case T_BMAPXY:
-      case T_BMAPXYZ:
         elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
+        break;
+      case T_BMAPXYZ:
+        if (((BMAPXYZ*)elem->p_elem)->driftMatrix)
+          elem->matrix = drift_matrix(((BMAPXYZ*)elem->p_elem)->length, MIN(run->default_order, 3));
+        else 
+          elem->matrix = determineMatrixHigherOrder(run, elem, NULL, NULL, MIN(run->default_order, 3));
         break;
       case T_CCBEND:
         ccbend = (CCBEND*)elem->p_elem;
