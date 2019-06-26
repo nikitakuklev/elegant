@@ -1931,20 +1931,21 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
   long nx, ny, imap;
   BMAPXYZ_DATA *data;
 
-  if (!fexists(bmapxyz->filename)) {
-    printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
-    fflush(stdout);
-    exitElegant(1);
-  }
-
   for (imap=0; imap<nStoredBmapxyzData; imap++) {
-    if (strcmp(bmapxyz->filename, storedBmapxyzData->filename)==0) 
+    if (strcmp(bmapxyz->filename, storedBmapxyzData[imap].filename)==0) 
       break;
   }
   if (imap<nStoredBmapxyzData) {
     bmapxyz->data = &(storedBmapxyzData[imap].data);
     return;
   }
+
+  if (!fexists(bmapxyz->filename)) {
+    printf("file %s not found for BMAPXYZ element\n", bmapxyz->filename);
+    fflush(stdout);
+    exitElegant(1);
+  }
+  printf("Reading BMXYZ field data from file %s\n", bmapxyz->filename);
 
   storedBmapxyzData = SDDS_Realloc(storedBmapxyzData, sizeof(*storedBmapxyzData)*(nStoredBmapxyzData+1));
   bmapxyz->data = data = &(storedBmapxyzData[imap].data);
