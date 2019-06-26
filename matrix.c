@@ -576,6 +576,7 @@ void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, V
 long read_matrices(VMATRIX *M, FILE *fp)
 {
     long order, i, j, k, l;
+    short found;
     char s[256], *ptr;
     double *C, **R, ***T, ****Q;
 
@@ -585,10 +586,18 @@ long read_matrices(VMATRIX *M, FILE *fp)
     order = M->order;
 
     if (order>=1) {
-        if (!fgets(s, 256, fp) || !(ptr=strchr(s, ':'))) {
-            log_exit("read_matrices");
-            return(0);
+        found = 0;
+        while (!feof(fp) && !found) {
+            s[0] = 0;
+            fgets(s, 256, fp);
+            if (strncmp(s, "C: ", 3)==0) {
+              found = 1;
             }
+        }
+        if (strncmp(s, "C: ", 3)!=0 || !(ptr = strchr(s, ':'))) {
+          log_exit("read_matrices");
+          return(0);
+        }
         for (i=0; i<6; i++)
             if (!get_double(C+i, ptr)) {
                 log_exit("read_matrices");
