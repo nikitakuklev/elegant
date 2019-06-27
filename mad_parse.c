@@ -299,14 +299,14 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         }
         printf("File %s found: %s\n", matr->filename, filename);
         fpm = fopen_e(filename, "r", 0);
-        free(filename);
         matr->M.order = matr->order;
         initialize_matrices(&(matr->M), matr->order);
-        if (!read_matrices(&(matr->M), fpm)) {
+        if (!read_matrices(&(matr->M), filename, fpm)) {
           printf("error reading matrix from file %s\n", matr->filename);
           fflush(stdout);
           abort();
         }
+        free(filename);
         fclose(fpm);
         matr->matrix_read = 1;
         matr->length = matr->M.C[4];

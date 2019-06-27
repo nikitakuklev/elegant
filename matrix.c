@@ -573,7 +573,7 @@ void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, V
     *Q = M->Q;
 }
 
-long read_matrices(VMATRIX *M, FILE *fp)
+long read_matrices(VMATRIX *M, char *filename, FILE *fp)
 {
     long order, i, j, k, l;
     short found;
@@ -594,7 +594,8 @@ long read_matrices(VMATRIX *M, FILE *fp)
               found = 1;
             }
         }
-        if (strncmp(s, "C: ", 3)!=0 || !(ptr = strchr(s, ':'))) {
+        if (!found || strncmp(s, "C: ", 3)!=0 || !(ptr = strchr(s, ':'))) {
+          printf("Error: did not find \"C:\" tag, which marks the start of a matrix, in file %s\n", filename);
           log_exit("read_matrices");
           return(0);
         }
