@@ -3982,7 +3982,7 @@ extern void free_matrices(VMATRIX *M);
 extern void free_nonlinear_matrices(VMATRIX *M);
 extern void free_matrices_above_order(VMATRIX *M, long order);
 extern void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M);
-extern long read_matrices(VMATRIX *M, FILE *fp);
+extern long read_matrices(VMATRIX *M, char *filename, FILE *fp);
 extern void filter_matrices(VMATRIX *M, double threshold);
 extern void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0);
 extern void copy_matrices(VMATRIX *M1, VMATRIX *M0);
