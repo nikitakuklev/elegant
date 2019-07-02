@@ -596,6 +596,7 @@ long read_matrices(VMATRIX *M, char *filename, FILE *fp)
         }
         if (!found || strncmp(s, "C: ", 3)!=0 || !(ptr = strchr(s, ':'))) {
           printf("Error: did not find \"C:\" tag, which marks the start of a matrix, in file %s\n", filename);
+          printf("Note that the matrix format changed in version 2019.1.2, which may be the source of the problem.\n");
           log_exit("read_matrices");
           return(0);
         }
