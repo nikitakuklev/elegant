@@ -1325,8 +1325,8 @@ void trackWithIonEffects
               kick[0] += tempQ[i]*tempkick[0];
               kick[1] += tempQ[i]*tempkick[1];
             }
-            part[ip][1] = kick[0] / (Po*particleMassMV*1e6*particleRelSign);
-            part[ip][3] = kick[1] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
             break;
           default:
             bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
