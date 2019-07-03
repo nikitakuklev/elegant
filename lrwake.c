@@ -14,8 +14,14 @@
 
 void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge, long nBuckets);
 
-void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, 
-                                  long *nBuckets, 
+void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, 
+                                  /* return data: */
+                                  double **time,     /* (*time)[ip] is the arrival time of ip-th particle */
+                                  long **ibParticle, /* (*ibParticle)[ib] is the bucket assignment for ip-th particle */
+                                  long ***ipBucket,  /* (*ipBucket)[ib][i] is the ip value of the i-th particle in the ib-th bucket */
+                                  long **npBucket,   /* (*npBucket)[ib] is the number of particles in the ib-th bucket */
+                                  long *nBuckets,    /* *nBuckets is the number of buckets */
+                                  /* input data from previous call */
                                   long lastNBuckets /* Supply this only if the calling algorithm insists that the number of buckets not change */
                                   )
 {
@@ -130,7 +136,6 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
           printf("Allocating cross-reference arrays\n");
           fflush(stdout);
 #endif
-          *ipBucket = (long**) czarray_2d(sizeof(***ipBucket), *nBuckets, np);
           *npBucket = (long*) tmalloc(sizeof(*npBucket)*(*nBuckets));
           for (ib=0; ib<(*nBuckets); ib++)
             (*npBucket)[ib] = 0;
@@ -139,6 +144,7 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
         printf("Looping over all particles\n");
         fflush(stdout);
 #endif
+        /* count the number of particles in each bucket so we can size arrays */
         for (ip=0; ip<np; ip++) {
           if (*nBuckets==1)
             ib = 0;
@@ -153,6 +159,29 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
 #endif
           }
           (*ibParticle)[ip] = ib;
+          if (npBucket)
+            (*npBucket)[ib] += 1;
+        }
+        if (ipBucket && npBucket) {
+          *ipBucket = tmalloc(sizeof(**ipBucket)*(*nBuckets));
+          for (ib=0; ib<*nBuckets; ib++) {
+            (*ipBucket)[ib] = (long*)tmalloc(sizeof(***ipBucket)*(*npBucket)[ib]);
+            (*npBucket)[ib] = 0; /* will use as index when assigning particles to buckets below */
+          }
+        }
+        for (ip=0; ip<np; ip++) {
+          if (*nBuckets==1)
+            ib = 0;
+          else
+            ib = (*ibParticle)[ip];
+          if (ib<0 || ib>=(*nBuckets)) {
+#if USE_MPI
+            mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
+            return;
+#else
+            printf("Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
+#endif
+          }
           if (ipBucket && npBucket) {
             (*ipBucket)[ib][(*npBucket)[ib]] = ip;
             (*npBucket)[ib] += 1;
