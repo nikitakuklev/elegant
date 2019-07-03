@@ -71,11 +71,12 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ion_effects| command now supports calculation of ion fields using a bi-gaussian distribution (sum of two
-  gaussians), which allows modeling the core and tails of the distribution more accurately. A number of parameters
-  were added for control of fitting and output. J. Calvey (ANL) co-developed this improvement.
+\item The \verb|ion_effects| command now supports calculation of ion fields using either a bi-gaussian distribution (sum of two
+  gaussians) or a bi-lorentzian distribution (sum of two lorentzians), which allows modeling the core and tails of the 
+  distribution more accurately. A number of parameters
+  were added for control of fitting and output. J. Calvey (ANL) and R. Lindberg (ANL) co-developed this improvement.
 \item The \verb|sdds_beam| command now offers control of which bunch is used for fiducialization of rf systems.
-  It defaults to the first bunch (#0), which is a change from the previous (and frequently confusing) behavior
+  It defaults to the first bunch (\#0), which is a change from the previous (and frequently confusing) behavior
   of fiducializing to the entire beam.
 \end{itemize}
 
@@ -2589,24 +2590,25 @@ included in the plane in question.
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
-	  double bigaussian_fit_target = 0.1;
-	  double bigaussian_fit_tolerance = 1e-3;
-	  long bigaussian_fit_evaluations = 20;
-	  long bigaussian_fit_passes = 2;
-	  long bigaussian_fit_restarts = 20;
-	  STRING fit_residual_type = NULL;
+          double distribution_fit_target = 0.1;
+          double distribution_fit_tolerance = 1e-3;
+          long distribution_fit_evaluations = 100;
+          long distribution_fit_passes = 1;
+          long distribution_fit_restarts = 1;
+          STRING fit_residual_type = NULL;
           long macro_ions = 0;
+          long symmetrize = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;
           double ion_span[2] = {0, 0};
-	  double ion_bin_divisor[2] = {10.0, 10.0};
-	  double ion_range_multiplier[2] = {2.0, 2.0};
-	  double ion_sigma_limit_multiplier[2] = {0, 0};
-	  STRING ion_histogram_output = NULL;
-	  double ion_histogram_output_s_start = 0;
-	  double ion_histogram_output_s_end = 10;
-	  long ion_histogram_output_interval = 1000;
-	  long ion_histogram_min_bins = 200;
+          double ion_bin_divisor[2] = {10.0, 10.0};
+          double ion_range_multiplier[2] = {2.0, 2.0};
+          double ion_sigma_limit_multiplier[2] = {0, 0};
+          STRING ion_histogram_output = NULL;
+          double ion_histogram_output_s_start = 0;
+          double ion_histogram_output_s_end = 10;
+          long ion_histogram_output_interval = 1000;
+          long ion_histogram_min_bins = 200;
           long verbosity = 0;
 &end
 \end{verbatim}
@@ -2631,26 +2633,45 @@ included in the plane in question.
 \item \verb|ion_density_output| --- Possibly incomplete name of an SDDS file to which ion density data will be written.
 \item \verb|ion_output_all_locations| --- If nonzero, \verb|ion_density_output| includes data at the location of
   all \verb|IONEFFECTS| elements. By default, only the first element is included.
+\item \verb|ion_species_output| --- If nonzero, \verb|ion_density_output| includes data for each ion species.
 \item \verb|field_calculation_method| --- By default, the fields are computed on the
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
   for the ions. A more accurate, but slower, method is a sum of gaussians, which can be invoked by setting
   \verb|field_calculation_method| to \verb|"bigaussian"|.
-\item \verb|bigaussian_fit_target| --- If the bigaussian field calculation method is selected, gives the target for the
+  In that case, the charge distribution is of the form
+  \begin{equation}
+    \rho(x, y) = (G(x, h_{x,1}, \sigma_{x,1}, c_{x,1}) + G(x, h_{x,2}, \sigma_{x,2}, c_{x,2}))*
+    (G(y, h_{y,1}, \sigma_{y,1}, c_{y,1}) + G(y, h_{y,2}, \sigma_{y,2}, c_{y,2})),
+  \end{equation}
+  where $G(q, h, \sigma, c) = h\exp{-(q-c)^2/(2\sigma^2)}$.
+  Another method, using a sum of lorentzians, is also available by setting \verb|field_calculation_method| to \verb|"bilorentzian"|;
+  this method is considered very experimental at present.
+  The charge distribution for the bilorentzian is
+  \begin{equation}
+    \rho(x, y) = (L(x, h_{x,1}, a_{x,1}, c_{x,1}) + L(x, h_{x,2}, a_{x,2}, c_{x,2}))*
+    (L(y, h_{y,1}, a_{y,1}, c_{y,1}) + L(y, h_{y,2}, a_{y,2}, c_{y,2})),
+  \end{equation}
+  where $L(q, h, a, c) = h/(1 + (q-c)^2/a^2)$.
+\item \verb|distribution_fit_target| --- If the distribution field calculation method is selected, gives the target for the
   fractional deviation of the fit. Smaller numbers will result in long run times.
-\item \verb|bigaussian_fit_tolerance| --- If the bigaussian field calculation method is selected, gives the tolerance for the
+\item \verb|distribution_fit_tolerance| --- If the distribution field calculation method is selected, gives the tolerance for the
   fractional deviation of the fit. Smaller numbers will result in long run times but higher likelihood of reaching the target.
-\item \verb|bigaussian_fit_evaluations|, \verb|bigaussian_fit_passes|, \verb|bigaussian_fit_restarts| --- Parameters
-  for the simplex optimizer that performs the bigaussian fit. Note that in \verb|Pelegant|, a hybrid simplex method is
+\item \verb|distribution_fit_evaluations|, \verb|distribution_fit_passes|, \verb|distribution_fit_restarts| --- Parameters
+  for the simplex optimizer that performs the distribution fit. Note that in \verb|Pelegant|, a hybrid simplex method is
   used, which appears to converge quickly if the default parameters are used.
-\item \verb|fit_residual_type| --- Residual type for bigaussian fitting. The default is \verb|rms-dev-plus-ad-sum|, which
+\item \verb|fit_residual_type| --- Residual type for distribution fitting. The default is \verb|rms-dev-plus-ad-sum|, which
   indicates using the sum of the normalized rms deviation and the normalized absolute deviation of the total charge.
   Other options are \verb|sum-ad| (sum of normalized absolute deviation), \verb|rms-dev| (sum of normalized rms deviation),
   \verb|max-ad| (maximum normalized absolute deviation), \verb|max-ad-plus-rms-dev| (sum of maximum normalized absolute 
-  deviation and normalized rms deviation), \verb|sum-ad-plus-rms-dev|, \verb|rms-dev-plus-ad-sum|, and \verb|sum-ad-plus-ad-sum|.
+  deviation and normalized rms deviation), \verb|sum-ad-plus-rms-dev|, \verb|rms-dev-plus-ad-sum|, \verb|sum-ad-plus-ad-sum|,
+  and \verb|rms-dev-plus-centroid|.
 \item \verb|macro_ions| --- The number of macro ions to generate per bunch on each turn for which generation is done. 
   The macro ion charge is adjusted
   according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
   \verb|IONEFFECTS| elements.
+\item \verb|symmetrize| --- If nonzero, ions are emitted in symmetric pairs to ensure that the centroids don't deviate
+  from the electron beam centroids because of noise. Doubles the number of macro ions that are emitted. Intended primarily for
+  testing purposes.
 \item \verb|generation_interval| --- The number of bunches between generation of ions. The macro ion charge is adjusted
   to account for this, so the effective ion charge after many turns is the same. May be overridden with the
   \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements. The actual condition for generation of
@@ -2662,15 +2683,18 @@ included in the plane in question.
 \item \verb|ion_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
-\item \verb|ion_bin_divisor| --- For \verb|field_calculation_method="bigaussian"|, the number of ion bins per rms parameter of
-      the electron beam.      
-\item \verb|ion_range_multiplier| --- For \verb|field_calculation_method="bigaussian"|, the full span of the ion binning regoin
-      bins in units of the rms parameter of the ion distribution.
-\item \verb|ion_sigma_limit_multiplier| --- For \verb|field_calculation_method="bigaussian"|, the minimum value for either of the
-  ion sigmas in units of the bin size. Use to prevent one of the gaussians from being too delta-function-like.
+\item \verb|ion_bin_divisor| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
+  the number of ion bins per rms parameter of  the electron beam.      
+\item \verb|ion_range_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
+  the full span of the ion binning region bins in units of the rms parameter of the ion distribution.
+\item \verb|ion_sigma_limit_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
+  the minimum value for either of the
+  ion sigmas (for bigaussian) or size parameter (for bilorentizan)
+  in units of the bin size. Use to prevent one of the gaussians or lorentzians from being too delta-function-like.
 \item \verb|ion_histogram_output|, \verb|ion_histogram_output_s_start|, \verb|ion_histogram_output_s_end|, 
       \verb|ion_histogram_output_interval|, \verb|ion_histogram_max_bins| --- Controls for the output of ion histograms when
-      \verb|field_calculation_method="bigaussian"|. \verb|ion_histogram_output| gives the (incomplete) filename.
+      \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|. 
+      \verb|ion_histogram_output| gives the (incomplete) filename.
       \verb|ion_histogram_output_s_start| and \verb|ion_histogram_output_s_end| give limits on the $s$ coordinate of the
       \verb|IONEFFECTS| element. \verb|ion_histogram_output_interval| gives the interval in passes between output.
       \verb|ion_histogram_min_bins| gives the minimum number of bins worth of data to output; if the number exceeds this,
