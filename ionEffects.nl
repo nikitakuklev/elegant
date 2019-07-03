@@ -21,6 +21,7 @@
 	  long distribution_fit_restarts = 1;
 	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
+          long symmetrize = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;
           double ion_span[2] = {0, 0};

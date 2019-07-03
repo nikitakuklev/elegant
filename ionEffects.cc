@@ -42,7 +42,8 @@ static long ionFieldMethod = -1;
 #define ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV 4
 #define ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM 5
 #define ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM 6
-#define N_ION_FIT_RESIDUAL_OPTIONS 7
+#define ION_FIT_RESIDUAL_RMS_DEV_PLUS_CENTROID 7
+#define N_ION_FIT_RESIDUAL_OPTIONS 8
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-ad",
   (char*)"rms-dev",
@@ -50,7 +51,8 @@ static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"max-ad-plus-rms-dev",
   (char*)"sum-ad-plus-rms-dev",
   (char*)"rms-dev-plus-ad-sum",
-  (char*)"sum-ad-plus-ad-sum"
+  (char*)"sum-ad-plus-ad-sum",
+  (char*)"rms-dev-plus-centroid",
 };
 
 static long residualType = -1;
@@ -71,7 +73,7 @@ typedef struct {
 static ION_PROPERTIES ionProperties;
 void readIonProperties(char *filename);
 
-void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, double centroid[2], double sigma[2]);
+void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, double centroid[2], double sigma[2], long symmetrize);
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y);
 
@@ -824,12 +826,15 @@ void trackWithIonEffects
 #else
             nToAdd = ionEffects->macroIons;
 #endif
-            
+
             if (nToAdd) {
               qToAdd = unitsFactor * qBunch * ionEffects->pressure[index] * ionEffects->generationInterval * \
                 ionProperties.crossSection[iSpecies] * (ionEffects->sEnd - ionEffects->sStart) / ionEffects->macroIons;
-              
-              addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma);
+              if (symmetrize) {
+                nToAdd *= 2;
+                qToAdd /= 2;
+              }
+              addIons(ionEffects, iSpecies, nToAdd, qToAdd, centroid, sigma, symmetrize);
             }
           } else if (((index=ionProperties.sourceIonIndex[iSpecies])>=0) && \
 		     (((iPass-ionEffects->startPass)*nBunches+iBunch)%multiple_ionization_interval == 0)) {
@@ -1320,8 +1325,8 @@ void trackWithIonEffects
               kick[0] += tempQ[i]*tempkick[0];
               kick[1] += tempQ[i]*tempkick[1];
             }
-            part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
-            part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][1] = kick[0] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][3] = kick[1] / (Po*particleMassMV*1e6*particleRelSign);
             break;
           default:
             bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
@@ -1547,7 +1552,7 @@ void trackWithIonEffects
     free(speciesCount);
 }
 
-void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double centroid[2], double sigma[2])
+void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double centroid[2], double sigma[2], long symmetrize)
 {
   long iNew;
   
@@ -1569,7 +1574,15 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
     ionEffects->coordinate[iSpecies][iNew][2] =  gauss_rn_lim(centroid[1], sigma[1], 3, random_4) ; /* initial y position */
     ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
     ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
-    
+    if (symmetrize) {
+      iNew ++;
+      ionEffects->coordinate[iSpecies][iNew][0] = centroid[0] - (ionEffects->coordinate[iSpecies][iNew-1][0]-centroid[0]);
+      ionEffects->coordinate[iSpecies][iNew][1] = 0 ;
+      ionEffects->coordinate[iSpecies][iNew][2] = centroid[1] - (ionEffects->coordinate[iSpecies][iNew-1][2]-centroid[1]);
+      ionEffects->coordinate[iSpecies][iNew][3] = 0 ;
+      ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ;
+    }
+
     //ionEffects->qIon[iSpecies][iNew] = qToAdd;
   }
   
@@ -2116,6 +2129,7 @@ short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramVa
 double biGaussianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
+  double wSumData = 0, wSumFit = 0;
 
   *invalid = 0;
 
@@ -2128,6 +2142,7 @@ double biGaussianFunction(double *param, long *invalid)
   
   for (int i=0; i<nData; i++) {
     double z;
+    wSumData += xData[i]*yData[i];
     yFit[i] = 0;
     z = (xData[i]-param[1])/param[0];
     if (z<6 && z>-6)
@@ -2139,6 +2154,7 @@ double biGaussianFunction(double *param, long *invalid)
     sum += tmp;
     sum2 += sqr(tmp);
     yFitSum += yFit[i];
+    wSumFit += xData[i]*yFit[i];
     if (tmp>max)
       max = tmp;
   }
@@ -2161,6 +2177,12 @@ double biGaussianFunction(double *param, long *invalid)
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM:
     result = sum/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_CENTROID:
+    if (yFitSum)
+      result = sqrt(sum2)/yDataSum + abs(wSumFit/yFitSum-wSumData/yDataSum);
+    else
+      result = sqrt(sum2)/yDataSum + abs(wSumData/yDataSum);
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
   default:
