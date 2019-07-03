@@ -24,10 +24,14 @@
 
 #define ION_FIELD_GAUSSIAN 0
 #define ION_FIELD_BIGAUSSIAN 1
-#define N_ION_FIELD_METHODS 2
+#define ION_FIELD_BILORENTZIAN 2
+#define ION_FIELD_AUTO 3
+#define N_ION_FIELD_METHODS 4
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
-  (char*)"bigaussian"
+  (char*)"bigaussian",
+  (char*)"bilorentzian",
+  (char*)"auto"
 };
 static long ionFieldMethod = -1;
 
@@ -104,8 +108,11 @@ extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm
 static double *xData=NULL, *yData=NULL, *yFit=NULL, yDataSum;
 static long nData = 0;
 
-void biGaussianFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
+short biWhateverFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], 
+                    double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
 double biGaussianFunction(double *param, long *invalid);
+double biLorentzianFunction(double *param, long *invalid);
+
 //void report();
 void report(double res, double *a, long pass, long n_eval, long n_dimen);
 
@@ -273,8 +280,9 @@ void setUpIonEffectsOutputFiles(long nPasses)
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
         }
-	if (ionFieldMethod==ION_FIELD_BIGAUSSIAN &&
+	if (ionFieldMethod!=ION_FIELD_GAUSSIAN &&
 	    (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE) ||
+             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitType", NULL, SDDS_STRING) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
 #if USE_MPI
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluationsBest", NULL, SDDS_LONG) ||
@@ -343,6 +351,8 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
+  if (ionFieldMethod==ION_FIELD_AUTO)
+    bombElegantVA((char*)"field_calculation_method=\"%s\" is not yet implemented", field_calculation_method);
 
   if (!fit_residual_type || !strlen(fit_residual_type))
     residualType = ION_FIT_RESIDUAL_RMS_DEV;
@@ -1192,40 +1202,91 @@ void trackWithIonEffects
     double paramValueX[6], paramValueY[6];
     double tempCentroid[4][2], tempSigma[4][2], tempkick[2], tempQ[4];
     double normX, normY;
-    if (ionFieldMethod == ION_FIELD_BIGAUSSIAN) {
+    
+    ionEffects->ionFieldMethod = ionFieldMethod;
+
+    if (ionFieldMethod != ION_FIELD_GAUSSIAN) {
       makeIonHistograms(ionEffects, ionProperties.nSpecies, centroid, sigma, ionCentroid, ionSigma);
 #if USE_MPI && MPI_DEBUG
-      printf("Running bigaussian fit for s=%le, bunch %ld\n", ionEffects->sLocation, iBunch);
+      printf("Running bigaussian/bilorentzian fit for s=%le, bunch %ld\n", ionEffects->sLocation, iBunch);
       fflush(stdout);
 #endif
-      biGaussianFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
+      /* We take a return value here for future improvement in which the fitting function is automatically selected. */
+      ionEffects->ionFieldMethod = 
+        biWhateverFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
 
-      normX = e_mks * ionEffects->ionRange[0] / ionEffects->ionBins[0];
-      normY = e_mks * ionEffects->ionRange[1] / ionEffects->ionBins[1];
-
-      tempCentroid[0][0] = paramValueX[1];
-      tempCentroid[0][1] = paramValueY[1];
-      tempSigma[0][0] = paramValueX[0];
-      tempSigma[0][1] = paramValueY[0];
-      tempQ[0] = paramValueX[2] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[0] * paramValueY[0] * sqr(e_mks) / qIon;
-
-      tempCentroid[1][0] = paramValueX[4];
-      tempCentroid[1][1] = paramValueY[1];
-      tempSigma[1][0] = paramValueX[3];
-      tempSigma[1][1] = paramValueY[0];
-      tempQ[1] = paramValueX[5] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[3] * paramValueY[0] * sqr(e_mks) / qIon;
-
-      tempCentroid[2][0] = paramValueX[1];
-      tempCentroid[2][1] = paramValueY[4];
-      tempSigma[2][0] = paramValueX[0];
-      tempSigma[2][1] = paramValueY[3];
-      tempQ[2] = paramValueX[2] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[0] * paramValueY[3] * sqr(e_mks) / qIon;
-
-      tempCentroid[3][0] = paramValueX[4];
-      tempCentroid[3][1] = paramValueY[4];
-      tempSigma[3][0] = paramValueX[3];
-      tempSigma[3][1] = paramValueY[3];
-      tempQ[3] = paramValueX[5] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[3] * paramValueY[3] * sqr(e_mks) / qIon;
+      /* these factors needed because we fit charge histograms instead of charge densities */
+      normX = ionEffects->ionRange[0] / ionEffects->ionBins[0];
+      normY = ionEffects->ionRange[1] / ionEffects->ionBins[1];
+      
+      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN) {
+        /* paramValueX[0,1,2,3,4,5] = sigma1, centroid1, height1, sigma2, centroid2, height2 */
+        tempCentroid[0][0] = paramValueX[1];
+        tempCentroid[0][1] = paramValueY[1];
+        tempSigma[0][0] = paramValueX[0];
+        tempSigma[0][1] = paramValueY[0];
+        /* We need 2*Pi*SigmaX*Sigmay here because in biGaussianFunction() the factor 1/(sqrt(2*pi)*sigma) is
+         * hidden in the height parameter. We need to remove it for use in the B-E formula.
+         * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
+         * each of which will integrate to qIon.
+         */
+        tempQ[0] = paramValueX[2] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[0] * paramValueY[0] / qIon;
+        
+        tempCentroid[1][0] = paramValueX[4];
+        tempCentroid[1][1] = paramValueY[1];
+        tempSigma[1][0] = paramValueX[3];
+        tempSigma[1][1] = paramValueY[0];
+        tempQ[1] = paramValueX[5] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[3] * paramValueY[0] / qIon;
+        
+        tempCentroid[2][0] = paramValueX[1];
+        tempCentroid[2][1] = paramValueY[4];
+        tempSigma[2][0] = paramValueX[0];
+        tempSigma[2][1] = paramValueY[3];
+        tempQ[2] = paramValueX[2] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[0] * paramValueY[3] / qIon;
+        
+        tempCentroid[3][0] = paramValueX[4];
+        tempCentroid[3][1] = paramValueY[4];
+        tempSigma[3][0] = paramValueX[3];
+        tempSigma[3][1] = paramValueY[3];
+        tempQ[3] = paramValueX[5] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[3] * paramValueY[3] / qIon;
+      } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN) {
+        /* paramValueX[0,1,2] = ax1, centroidx1, heightx1 */
+        /* paramValueY[0,1,2] = ay1, centroidy1, heighty1 */
+        tempSigma[0][0] = paramValueX[0];
+        tempSigma[0][1] = paramValueY[0];
+        tempCentroid[0][0] = paramValueX[1];
+        tempCentroid[0][1] = paramValueY[1];
+        /* Here we account for the bin sizes (normX and normY) and convert the height parameters to those
+         * used in a standard Lorentzian, PI*L(0)*a. We also divide out the total
+         * charge since otherwise the 2d integral will be qIon^2, instead of qIon. 
+         */
+        tempQ[0] = paramValueX[2]*PI*paramValueX[0]/normX * paramValueY[2]*PI*paramValueY[0]/normY / qIon;
+        
+        /* paramValueX[3,4,5] = ax2, centroidx2, heightx2 */
+        /* paramValueY[0,1,2] = ay1, centroidy1, heighty1 */
+        tempSigma[1][0] = paramValueX[3];
+        tempSigma[1][1] = paramValueY[0];
+        tempCentroid[1][0] = paramValueX[4];
+        tempCentroid[1][1] = paramValueY[1];
+        tempQ[1] = paramValueX[5]*PI*paramValueX[3]/normX * paramValueY[2]*PI*paramValueY[0]/normY / qIon;
+        
+        /* paramValueX[0,1,2] = ax1, centroidx1, heightx1 */
+        /* paramValueY[3,4,5] = ay2, centroidy2, heighty2 */
+        tempCentroid[2][0] = paramValueX[1];
+        tempCentroid[2][1] = paramValueY[4];
+        tempSigma[2][0] = paramValueX[0];
+        tempSigma[2][1] = paramValueY[3];
+        tempQ[2] = paramValueX[2]*PI*paramValueX[0]/normX * paramValueY[5]*PI*paramValueY[3]/normY / qIon;
+        
+        /* paramValueX[3,4,5] = ax2, centroidx2, heightx2 */
+        /* paramValueY[3,4,5] = ay2, centroidy2, heighty2 */
+        tempCentroid[3][0] = paramValueX[4];
+        tempCentroid[3][1] = paramValueY[4];
+        tempSigma[3][0] = paramValueX[3];
+        tempSigma[3][1] = paramValueY[3];
+        tempQ[3] = paramValueX[5]*PI*paramValueX[3]/normX * paramValueY[5]*PI*paramValueY[3]/normY / qIon;
+      } else
+        bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
     }
 
     if (isSlave || !notSinglePart) {
@@ -1234,36 +1295,38 @@ void trackWithIonEffects
         for (ip=0; ip<np; ip++) {
           double kick[2];
 
-	  if (ionFieldMethod != ION_FIELD_BIGAUSSIAN) {
+          switch (ionEffects->ionFieldMethod) {
+          case ION_FIELD_GAUSSIAN:
 	    gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
-	  } else {
-	   
-	    // Gx1 * Gy1
-	    gaussianBeamKick(part[ip], tempCentroid[0], tempSigma[0], tempkick, tempQ[0], me_mks, 1);
-	    kick[0] = tempkick[0];
-	    kick[1] = tempkick[1];
-
-	    //Gx2 * Gy1 
-	    gaussianBeamKick(part[ip], tempCentroid[1], tempSigma[1], tempkick, tempQ[1], me_mks, 1);
-	    kick[0] += tempkick[0];
-	    kick[1] += tempkick[1];
-
-	    //Gx1 * Gy2	    
-	    gaussianBeamKick(part[ip], tempCentroid[2], tempSigma[2], tempkick, tempQ[2], me_mks, 1);
-	    kick[0] += tempkick[0];
-	    kick[1] += tempkick[1];
-
-	    //Gx2 * Gy2
-	    gaussianBeamKick(part[ip], tempCentroid[3], tempSigma[3], tempkick, tempQ[3], me_mks, 1);
-	    kick[0] += tempkick[0];
-	    kick[1] += tempkick[1];
-
+            part[ip][1] += kick[0] / c_mks / Po;
+            part[ip][3] += kick[1] / c_mks / Po; 
+            break;
+          case ION_FIELD_BIGAUSSIAN:
+            kick[0] = kick[1] = 0;
+            for (int i=0; i<4; i++)  {
+              gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], tempkick, tempQ[i], me_mks, 1);
+              kick[0] += tempkick[0];
+              kick[1] += tempkick[1];
+            }
+            part[ip][1] += kick[0] / c_mks / Po;
+            part[ip][3] += kick[1] / c_mks / Po; 
+            break;
+          case ION_FIELD_BILORENTZIAN:
+            kick[0] = kick[1] = 0;
+            for (int i=0; i<4; i++) {
+              evaluateVoltageFromLorentzian(tempkick, 
+                                           tempSigma[i][0], tempSigma[i][1], 
+                                           part[ip][0] - tempCentroid[i][0], part[ip][2] - tempCentroid[i][1]);
+              kick[0] += tempQ[i]*tempkick[0];
+              kick[1] += tempQ[i]*tempkick[1];
+            }
+            part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
+            part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
+            break;
+          default:
+            bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
+            break;
 	  }
-
-	  //if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
-	  part[ip][1] += kick[0] / c_mks / Po;
-	  part[ip][3] += kick[1] / c_mks / Po; 
-
         }
       }
 
@@ -1274,7 +1337,7 @@ void trackWithIonEffects
       }
     }
 
-    if (ionFieldMethod == ION_FIELD_BIGAUSSIAN &&
+    if ((ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN)&&
 	(SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
 	&& (ionEffects->sLocation >= ionHistogramOutput_sStart) 
 	&& (ionEffects->sLocation <= ionHistogramOutput_sEnd)) {
@@ -1308,7 +1371,7 @@ void trackWithIonEffects
 	  if (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
 			      ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "fitResidual", ionEffects->xyBigaussianFitResidual[iPlane],
+				  "fitResidual", ionEffects->xyFitResidual[iPlane],
 #if USE_MPI
 				  "nEvaluationsBest", ionEffects->nEvaluationsBest[iPlane],
 				  "nEvaluationsMin", ionEffects->nEvaluationsMin[iPlane],
@@ -1316,12 +1379,12 @@ void trackWithIonEffects
 #else
 				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				  "sigma1", ionEffects->xyBigaussianParameter[iPlane][0],
-				  "sigma2", ionEffects->xyBigaussianParameter[iPlane][3],
-				  "centroid1", ionEffects->xyBigaussianParameter[iPlane][1],
-				  "centroid2", ionEffects->xyBigaussianParameter[iPlane][4],
-				  "q1", ionEffects->xyBigaussianParameter[iPlane][2],
-				  "q2", ionEffects->xyBigaussianParameter[iPlane][5],
+				  "sigma1", ionEffects->xyFitParameter[iPlane][0],
+				  "sigma2", ionEffects->xyFitParameter[iPlane][3],
+				  "centroid1", ionEffects->xyFitParameter[iPlane][1],
+				  "centroid2", ionEffects->xyFitParameter[iPlane][4],
+				  "q1", ionEffects->xyFitParameter[iPlane][2],
+				  "q2", ionEffects->xyFitParameter[iPlane][5],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
@@ -1779,11 +1842,6 @@ void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double 
   ionEffects->coordinate[iSpecies][iNew][2] =  y;
   ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
   ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
-
-
-
-    
-  
 }
 
 
@@ -1885,12 +1943,12 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 }
 
 
-
-void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
+short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, 
+                   IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0, lastResult = DBL_MAX;
   double nVariables = 6;
   double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
-  int32_t nEvalMax=bigaussian_fit_evaluations, nPassMax=bigaussian_fit_passes;
+  int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax;
   long fitReturn, dummy, nEvaluations;
@@ -1921,12 +1979,21 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     paramValue[4] = ionCentroid[plane];
     paramValue[5] = peakVal/2;
 
+    /*
     paramDelta[0] = paramValue[0]/20;
     paramDelta[1] = abs(beamCentroid[plane])/20;
     paramDelta[2] = peakVal/40;
     paramDelta[3] = paramValue[3]/20;
     paramDelta[4] = abs(ionCentroid[plane])/20;
     paramDelta[5] = peakVal/40;
+    */
+    
+    paramDelta[0] = paramValue[0]/2;
+    paramDelta[1] = abs(beamCentroid[plane])/2;
+    paramDelta[2] = peakVal/4;
+    paramDelta[3] = paramValue[3]/2;
+    paramDelta[4] = abs(ionCentroid[plane])/2;
+    paramDelta[5] = peakVal/4;
 
     lowerLimit[0] = paramValue[0]/100;
     if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
@@ -1962,14 +2029,15 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     }
     lastBestResult = DBL_MAX;
 #endif
-    int nTries = bigaussian_fit_restarts;
+    int nTries = distribution_fit_restarts;
     nEvaluations = 0;
     fitReturn = 0;
     lastResult = DBL_MAX;
     while (nTries--) {
       fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-			      NULL, nVariables, bigaussian_fit_target, bigaussian_fit_tolerance/10.0, biGaussianFunction, 
-			      (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+                               NULL, nVariables, distribution_fit_target, distribution_fit_tolerance/10.0, 
+                               ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN?biGaussianFunction:biLorentzianFunction,
+                               (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
       if (fitReturn>=0)
 	nEvaluations += fitReturn;
 #if USE_MPI
@@ -1981,12 +2049,12 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
       MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
       printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
 #endif
-      if (bestResult<bigaussian_fit_target || (lastBestResult - bestResult)<bigaussian_fit_tolerance) {
+      if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
 	break;
       }
       lastBestResult = bestResult;
 #else
-      if (result<bigaussian_fit_target || (lastResult-result)<bigaussian_fit_tolerance)
+      if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance)
 	break;
       lastResult = result;
 #endif
@@ -2017,15 +2085,15 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
     ionEffects->nEvaluations[plane] = nEvaluations;
 #endif
 
-    ionEffects->xyBigaussianFitResidual[plane] = biGaussianFunction(paramValue, &dummy);
+    ionEffects->xyFitResidual[plane] = biGaussianFunction(paramValue, &dummy);
 #if USE_MPI && MPI_DEBUG
-    printf("residual is %le\n", ionEffects->xyBigaussianFitResidual[plane]);
+    printf("residual is %le\n", ionEffects->xyFitResidual[plane]);
 #endif
 
     if (fitReturn>0) {
-      ionEffects->xyBigaussianSet[plane] = 1;
+      ionEffects->xyFitSet[plane] = 1;
       for (int i=0; i<6; i++)
-	ionEffects->xyBigaussianParameter[plane][i] = paramValue[i];
+	ionEffects->xyFitParameter[plane][i] = paramValue[i];
       for (int i=0; i<nData; i++)
 	ionEffects->ionHistogramFit[plane][i] = yFit[i];
     } else {
@@ -2040,6 +2108,8 @@ void biGaussianFit(double beamSigma[2], double beamCentroid[2], double *paramVal
 	paramValueY[i] = paramValue[i];
     }
   }
+
+  return ionEffects->ionFieldMethod;
 }
 
 
@@ -2065,6 +2135,65 @@ double biGaussianFunction(double *param, long *invalid)
     z = (xData[i]-param[4])/param[3];
     if (z<6 && z>-6)
       yFit[i] += param[5] * exp(-z*z/2);
+    tmp = abs(yFit[i]-yData[i]);
+    sum += tmp;
+    sum2 += sqr(tmp);
+    yFitSum += yFit[i];
+    if (tmp>max)
+      max = tmp;
+  }
+  
+  switch (residualType) {
+  case ION_FIT_RESIDUAL_RMS_DEV:
+    result = sqrt(sum2)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_MAX_ABS_DEV:
+    result = max/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_MAX_PLUS_RMS_DEV:
+    result = sqrt(sum2)/yDataSum + max/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_PLUS_RMS_DEV:
+    result = sqrt(sum2)/yDataSum + sum/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM:
+    result = sqrt(sum2)/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM:
+    result = sum/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_SUM_ABS_DEV:
+  default:
+    result = sum/yDataSum;
+    break;
+  }
+    
+  return result;
+}
+
+double biLorentzianFunction(double *param, long *invalid) 
+{
+  double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
+  *invalid = 0;
+
+  /* The parameters are different from the standard Lorentzian.
+   * Instead of A/(pi*a*(1 + (x/a)^2) we use peak/(1 + (x/a)^2)
+   */
+  //param[0] = a1
+  //param[1] = cen1
+  //param[2] = peak1
+  //param[3] = a2
+  //param[4] = cen2
+  //param[5] = peak2
+  
+  for (int i=0; i<nData; i++) {
+    double z;
+    z = (xData[i]-param[1])/param[0];
+    yFit[i]  = param[2]/(1+sqr(z));
+
+    z = (xData[i]-param[4])/param[3];
+    yFit[i] += param[5]/(1+sqr(z));
+
     tmp = abs(yFit[i]-yData[i]);
     sum += tmp;
     sum2 += sqr(tmp);

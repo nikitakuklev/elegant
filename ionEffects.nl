@@ -14,11 +14,11 @@
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
-	  double bigaussian_fit_target = 0.1;
-	  double bigaussian_fit_tolerance = 1e-3;
-	  long bigaussian_fit_evaluations = 100;
-	  long bigaussian_fit_passes = 1;
-	  long bigaussian_fit_restarts = 1;
+	  double distribution_fit_target = 0.1;
+	  double distribution_fit_tolerance = 1e-3;
+	  long distribution_fit_evaluations = 100;
+	  long distribution_fit_passes = 1;
+	  long distribution_fit_restarts = 1;
 	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
           long generation_interval = 1;

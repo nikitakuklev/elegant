@@ -54,6 +54,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|correct| command, also had a bug in reporting the ``uncorrected'' trajectory in the trajectory output file.
   Instead of giving the uncorrected trajectory, it was giving the trajectory after the penultimate correction iteration.
   This was reported by forum user shancai.
+\item The memory-efficiency of bucket assignments, invoked when using \verb|use_bunched_mode| in \verb|sdds_beam|,
+  was improved, preventing crashes in some extreme cases for the serial version.
 \end{itemize}
 
 \subsection{New and Modified Elements}

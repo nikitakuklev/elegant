@@ -3304,10 +3304,11 @@ typedef struct {
   double *ionHistogramFit[2];      /* fit to same */
   double ionHistogramMissed[2];    /* Charge of ions that are left out of the histogram */
   double qTotal;                   /* for normalization of ionHistogramMissed */
-  /* save bigaussian parameters between calls to speed up subsequent fitting, and for output */
-  double xyBigaussianParameter[2][6]; 
-  short xyBigaussianSet[2];           /* if nonzero, bigaussian parameter values are valid */
-  double xyBigaussianFitResidual[2];
+  /* save fit parameters between calls to speed up subsequent fitting, and for output */
+  short ionFieldMethod;             /* last method used */
+  short xyFitSet[2];                /* if nonzero, fit parameter values are valid */
+  double xyFitParameter[2][6];      /* [0]=x, [1]=y: fit parameters for two distributions (bigaussian or bilorentzian) */
+  double xyFitResidual[2];          /* [0]=x, [1]=y: last residual */
 #if USE_MPI
   long nEvaluationsBest[2], nEvaluationsMin[2], nEvaluationsMax[2];
 #else
@@ -4583,6 +4584,7 @@ void histogram_sums(long nonEmptyBins, long firstBin, long *lastBin, long *his);
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run);
 void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline);
 void trackWithIonEffects(double **part0, long np0, IONEFFECTS *ionEffects, double Po, long iPass, long nPasses, CHARGE *charge);
+void evaluateVoltageFromLorentzian(double *Eperp, double a, double b, double x, double y);
 
 extern VMATRIX *computeMatricesFromTracking(FILE *fpo_ma, double **initial, double **final, double **error, 
 				 double *step_size, double *maximum_value, int n_points1, int n_points_total,
