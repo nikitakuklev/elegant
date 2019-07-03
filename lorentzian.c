@@ -30,7 +30,7 @@ void evaluateVoltageFromLorentzian(double *Eperp, double a, double b, double x, 
   double arcTANa_b, arcTANb_a;
 
   /* Check to see if general expression can be used; it has numerical problems when |x| -> |b| and |y| -> |a| */
-  if((fabs(fabs(b)-fabs(x))<0.001) && (fabs(fabs(a)-fabs(y))<0.001)) {
+  if((fabs(fabs(x/b)-1)<0.001) && (fabs(fabs(y/a)-1)<0.001)) {
     /* Use expansion accurate to better than 3x10^{-10} and make calculation assuming x > 0, y > 0 */
     arcTANa_b = atan2(a,b);
     arcTANb_a = atan2(b,a);
