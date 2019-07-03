@@ -2684,12 +2684,17 @@ included in the plane in question.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
 \item \verb|ion_bin_divisor| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
-  the number of ion bins per rms parameter of  the electron beam.      
+  the number of ion bins per rms parameter of the electron beam.
 \item \verb|ion_range_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
-  the full span of the ion binning region bins in units of the rms parameter of the ion distribution.
+  used to determine the full span of the ion binning region bins in units of the rms parameter of the ion distribution.
+  The sign of the value determines which algorithm is used.
+  For $m<0$, the binning range is $\left|m\right|\sigma_{ion}$.
+  For $m=0$, the full span of the ion distribution is included; this may result in a very large number of bins being
+  used to cover a few outlying ions, and is not recommended.
+  For $m>0$, the code first finds the approximate range containing the central 80\% of the ions, then multiplies by
+  $m$ to get the range used.
 \item \verb|ion_sigma_limit_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
-  the minimum value for either of the
-  ion sigmas (for bigaussian) or size parameter (for bilorentizan)
+  the minimum value for either of the ion sigmas (for bigaussian) or size parameters (for bilorentizan)
   in units of the bin size. Use to prevent one of the gaussians or lorentzians from being too delta-function-like.
 \item \verb|ion_histogram_output|, \verb|ion_histogram_output_s_start|, \verb|ion_histogram_output_s_end|, 
       \verb|ion_histogram_output_interval|, \verb|ion_histogram_max_bins| --- Controls for the output of ion histograms when
