@@ -23,6 +23,7 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
 VMATRIX *rfdf_matrix(RFDF *rfdf, double Preference);
 VMATRIX *sextupoleFringeMatrix(double K2, double length, long maxOrder, long side);
 VMATRIX *mult_matrix(MULT *mult, double P, long maxOrder);
+VMATRIX *interpolateMatrixWithIdentityMatrix(VMATRIX *M0, double fraction, long order);
 
 static double timeCounter[N_TYPES];
 static long runCounter[N_TYPES];
@@ -1314,8 +1315,7 @@ VMATRIX *compute_matrix(
           matr->matrix_read = 1;
           matr->length = matr->M.C[4];
         }
-        elem->matrix = tmalloc(sizeof(*(elem->matrix)));
-        copy_matrices(elem->matrix, &(((MATR*)elem->p_elem)->M));
+        elem->matrix = interpolateMatrixWithIdentityMatrix(&(((MATR*)elem->p_elem)->M), matr->fraction, matr->order);
         break;
       case T_WATCH:
         break;
@@ -2851,4 +2851,37 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
   return M;
 }
 
+
+VMATRIX *interpolateMatrixWithIdentityMatrix(VMATRIX *M0, double fraction, long order)
+{
+    VMATRIX *M;
+    double *C, **R, ***T;
+    long i, j, k, l;
+
+    M = tmalloc(sizeof(*M));
+    M->order = order;
+    initialize_matrices(M, M->order);
+
+    M->C[4] = M0->C[4];
+
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++)
+        M->R[i][j] = (i==j?1-fraction:0) + M0->R[i][j]*fraction;
+    
+    if (order>1) {
+      for (i=0; i<6; i++) 
+        for (j=0; j<6; j++)
+          for (k=0; k<=j; k++)
+            M->T[i][j][k] = M0->T[i][j][k]*fraction;
+      if (order>2) {
+        for (i=0; i<6; i++) 
+          for (j=0; j<6; j++)
+            for (k=0; k<=j; k++)
+              for (l=0; l<=k; l++)
+                M->Q[i][j][k][l] = M0->Q[i][j][k][l]*fraction;
+      }
+    }
+    
+    return(M);
+}
 

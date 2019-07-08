@@ -552,6 +552,7 @@ MATR matr_example;
 /* name for matrix parameters */
 PARAMETER matr_param[N_MATR_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&matr_example.length), NULL, 0.0, 0, "length"},
+    {"FRACTION", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matr_example.fraction), NULL, 1.0, 0, "The provided matrix M is interpolated with the identity matrix I according to f*M+(1-f)*I."},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&matr_example.filename), "", 0.0, 0, "input file"},
     {"ORDER", "", IS_SHORT, 0, (long)((char *)&matr_example.order), NULL, 0.0, 1, "matrix order"},
     } ;

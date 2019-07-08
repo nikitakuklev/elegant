@@ -955,7 +955,7 @@ extern char *entity_text[N_TYPES];
 #define N_RCOL_PARAMS 7
 #define N_ECOL_PARAMS 9
 #define N_MARK_PARAMS 3
-#define N_MATR_PARAMS 3
+#define N_MATR_PARAMS 4
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 27
 #define N_RFTMEZ0_PARAMS 36
@@ -2070,7 +2070,7 @@ typedef struct {
 /* names and storage structure for explicit matrix input from a file */
 extern PARAMETER matr_param[N_MATR_PARAMS] ;
 typedef struct {
-    double length;
+    double length, fraction;
     char *filename;
     short order;
     /* for internal use only */
