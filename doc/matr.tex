@@ -24,3 +24,13 @@ In the past,
 instead of starting with \verb|C:|, the first line of the matrix could start
 with any string terminated by a colon, but that line had to be the first line in the
 file, which conflicted with the format emitted by \verb|analyze_map|.
+
+The \verb|FRACTION| parameter can be used to interpolate the matrix elements between the
+matrix $M_0$ read from \verb|FILENAME| and the identity matrix $I$, according to
+\begin{equation}
+M = fM_0 + (1-f)I.
+\end{equation}
+This can be used, for example, to gradually ramp in the effect of a matrix in order to
+study its effect or allow smoother transition of an optical solution obtained with the
+optimizer.
+
