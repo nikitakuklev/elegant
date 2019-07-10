@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Process the runScan results to show bunch-by-bunch properties vs charge
+
+sddsxref runScan.out runScan.fin -pipe=out -transfer=parameter,Q.TOTAL -leave=* \
+    | sddsprocess -pipe \
+    "-define=col,Step,i_page,type=short" \
+    "-define=col,QTotal,Q.TOTAL,units=C" \
+    "-define=col,Bunch,particleID 1 - IDSlotsPerBunch / int,type=short" \
+    | sddssort -pipe -col=Bunch \
+    | sddsbreak -pipe -change=Bunch \
+    | sddsprocess -pipe -process=Bunch,first,%s \
+    | sddsanalyzebeam -pipe -correctedOnly \
+    | sddssort -pipe -column=Bunch -column=Step \
+    | sddsbreak -pipe -change=Bunch \
+    | sddsprocess -pipe=in runScan.proc -process=Bunch,first,%s0 -print=param,Label1,"Bunch %.0lf",Bunch0
+    
+sddsplot -col=Q.TOTAL,Sdelta runScan.proc -split=page -legend=param=Label1 -graph=line,vary -mode=loglog
+sddsplot -col=Q.TOTAL,Cx runScan.proc -split=page -legend=param=Label1 -graph=line,vary -mode=loglin
+sddsplot -col=Q.TOTAL,Cy runScan.proc -split=page -legend=param=Label1 -graph=line,vary -mode=loglin

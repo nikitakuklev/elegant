@@ -1,0 +1,21 @@
+&run_setup
+        p_central_mev = 100
+        lattice = lattice.lte
+        use_beamline = BL
+        final = %s.fin
+        output = %s.out
+&end
+
+&run_control
+        n_indices = 1
+&end
+
+&vary_element name = Q, item = TOTAL, initial=1e-9, final=1e-6, geometric = 1, index_number=0, index_limit=10 &end
+
+&sdds_beam
+        input = bunchTrain.out,
+        use_bunched_mode = 1        
+        reuse_bunch = 1
+&end
+
+&track &end

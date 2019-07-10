@@ -1,0 +1,22 @@
+&run_setup
+        p_central_mev = 100
+        lattice = lattice.lte
+        use_beamline = GB
+        output = %s.out
+&end
+
+&run_control
+&end
+
+&bunched_beam
+        n_particles_per_bunch = 10000
+        emit_nx = 1e-6
+        emit_ny = 1e-6
+        beta_x = 10
+        beta_y = 1
+        sigma_s = 10e-3
+        sigma_dp = 1e-3
+        distribution_cutoff[0] = 3*3
+&end
+
+&track &end

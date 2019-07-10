@@ -1,0 +1,17 @@
+&run_setup
+        p_central_mev = 100
+        lattice = lattice.lte
+        use_beamline = BL
+        output = %s.out
+&end
+
+&run_control
+&end
+
+&sdds_beam
+        input = bunchTrain.out,
+        use_bunched_mode = 1        
+        reuse_bunch = 1
+&end
+
+&track &end

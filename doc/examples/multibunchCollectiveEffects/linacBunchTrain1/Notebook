@@ -1,0 +1,42 @@
+Example of running an irregular train of bunches through a linac with cavity HOMs
+---M. Borland, ANL, 2019 
+
+dipole.40tile.modes
+monopole.40tile.modes
+        Cavity mode files. These are for the APS storage ring cavities, provided by L. Emery (ANL).
+
+lattice.lte
+        Lattice file
+
+bunch.ele
+        Run to make a single bunch
+        
+        $ elegant bunch.ele
+
+makeTrain
+        Script to make a bunch train from the output of running bunch.ele
+
+        $ makeTrain
+
+run.ele
+        Simple run with a fixed value of the total charge in the train.
+
+        $ elegant run.ele
+        $ sddsplot -column=t,'(x,y,p)' -separate=1 run.out -graph=dot
+
+runScan.ele
+        Runs the bunch train through the linac for several values of the total charge in the train.
+
+        $ elegant runScan.ele
+        or (if you have 12 cores, for example)
+        $ mpiexec -np 12 Pelegant runScan.ele
+
+processScan
+        Processes runScan and makes some graphs, showing beam break-up.
+
+        $ processScan
+
+cleanUp
+        Cleans up run output
+        
+        $ cleanUp

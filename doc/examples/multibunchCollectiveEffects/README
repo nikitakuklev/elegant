@@ -7,3 +7,6 @@ ILMatrixFromTracking
         Example of determining the parameters for ILMATRIX from tracking. More reliable
         than using values from twiss_output, as done for APS-24Bunch-CBI. The ILMatrix.sdds
         file from here can be used in place of the file generated in APS-24Bunch-CBI.
+
+linacBunchTrain1
+        Example of simulating beam breakup in a linac with a strange bunch pattern.

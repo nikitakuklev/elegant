@@ -1,0 +1,14 @@
+D0: drift
+GB: LINE=(D0)
+
+L1: RFCA,L=3.0,FREQ=352E6,VOLT=10E6,PHASE=90,N_KICKS=20,fiducial="light"
+Q1: QUAD,L=0.5,K1=0.25
+D1: DRIF,L=0.25
+Q2: QUAD,L=1,K1=-0.25
+RFM: FRFMODE,FILENAME="monopole.40tile.modes",BIN_SIZE=1e-12,N_BINS=1500
+RFD: FTRFMODE,FILENAME="dipole.40tile.modes",BIN_SIZE=1e-12,N_BINS=1200
+
+CELL: LINE=(L1,D1,Q1,D1,Q2,D1,Q1,D1,RFM,RFD)
+Q: charge,total=10e-9,allow_total_change=1
+BL: line=(Q,10*CELL)
+

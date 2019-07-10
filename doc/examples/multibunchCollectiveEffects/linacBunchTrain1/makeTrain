@@ -1,0 +1,36 @@
+#!/bin/sh  
+# \
+exec tclsh "$0" "$@"
+
+# main rf frequency
+set frf 352e6
+# Offsets, in buckets
+set offsetList [list 0 1 2 3 10 20]
+# Relative charge
+set relChargeList [list 0.1 1 0.1 0.1 1 0.1]
+# bunch file
+set bunchFile bunch.out
+
+set np [exec sdds2stream -rows=bare $bunchFile]
+
+set index 0
+foreach offset $offsetList relCharge $relChargeList {
+    set nmax [expr int($np*$relCharge)]
+    # 1. Filter the number of particles to vary the relative charge
+    # 2. Offset the time coordinates (t) to different rf buckets
+    # 3. Offset the particleID to assign particles to different bunches
+    # 4. Offset the x and y coordinates to seed transverse effects
+    set rx [expr 5e-4*rand()]
+    set ry [expr 1e-4*rand()]
+    exec sddsprocess $bunchFile $bunchFile.$index \
+      "-test=column,i_row $nmax <" \
+      "-redefine=col,t,t $offset $frf / +,units=s" \
+      "-redefine=col,particleID,particleID $index IDSlotsPerBunch * +,type=long" \
+      "-redefine=col,x,x $rx +,units=m" \
+      "-redefine=col,y,y $ry +,units=m"
+    lappend bunchList $bunchFile.$index
+    incr index
+}
+
+eval exec sddscombine $bunchList bunchTrain.out -overwrite
+eval file delete $bunchList
