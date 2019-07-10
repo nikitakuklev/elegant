@@ -2098,7 +2098,11 @@ short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramVa
     ionEffects->nEvaluations[plane] = nEvaluations;
 #endif
 
-    ionEffects->xyFitResidual[plane] = biGaussianFunction(paramValue, &dummy);
+    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN)
+      ionEffects->xyFitResidual[plane] = biGaussianFunction(paramValue, &dummy);
+    else
+      ionEffects->xyFitResidual[plane] = biLorentzianFunction(paramValue, &dummy);
+
 #if USE_MPI && MPI_DEBUG
     printf("residual is %le\n", ionEffects->xyFitResidual[plane]);
 #endif
