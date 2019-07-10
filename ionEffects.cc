@@ -2200,6 +2200,8 @@ double biGaussianFunction(double *param, long *invalid)
 double biLorentzianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
+  double wSumData = 0, wSumFit = 0;
+
   *invalid = 0;
 
   /* The parameters are different from the standard Lorentzian.
@@ -2214,6 +2216,8 @@ double biLorentzianFunction(double *param, long *invalid)
   
   for (int i=0; i<nData; i++) {
     double z;
+    wSumData += xData[i]*yData[i];
+
     z = (xData[i]-param[1])/param[0];
     yFit[i]  = param[2]/(1+sqr(z));
 
@@ -2224,6 +2228,7 @@ double biLorentzianFunction(double *param, long *invalid)
     sum += tmp;
     sum2 += sqr(tmp);
     yFitSum += yFit[i];
+    wSumFit += xData[i]*yFit[i];
     if (tmp>max)
       max = tmp;
   }
@@ -2246,6 +2251,12 @@ double biLorentzianFunction(double *param, long *invalid)
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM:
     result = sum/yDataSum + abs(yDataSum-yFitSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_CENTROID:
+    if (yFitSum)
+      result = sqrt(sum2)/yDataSum + abs(wSumFit/yFitSum-wSumData/yDataSum);
+    else
+      result = sqrt(sum2)/yDataSum + abs(wSumData/yDataSum);
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
   default:
