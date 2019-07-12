@@ -25,12 +25,16 @@
 #define ION_FIELD_GAUSSIAN 0
 #define ION_FIELD_BIGAUSSIAN 1
 #define ION_FIELD_BILORENTZIAN 2
-#define ION_FIELD_AUTO 3
-#define N_ION_FIELD_METHODS 4
+#define ION_FIELD_TRIGAUSSIAN 3
+#define ION_FIELD_TRILORENTZIAN 4
+#define ION_FIELD_AUTO 5
+#define N_ION_FIELD_METHODS 6
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
   (char*)"bigaussian",
   (char*)"bilorentzian",
+  (char*)"trigaussian",
+  (char*)"trilorentzian",
   (char*)"auto"
 };
 static long ionFieldMethod = -1;
@@ -106,14 +110,16 @@ static long leftIonCounter = 0;
 extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm);
 #endif
 
-//for bi-gaussian fit
+//for fit (e.g., bi-gaussian)
 static double *xData=NULL, *yData=NULL, *yFit=NULL, yDataSum;
 static long nData = 0;
+static long nFunctions = 2; /* should be 2 or 3 */
+static long mFunctions;
 
-short biWhateverFit(double beamSigma[2], double beamCentroid[2], double paramValueX[6], 
-                    double paramValueY[6], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
-double biGaussianFunction(double *param, long *invalid);
-double biLorentzianFunction(double *param, long *invalid);
+short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double paramValueX[9], 
+                    double paramValueY[9], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
+double multiGaussianFunction(double *param, long *invalid);
+double multiLorentzianFunction(double *param, long *invalid);
 
 //void report();
 void report(double res, double *a, long pass, long n_eval, long n_dimen);
@@ -302,6 +308,13 @@ void setUpIonEffectsOutputFiles(long nPasses)
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
 	}
+        if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
+            (!SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma3", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid3", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q3", "C", SDDS_DOUBLE))) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  exitElegant(1);
+        }
         if (!SDDS_SaveLayout(SDDS_ionHistogramOutput) || !SDDS_WriteLayout(SDDS_ionHistogramOutput)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
@@ -355,6 +368,10 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
   if (ionFieldMethod==ION_FIELD_AUTO)
     bombElegantVA((char*)"field_calculation_method=\"%s\" is not yet implemented", field_calculation_method);
+  if (ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN)
+    nFunctions = 2;
+  else if (ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
+    nFunctions = 3;
 
   if (!fit_residual_type || !strlen(fit_residual_type))
     residualType = ION_FIT_RESIDUAL_RMS_DEV;
@@ -1204,8 +1221,8 @@ void trackWithIonEffects
 #endif
     
 //for bi-gaussian kick
-    double paramValueX[6], paramValueY[6];
-    double tempCentroid[4][2], tempSigma[4][2], tempkick[2], tempQ[4];
+    double paramValueX[9], paramValueY[9];
+    double tempCentroid[9][2], tempSigma[9][2], tempkick[2], tempQ[9];
     double normX, normY;
     
     ionEffects->ionFieldMethod = ionFieldMethod;
@@ -1218,78 +1235,51 @@ void trackWithIonEffects
 #endif
       /* We take a return value here for future improvement in which the fitting function is automatically selected. */
       ionEffects->ionFieldMethod = 
-        biWhateverFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
-
+        multipleWhateverFit(sigma, centroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
+      
       /* these factors needed because we fit charge histograms instead of charge densities */
       normX = ionEffects->ionRange[0] / ionEffects->ionBins[0];
       normY = ionEffects->ionRange[1] / ionEffects->ionBins[1];
       
-      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN) {
-        /* paramValueX[0,1,2,3,4,5] = sigma1, centroid1, height1, sigma2, centroid2, height2 */
-        tempCentroid[0][0] = paramValueX[1];
-        tempCentroid[0][1] = paramValueY[1];
-        tempSigma[0][0] = paramValueX[0];
-        tempSigma[0][1] = paramValueY[0];
-        /* We need 2*Pi*SigmaX*Sigmay here because in biGaussianFunction() the factor 1/(sqrt(2*pi)*sigma) is
-         * hidden in the height parameter. We need to remove it for use in the B-E formula.
-         * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
-         * each of which will integrate to qIon.
-         */
-        tempQ[0] = paramValueX[2] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[0] * paramValueY[0] / qIon;
-        
-        tempCentroid[1][0] = paramValueX[4];
-        tempCentroid[1][1] = paramValueY[1];
-        tempSigma[1][0] = paramValueX[3];
-        tempSigma[1][1] = paramValueY[0];
-        tempQ[1] = paramValueX[5] / normX * paramValueY[2] / normY * 2 * PI * paramValueX[3] * paramValueY[0] / qIon;
-        
-        tempCentroid[2][0] = paramValueX[1];
-        tempCentroid[2][1] = paramValueY[4];
-        tempSigma[2][0] = paramValueX[0];
-        tempSigma[2][1] = paramValueY[3];
-        tempQ[2] = paramValueX[2] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[0] * paramValueY[3] / qIon;
-        
-        tempCentroid[3][0] = paramValueX[4];
-        tempCentroid[3][1] = paramValueY[4];
-        tempSigma[3][0] = paramValueX[3];
-        tempSigma[3][1] = paramValueY[3];
-        tempQ[3] = paramValueX[5] / normX * paramValueY[5] / normY * 2 * PI * paramValueX[3] * paramValueY[3] / qIon;
-      } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN) {
-        /* paramValueX[0,1,2] = ax1, centroidx1, heightx1 */
-        /* paramValueY[0,1,2] = ay1, centroidy1, heighty1 */
-        tempSigma[0][0] = paramValueX[0];
-        tempSigma[0][1] = paramValueY[0];
-        tempCentroid[0][0] = paramValueX[1];
-        tempCentroid[0][1] = paramValueY[1];
-        /* Here we account for the bin sizes (normX and normY) and convert the height parameters to those
-         * used in a standard Lorentzian, PI*L(0)*a. We also divide out the total
-         * charge since otherwise the 2d integral will be qIon^2, instead of qIon. 
-         */
-        tempQ[0] = paramValueX[2]*PI*paramValueX[0]/normX * paramValueY[2]*PI*paramValueY[0]/normY / qIon;
-        
-        /* paramValueX[3,4,5] = ax2, centroidx2, heightx2 */
-        /* paramValueY[0,1,2] = ay1, centroidy1, heighty1 */
-        tempSigma[1][0] = paramValueX[3];
-        tempSigma[1][1] = paramValueY[0];
-        tempCentroid[1][0] = paramValueX[4];
-        tempCentroid[1][1] = paramValueY[1];
-        tempQ[1] = paramValueX[5]*PI*paramValueX[3]/normX * paramValueY[2]*PI*paramValueY[0]/normY / qIon;
-        
-        /* paramValueX[0,1,2] = ax1, centroidx1, heightx1 */
-        /* paramValueY[3,4,5] = ay2, centroidy2, heighty2 */
-        tempCentroid[2][0] = paramValueX[1];
-        tempCentroid[2][1] = paramValueY[4];
-        tempSigma[2][0] = paramValueX[0];
-        tempSigma[2][1] = paramValueY[3];
-        tempQ[2] = paramValueX[2]*PI*paramValueX[0]/normX * paramValueY[5]*PI*paramValueY[3]/normY / qIon;
-        
-        /* paramValueX[3,4,5] = ax2, centroidx2, heightx2 */
-        /* paramValueY[3,4,5] = ay2, centroidy2, heighty2 */
-        tempCentroid[3][0] = paramValueX[4];
-        tempCentroid[3][1] = paramValueY[4];
-        tempSigma[3][0] = paramValueX[3];
-        tempSigma[3][1] = paramValueY[3];
-        tempQ[3] = paramValueX[5]*PI*paramValueX[3]/normX * paramValueY[5]*PI*paramValueY[3]/normY / qIon;
+      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
+        /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
+        /* paramValueY[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
+        for (int ix=0; ix<nFunctions; ix++) {
+          for (int iy=0; iy<nFunctions; iy++) {
+            tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
+            tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
+            tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
+            tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
+
+            /* We need 2*Pi*SigmaX*Sigmay here because in biGaussianFunction() the factor 1/(sqrt(2*pi)*sigma) is
+             * hidden in the height parameter. We need to remove it for use in the B-E formula.
+             * Dividing by qIon is needed because we are making a product of two functions, rho(x) and rho(y),
+             * each of which will integrate to qIon.
+             */
+            tempQ[ix+iy*nFunctions] = 
+              paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
+              2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
+          }
+        }
+      } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
+        /* paramValueX[0..8] = ax1, centroidx1, heightx1, ax2, centroidx2, heightx2, [ax3, centroidx3, heightx3] */
+        /* paramValueY[0..8] = ay1, centroidy1, heighty1, ay2, centroidy2, heighty2, [ay3, centroidy3, heighty3] */
+        for (int ix=0; ix<nFunctions; ix++) {
+          for (int iy=0; iy<nFunctions; iy++) {
+            tempCentroid[ix+iy*nFunctions][0] = paramValueX[1+ix*3];
+            tempCentroid[ix+iy*nFunctions][1] = paramValueY[1+iy*3];
+            tempSigma[ix+iy*nFunctions][0] = paramValueX[0+ix*3];
+            tempSigma[ix+iy*nFunctions][1] = paramValueY[0*iy*3];
+
+            /* Here we account for the bin sizes (normX and normY) and convert the height parameters to those
+             * used in a standard Lorentzian, PI*L(0)*a. We also divide out the total
+             * charge since otherwise the 2d integral will be qIon^2, instead of qIon. 
+             */
+            tempQ[ix+iy*nFunctions] = 
+              paramValueX[2+ix*3]*PI*paramValueX[0+ix*3]/normX *
+              paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / qIon;
+          }
+        }
       } else
         bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
     }
@@ -1307,8 +1297,9 @@ void trackWithIonEffects
             part[ip][3] += kick[1] / c_mks / Po; 
             break;
           case ION_FIELD_BIGAUSSIAN:
+          case ION_FIELD_TRIGAUSSIAN:
             kick[0] = kick[1] = 0;
-            for (int i=0; i<4; i++)  {
+            for (int i=0; i<nFunctions*nFunctions; i++)  {
               gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], tempkick, tempQ[i], me_mks, 1);
               kick[0] += tempkick[0];
               kick[1] += tempkick[1];
@@ -1317,8 +1308,9 @@ void trackWithIonEffects
             part[ip][3] += kick[1] / c_mks / Po; 
             break;
           case ION_FIELD_BILORENTZIAN:
+          case ION_FIELD_TRILORENTZIAN:
             kick[0] = kick[1] = 0;
-            for (int i=0; i<4; i++) {
+            for (int i=0; i<nFunctions*nFunctions; i++) {
               evaluateVoltageFromLorentzian(tempkick, 
                                            tempSigma[i][0], tempSigma[i][1], 
                                            part[ip][0] - tempCentroid[i][0], part[ip][2] - tempCentroid[i][1]);
@@ -1342,7 +1334,8 @@ void trackWithIonEffects
       }
     }
 
-    if ((ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN)&&
+    if ((ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN ||
+         ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
 	(SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
 	&& (ionEffects->sLocation >= ionHistogramOutput_sStart) 
 	&& (ionEffects->sLocation <= ionHistogramOutput_sEnd)) {
@@ -1390,6 +1383,15 @@ void trackWithIonEffects
 				  "centroid2", ionEffects->xyFitParameter[iPlane][4],
 				  "q1", ionEffects->xyFitParameter[iPlane][2],
 				  "q2", ionEffects->xyFitParameter[iPlane][5],
+				  NULL)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+          if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "sigma3", ionEffects->xyFitParameter[iPlane][6],
+				  "centroid3", ionEffects->xyFitParameter[iPlane][7],
+				  "q3", ionEffects->xyFitParameter[iPlane][8],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
@@ -1956,11 +1958,10 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 }
 
 
-short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, 
+short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0, lastResult = DBL_MAX;
-  double nVariables = 6;
-  double paramValue[6], paramDelta[6], lowerLimit[6], upperLimit[6];
+  double paramValue[9], paramDelta[9], lowerLimit[9], upperLimit[9];
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax;
@@ -1972,117 +1973,136 @@ short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramVa
 #endif
   long verbosity = 0, plane;
 
+  for (int i=0; i<3*nFunctions; i++)
+    paramValueX[i] = paramValueY[i] = 0;
+
   for (plane=0; plane<2; plane++) {
-    nData = ionEffects->ionBins[plane];
-
-    xData = ionEffects->xyIonHistogram[plane];
-    yData = ionEffects->ionHistogram[plane];
-    yFit = ionEffects->ionHistogramFit[plane];
-    yDataSum = 0;
-    for (int i=0; i<nData; i++)
-      yDataSum += yData[i];
-    result = find_min_max(&minVal, &peakVal, yData, nData);
-    find_min_max(&xMin, &xMax, xData, nData);
-
-    /* smaller sigma is close to the beam size, larger is close to ion sigma */
-    paramValue[0] = beamSigma[plane];
-    paramValue[1] = beamCentroid[plane];
-    paramValue[2] = peakVal/2;
-    paramValue[3] = ionSigma[plane];
-    paramValue[4] = ionCentroid[plane];
-    paramValue[5] = peakVal/2;
-
-    /*
-    paramDelta[0] = paramValue[0]/20;
-    paramDelta[1] = abs(beamCentroid[plane])/20;
-    paramDelta[2] = peakVal/40;
-    paramDelta[3] = paramValue[3]/20;
-    paramDelta[4] = abs(ionCentroid[plane])/20;
-    paramDelta[5] = peakVal/40;
-    */
-    
-    paramDelta[0] = paramValue[0]/2;
-    paramDelta[1] = abs(beamCentroid[plane])/2;
-    paramDelta[2] = peakVal/4;
-    paramDelta[3] = paramValue[3]/2;
-    paramDelta[4] = abs(ionCentroid[plane])/2;
-    paramDelta[5] = peakVal/4;
-
-    lowerLimit[0] = paramValue[0]/100;
-    if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
-      lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
-    lowerLimit[1] = xMin/10;
-    lowerLimit[2] = peakVal/20;
-    lowerLimit[3] = paramValue[3]/100;
-    if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
-      lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
-    lowerLimit[4] = xMin/10;
-    lowerLimit[5] = peakVal/20;
-
-    upperLimit[0] = paramValue[0]*10;
-    if (upperLimit[0]<lowerLimit[0])
-      upperLimit[0] = 2*lowerLimit[0];
-    upperLimit[1] = xMax/10;
-    upperLimit[2] = peakVal;
-    upperLimit[3] = paramValue[3]*10;
-    if (upperLimit[3]<lowerLimit[3])
-      upperLimit[3] = 2*lowerLimit[3];
-    upperLimit[4] = xMax/10;
-    upperLimit[5] = peakVal;
-
-#if USE_MPI
-    /* Randomize step sizes and starting points */
-    for (int i=0; i<6; i++) {
-      paramValue[i] *= (1+(random_2(0)-0.5)/5);
-      if (paramValue[i]<lowerLimit[i])
-	paramValue[i] = lowerLimit[i];
-      if (paramValue[i]>upperLimit[i])
-	paramValue[i] = upperLimit[i];
-      paramDelta[i] *= random_2(0)*9.9+0.1;
-    }
-    lastBestResult = DBL_MAX;
-#endif
-    int nTries = distribution_fit_restarts;
-    nEvaluations = 0;
     fitReturn = 0;
-    lastResult = DBL_MAX;
-    while (nTries--) {
-      fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-                               NULL, nVariables, distribution_fit_target, distribution_fit_tolerance/10.0, 
-                               ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN?biGaussianFunction:biLorentzianFunction,
-                               (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
-      if (fitReturn>=0)
-	nEvaluations += fitReturn;
+
+    nData = ionEffects->ionBins[plane];
+    for (mFunctions=2; mFunctions<=nFunctions; mFunctions++) {
+      xData = ionEffects->xyIonHistogram[plane];
+      yData = ionEffects->ionHistogram[plane];
+      yFit = ionEffects->ionHistogramFit[plane];
+      yDataSum = 0;
+      for (int i=0; i<nData; i++)
+        yDataSum += yData[i];
+      result = find_min_max(&minVal, &peakVal, yData, nData);
+      find_min_max(&xMin, &xMax, xData, nData);
+      
+      /* smaller sigma is close to the beam size, larger is close to ion sigma */
+      if (mFunctions==2) {
+        paramValue[0] = beamSigma[plane];
+        paramValue[1] = beamCentroid[plane];
+        paramValue[2] = peakVal/2;
+        paramDelta[0] = paramValue[0]/2;
+        paramDelta[1] = abs(beamCentroid[plane])/2;
+        paramDelta[2] = peakVal/4;
+        lowerLimit[0] = paramValue[0]/100;
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+          lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
+        lowerLimit[1] = xMin/10;
+        lowerLimit[2] = peakVal/20;
+        upperLimit[0] = paramValue[0]*10;
+        if (upperLimit[0]<lowerLimit[0])
+          upperLimit[0] = 2*lowerLimit[0];
+        upperLimit[1] = xMax/10;
+        upperLimit[2] = peakVal;
+
+        paramValue[3] = ionSigma[plane];
+        paramValue[4] = ionCentroid[plane];
+        paramValue[5] = paramValue[2]/3;
+        paramDelta[3] = paramValue[3]/2;
+        paramDelta[4] = abs(ionCentroid[plane])/2;
+        paramDelta[5] = peakVal/4;
+        lowerLimit[3] = paramValue[3]/100;
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+          lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
+        lowerLimit[4] = xMin/10;
+        lowerLimit[5] = paramDelta[5]/5;
+        upperLimit[3] = paramValue[3]*10;
+        if (upperLimit[3]<lowerLimit[3])
+          upperLimit[3] = 2*lowerLimit[3];
+        upperLimit[4] = xMax/10;
+        upperLimit[5] = peakVal;
+      } else if (mFunctions==3) {
+        paramValue[6] = 10*ionSigma[plane];
+        paramValue[7] = 0;
+        paramValue[8] = 0;
+        paramDelta[6] = paramValue[6]/2;
+        paramDelta[7] = abs(ionCentroid[plane])/2;
+        paramDelta[8] = peakVal/20;
+        lowerLimit[6] = paramValue[6]/100;
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
+            lowerLimit[6]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+          lowerLimit[6] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
+        lowerLimit[7] = xMin/10;
+        lowerLimit[8] = 0;
+        upperLimit[6] = paramValue[6]*10;
+        if (upperLimit[6]<lowerLimit[6])
+          upperLimit[6] = 2*lowerLimit[6];
+        upperLimit[7] = xMax/10;
+        upperLimit[8] = peakVal;
+      }
+      
 #if USE_MPI
-      //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
-      MPI_Barrier(MPI_COMM_WORLD);
-      MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+      /* Randomize step sizes and starting points */
+      for (int i=0; i<3*mFunctions; i++) {
+        if (myid!=0) {
+          paramValue[i] *= (1+(random_2(0)-0.5)/5);
+          if (paramValue[i]<lowerLimit[i])
+            paramValue[i] = lowerLimit[i];
+          if (paramValue[i]>upperLimit[i])
+            paramValue[i] = upperLimit[i];
+          paramDelta[i] *= random_2(0)*9.9+0.1;
+        }
+      }
+      lastBestResult = DBL_MAX;
+#endif
+      int nTries = distribution_fit_restarts;
+      nEvaluations = 0;
+      lastResult = DBL_MAX;
+      while (nTries--) {
+        fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+                                 NULL, mFunctions*3, distribution_fit_target, distribution_fit_tolerance/10.0, 
+                                 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
+                                 ?multiGaussianFunction:multiLorentzianFunction,
+                                 (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+        if (fitReturn>=0)
+          nEvaluations += fitReturn;
+#if USE_MPI
+        //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+        MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 #if MPI_DEBUG
-      double worstResult;
-      MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-      printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
+        double worstResult;
+        MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+        printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
 #endif
-      if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
-	break;
-      }
-      lastBestResult = bestResult;
+        if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
+          break;
+        }
+        lastBestResult = bestResult;
 #else
-      if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance)
-	break;
-      lastResult = result;
+        if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance)
+          break;
+        lastResult = result;
 #endif
 #if USE_MPI
-      MPI_Barrier(MPI_COMM_WORLD);
-      findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
-      MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
-      for (int i=0; i<6; i++) {
-	paramValue[i] *= (1+(random_2(0)-0.5)/20);
-	if (paramValue[i]<lowerLimit[i])
-	  paramValue[i] = lowerLimit[i];
-	if (paramValue[i]>upperLimit[i])
-	  paramValue[i] = upperLimit[i];
-      }
+        MPI_Barrier(MPI_COMM_WORLD);
+        findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+        MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+        for (int i=0; i<3*mFunctions; i++) {
+          paramValue[i] *= (1+(random_2(0)-0.5)/20);
+          if (paramValue[i]<lowerLimit[i])
+            paramValue[i] = lowerLimit[i];
+          if (paramValue[i]>upperLimit[i])
+            paramValue[i] = upperLimit[i];
+        }
 #endif
+      }
+      if (result<distribution_fit_target)
+        break;
     }
 
 #if USE_MPI
@@ -2097,16 +2117,15 @@ short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramVa
 #else
     ionEffects->nEvaluations[plane] = nEvaluations;
 #endif
-
-    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN)
-      ionEffects->xyFitResidual[plane] = biGaussianFunction(paramValue, &dummy);
+    if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN)
+      ionEffects->xyFitResidual[plane] = multiGaussianFunction(paramValue, &dummy);
     else
-      ionEffects->xyFitResidual[plane] = biLorentzianFunction(paramValue, &dummy);
-
+      ionEffects->xyFitResidual[plane] = multiLorentzianFunction(paramValue, &dummy);
+    
 #if USE_MPI && MPI_DEBUG
     printf("residual is %le\n", ionEffects->xyFitResidual[plane]);
 #endif
-
+    
     if (fitReturn>0) {
       ionEffects->xyFitSet[plane] = 1;
       for (int i=0; i<6; i++)
@@ -2118,42 +2137,38 @@ short biWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramVa
 	ionEffects->ionHistogramFit[plane][i] = -1;
     }
     
-    for (int i=0; i<6; i++) {
+    for (int i=0; i<3*mFunctions; i++) {
       if (plane==0)
 	paramValueX[i] = paramValue[i];
       else
 	paramValueY[i] = paramValue[i];
     }
   }
-
+  
   return ionEffects->ionFieldMethod;
 }
 
 
-double biGaussianFunction(double *param, long *invalid) 
+double multiGaussianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0;
 
   *invalid = 0;
 
-  //param[0] = sig1
-  //param[1] = cen1
-  //param[2] = h1
-  //param[3] = sig2
-  //param[4] = cen2
-  //param[5] = h2
-  
+  //param[3*j+0] = sig[j]
+  //param[3*j+1] = cen[j]
+  //param[3*j+2] = h[j]
+
   for (int i=0; i<nData; i++) {
     double z;
     wSumData += xData[i]*yData[i];
     yFit[i] = 0;
-    z = (xData[i]-param[1])/param[0];
-    if (z<6 && z>-6)
-      yFit[i] += param[2] * exp(-z*z/2);
-    z = (xData[i]-param[4])/param[3];
-    if (z<6 && z>-6)
-      yFit[i] += param[5] * exp(-z*z/2);
+    for (int j=0; j<mFunctions; j++) {
+      z = (xData[i]-param[3*j+1])/param[3*j+0];
+      if (z<6 && z>-6)
+        yFit[i] += param[3*j+2] * exp(-z*z/2);
+    }
     tmp = abs(yFit[i]-yData[i]);
     sum += tmp;
     sum2 += sqr(tmp);
@@ -2189,15 +2204,18 @@ double biGaussianFunction(double *param, long *invalid)
       result = sqrt(sum2)/yDataSum + abs(wSumData/yDataSum);
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
-  default:
     result = sum/yDataSum;
+    break;
+  default:
+    result = 0;
+    bombElegant("Invalid residual code in multiLorentzianFunction---seek professional help", NULL);
     break;
   }
     
   return result;
 }
 
-double biLorentzianFunction(double *param, long *invalid) 
+double multiLorentzianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0;
@@ -2207,23 +2225,18 @@ double biLorentzianFunction(double *param, long *invalid)
   /* The parameters are different from the standard Lorentzian.
    * Instead of A/(pi*a*(1 + (x/a)^2) we use peak/(1 + (x/a)^2)
    */
-  //param[0] = a1
-  //param[1] = cen1
-  //param[2] = peak1
-  //param[3] = a2
-  //param[4] = cen2
-  //param[5] = peak2
+  //param[3*j+0] = a[j]
+  //param[3*j+1] = cen[j]
+  //param[3*j+2] = peak[j]
   
   for (int i=0; i<nData; i++) {
     double z;
     wSumData += xData[i]*yData[i];
-
-    z = (xData[i]-param[1])/param[0];
-    yFit[i]  = param[2]/(1+sqr(z));
-
-    z = (xData[i]-param[4])/param[3];
-    yFit[i] += param[5]/(1+sqr(z));
-
+    yFit[i] = 0;
+    for (int j=0; j<mFunctions; j++) {
+      z = (xData[i]-param[3*j+1])/param[3*j+0];
+      yFit[i] += param[3*j+2]/(1+sqr(z));
+    }
     tmp = abs(yFit[i]-yData[i]);
     sum += tmp;
     sum2 += sqr(tmp);
@@ -2259,8 +2272,11 @@ double biLorentzianFunction(double *param, long *invalid)
       result = sqrt(sum2)/yDataSum + abs(wSumData/yDataSum);
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
-  default:
     result = sum/yDataSum;
+    break;
+  default:
+    result = 0;
+    bombElegant("Invalid residual code in multiLorentzianFunction---seek professional help", NULL);
     break;
   }
     
@@ -2276,4 +2292,3 @@ void report(double y, double *x, long pass, long nEval, long n_dimen)
     fprintf(stderr, "%.8e ", x[i]);
   fputc('\n', stderr);
 }
-
