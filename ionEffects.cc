@@ -2091,7 +2091,7 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
 #if USE_MPI
         MPI_Barrier(MPI_COMM_WORLD);
         findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
-        MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+        MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
         for (int i=0; i<3*mFunctions; i++) {
           paramValue[i] *= (1+(random_2(0)-0.5)/20);
           if (paramValue[i]<lowerLimit[i])
@@ -2111,7 +2111,7 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMin[plane], 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMax[plane], 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
-    MPI_Bcast(paramValue, 6, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+    MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
     MPI_Bcast(&nEvaluations, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
     ionEffects->nEvaluationsBest[plane] = nEvaluations;
 #else
