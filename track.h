@@ -3306,8 +3306,9 @@ typedef struct {
   double qTotal;                   /* for normalization of ionHistogramMissed */
   /* save fit parameters between calls to speed up subsequent fitting, and for output */
   short ionFieldMethod;             /* last method used */
-  short xyFitSet[2];                /* if nonzero, fit parameter values are valid */
-  double xyFitParameter[2][6];      /* [0]=x, [1]=y: fit parameters for two distributions (bigaussian or bilorentzian) */
+  unsigned short xyFitSet[2];       /* 0x01:2-function fit set, 0x02:3-function fit set */
+  double xyFitParameter2[2][6];     /* [0]=x, [1]=y: fit parameters for two distributions (bigaussian or bilorentzian) */
+  double xyFitParameter3[2][9];     /* [0]=x, [1]=y: fit parameters for three distributions (trigaussian or trilorentzian) */
   double xyFitResidual[2];          /* [0]=x, [1]=y: last residual */
 #if USE_MPI
   long nEvaluationsBest[2], nEvaluationsMin[2], nEvaluationsMax[2];

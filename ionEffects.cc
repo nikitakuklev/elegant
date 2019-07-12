@@ -604,6 +604,8 @@ void trackWithIonEffects
 
   if (ionEffects->startPass<0)
     ionEffects->startPass = 0;
+  if (iPass==0)
+    ionEffects->xyFitSet[0] = ionEffects->xyFitSet[1] = 0;
 
   if ((ionEffects->startPass>=0 && iPass<ionEffects->startPass) ||
       (ionEffects->endPass>=0 && iPass>ionEffects->endPass) ||
@@ -1377,21 +1379,21 @@ void trackWithIonEffects
 #else
 				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				  "sigma1", ionEffects->xyFitParameter[iPlane][0],
-				  "sigma2", ionEffects->xyFitParameter[iPlane][3],
-				  "centroid1", ionEffects->xyFitParameter[iPlane][1],
-				  "centroid2", ionEffects->xyFitParameter[iPlane][4],
-				  "q1", ionEffects->xyFitParameter[iPlane][2],
-				  "q2", ionEffects->xyFitParameter[iPlane][5],
+				  "sigma1", ionEffects->xyFitParameter2[iPlane][0],
+				  "sigma2", ionEffects->xyFitParameter2[iPlane][3],
+				  "centroid1", ionEffects->xyFitParameter2[iPlane][1],
+				  "centroid2", ionEffects->xyFitParameter2[iPlane][4],
+				  "q1", ionEffects->xyFitParameter2[iPlane][2],
+				  "q2", ionEffects->xyFitParameter2[iPlane][5],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
 	  }
           if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "sigma3", ionEffects->xyFitParameter[iPlane][6],
-				  "centroid3", ionEffects->xyFitParameter[iPlane][7],
-				  "q3", ionEffects->xyFitParameter[iPlane][8],
+				  "sigma3", ionEffects->xyFitParameter2[iPlane][6],
+				  "centroid3", ionEffects->xyFitParameter2[iPlane][7],
+				  "q3", ionEffects->xyFitParameter2[iPlane][8],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
@@ -1992,9 +1994,15 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
       
       /* smaller sigma is close to the beam size, larger is close to ion sigma */
       if (mFunctions==2) {
-        paramValue[0] = beamSigma[plane];
-        paramValue[1] = beamCentroid[plane];
-        paramValue[2] = peakVal/2;
+	if (ionEffects->xyFitSet[plane]&0x01) {
+	  paramValue[0] = ionEffects->xyFitParameter2[plane][0];
+	  paramValue[1] = ionEffects->xyFitParameter2[plane][1];
+	  paramValue[2] = ionEffects->xyFitParameter2[plane][2];
+	} else {
+	  paramValue[0] = beamSigma[plane];
+	  paramValue[1] = beamCentroid[plane];
+	  paramValue[2] = peakVal/2;
+	}
         paramDelta[0] = paramValue[0]/2;
         paramDelta[1] = abs(beamCentroid[plane])/2;
         paramDelta[2] = peakVal/4;
@@ -2008,10 +2016,16 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
           upperLimit[0] = 2*lowerLimit[0];
         upperLimit[1] = xMax/10;
         upperLimit[2] = peakVal;
-
-        paramValue[3] = ionSigma[plane];
-        paramValue[4] = ionCentroid[plane];
-        paramValue[5] = paramValue[2]/3;
+	
+	if (ionEffects->xyFitSet[plane]&0x01) {
+	  paramValue[3] = ionEffects->xyFitParameter2[plane][3];
+	  paramValue[4] = ionEffects->xyFitParameter2[plane][4];
+	  paramValue[5] = ionEffects->xyFitParameter2[plane][5];
+	} else {
+	  paramValue[3] = ionSigma[plane];
+	  paramValue[4] = ionCentroid[plane];
+	  paramValue[5] = paramValue[2]/3;
+	}
         paramDelta[3] = paramValue[3]/2;
         paramDelta[4] = abs(ionCentroid[plane])/2;
         paramDelta[5] = peakVal/4;
@@ -2026,9 +2040,31 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
         upperLimit[4] = xMax/10;
         upperLimit[5] = peakVal;
       } else if (mFunctions==3) {
-        paramValue[6] = 10*ionSigma[plane];
-        paramValue[7] = 0;
-        paramValue[8] = 0;
+	if (ionEffects->xyFitSet[plane]&0x02) {
+#if USE_MPI
+	  /* In this case, the odd processors will use the held-over values from 2-function fit */
+	  if (myid%2==0) {
+	    memcpy(paramValue, ionEffects->xyFitParameter3[plane], 9*sizeof(double));
+#if USE_MPI
+	    if (myid==0) {
+	      printf("Using previous fit as starting point (2-function)\n");
+	      fflush(stdout);
+	    }
+#endif
+	  } else {
+	    paramValue[6] = 10*ionSigma[plane];
+	    paramValue[7] = 0;
+	    paramValue[8] = 0;
+	  }
+#else
+	  memcpy(paramValue, ionEffects->xyFitParameter3[plane], 9*sizeof(double));
+#endif
+	} else {
+	  /* paramValue[0-5] are held over from 2-function fit */
+	  paramValue[6] = 10*ionSigma[plane];
+	  paramValue[7] = 0;
+	  paramValue[8] = 0;
+	}
         paramDelta[6] = paramValue[6]/2;
         paramDelta[7] = abs(ionCentroid[plane])/2;
         paramDelta[8] = peakVal/20;
@@ -2044,65 +2080,100 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
         upperLimit[7] = xMax/10;
         upperLimit[8] = peakVal;
       }
-      
-#if USE_MPI
-      /* Randomize step sizes and starting points */
-      for (int i=0; i<3*mFunctions; i++) {
-        if (myid!=0) {
-          paramValue[i] *= (1+(random_2(0)-0.5)/5);
-          if (paramValue[i]<lowerLimit[i])
-            paramValue[i] = lowerLimit[i];
-          if (paramValue[i]>upperLimit[i])
-            paramValue[i] = upperLimit[i];
-          paramDelta[i] *= random_2(0)*9.9+0.1;
-        }
+
+    for (int i=0; i<3*mFunctions; i++) {
+      if (lowerLimit[i]>paramValue[i]) {
+	if (paramValue[i]<0)
+	  lowerLimit[i] = 10*paramValue[i];
+	else
+	  lowerLimit[i] = paramValue[i]/10;
       }
-      lastBestResult = DBL_MAX;
-#endif
-      int nTries = distribution_fit_restarts;
-      nEvaluations = 0;
-      lastResult = DBL_MAX;
-      while (nTries--) {
-        fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-                                 NULL, mFunctions*3, distribution_fit_target, distribution_fit_tolerance/10.0, 
-                                 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
-                                 ?multiGaussianFunction:multiLorentzianFunction,
-                                 (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
-        if (fitReturn>=0)
-          nEvaluations += fitReturn;
+      if (upperLimit[i]<paramValue[i]) {
+	if (paramValue[i]<0)
+	  upperLimit[i] = paramValue[i]/10;
+	else
+	  upperLimit[i] = paramValue[i]*10;
+      }
+    }
+
 #if USE_MPI
-        //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
-        MPI_Barrier(MPI_COMM_WORLD);
-        MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    /* Randomize step sizes and starting points */
+    for (int i=0; i<3*mFunctions; i++) {
+      if (myid!=0 && (mFunctions!=3 || myid!=1)) {
+	paramValue[i] *= (1+(random_2(0)-0.5)/5);
+	if (paramValue[i]<lowerLimit[i])
+	  paramValue[i] = lowerLimit[i];
+	if (paramValue[i]>upperLimit[i])
+	  paramValue[i] = upperLimit[i];
+	paramDelta[i] *= random_2(0)*9.9+0.1;
+      }
+    }
+    lastBestResult = DBL_MAX;
+#endif
+    int nTries = distribution_fit_restarts;
+    nEvaluations = 0;
+    lastResult = DBL_MAX;
+    while (nTries--) {
+      fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
+			       NULL, mFunctions*3, distribution_fit_target, distribution_fit_tolerance/10.0, 
+			       ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
+			       ?multiGaussianFunction:multiLorentzianFunction,
+			       (verbosity>0?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+      if (fitReturn>=0)
+	nEvaluations += fitReturn;
+#if USE_MPI
+      //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 #if MPI_DEBUG
-        double worstResult;
-        MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-        printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
+      double worstResult;
+      MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
 #endif
-        if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
-          break;
-        }
-        lastBestResult = bestResult;
-#else
-        if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance)
-          break;
-        lastResult = result;
-#endif
-#if USE_MPI
-        MPI_Barrier(MPI_COMM_WORLD);
-        findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
-        MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
-        for (int i=0; i<3*mFunctions; i++) {
-          paramValue[i] *= (1+(random_2(0)-0.5)/20);
-          if (paramValue[i]<lowerLimit[i])
-            paramValue[i] = lowerLimit[i];
-          if (paramValue[i]>upperLimit[i])
-            paramValue[i] = upperLimit[i];
-        }
-#endif
+      if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
+	break;
       }
-      if (result<distribution_fit_target)
-        break;
+      lastBestResult = bestResult;
+#else
+      if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance)
+	break;
+      lastResult = result;
+#endif
+    
+#if USE_MPI
+      if (nTries!=0) {
+        MPI_Barrier(MPI_COMM_WORLD);
+	findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+	MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+	for (int i=0; i<3*mFunctions; i++) {
+          paramValue[i] *= (1+(random_2(0)-0.5)/20);
+	  if (paramValue[i]<lowerLimit[i])
+	    paramValue[i] = lowerLimit[i];
+	  if (paramValue[i]>upperLimit[i])
+	    paramValue[i] = upperLimit[i];
+        }
+      }
+#endif
+    }
+
+#if USE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+    findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+    MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+#endif
+    
+    if (fitReturn>0) {
+      ionEffects->xyFitSet[plane] |= mFunctions==2 ? 0x01 : 0x02;
+      for (int i=0; i<3*mFunctions; i++) {
+	if (mFunctions<3)
+	  ionEffects->xyFitParameter2[plane][i] = paramValue[i];
+	else
+	  ionEffects->xyFitParameter3[plane][i] = paramValue[i];
+      }
+    }
+    
+    if (result<distribution_fit_target)
+      break;
     }
 
 #if USE_MPI
@@ -2111,7 +2182,6 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMin[plane], 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMax[plane], 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
-    MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
     MPI_Bcast(&nEvaluations, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
     ionEffects->nEvaluationsBest[plane] = nEvaluations;
 #else
@@ -2127,12 +2197,10 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
 #endif
     
     if (fitReturn>0) {
-      ionEffects->xyFitSet[plane] = 1;
-      for (int i=0; i<6; i++)
-	ionEffects->xyFitParameter[plane][i] = paramValue[i];
       for (int i=0; i<nData; i++)
 	ionEffects->ionHistogramFit[plane][i] = yFit[i];
     } else {
+      ionEffects->xyFitSet[plane] = 0;
       for (int i=0; i<nData; i++)
 	ionEffects->ionHistogramFit[plane][i] = -1;
     }
