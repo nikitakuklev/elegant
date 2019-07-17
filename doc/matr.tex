@@ -30,7 +30,9 @@ matrix $M_0$ read from \verb|FILENAME| and the identity matrix $I$, according to
 \begin{equation}
 M = fM_0 + (1-f)I.
 \end{equation}
-This can be used, for example, to gradually ramp in the effect of a matrix in order to
-study its effect or allow smoother transition of an optical solution obtained with the
-optimizer.
+This can be used, for example, to gradually ramp in the effect as part of an optimization.
+N.B.: in general, the matrix does not have unit determinant unless $f=0$ or $f=1$, so this 
+feature should be used only as a knob to assist finding a solution with $f=1$.
+
+
 
