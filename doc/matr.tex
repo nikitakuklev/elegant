@@ -33,6 +33,8 @@ M = fM_0 + (1-f)I.
 This can be used, for example, to gradually ramp in the effect as part of an optimization.
 N.B.: in general, the matrix does not have unit determinant unless $f=0$ or $f=1$, so this 
 feature should be used only as a knob to assist finding a solution with $f=1$.
+Exceptions are when $M_0$ is a drift space or thin-lens quadrupole matrix, in which cases
+the determinant of $M$ is always 1.
 
 
 
