@@ -29,7 +29,7 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE1="sddsmatchmoments [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-momentsFile=<filename>[,<page>]] [-library={meschach|gsl}] [-exclude=[{x|y|z}][,centroids]]\n\n";
+  [-momentsFile=<filename>[,page=<page>]] [-library={meschach|gsl}] [-exclude=[{x|y|z}][,centroids]]\n\n";
 char *USAGE2="The input file must have columns x, xp, y, yp, and p; for example, an\n\
 elegant beam output file is acceptable. \n\n\
 -momentsFile    Provide the name of the elegant moments_output file.\n\
