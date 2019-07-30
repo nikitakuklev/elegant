@@ -410,7 +410,11 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", 
                              "Bunch length", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "tLifetime", NULL, "hour", 
-                             "Touschek half lifetime, which is equivalent to Initial exponential decay lifetime", NULL, SDDS_DOUBLE, NULL))
+                             "Touschek half lifetime, which is equivalent to the initial exponential decay lifetime", 
+                             NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "deltaLimit", NULL, "", 
+                             "Limit on maximum momentum acceptance from -deltaLimit or -RF with limit qualifier.",
+                             NULL, SDDS_DOUBLE, NULL) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   if (!SDDS_TransferColumnDefinition(&resultsPage, &twissPage, "s", NULL) ||
@@ -501,6 +505,10 @@ int main( int argc, char **argv)
 	  SDDS_Bomb("rf voltage too low compared to energy loss per turn");
 	if (deltaLimit==0 || rfLimit<deltaLimit)
 	  deltaLimit = rfLimit;
+        if (verbosity) {
+          printf("momentum acceptance limited to +/-%le by rf\n", deltaLimit);
+          fflush(stdout);
+        }
       }
     }
   }
@@ -532,9 +540,9 @@ int main( int argc, char **argv)
   
   dpp = SDDS_GetColumnInDoubles(&aperPage, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&aperPage, "deltaNegative");
-  if (deltaLimit>0)
+  if (deltaLimit>0) 
     limitMomentumAperture(dpp, dpm, deltaLimit, elem2);
-  
+
   if (verbosity) {
     fprintf( stdout, "done.\n");
     fflush(stdout);
@@ -695,6 +703,7 @@ int main( int argc, char **argv)
                           "Particles", NP,
                           "Charge", (1e9 * charge),
                           "tLifetime", tLife,
+                          "deltaLimit", deltaLimit,
                           "sigmaz", sz, NULL) ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, s, elements, "s") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, betax, elements, "betax") ||
