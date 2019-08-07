@@ -1,0 +1,11 @@
+#!/bin/bash
+
+elegant run.ele 
+
+sddscollapse run.fin -pipe=out \
+  | sddsprocess -pipe -define=col,delta,MALIN.DP \
+  | sddsmpfit -pipe=in run.fit -indep=delta -depen=Cs -terms=7 -info=run.finf
+
+sddsprocess run.finf -process=CsCoefficient,first,Cs0 "-define=col,alpha,CsCoefficient Cs0 /"  -clip=1,0
+sddsprintout -col=Order -col=alpha run.finf
+
