@@ -153,7 +153,9 @@ void setup_aperture_search(
     printf("*** Other methods, which search from large amplitude to small amplitude,\n");
     printf("*** may overstate the aperture because of stable islands\n");
   }
-  
+  if (full_plane!=0 && mode_code<ONE_LINE_MODE)
+    bombElegant("full_plane=1 is only supported for line-based modes at present", NULL);
+
   if (optimization_mode && (mode_code<=TWO_LINE_MODE || (mode_code==LINE_MODE && n_lines<3)))
     bombElegant("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
   if (offset_by_orbit && mode_code==SP_MODE)
@@ -966,11 +968,16 @@ long do_aperture_search_line(
     dxFactor[2] = 1;   dyFactor[2] = 0;
     break;
   default:
-    dtheta = PI/(lines-1);
+    if (full_plane==0)
+      dtheta = PI/(lines-1);
+    else
+      dtheta = PIx2/(lines-1);
     for (line=0; line<lines; line++) {
-      if (fabs(dxFactor[line] = sin(-PI/2+dtheta*line))<1e-6)
+      dxFactor[line] = sin(-PI/2+dtheta*line);
+      dyFactor[line] = cos(-PI/2+dtheta*line);
+      if (fabs(dxFactor[line])<1e-6)
 	dxFactor[line] = 0;
-      if (fabs(dyFactor[line] = cos(-PI/2+dtheta*line))<1e-6)
+      if (fabs(dyFactor[line])<1e-6)
 	dyFactor[line] = 0;
     }
     break;
@@ -1267,7 +1274,6 @@ long do_aperture_search_line(
 /* Line aperture search that makes use of larger parallel resources by tracking all particles for all
    lines at the same time (if enough processors are available
 */
-#define DEBUG 1
 
 long do_aperture_search_line_p(
 			     RUN *run,
@@ -1350,11 +1356,16 @@ long do_aperture_search_line_p(
     dxFactor[2] = 1;   dyFactor[2] = 0;
     break;
   default:
-    dtheta = PI/(lines-1);
+    if (full_plane==0)
+      dtheta = PI/(lines-1);
+    else
+      dtheta = PIx2/(lines-1);
     for (line=0; line<lines; line++) {
-      if (fabs(dxFactor[line] = sin(-PI/2+dtheta*line))<1e-6)
+      dxFactor[line] = sin(-PI/2+dtheta*line);
+      dyFactor[line] = cos(-PI/2+dtheta*line);
+      if (fabs(dxFactor[line])<1e-6)
 	dxFactor[line] = 0;
-      if (fabs(dyFactor[line] = cos(-PI/2+dtheta*line))<1e-6)
+      if (fabs(dyFactor[line])<1e-6)
 	dyFactor[line] = 0;
     }
     break;
