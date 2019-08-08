@@ -2004,6 +2004,7 @@ The proper use of this command can be confusing.  A typical sequence will be as 
     long offset_by_orbit = 0;
     long n_lines = 11;
     long optimization_mode = 0;
+    long full_plane = 0;
 &end
 \end{verbatim}
 
@@ -2081,6 +2082,9 @@ zero for backward compatibility, but the recommended value is 1.
 \item \verb|optimization_mode| --- If non-zero, then \verb|find_aperture| is a setup command and can be used
 with {\tt elegant}'s internal optimizer.  The quantity \verb|DaArea| is defined, giving the area of the dynamic
 aperture for use in the penalty function.  This is available only for the line search modes.
+
+\item \verb|full_plane| --- If non-zero, then the search covers both positive and negative y values.
+  Only available in line-search modes.
 
 \end{itemize}
 
