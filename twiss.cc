@@ -5137,7 +5137,7 @@ void run_rf_setup(RUN *run, LINE_LIST *beamline, long writeToFile)
   iFreq = confirm_parameter((char*)"FREQ", T_RFCA);
   iVolt = confirm_parameter((char*)"VOLT", T_RFCA);
   iPhase = confirm_parameter((char*)"PHASE", T_RFCA);
-  frf = harmonic/T0;
+  frf = harmonic/T0*(1+rf_setup_struct.fractional_frequency_change);
   printf("\nRf setup: frequency is %21.15e Hz (h=%ld)\n", frf, harmonic);
   for (i=0; i<nRfca; i++) {
     rfca = (RFCA*)(rfcaElem[i]->p_elem);

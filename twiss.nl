@@ -99,6 +99,7 @@
         double s_end = -1;
         long set_for_each_step = 0;
         double near_frequency = 0;
+	double fractional_frequency_change = 0;
         long harmonic = -1;
         double bucket_half_height = 0;
         double over_voltage = 0;
