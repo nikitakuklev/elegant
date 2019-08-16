@@ -31,7 +31,12 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
     SREFFECTS SReffects;
 
 #if USE_MPI
-    if (isMaster && notSinglePart) /* This is a parallel element, the master will not track unless it is a single particle simulation */
+    mpiAbort = 0;
+#endif
+    
+#if USE_MPI
+    if (isMaster && notSinglePart)
+      /* This is a parallel element, the master will not track unless it is a single particle simulation */
       active = 0;
 #endif
 
@@ -65,6 +70,14 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects0, double Po,
         fflush(stdout);
       }
     } else {
+      if (SReffects.eyRef!=0 && SReffects.coupling!=0) {
+#if USE_MPI
+	mpiAbort = MPI_ABORT_SREFFECTS_ERROR1;
+	return ;
+#else
+	bombElegant("Error: SREFFECTS element has nonzero values for both EYREF and COUPLING", NULL);
+#endif
+      }
       if (SReffects.eyRef==0 || SReffects.coupling!=0)  {
         SReffects.exRef = SReffects.exRef/(1+SReffects.coupling*SReffects.Jy/SReffects.Jx);
         SReffects.eyRef = SReffects.exRef*SReffects.coupling;

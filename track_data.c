@@ -3711,6 +3711,7 @@ char *mpiAbortDescription[N_MPI_ABORT_TYPES] = {
   "Error in particle pointer order",
   "Non-positive particle ID value",
   "RF cavity fiducialization failed",
+  "SREFFECTS setup error: EYREF and COUPLING both nonzero",
 };
 #endif
 
