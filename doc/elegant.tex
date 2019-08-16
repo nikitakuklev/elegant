@@ -45,6 +45,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   some circumstances.
 \item Fixed a bug in the implementation of the expanded Hamiltonian for \verb|MULT| elements.
 \item Fixed a bug in the \verb|BMXYZ| element that caused a crash when multiple such elements were used.
+\item If \verb|COUPLING| and \verb|EYREF| were both non-zero for an \verb|SREFFECTS| element, the \verb|EYREF|
+  value would be ignored, which is potentially confusing. This issue is now flagged as an error.
+  B. Podobodov (BNL) brought the issue to our attention.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
