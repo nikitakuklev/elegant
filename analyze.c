@@ -884,14 +884,14 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long nPoints1 = trackingMatrixPoints;
   long maxFitOrder = 4;
 #if USE_MPI
-  long nWorking, n_leftTotal, k, *nToTrackCounts;
+  long nWorking=0, n_leftTotal, k, *nToTrackCounts;
 #endif
   /* We'll store some of the matrices to avoid recomputing them */
 #define MAX_N_STORED_MATRICES 1000
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
-  long my_nTrack, my_offset, fiducialOnly;
+  long my_nTrack, my_offset, fiducialOnly = 0;
 
   memcpy(defaultStep, trackingMatrixStepSize, sizeof(double)*6);
 

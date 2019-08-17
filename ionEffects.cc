@@ -1391,9 +1391,9 @@ void trackWithIonEffects
 	  }
           if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "sigma3", ionEffects->xyFitParameter2[iPlane][6],
-				  "centroid3", ionEffects->xyFitParameter2[iPlane][7],
-				  "q3", ionEffects->xyFitParameter2[iPlane][8],
+				  "sigma3", ionEffects->xyFitParameter3[iPlane][6],
+				  "centroid3", ionEffects->xyFitParameter3[iPlane][7],
+				  "q3", ionEffects->xyFitParameter3[iPlane][8],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
