@@ -166,7 +166,6 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
           *ipBucket = tmalloc(sizeof(**ipBucket)*(*nBuckets));
           for (ib=0; ib<*nBuckets; ib++) {
             (*ipBucket)[ib] = (long*)tmalloc(sizeof(***ipBucket)*(*npBucket)[ib]);
-            (*npBucket)[ib] = 0; /* will use as index when assigning particles to buckets below */
           }
         }
         for (ip=0; ip<np; ip++) {
@@ -174,17 +173,8 @@ void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, 
             ib = 0;
           else
             ib = (*ibParticle)[ip];
-          if (ib<0 || ib>=(*nBuckets)) {
-#if USE_MPI
-            mpiAbort = MPI_ABORT_BUCKET_ASSIGNMENT_ERROR;
-            return;
-#else
-            printf("Error: particle outside bunch: ib=%ld, nBuckets=%ld, particleID=%ld\n", ib, *nBuckets, (long)(part[ip][6]));
-#endif
-          }
           if (ipBucket && npBucket) {
             (*ipBucket)[ib][(*npBucket)[ib]] = ip;
-            (*npBucket)[ib] += 1;
           }
         }
       }
