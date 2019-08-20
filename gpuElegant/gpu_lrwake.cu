@@ -85,8 +85,8 @@ void gpu_determine_bucket_assignments(long np, long idSlotsPerBunch,
     {
       sortByPID(np); // sort particles
       d_ibParticle = gpuBase->d_temp_particles + 4 * particlePitch;
-      ibMin = UINT_MAX;
-      ibMax = 0;
+      ibMin = LONG_MAX;
+      ibMax = LONG_MIN;
       gpuDriver(np,
                 gpu_determine_bucket_assignments_kernel1(idSlotsPerBunch, d_ibParticle));
       gpuReduceMinMax(d_ibParticle, np, &fibMin, &fibMax);
