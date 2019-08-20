@@ -78,6 +78,8 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #endif
 #endif
 
+  /* TEMPORARILY not using the GPU code until it can be updated to match the non-GPU code */
+  /*
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -86,10 +88,11 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
     startCpuTimer();
     findFiducialTime(part, np, s0, sOffset, p0, mode);
     compareGpuCpu(np, "findFiducialTime");
-#endif /* GPU_VERIFY */
+#endif
     return tFid;
   }
-#endif /* HAVE_GPU */
+#endif
+  */
 
   if (mode&FID_MODE_LIGHT) 
     tFid =  (s0+sOffset)/c_mks;
@@ -267,6 +270,10 @@ long simple_rf_cavity(
     )
 {
 
+
+/* TEMPORARILY not using the GPU code until it can be updated to match the non-GPU code */
+/* The potential problem is in the gpu_determine_bucket_assignments function */
+/*
 #ifdef HAVE_GPU
   long nLeft;
 #ifdef GPU_VERIFY
@@ -289,7 +296,8 @@ long simple_rf_cavity(
 #endif
     return nLeft;
   }
-#endif /* HAVE_GPU */
+#endif
+*/
 
   return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
                          NULL, NULL, NULL, NULL, NULL, 0);
