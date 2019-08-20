@@ -47,9 +47,6 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
 #endif
 #endif
 
-/* TEMPORARILY not using the GPU code until it can be updated to match the non-GPU code */
-/* The potential problem is in the gpu_determine_bucket_assignments function */
-/*
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -63,7 +60,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
     return;
   }
 #endif
-*/
+
 
   set_up_wake(wakeData, run, i_pass, np0, charge);
 

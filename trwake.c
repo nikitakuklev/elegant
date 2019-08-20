@@ -42,9 +42,6 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
   double *buffer;
 #endif
 
-/* TEMPORARILY not using the GPU code until it can be updated to match the non-GPU code */
-/* The potential problem is in the gpu_determine_bucket_assignments function */
-/*
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -57,7 +54,7 @@ void track_through_trwake(double **part0, long np0, TRWAKE *wakeData, double Po,
     return;
   }
 #endif
-*/
+
 
   set_up_trwake(wakeData, run, i_pass, np0, charge);
 

@@ -271,9 +271,6 @@ long simple_rf_cavity(
 {
 
 
-/* TEMPORARILY not using the GPU code until it can be updated to match the non-GPU code */
-/* The potential problem is in the gpu_determine_bucket_assignments function */
-/*
 #ifdef HAVE_GPU
   long nLeft;
 #ifdef GPU_VERIFY
@@ -297,7 +294,7 @@ long simple_rf_cavity(
     return nLeft;
   }
 #endif
-*/
+
 
   return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
                          NULL, NULL, NULL, NULL, NULL, 0);
