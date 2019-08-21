@@ -677,3 +677,16 @@ void set_up_lrwake(LRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 #endif
 }
 
+void free_bucket_assignment_memory(double *time0, long *ibParticle, long **ipBucket, long *npBucket, long nBuckets)
+{
+  long iBucket;
+  if (time0) 
+    free(time0);
+  if (ibParticle) 
+    free(ibParticle);
+  for (iBucket=0; iBucket<nBuckets; iBucket++)
+    free(ipBucket[iBucket]);
+  free(ipBucket);
+  if (npBucket)
+    free(npBucket);
+}
