@@ -31,7 +31,7 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
   long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-  long iBucket, nBuckets;
+  long iBucket, nBuckets=0;
 #if USE_MPI
   long npTotal;
   double sumTotal;
@@ -69,14 +69,8 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
 #endif
 
   if (tfbp->updateInterval>1 && pass%tfbp->updateInterval!=0) {
-    if (time0) 
-      free(time0);
-    if (ibParticle) 
-      free(ibParticle);
-    if (ipBucket)
-      free_czarray_2d((void**)ipBucket, nBuckets, np0);
-    if (npBucket)
-      free(npBucket);
+    if (isSlave || !notSinglePart) 
+      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
     return;
   }
   
@@ -181,15 +175,9 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part0, long np0, long pa
       tfbp->filterOutput[iBucket] = output;
     }
   }
-
-  if (time0) 
-    free(time0);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBucket)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
+  
+  if (isSlave || !notSinglePart) 
+    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 }
 
 
@@ -251,7 +239,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   long *ibParticle = NULL;        /* array to record which bucket each particle is in */
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
-  long iBucket, nBuckets;
+  long iBucket, nBuckets=0;
   long rpass, updateInterval;
   double tAve, rfFactor, phase=0;
   std::complex <double> Zc, Ig, iu;
@@ -309,14 +297,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   if ((updateInterval =  tfbd->pickup->updateInterval*tfbd->updateInterval)<=0) 
     bombElegantVA((char*)"TFBDRIVER and TFBPICKUP with ID=%s have UPDATE_INTERVAL product of %d", tfbd->ID, updateInterval);
   if (pass%updateInterval!=0) {
-    if (time0) 
-      free(time0);
-    if (ibParticle) 
-      free(ibParticle);
-    if (ipBucket)
-      free_czarray_2d((void**)ipBucket, nBuckets, np0);
-    if (npBucket)
-      free(npBucket);
+    if (isSlave || !notSinglePart) 
+      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
     return;
   }
   
@@ -590,14 +572,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part0, long np0, LINE_LI
   MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-  if (time0) 
-    free(time0);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBucket)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
+  if (isSlave || !notSinglePart) 
+    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
 #if defined(DEBUG) || MPI_DEBUG
   printf("TFBDRIVER: end of routine\n");

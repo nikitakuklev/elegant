@@ -4270,6 +4270,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *Po,
 			  RUN *run, long i_pass, CHARGE *charge);
 void determine_bucket_assignments(double **part, long np, long idSlotsPerBunch, double P0, double **time, long **ibParticle, long ***ipBucket, long **npBucket, long *nBuckets,
                                   long lastNBuckets);
+void free_bucket_assignment_memory(double *time0, long *ibParticle, long **ipBucket, long *npBucket, long nBuckets);
 
 void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
                 double lengthScale, double dgammaOverGamma);
