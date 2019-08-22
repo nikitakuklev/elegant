@@ -116,6 +116,7 @@ void track_through_wake(double **part0, long np0, WAKE *wakeData, double *PoInpu
           tmean /= np;
       }
       
+      tmax = -(tmin = DBL_MAX);
       find_min_max(&tmin, &tmax, time, np);
 #ifdef DEBUG
       printf("WAKE: tmin=%21.15le, tmax=%21.15le, np=%ld\n", tmin, tmax, np);

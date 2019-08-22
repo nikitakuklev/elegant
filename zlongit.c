@@ -189,6 +189,7 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
         }
       }
 
+      tmax = -(tmin = DBL_MAX);
       find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
       find_global_min_max(&tmin, &tmax, np, workers); 
