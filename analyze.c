@@ -882,7 +882,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
   long nPoints1 = trackingMatrixPoints;
-  long maxFitOrder = 4;
+  long maxFitOrder = 4, fiducialOnly = 0;
 #if USE_MPI
   long nWorking=0, n_leftTotal, k, *nToTrackCounts;
 #endif
