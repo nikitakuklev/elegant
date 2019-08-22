@@ -459,8 +459,6 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
   }
 
   /* Free memory */
-  if (time)
-    free(time);
   if (tBucket)
     free(tBucket);
   if (xBucket)
@@ -469,8 +467,6 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     free(yBucket);
   if (QBucket)
     free(QBucket);
-  if (ibParticle)
-    free(ibParticle);
   if (VxBucket)
     free(VxBucket);
   if (VyBucket)
@@ -481,7 +477,7 @@ void track_through_lrwake(double **part, long np, LRWAKE *wakeData, double *P0In
     free(QxBucket);
   if (QyBucket)
     free(QyBucket);
-    
+  free_bucket_assignment_memory(time, ibParticle, NULL, NULL, nBuckets);
   }
 
 #if USE_MPI

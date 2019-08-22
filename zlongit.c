@@ -538,16 +538,11 @@ void track_through_zlongit(double **part0, long np0, ZLONGIT *zlongit, double Po
     free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0) 
     free(time);
-  if (time0) 
-    free(time0);
   if (pbin)
     free(pbin);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBucket && nBuckets>0)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
+
+  if (isSlave || !notSinglePart)
+      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 
 #if USE_MPI
   MPI_Barrier(workers);

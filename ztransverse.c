@@ -414,18 +414,12 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
     free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0) 
     free(time);
-  if (time0) 
-    free(time0);
+  if (isSlave || !notSinglePart)
+    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   if (pbin)
     free(pbin);
   if (pz)
     free(pz);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBucket)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
   if (posItime[0])
     free(posItime[0]);
   if (posItime[1])
