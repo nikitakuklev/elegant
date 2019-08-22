@@ -1534,18 +1534,10 @@ void trackWithIonEffects
     }
 #endif
 
-  if (time0) 
-    free(time0);
   if (time && time!=time0)
     free(time);
-  if (part && part!=part0)
-    free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBunch)
-    free_czarray_2d((void**)ipBunch, nBunches, np0);
-  if (npBunch)
-    free(npBunch);
+  if (isSlave || !notSinglePart)
+    free_bucket_assignment_memory(time0, ibParticle, ipBunch, npBunch, nBunches);
   if (speciesCentroid)
     free_zarray_2d((void**)speciesCentroid, ionProperties.nSpecies, 2);
   if (speciesSigma)
