@@ -3712,6 +3712,7 @@ void add_to_particle_energy(double *coord, double timeOfFlight, double Po, doubl
 double findFiducialTime(double **part, long np, double s0, double sOffset,
                         double p0, unsigned long mode);
 extern unsigned long parseFiducialMode(char *mode);
+void setFiducializationBunch(long b, int32_t n);
 
 /* prototypes for final_props.c */
 extern void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,

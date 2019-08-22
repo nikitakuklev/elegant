@@ -891,7 +891,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static long nStoredMatrices = 0, iStoredMatrices = -1;
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
-  long my_nTrack, my_offset, fiducialOnly = 0;
+  long my_nTrack, my_offset;
 
   memcpy(defaultStep, trackingMatrixStepSize, sizeof(double)*6);
 

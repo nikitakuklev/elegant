@@ -60,7 +60,7 @@ void track_through_rfmode(
     static FILE *fpdeb2 = NULL;
     */
     
-    long ip, ib, lastBin=0, firstBin=0, n_binned=0, n_binned_global=0;
+    long ip, ib, lastBin=0, firstBin=0, n_binned=0;
     double tmin=0, tmax, last_tmax, tmean, dt=0;
     double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double VPrevious, tPrevious, phasePrevious;
@@ -74,6 +74,7 @@ void track_through_rfmode(
 #if USE_MPI
     long nonEmptyBins = 0;
     MPI_Status mpiStatus;
+    long n_binned_global=0;
 #endif
 
     /* These are here just to quash apparently spurious compiler warnings about possibly using uninitialzed variables */

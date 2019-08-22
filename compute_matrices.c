@@ -2855,7 +2855,6 @@ VMATRIX *mult_matrix(MULT *mult, double P, long order)
 VMATRIX *interpolateMatrixWithIdentityMatrix(VMATRIX *M0, double fraction, long order)
 {
     VMATRIX *M;
-    double *C, **R, ***T;
     long i, j, k, l;
 
     M = tmalloc(sizeof(*M));
