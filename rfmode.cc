@@ -1106,7 +1106,8 @@ void track_through_rfmode(
       free(time);
     if (pbin)
       free(pbin);
-    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
+    if (isSlave || !notSinglePart)
+      free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   }
 
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 
