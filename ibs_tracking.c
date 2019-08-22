@@ -545,14 +545,8 @@ void track_IBS(double **part0, long np0, IBSCATTER *IBS, double Po,
 
   if (time && time!=time0) 
     free(time);
-  if (time0) 
-    free(time0);
-  if (ibParticle) 
-    free(ibParticle);
-  if (ipBucket)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
+  if (isSlave || !notSinglePart)
+    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
   
   if (IBS->verbose) {
 #if USE_MPI

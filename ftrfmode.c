@@ -548,17 +548,10 @@ void track_through_ftrfmode(
     free_czarray_2d((void**)part, max_np, COORDINATES_PER_PARTICLE);
   if (time && time!=time0)
     free(time);
-  if (time0)
-    free(time0);
   if (pbin)
     free(pbin);
-  if (ibParticle)
-    free(ibParticle);
-  if (ipBucket)
-    free_czarray_2d((void**)ipBucket, nBuckets, np0);
-  if (npBucket)
-    free(npBucket);
-
+  if (isSlave || !notSinglePart)
+    free_bucket_assignment_memory(time0, ibParticle, ipBucket, npBucket, nBuckets);
 }
 
 void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, long n_passes, 
