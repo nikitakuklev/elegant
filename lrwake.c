@@ -680,9 +680,11 @@ void free_bucket_assignment_memory(double *time0, long *ibParticle, long **ipBuc
     free(time0);
   if (ibParticle) 
     free(ibParticle);
-  for (iBucket=0; iBucket<nBuckets; iBucket++)
-    free(ipBucket[iBucket]);
-  free(ipBucket);
+  if (ipBucket) {
+    for (iBucket=0; iBucket<nBuckets; iBucket++)
+      free(ipBucket[iBucket]);
+    free(ipBucket);
+  }
   if (npBucket)
     free(npBucket);
 }
