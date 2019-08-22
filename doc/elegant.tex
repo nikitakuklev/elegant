@@ -2651,16 +2651,15 @@ included in the plane in question.
 \item \verb|ion_species_output| --- If nonzero, \verb|ion_density_output| includes data for each ion species.
 \item \verb|field_calculation_method| --- By default, the fields are computed on the
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
-  for the ions. A more accurate, but slower, method is a sum of gaussians, which can be invoked by setting
-  \verb|field_calculation_method| to \verb|"bigaussian"|.
-  In that case, the charge distribution is of the form
+  for the ions. More accurate, but slower, methods is sums of two or three gaussians, or sums 
+  of two or three lorentzians, which can be invoked by setting
+  \verb|field_calculation_method| to \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|.
+  In the bigaussian case, the charge distribution is of the form
   \begin{equation}
     \rho(x, y) = (G(x, h_{x,1}, \sigma_{x,1}, c_{x,1}) + G(x, h_{x,2}, \sigma_{x,2}, c_{x,2}))*
     (G(y, h_{y,1}, \sigma_{y,1}, c_{y,1}) + G(y, h_{y,2}, \sigma_{y,2}, c_{y,2})),
   \end{equation}
   where $G(q, h, \sigma, c) = h\exp{-(q-c)^2/(2\sigma^2)}$.
-  Another method, using a sum of lorentzians, is also available by setting \verb|field_calculation_method| to \verb|"bilorentzian"|;
-  this method is considered very experimental at present.
   The charge distribution for the bilorentzian is
   \begin{equation}
     \rho(x, y) = (L(x, h_{x,1}, a_{x,1}, c_{x,1}) + L(x, h_{x,2}, a_{x,2}, c_{x,2}))*
