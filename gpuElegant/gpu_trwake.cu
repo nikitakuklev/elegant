@@ -141,6 +141,7 @@ extern "C"
                   tmean /= np;
               }
 
+            tmax = -(tmin = DBL_MAX);
             gpuReduceMinMax(d_time + offset, np, &tmin, &tmax);
             gpuErrorHandler("gpu_track_through_trwake::gpuReduceMinMax");
 #ifdef DEBUG

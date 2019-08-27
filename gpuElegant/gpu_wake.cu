@@ -106,6 +106,7 @@ extern "C"
                   tmean /= np;
               }
 
+            tmax = -(tmin = DBL_MAX);
             gpuReduceMinMax(d_time + offset, np, &tmin, &tmax);
 #ifdef DEBUG
             printf("WAKE: tmin=%21.15le, tmax=%21.15le, np=%ld\n", tmin, tmax, np);
