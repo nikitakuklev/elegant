@@ -70,7 +70,7 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR",
+    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -3476,6 +3476,26 @@ PARAMETER taperapr_param[N_TAPERAPR_PARAMS] = {
     {"STICKY", NULL, IS_SHORT, 0, (long)((char *)&taperapr_example.sticky), NULL, 0.0, 0, "final aperture holds downstream until next TAPERAPC, TAPERAPE, TAPERAPR, or MAXAMP"},
     };
 
+SHRFDF shrfdf_example;
+/* names for space harmonic rf deflector parameters */
+PARAMETER shrfdf_param[N_SHRFDF_PARAMS] = {
+    {"FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.factor), NULL, 1.0, 0, "A factor by which to multiply all components."},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"PERIOD_LENGTH", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.period_length), NULL, 0.0, 0, "cavity period length, or cell length"},
+    {"PERIOD_PHASE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.period_phase), NULL, 0.0, 0, "cavity period phase advance, or so-called working mode"},
+    {"V0", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.v[0]), NULL, 0.0, 0, "effective voltage of space harmonic n=0"},
+    {"V1", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.v[1]), NULL, 0.0, 0, "effective voltage of space harmonic n=1"},
+    {"V2", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.v[2]), NULL, 0.0, 0, "effective voltage of space harmonic n=2"},
+    {"V3", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.v[3]), NULL, 0.0, 0, "effective voltage of space harmonic n=3"},
+    {"V4", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.v[4]), NULL, 0.0, 0, "effective voltage of space harmonic n=4"},
+    {"PHASE0", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.phase[0]), NULL, 0.0, 0, "Phase of space harmonic n=0"},
+    {"PHASE1", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.phase[1]), NULL, 0.0, 0, "Phase of space harmonic n=1"},
+    {"PHASE2", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.phase[2]), NULL, 0.0, 0, "Phase of space harmonic n=2"},
+    {"PHASE3", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.phase[3]), NULL, 0.0, 0, "Phase of space harmonic n=3"},
+    {"PHASE4", "HZ", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&shrfdf_example.phase[4]), NULL, 0.0, 0, "Phase of space harmonic n=4"},
+    {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&shrfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    } ;
+
 /* END OF ELEMENT DICTIONARY ARRAYS */
 
 /* array of parameter structures */
@@ -3628,6 +3648,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAPERAPC_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPC), taperapc_param},
     { N_TAPERAPE_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPE), taperape_param},
     { N_TAPERAPR_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPR), taperapr_param},
+    { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     },
 } ;
 
 void compute_offsets()
