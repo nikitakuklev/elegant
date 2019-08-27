@@ -930,7 +930,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TAPERAPC 125
 #define T_TAPERAPE 126
 #define T_TAPERAPR 127
-#define N_TYPES  128
+#define T_SHRFDF  128
+#define N_TYPES  129
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -1065,6 +1066,7 @@ extern char *entity_text[N_TYPES];
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
+#define N_SHRFDF_PARAMS 15
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3375,6 +3377,19 @@ typedef struct {
   /* internal use only */
   short e1Index, e2Index;
 } TAPERAPR;
+
+/* names and storage structure for space harmonic RF deflector cavity
+ */
+extern PARAMETER shrfdf_param[N_SHRFDF_PARAMS] ;
+   
+typedef struct {
+  double factor, tilt, period_length, period_phase;
+  double v[5], phase[5];
+  long phase_reference;
+  /* for internal use only */
+  double t_first_particle;        
+  long initialized, fiducial_seen;
+} SHRFDF;
 
   /* END OF ELEMENT STRUCTURE DEFINITIONS */
 
