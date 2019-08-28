@@ -70,7 +70,8 @@ char *entity_name[N_TYPES] = {
     "FTABLE", "KOCT", "RIMULT", "GFWIGGLER", "MRFDF", "CORGPIPE", "LRWAKE",
     "EHKICK", "EVKICK", "EKICKER", "BMXYZ", "BRAT", "BGGEXP", "BRANCH",
     "IONEFFECTS", "SLICE", "SPEEDBUMP", "CCBEND", "HKPOLY", "BOFFAXE",
-    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", "SHRFDF",
+    "APCONTOUR", "TAPERAPC", "TAPERAPE", "TAPERAPR", 
+    /* "SHRFDF", */
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -206,6 +207,7 @@ char *entity_text[N_TYPES] = {
     "A tapered aperture that is a section of a circular cylinder.",
     "A tapered elliptical aperture.",
     "A tapered rectangular aperture.",
+    /* "A deflecting data using space harmonics" */
     } ;
 
 QUAD quad_example;
@@ -3648,7 +3650,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAPERAPC_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPC), taperapc_param},
     { N_TAPERAPE_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPE), taperape_param},
     { N_TAPERAPR_PARAMS, MAT_LEN_NCAT, sizeof(TAPERAPR), taperapr_param},
-    { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     },
+    /* { N_SHRFDF_PARAMS,  MPALGORITHM,   sizeof(SHRFDF),    shrfdf_param     }, */
 } ;
 
 void compute_offsets()
