@@ -930,8 +930,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TAPERAPC 125
 #define T_TAPERAPE 126
 #define T_TAPERAPR 127
-  /* #define T_SHRFDF  128  */
-#define N_TYPES  128
+#define T_SHRFDF  128
+#define N_TYPES  129
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
