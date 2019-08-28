@@ -1066,7 +1066,7 @@ extern char *entity_text[N_TYPES];
 #define N_TAPERAPC_PARAMS 6
 #define N_TAPERAPE_PARAMS 12
 #define N_TAPERAPR_PARAMS 9
-#define N_SHRFDF_PARAMS 15
+#define N_SHRFDF_PARAMS 25
 
   /* END OF LIST FOR NUMBERS OF PARAMETERS */
 
@@ -3384,7 +3384,7 @@ extern PARAMETER shrfdf_param[N_SHRFDF_PARAMS] ;
    
 typedef struct {
   double factor, tilt, period_length, period_phase;
-  double v[5], phase[5];
+  double v[10], phase[10];
   long phase_reference;
   /* for internal use only */
   double t_first_particle;        
