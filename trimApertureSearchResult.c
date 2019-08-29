@@ -13,13 +13,13 @@
 #include "mdb.h"
 #include "track.h"
 
-double trimApertureSearchResult(long lines, 
+double trimApertureSearchResult1(long lines, 
 				double *xLimit, double *yLimit, 
 				double *dxFactor, double *dyFactor, 
 				long fullPlane)
 {
   long line;
-  double area = 0;
+  double area;
   if (!fullPlane) {
     /* First clip off any portions that stick out like islands.  This is done in three steps. */
     
@@ -97,8 +97,24 @@ double trimApertureSearchResult(long lines,
   }
 
   /* perform trapazoid rule integration */
+  area = 0;
   for (line=0; line<lines-1; line++) 
     area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
 
   return area;
 }
+
+double trimApertureSearchResult(long lines, 
+                          double *xLimit, double *yLimit, 
+                          double *dxFactor, double *dyFactor, 
+                          long fullPlane) 
+{
+  double area1 = -1, area2 = -1;
+  long count;
+  count = lines;
+  while (count-- && 
+         (area2=trimApertureSearchResult1(lines, xLimit, yLimit, dxFactor, dyFactor, fullPlane))!=area1) 
+    area1 = area2;
+  return area1;
+}
+

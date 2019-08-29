@@ -3,19 +3,18 @@
  */
 
 #include "mdb.h"
-#include "scan.h"
-#include "table.h"
 #include "SDDS.h"
+#include "track.h"
 
 static char *USAGE = "trimda <input> <output>";
 
 
 int main(int argc, char **argv)
 {
-  int i_arg;
   char *output, *input;
   SDDS_DATASET SDDS_input, SDDS_output;
-  long line, lines, full_plane, dtheta;
+  long line, lines, full_plane, count;
+  double dtheta;
   double *xLimit, *yLimit;
   double *dxFactor, *dyFactor, area;
 
@@ -52,7 +51,6 @@ int main(int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-
   while (SDDS_ReadPage(&SDDS_input)>0) {
     lines = SDDS_RowCount(&SDDS_input);
     if (!(xLimit = SDDS_GetColumnInDoubles(&SDDS_input, "x")) ||
@@ -60,10 +58,16 @@ int main(int argc, char **argv)
       fprintf(stderr, "unable to get x or y data from input file\n");
       exit(1);
     }
-    if (SDDS_StartPage(&SDDS_output, lines) ||
-	!SDDS_CopyColumns(&SDDS_output, &SDDS_input) ||
-	!SDDS_CopyParameters(&SDDS_output, &SDDS_input)) {
-      SDDS_SetError("Probem copying data to output file");
+    if (!SDDS_StartPage(&SDDS_output, lines)) {
+      SDDS_SetError("Probem starting page in output file");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!SDDS_CopyColumns(&SDDS_output, &SDDS_input)) {
+      SDDS_SetError("Probem copying column data to output file");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!SDDS_CopyParameters(&SDDS_output, &SDDS_input)) {
+      SDDS_SetError("Probem copying parameter data to output file");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     
@@ -89,13 +93,13 @@ int main(int argc, char **argv)
       if (fabs(dyFactor[line])<1e-6)
 	dyFactor[line] = 0;
     }
-    
+
     area = trimApertureSearchResult(lines, xLimit, yLimit, dxFactor, dyFactor, full_plane);
-    
+
     if (!SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
 	!SDDS_SetColumn(&SDDS_output, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
 	!SDDS_SetParameters(&SDDS_output, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Area", area, NULL)) {
-      SDDS_SetError("Probem setting up output file");
+      SDDS_SetError("Probem setting data in output file");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (!SDDS_WritePage(&SDDS_output)) {
