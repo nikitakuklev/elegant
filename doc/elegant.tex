@@ -20,7 +20,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.2.0\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2019.3\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -33,64 +33,38 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2019.2.1}
+\section{Highlights of What's New in Version 2019.3.0}
 
-Here is a summary of what's changed since release 2019.1.1.
+Here is a summary of what's changed since release 2019.2.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed a bug in tracking-based matrix computation for \verb|CCBEND| that would result in the program hanging under
-  some circumstances.
-\item Fixed a bug in the implementation of the expanded Hamiltonian for \verb|MULT| elements.
-\item Fixed a bug in the \verb|BMXYZ| element that caused a crash when multiple such elements were used.
-\item If \verb|COUPLING| and \verb|EYREF| were both non-zero for an \verb|SREFFECTS| element, the \verb|EYREF|
-  value would be ignored, which is potentially confusing. This issue is now flagged as an error.
-  B. Podobodov (BNL) brought the issue to our attention.
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|correct| command, which performs trajectory or orbit correction, would fail to output corrector
-  data for both planes in some cases. This was fixed.
-\item The \verb|correct| command, also had a bug in reporting the ``uncorrected'' trajectory in the trajectory output file.
-  Instead of giving the uncorrected trajectory, it was giving the trajectory after the penultimate correction iteration.
-  This was reported by forum user shancai.
-\item The memory-efficiency of bucket assignments, invoked when using \verb|use_bunched_mode| in \verb|sdds_beam|,
-  was improved, preventing crashes in some extreme cases for the serial version.
+\item DA trimming (to make the \verb|xClipped| and \verb|yClipped| columns, as well as the \verb|Area| parameter)
+  was not working properly in the parallel version. This was fixed. In addition, the algorithm was improved for
+  both the serial and parallel versions to iterate the trimming until it converges.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the \verb|APCONTOUR| element, which provides an aperture or obstruction defined by an $(x, y)$ contour in an SDDS file.
-\item Added the \verb|TAPERAPC| element, which provides a tapered circular aperture.
-\item Added the \verb|TAPERAPE| element, which provides a tapered elliptical aperture.
-\item Added the \verb|TAPERAPR| element, which provides a tapered rectangular aperture.
-\item \verb|RFMODE| now allows ignoring particles that are outside the binning region, using the \verb|ALLOW_UNBINNED_PARTICLES|
-  parameter.
-\item The required format for \verb|MATR| (matrix from a text file) has changed slightly, as described on the manual page.
-  The element also has a new parameter, \verb|FRACTION| that allows interpolating the matrix elements with the identity
-  matrix as one endpoint.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|ion_effects| command now supports calculation of ion fields using a bi-gaussian distribution (sum of two
-  gaussians) or bi-lorentzian distribution (sum of two lorentzians), as well as tri-gaussian and tri-lorentzian
-  distributions. This which allows modeling the core and tails of the distribution more accurately. A number of parameters
-  were added for control of fitting and output. J. Calvey (ANL) and R. Lindberg (ANL) co-developed this improvement.
-\item The \verb|sdds_beam| command now offers control of which bunch is used for fiducialization of rf systems.
-  It defaults to the first bunch (\#0), which is a change from the previous (and frequently confusing) behavior
-  of fiducializing to the entire beam.
-\item The \verb|aperture_search| command now allows full-plane computations, i.e., computations covering both $y\geq 0$ and
-  $y<0$.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item None
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -7634,6 +7608,85 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2019.2.1}
+
+Here is a summary of what's changed since release 2019.1.1.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Fixed a bug in tracking-based matrix computation for \verb|CCBEND| that would result in the program hanging under
+  some circumstances.
+\item Fixed a bug in the implementation of the expanded Hamiltonian for \verb|MULT| elements.
+\item Fixed a bug in the \verb|BMXYZ| element that caused a crash when multiple such elements were used.
+\item If \verb|COUPLING| and \verb|EYREF| were both non-zero for an \verb|SREFFECTS| element, the \verb|EYREF|
+  value would be ignored, which is potentially confusing. This issue is now flagged as an error.
+  B. Podobodov (BNL) brought the issue to our attention.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|correct| command, which performs trajectory or orbit correction, would fail to output corrector
+  data for both planes in some cases. This was fixed.
+\item The \verb|correct| command, also had a bug in reporting the ``uncorrected'' trajectory in the trajectory output file.
+  Instead of giving the uncorrected trajectory, it was giving the trajectory after the penultimate correction iteration.
+  This was reported by forum user shancai.
+\item The memory-efficiency of bucket assignments, invoked when using \verb|use_bunched_mode| in \verb|sdds_beam|,
+  was improved, preventing crashes in some extreme cases for the serial version.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added the \verb|APCONTOUR| element, which provides an aperture or obstruction defined by an $(x, y)$ contour in an SDDS file.
+\item Added the \verb|TAPERAPC| element, which provides a tapered circular aperture.
+\item Added the \verb|TAPERAPE| element, which provides a tapered elliptical aperture.
+\item Added the \verb|TAPERAPR| element, which provides a tapered rectangular aperture.
+\item \verb|RFMODE| now allows ignoring particles that are outside the binning region, using the \verb|ALLOW_UNBINNED_PARTICLES|
+  parameter.
+\item The required format for \verb|MATR| (matrix from a text file) has changed slightly, as described on the manual page.
+  The element also has a new parameter, \verb|FRACTION| that allows interpolating the matrix elements with the identity
+  matrix as one endpoint.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|ion_effects| command now supports calculation of ion fields using a bi-gaussian distribution (sum of two
+  gaussians) or bi-lorentzian distribution (sum of two lorentzians), as well as tri-gaussian and tri-lorentzian
+  distributions. This which allows modeling the core and tails of the distribution more accurately. A number of parameters
+  were added for control of fitting and output. J. Calvey (ANL) and R. Lindberg (ANL) co-developed this improvement.
+\item The \verb|sdds_beam| command now offers control of which bunch is used for fiducialization of rf systems.
+  It defaults to the first bunch (\#0), which is a change from the previous (and frequently confusing) behavior
+  of fiducializing to the entire beam.
+\item The \verb|aperture_search| command now allows full-plane computations, i.e., computations covering both $y\geq 0$ and
+  $y<0$.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|touschekLifetime| program now reports the value of \verb|deltaLimit| in the output file, whether that
+  value is given explicitly or computed via the rf voltage.
+\item Added the program \verb|sdds5x5sigmaproc|, which computes the 5x5 sigma matrix (i.e., all elements except those
+  related to the time coordinates) from a quadrupole scan.
+\end{itemize}
+
 
 \subsection{Highlights of What's New in Version 2019.1.1}
 
