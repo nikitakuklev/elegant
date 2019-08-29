@@ -1202,89 +1202,8 @@ long do_aperture_search_line(
 #endif
   if (originStable && lines>1) {
     /* compute the area */
-    
-    if (!full_plane) {
-      /* First clip off any portions that stick out like islands.  This is done in three steps. */
-      
-      /* 1.  Insist that the x values must be monotonically increasing 
-       */
-      for (line=0; line<lines/2; line++)
-	if (xLimit[line+1]<xLimit[line])
-	  xLimit[line+1] = xLimit[line];
-      for (line=lines-1; line>lines/2; line--)
-	if (xLimit[line-1]>xLimit[line])
-	  xLimit[line-1] = xLimit[line];
-      
-      /* 2. for x<0, y values must increase monotonically as x increases (larger index) */
-      for (line=lines/2; line>0; line--) {
-	if (yLimit[line-1]>yLimit[line])
-	  yLimit[line-1] = yLimit[line];
-      }
-      
-      /* 3. for x>0, y values must fall monotonically as x increases (larger index) */
-      for (line=lines/2; line<(lines-1); line++) {
-	if (yLimit[line+1]>yLimit[line])
-	  yLimit[line+1] = yLimit[line];
-      }
-    
-      /* perform trapazoid rule integration */
-      for (line=0; line<lines-1; line++) 
-	area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
-    } else {
-      /* First clip off any portions that stick out like islands.  */
-      
-      for (line=0; line<lines-1; line++) {
-	if (dxFactor[line]>0 && dxFactor[line+1]>0) {
-	  if (dyFactor[line]>0 && dyFactor[line+1]>0) {
-	    /* Quadrant 1 */
-	    if (xLimit[line+1]<xLimit[line])
-	      xLimit[line] = xLimit[line+1];
-	  } else if (dyFactor[line]<0 && dyFactor[line+1]<0) {
-	    /* Quadrant 4 */
-	    if (xLimit[line+1]>xLimit[line])
-	      xLimit[line+1] = xLimit[line];
-	  }
-	} else if (dxFactor[line]<0 && dxFactor[line+1]<0) {
-	  if (dyFactor[line]>0 && dyFactor[line+1]>0) {
-	    /* Quadrant 2 */
-	    if (xLimit[line+1]<xLimit[line])
-	      xLimit[line+1] = xLimit[line];
-	  } else if (dyFactor[line]<0 && dyFactor[line+1]<0) {
-	    /* Quadrant 3 */
-	    if (xLimit[line+1]>xLimit[line])
-	      xLimit[line] = xLimit[line+1];
-	  }
-	}
-      }
 
-      for (line=0; line<lines-1; line++) {
-	if (dxFactor[line]>0 && dxFactor[line+1]>0) {
-	  if (dyFactor[line]>0 && dyFactor[line+1]>0) {
-	    /* Quadrant 1 */
-	    if (yLimit[line+1]>yLimit[line])
-	      yLimit[line+1] = yLimit[line];
-	  } else if (dyFactor[line]<0 && dyFactor[line+1]<0) {
-	    /* Quadrant 4 */
-	    if (yLimit[line]<yLimit[line+1])
-	      yLimit[line] = yLimit[line+1];
-	  }
-	} else if (dxFactor[line]<0 && dxFactor[line+1]<0) {
-	  if (dyFactor[line]>0 && dyFactor[line+1]>0) {
-	    /* Quadrant 2 */
-	    if (yLimit[line+1]<yLimit[line])
-	      yLimit[line] = yLimit[line+1];
-	  } else if (dyFactor[line]<0 && dyFactor[line+1]<0) {
-	    /* Quadrant 3 */
-	    if (yLimit[line+1]<yLimit[line])
-	      yLimit[line+1] = yLimit[line];
-	  }
-	}
-      }
-
-      /* perform trapazoid rule integration */
-      for (line=0; line<lines-1; line++)
-	area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
-    }
+    area = trimApertureSearchResult(lines, xLimit, yLimit, dxFactor, dyFactor, full_plane);
   }
   *returnValue = area;
 
@@ -1657,34 +1576,7 @@ long do_aperture_search_line_p(
     area = 0;
     if (lines>1) {
       /* compute the area */
-      
-      /* First clip off any portions that stick out like islands.  This is done in three steps. */
-      
-      /* 1.  Insist that the x values must be monotonically increasing 
-       */
-      for (line=0; line<lines/2; line++)
-	if (xLimit[line+1]<xLimit[line])
-	  xLimit[line+1] = xLimit[line];
-      for (line=lines-1; line>lines/2; line--)
-	if (xLimit[line-1]>xLimit[line])
-	  xLimit[line-1] = xLimit[line];
-      
-      /* 2. for x<0, y values must increase monotonically as x increases (larger index) */
-      for (line=lines/2; line>0; line--) {
-	if (yLimit[line-1]>yLimit[line])
-	  yLimit[line-1] = yLimit[line];
-      }
-      
-      /* 3. for x>0, y values must fall monotonically as x increases (larger index) */
-      for (line=lines/2; line<(lines-1); line++) {
-	if (yLimit[line+1]>yLimit[line])
-	  yLimit[line+1] = yLimit[line];
-      }
-      
-      /* perform trapazoid rule integration */
-      for (line=0; line<lines-1; line++) 
-	area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
-      
+      area = trimApertureSearchResult(lines, xLimit, yLimit, dxFactor, dyFactor, full_plane);
     }
     *returnValue = area;
 
@@ -1735,3 +1627,4 @@ long do_aperture_search_line_p(
 }
 
 #endif
+

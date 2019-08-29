@@ -4232,6 +4232,7 @@ long do_aperture_search_line(RUN *run, VARY *control, double *referenceCoord,
 			     ERRORVAL *errcon, LINE_LIST *beamline,
 			     long number, double *apertureReturn);
 void finish_aperture_search(RUN *run, VARY *control,  ERRORVAL *errcon, LINE_LIST *beamline);
+double trimApertureSearchResult(long lines, double *xLimit, double *yLimit, double *dxFactor, double *dyFactor, long fullPlane);
 
 /* prototypes for analyze.c */
 void setup_transport_analysis(NAMELIST_TEXT *nltext, RUN *run, VARY *control, ERRORVAL *errcon);
