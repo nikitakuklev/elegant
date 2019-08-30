@@ -55,7 +55,13 @@ double teyEfficiency = 2.0e-8;	/* Proportional constant for total electron yield
 double pi_const=3.141592653589793238462643;	/* constant */
 double degToRad = 0.0174532925199433;	/* Conversion factor from degree to radian */	
 
-static char *matTable="/home/oxygen/OAG/generalData/elementProperties.sdds";
+/*need set the environment variable as following:
+  setenv XRAYLIB_ELEMENT_PROPERTIES /home/oxygen/OAG/generalData/elementProperties.sdds
+  or 
+  export XRAYLIB_ELEMENT_PROPERTIES=/home/oxygen/OAG/generalData/elementProperties.sdds
+  It depends on which shell you are in, bash uses export and csh and tcsh use setenv 
+  this file will be used for matTable variable */
+static char *matTable;
 
 #define modes 10
 static int availableMode[modes]={0, 1, 2, 4, 6, 10, 11, 12, 14, 20};
@@ -153,6 +159,13 @@ int main ( int argc, char *argv[] )
     fprintf(stderr, "%s\n", USAGE);
     exit(1);
   }
+  matTable = getenv("XRAYLIB_ELEMENT_PROPERTIES");
+  /*Do not free matTable, it is not allocating new memory*/
+  if (matTable==NULL) {
+    fprintf(stderr, "Error: environment variable XRAYLIB_ELEMENT_PROPERTIES is not set\n");
+    exit(1);
+  }
+  
   targetThickness = 0.01; 	/* units = mm */
   targetDensity   = 2.7;  	/* units = g/cm^3 */ 
   for (i_arg=1; i_arg<argc; i_arg++) {
