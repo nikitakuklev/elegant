@@ -61,9 +61,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux
+PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux xrltool xrltest
 else
-PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon xrltool xrltest
 endif
 
 SCRIPTS = brightnessEnvelope
@@ -212,6 +212,10 @@ sddsxra$(EXE)_SRCS = sddsxra.c
 sddscompton(EXE)_SRCS = sddscompton.c
 
 sddsxrf(EXE)_SRCS = sddsxrf.c
+
+xrtool(EXE)_SRCS = xrtool.c
+
+xrltest(EXE)_SRCS = xrltest.c
 
 OBJNAMES = sddsbrightness$(OBJ) usb$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
