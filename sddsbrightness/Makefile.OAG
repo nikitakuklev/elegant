@@ -61,9 +61,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux xrltool xrltest sddscompton sddsxrf
+PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux 
 else
-PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon xrltool xrltest sddscompton sddsxrf
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon 
 endif
 
 SCRIPTS = brightnessEnvelope
@@ -135,7 +135,7 @@ XRAYLIB =
 #Look for private version of xraylib used here at APS
 XRAY = $(words $(wildcard $(OAG_APPS)/src/xraylib))
 ifeq ($(XRAY), 1)
-PROD_HOST += sddscompton sddsxra sddsxrf
+PROD_HOST += sddscompton sddsxra sddsxrf xrltool xrltest
 sddscompton_CFLAGS = -I$(OAG_APPS)/src/xraylib
 sddsxra_CFLAGS = -I$(OAG_APPS)/src/xraylib
 sddsxrf_CFLAGS = -I$(OAG_APPS)/src/xraylib
@@ -163,7 +163,7 @@ SYSXRL = $(words $(notdir $(wildcard \
 
 ifneq ($(SYSXRL), 0)
 STATIC_BUILD=NO
-PROD_HOST += sddscompton sddsxra sddsxrf
+PROD_HOST += sddscompton sddsxra sddsxrf xrltool xrltest
 sddscompton_LDFLAGS += -lxrl
 sddsxra_LDFLAGS += -lxrl
 sddsxrf_LDFLAGS += -lxrl
