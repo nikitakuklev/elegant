@@ -15,7 +15,7 @@ char  strVar[MAXVAR][64];	/* Command line arguments in strings */
 int   intVar[MAXVAR];		/* Command line arguments in integers */
 float floatVar[MAXVAR];		/* Command line arguments in floating numbers */
 
-struct compoundData  	compData;
+struct compoundData  	*compData;
 
 typedef struct {
   int    Z;
@@ -1258,23 +1258,23 @@ int main ( int argc, char *argv[] )
   		"Coster-Kronig transotion probability");
   /*  ENHANCEMENT: COMPOUND PARSER. The other parser, CompoundParserSimple, is not accessible */
   } else if(strcmp(strVar[0], "CompoundParser") == 0)        { 
-    i = CompoundParser(strVar[1], &compData);
-    if (i == 0) {
+    compData = CompoundParser(strVar[1]);
+    if (compData == NULL) {
       printf("Error parsing the formula %s\n", strVar[1]);
     } else {
       sumScales = 0.0;
-      for ( i = 0; i < compData.nElements; i++ ) {
-       scaleNAtoms[i] = compData.massFractions[i] / AtomicWeight(compData.Elements[i]);
+      for ( i = 0; i < compData->nElements; i++ ) {
+       scaleNAtoms[i] = compData->massFractions[i] / AtomicWeight(compData->Elements[i]);
        sumScales = sumScales + scaleNAtoms[i];
       }
-      compWeight = compData.nAtomsAll / sumScales;
-      for ( i = 0; i < compData.nElements; i++ ) nAtoms[i] = scaleNAtoms[i] * compWeight;
+      compWeight = compData->nAtomsAll / sumScales;
+      for ( i = 0; i < compData->nElements; i++ ) nAtoms[i] = scaleNAtoms[i] * compWeight;
       /* Print function info */
       if (verbose > 2) printf("Enhanced CompoundParser function: nElements, nAllAtoms, molWeight + {AtomicNumber, nAtoms, massFractions}\n");
       /* Print total numbers of elements, total numbers of atoms and molecular weight */
-      printf("%d %d %f", compData.nElements, compData.nAtomsAll, compWeight);
+      printf("%d %d %f", compData->nElements, compData->nAtomsAll, compWeight);
       /* Print atomic number, number of atoms and weight fraction of each elements */
-      for ( i = 0; i < compData.nElements; i++ ) printf(" %d %d %f", compData.Elements[i], nAtoms[i], compData.massFractions[i]);
+      for ( i = 0; i < compData->nElements; i++ ) printf(" %d %d %f", compData->Elements[i], nAtoms[i], compData->massFractions[i]);
       printf("\n");
     }
   } else if(strcmp(strVar[0], "?")==0 || strstr(strVar[0],"H")!=NULL || strstr(strVar[0],"h")!=NULL) { 
