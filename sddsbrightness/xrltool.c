@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <ctype.h>
 
-#include "xraylib/xraylib.h"
-#include "xraylib/xraylib-parser.h"
+#include "xraylib.h"
+#include "xraylib-parser.h"
 
 /* Define global variables */
 #define MAXVAR 16
