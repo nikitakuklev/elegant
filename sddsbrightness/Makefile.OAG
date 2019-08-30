@@ -61,9 +61,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux xrltool xrltest
+PROD = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddssyncflux xrltool xrltest sddscompton sddsxrf
 else
-PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon xrltool xrltest
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve sddsws sddsbs sddsecon xrltool xrltest sddscompton sddsxrf
 endif
 
 SCRIPTS = brightnessEnvelope
@@ -139,6 +139,8 @@ PROD_HOST += sddscompton sddsxra sddsxrf
 sddscompton_CFLAGS = -I$(OAG_APPS)/src/xraylib
 sddsxra_CFLAGS = -I$(OAG_APPS)/src/xraylib
 sddsxrf_CFLAGS = -I$(OAG_APPS)/src/xraylib
+xrltool_CFLAGS = -I$(OAG_APPS)/src/xraylib
+xrltest_CFLAGS = -I$(OAG_APPS)/src/xraylib
 XRAYLIB = xrl
 xrl_DIR = $(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
 else
