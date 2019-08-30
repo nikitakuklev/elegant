@@ -1958,6 +1958,7 @@ void bmapxyz_field_setup(BMAPXYZ *bmapxyz)
       !(z=SDDS_GetColumnInDoubles(&SDDSin, "z")) ) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
+  printf("Checking BMXYZ field data from file %s\n", bmapxyz->filename);
   if (!check_sdds_column(&SDDSin, "x", "m") ||
       !check_sdds_column(&SDDSin, "y", "m") ||
       !check_sdds_column(&SDDSin, "z", "m")) {
