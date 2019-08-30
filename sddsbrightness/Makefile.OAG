@@ -168,6 +168,7 @@ sddscompton_LDFLAGS += -lxrl
 sddsxra_LDFLAGS += -lxrl
 sddsxrf_LDFLAGS += -lxrl
 xrltool_LDFLAGS += -lxrl
+xrltest_LDFLAGS += -lxrl
 endif
 endif
 
