@@ -7,10 +7,11 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-/* routine: track_through_rf_deflector()
- * purpose: track particles through an RF deflector
+/* routine: track_through_space_harmonic_deflector()
+ * purpose: track particles through an RF deflector with space harmonics
  * 
  * Michael Borland, 1989
+ * space harmonic by Yipeng Sun, 2019
  */
 #include "mdb.h"
 #include "track.h"
@@ -29,6 +30,7 @@ void track_through_space_harmonic_deflector(
   double x, xp, y, yp;
   double beta, px, py, pz, pc;
   double omega, k, t_part;
+  double k_0, alpha_sq;
   double dpx, dpy, dpz, phase;
   long ip, mode;
 
@@ -61,14 +63,21 @@ void track_through_space_harmonic_deflector(
     t_part = initial[ip][4]/(c_mks*beta);
     dpx = dpy = dpz = 0;
     
-    for (mode=0; mode<5; mode++) {
+    /* for fundamental mode, n=0 */
+    k_0 = rf_param->period_phase/rf_param->period_length;
+    omega = k_0*c_mks;
+    phase = omega*(t_part-t_first)+rf_param->phase[0];
+    dpx += rf_param->v[0]*sin(phase);
+    
+    for (mode=1; mode<10; mode++) {
       if (rf_param->v[mode]==0 )
         continue;
       
       k = (rf_param->period_phase+2*PI*mode)/rf_param->period_length;
+      alpha_sq = k*k - k_0*k_0;
       omega = k*c_mks;
       phase = omega*(t_part-t_first)+rf_param->phase[mode];
-      dpx += rf_param->v[mode]*sin(phase);
+      dpx += rf_param->v[mode]*sin(phase)*(0.5+0.0625*alpha_sq*(3.0*x*x+y*y));
     }
     /* We assume the deflection is from magnetic fields, so p^2 doesn't change */
     px += dpx*rf_param->factor*particleCharge/(particleMass*sqr(c_mks));
