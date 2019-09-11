@@ -1043,6 +1043,7 @@ long do_tracking(
        * information on the tracking context 
        */
       strncpy(trackingContext.elementName, eptr->name, CONTEXT_BUFSIZE);
+      trackingContext.element = eptr;
       trackingContext.elementOccurrence = eptr->occurence;
       trackingContext.sliceAnalysis = sliceAnalysis?
 	(sliceAnalysis->finalValuesOnly?NULL:sliceAnalysis):NULL;
@@ -3863,11 +3864,12 @@ void getTrackingContext(TRACKING_CONTEXT *trackingContext0)
   memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
 }
 
-void setTrackingContext(char *name, long occurence, long type, char *rootname) 
+void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr) 
 {
 #if USE_MPI
   trackingContext.myid = myid;
 #endif
+  trackingContext.element = eptr;
   trackingContext.sliceAnalysis = NULL;
   trackingContext.zStart = 0;
   trackingContext.zEnd = 0;

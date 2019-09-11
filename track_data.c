@@ -2941,6 +2941,7 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
     {"SG_ORDER", "", IS_SHORT, 0, (long)((char *)&lscdrift_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing current histogram"},
     {"INTERPOLATE", "", IS_SHORT, 0, (long)((char *)&lscdrift_example.interpolate), NULL, 0.0, 1, "Interpolate wake?"},
     {"LSC", "", IS_SHORT, 0, (long)((char *)&lscdrift_example.lsc), NULL, 0.0, 1, "Include longitudinal space-charge impedance?  If zero, acts like ordinary drift."},
+    {"AUTO_LEFFECTIVE", "", IS_SHORT, 0, (long)((char *)&lscdrift_example.autoLEffective), NULL, 0.0, 0, "In nonzero and if L=0, the LEFFECTIVE parameter is set to the length of the previous element."},
     {"LOW_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.lowFrequencyCutoff0), NULL, -1.0, 0, "Highest spatial frequency at which low-frequency cutoff filter is zero.  If not positive, no low-frequency cutoff filter is applied. Frequency is in units of Nyquist (0.5/binsize)."},
     {"LOW_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.lowFrequencyCutoff1), NULL, -1.0, 0, "Lowest spatial frequency at which low-frequency cutoff filter is 1.  If not given, defaults to LOW_FREQUENCY_CUTOFF1."},
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.highFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},

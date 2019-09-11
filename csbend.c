@@ -675,7 +675,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       csbend0.refKicks = csbend0.n_kicks;
       /* This forces us into the next branch on the next call to this routine */
       csbend0.refTrajectoryChangeSet = 1;
-      setTrackingContext("csbend0", 0, T_CSBEND, "none");
+      setTrackingContext("csbend0", 0, T_CSBEND, "none", NULL);
       track_through_csbend(part0, 1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
       csbend->refTrajectoryChangeSet = 2;  /* indicates that reference trajectory has been determined */
 

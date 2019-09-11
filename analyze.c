@@ -1920,7 +1920,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
         D[i] = 0;
   }
   sigmaDelta2 = 0;
-  setTrackingContext(elem->name, elem->occurence, elem->type, run->rootname);
+  setTrackingContext(elem->name, elem->occurence, elem->type, run->rootname, elem);
   switch (elem->type) {
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;

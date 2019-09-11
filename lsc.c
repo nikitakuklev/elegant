@@ -35,6 +35,8 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double lengthLeft, Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
+  TRACKING_CONTEXT context;
+  ELEMENT_LIST *eptr;
 #if DEBUG
   FILE *fpd = NULL;
 #endif
@@ -42,6 +44,18 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double *buffer;
 #endif
 
+  getTrackingContext(&context);
+  eptr = context.element;
+  if (eptr->pred && LSC->length==0 && LSC->autoLEffective) {
+    ELEMENT_LIST *pred;
+    pred = eptr->pred;
+    if (entity_description[pred->type].flags&HAS_LENGTH) {
+      LSC->lEffective = ((DRIFT*)pred->p_elem)->length;
+      printf("Set LEffective=%le m for LSCDRIFT %s following %s\n", LSC->lEffective, eptr->name, eptr->pred->name);
+      fflush(stdout);
+    } else
+      return;
+  }
 #ifdef HAVE_GPU
   if(getElementOnGpu()){
     startGpuTimer();
@@ -202,7 +216,8 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
-      printf("Error: beam radius is zero in LSCDRIFT\n");
+      printf("Error: beam radius is zero in LSCDRIFT: S11=%le, S33=%le, RADIUS_FACTOR=%le\n",
+             S11, S33, LSC->radiusFactor);
       exitElegant(1);
     }
     /* - compute kSC */

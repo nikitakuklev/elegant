@@ -754,6 +754,7 @@ typedef struct {
 typedef struct {
   char elementName[CONTEXT_BUFSIZE+1];
   long elementOccurrence, step, elementType;
+  ELEMENT_LIST *element;
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
   char rootname[CONTEXT_BUFSIZE+1];
@@ -1027,7 +1028,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 17
 #define N_TFBPICKUP_PARAMS 40
 #define N_TFBDRIVER_PARAMS 48
-#define N_LSCDRIFT_PARAMS  13
+#define N_LSCDRIFT_PARAMS  14
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 27
 #define N_TAYLORSERIES_PARAMS 6
@@ -3190,7 +3191,7 @@ extern PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS];
 typedef struct {
   double length, lEffective;
   long bins;
-  short smoothing, SGHalfWidth, SGOrder, interpolate, lsc;
+  short smoothing, SGHalfWidth, SGOrder, interpolate, lsc, autoLEffective;
   double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
 } LSCDRIFT;
@@ -3672,7 +3673,7 @@ extern void recordLostParticles(double **coord, long nLeft, long nLostNew, LOST_
 extern void resetElementTiming();
 extern void reportElementTiming();
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
-extern void setTrackingContext(char *name, long occurence, long type, char *rootname);
+extern void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
