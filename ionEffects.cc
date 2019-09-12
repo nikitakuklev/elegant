@@ -2037,12 +2037,6 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
 	  /* In this case, the odd processors will use the held-over values from 2-function fit */
 	  if (myid%2==0) {
 	    memcpy(paramValue, ionEffects->xyFitParameter3[plane], 9*sizeof(double));
-#if USE_MPI
-	    if (myid==0) {
-	      printf("Using previous fit as starting point (2-function)\n");
-	      fflush(stdout);
-	    }
-#endif
 	  } else {
 	    paramValue[6] = 10*ionSigma[plane];
 	    paramValue[7] = 0;
