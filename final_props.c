@@ -998,6 +998,7 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po, long star
         }
     }
     s[0] = s11; s[1] = s12; s[2] = s22;
+    s_total[0] = s_total[1] = s_total[2] = 0; /* suppresses valgrind complaint */
     MPI_Reduce (s, s_total, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
    
 #ifdef DEBUG 
