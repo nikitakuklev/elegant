@@ -1973,6 +1973,9 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
   for (plane=0; plane<2; plane++) {
     fitReturn = 0;
 
+    for (int i=0; i<9; i++)
+      paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = 0;
+
     nData = ionEffects->ionBins[plane];
     for (mFunctions=2; mFunctions<=nFunctions; mFunctions++) {
       xData = ionEffects->xyIonHistogram[plane];
