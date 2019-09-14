@@ -292,7 +292,11 @@ long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *m
   iy = (y-map->ymin)/map->dyg ;
   if (ix<0 || iy<0 || ix>map->nx-1 || iy>map->ny-1)
     return 0;
-  
+  if (ix==(map->nx-1))
+    ix--;
+  if (iy==(map->ny-1))
+    iy--;
+
   fx = (x-(ix*map->dxg+map->xmin))/map->dxg;
   fy = (y-(iy*map->dyg+map->ymin))/map->dyg;
 
