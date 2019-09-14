@@ -13,7 +13,7 @@
           STRING ion_density_output = NULL;
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
-          STRING field_calculation_method = NULL;
+          STRING field_calculation_method = "gaussian";
 	  double distribution_fit_target = 0.1;
 	  double distribution_fit_tolerance = 1e-3;
 	  long distribution_fit_evaluations = 100;
@@ -32,7 +32,8 @@
 	  double ion_histogram_output_s_start = 0;
 	  double ion_histogram_output_s_end = 10;
 	  long ion_histogram_output_interval = 1000;
-	  long ion_histogram_min_bins = 200;
+	  long ion_histogram_min_output_bins = 200;
+	  long ion_histogram_max_bins = 10000;
           long verbosity = 0;
 #end
 
