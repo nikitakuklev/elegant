@@ -130,11 +130,21 @@ void findGlobalMinIndex (double *min, int *processor_ID, MPI_Comm comm) {
       double val;
       int rank;
     } in, out;
-    in.val = out.val = *min;
+    in.val = *min;
     MPI_Comm_rank(comm, &(in.rank));
-    out.rank = in.rank;
     MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
     *min = out.val;
+    *processor_ID = out.rank;
+}
+void findGlobalMaxIndex (double *max, int *processor_ID, MPI_Comm comm) {
+    struct {
+      double val;
+      int rank;
+    } in, out;
+    in.val = *max;
+    MPI_Comm_rank(comm, &(in.rank));
+    MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, comm);
+    *max = out.val;
     *processor_ID = out.rank;
 }
 #endif
@@ -1966,7 +1976,7 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 
 short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *paramValueX, double *paramValueY, 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
-  double result = 0, lastResult = DBL_MAX;
+  double result = 0;
   double paramValue[9], paramDelta[9], lowerLimit[9], upperLimit[9];
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
@@ -1974,8 +1984,9 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
   long fitReturn, dummy, nEvaluations;
 #if USE_MPI
   double bestResult, lastBestResult;
-  long nEvaluationsMin, nEvaluationsMax;
-  int min_location, max_location;
+  int min_location;
+#else
+  double lastResult = DBL_MAX;
 #endif
   long verbosity = 0, plane;
 
@@ -1984,6 +1995,10 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
 
   for (plane=0; plane<2; plane++) {
     fitReturn = 0;
+#if MPI_DEBUG
+    printf("Performing fit for %c plane\n", plane?'y':'x');
+    fflush(stdout);
+#endif
 
     for (int i=0; i<9; i++)
       paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = 0;
@@ -2113,7 +2128,9 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
 #endif
     int nTries = distribution_fit_restarts;
     nEvaluations = 0;
+#if !USE_MPI
     lastResult = DBL_MAX;
+#endif
     while (nTries--) {
       fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 			       NULL, mFunctions*3, distribution_fit_target, distribution_fit_tolerance/10.0, 
@@ -2123,13 +2140,15 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
       if (fitReturn>=0)
 	nEvaluations += fitReturn;
 #if USE_MPI
-      //printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+#if MPI_DEBUG
+      printf("Waiting on barrier after simplexMin, return=%ld, result=%le\n", fitReturn, result); fflush(stdout);
+#endif
       MPI_Barrier(MPI_COMM_WORLD);
       MPI_Allreduce(&result, &bestResult, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
 #if MPI_DEBUG
       double worstResult;
       MPI_Allreduce(&result, &worstResult, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-      printf("bestResult = %le, worstResult = %le\n", bestResult, worstResult); fflush(stdout);
+      printf("nTries = %d, bestResult = %le, worstResult = %le\n", nTries, bestResult, worstResult); fflush(stdout);
 #endif
       if (bestResult<distribution_fit_target || (lastBestResult - bestResult)<distribution_fit_tolerance) {
 	break;
@@ -2146,6 +2165,10 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
         MPI_Barrier(MPI_COMM_WORLD);
 	min_location = 1;
 	findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+#if MPI_DEBUG
+        printf("distributing and randomizing bestResult from processor %d\n", min_location);
+        fflush(stdout);
+#endif
 	MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
 	for (int i=0; i<3*mFunctions; i++) {
           paramValue[i] *= (1+(random_2(0)-0.5)/20);
@@ -2162,7 +2185,12 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
     MPI_Barrier(MPI_COMM_WORLD);
     min_location = 1;
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("distributing best result from processor %d\n", min_location);
+    fflush(stdout);
+#endif
     MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
+    MPI_Bcast(&fitReturn, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
 #endif
     
     if (fitReturn>0) {
@@ -2191,7 +2219,9 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
     min_location = -1;
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
 #if MPI_DEBUG
-    printf("min_location = %d after findGlobalMinIndex\n", min_location);
+    int max_location;
+    findGlobalMaxIndex(&result, &max_location, MPI_COMM_WORLD);
+    printf("min,max_location = %d,%d after findGlobalMinIndex\n", min_location, max_location);
 #endif
     MPI_Bcast(&nEvaluations, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
     ionEffects->nEvaluationsBest[plane] = nEvaluations;
