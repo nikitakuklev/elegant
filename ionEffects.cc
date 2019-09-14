@@ -943,8 +943,9 @@ void trackWithIonEffects
 	ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
 	ionCharge = (double)ionProperties.chargeState[iSpecies];
 
-
 	double tempkick[2], maxkick[2], tempart[4];
+	maxkick[0] = maxkick[1] = 0;
+	tempkick[0] = tempkick[1] = 0;
 	tempart[0] = sigma[0] + centroid[0];
 	tempart[2] = 0;
 	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
@@ -961,10 +962,8 @@ void trackWithIonEffects
             BeamFieldFunction(qBunch, sigma, centroid, &(ionEffects->coordinate[iSpecies][iIon][0]), &Ex, &Ey);
           */
 	  coord = ionEffects->coordinate[iSpecies][iIon];
-          
+	  kick[0] = kick[1] = 0;
 	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
-
-
           
 #if DEBUG
 	  if (isnan(kick[0])) {
