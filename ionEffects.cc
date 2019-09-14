@@ -99,7 +99,7 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
-static long ionHistogramOutputInterval, ionHistogramMinBins;
+static long ionHistogramOutputInterval, ionHistogramMinOutputBins, ionHistogramMaxBins;
 static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
 static double sStartFirst = -1;
@@ -130,8 +130,9 @@ void findGlobalMinIndex (double *min, int *processor_ID, MPI_Comm comm) {
       double val;
       int rank;
     } in, out;
-    in.val = *min;
+    in.val = out.val = *min;
     MPI_Comm_rank(comm, &(in.rank));
+    out.rank = in.rank;
     MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
     *min = out.val;
     *processor_ID = out.rank;
@@ -328,8 +329,6 @@ void setUpIonEffectsOutputFiles(long nPasses)
 
 void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 {
-  cp_str(&field_calculation_method, (char*)"gaussian");
-
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -360,7 +359,8 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     ionHistogramOutputInterval = ion_histogram_output_interval;
     ionHistogramOutput_sStart = ion_histogram_output_s_start;
     ionHistogramOutput_sEnd= ion_histogram_output_s_end;
-    ionHistogramMinBins = ion_histogram_min_bins;
+    ionHistogramMinOutputBins = ion_histogram_min_output_bins;
+    ionHistogramMaxBins = ion_histogram_max_bins;
   }
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
@@ -374,7 +374,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     nFunctions = 3;
 
   if (!fit_residual_type || !strlen(fit_residual_type))
-    residualType = ION_FIT_RESIDUAL_RMS_DEV;
+    residualType = ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM;
   else if ((residualType = match_string(fit_residual_type, ionFitResidualOption, N_ION_FIT_RESIDUAL_OPTIONS, EXACT_MATCH))<0)
     bombElegantVA((char*)"fit_residual_type=\"%s\" not recognized", fit_residual_type);
 
@@ -918,7 +918,7 @@ void trackWithIonEffects
           
       /*** Determine and apply kicks from beam to ions */
       for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        double ionMass, ionCharge, *coord, kick[2];
+        double ionMass, ionCharge, *coord, kick[2]={0,0};
       
         /* Relevant quantities:
          * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
@@ -1222,7 +1222,7 @@ void trackWithIonEffects
   }
 #endif
     
-//for bi-gaussian kick
+    //for multi-gaussian and multi-lorentzian kick
     double paramValueX[9], paramValueY[9];
     double tempCentroid[9][2], tempSigma[9][2], tempkick[2], tempQ[9];
     double normX, normY;
@@ -1233,6 +1233,8 @@ void trackWithIonEffects
       makeIonHistograms(ionEffects, ionProperties.nSpecies, centroid, sigma, ionCentroid, ionSigma);
 #if USE_MPI && MPI_DEBUG
       printf("Running bigaussian/bilorentzian fit for s=%le, bunch %ld\n", ionEffects->sLocation, iBunch);
+      printf("Ion centroid = (%le, %le), sigma = (%le, %le)\n", ionCentroid[0], ionCentroid[1], 
+	     ionSigma[0], ionSigma[1]);
       fflush(stdout);
 #endif
       /* We take a return value here for future improvement in which the fitting function is automatically selected. */
@@ -1288,9 +1290,12 @@ void trackWithIonEffects
 
     if (isSlave || !notSinglePart) {
       /*** Determine and apply kicks to beam from the total ion field */
+#if MPI_DEBUG
+      printf("Applying kicks to electron beam\n");
+#endif
       if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
         for (ip=0; ip<np; ip++) {
-          double kick[2];
+          double kick[2] = {0,0};
 
           switch (ionEffects->ionFieldMethod) {
           case ION_FIELD_GAUSSIAN:
@@ -1592,12 +1597,19 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
   double qTotal;
 
   for (iPlane=0; iPlane<2; iPlane++) {
-    ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
+    if (beamSigma[iPlane]>0 && ionEffects->binDivisor[iPlane]>1)
+      ionEffects->ionDelta[iPlane] = beamSigma[iPlane]/ionEffects->binDivisor[iPlane];
+    else
+      ionEffects->ionDelta[iPlane] = 1e-3;
     if (ionEffects->rangeMultiplier[iPlane]<0)
       ionEffects->ionRange[iPlane] = -ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane];
     else
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
+    if (ionEffects->ionBins[iPlane]>ionHistogramMaxBins) {
+      ionEffects->ionBins[iPlane] = ionHistogramMaxBins;
+      ionEffects->ionDelta[iPlane] = 2*ionEffects->ionRange[iPlane]/(ionHistogramMaxBins-1.0);
+    }
 
     /* allocate and set x or y coordinates of histogram (for output to file) */
     if (ionEffects->xyIonHistogram[iPlane])
@@ -1791,7 +1803,7 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
   long i, j;
   double min, max, threshold;
 
-  if (nBins<ionHistogramMinBins || nBins<20) {
+  if (nBins<ionHistogramMinOutputBins || nBins<20) {
     *binOffset = 0;
     *activeBins = nBins;
     return;
@@ -1816,13 +1828,13 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
     return;
   }
 
-  if (*activeBins<ionHistogramMinBins) {
-    j = ionHistogramMinBins - *activeBins;
+  if (*activeBins<ionHistogramMinOutputBins) {
+    j = ionHistogramMinOutputBins - *activeBins;
     *binOffset -= j/2;
     *activeBins += j;
     if (*binOffset<0 || (*binOffset+*activeBins)>=nBins) {
       *binOffset = 0;
-      *activeBins = ionHistogramMinBins;
+      *activeBins = ionHistogramMinOutputBins;
       return;
     }
   }
@@ -2168,12 +2180,19 @@ short multipleWhateverFit(double beamSigma[2], double beamCentroid[2], double *p
     }
 
 #if USE_MPI
-    //printf("Waiting on barrier after optimization loop, result=%le, fitReturn=%ld\n", result, fitReturn); fflush(stdout);
+#if MPI_DEBUG
+    printf("Waiting on barrier after optimization loop, result=%le, fitReturn=%ld, nEvaluations=%ld\n", 
+	   result, fitReturn, nEvaluations); 
+    fflush(stdout);
+#endif
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMin[plane], 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
     MPI_Allreduce(&nEvaluations, &ionEffects->nEvaluationsMax[plane], 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
-    min_location = 1;
+    min_location = -1;
     findGlobalMinIndex(&result, &min_location, MPI_COMM_WORLD);
+#if MPI_DEBUG
+    printf("min_location = %d after findGlobalMinIndex\n", min_location);
+#endif
     MPI_Bcast(&nEvaluations, 1, MPI_LONG, min_location, MPI_COMM_WORLD);
     ionEffects->nEvaluationsBest[plane] = nEvaluations;
 #else
