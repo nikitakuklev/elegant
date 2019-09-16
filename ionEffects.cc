@@ -797,11 +797,13 @@ void trackWithIonEffects
 
     if (isSlave || !notSinglePart) {
       /*** Advance the ion positions */
-      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-          ionEffects->coordinate[iSpecies][iIon][0] += (tNow-ionEffects->t)*ionEffects->coordinate[iSpecies][iIon][1];
-          ionEffects->coordinate[iSpecies][iIon][2] += (tNow-ionEffects->t)*ionEffects->coordinate[iSpecies][iIon][3];
-        }
+      if (iPass>=freeze_ions_until_pass) {
+	for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+	  for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+	    ionEffects->coordinate[iSpecies][iIon][0] += (tNow-ionEffects->t)*ionEffects->coordinate[iSpecies][iIon][1];
+	    ionEffects->coordinate[iSpecies][iIon][2] += (tNow-ionEffects->t)*ionEffects->coordinate[iSpecies][iIon][3];
+	  }
+	}
       }
       ionEffects->t = tNow;
       
@@ -923,72 +925,69 @@ void trackWithIonEffects
       }
 
 
-     
-
-          
-      /*** Determine and apply kicks from beam to ions */
-      for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-        double ionMass, ionCharge, *coord, kick[2]={0,0};
+      if (iPass>=freeze_ions_until_pass) {
+	/*** Determine and apply kicks from beam to ions */
+	for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+	  double ionMass, ionCharge, *coord, kick[2]={0,0};
       
-        /* Relevant quantities:
-         * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
-         * ionProperties.mass[iSpecies] --- Mass of the ion (AMUs)
-         * qBunch --- bunch charge (C)
-         * sigma[0], sigma[1] --- x, y sigma (m)
-         * centroid[0], centroid[1] --- x , y centroid (m)
-         * ionEffects->nIons[index] --- Number of ions of the source species
-         * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
-         */
-        
-	ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
-	ionCharge = (double)ionProperties.chargeState[iSpecies];
-
-	double tempkick[2], maxkick[2], tempart[4];
-	maxkick[0] = maxkick[1] = 0;
-	tempkick[0] = tempkick[1] = 0;
-	tempart[0] = sigma[0] + centroid[0];
-	tempart[2] = 0;
-	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
-	maxkick[0] = 2*abs(tempkick[0]);
-	
-	tempart[2] = sigma[1] + centroid[1];
-	tempart[0] = 0;
-	gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
-	maxkick[1] = 2*abs(tempkick[1]);
-        
-        for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
-          /*
-            Get effective fields in V/m
-            BeamFieldFunction(qBunch, sigma, centroid, &(ionEffects->coordinate[iSpecies][iIon][0]), &Ex, &Ey);
-          */
-	  coord = ionEffects->coordinate[iSpecies][iIon];
-	  kick[0] = kick[1] = 0;
-	  gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
-          
-#if DEBUG
-	  if (isnan(kick[0])) {
-	    printf("kick nan");
-	  }
-#endif
-
-	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
-	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
-	    ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
-	  } 
-
-	  //          ionEffects->coordinate[iSpecies][iIon][1] += 
-          //  Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
-          //ionEffects->coordinate[iSpecies][iIon][3] += Ey*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+	  /* Relevant quantities:
+	   * ionProperties.chargeState[iSpecies] --- Charge state of the ion (integer)
+	   * ionProperties.mass[iSpecies] --- Mass of the ion (AMUs)
+	   * qBunch --- bunch charge (C)
+	   * sigma[0], sigma[1] --- x, y sigma (m)
+	   * centroid[0], centroid[1] --- x , y centroid (m)
+	   * ionEffects->nIons[index] --- Number of ions of the source species
+	   * ionEffects->coordinate[index][j][k] --- kth coordinate of jth source ion 
+	   */
 	  
-        }
-      }
-    }  /* branch for workers */
-    
+	  ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
+	  ionCharge = (double)ionProperties.chargeState[iSpecies];
+	  
+	  double tempkick[2], maxkick[2], tempart[4];
+	  maxkick[0] = maxkick[1] = 0;
+	  tempkick[0] = tempkick[1] = 0;
+	  tempart[0] = sigma[0] + centroid[0];
+	  tempart[2] = 0;
+	  gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
+	  maxkick[0] = 2*abs(tempkick[0]);
+	  
+	  tempart[2] = sigma[1] + centroid[1];
+	  tempart[0] = 0;
+	  gaussianBeamKick(tempart, centroid, sigma, tempkick, qBunch, ionMass, ionCharge);
+	  maxkick[1] = 2*abs(tempkick[1]);
+	  
+	  for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
+	    /*
+	      Get effective fields in V/m
+	      BeamFieldFunction(qBunch, sigma, centroid, &(ionEffects->coordinate[iSpecies][iIon][0]), &Ex, &Ey);
+	    */
+	    coord = ionEffects->coordinate[iSpecies][iIon];
+	    kick[0] = kick[1] = 0;
+	    gaussianBeamKick(coord, centroid, sigma, kick, qBunch, ionMass, ionCharge);
+	    
+#if DEBUG
+	    if (isnan(kick[0])) {
+	      printf("kick nan");
+	    }
+#endif
+	    
+	    if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
+	      ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
+	      ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
+	    } 
+	    
+	    //          ionEffects->coordinate[iSpecies][iIon][1] += 
+	    //  Ex*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+	    //ionEffects->coordinate[iSpecies][iIon][3] += Ey*ionProperties.chargeState[iSpecies]/ionProperties.mass[iSpecies]; /* plus other constants */
+	    
+	  }
+	}
+      } 
+    } /* branch for workers */
+
     /* Master should also have valid values for these since we may want to log them */
-    ionCentroid[0] = 0;
-    ionCentroid[1] = 0;
-    ionSigma[0] = 0;
-    ionSigma[1] = 0;
+    ionCentroid[0] = ionCentroid[1] = 0;
+    ionSigma[0] = ionSigma[1] = 0;
     qIon = 0;
     long mTot = 0;
     double bx1, bx2, by1, by2;
@@ -996,7 +995,6 @@ void trackWithIonEffects
     bx2 = centroid[0] + 3*sigma[0];
     by1 = centroid[1] - 3*sigma[1];
     by2 = centroid[1] + 3*sigma[1];
-
 
     if (ion_species_output && iBunch==0) {
       speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
@@ -1302,7 +1300,7 @@ void trackWithIonEffects
 #if MPI_DEBUG
       printf("Applying kicks to electron beam\n");
 #endif
-      if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10) {
+      if (qIon && ionSigma[0]>0 && ionSigma[1]>0 && mTotTotal>10 && iPass>=freeze_electrons_until_pass) {
         for (ip=0; ip<np; ip++) {
           double kick[2] = {0,0};
 
@@ -1618,6 +1616,11 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *beamCentro
     if (ionEffects->ionBins[iPlane]>ionHistogramMaxBins) {
       ionEffects->ionBins[iPlane] = ionHistogramMaxBins;
       ionEffects->ionDelta[iPlane] = 2*ionEffects->ionRange[iPlane]/(ionHistogramMaxBins-1.0);
+    }
+
+    if (ionEffects->ionRange[iPlane]>ionEffects->span[iPlane]) {
+      ionEffects->ionRange[iPlane] = ionEffects->span[iPlane];
+      ionEffects->ionDelta[iPlane] = 2*ionEffects->ionRange[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
     }
 
     /* allocate and set x or y coordinates of histogram (for output to file) */

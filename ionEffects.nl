@@ -35,5 +35,7 @@
 	  long ion_histogram_min_output_bins = 200;
 	  long ion_histogram_max_bins = 100000;
           long verbosity = 0;
+	  long freeze_ions_until_pass = 0;
+	  long freeze_electrons_until_pass = 0;
 #end
 
