@@ -33,7 +33,7 @@
 	  double ion_histogram_output_s_end = 10;
 	  long ion_histogram_output_interval = 1000;
 	  long ion_histogram_min_output_bins = 200;
-	  long ion_histogram_max_bins = 10000;
+	  long ion_histogram_max_bins = 100000;
           long verbosity = 0;
 #end
 
