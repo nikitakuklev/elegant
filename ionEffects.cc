@@ -1242,7 +1242,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   double paramValue[9], paramDelta[9], lowerLimit[9], upperLimit[9];
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
-  double peakVal, minVal, xMin, xMax;
+  double peakVal, minVal, xMin, xMax, fitTolerance;
   long fitReturn, dummy, nEvaluations;
 #if USE_MPI
   double bestResult, lastBestResult;
@@ -1252,10 +1252,13 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 #endif
   long plane, pFunctions;
 
+  fitTolerance = distribution_fit_tolerance;
 #if !USE_MPI
-  nEvalMax *= 10;
-  nPassMax *= 3;
-  
+  if ((nEvalMax *= 10)<1500)
+    nEvalMax = 1500;
+  if (nPassMax<3)
+    nPassMax = 3;
+  fitTolerance /= 10;
 #endif
 
   for (int i=0; i<3*nFunctions; i++)
@@ -1408,12 +1411,13 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       int nTries = distribution_fit_restarts;
       nEvaluations = 0;
 #if !USE_MPI
-      nTries *= 10;
+      if (nTries<10)
+	nTries = 10;
       lastResult = DBL_MAX;
 #endif
       while (nTries--) {
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-				 NULL, mFunctions*3, distribution_fit_target, distribution_fit_tolerance/10.0, 
+				 NULL, mFunctions*3, distribution_fit_target, fitTolerance/10.0, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
@@ -1430,7 +1434,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	  printf("bestResult=%le, result=%le\n", bestResult, result);
 	  fflush(stdout);
 	}
-	if (bestResult<distribution_fit_target || fabs(lastBestResult - bestResult)<distribution_fit_tolerance) {
+	if (bestResult<distribution_fit_target || fabs(lastBestResult - bestResult)<fitTolerance) {
 	  if (verbosity>100) {
 	    printf("Best result is good enough or hasn't changed, breaking from while loop\n");
 	    fflush(stdout);
@@ -1439,7 +1443,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	}
 	lastBestResult = bestResult;
 #else
-	if (result<distribution_fit_target || (lastResult-result)<distribution_fit_tolerance) {
+	if (result<distribution_fit_target || (lastResult-result)<fitTolerance) {
 	  if (verbosity>100) {
 	    printf("Best result is good enough or hasn't changed, breaking from while loop\n");
 	    fflush(stdout);
