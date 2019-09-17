@@ -29,8 +29,8 @@
 	  double ion_range_multiplier[2] = {2.0, 2.0};
 	  double ion_sigma_limit_multiplier[2] = {0, 0};
 	  STRING ion_histogram_output = NULL;
-	  double ion_histogram_output_s_start = 0;
-	  double ion_histogram_output_s_end = 10;
+	  double ion_histogram_output_s_start = -1;
+	  double ion_histogram_output_s_end = -1;
 	  long ion_histogram_output_interval = 1000;
 	  long ion_histogram_min_output_bins = 200;
 	  long ion_histogram_max_bins = 100000;

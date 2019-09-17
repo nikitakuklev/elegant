@@ -3300,6 +3300,8 @@ typedef struct {
   double ***coordinate;            /* coordinate[i][j][k] is the kth coordinate of the jth ion of species i */
                                    /* coordinate order is (x, vx, y, vy, charge) */
   long *nIons;                     /* nIons[i] is the number of ions of species i */
+  long nTotalIons;                 /* total over all processors */
+  long nMin, nMax;                 /* min and max over all processors */
   double ionDelta[2];              /* delta x or y for ion histogram bins */
   double ionRange[2];              /* range in x or y for ion histogram */
   long ionBins[2];                 /* number of bins */
