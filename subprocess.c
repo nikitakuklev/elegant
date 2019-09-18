@@ -55,7 +55,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
       }
       else {
         if (!run || !run->rootname)
-          bombElegant("rootname must be initialized prior to subprocess execution if \%s substitution is used", NULL);
+          bombElegant("rootname must be initialized prior to subprocess execution if %s substitution is used", NULL);
         *ptr = 0;
         ptr += 2;
         strcat(buffer, ptr0);
