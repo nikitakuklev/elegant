@@ -28,12 +28,13 @@
 	  double ion_bin_divisor[2] = {10.0, 10.0};
 	  double ion_range_multiplier[2] = {2.0, 2.0};
 	  double ion_sigma_limit_multiplier[2] = {0, 0};
+	  long ion_histogram_max_bins = 100000;
+	  long ion_histogram_min_per_bin = 15;
 	  STRING ion_histogram_output = NULL;
 	  double ion_histogram_output_s_start = -1;
 	  double ion_histogram_output_s_end = -1;
 	  long ion_histogram_output_interval = 1000;
 	  long ion_histogram_min_output_bins = 200;
-	  long ion_histogram_max_bins = 100000;
           long verbosity = 0;
 	  long freeze_ions_until_pass = 0;
 	  long freeze_electrons_until_pass = 0;

@@ -119,7 +119,7 @@ void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset
 static SDDS_DATASET *SDDS_beamOutput = NULL;
 static SDDS_DATASET *SDDS_ionDensityOutput = NULL;
 static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
-static long ionHistogramOutputInterval, ionHistogramMinOutputBins, ionHistogramMaxBins;
+static long ionHistogramOutputInterval, ionHistogramMinOutputBins, ionHistogramMaxBins, ionHistogramMinPerBin;
 static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
 static double sStartFirst = -1;
@@ -314,6 +314,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binSize", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binRange", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nBins", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nMacroIons", NULL, SDDS_LONG) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -392,6 +393,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     ionHistogramMinOutputBins = ion_histogram_min_output_bins;
   }
   ionHistogramMaxBins = ion_histogram_max_bins;
+  ionHistogramMinPerBin = ion_histogram_min_per_bin;
   if (!field_calculation_method || !strlen(field_calculation_method))
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
@@ -832,7 +834,17 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
   long iSpecies, iBin, iPlane;
   long iIon;
   double qTotal = 0;
+  long nIons = 0;
 
+  for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++)
+    nIons += ionEffects->nIons[iSpecies]; 
+
+#if USE_MPI
+  long nIonsTotal;
+  MPI_Allreduce(&nIons, &nIonsTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  nIons = nIonsTotal;
+#endif
+  
   for (iPlane=0; iPlane<2; iPlane++) {
     qTotal = 0;
     if (verbosity>200) {
@@ -847,18 +859,21 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
     else
       ionEffects->ionDelta[iPlane] = 1e-3;
     if (ionEffects->rangeMultiplier[iPlane]<0)
-      ionEffects->ionRange[iPlane] = abs(ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane]);
+      ionEffects->ionRange[iPlane] = 2*abs(ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane]);
     else
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
+    if (nIons!=0 && ionHistogramMinPerBin>1 && (nIons/ionEffects->ionBins[iPlane])<ionHistogramMinPerBin) {
+      ionEffects->ionBins[iPlane] = nIons/ionHistogramMinPerBin+5;
+      ionEffects->ionDelta[iPlane] = ionEffects->ionRange[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
+    }
     if (ionEffects->ionBins[iPlane]>ionHistogramMaxBins) {
       ionEffects->ionBins[iPlane] = ionHistogramMaxBins;
-      ionEffects->ionDelta[iPlane] = 2*ionEffects->ionRange[iPlane]/(ionHistogramMaxBins-1.0);
+      ionEffects->ionDelta[iPlane] = ionEffects->ionRange[iPlane]/(ionHistogramMaxBins-1.0);
     }
-
-    if (ionEffects->ionRange[iPlane]>ionEffects->span[iPlane]) {
-      ionEffects->ionRange[iPlane] = ionEffects->span[iPlane];
-      ionEffects->ionDelta[iPlane] = 2*ionEffects->ionRange[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
+    if (ionEffects->ionRange[iPlane]>2*ionEffects->span[iPlane]) {
+      ionEffects->ionRange[iPlane] = 2*ionEffects->span[iPlane];
+      ionEffects->ionDelta[iPlane] = ionEffects->ionRange[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
     }
 
     if (verbosity>100) {
@@ -1247,6 +1262,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax, fitTolerance;
   long fitReturn, dummy, nEvaluations;
+  int nTries;
 #if USE_MPI
   double bestResult, lastBestResult;
   int min_location;
@@ -1411,7 +1427,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       }
       lastBestResult = DBL_MAX;
 #endif
-      int nTries = distribution_fit_restarts;
+      nTries = distribution_fit_restarts;
       nEvaluations = 0;
 #if !USE_MPI
       if (nTries<10)
@@ -2397,13 +2413,25 @@ void applyIonKicksToElectronBunch
     
     makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchCentroid, bunchSigma, ionCentroid, ionSigma);
 
+    if (verbosity>40) {
+      long i, j;
+      double sum[2];
+      for (i=0; i<2; i++) {
+	sum[i] = 0;
+	for (j=0; j<ionEffects->ionBins[i]; j++)
+	  sum[i] += ionEffects->ionHistogram[i][j];
+      }
+      printf("Charge check on histograms: x=%le, y=%le, q=%le\n", sum[0], sum[1], qIon);
+      fflush(stdout);
+    }
+
     /* We take a return value here for future improvement in which the fitting function is automatically selected. */
     ionEffects->ionFieldMethod = 
       multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
       
     /* these factors needed because we fit charge histograms instead of charge densities */
-    normX = ionEffects->ionRange[0] / ionEffects->ionBins[0];
-    normY = ionEffects->ionRange[1] / ionEffects->ionBins[1];
+    normX = ionEffects->ionDelta[0];
+    normY = ionEffects->ionDelta[1];
       
     if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
       /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
@@ -2525,8 +2553,12 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
     if (myid==0) {
 #endif
       for (iPlane=0; iPlane<2; iPlane++) {
+	/*
 	determineOffsetAndActiveBins(ionEffects->ionHistogram[iPlane], ionEffects->ionBins[iPlane],
 				     &binOffset, &activeBins);
+	*/
+	binOffset = 0;
+	activeBins = ionEffects->ionBins[iPlane];
 	if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
 	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				"Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
@@ -2536,6 +2568,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"binSize", ionEffects->ionDelta[iPlane],
 				"binRange", ionEffects->ionRange[iPlane],
 				"nBins", ionEffects->ionBins[iPlane],
+				"nMacroIons", ionEffects->nTotalIons,
 				"Plane", iPlane==0?"x":"y", 
 				NULL) ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,

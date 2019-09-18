@@ -66,8 +66,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   \begin{itemize}
   \item The distribution fitting parameters for the serial version are automatically adjusted to improve fitting,
     so that it is comparable to the fitting used by the parallel version.
-  \item The \verb|ion_histogram_max_bins| was added to allow restricting the maximum number of bins; it defaults to 100,000.
-  \item The \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| to allow ``freezing'' the motion of the
+  \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins; it defaults to 100,000.
+  \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
+    macro ions per bin; it defaults to 15.
+  \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
     ions and electrons until a specified pass number. This is useful for diagnostic purposes.
   \end{itemize}
 \end{itemize}
@@ -2604,11 +2606,14 @@ included in the plane in question.
           double ion_bin_divisor[2] = {10.0, 10.0};
           double ion_range_multiplier[2] = {2.0, 2.0};
           double ion_sigma_limit_multiplier[2] = {0, 0};
+	  long ion_histogram_max_bins = 100000;
+	  long ion_histogram_min_per_bin = 15;
           STRING ion_histogram_output = NULL;
           double ion_histogram_output_s_start = 0;
           double ion_histogram_output_s_end = 10;
           long ion_histogram_output_interval = 1000;
-          long ion_histogram_min_bins = 200;
+	  long freeze_ions_until_pass = 0;
+	  long freeze_electrons_until_pass = 0;
           long verbosity = 0;
 &end
 \end{verbatim}
@@ -2638,7 +2643,8 @@ included in the plane in question.
   assumption that the beam and ion distributions are gaussian. This is a good assumption for the beam, but not highly accurate
   for the ions. More accurate, but slower, methods is sums of two or three gaussians, or sums 
   of two or three lorentzians, which can be invoked by setting
-  \verb|field_calculation_method| to \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|.
+  \verb|field_calculation_method| to \verb|"bigaussian"|, \verb|"trigaussian"|, \verb|"bilorentzian"|, or \verb|"trilorentzian"|;
+  these are collectively referred to as ``histogram fitting methods'' below.
   In the bigaussian case, the charge distribution is of the form
   \begin{equation}
     \rho(x, y) = (G(x, h_{x,1}, \sigma_{x,1}, c_{x,1}) + G(x, h_{x,2}, \sigma_{x,2}, c_{x,2}))*
@@ -2682,9 +2688,8 @@ included in the plane in question.
 \item \verb|ion_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
-\item \verb|ion_bin_divisor| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
-  the number of ion bins per rms parameter of the electron beam.
-\item \verb|ion_range_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
+\item \verb|ion_bin_divisor| --- For histogram fitting methods, the number of ion bins per rms parameter of the electron beam.
+\item \verb|ion_range_multiplier| --- For  histogram fitting methods,
   used to determine the full span of the ion binning region bins in units of the rms parameter of the ion distribution.
   The sign of the value determines which algorithm is used.
   For $m<0$, the binning range is $\left|m\right|\sigma_{ion}$.
@@ -2692,17 +2697,17 @@ included in the plane in question.
   used to cover a few outlying ions, and is not recommended.
   For $m>0$, the code first finds the approximate range containing the central 80\% of the ions, then multiplies by
   $m$ to get the range used.
-\item \verb|ion_sigma_limit_multiplier| --- For \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|, 
+\item \verb|ion_sigma_limit_multiplier| --- For  histogram fitting methods,
   the minimum value for either of the ion sigmas (for bigaussian) or size parameters (for bilorentizan)
   in units of the bin size. Use to prevent one of the gaussians or lorentzians from being too delta-function-like.
+\item \verb|ion_histogram_max_bins| --- Maximum number of ion bins for fitting methods.
+\item \verb|ion_histogram_min_per_bin| --- Minimum number of ions per bin (on average).
 \item \verb|ion_histogram_output|, \verb|ion_histogram_output_s_start|, \verb|ion_histogram_output_s_end|, 
       \verb|ion_histogram_output_interval|, \verb|ion_histogram_max_bins| --- Controls for the output of ion histograms when
-      \verb|field_calculation_method="bigaussian"| or \verb|"bilorentzian"|. 
+      using histogram fitting methods.
       \verb|ion_histogram_output| gives the (incomplete) filename.
       \verb|ion_histogram_output_s_start| and \verb|ion_histogram_output_s_end| give limits on the $s$ coordinate of the
       \verb|IONEFFECTS| element. \verb|ion_histogram_output_interval| gives the interval in passes between output.
-      \verb|ion_histogram_min_bins| gives the minimum number of bins worth of data to output; if the number exceeds this,
-      output is restricted to the most populous part of the histogram 
 \item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
 \end{itemize}
 
