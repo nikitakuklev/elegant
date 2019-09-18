@@ -952,6 +952,9 @@ double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
   quickBins = (2*hrange)/delta+0.5;
   if (quickBins<50 || nIons<8) {
     /* printf("Using full range [%le, %le] for ion binning\n", -hrange, hrange); fflush(stdout); */
+    hrange *= abs(ionEffects->rangeMultiplier[iPlane]);
+    if (hrange>ionEffects->span[iPlane])
+      hrange = ionEffects->span[iPlane];
     return 2*hrange;
   }
 
@@ -1239,7 +1242,7 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double *paramValueX, double *paramValueY, 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
-  double paramValue[9], paramDelta[9], lowerLimit[9], upperLimit[9];
+  double paramValue[9], paramDelta[9], paramDeltaSave[9], lowerLimit[9], upperLimit[9];
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax, fitTolerance;
@@ -1258,7 +1261,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
     nEvalMax = 1500;
   if (nPassMax<3)
     nPassMax = 3;
-  fitTolerance /= 10;
+  fitTolerance /= 100;
 #endif
 
   for (int i=0; i<3*nFunctions; i++)
@@ -1416,11 +1419,13 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       lastResult = DBL_MAX;
 #endif
       while (nTries--) {
+	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 				 NULL, mFunctions*3, distribution_fit_target, fitTolerance/10.0, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
+	memcpy(paramDelta, paramDeltaSave, sizeof(*paramDelta)*9); 
 	if (fitReturn>=0)
 	  nEvaluations += fitReturn;
 	if (verbosity>100) {

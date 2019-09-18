@@ -49,6 +49,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item DA trimming (to make the \verb|xClipped| and \verb|yClipped| columns, as well as the \verb|Area| parameter)
   was not working properly in the parallel version. This was fixed. In addition, the algorithm was improved for
   both the serial and parallel versions to iterate the trimming until it converges.
+\item The multi-gaussian and multi-lorentzian feature of the \verb|ion_effects| command, added in the last release, proved unreliable, 
+  as reported by B. Podobedov (BNL). Several improvements and bug fixes were implemented that should improve
+  matters.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -59,13 +62,20 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|ion_effects| command was improved in several ways: 
+  \begin{itemize}
+  \item The distribution fitting parameters for the serial version are automatically adjusted to improve fitting,
+    so that it is comparable to the fitting used by the parallel version.
+  \item The \verb|ion_histogram_max_bins| was added to allow restricting the maximum number of bins; it defaults to 100,000.
+  \item The \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| to allow ``freezing'' the motion of the
+    ions and electrons until a specified pass number. This is useful for diagnostic purposes.
+  \end{itemize}
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item None.
+\item Some apparent MPI-related issues were resolved for the \verb|ion_effects| command.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
