@@ -618,11 +618,11 @@ VMATRIX *sbend_matrix(
 
   small3 = pow(1e-16, 1./3.);
 
-    if (sqrt(FABS(kx2))*t0<small3) {
+  if (sqrt(fabs(kx2))*fabs(t0)<small3) {
       kx2 = sqr(small3/t0);
       if (kx2)
         kx2 = SIGN(kx2)*kx2;
-    }
+  }
 
     if (kx2>0.0) {
         kx = sqrt(kx2);
