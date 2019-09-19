@@ -22,7 +22,7 @@ typedef struct {
 extern "C" {
 #endif
 
-void readGasPressureData(char *filename, PRESSURE_DATA *pressureData);
+void readGasPressureData(char *filename, PRESSURE_DATA *pressureData, double factor);
 void computeAverageGasPressures(double sStart, double sEnd, double *pressure, PRESSURE_DATA *pressureData);
 
 #ifdef __cplusplus

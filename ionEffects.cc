@@ -414,7 +414,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
 
   }
 
-  readGasPressureData(pressure_profile, &pressureData);
+  readGasPressureData(pressure_profile, &pressureData, pressure_factor);
 
   readIonProperties(ion_properties);
 
@@ -857,7 +857,8 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
     if (nIons!=0 && ionHistogramMinPerBin>1 && (nIons/ionEffects->ionBins[iPlane])<ionHistogramMinPerBin) {
-      ionEffects->ionBins[iPlane] = nIons/ionHistogramMinPerBin+5;
+      if ((ionEffects->ionBins[iPlane] = nIons/ionHistogramMinPerBin+3)<6)
+	ionEffects->ionBins[iPlane] = 6;
       ionEffects->ionDelta[iPlane] = ionEffects->ionRange[iPlane]/(ionEffects->ionBins[iPlane]-1.0);
     }
     if (ionEffects->ionBins[iPlane]>ionHistogramMaxBins) {
@@ -1251,7 +1252,6 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
   double paramValue[9], paramDelta[9], paramDeltaSave[9], lowerLimit[9], upperLimit[9];
-  short disable[9];
   long nSignificant;
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
@@ -1288,7 +1288,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 #endif
     
     for (int i=0; i<9; i++)
-      paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = disable[i] = 0;
+      paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = 0;
     
     nData = ionEffects->ionBins[plane];
     nSignificant=0;
@@ -1439,25 +1439,28 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       lastResult = DBL_MAX;
 #endif
       while (nTries--) {
-	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
-	if (nSignificant<12) {
-	  paramValue[7] = paramValue[8] = 0;
-	  paramValue[6] = 1; // Doesn't matter, but can't be zero
-	  disable[6] = disable[7] = disable[8] = 1;
-	  if (nSignificant<6) {
-	    paramValue[4] = paramValue[5] = 0;
-	    paramValue[3] = 1; // Doesn't matter, but can't be zero
-	    disable[3] = disable[4] = disable[5] = 1;
-	  }
+	long nVariables;
+	nVariables = 3*mFunctions;
+	if (nSignificant<3) {
+	  nVariables = 3;
+	  paramValue[4] = paramValue[5] = 0;
+	  paramValue[3] = 1; // Doesn't matter, but can't be zero
 	}
+	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-				 disable, mFunctions*3, distribution_fit_target, fitTolerance/10.0, 
+				 NULL, nVariables, distribution_fit_target, fitTolerance/10.0, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
-	memcpy(paramDelta, paramDeltaSave, sizeof(*paramDelta)*9); 
+	memcpy(paramDelta, paramDeltaSave, sizeof(*paramDelta)*9);
 	if (fitReturn>=0)
 	  nEvaluations += fitReturn;
+	else {
+	  for (int i=0; i<9; i++)
+	    paramValue[i] = 0;
+	  for (int i=0; i<nData; i++)
+	    yFit[i] = 0;
+	}
 	if (verbosity>100) {
 	  printf("Exited simplexMin, return=%ld, result=%le\n  ", fitReturn, result); 
 	  for (int i=0; i<3*mFunctions; i++)
@@ -1553,7 +1556,8 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	}
 	break;
       }
-      if (nSignificant<12) {
+      if (nSignificant<6) {
+	// Don't run loop with mFunctions=3 when we don't have at least 6 valid points
 	if (verbosity>100) {
 	  printf("Terminating with mFunctions=%ld due to too few (%ld) significant points\n",
 		 mFunctions, nSignificant);
@@ -2607,8 +2611,8 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
   if ((ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN ||
        ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
       (SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
-      && (ionHistogramOutput_sStart<0 || (ionEffects->sLocation >= ionHistogramOutput_sStart)) 
-      && (ionHistogramOutput_sEnd<0 || (ionEffects->sLocation <= ionHistogramOutput_sEnd))) {
+      && (ionHistogramOutput_sStart<0 || ionEffects->sLocation>=ionHistogramOutput_sStart) 
+      && (ionHistogramOutput_sEnd<0 || ionEffects->sLocation<=ionHistogramOutput_sEnd)) {
     /* output ion density histogram */
 #if USE_MPI
     if (myid==0) {

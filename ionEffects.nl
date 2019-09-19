@@ -7,6 +7,7 @@
 
 #namelist ion_effects static
           STRING pressure_profile = NULL;
+	  double pressure_factor = 1.0;
           STRING ion_properties = NULL;
           STRING beam_output = NULL;
           long beam_output_all_locations = 0;
@@ -29,7 +30,7 @@
 	  double ion_range_multiplier[2] = {2.0, 2.0};
 	  double ion_sigma_limit_multiplier[2] = {0, 0};
 	  long ion_histogram_max_bins = 100000;
-	  long ion_histogram_min_per_bin = 15;
+	  long ion_histogram_min_per_bin = 5;
 	  STRING ion_histogram_output = NULL;
 	  double ion_histogram_output_s_start = -1;
 	  double ion_histogram_output_s_end = -1;

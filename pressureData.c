@@ -20,7 +20,7 @@
 #include "constants.h"
 #include "pressureData.h"
 
-void readGasPressureData(char *filename, PRESSURE_DATA *pressureData)
+void readGasPressureData(char *filename, PRESSURE_DATA *pressureData, double factor)
 {
   /* Assumed file structure:
    * Parameters: 
@@ -103,7 +103,8 @@ void readGasPressureData(char *filename, PRESSURE_DATA *pressureData)
     if (!(pressureData->pressure[i] = SDDS_GetColumnInDoubles(&SDDSin, pressureData->gasName[i]))) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-    /* Convert to Torr */
+    /* Convert to Torr and include external factor supplied by caller */
+    pressureMultiplier *= factor;
     if (pressureMultiplier!=1) {
       long j;
       for (j=0; j<pressureData->nLocations; j++) {
