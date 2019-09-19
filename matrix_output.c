@@ -31,7 +31,7 @@ static char **SDDS_match = NULL;
 static SDDS_TABLE *SDDS_matrix = NULL;
 static long *SDDS_matrix_initialized = NULL;
 static long *SDDS_matrix_count = NULL;
-static long individualMatrices=0, printElementData=0, mathematicaFinalMatrix=0;
+static long individualMatrices=0, printElementData=0, mathematicaFullMatrix=0;
 
 #define IC_S 0
 #define IC_ELEMENT 1
@@ -104,7 +104,7 @@ void setup_matrix_output(
     bombElegant("individual_matrices and full_matrix_only are incompatible", NULL);
   individualMatrices = individual_matrices;
   printElementData = print_element_data;
-  mathematicaFinalMatrix = mathematica_final_matrix;
+  mathematicaFullMatrix = mathematica_full_matrix;
 
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
@@ -440,7 +440,7 @@ void run_matrix_output(
       SWAP_LONG(M1->order, print_order[i_output]);
       print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
       SWAP_LONG(M1->order, print_order[i_output]);
-      if (mathematicaFinalMatrix) {
+      if (mathematicaFullMatrix) {
         long i, j;
         char sbuffer[100];
         fprintf(fp_printout[i_output], "MFull={\n");

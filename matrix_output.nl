@@ -10,7 +10,7 @@
     long printout_order = 1;
     STRING printout_format = "%22.15e ";
     long full_matrix_only = 0;
-    long mathematica_final_matrix = 0;
+    long mathematica_full_matrix = 0;
     long print_element_data = 1;
     STRING SDDS_output = NULL;
     long SDDS_output_order = 1;
