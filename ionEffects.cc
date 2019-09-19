@@ -596,7 +596,7 @@ void trackWithIonEffects
  CHARGE *charge           /* beam charge structure */
  )
 {
-  long ip, iSpecies, iIon;
+  long ip;
   long iBunch, nBunches=0;
   double *time0 = NULL;          /* array to record arrival time of each particle */
   double **part = NULL;          /* particle buffer for working bunch */
@@ -1254,7 +1254,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax, fitTolerance;
-  long fitReturn, dummy, nEvaluations;
+  long fitReturn, dummy, nEvaluations=0;
   int nTries;
 #if USE_MPI
   double bestResult, lastBestResult;
@@ -1295,6 +1295,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       fflush(stdout);
     }
 
+    pFunctions = 2;
     for (mFunctions=2; mFunctions<=nFunctions; mFunctions++) {
       if (verbosity>100) {
 	printf("multipleWhateverFit, mFunctions=%ld\n", mFunctions);
@@ -1534,12 +1535,6 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       
     }
     
-    if (verbosity>100) {
-      printf("Exited from mFunctions loop with mFunctions=%ld, pFunctions=%ld\n",
-	     mFunctions, pFunctions);
-      fflush(stdout);
-    }
-     
     mFunctions = pFunctions; // Last values used, regardless of how exit from loop occurred
     if (mFunctions==2 && nFunctions==3) {
       ionEffects->xyFitSet[plane] |=  0x02;
@@ -1598,10 +1593,6 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   }
   mFunctions = nFunctions; // ok for both planes since we filled parameters with zeros to start.
 
-  if (verbosity>100) {
-    printf("returning from fit, residual is %le\n", ionEffects->xyFitResidual[plane]);
-    fflush(stdout);
-  }
   return ionEffects->ionFieldMethod;
 }
 
@@ -2015,7 +2006,7 @@ void eliminateIonsOutsideSpan(IONEFFECTS *ionEffects)
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches,
 		  double qBunch, double bunchCentroid[2], double bunchSigma[2])
 {
-  long iSpecies, iIon, index, nToAdd, nLeft;
+  long iSpecies, index, nToAdd;
   double qToAdd;
 
   if (verbosity>30) {
@@ -2183,7 +2174,7 @@ void computeIonOverallParameters
   long mTot, jMacro;
   double bx1, bx2, by1, by2;
   double qIon;
-  long mTotTotal, iSpecies;
+  long iSpecies;
   
   if (verbosity>30) {
     printf("Computing centroid and sigma of ions\n");
