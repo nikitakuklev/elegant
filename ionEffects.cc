@@ -47,7 +47,8 @@ static long ionFieldMethod = -1;
 #define ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM 5
 #define ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM 6
 #define ION_FIT_RESIDUAL_RMS_DEV_PLUS_CENTROID 7
-#define N_ION_FIT_RESIDUAL_OPTIONS 8
+#define ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE 8
+#define N_ION_FIT_RESIDUAL_OPTIONS 9
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-ad",
   (char*)"rms-dev",
@@ -57,6 +58,7 @@ static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"rms-dev-plus-ad-sum",
   (char*)"sum-ad-plus-ad-sum",
   (char*)"rms-dev-plus-centroid",
+  (char*)"rms-dev-plus-ad-charge",
 };
 
 static long residualType = -1;
@@ -154,17 +156,6 @@ void findGlobalMinIndex (double *min, int *processor_ID, MPI_Comm comm) {
     MPI_Comm_rank(comm, &(in.rank));
     MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, comm);
     *min = out.val;
-    *processor_ID = out.rank;
-}
-void findGlobalMaxIndex (double *max, int *processor_ID, MPI_Comm comm) {
-    struct {
-      double val;
-      int rank;
-    } in, out;
-    in.val = *max;
-    MPI_Comm_rank(comm, &(in.rank));
-    MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, comm);
-    *max = out.val;
     *processor_ID = out.rank;
 }
 #endif
@@ -309,6 +300,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "t", "s", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "s", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "Plane", NULL, SDDS_STRING) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIons", "C", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsOutside", "C", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fractionIonChargeOutside", NULL, SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binSize", "m", SDDS_DOUBLE) ||
@@ -324,6 +316,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
 	    (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE) ||
              !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitType", NULL, SDDS_STRING) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsFromFit", "C", SDDS_DOUBLE) ||
 #if USE_MPI
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluationsBest", NULL, SDDS_LONG) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluationsMin", NULL, SDDS_LONG) ||
@@ -406,7 +399,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     nFunctions = 3;
 
   if (!fit_residual_type || !strlen(fit_residual_type))
-    residualType = ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_SUM;
+    residualType = ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE;
   else if ((residualType = match_string(fit_residual_type, ionFitResidualOption, N_ION_FIT_RESIDUAL_OPTIONS, EXACT_MATCH))<0)
     bombElegantVA((char*)"fit_residual_type=\"%s\" not recognized", fit_residual_type);
 
@@ -1272,6 +1265,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   long plane, pFunctions;
 
   fitTolerance = distribution_fit_tolerance;
+  /*
 #if !USE_MPI
   if ((nEvalMax *= 10)<1500)
     nEvalMax = 1500;
@@ -1279,6 +1273,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
     nPassMax = 3;
   fitTolerance /= 100;
 #endif
+  */
 
   for (int i=0; i<3*nFunctions; i++)
     paramValueX[i] = paramValueY[i] = 0;
@@ -1615,12 +1610,14 @@ double multiGaussianFunction(double *param, long *invalid)
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0;
+  double charge, dx;
 
   *invalid = 0;
 
   //param[3*j+0] = sig[j]
   //param[3*j+1] = cen[j]
   //param[3*j+2] = h[j]
+  dx = xData[1] - xData[0];
 
   for (int i=0; i<nData; i++) {
     double z;
@@ -1668,6 +1665,12 @@ double multiGaussianFunction(double *param, long *invalid)
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
     result = sum/yDataSum;
     break;
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE:
+    charge = 0;
+    for (int j=0; j<mFunctions; j++)
+      charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
+    result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
+    break;
   default:
     result = 0;
     bombElegant("Invalid residual code in multiGaussianFunction---seek professional help", NULL);
@@ -1681,9 +1684,12 @@ double multiLorentzianFunction(double *param, long *invalid)
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0;
+  double charge, dx;
 
   *invalid = 0;
 
+  dx = xData[1] - xData[0];
+  
   /* The parameters are different from the standard Lorentzian.
    * Instead of A/(pi*a*(1 + (x/a)^2) we use peak/(1 + (x/a)^2)
    */
@@ -1735,6 +1741,12 @@ double multiLorentzianFunction(double *param, long *invalid)
     break;
   case ION_FIT_RESIDUAL_SUM_ABS_DEV:
     result = sum/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE:
+    charge = 0;
+    for (int j=0; j<mFunctions; j++)
+      charge += param[3*j+2]*PI*param[3*j+0];
+    result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
     break;
   default:
     result = 0;
@@ -2408,10 +2420,32 @@ void applyIonKicksToElectronBunch
     fflush(stdout);
   }
 
+  ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
+
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
     // multi-gaussian or multi-lorentzian kick
     
     makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchCentroid, bunchSigma, ionCentroid, ionSigma);
+
+    /* We take a return value here for future improvement in which the fitting function is automatically selected. */
+    ionEffects->ionFieldMethod = 
+      multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
+
+    /* determine the charge implied by the fits */
+    for (int iPlane=0; iPlane<2; iPlane++) {
+      ionEffects->ionChargeFromFit[iPlane] = 0;
+      if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
+	for (int i=0; i<nFunctions; i++) 
+	  ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
+	    paramValueX[3*i+2]*sqrt(PIx2)*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
+	    paramValueY[3*i+2]*sqrt(PIx2)*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
+      } else {
+	for (int i=0; i<nFunctions; i++) 
+	  ionEffects->ionChargeFromFit[iPlane] += iPlane==0 ?
+	    paramValueX[3*i+2]*PI*paramValueX[3*i+0]/ionEffects->ionDelta[iPlane] :
+	    paramValueY[3*i+2]*PI*paramValueY[3*i+0]/ionEffects->ionDelta[iPlane] ;
+      }
+    }
 
     if (verbosity>40) {
       long i, j;
@@ -2422,17 +2456,14 @@ void applyIonKicksToElectronBunch
 	  sum[i] += ionEffects->ionHistogram[i][j];
       }
       printf("Charge check on histograms: x=%le, y=%le, q=%le\n", sum[0], sum[1], qIon);
+      printf("Charge from fits: x=%le, y=%le\n", ionEffects->ionChargeFromFit[0], ionEffects->ionChargeFromFit[1]);
       fflush(stdout);
     }
 
-    /* We take a return value here for future improvement in which the fitting function is automatically selected. */
-    ionEffects->ionFieldMethod = 
-      multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
-      
     /* these factors needed because we fit charge histograms instead of charge densities */
     normX = ionEffects->ionDelta[0];
     normY = ionEffects->ionDelta[1];
-      
+
     if (ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN) {
       /* paramValueX[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
       /* paramValueY[0..8] = sigma1, centroid1, height1, sigma2, centroid2, height2, [sigma3, centroid3, height3] */
@@ -2562,6 +2593,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 	if (!SDDS_StartPage(SDDS_ionHistogramOutput, activeBins) ||
 	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				"Pass", iPass, "Bunch", iBunch, "t", tNow, "s", ionEffects->sLocation,
+				"qIons", ionEffects->qTotal,
 				"qIonsOutside", ionEffects->ionHistogramMissed[iPlane],
 				"fractionIonChargeOutside", 
 				ionEffects->qTotal ? ionEffects->ionHistogramMissed[iPlane]/ionEffects->qTotal : -1,
@@ -2582,6 +2614,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 			    ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
 	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				"fitResidual", ionEffects->xyFitResidual[iPlane],
+				"qIonsFromFit", ionEffects->ionChargeFromFit[iPlane],
 #if USE_MPI
 				"nEvaluationsBest", ionEffects->nEvaluationsBest[iPlane],
 				"nEvaluationsMin", ionEffects->nEvaluationsMin[iPlane],

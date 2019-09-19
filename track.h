@@ -3316,6 +3316,7 @@ typedef struct {
   double xyFitParameter2[2][6];     /* [0]=x, [1]=y: fit parameters for two distributions (bigaussian or bilorentzian) */
   double xyFitParameter3[2][9];     /* [0]=x, [1]=y: fit parameters for three distributions (trigaussian or trilorentzian) */
   double xyFitResidual[2];          /* [0]=x, [1]=y: last residual */
+  double ionChargeFromFit[2];
 #if USE_MPI
   long nEvaluationsBest[2], nEvaluationsMin[2], nEvaluationsMax[2];
 #else
