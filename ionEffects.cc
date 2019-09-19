@@ -2028,6 +2028,7 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
 	  /* The macroIons parameter is the number for all processors, so we need to 
 	   * apportion the ions among the working processors 
 	   */
+	  long nLeft;
 	  nToAdd = ionEffects->macroIons/(n_processors-1.0);
 	  nLeft = ionEffects->macroIons - nToAdd*(n_processors-1);
 	  for (long iLeft=0; iLeft<nLeft; iLeft++) {
