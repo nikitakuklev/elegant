@@ -74,6 +74,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
     macro ions per bin; it defaults to 15.
   \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
     ions and electrons until a specified pass number. This is useful for diagnostic purposes.
+  \item The new \verb|pressure_factor| parameter allows multiplying all the pressure profiles by a common factor.
   \end{itemize}
 \end{itemize}
 
@@ -2588,6 +2589,7 @@ included in the plane in question.
 \begin{verbatim}
 &ion_effects
           STRING pressure_profile = NULL;
+          double pressure_factor = 1.0;
           STRING ion_properties = NULL;
           STRING beam_output = NULL;
           long beam_output_all_locations = 0;
@@ -2625,6 +2627,7 @@ included in the plane in question.
 \item \verb|pressure_profile| --- Name of an SDDS file giving the s-dependent gas pressure for
   various gas species. Column names will be matched to the entries in the \verb|SourceName| column of the
   \verb|ion_properties| file.
+\iterm \verb|pressure_factor| --- Factor by which to multiply the pressures given in the \verb|pressure_profile|.
 \item \verb|ion_properties| --- Name of an SDDS file giving properties of ions. Column names are
   \begin{itemize}
   \item \verb|IonName| --- String column giving the name of the ion.
