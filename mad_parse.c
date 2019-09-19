@@ -627,6 +627,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
             copy_element(e1, e2, reverse, 0, 0, editCmd);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             e1->divisions = e2->divisions;
+            e1->occurence = e2->occurence;
             e1->firstOfDivGroup = e2->firstOfDivGroup;
             extend_elem_list(&e1);
             e2 = e2->succ;
@@ -639,6 +640,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
             copy_element(e1, e2, reverse, 0, 0, editCmd);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             e1->divisions = e2->divisions;
+            e1->occurence = e2->occurence;
             e1->firstOfDivGroup = e2->firstOfDivGroup;
             extend_elem_list(&e1);
             e2 = e2->pred;

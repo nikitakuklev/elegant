@@ -58,6 +58,7 @@
     long tracking_updates = 1;
     STRING search_path = NULL;
     long element_divisions = 0;
+    long back_tracking = 0;
 #end
 
 #namelist change_particle,struct

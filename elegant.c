@@ -858,7 +858,7 @@ char **argv;
 	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
 	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
 #endif
-      beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice);
+      beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, back_tracking);
 #ifdef  USE_MPE
 	      MPE_Log_event(event1b, 0, "end get_beamline");
       }

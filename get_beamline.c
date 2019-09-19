@@ -86,7 +86,7 @@ void freeInputObjects()
 
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
-LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
+LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long backtrack)
 {
   long type=0, i;
   long iMad;
@@ -543,26 +543,20 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptr = eptr->succ;
   }
 
-  if (echo) {
-    printf("Step 1 done.\n");
-#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-    report_stats(stdout, "statistics: ");
-#endif
-    fflush(stdout);
-  }
-
   /* Set up hash table to all computing occurrence numbers quickly */
   occurence_htab = hcreate(12);
   occurenceCounter = tmalloc(sizeof(*occurenceCounter)*totalElements);
   uniqueElements = 0;
   eptr = &(lptr->elem);
   while (eptr) {
-    if (hcount(occurence_htab)==0 || hfind(occurence_htab, eptr->name, strlen(eptr->name))==FALSE) {
-      occurenceCounter[uniqueElements] = 0;
-      hadd(occurence_htab, eptr->name, strlen(eptr->name), (void*)&occurenceCounter[uniqueElements++]);
-      if (echo) {
-        printf("Added %s to hash table\n", eptr->name);
-        fflush(stdout);
+    if (eptr->name!=NULL) {
+      if (hcount(occurence_htab)==0 || hfind(occurence_htab, eptr->name, strlen(eptr->name))==FALSE) {
+        occurenceCounter[uniqueElements] = 0;
+        hadd(occurence_htab, eptr->name, strlen(eptr->name), (void*)&occurenceCounter[uniqueElements++]);
+        if (echo) {
+          printf("Added %s to hash table\n", eptr->name);
+          fflush(stdout);
+        }
       }
     }
     eptr = eptr->succ;
@@ -575,7 +569,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 #endif
     fflush(stdout);
   }
-    
+
+  /* assign occurence numbers */
   eptr = &(lptr->elem);
   lptr->flags = 0;
   while (eptr) {
@@ -588,6 +583,61 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   }
   hdestroy(occurence_htab);
   free(occurenceCounter);
+
+  if (backtrack) {
+    ELEMENT_LIST ecopy;
+    copy_line(&ecopy, &(lptr->elem), lptr->n_elems, 0, NULL, NULL);
+    copy_line(&(lptr->elem), &ecopy, lptr->n_elems, 1, NULL, NULL);
+    /* free_elements(&ecopy); */
+    eptr = &(lptr->elem);
+    while (eptr) {
+      if (entity_description[eptr->type].flags&HAS_LENGTH)
+        ((DRIFT*)(eptr->p_elem))->length *= -1;
+      switch (eptr->type) {
+      case T_SBEN:
+        ((BEND*)(eptr->p_elem))->angle *= -1;
+        ((BEND*)(eptr->p_elem))->e[0] *= -1;
+        ((BEND*)(eptr->p_elem))->e[1] *= -1;
+        break;
+      case T_RFCA:
+        ((RFCA*)(eptr->p_elem))->volt *= -1;
+        break;
+      case T_WAKE:
+        ((WAKE*)(eptr->p_elem))->factor *= -1;
+        break;
+      case T_TRWAKE:
+        ((TRWAKE*)(eptr->p_elem))->factor *= -1;
+        break;
+      case T_QUAD:
+      case T_SEXT:
+      case T_DRIF:
+      case T_MONI:
+      case T_HMON:
+      case T_VMON:
+      case T_MARK:
+      case T_WATCH:
+        break;
+      default:
+        printf("Warning: no backtracking method for element %s (type %s)---performing forward tracking!",
+               eptr->name, entity_name[eptr->type]);
+        break;
+      }
+      eptr = eptr->succ;
+      if (eptr && eptr->name==NULL) {
+        eptr->pred->succ = NULL;
+        free(eptr);
+        eptr = NULL;
+      }
+    }
+  }
+
+  if (echo) {
+    printf("Step 1 done.\n");
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+#endif
+    fflush(stdout);
+  }
 
 
   eptr = &(lptr->elem);

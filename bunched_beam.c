@@ -185,7 +185,7 @@ void setup_bunched_beam(
   if (!use_moments_output_values && matched_to_cell) {
     unsigned long flags;
     flags = beamline->flags;
-    if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
+    if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0, 0)))
       bombElegant("unable to find beamline definition for cell", NULL);
     if (control->cell==beamline)
       beamline->flags = flags;
