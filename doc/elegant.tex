@@ -63,6 +63,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|run_setup| command has a new parameter, \verb|back_tracking|, which allows invoking a limited
+  back-tracking capability. See the entry for \verb|run_setup| for more details.
 \item The \verb|ion_effects| command was improved in several ways: 
   \begin{itemize}
   \item The default distribution fitting parameters were modified to give improved convergence
@@ -4405,6 +4407,7 @@ in \verb|run_setup|.
     STRING search_path = NULL;
     long element_divisions = 0;
     long load_balancing_on = 0;
+    long back_tracking = 0;
 &end
 \end{verbatim}
 
@@ -4491,6 +4494,10 @@ tracking.
  load balancing can be useful if, for example, one is performing parameter scans and
  wishes to eliminate spurious sources of variation.
  If -1, then the load balance is checked and reported, but no rebalancing takes place.
+\item \verb|back_tracking| --- If nonzero, then back-tracking is performed. The beamline is reversed in
+  order and the beam is propagated backwards through the elements. Only a few elements are supported at
+  present, including \verb|CHARGE|, \verb|DRIF|, \verb|HMON|, \verb|MARK|, \verb|MONI|, \verb|QUAD|, \verb|RFCA|, 
+  \verb|SBEN|, \verb|SEXT|, \verb|TRWAKE|, \verb|VMON|, \verb|WAKE|, and \verb|WATCH|.
 \end{itemize}
 
 %\begin{latexonly}

@@ -31,7 +31,7 @@ static char **SDDS_match = NULL;
 static SDDS_TABLE *SDDS_matrix = NULL;
 static long *SDDS_matrix_initialized = NULL;
 static long *SDDS_matrix_count = NULL;
-static long individualMatrices=0, printElementData=0;
+static long individualMatrices=0, printElementData=0, mathematicaFinalMatrix=0;
 
 #define IC_S 0
 #define IC_ELEMENT 1
@@ -104,6 +104,7 @@ void setup_matrix_output(
     bombElegant("individual_matrices and full_matrix_only are incompatible", NULL);
   individualMatrices = individual_matrices;
   printElementData = print_element_data;
+  mathematicaFinalMatrix = mathematica_final_matrix;
 
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
@@ -439,6 +440,21 @@ void run_matrix_output(
       SWAP_LONG(M1->order, print_order[i_output]);
       print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
       SWAP_LONG(M1->order, print_order[i_output]);
+      if (mathematicaFinalMatrix) {
+        long i, j;
+        char sbuffer[100];
+        fprintf(fp_printout[i_output], "MFull={\n");
+        for (i=0; i<6; i++) {
+          fprintf(fp_printout[i_output], "{");
+          for (j=0; j<6; j++) {
+            sprintf(sbuffer, "%21.15e", M1->R[i][j]);
+            edit_string(sbuffer, "%/e/*10^(/ei/)");
+            fprintf(fp_printout[i_output], "%s%s",
+                    sbuffer, j==5? (i==5? "}\n" : "},\n") : ",");
+          }
+        }
+        fprintf(fp_printout[i_output], "}\n");
+      }
     }
   }
   log_exit("run_matrix_output");

@@ -591,6 +591,9 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     /* free_elements(&ecopy); */
     eptr = &(lptr->elem);
     while (eptr) {
+      if (!(entity_description[eptr->type].flags&BACKTRACK))
+        bombElegantVA("Error: no backtracking method for element %s (type %s)",
+                      eptr->name, entity_name[eptr->type]);
       if (entity_description[eptr->type].flags&HAS_LENGTH)
         ((DRIFT*)(eptr->p_elem))->length *= -1;
       switch (eptr->type) {
@@ -608,18 +611,26 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       case T_TRWAKE:
         ((TRWAKE*)(eptr->p_elem))->factor *= -1;
         break;
-      case T_QUAD:
-      case T_SEXT:
-      case T_DRIF:
-      case T_MONI:
-      case T_HMON:
-      case T_VMON:
-      case T_MARK:
-      case T_WATCH:
+      case T_MALIGN:
+        ((MALIGN*)eptr->p_elem)->dx *= -1;
+        ((MALIGN*)eptr->p_elem)->dxp *= -1;
+        ((MALIGN*)eptr->p_elem)->dy *= -1;
+        ((MALIGN*)eptr->p_elem)->dyp *= -1;
+        break;
+      case T_ROTATE:
+        ((ROTATE*)eptr->p_elem)->tilt *= -1;
+        break;
+      case T_HCOR:
+        ((HCOR*)eptr->p_elem)->kick *= -1;
+        break;
+      case T_VCOR:
+        ((VCOR*)eptr->p_elem)->kick *= -1;
+        break;
+      case T_HVCOR:
+        ((HVCOR*)eptr->p_elem)->xkick *= -1;
+        ((HVCOR*)eptr->p_elem)->ykick *= -1;
         break;
       default:
-        printf("Warning: no backtracking method for element %s (type %s)---performing forward tracking!",
-               eptr->name, entity_name[eptr->type]);
         break;
       }
       eptr = eptr->succ;
