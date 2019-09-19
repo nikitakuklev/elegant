@@ -1251,6 +1251,8 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
   double paramValue[9], paramDelta[9], paramDeltaSave[9], lowerLimit[9], upperLimit[9];
+  short disable[9];
+  long nSignificant;
   int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
   double peakVal, minVal, xMin, xMax, fitTolerance;
@@ -1286,12 +1288,18 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 #endif
     
     for (int i=0; i<9; i++)
-      paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = 0;
+      paramValue[i] = paramDelta[i] = lowerLimit[i] = upperLimit[i] = disable[i] = 0;
     
     nData = ionEffects->ionBins[plane];
+    nSignificant=0;
+    for (int i=0; i<nData; i++)
+      if (ionEffects->ionHistogram[plane][i]>0)
+	nSignificant++;
+    if ((nSignificant += 2)>nData)
+      nSignificant = nData;
 
     if (verbosity>100) {
-      printf("multipleWhateverFit, nData = %ld, plane=%c\n", nData, plane?'y':'x');
+      printf("multipleWhateverFit, nData = %ld, nSignificant = %ld, plane=%c\n", nData, nSignificant, plane?'y':'x');
       fflush(stdout);
     }
 
@@ -1432,8 +1440,18 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 #endif
       while (nTries--) {
 	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
+	if (nSignificant<12) {
+	  paramValue[7] = paramValue[8] = 0;
+	  paramValue[6] = 1; // Doesn't matter, but can't be zero
+	  disable[6] = disable[7] = disable[8] = 1;
+	  if (nSignificant<6) {
+	    paramValue[4] = paramValue[5] = 0;
+	    paramValue[3] = 1; // Doesn't matter, but can't be zero
+	    disable[3] = disable[4] = disable[5] = 1;
+	  }
+	}
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-				 NULL, mFunctions*3, distribution_fit_target, fitTolerance/10.0, 
+				 disable, mFunctions*3, distribution_fit_target, fitTolerance/10.0, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);
@@ -1441,7 +1459,10 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	if (fitReturn>=0)
 	  nEvaluations += fitReturn;
 	if (verbosity>100) {
-	  printf("Exited simplexMin, return=%ld, result=%le\n", fitReturn, result); 
+	  printf("Exited simplexMin, return=%ld, result=%le\n  ", fitReturn, result); 
+	  for (int i=0; i<3*mFunctions; i++)
+	    printf("param[%d] = %le, ", i, paramValue[i]);
+	  printf("\n");
 	  fflush(stdout);
 	}
 #if USE_MPI
@@ -1532,7 +1553,14 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	}
 	break;
       }
-      
+      if (nSignificant<12) {
+	if (verbosity>100) {
+	  printf("Terminating with mFunctions=%ld due to too few (%ld) significant points\n",
+		 mFunctions, nSignificant);
+	  fflush(stdout);
+	}
+	break;
+      }
     }
     
     mFunctions = pFunctions; // Last values used, regardless of how exit from loop occurred
@@ -1668,6 +1696,11 @@ double multiGaussianFunction(double *param, long *invalid)
     break;
   }
     
+  if (result<0 || isnan(result) || isinf(result)) {
+    *invalid = 1;
+    result = DBL_MAX;
+  }
+
   return result;
 }
 
@@ -1743,6 +1776,11 @@ double multiLorentzianFunction(double *param, long *invalid)
     result = 0;
     bombElegant("Invalid residual code in multiLorentzianFunction---seek professional help", NULL);
     break;
+  }
+
+  if (result<0 || isnan(result) || isinf(result)) {
+    *invalid = 1;
+    result = DBL_MAX;
   }
 
   if (verbosity>300) {
