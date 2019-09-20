@@ -669,6 +669,8 @@ void trackWithIonEffects
   if (myid==0) 
     MPI_Recv(&nBunches, 1, MPI_LONG, 1, 1, MPI_COMM_WORLD, &mpiStatus);
 #endif
+  if (nBunches==0)
+    return;
   if (verbosity>30) {
     printf("Running ION_EFFECTS with %ld bunches\n", nBunches);
     fflush(stdout);
@@ -2252,6 +2254,7 @@ void computeIonOverallParameters
 	speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = speciesCharge[iSpecies] = 0;
 	speciesCount[iSpecies] = 0;
       }
+      mTot += ionEffects->nIons[iSpecies];
       for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
 	if ((ionEffects->coordinate[iSpecies][jMacro][0] > bx1) && (ionEffects->coordinate[iSpecies][jMacro][0] < bx2) &&
 	    (ionEffects->coordinate[iSpecies][jMacro][2] > by1) && (ionEffects->coordinate[iSpecies][jMacro][2] < by2)) {
@@ -2264,7 +2267,6 @@ void computeIonOverallParameters
 	  ionCentroid[0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  ionCentroid[1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  qIon += ionEffects->coordinate[iSpecies][jMacro][4];
-	  mTot++;
 	}
       }
     }
