@@ -124,8 +124,7 @@ static SDDS_DATASET *SDDS_ionHistogramOutput = NULL;
 static long ionHistogramOutputInterval, ionHistogramMinOutputBins, ionHistogramMaxBins, ionHistogramMinPerBin;
 static double ionHistogramOutput_sStart, ionHistogramOutput_sEnd;
 
-static double sStartFirst = -1;
-static long iIonEffectsElement = -1, nIonEffectsElements = 0, iBeamOutput, iIonDensityOutput;
+static long iBeamOutput, iIonDensityOutput;
 static IONEFFECTS *firstIonEffects = NULL; /* first in the lattice */
 #if USE_MPI
 static long leftIonCounter = 0;
@@ -183,6 +182,7 @@ void closeIonEffectsOutputFiles() {
 void setUpIonEffectsOutputFiles(long nPasses) 
 {
   long iSpecies;
+
   closeIonEffectsOutputFiles(); /* Shouldn't be needed, but won't hurt */
 
   if (beam_output) {
@@ -197,11 +197,11 @@ void setUpIonEffectsOutputFiles(long nPasses)
           exitElegant(1);
         }
         if (!SDDS_DefineSimpleColumn(SDDS_beamOutput, "t", "s", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Pass", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_beamOutput, "Pass", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Bunch", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "qBunch", "C", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "npBunch", NULL, SDDS_LONG) ||
-            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "s", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_beamOutput, "s", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Sx", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Sy", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Cx", "m", SDDS_DOUBLE) ||
@@ -227,12 +227,13 @@ void setUpIonEffectsOutputFiles(long nPasses)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
-        if (!SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Pass", NULL, SDDS_LONG) ||
+        if (!SDDS_DefineSimpleParameter(SDDS_ionDensityOutput, "Pass", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Bunch", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "t", "s", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "s", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionDensityOutput, "s", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "qIons", "C", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nMacroIons", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "nCoreMacroIons", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Sx", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Sy", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_ionDensityOutput, "Cx", "m", SDDS_DOUBLE) ||
@@ -307,6 +308,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "binRange", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nBins", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nMacroIons", NULL, SDDS_LONG) ||
+            !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nCoreMacroIons", NULL, SDDS_LONG) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -502,8 +504,6 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
   eptrLast = eptr;
   if (eptr->type == T_IONEFFECTS) 
     bombElegant("ION_EFFECTS element cannot be the first element in the beamline", NULL);
-  nIonEffectsElements = 0;
-  sStartFirst = 0;
   while (eptr) {
     if (eptr->type == T_CHARGE)
       chargeSeen = 1;
@@ -522,12 +522,9 @@ void completeIonEffectsSetup(RUN *run, LINE_LIST *beamline)
         ionEffects->sEnd = (eptrLast->end_pos + eptr->end_pos)/2;
       }
       eptrLast = eptr;
-      if (nIonEffectsElements==0)
-        sStartFirst = ionEffects->sStart;
       for (iPlane=0; iPlane<2; iPlane++)
         ionEffects->xyIonHistogram[iPlane] = ionEffects->ionHistogram[iPlane] = 
           ionEffects->ionHistogramFit[iPlane] = NULL;
-      nIonEffectsElements++;
     } 
     eptr = eptr->succ;
   }
@@ -1818,27 +1815,28 @@ void startSummaryDataOutputPage(IONEFFECTS *ionEffects, long iPass, long nPasses
 #if USE_MPI
   if (myid==0) {
 #endif
-    if (iPass==0 && ionEffects->sStart==sStartFirst) {
-      iIonEffectsElement = 0;
+    if (beam_output_all_locations || ionEffects==firstIonEffects) {
       if (SDDS_beamOutput) {
 	if (verbosity>10) {
 	  printf("Starting page (%ld rows) for ion-related electron beam output\n", 
-		 nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches);
+		 nBunches);
 	  fflush(stdout);
 	}
-        if (!SDDS_StartPage(SDDS_beamOutput, nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches)) {
+        if (!SDDS_StartPage(SDDS_beamOutput, nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
         iBeamOutput = 0;
       }
+    }
+    if (ion_output_all_locations==1 || ionEffects==firstIonEffects) {
       if (SDDS_ionDensityOutput) {
 	if (verbosity>10) {
 	  printf("Starting page (%ld rows) for ion density output\n", 
-		 nPasses*(beam_output_all_locations?nIonEffectsElements:1)*nBunches);
+		 nBunches);
 	  fflush(stdout);
 	}
-        if (!SDDS_StartPage(SDDS_ionDensityOutput, nPasses*(ion_output_all_locations?nIonEffectsElements:1)*nBunches)) {
+        if (!SDDS_StartPage(SDDS_ionDensityOutput, nBunches)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
         }
@@ -1909,11 +1907,12 @@ void setIonEffectsElectronBunchOutput
     if (SDDS_beamOutput) {
       if ((beam_output_all_locations || ionEffects==firstIonEffects) &&
 	  !SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
-			     "t", tNow, "Pass", iPass,
+			     "t", tNow, 
 			     "Bunch", iBunch, "qBunch", qBunch, "npBunch", npTotal,
-			     "s", ionEffects->sLocation,
 			     "Sx", bunchSigma[0], "Sy", bunchSigma[1], "Cx", bunchCentroid[0], "Cy", bunchCentroid[1],
-			     NULL)) {
+			     NULL) ||
+	  !SDDS_SetParameters(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "s", ionEffects->sLocation,
+			      "Pass", iPass, NULL)) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	exitElegant(1);
       }
@@ -1940,10 +1939,13 @@ void setIonEffectsIonParameterOutput
 #endif
     if ((SDDS_ionDensityOutput) && (iPass-ionEffects->startPass+iBunch)%ionEffects->generationInterval==0) {
       if (ion_output_all_locations || ionEffects==firstIonEffects) {
-        if (!SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
-                               "t", tNow, "Pass", iPass, "Bunch", iBunch,  "s", ionEffects->sLocation,
+	if (!SDDS_SetParameters(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, &
+				"s", ionEffects->sLocation, "Pass", iPass, NULL) ||
+	    !SDDS_SetRowValues(SDDS_ionDensityOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iIonDensityOutput,
+                               "t", tNow, "Bunch", iBunch,  
                                "qIons", qIon, "Sx", ionSigma[0], "Sy", ionSigma[1],
                                "Cx", ionCentroid[0], "Cy", ionCentroid[1], "nMacroIons", ionEffects->nTotalIons,
+			       "nCoreMacroIons", ionEffects->nCoreIons,
 #if USE_MPI
                                "nMacroIonsMin", ionEffects->nMin, 
                                "nMacroIonsMax", ionEffects->nMax, 
@@ -2216,7 +2218,7 @@ void computeIonOverallParameters
  double bunchCentroid[2], double bunchSigma[2], long iBunch
  )
 {
-  long mTot, jMacro;
+  long mTot, nTot, jMacro;
   double bx1, bx2, by1, by2;
   double qIon;
   long iSpecies;
@@ -2226,12 +2228,19 @@ void computeIonOverallParameters
     fflush(stdout);
   }
 
-  /* use these as limits on the ion coordinates to include in the calculations */
-  bx1 = bunchCentroid[0] - 3*bunchSigma[0];
-  bx2 = bunchCentroid[0] + 3*bunchSigma[0];
-  by1 = bunchCentroid[1] - 3*bunchSigma[1];
-  by2 = bunchCentroid[1] + 3*bunchSigma[1];
-  
+  /* use these as limits on the ion coordinates to include in the centroid and rms calculations,
+   * i.e., the core ions 
+   */
+  if (ionFieldMethod==ION_FIELD_GAUSSIAN) {
+    bx1 = bunchCentroid[0] - 3*bunchSigma[0];
+    bx2 = bunchCentroid[0] + 3*bunchSigma[0];
+    by1 = bunchCentroid[1] - 3*bunchSigma[1];
+    by2 = bunchCentroid[1] + 3*bunchSigma[1];
+  } else {
+    bx1 = by1 = -DBL_MAX;
+    bx2 = by2 = DBL_MAX;
+  }
+
   if (ion_species_output && iBunch==0) {
     speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
     speciesSigma = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
@@ -2242,7 +2251,8 @@ void computeIonOverallParameters
   /* Compute charge-weighted centroids */
   ionCentroid[0] = ionCentroid[1] = 0;
   qIon = *qIonReturn = 0;
-  mTot = 0; /* counts the total number of ions */
+  nTot = 0; /* counts the total number of ions */
+  mTot = 0; /* counts the core number of ions */
   if (isSlave || !notSinglePart) {
     for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
       /* Relevant quantities:
@@ -2254,7 +2264,7 @@ void computeIonOverallParameters
 	speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = speciesCharge[iSpecies] = 0;
 	speciesCount[iSpecies] = 0;
       }
-      mTot += ionEffects->nIons[iSpecies];
+      nTot += ionEffects->nIons[iSpecies];
       for (jMacro=0; jMacro < ionEffects->nIons[iSpecies]; jMacro++) {
 	if ((ionEffects->coordinate[iSpecies][jMacro][0] > bx1) && (ionEffects->coordinate[iSpecies][jMacro][0] < bx2) &&
 	    (ionEffects->coordinate[iSpecies][jMacro][2] > by1) && (ionEffects->coordinate[iSpecies][jMacro][2] < by2)) {
@@ -2267,6 +2277,7 @@ void computeIonOverallParameters
 	  ionCentroid[0] += ionEffects->coordinate[iSpecies][jMacro][0]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  ionCentroid[1] += ionEffects->coordinate[iSpecies][jMacro][2]*ionEffects->coordinate[iSpecies][jMacro][4];
 	  qIon += ionEffects->coordinate[iSpecies][jMacro][4];
+	  mTot ++;
 	}
       }
     }
@@ -2284,30 +2295,32 @@ void computeIonOverallParameters
   /* Sum ion centroid and charge data over all nodes */
 
   /* Find min and max ion counts */
-  long mTotMin, mTotMax;
+  long nTotMin, nTotMax;
   if (myid==0)
-    mTot = LONG_MAX;
-  MPI_Allreduce(&mTot, &mTotMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
-  ionEffects->nMin = mTotMin;
+    nTot = LONG_MAX;
+  MPI_Allreduce(&nTot, &nTotMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
+  ionEffects->nMin = nTotMin;
   if (myid==0)
-    mTot = LONG_MIN;
-  MPI_Allreduce(&mTot, &mTotMax, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
-  ionEffects->nMax = mTotMax;
+    nTot = LONG_MIN;
+  MPI_Allreduce(&nTot, &nTotMax, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD);
+  ionEffects->nMax = nTotMax;
   if (myid==0)
-    mTot = 0;
+    nTot = 0;
 
   /* total count, total charge, and centroids */
-  double inBuffer[4], sumBuffer[4]; // to increase MPI efficiency 
+  double inBuffer[5], sumBuffer[5]; // to increase MPI efficiency 
   double ionCentroidTotal[2];
-  inBuffer[0] = mTot;
+  inBuffer[0] = nTot;
   inBuffer[1] = qIon;
   inBuffer[2] = ionCentroid[0];
   inBuffer[3] = ionCentroid[1];
-  MPI_Allreduce(inBuffer, sumBuffer, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  ionEffects->nTotalIons = mTot = sumBuffer[0];
+  inBuffer[4] = mTot;
+  MPI_Allreduce(inBuffer, sumBuffer, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  ionEffects->nTotalIons = nTot = sumBuffer[0];
   *qIonReturn = qIon = sumBuffer[1];
   ionCentroidTotal[0] = sumBuffer[2];
   ionCentroidTotal[1] = sumBuffer[3];
+  ionEffects->nCoreIons = mTot = sumBuffer[4];
   if (qIon!=0) {
     ionCentroid[0] = ionCentroidTotal[0]/qIon;
     ionCentroid[1] = ionCentroidTotal[1]/qIon;
@@ -2315,7 +2328,7 @@ void computeIonOverallParameters
     ionCentroid[0] = ionCentroid[1] = 0; // Not really needed
   if (verbosity>100) {
     printf("qIon = %le, centroids = %le, %le, counts: %ld, %ld\n",
-	   qIon, ionCentroid[0], ionCentroid[1], mTotMin, mTotMax);
+	   qIon, ionCentroid[0], ionCentroid[1], nTotMin, nTotMax);
     fflush(stdout);
   }
   if (ion_species_output) {
@@ -2342,7 +2355,8 @@ void computeIonOverallParameters
   }
 #else // Non-MPI
   *qIonReturn = qIon;
-  ionEffects->nTotalIons = mTot;
+  ionEffects->nTotalIons = nTot;
+  ionEffects->nCoreIons = mTot;
   if (qIon) {
     ionCentroid[0] = ionCentroid[0]/qIon;
     ionCentroid[1] = ionCentroid[1]/qIon;
@@ -2358,7 +2372,7 @@ void computeIonOverallParameters
     }
   }
 #endif
-  *nIonsTotal = mTot;
+  *nIonsTotal = nTot;
 
   /* Compute charge-weighted rms size */
   ionSigma[0] = ionSigma[1] = 0;
@@ -2637,6 +2651,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"binRange", ionEffects->ionRange[iPlane],
 				"nBins", ionEffects->ionBins[iPlane],
 				"nMacroIons", ionEffects->nTotalIons,
+				"nCoreMacroIons", ionEffects->nCoreIons,
 				"Plane", iPlane==0?"x":"y", 
 				NULL) ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
@@ -2690,27 +2705,23 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects)
 {
-  if (verbosity>30) {
-    printf("Flushing SDDS output of ion density and beam parameters\n");
-    fflush(stdout);
-  }
-
 #if USE_MPI
   if (myid==0) {
 #endif
-    iIonEffectsElement++;
-    if (iIonEffectsElement==nIonEffectsElements) {
-      if (SDDS_beamOutput && !SDDS_UpdatePage(SDDS_beamOutput, FLUSH_TABLE)) {
-	SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	SDDS_Bomb((char*)"problem flushing data for ion_effects beam parameters output file");
-      }
-      if (SDDS_ionDensityOutput && !SDDS_UpdatePage(SDDS_ionDensityOutput, FLUSH_TABLE)) {
-	SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	SDDS_Bomb((char*)"problem flushing data for ion_effects ion density output file");
-      }
-      iIonEffectsElement = 0;
+    if ((beam_output_all_locations || ionEffects==firstIonEffects) 
+	&& SDDS_beamOutput && !SDDS_WritePage(SDDS_beamOutput)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
     }
+    iBeamOutput = 0;
+    if ((ion_output_all_locations || ionEffects==firstIonEffects) 
+	&& SDDS_ionDensityOutput && !SDDS_WritePage(SDDS_ionDensityOutput)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exitElegant(1);
+    }
+    iIonDensityOutput = 0;
 #if USE_MPI
   }
 #endif
 }
+
