@@ -17,7 +17,7 @@
           STRING field_calculation_method = NULL;
 	  double distribution_fit_target = 0.01;
 	  double distribution_fit_tolerance = 1e-3;
-	  long distribution_fit_evaluations = 500;
+	  long distribution_fit_evaluations = 200;
 	  long distribution_fit_passes = 3;
 	  long distribution_fit_restarts = 3;
 	  STRING fit_residual_type = NULL;
