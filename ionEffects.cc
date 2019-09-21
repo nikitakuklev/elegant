@@ -48,7 +48,8 @@ static long ionFieldMethod = -1;
 #define ION_FIT_RESIDUAL_SUM_ABS_PLUS_ABS_DEV_SUM 6
 #define ION_FIT_RESIDUAL_RMS_DEV_PLUS_CENTROID 7
 #define ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE 8
-#define N_ION_FIT_RESIDUAL_OPTIONS 9
+#define ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE 9
+#define N_ION_FIT_RESIDUAL_OPTIONS 10
 static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-ad",
   (char*)"rms-dev",
@@ -59,6 +60,7 @@ static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
   (char*)"sum-ad-plus-ad-sum",
   (char*)"rms-dev-plus-centroid",
   (char*)"rms-dev-plus-ad-charge",
+  (char*)"max-ad-plus-ad-charge",
 };
 
 static long residualType = -1;
@@ -401,7 +403,7 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     nFunctions = 3;
 
   if (!fit_residual_type || !strlen(fit_residual_type))
-    residualType = ION_FIT_RESIDUAL_RMS_DEV_PLUS_ABS_DEV_CHARGE;
+    residualType = ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE;
   else if ((residualType = match_string(fit_residual_type, ionFitResidualOption, N_ION_FIT_RESIDUAL_OPTIONS, EXACT_MATCH))<0)
     bombElegantVA((char*)"fit_residual_type=\"%s\" not recognized", fit_residual_type);
 
@@ -1693,6 +1695,12 @@ double multiGaussianFunction(double *param, long *invalid)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
     result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
     break;
+  case ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE:
+    charge = 0;
+    for (int j=0; j<mFunctions; j++)
+      charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
+    result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
+    break;
   default:
     result = 0;
     bombElegant("Invalid residual code in multiGaussianFunction---seek professional help", NULL);
@@ -1774,6 +1782,12 @@ double multiLorentzianFunction(double *param, long *invalid)
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*PI*param[3*j+0];
     result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
+    break;
+  case ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE:
+    charge = 0;
+    for (int j=0; j<mFunctions; j++)
+      charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
+    result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
     break;
   default:
     result = 0;

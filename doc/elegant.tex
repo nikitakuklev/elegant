@@ -68,9 +68,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|ion_effects| command was improved in several ways: 
   \begin{itemize}
   \item The default distribution fitting parameters were modified to give improved convergence
-  \item The default distribution fitting criterion is the sum of the rms deviation and the absolute fractional
-    deviation of the charge. This makes it less likely that overfitting will result in large spikes in the
-    distribution.
+  \item The default distribution fitting criterion is now the sum of the maximum fractional absolute deviation over the histogram
+    and the absolute fractional deviation of the ion charge. This makes it less likely that overfitting will result 
+    in large spikes in the distribution.
   \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins; it defaults to 100,000.
   \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
     macro ions per bin; it defaults to 15.
@@ -2673,14 +2673,14 @@ included in the plane in question.
 \item \verb|distribution_fit_evaluations|, \verb|distribution_fit_passes|, \verb|distribution_fit_restarts| --- Parameters
   for the simplex optimizer that performs the distribution fit. Note that in \verb|Pelegant|, a hybrid simplex method is
   used, which appears to converge quickly if the default parameters are used.
-\item \verb|fit_residual_type| --- Residual type for distribution fitting. The default is \verb|rms-dev-plus-ad-charge|, which
-  indicates using the sum of the normalized rms deviation and the normalized absolute deviation of the total charge, where
+\item \verb|fit_residual_type| --- Residual type for distribution fitting. The default is \verb|max-ad-plus-ad-charge|, which
+  indicates using the sum of the maximum absolute deviation and the normalized absolute deviation of the total charge, where
   the latter is computed from difference of the actual total ion charge and the analytical integral of the charge 
   in the summed distributions; this tends to ensure that there are no hidden spikes in the distribution due to overfitting.
   Other options are \verb|sum-ad| (sum of normalized absolute deviation), \verb|rms-dev| (sum of normalized rms deviation),
   \verb|max-ad| (maximum normalized absolute deviation), \verb|max-ad-plus-rms-dev| (sum of maximum normalized absolute 
   deviation and normalized rms deviation), \verb|sum-ad-plus-rms-dev|, \verb|rms-dev-plus-ad-sum|, \verb|sum-ad-plus-ad-sum|,
-  and \verb|rms-dev-plus-centroid|.
+  \verb|rms-dev-plus-centroid|, and \verb|rms-dev-plus-ad-charge|.
 \item \verb|macro_ions| --- The number of macro ions to generate per bunch on each turn for which generation is done. 
   The macro ion charge is adjusted
   according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
