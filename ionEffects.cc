@@ -321,6 +321,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
              !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitType", NULL, SDDS_STRING) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsFromFit", "C", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsError", "C", SDDS_DOUBLE) ||
 #if USE_MPI
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluationsBest", NULL, SDDS_LONG) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluationsMin", NULL, SDDS_LONG) ||
@@ -2686,6 +2687,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				"fitResidual", ionEffects->xyFitResidual[iPlane],
 				"qIonsFromFit", ionEffects->ionChargeFromFit[iPlane],
+				"qIonsError", ionEffects->ionChargeFromFit[iPlane]-ionEffects->qTotal,
 #if USE_MPI
 				"nEvaluationsBest", ionEffects->nEvaluationsBest[iPlane],
 				"nEvaluationsMin", ionEffects->nEvaluationsMin[iPlane],
