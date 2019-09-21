@@ -312,14 +312,17 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nMacroIons", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nCoreMacroIons", NULL, SDDS_LONG) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
-	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)) {
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma1", "m", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid1", "m", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q1", "C", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)||
+	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE)) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
         }
 	if (ionFieldMethod!=ION_FIELD_GAUSSIAN &&
-	    (!SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "ChargeFit", "C", SDDS_DOUBLE) ||
-             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitType", NULL, SDDS_STRING) ||
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
+	    (!SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitType", NULL, SDDS_STRING) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsFromFit", "C", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "qIonsError", "C", SDDS_DOUBLE) ||
 #if USE_MPI
@@ -329,9 +332,6 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #else
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluations", NULL, SDDS_LONG) ||
 #endif
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma1", "m", SDDS_DOUBLE) ||
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid1", "m", SDDS_DOUBLE) ||
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q1", "C", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma2", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid2", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q2", "C", SDDS_DOUBLE))) {
@@ -2589,9 +2589,25 @@ void applyIonKicksToElectronBunch
       }
     } else
       bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
-  } else 
+  } else {
     ionEffects->qTotal = qIon;
-  
+    for (int iPlane=0; iPlane<2; iPlane++) {
+      double residual;
+      residual = 0;
+      for (int i=0; i<ionEffects->ionBins[iPlane]; i++)  {
+	double xy;
+	xy = (i+0.5)*ionEffects->ionDelta[iPlane] - ionEffects->ionRange[iPlane]/2 - ionCentroid[iPlane];
+	ionEffects->ionHistogramFit[iPlane][i] 
+	  = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]*exp(-sqr(xy/ionSigma[iPlane])/2);
+	residual += sqr(ionEffects->ionHistogramFit[iPlane][i]-ionEffects->ionHistogram[iPlane][i]);
+      }
+      ionEffects->xyFitResidual[iPlane] = sqrt(residual)/(qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane]);
+      ionEffects->xyFitParameter2[iPlane][0] = ionSigma[iPlane];
+      ionEffects->xyFitParameter2[iPlane][1] = ionCentroid[iPlane];
+      ionEffects->xyFitParameter2[iPlane][2] = qIon*ionEffects->ionDelta[iPlane]/sqrt(PIx2)/ionSigma[iPlane];
+    }
+  }
+
   if (isSlave || !notSinglePart) {
     /*** Determine and apply kicks to beam from the total ion field */
 #if MPI_DEBUG
@@ -2685,19 +2701,22 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"nMacroIons", ionEffects->nTotalIons,
 				"nCoreMacroIons", ionEffects->nCoreIons,
 				"Plane", iPlane==0?"x":"y", 
+				"fitResidual", ionEffects->xyFitResidual[iPlane],
+				"sigma1", ionEffects->xyFitParameter2[iPlane][0],
+				"centroid1", ionEffects->xyFitParameter2[iPlane][1],
+				"q1", ionEffects->xyFitParameter2[iPlane][2],
 				NULL) ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
 			    ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			    ionEffects->ionHistogram[iPlane]+binOffset, activeBins, "Charge")) {
+			    ionEffects->ionHistogram[iPlane]+binOffset, activeBins, "Charge") ||
+	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			    ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit")) {
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	  SDDS_Bomb((char*)"Problem writing ion histogram data");
 	}
 	if (ionFieldMethod!=ION_FIELD_GAUSSIAN) {
-	  if (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			      ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
-	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "fitResidual", ionEffects->xyFitResidual[iPlane],
+	  if (!SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				  "qIonsFromFit", ionEffects->ionChargeFromFit[iPlane],
 				  "qIonsError", ionEffects->ionChargeFromFit[iPlane]-ionEffects->qTotal,
 #if USE_MPI
@@ -2707,11 +2726,8 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 #else
 				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				  "sigma1", ionEffects->xyFitParameter2[iPlane][0],
 				  "sigma2", ionEffects->xyFitParameter2[iPlane][3],
-				  "centroid1", ionEffects->xyFitParameter2[iPlane][1],
 				  "centroid2", ionEffects->xyFitParameter2[iPlane][4],
-				  "q1", ionEffects->xyFitParameter2[iPlane][2],
 				  "q2", ionEffects->xyFitParameter2[iPlane][5],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
