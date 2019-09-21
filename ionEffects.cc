@@ -1633,7 +1633,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 double multiGaussianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
-  double wSumData = 0, wSumFit = 0;
+  double wSumData = 0, wSumFit = 0, peak = 0;
   double charge, dx;
 
   *invalid = 0;
@@ -1645,6 +1645,8 @@ double multiGaussianFunction(double *param, long *invalid)
 
   for (int i=0; i<nData; i++) {
     double z;
+    if (yData[i]>peak)
+      peak = yData[i];
     wSumData += xData[i]*yData[i];
     yFit[i] = 0;
     for (int j=0; j<mFunctions; j++) {
@@ -1699,7 +1701,8 @@ double multiGaussianFunction(double *param, long *invalid)
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
-    result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
+    // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
+    result = max/peak + abs(charge/dx-yDataSum)/yDataSum;
     break;
   default:
     result = 0;
@@ -1718,7 +1721,7 @@ double multiGaussianFunction(double *param, long *invalid)
 double multiLorentzianFunction(double *param, long *invalid) 
 {
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
-  double wSumData = 0, wSumFit = 0;
+  double wSumData = 0, wSumFit = 0, peak = 0;
   double charge, dx;
 
   *invalid = 0;
@@ -1734,6 +1737,8 @@ double multiLorentzianFunction(double *param, long *invalid)
   
   for (int i=0; i<nData; i++) {
     double z;
+    if (yData[i]>peak)
+      peak = yData[i];
     wSumData += xData[i]*yData[i];
     yFit[i] = 0;
     for (int j=0; j<mFunctions; j++) {
@@ -1787,7 +1792,8 @@ double multiLorentzianFunction(double *param, long *invalid)
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
-    result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
+    // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
+    result = max/peak + abs(charge/dx-yDataSum)/yDataSum;
     break;
   default:
     result = 0;
@@ -2486,11 +2492,11 @@ void applyIonKicksToElectronBunch
 
   ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
 
+  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchCentroid, bunchSigma, ionCentroid, ionSigma);
+
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
     // multi-gaussian or multi-lorentzian kick
     
-    makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchCentroid, bunchSigma, ionCentroid, ionSigma);
-
     /* We take a return value here for future improvement in which the fitting function is automatically selected. */
     ionEffects->ionFieldMethod = 
       multipleWhateverFit(bunchSigma, bunchCentroid, paramValueX, paramValueY, ionEffects, ionSigma, ionCentroid);
