@@ -2645,9 +2645,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
     fflush(stdout);
   }
 
-  if ((ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN ||
-       ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
-      (SDDS_ionHistogramOutput) && (iPass%ionHistogramOutputInterval == 0)
+  if (SDDS_ionHistogramOutput && iBunch%ionHistogramOutputInterval == 0
       && (ionHistogramOutput_sStart<0 || ionEffects->sLocation>=ionHistogramOutput_sStart) 
       && (ionHistogramOutput_sEnd<0 || ionEffects->sLocation<=ionHistogramOutput_sEnd)) {
     /* output ion density histogram */
@@ -2682,37 +2680,39 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	  SDDS_Bomb((char*)"Problem writing ion histogram data");
 	}
-	if (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
-			    ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
-	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				"fitResidual", ionEffects->xyFitResidual[iPlane],
-				"qIonsFromFit", ionEffects->ionChargeFromFit[iPlane],
-				"qIonsError", ionEffects->ionChargeFromFit[iPlane]-ionEffects->qTotal,
+	if (ionFieldMethod!=ION_FIELD_GAUSSIAN) {
+	  if (!SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
+			      ionEffects->ionHistogramFit[iPlane]+binOffset, activeBins, "ChargeFit") ||
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "fitResidual", ionEffects->xyFitResidual[iPlane],
+				  "qIonsFromFit", ionEffects->ionChargeFromFit[iPlane],
+				  "qIonsError", ionEffects->ionChargeFromFit[iPlane]-ionEffects->qTotal,
 #if USE_MPI
-				"nEvaluationsBest", ionEffects->nEvaluationsBest[iPlane],
-				"nEvaluationsMin", ionEffects->nEvaluationsMin[iPlane],
-				"nEvaluationsMax", ionEffects->nEvaluationsMax[iPlane],
+				  "nEvaluationsBest", ionEffects->nEvaluationsBest[iPlane],
+				  "nEvaluationsMin", ionEffects->nEvaluationsMin[iPlane],
+				  "nEvaluationsMax", ionEffects->nEvaluationsMax[iPlane],
 #else
-				"nEvaluations", ionEffects->nEvaluations[iPlane],
+				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				"sigma1", ionEffects->xyFitParameter2[iPlane][0],
-				"sigma2", ionEffects->xyFitParameter2[iPlane][3],
-				"centroid1", ionEffects->xyFitParameter2[iPlane][1],
-				"centroid2", ionEffects->xyFitParameter2[iPlane][4],
-				"q1", ionEffects->xyFitParameter2[iPlane][2],
-				"q2", ionEffects->xyFitParameter2[iPlane][5],
-				NULL)) {
-	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	  SDDS_Bomb((char*)"Problem writing ion histogram data");
-	}
-	if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
-	    !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				"sigma3", ionEffects->xyFitParameter3[iPlane][6],
-				"centroid3", ionEffects->xyFitParameter3[iPlane][7],
-				"q3", ionEffects->xyFitParameter3[iPlane][8],
-				NULL)) {
-	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	  SDDS_Bomb((char*)"Problem writing ion histogram data");
+				  "sigma1", ionEffects->xyFitParameter2[iPlane][0],
+				  "sigma2", ionEffects->xyFitParameter2[iPlane][3],
+				  "centroid1", ionEffects->xyFitParameter2[iPlane][1],
+				  "centroid2", ionEffects->xyFitParameter2[iPlane][4],
+				  "q1", ionEffects->xyFitParameter2[iPlane][2],
+				  "q2", ionEffects->xyFitParameter2[iPlane][5],
+				  NULL)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
+	  if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
+	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "sigma3", ionEffects->xyFitParameter3[iPlane][6],
+				  "centroid3", ionEffects->xyFitParameter3[iPlane][7],
+				  "q3", ionEffects->xyFitParameter3[iPlane][8],
+				  NULL)) {
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    SDDS_Bomb((char*)"Problem writing ion histogram data");
+	  }
 	}
 	if (!SDDS_WritePage(SDDS_ionHistogramOutput)) {
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
