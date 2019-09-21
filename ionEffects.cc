@@ -1639,9 +1639,16 @@ double multiGaussianFunction(double *param, long *invalid)
 
   *invalid = 0;
 
+  for (int i=0; i<9; i++)
+    if (isnan(param[i]) || isinf(param[i])) {
+      *invalid = 1;
+      return DBL_MAX;
+    }
+
   //param[3*j+0] = sig[j]
   //param[3*j+1] = cen[j]
   //param[3*j+2] = h[j]
+
   dx = xData[1] - xData[0];
 
   for (int i=0; i<nData; i++) {
@@ -1726,6 +1733,12 @@ double multiLorentzianFunction(double *param, long *invalid)
   double charge, dx;
 
   *invalid = 0;
+
+  for (int i=0; i<9; i++)
+    if (isnan(param[i]) || isinf(param[i])) {
+      *invalid = 1;
+      return DBL_MAX;
+    }
 
   dx = xData[1] - xData[0];
   
