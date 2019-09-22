@@ -134,7 +134,7 @@ extern void find_global_min_index (double *min, int *processor_ID, MPI_Comm comm
 #endif
 
 //for fit (e.g., bi-gaussian)
-static double *xData=NULL, *yData=NULL, *yFit=NULL, yDataSum;
+static double *xData=NULL, *yData=NULL, *yFit=NULL, yDataSum, ionChargeData;
 static long nData = 0;
 static long nFunctions = 2; /* should be 2 or 3 */
 static long mFunctions;
@@ -832,7 +832,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
   long iSpecies, iBin, iPlane;
   long iIon;
   double qTotal = 0;
-  long nIons = 0;
+  long nIons = 0, nIonsMin;
 
   for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++)
     nIons += ionEffects->nIons[iSpecies]; 
@@ -841,6 +841,9 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
   long nIonsTotal;
   MPI_Allreduce(&nIons, &nIonsTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   nIons = nIonsTotal;
+  MPI_Allreduce(&nIons, &nIonsMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
+#else
+  nIonsMin = nIons;
 #endif
   
   for (iPlane=0; iPlane<2; iPlane++) {
@@ -868,7 +871,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
     }
     if (ionEffects->ionBins[iPlane]>ionHistogramMaxBins) {
       ionEffects->ionBins[iPlane] = ionHistogramMaxBins;
-      ionEffects->ionDelta[iPlane] = ionEffects->ionRange[iPlane]/(ionHistogramMaxBins-1.0);
+      ionEffects->ionRange[iPlane] = ionEffects->ionDelta[iPlane]*(ionHistogramMaxBins-1.0);
     }
     if (ionEffects->ionRange[iPlane]>2*ionEffects->span[iPlane]) {
       ionEffects->ionRange[iPlane] = 2*ionEffects->span[iPlane];
@@ -1273,6 +1276,8 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   long plane, pFunctions;
 
   fitTolerance = distribution_fit_tolerance;
+  ionChargeData = ionEffects->qTotal;
+
   /*
 #if !USE_MPI
   if ((nEvalMax *= 10)<1500)
@@ -1701,14 +1706,14 @@ double multiGaussianFunction(double *param, long *invalid)
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
-    result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
+    result = sqrt(sum2)/yDataSum + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
   case ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE:
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
     // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
-    result = max/peak + abs(charge/dx-yDataSum)/yDataSum;
+    result = max/peak + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
   default:
     result = 0;
@@ -1792,14 +1797,14 @@ double multiLorentzianFunction(double *param, long *invalid)
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*PI*param[3*j+0];
-    result = sqrt(sum2)/yDataSum + abs(charge/dx-yDataSum)/yDataSum;
+    result = sqrt(sum2)/yDataSum + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
   case ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE:
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
     // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
-    result = max/peak + abs(charge/dx-yDataSum)/yDataSum;
+    result = max/peak + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
   default:
     result = 0;
