@@ -781,10 +781,13 @@ void trackWithIonEffects
     free_zarray_2d((void**)speciesCentroid, ionProperties.nSpecies, 2);
   if (speciesSigma)
     free_zarray_2d((void**)speciesSigma, ionProperties.nSpecies, 2);
+  speciesCentroid = speciesSigma = NULL;
   if (speciesCharge)
     free(speciesCharge);
+  speciesCharge = NULL;
   if (speciesCount)
     free(speciesCount);
+  speciesCount = NULL;
 }
 
 void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double bunchCentroid[2], double bunchSigma[2], long symmetrize)
@@ -2263,11 +2266,15 @@ void computeIonOverallParameters
     bx2 = by2 = DBL_MAX;
   }
 
-  if (ion_species_output && iBunch==0) {
-    speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
-    speciesSigma = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
-    speciesCharge = (double*)tmalloc(sizeof(*speciesCharge)*ionProperties.nSpecies);
-    speciesCount = (long*)tmalloc(sizeof(*speciesCount)*ionProperties.nSpecies);
+  if (ion_species_output) {
+    if (!speciesCentroid)
+      speciesCentroid = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
+    if (!speciesSigma) 
+      speciesSigma = (double**)zarray_2d(sizeof(double), ionProperties.nSpecies, 2);
+    if (!speciesCharge)
+      speciesCharge = (double*)tmalloc(sizeof(*speciesCharge)*ionProperties.nSpecies);
+    if (!speciesCount)
+      speciesCount = (long*)tmalloc(sizeof(*speciesCount)*ionProperties.nSpecies);
   }
 
   /* Compute charge-weighted centroids */
@@ -2354,26 +2361,34 @@ void computeIonOverallParameters
     fflush(stdout);
   }
   if (ion_species_output) {
+    double *speciesInBuffer, *speciesSumBuffer;
+    speciesInBuffer = (double*)tmalloc(sizeof(*speciesInBuffer)*4*ionProperties.nSpecies);
+    speciesSumBuffer = (double*)tmalloc(sizeof(*speciesSumBuffer)*4*ionProperties.nSpecies);
     for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
       if (myid!=0) {
-	inBuffer[0] = speciesCentroid[iSpecies][0];
-	inBuffer[1] = speciesCentroid[iSpecies][1];
-	inBuffer[2] = speciesCharge[iSpecies];
-	inBuffer[3] = speciesCount[iSpecies];
+	speciesInBuffer[iSpecies*4+0] = speciesCentroid[iSpecies][0];
+	speciesInBuffer[iSpecies*4+1] = speciesCentroid[iSpecies][1];
+	speciesInBuffer[iSpecies*4+2] = speciesCharge[iSpecies];
+	speciesInBuffer[iSpecies*4+3] = speciesCount[iSpecies];
       } else {
-	inBuffer[0] = inBuffer[1] = inBuffer[2] = inBuffer[3] = 0;
+	speciesInBuffer[iSpecies*4+0] = speciesInBuffer[iSpecies*4+1] = 
+	  speciesInBuffer[iSpecies*4+2] = speciesInBuffer[iSpecies*4+3] = 0;
       }
-      MPI_Allreduce(inBuffer, sumBuffer, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      speciesCentroid[iSpecies][0] = sumBuffer[0];
-      speciesCentroid[iSpecies][1] = sumBuffer[1];
-      speciesCharge[iSpecies] = sumBuffer[2];
-      speciesCount[iSpecies] = sumBuffer[3];
+    }
+    MPI_Allreduce(speciesInBuffer, speciesSumBuffer, 4*ionProperties.nSpecies, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+      speciesCentroid[iSpecies][0] = speciesSumBuffer[iSpecies*4+0];
+      speciesCentroid[iSpecies][1] = speciesSumBuffer[iSpecies*4+1];
+      speciesCharge[iSpecies] = speciesSumBuffer[iSpecies*4+2];
+      speciesCount[iSpecies] = speciesSumBuffer[iSpecies*4+3];
       if (speciesCharge[iSpecies]) {
 	speciesCentroid[iSpecies][0] /= speciesCharge[iSpecies];
 	speciesCentroid[iSpecies][1] /= speciesCharge[iSpecies];
       } else 
 	speciesCentroid[iSpecies][0] = speciesCentroid[iSpecies][1] = 0;
     }
+    free(speciesInBuffer);
+    free(speciesSumBuffer);
   }
 #else // Non-MPI
   *qIonReturn = qIon;
@@ -2440,13 +2455,26 @@ void computeIonOverallParameters
     fflush(stdout);
   }
   if (ion_species_output) {
+    double *speciesInBuffer, *speciesSumBuffer;
+    speciesInBuffer = (double*)tmalloc(sizeof(*speciesInBuffer)*2*ionProperties.nSpecies);
+    speciesSumBuffer = (double*)tmalloc(sizeof(*speciesSumBuffer)*2*ionProperties.nSpecies);
     for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
-      MPI_Allreduce(speciesSigma[iSpecies], ionSigmaTotal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      if (speciesCharge[iSpecies]) {
-	speciesSigma[iSpecies][0] = sqrt(ionSigmaTotal[0]/speciesCharge[iSpecies]);
-	speciesSigma[iSpecies][1] = sqrt(ionSigmaTotal[1]/speciesCharge[iSpecies]);
+      if (myid!=0) {
+	speciesInBuffer[2*iSpecies+0] = speciesSigma[iSpecies][0];
+	speciesInBuffer[2*iSpecies+1] = speciesSigma[iSpecies][1];
+      } else {
+	speciesInBuffer[2*iSpecies+0] = speciesInBuffer[2*iSpecies+1] = 0;
       }
     }
+    MPI_Allreduce(speciesInBuffer, speciesSumBuffer, 2*ionProperties.nSpecies, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    for (iSpecies=0; iSpecies<ionProperties.nSpecies; iSpecies++) {
+      if (speciesCharge[iSpecies]) {
+	speciesSigma[iSpecies][0] = sqrt(speciesSumBuffer[2*iSpecies+0]/speciesCharge[iSpecies]);
+	speciesSigma[iSpecies][1] = sqrt(speciesSumBuffer[2*iSpecies+1]/speciesCharge[iSpecies]);
+      }
+    }
+    free(speciesInBuffer);
+    free(speciesSumBuffer);
   }
 #else
   if (qIon) {
