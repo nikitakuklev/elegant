@@ -71,7 +71,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   \item The default distribution fitting criterion is now the sum of the maximum fractional absolute deviation over the histogram
     and the absolute fractional deviation of the ion charge. This makes it less likely that overfitting will result 
     in large spikes in the distribution.
-  \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins; it defaults to 100,000.
+  \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins; it defaults to 5,000.
   \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
     macro ions per bin; it defaults to 15.
   \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
@@ -2614,8 +2614,8 @@ included in the plane in question.
           double ion_bin_divisor[2] = {10.0, 10.0};
           double ion_range_multiplier[2] = {2.0, 2.0};
           double ion_sigma_limit_multiplier[2] = {0, 0};
-	  long ion_histogram_max_bins = 100000;
-	  long ion_histogram_min_per_bin = 15;
+	  long ion_histogram_max_bins = 5000;
+	  long ion_histogram_min_per_bin = 5;
           STRING ion_histogram_output = NULL;
           double ion_histogram_output_s_start = 0;
           double ion_histogram_output_s_end = 10;
@@ -2685,6 +2685,8 @@ included in the plane in question.
   The macro ion charge is adjusted
   according to the cross section and bunch charge. May be overriden by the \verb|MACRO_IONS| parameter on individual
   \verb|IONEFFECTS| elements.
+  If this value is too small, the ion distribution will be noisy, which may result in unreliable results.
+  When using the parallel version, setting \verb|macro_ions| to 1,000 or higher is not unreasonable.
 \item \verb|symmetrize| --- If nonzero, ions are emitted in symmetric pairs to ensure that the centroids don't deviate
   from the electron beam centroids because of noise. Doubles the number of macro ions that are emitted. Intended primarily for
   testing purposes.
@@ -2693,6 +2695,7 @@ included in the plane in question.
   \verb|GENERATION_INTERVAL| parameter on individual \verb|IONEFFECTS| elements. The actual condition for generation of
   ions is such that the generating bunches vary on each turn. This can be used to effectively reduce \verb|macro_ions|
   below 1, to prevent generation of too many macro ions.
+  This will result in noisy histograms and should be used with caution.
 \item \verb|multiple_ionization_interval| --- The number of bunches between multiple ionization calculations.  
       The macro ion charge is adjusted
       to account for this, so the effective ion charge after many turns is the same.
@@ -2712,6 +2715,11 @@ included in the plane in question.
   the minimum value for either of the ion sigmas (for bigaussian) or size parameters (for bilorentizan)
   in units of the bin size. Use to prevent one of the gaussians or lorentzians from being too delta-function-like.
 \item \verb|ion_histogram_max_bins| --- Maximum number of ion bins for fitting methods.
+  If this limit is reached, the {\em span} of the histograms will  be reduced to ensure that the central portion is
+  resolved.
+  If the value is  too large, the histograms may
+  be noisy, which will make the fits unreliable. Also, a large value will result in reduced parallel efficiency, as
+  processors must pass around more data. 
 \item \verb|ion_histogram_min_per_bin| --- Minimum number of ions per bin (on average).
 \item \verb|ion_histogram_output|, \verb|ion_histogram_output_s_start|, \verb|ion_histogram_output_s_end|, 
       \verb|ion_histogram_output_interval|, \verb|ion_histogram_max_bins| --- Controls for the output of ion histograms when
@@ -2721,6 +2729,17 @@ included in the plane in question.
       \verb|IONEFFECTS| element. \verb|ion_histogram_output_interval| gives the interval in passes between output.
 \item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
 \end{itemize}
+
+The user is strongly advise to study the ion histograms by using the \verb|ion_histogram_output| parameter to request
+this data.
+The histograms should not be excessively noisy.
+The data also includes the fits, which should be close to the data.
+(For ``gaussian'' mode, this is generally not possible.)
+A sample command to examine the histograms and fits for the y plane (generally the most difficult) is
+\begin{verbatim}
+sddsplot -column=Position,Charge* run.ionHist -split=page -groupby=page -separate=page -graph=line,vary 
+\end{verbatim}
+
 
 %\begin{latexonly}
 \newpage
