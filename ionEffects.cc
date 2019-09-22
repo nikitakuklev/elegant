@@ -1000,6 +1000,7 @@ double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies)
   for (i=0; i<quickBins; i++)
     histogram[i] = histogramGlobal[i];
   free(histogramGlobal);
+  nIonsMissed = nIonsMissedGlobal;
 #endif
   
   /* find cumulative distribution */
