@@ -1332,20 +1332,35 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       
       /* smaller sigma is close to the beam size, larger is close to ion sigma */
       if (mFunctions==2) {
-	if (ionEffects->xyFitSet[plane]&0x01) {
-	  paramValue[0] = ionEffects->xyFitParameter2[plane][0];
-	  paramValue[1] = ionEffects->xyFitParameter2[plane][1];
-	  paramValue[2] = ionEffects->xyFitParameter2[plane][2];
+#if USE_MPI
+	if (myid%2==0 && ionEffects->xyFitSet[plane]&0x01) {
+	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
 	} else {
 	  paramValue[0] = bunchSigma[plane];
 	  paramValue[1] = bunchCentroid[plane];
 	  paramValue[2] = peakVal/2;
+	  paramValue[3] = ionSigma[plane];
+	  paramValue[4] = ionCentroid[plane];
+	  paramValue[5] = paramValue[2]/3;
 	}
+#else
+	if (ionEffects->xyFitSet[plane]&0x01) {
+	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
+	} else {
+	  paramValue[0] = bunchSigma[plane];
+	  paramValue[1] = bunchCentroid[plane];
+	  paramValue[2] = peakVal/2;
+	  paramValue[3] = ionSigma[plane];
+	  paramValue[4] = ionCentroid[plane];
+	  paramValue[5] = paramValue[2]/3;
+	}
+#endif
         paramDelta[0] = paramValue[0]/2;
         paramDelta[1] = abs(bunchCentroid[plane])/2;
         paramDelta[2] = peakVal/4;
         lowerLimit[0] = paramValue[0]/100;
-        if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
+	    lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
           lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
         lowerLimit[1] = xMin/10;
         lowerLimit[2] = peakVal/20;
@@ -1355,20 +1370,12 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
         upperLimit[1] = xMax/10;
         upperLimit[2] = peakVal;
 	
-	if (ionEffects->xyFitSet[plane]&0x01) {
-	  paramValue[3] = ionEffects->xyFitParameter2[plane][3];
-	  paramValue[4] = ionEffects->xyFitParameter2[plane][4];
-	  paramValue[5] = ionEffects->xyFitParameter2[plane][5];
-	} else {
-	  paramValue[3] = ionSigma[plane];
-	  paramValue[4] = ionCentroid[plane];
-	  paramValue[5] = paramValue[2]/3;
-	}
         paramDelta[3] = paramValue[3]/2;
         paramDelta[4] = abs(ionCentroid[plane])/2;
         paramDelta[5] = peakVal/4;
         lowerLimit[3] = paramValue[3]/100;
-        if (ionEffects->sigmaLimitMultiplier[plane]>0 && lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
+        if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
+	    lowerLimit[3]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
           lowerLimit[3] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
         lowerLimit[4] = xMin/10;
         lowerLimit[5] = paramDelta[5]/5;
@@ -1431,7 +1438,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 #if USE_MPI
       /* Randomize step sizes and starting points */
       for (int i=0; i<3*mFunctions; i++) {
-	if (myid!=0 && (mFunctions!=3 || myid!=1)) {
+	if (myid!=0 && myid!=1) {
 	  paramValue[i] *= (1+(random_2(0)-0.5)/5);
 	  if (paramValue[i]<lowerLimit[i])
 	    paramValue[i] = lowerLimit[i];
