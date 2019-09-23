@@ -68,7 +68,9 @@ void track_through_space_harmonic_deflector(
     omega = k_0*c_mks;
     phase = omega*(t_part-t_first)+rf_param->phase[0];
     dpx += rf_param->v[0]*sin(phase);
+    dpz += rf_param->v[0]*cos(phase)*k_0*x;
     
+    /* for mode space harmonics, n=1-9 */
     for (mode=1; mode<10; mode++) {
       if (rf_param->v[mode]==0 )
         continue;
@@ -78,6 +80,7 @@ void track_through_space_harmonic_deflector(
       omega = k*c_mks;
       phase = omega*(t_part-t_first)+rf_param->phase[mode];
       dpx += rf_param->v[mode]*sin(phase)*(0.5+0.0625*alpha_sq*(3.0*x*x+y*y));
+      dpz += rf_param->v[mode]*k*x*cos(phase)*(0.5+0.0625*alpha_sq*(x*x+y*y));
     }
     /* We assume the deflection is from magnetic fields, so p^2 doesn't change */
     px += dpx*rf_param->factor*particleCharge/(particleMass*sqr(c_mks));
