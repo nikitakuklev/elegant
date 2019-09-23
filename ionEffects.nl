@@ -15,11 +15,11 @@
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
-	  double distribution_fit_target = 0.01;
-	  double distribution_fit_tolerance = 1e-3;
-	  long distribution_fit_evaluations = 200;
+	  double distribution_fit_target = 0.03;
+	  double distribution_fit_tolerance = 1e-5;
+	  long distribution_fit_evaluations = 300;
 	  long distribution_fit_passes = 3;
-	  long distribution_fit_restarts = 3;
+	  long distribution_fit_restarts = 10;
 	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
           long symmetrize = 0;
