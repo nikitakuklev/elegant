@@ -1262,9 +1262,9 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
   double result = 0;
   double paramValue[9], paramDelta[9], paramDeltaSave[9], lowerLimit[9], upperLimit[9];
   long nSignificant;
-  int32_t nEvalMax=distribution_fit_evaluations, nPassMax=distribution_fit_passes;
+  int32_t nEvalMax, nPassMax;
   unsigned long simplexFlags = SIMPLEX_NO_1D_SCANS;
-  double peakVal, minVal, xMin, xMax, fitTolerance;
+  double peakVal, minVal, xMin, xMax, fitTolerance, fitTarget;
   long fitReturn, dummy, nEvaluations=0;
   int nTries;
 #if USE_MPI
@@ -1277,16 +1277,6 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 
   fitTolerance = distribution_fit_tolerance;
   ionChargeData = ionEffects->qTotal;
-
-  /*
-#if !USE_MPI
-  if ((nEvalMax *= 10)<1500)
-    nEvalMax = 1500;
-  if (nPassMax<3)
-    nPassMax = 3;
-  fitTolerance /= 100;
-#endif
-  */
 
   for (int i=0; i<3*nFunctions; i++)
     paramValueX[i] = paramValueY[i] = 0;
@@ -1450,12 +1440,18 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
       lastBestResult = DBL_MAX;
 #endif
       nTries = distribution_fit_restarts;
-      nEvaluations = 0;
+      nEvalMax = distribution_fit_evaluations;
+      nPassMax = distribution_fit_passes;
 #if !USE_MPI
       if (nTries<10)
 	nTries = 10;
       lastResult = DBL_MAX;
 #endif
+      fitTarget = distribution_fit_target;
+      if (mFunctions==2 && nFunctions==3) {
+	// For this stage, just go for a rough 2-function fit
+	nTries = 1;
+      }
       while (nTries--) {
 	long nVariables;
 	nVariables = 3*mFunctions;
@@ -1466,7 +1462,7 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	}
 	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
-				 NULL, nVariables, distribution_fit_target, fitTolerance/10.0, 
+				 NULL, nVariables, fitTarget, fitTolerance, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
 				 ?multiGaussianFunction:multiLorentzianFunction,
 				 (verbosity>200?report:NULL) , nEvalMax, nPassMax, 12, 3, 1.0, simplexFlags);

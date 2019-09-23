@@ -15,7 +15,7 @@
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
-	  double distribution_fit_target = 0.01;
+	  double distribution_fit_target = 0.025;
 	  double distribution_fit_tolerance = 1e-3;
 	  long distribution_fit_evaluations = 200;
 	  long distribution_fit_passes = 3;
