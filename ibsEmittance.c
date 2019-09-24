@@ -544,9 +544,9 @@ int main( int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations", NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "$gp$rm", "Equilibrium horizontal emittance with no coupling and no IBS", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "$gp$rm", "Initial horizontal emittance with coupling", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Initial vertical emittance with coupling", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "m", "Equilibrium horizontal emittance with no coupling and no IBS", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "m", "Initial horizontal emittance with coupling", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "m", "Initial vertical emittance with coupling", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   /* requested equilibrium emittances or integrate emittances turn-by-turn*/
@@ -554,8 +554,8 @@ int main( int argc, char **argv)
     if (0>SDDS_DefineParameter(&resultsPage, "xGrowthRate", "g$bIBS,x$n", "1/s", "IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&resultsPage, "yGrowthRate", "g$bIBS,y$n", "1/s", "IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&resultsPage, "zGrowthRate", "g$bIBS,z$n", "1/s", "IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL) ||
-0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
+0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "m", "Horizontal emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "m", "Vertical emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS", NULL, SDDS_DOUBLE, NULL) || 
         0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS", NULL, SDDS_DOUBLE, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -573,8 +573,8 @@ int main( int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   if (integrationTurns) {
-    if (SDDS_DefineColumn(&resultsPage, "ex", "$ge$r$bx$n", "$gp$rm", "Horizontal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "ey", "$ge$r$by$n", "$gp$rm", "Vertical Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+    if (SDDS_DefineColumn(&resultsPage, "ex", "$ge$r$bx$n", "m", "Horizontal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "ey", "$ge$r$by$n", "m", "Vertical Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "el", "$ge$r$bl$n", "s", "Longitudinal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Sdelta", "$gs$bd$n$r", "", "Fractional RMS Energy Spread", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Sz", "$gs$r$bz$n", "m", "RMS Bunch Length", NULL, SDDS_DOUBLE, 0)<0 ||
