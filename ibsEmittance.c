@@ -716,10 +716,10 @@ int main( int argc, char **argv)
     if (!sigmaDeltaInput)
       sigmaDeltaInput = sigmaDelta0;
     if (!emitxInput)
-      emitxInput = emitx0/ ( 1 + coupling);
+      emitxInput = emitx0/ ( 1 + coupling*taux/tauy);
     else 
       /* The emitxInput value is really emit=emitx+emity */
-      emitxInput = emitxInput/ ( 1 + coupling);
+      emitxInput = emitxInput/ ( 1 + coupling*taux/tauy);
     if (!emityInput)
       emityInput = emitxInput * coupling;
     else
