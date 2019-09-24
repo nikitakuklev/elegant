@@ -6,6 +6,8 @@
 \usepackage{hyperref}
 \usepackage{longtable}
 \usepackage{subfigure} 
+\usepackage{amsmath}
+\usepackage{breqn}
 \usepackage[dvips]{graphicx}
 \pagestyle{plain}
 %\voffset=-0.75in
@@ -57,6 +59,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item The \verb|SHRFDF| element was added, which models a deflecting rf cavity using a space harmonic expansion.
+  This was implemented by Y.P. Sun (APS). See \cite{Sun-NAPAC19} for details.
 \item The \verb|LSCDRIFT| element, which models longitudinal space charge, can now have its effective length
   set automatically to correspond to the length of the upstream element.
 \end{itemize}
@@ -65,15 +69,16 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|run_setup| command has a new parameter, \verb|back_tracking|, which allows invoking a limited
   back-tracking capability. See the entry for \verb|run_setup| for more details.
+  This is an experimental feature and users are encouraged to report problems to the forum.
 \item The \verb|ion_effects| command was improved in several ways: 
   \begin{itemize}
   \item The default distribution fitting parameters were modified to give improved convergence
   \item The default distribution fitting criterion is now the sum of the maximum fractional absolute deviation over the histogram
     and the absolute fractional deviation of the ion charge. This makes it less likely that overfitting will result 
     in large spikes in the distribution.
-  \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins; it defaults to 5,000.
+  \item The new \verb|ion_histogram_max_bins| parameters allows restricting the maximum number of bins.
   \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
-    macro ions per bin; it defaults to 15.
+    macro ions per bin.
   \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
     ions and electrons until a specified pass number. This is useful for diagnostic purposes.
   \item The new \verb|pressure_factor| parameter allows multiplying all the pressure profiles by a common factor.
@@ -2630,7 +2635,7 @@ included in the plane in question.
 \item \verb|pressure_profile| --- Name of an SDDS file giving the s-dependent gas pressure for
   various gas species. Column names will be matched to the entries in the \verb|SourceName| column of the
   \verb|ion_properties| file.
-\iterm \verb|pressure_factor| --- Factor by which to multiply the pressures given in the \verb|pressure_profile|.
+\item \verb|pressure_factor| --- Factor by which to multiply the pressures given in the \verb|pressure_profile|.
 \item \verb|ion_properties| --- Name of an SDDS file giving properties of ions. Column names are
   \begin{itemize}
   \item \verb|IonName| --- String column giving the name of the ion.
@@ -9092,7 +9097,7 @@ Here is a summary of what's changed since release 27.1.0:
 
 \newpage
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
 
 \bibitem{Kernighan}
     B. W. Kernighan and D. M. Ritchie, {\em The C Programming Language},
