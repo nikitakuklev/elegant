@@ -91,7 +91,7 @@ void gaussianBeamKick(double *coord, double *center, double *sigma, long fromBea
 void roundGaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
-void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma);
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionSigma);
 double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies);
 void startSummaryDataOutputPage(IONEFFECTS *ionEffects, long iPass, long nPasses, long nBunches);
 void computeIonEffectsElectronBunchParameters(double **part, double *time, long np, 
@@ -830,7 +830,7 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,
   
 }
 
-void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma)
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionSigma)
 {
   long iSpecies, iBin, iPlane;
   long iIon;
@@ -851,11 +851,11 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
     if (verbosity>200) {
       printf("making ion histogram for plane %c\nbeamSize = %le, binDivisior=%le, rangeMult=%le, ionSigma=%le, maxBins=%ld\n",
 	     iPlane?'y':'x', 
-	     bunchSigma[iPlane], ionEffects->binDivisor[iPlane],
+	     bunchSigma[2*iPlane], ionEffects->binDivisor[iPlane],
 	     ionEffects->rangeMultiplier[iPlane], ionSigma[iPlane], ionHistogramMaxBins);
       fflush(stdout);
     }
-    if (bunchSigma[iPlane]>0 && ionEffects->binDivisor[iPlane]>1)
+    if (bunchSigma[2*iPlane]>0 && ionEffects->binDivisor[iPlane]>1)
       ionEffects->ionDelta[iPlane] = bunchSigma[2*iPlane]/ionEffects->binDivisor[iPlane];
     else
       ionEffects->ionDelta[iPlane] = 1e-3;
@@ -1364,7 +1364,7 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	}
 #endif
         paramDelta[0] = paramValue[0]/2;
-        paramDelta[1] = abs(bunchCentroid[plane])/2;
+        paramDelta[1] = abs(bunchCentroid[2*plane])/2;
         paramDelta[2] = peakVal/4;
         lowerLimit[0] = paramValue[0]/100;
         if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
@@ -2554,7 +2554,7 @@ void applyIonKicksToElectronBunch
 
   ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
 
-  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionCentroid, ionSigma);
+  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
     // multi-gaussian or multi-lorentzian kick
