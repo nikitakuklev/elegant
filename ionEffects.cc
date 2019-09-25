@@ -1940,16 +1940,16 @@ void setIonEffectsElectronBunchOutput
 #endif
     if (SDDS_beamOutput) {
       if ((beam_output_all_locations || ionEffects==firstIonEffects) &&
-	  !SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
-			     "t", tNow, 
-			     "Bunch", iBunch, "qBunch", qBunch, "npBunch", npTotal,
-			     "Sx", bunchSigma[0], "Sy", bunchSigma[2], 
-			     "Cx", bunchCentroid[0], "Cy", bunchCentroid[2],
-			     "Sxp", bunchSigma[1], "Syp", bunchSigma[3], 
-			     "Cxp", bunchCentroid[1], "Cyp", bunchCentroid[3],
-			     NULL) ||
-	  !SDDS_SetParameters(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "s", ionEffects->sLocation,
-			      "Pass", iPass, NULL)) {
+	  (!SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
+                              "t", tNow, 
+                              "Bunch", iBunch, "qBunch", qBunch, "npBunch", npTotal,
+                              "Sx", bunchSigma[0], "Sy", bunchSigma[2], 
+                              "Cx", bunchCentroid[0], "Cy", bunchCentroid[2],
+                              "Sxp", bunchSigma[1], "Syp", bunchSigma[3], 
+                              "Cxp", bunchCentroid[1], "Cyp", bunchCentroid[3],
+                              NULL) ||
+           !SDDS_SetParameters(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "s", ionEffects->sLocation,
+                               "Pass", iPass, NULL))) {
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	exitElegant(1);
       }
