@@ -1909,6 +1909,8 @@ void computeIonEffectsElectronBunchParameters
   rms_emittance(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3]);
   compute_average(tNow, time, np);
 #endif
+  for (int i=0; i<4; i++)
+    bunchSigma[i] = sqrt(bunchSigma[i]);
   *qBunch = (*npTotal)*charge->macroParticleCharge;
   
   if (verbosity>40) {
