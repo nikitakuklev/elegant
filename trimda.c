@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 {
   char *output, *input;
   SDDS_DATASET SDDS_input, SDDS_output;
-  long line, lines, full_plane, count;
+  long line, lines, full_plane;
   double dtheta;
   double *xLimit, *yLimit;
   double *dxFactor, *dyFactor, area;
