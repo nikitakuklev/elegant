@@ -835,7 +835,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
   long iSpecies, iBin, iPlane;
   long iIon;
   double qTotal = 0;
-  long nIons = 0, nIonsMin;
+  long nIons = 0;
 
   for (iSpecies=qTotal=0; iSpecies<nSpecies; iSpecies++)
     nIons += ionEffects->nIons[iSpecies]; 
@@ -844,9 +844,6 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
   long nIonsTotal;
   MPI_Allreduce(&nIons, &nIonsTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   nIons = nIonsTotal;
-  MPI_Allreduce(&nIons, &nIonsMin, 1, MPI_LONG, MPI_MIN, MPI_COMM_WORLD);
-#else
-  nIonsMin = nIons;
 #endif
   
   for (iPlane=0; iPlane<2; iPlane++) {
