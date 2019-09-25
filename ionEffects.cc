@@ -85,10 +85,10 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y);
 
-void gaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
+void gaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
-void roundGaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
+void roundGaussianBeamKick(double *coord, double *center, double *sigma, long fromBeam, double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma);
@@ -1159,8 +1159,17 @@ void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double 
 }
 
 
-void gaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
-		      double ionMass, double ionCharge) 
+void gaussianBeamKick
+(
+ double *coord, 
+ double *center, 
+ double *sigma, 
+ long fromBeam, // If nonzero, center and sigma arrays have (x, x', y, y') data. Otherwise, just (x, y)
+ double kick[2], 
+ double charge, 
+ double ionMass, 
+ double ionCharge
+ ) 
 {
   // calculate beam kick on ion, assuming Gaussian beam
   double sx, sy, x, y, sd, Fx, Fy, C1, C2, C3, ay;
@@ -1173,9 +1182,9 @@ void gaussianBeamKick(double *coord, double center[4], double sigma[4], double k
   //  return;
   
   sx = sigma[0];
-  sy = sigma[2];
+  sy = sigma[fromBeam?2:1];
   x = coord[0] - center[0];
-  y = coord[2] - center[2];
+  y = coord[2] - center[fromBeam?2:1];
 
 
   C1 = c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
@@ -1227,8 +1236,17 @@ void gaussianBeamKick(double *coord, double center[4], double sigma[4], double k
 
 
 
-void roundGaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
-		      double ionMass, double ionCharge) 
+void roundGaussianBeamKick
+(
+ double *coord, 
+ double *center, 
+ double *sigma, 
+ long fromBeam, // If nonzero, center and sigma arrays have (x, x', y, y') data. Otherwise, just (x, y)
+ double kick[2], 
+ double charge, 
+ double ionMass, 
+ double ionCharge
+) 
 {
   // calculate beam kick on ion, assuming round Gaussian beam
   double sx, sy, x, y, sig, r, C1, dp, theta;
@@ -1239,11 +1257,11 @@ void roundGaussianBeamKick(double *coord, double center[4], double sigma[4], dou
   //  return;
   
   sx = sigma[0];
-  sy = sigma[2];
+  sy = sigma[fromBeam?2:1];
   sig = (sx + sy) / 2;
 
   x = coord[0] - center[0];
-  y = coord[2] - center[2];
+  y = coord[2] - center[fromBeam?2:1];
   r = sqrt(sqr(x) + sqr(y));
 
   C1 = 2 * c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
@@ -2227,19 +2245,19 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 	tempkick[0] = tempkick[1] = 0;
 	tempart[0] = bunchSigma[0] + bunchCentroid[0];
 	tempart[2] = 0;
-	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, tempkick, qBunch, ionMass, ionCharge);
+	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, 1, tempkick, qBunch, ionMass, ionCharge);
 	maxkick[0] = 2*abs(tempkick[0]);
 	
 	tempart[2] = bunchSigma[2] + bunchCentroid[2];
 	tempart[0] = 0;
-	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, tempkick, qBunch, ionMass, ionCharge);
+	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, 1, tempkick, qBunch, ionMass, ionCharge);
 	maxkick[1] = 2*abs(tempkick[1]);
 	
 	localCount += ionEffects->nIons[iSpecies];
 	for (iIon=0; iIon<ionEffects->nIons[iSpecies]; iIon++) {
 	  coord = ionEffects->coordinate[iSpecies][iIon];
 	  kick[0] = kick[1] = 0;
-	  gaussianBeamKick(coord, bunchCentroid, bunchSigma, kick, qBunch, ionMass, ionCharge);
+	  gaussianBeamKick(coord, bunchCentroid, bunchSigma, 1, kick, qBunch, ionMass, ionCharge);
 	  
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
@@ -2649,7 +2667,7 @@ void applyIonKicksToElectronBunch
 	for (ip=0; ip<np; ip++) {
 	  kick[0] = kick[1] = 0;
 	  
-	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, kick, qIon, me_mks, 1);
+	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, 0, kick, qIon, me_mks, 1);
 	  part[ip][1] += kick[0] / c_mks / Po;
 	  part[ip][3] += kick[1] / c_mks / Po; 
 	}
@@ -2660,7 +2678,7 @@ void applyIonKicksToElectronBunch
 	  kick[0] = kick[1] = 0;
 	  for (int i=0; i<nFunctions*nFunctions; i++)  {
 	    if (tempQ[i]) {
-	      gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], tempkick, tempQ[i], me_mks, 1);
+	      gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
 	      kick[0] += tempkick[0];
 	      kick[1] += tempkick[1];
 	    }
