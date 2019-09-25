@@ -85,10 +85,10 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
 
 void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double x, double y);
 
-void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+void gaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
-void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+void roundGaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
 void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma);
@@ -860,7 +860,7 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma
     else
       ionEffects->ionDelta[iPlane] = 1e-3;
     if (ionEffects->rangeMultiplier[iPlane]<0)
-      ionEffects->ionRange[iPlane] = 2*abs(ionSigma[2*iPlane]*ionEffects->rangeMultiplier[iPlane]);
+      ionEffects->ionRange[iPlane] = 2*abs(ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane]);
     else
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
@@ -1159,7 +1159,7 @@ void addIon_point(IONEFFECTS *ionEffects, long iSpecies, double qToAdd,  double 
 }
 
 
-void gaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+void gaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
 		      double ionMass, double ionCharge) 
 {
   // calculate beam kick on ion, assuming Gaussian beam
@@ -1173,9 +1173,9 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
   //  return;
   
   sx = sigma[0];
-  sy = sigma[1];
+  sy = sigma[2];
   x = coord[0] - center[0];
-  y = coord[2] - center[1];
+  y = coord[2] - center[2];
 
 
   C1 = c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
@@ -1227,7 +1227,7 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 
 
 
-void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
+void roundGaussianBeamKick(double *coord, double center[4], double sigma[4], double kick[2], double charge, 
 		      double ionMass, double ionCharge) 
 {
   // calculate beam kick on ion, assuming round Gaussian beam
@@ -1239,11 +1239,11 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
   //  return;
   
   sx = sigma[0];
-  sy = sigma[1];
+  sy = sigma[2];
   sig = (sx + sy) / 2;
 
   x = coord[0] - center[0];
-  y = coord[2] - center[1];
+  y = coord[2] - center[2];
   r = sqrt(sqr(x) + sqr(y));
 
   C1 = 2 * c_mks * charge * re_mks * me_mks * ionCharge / e_mks;
