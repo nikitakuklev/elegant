@@ -91,26 +91,25 @@ void gaussianBeamKick(double *coord, double center[2], double sigma[2], double k
 void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], double kick[2], double charge, 
 		      double ionMass, double ionCharge);
 
-void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentroid, double *bunchSigma, 
-		       double *ionCentroid, double *ionSigma);
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma);
 double findIonBinningRange(IONEFFECTS *ionEffects, long iPlane, long nSpecies);
 void startSummaryDataOutputPage(IONEFFECTS *ionEffects, long iPass, long nPasses, long nBunches);
 void computeIonEffectsElectronBunchParameters(double **part, double *time, long np, 
 					      CHARGE *charge, double *tNow, long *npTotal, double *qBunch,
 					      double centroid[2], double sigma[2]);
 void setIonEffectsElectronBunchOutput(IONEFFECTS *ionEffects, double tNow, long iPass, long iBunch, double qBunch, 
-				      long npTotal, double bunchSigma[2], double bunchCentroid[2]);
+				      long npTotal, double bunchSigma[4], double bunchCentroid[4]);
 void setIonEffectsIonParameterOutput(IONEFFECTS *ionEffects, double tNow, long iPass, long iBunch, double qIon,
 				     double ionSigma[2], double ionCentroid[2]);
 void advanceIonPositions(IONEFFECTS *ionEffects, long iPass, double tNow);
 void computeIonOverallParameters(IONEFFECTS *ionEffects, double ionCentroid[2], double ionSigma[2], double *qIonReturn,
-				 long *nIonsTotal, double bunchCentroid[2], double bunchSigma[2], long iBunch);
+				 long *nIonsTotal, double bunchCentroid[4], double bunchSigma[4], long iBunch);
 void eliminateIonsOutsideSpan(IONEFFECTS *ionEffects);
-void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[2], double bunchSigma[2]);
+void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4]);
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches, 
-		  double qBunch, double bunchCentroid[2], double bunchSigma[2]);
+		  double qBunch, double bunchCentroid[4], double bunchSigma[4]);
 void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np, double Po, long iBunch, long iPass, 
-				  double bunchCentroid[2], double bunchSigma[2],
+				  double bunchCentroid[4], double bunchSigma[4],
 				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2]);
 void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow);
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
@@ -139,7 +138,7 @@ static long nData = 0;
 static long nFunctions = 2; /* should be 2 or 3 */
 static long mFunctions;
 
-short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double paramValueX[9], 
+short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double paramValueX[9], 
                     double paramValueY[9], IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]);
 double multiGaussianFunction(double *param, long *invalid);
 double multiLorentzianFunction(double *param, long *invalid);
@@ -206,8 +205,12 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_beamOutput, "s", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Sx", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Sy", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Sxp", "", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Syp", "", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Cx", "m", SDDS_DOUBLE) ||
             !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Cy", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Cxp", "", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleColumn(SDDS_beamOutput, "Cyp", "", SDDS_DOUBLE) ||
             !SDDS_SaveLayout(SDDS_beamOutput) || !SDDS_WriteLayout(SDDS_beamOutput)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
           exitElegant(1);
@@ -606,7 +609,7 @@ void trackWithIonEffects
   long *npBunch = NULL;          /* array to record how many particles are in each bunch */
   long np, npTotal, max_np = 0;
   /* properties of the electron beam */
-  double bunchCentroid[2], bunchSigma[2], tNow, qBunch;
+  double bunchCentroid[4], bunchSigma[4], tNow, qBunch;
   //double sigmatemp[2];
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
@@ -790,7 +793,8 @@ void trackWithIonEffects
   speciesCount = NULL;
 }
 
-void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  double bunchCentroid[2], double bunchSigma[2], long symmetrize)
+void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd,  
+	     double bunchCentroid[4], double bunchSigma[4], long symmetrize)
 {
   long iNew;
   
@@ -809,14 +813,14 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
   for ( ; iNew<ionEffects->nIons[iSpecies]; iNew++) {
     ionEffects->coordinate[iSpecies][iNew][0] = gauss_rn_lim(bunchCentroid[0], bunchSigma[0], 3, random_4) ; /* initial x position */
     ionEffects->coordinate[iSpecies][iNew][1] = 0 ; /* initial x velocity */
-    ionEffects->coordinate[iSpecies][iNew][2] =  gauss_rn_lim(bunchCentroid[1], bunchSigma[1], 3, random_4) ; /* initial y position */
+    ionEffects->coordinate[iSpecies][iNew][2] =  gauss_rn_lim(bunchCentroid[2], bunchSigma[2], 3, random_4) ; /* initial y position */
     ionEffects->coordinate[iSpecies][iNew][3] = 0 ; /* initial y velocity */
     ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ; /* macroparticle charge */
     if (symmetrize) {
       iNew ++;
       ionEffects->coordinate[iSpecies][iNew][0] = bunchCentroid[0] - (ionEffects->coordinate[iSpecies][iNew-1][0]-bunchCentroid[0]);
       ionEffects->coordinate[iSpecies][iNew][1] = 0 ;
-      ionEffects->coordinate[iSpecies][iNew][2] = bunchCentroid[1] - (ionEffects->coordinate[iSpecies][iNew-1][2]-bunchCentroid[1]);
+      ionEffects->coordinate[iSpecies][iNew][2] = bunchCentroid[2] - (ionEffects->coordinate[iSpecies][iNew-1][2]-bunchCentroid[2]);
       ionEffects->coordinate[iSpecies][iNew][3] = 0 ;
       ionEffects->coordinate[iSpecies][iNew][4] = qToAdd ;
     }
@@ -826,8 +830,7 @@ void addIons(IONEFFECTS *ionEffects, long iSpecies, long nToAdd, double qToAdd, 
   
 }
 
-void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentroid, double *bunchSigma, 
-		       double *ionCentroid, double *ionSigma)
+void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchSigma, double *ionCentroid, double *ionSigma)
 {
   long iSpecies, iBin, iPlane;
   long iIon;
@@ -856,11 +859,11 @@ void makeIonHistograms(IONEFFECTS *ionEffects, long nSpecies, double *bunchCentr
       fflush(stdout);
     }
     if (bunchSigma[iPlane]>0 && ionEffects->binDivisor[iPlane]>1)
-      ionEffects->ionDelta[iPlane] = bunchSigma[iPlane]/ionEffects->binDivisor[iPlane];
+      ionEffects->ionDelta[iPlane] = bunchSigma[2*iPlane]/ionEffects->binDivisor[iPlane];
     else
       ionEffects->ionDelta[iPlane] = 1e-3;
     if (ionEffects->rangeMultiplier[iPlane]<0)
-      ionEffects->ionRange[iPlane] = 2*abs(ionSigma[iPlane]*ionEffects->rangeMultiplier[iPlane]);
+      ionEffects->ionRange[iPlane] = 2*abs(ionSigma[2*iPlane]*ionEffects->rangeMultiplier[iPlane]);
     else
       ionEffects->ionRange[iPlane] = findIonBinningRange(ionEffects, iPlane, nSpecies);
     ionEffects->ionBins[iPlane] = ionEffects->ionRange[iPlane]/ionEffects->ionDelta[iPlane]+0.5;
@@ -1257,7 +1260,7 @@ void roundGaussianBeamKick(double *coord, double center[2], double sigma[2], dou
 }
 
 
-short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double *paramValueX, double *paramValueY, 
+short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double *paramValueX, double *paramValueY, 
                    IONEFFECTS *ionEffects, double ionSigma[2], double ionCentroid[2]) {
   double result = 0;
   double paramValue[9], paramDelta[9], paramDeltaSave[9], lowerLimit[9], upperLimit[9];
@@ -1326,8 +1329,8 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	if (myid%2==0 && ionEffects->xyFitSet[plane]&0x01) {
 	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
 	} else {
-	  paramValue[0] = bunchSigma[plane];
-	  paramValue[1] = bunchCentroid[plane];
+	  paramValue[0] = bunchSigma[2*plane];
+	  paramValue[1] = bunchCentroid[2*plane];
 	  paramValue[2] = peakVal/2;
 	  paramValue[3] = ionSigma[plane];
 	  paramValue[4] = ionCentroid[plane];
@@ -1337,8 +1340,8 @@ short multipleWhateverFit(double bunchSigma[2], double bunchCentroid[2], double 
 	if (ionEffects->xyFitSet[plane]&0x01) {
 	  memcpy(paramValue, ionEffects->xyFitParameter2[plane], 6*sizeof(double));
 	} else {
-	  paramValue[0] = bunchSigma[plane];
-	  paramValue[1] = bunchCentroid[plane];
+	  paramValue[0] = bunchSigma[2*plane];
+	  paramValue[1] = bunchCentroid[2*plane];
 	  paramValue[2] = peakVal/2;
 	  paramValue[3] = ionSigma[plane];
 	  paramValue[4] = ionCentroid[plane];
@@ -1891,8 +1894,8 @@ void computeIonEffectsElectronBunchParameters
  double *tNow, 
  long *npTotal,
  double *qBunch,
- double bunchCentroid[2], 
- double bunchSigma[2]
+ double bunchCentroid[4], 
+ double bunchSigma[4]
  )
 {
   if (verbosity>30) {
@@ -1901,19 +1904,19 @@ void computeIonEffectsElectronBunchParameters
   }
   
 #if USE_MPI
-  bunchSigma[0] = computeRmsCoordinate_p(part, 0, np, bunchCentroid+0, npTotal, MPALGORITHM);
-  bunchSigma[1] = computeRmsCoordinate_p(part, 2, np, bunchCentroid+1, npTotal, MPALGORITHM);
+  rms_emittance_p(part, 0, 1, np, &bunchSigma[0], NULL, &bunchSigma[1], &bunchCentroid[0], &bunchCentroid[1], npTotal);
+  rms_emittance_p(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3], npTotal);
   *tNow = computeAverage_p(time, np, MPI_COMM_WORLD);
 #else
-  bunchSigma[0] = computeRmsCoordinate(part, 0, np, bunchCentroid+0, npTotal);
-  bunchSigma[1] = computeRmsCoordinate(part, 2, np, bunchCentroid+1, NULL);
+  rms_emittance(part, 0, 1, np, &bunchSigma[0], NULL, &bunchSigma[1], &bunchCentroid[0], &bunchCentroid[1]);
+  rms_emittance(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3]);
   compute_average(tNow, time, np);
 #endif
   *qBunch = (*npTotal)*charge->macroParticleCharge;
   
   if (verbosity>40) {
     printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
-	   *npTotal, *tNow, bunchSigma[0], bunchSigma[1], bunchCentroid[0], bunchCentroid[1], *qBunch);
+	   *npTotal, *tNow, bunchSigma[0], bunchSigma[2], bunchCentroid[0], bunchCentroid[2], *qBunch);
     fflush(stdout);
   }
 }
@@ -1926,8 +1929,8 @@ void setIonEffectsElectronBunchOutput
  long iBunch,
  double qBunch,
  long npTotal,
- double bunchSigma[2],
- double bunchCentroid[2]
+ double bunchSigma[4],
+ double bunchCentroid[4]
  )
 {
   if (verbosity>30) {
@@ -1943,7 +1946,10 @@ void setIonEffectsElectronBunchOutput
 	  !SDDS_SetRowValues(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBeamOutput++,
 			     "t", tNow, 
 			     "Bunch", iBunch, "qBunch", qBunch, "npBunch", npTotal,
-			     "Sx", bunchSigma[0], "Sy", bunchSigma[1], "Cx", bunchCentroid[0], "Cy", bunchCentroid[1],
+			     "Sx", bunchSigma[0], "Sy", bunchSigma[2], 
+			     "Cx", bunchCentroid[0], "Cy", bunchCentroid[2],
+			     "Sxp", bunchSigma[1], "Syp", bunchSigma[3], 
+			     "Cxp", bunchCentroid[1], "Cyp", bunchCentroid[3],
 			     NULL) ||
 	  !SDDS_SetParameters(SDDS_beamOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "s", ionEffects->sLocation,
 			      "Pass", iPass, NULL)) {
@@ -2084,7 +2090,7 @@ void eliminateIonsOutsideSpan(IONEFFECTS *ionEffects)
 }
 
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches,
-		  double qBunch, double bunchCentroid[2], double bunchSigma[2])
+		  double qBunch, double bunchCentroid[4], double bunchSigma[4])
 {
   long iSpecies, index, nToAdd;
   double qToAdd;
@@ -2144,12 +2150,12 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
 	  
 	  double beamFact, jx, jy, Pmi , rnd;
 	  beamFact = jx = jy = Pmi = rnd = 0;
-	  beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * bunchSigma[0] * bunchSigma[1]);
+	  beamFact = multiple_ionization_interval * 1e-22 * qBunch / e_mks / (2*PI * bunchSigma[0] * bunchSigma[2]);
 	  for (int jMacro = 0; jMacro < ionEffects->nIons[index]; jMacro++) {
 	    jx = ionEffects->coordinate[index][jMacro][0] - bunchCentroid[0];
-	    jy = ionEffects->coordinate[index][jMacro][2] - bunchCentroid[1];
+	    jy = ionEffects->coordinate[index][jMacro][2] - bunchCentroid[2];
 	    Pmi = beamFact * ionProperties.crossSection[iSpecies] *	\
-	      exp(-sqr(jx) / (2*sqr(bunchSigma[0])) - sqr(jy) / (2*sqr(bunchSigma[1])));
+	      exp(-sqr(jx) / (2*sqr(bunchSigma[0])) - sqr(jy) / (2*sqr(bunchSigma[2])));
 	    
 	    rnd = random_2(0);
 	    if (rnd < Pmi) { //multiple ionization occurs
@@ -2186,7 +2192,7 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
   }
 }
 
-void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[2], double bunchSigma[2])
+void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4])
 {
   long localCount;
   double ionMass, ionCharge, *coord, kick[2];
@@ -2225,7 +2231,7 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, tempkick, qBunch, ionMass, ionCharge);
 	maxkick[0] = 2*abs(tempkick[0]);
 	
-	tempart[2] = bunchSigma[1] + bunchCentroid[1];
+	tempart[2] = bunchSigma[2] + bunchCentroid[2];
 	tempart[0] = 0;
 	gaussianBeamKick(tempart, bunchCentroid, bunchSigma, tempkick, qBunch, ionMass, ionCharge);
 	maxkick[1] = 2*abs(tempkick[1]);
@@ -2249,7 +2255,7 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 void computeIonOverallParameters
 (
  IONEFFECTS *ionEffects, double ionCentroid[2], double ionSigma[2], double *qIonReturn, long *nIonsTotal,
- double bunchCentroid[2], double bunchSigma[2], long iBunch
+ double bunchCentroid[4], double bunchSigma[4], long iBunch
  )
 {
   long mTot, nTot, jMacro;
@@ -2268,8 +2274,8 @@ void computeIonOverallParameters
   if (ionFieldMethod==ION_FIELD_GAUSSIAN) {
     bx1 = bunchCentroid[0] - 3*bunchSigma[0];
     bx2 = bunchCentroid[0] + 3*bunchSigma[0];
-    by1 = bunchCentroid[1] - 3*bunchSigma[1];
-    by2 = bunchCentroid[1] + 3*bunchSigma[1];
+    by1 = bunchCentroid[2] - 3*bunchSigma[2];
+    by2 = bunchCentroid[2] + 3*bunchSigma[2];
   } else {
     bx1 = by1 = -DBL_MAX;
     bx2 = by2 = DBL_MAX;
@@ -2509,8 +2515,8 @@ void applyIonKicksToElectronBunch
  double Po,
  long iBunch,
  long iPass, 
- double bunchCentroid[2],
- double bunchSigma[2],
+ double bunchCentroid[4],
+ double bunchSigma[4],
  double qIon,
  long nIonsTotal,
  double ionCentroid[2],
@@ -2531,7 +2537,7 @@ void applyIonKicksToElectronBunch
 
   ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
 
-  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchCentroid, bunchSigma, ionCentroid, ionSigma);
+  makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionCentroid, ionSigma);
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
     // multi-gaussian or multi-lorentzian kick

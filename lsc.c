@@ -207,12 +207,12 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     Imax *= charge->macroParticleCharge/dt;
     /* - compute beam radius as the average rms beam size in x and y */
 #if !USE_MPI
-    rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+    rms_emittance(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL);
 #else
     if (notSinglePart)
-      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL, NULL);
     else
-      rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+      rms_emittance(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL);
 #endif
 
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
@@ -474,12 +474,12 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   Imax *= charge->macroParticleCharge/dt;
   /* - compute beam radius as the average rms beam size in x and y */
 #if !USE_MPI
-    rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+    rms_emittance(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL);
 #else
     if (notSinglePart)
-      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+      rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL, NULL);
     else
-      rms_emittance(part, 0, 2, np, &S11, NULL, &S33);    
+      rms_emittance(part, 0, 2, np, &S11, NULL, &S33, NULL, NULL);
 #endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
     printf("Error: beam radius is zero in LSCDRIFT\n");

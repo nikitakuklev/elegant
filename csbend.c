@@ -2507,16 +2507,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       case DERBENEV_CRITERION_EVAL:
       case DERBENEV_CRITERION_ENFORCE:
 #if !USE_MPI
-	rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL);
-	rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL);
+	rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL, NULL, NULL);
+	rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL, NULL, NULL);
 #else
      if (notSinglePart) {
         /* The master will get the result from the rms_emittance routine */
-	rms_emittance_p(part, 4, 5, n_part, &Sz, NULL, NULL);
-	rms_emittance_p(part, 0, 1, n_part, &Sx, NULL, NULL);
+       rms_emittance_p(part, 4, 5, n_part, &Sz, NULL, NULL, NULL, NULL, NULL);
+       rms_emittance_p(part, 0, 1, n_part, &Sx, NULL, NULL, NULL, NULL, NULL);
      } else {
-        rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL);
-        rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL);
+       rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL, NULL, NULL);
+       rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL, NULL, NULL);
      }
 #endif
 	Sz = sqrt(Sz);
@@ -2999,15 +2999,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     double S55;
 
 #if !USE_MPI    
-    rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
+    rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22, NULL, NULL);
+    rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL, NULL, NULL);
 #else
     if (notSinglePart) {	
-    	rms_emittance_p(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    	rms_emittance_p(part, 4, 5, i_top+1, &S55, NULL, NULL);
+      rms_emittance_p(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22, NULL, NULL, NULL);
+      rms_emittance_p(part, 4, 5, i_top+1, &S55, NULL, NULL, NULL, NULL, NULL);
     } else {
-     	rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-    	rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
+      rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22, NULL, NULL);
+      rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL, NULL, NULL);
     }
 #endif
 

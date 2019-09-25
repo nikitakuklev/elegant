@@ -3762,14 +3762,15 @@ extern double approximateBeamWidth(double fraction, double **part, long nPart, l
 #if USE_MPI
 extern double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord);
 extern double rms_emittance_p(double **coord, long i1, long i2, long n,
-                            double *S11Return, double *S12Return, double *S22Return);
+			      double *S11Return, double *S12Return, double *S22Return, 
+			      double *c1Return, double *c2Return, long *nTotal);
 extern double rms_longitudinal_emittance_p(double **coord, long n, double Po, long startPID, long endPID);
 extern double computeAverage_p(double *data, long np, MPI_Comm mpiComm);
 #endif
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
 void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
-                            double *S11Return, double *S12Return, double *S22Return);
+                            double *S11Return, double *S12Return, double *S22Return, double *c1Return, double *c2Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po, long startPID, long endPID);
 extern double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po);
 extern void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po);

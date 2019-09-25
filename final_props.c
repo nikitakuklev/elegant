@@ -646,11 +646,11 @@ long compute_final_properties
   computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+1, data+F_EMIT_OFFSET+3, NULL, NULL, sums->sigma, 2);
 #if 0
 #if !SDDS_MPI_IO
-  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
-  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL, NULL, NULL);
 #else
-  data[F_EMIT_OFFSET]   = rms_emittance_p(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
-  data[F_EMIT_OFFSET+1] = rms_emittance_p(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET]   = rms_emittance_p(coord, 0, 1, sums->n_part, NULL, NULL, NULL, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET+1] = rms_emittance_p(coord, 2, 3, sums->n_part, NULL, NULL, NULL, NULL, NULL, NULL);
 #endif
 
   /* corrected transverse emittances */
@@ -781,7 +781,8 @@ double beam_width(double fraction, double **coord, long n_part,
 }
 
 double rms_emittance(double **coord, long i1, long i2, long n, 
-                     double *s11Return, double *s12Return, double *s22Return)
+                     double *s11Return, double *s12Return, double *s22Return,
+		     double *c1Return, double *c2Return)
 {
   double s11, s12, s22, x, xp;
   double xc, xpc;
@@ -797,6 +798,10 @@ double rms_emittance(double **coord, long i1, long i2, long n,
   }
   xc  /= n;
   xpc /= n;
+  if (c1Return)
+    *c1Return = xc;
+  if (c2Return)
+    *c2Return = xpc;
 
   for (i=s11=s12=s22=0; i<n; i++) {
     s11 += sqr(x  = coord[i][i1]-xc );
@@ -814,12 +819,13 @@ double rms_emittance(double **coord, long i1, long i2, long n,
 
 #if USE_MPI
 double rms_emittance_p(double **coord, long i1, long i2, long n, 
-                     double *s11Return, double *s12Return, double *s22Return)
+		       double *s11Return, double *s12Return, double *s22Return,
+		       double *c1Return, double *c2Return, long *nTotal)
 {
   double s11, s12, s22, x, xp, s11_local=0.0, s22_local=0.0, s12_local=0.0;
   double xc, xpc, xc_local=0.0, xpc_local=0.0;
   long i, n_total=0;
-  
+
   if (notSinglePart) {
     if (isMaster)
       n = 0; /* The master will not contribute anything in this routine */
@@ -828,6 +834,9 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
     if (!n)
       return(0.0);    
   }
+
+  if (nTotal)
+    *nTotal = n_total;
 
   if (!n_total)
     return(0.0);
@@ -844,6 +853,10 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
 
   xc  /= n_total;
   xpc /= n_total;
+  if (c1Return)
+    *c1Return = xc;
+  if (c2Return)
+    *c2Return = xpc;
   
   for (i=0; i<n; i++) {
     s11_local += sqr(x  = coord[i][i1]-xc );

@@ -610,11 +610,11 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
   
 #if SDDS_MPI_IO
-  emitx = rms_emittance_p(particle, 0, 1, particles, &S11, &S12, NULL);
-  emity = rms_emittance_p(particle, 2, 3, particles, &S33, &S34, NULL);
+  emitx = rms_emittance_p(particle, 0, 1, particles, &S11, &S12, NULL, NULL, NULL, NULL);
+  emity = rms_emittance_p(particle, 2, 3, particles, &S33, &S34, NULL, NULL, NULL, NULL);
 #else
-  emitx = rms_emittance(particle, 0, 1, particles, &S11, &S12, NULL);
-  emity = rms_emittance(particle, 2, 3, particles, &S33, &S34, NULL);
+  emitx = rms_emittance(particle, 0, 1, particles, &S11, &S12, NULL, NULL, NULL);
+  emity = rms_emittance(particle, 2, 3, particles, &S33, &S34, NULL, NULL, NULL);
 #endif
 
   SetSASEBetaEmitValues(sasefelOutput->emit+0, sasefelOutput->betaToUse+0,

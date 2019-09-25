@@ -92,13 +92,13 @@ long trackUndulatorKickMap(
       if (sxpCoef) {
         /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
 #if !USE_MPI
-        rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22);
-        rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66);
-        rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66);
+        rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22, NULL, NULL);
+        rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66, NULL, NULL);
+        rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66, NULL, NULL);
 #else
-        rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22);
-        rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66);
-        rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66);
+        rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22, NULL, NULL, NULL);
+        rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66, NULL, NULL, NULL);
+        rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66, NULL, NULL, NULL);
 #endif
 
         if (S66) {
