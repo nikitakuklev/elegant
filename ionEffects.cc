@@ -1918,6 +1918,10 @@ void computeIonEffectsElectronBunchParameters
     fflush(stdout);
   }
   
+  for (int i=0; i<4; i++) {
+    bunchCentroid[i] = 0;
+    bunchSigma[i] = 1;
+  }
 #if USE_MPI
   rms_emittance_p(part, 0, 1, np, &bunchSigma[0], NULL, &bunchSigma[1], &bunchCentroid[0], &bunchCentroid[1], npTotal);
   rms_emittance_p(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3], npTotal);
@@ -1927,13 +1931,21 @@ void computeIonEffectsElectronBunchParameters
   rms_emittance(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3]);
   compute_average(tNow, time, np);
 #endif
-  for (int i=0; i<4; i++)
-    bunchSigma[i] = sqrt(bunchSigma[i]);
+  for (int i=0; i<4; i++) {
+    if (isnan(bunchCentroid[i]) || isinf(bunchCentroid[i]))
+      bunchCentroid[i] = 0;
+    if (bunchSigma[i]>0 && !isnan(bunchSigma[i]) && !isinf(bunchSigma[i]))
+      bunchSigma[i] = sqrt(bunchSigma[i]);
+    else
+      bunchSigma[i] = 1;
+  }
   *qBunch = (*npTotal)*charge->macroParticleCharge;
   
   if (verbosity>40) {
-    printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  centroid x,y: %le, %le,  q: %le\n",
-	   *npTotal, *tNow, bunchSigma[0], bunchSigma[2], bunchCentroid[0], bunchCentroid[2], *qBunch);
+    printf("np: %ld, <t>: %le, sigma x,y: %le, %le,  sigma x',y': %le, %le, centroid x,y: %le, %le,  q: %le\n",
+	   *npTotal, *tNow, bunchSigma[0], bunchSigma[2], 
+	   bunchSigma[1], bunchSigma[3], 
+	   bunchCentroid[0], bunchCentroid[2], *qBunch);
     fflush(stdout);
   }
 }
