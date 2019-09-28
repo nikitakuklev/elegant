@@ -732,24 +732,27 @@ void trackWithIonEffects
 #endif
 
     computeIonEffectsElectronBunchParameters(part, time, np, charge, &tNow, &npTotal, &qBunch, bunchCentroid, bunchSigma);
-
+    
     setIonEffectsElectronBunchOutput(ionEffects, tNow, iPass, iBunch, qBunch, npTotal, bunchSigma, bunchCentroid);
 
     advanceIonPositions(ionEffects, iPass, tNow);
       
     eliminateIonsOutsideSpan(ionEffects);
 
-    generateIons(ionEffects, iPass, iBunch, nBunches, qBunch, bunchCentroid, bunchSigma);
+    if (npTotal) {
+      generateIons(ionEffects, iPass, iBunch, nBunches, qBunch, bunchCentroid, bunchSigma);
 
-    applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma);
+      applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma);
+    }
 
     computeIonOverallParameters(ionEffects, ionCentroid, ionSigma, &qIon, &nIonsTotal, bunchCentroid, bunchSigma, iBunch);
 
     setIonEffectsIonParameterOutput(ionEffects, tNow, iPass, iBunch, qIon, ionSigma, ionCentroid);
 
-    applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, bunchCentroid, bunchSigma, 
-				 qIon, nIonsTotal, ionCentroid, ionSigma);
-
+    if (npTotal)
+      applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, bunchCentroid, bunchSigma, 
+				   qIon, nIonsTotal, ionCentroid, ionSigma);
+    
     if (isSlave || !notSinglePart) {
       if (nBunches!=1) {
         /*** Copy bunch coordinates back to original array */
@@ -2600,6 +2603,7 @@ void applyIonKicksToElectronBunch
 	  sum[i] += ionEffects->ionHistogram[i][j];
       }
       printf("Charge check on histograms: x=%le, y=%le, q=%le\n", sum[0], sum[1], qIon);
+      printf("Residual of fits: x=%le, y=%le\n", ionEffects->xyFitResidual[0], ionEffects->xyFitResidual[1]);
       printf("Charge from fits: x=%le, y=%le\n", ionEffects->ionChargeFromFit[0], ionEffects->ionChargeFromFit[1]);
       fflush(stdout);
     }
@@ -2626,6 +2630,10 @@ void applyIonKicksToElectronBunch
 	  tempQ[ix+iy*nFunctions] = 
 	    paramValueX[2+ix*3] / normX * paramValueY[2+iy*3] / normY * 
 	    2 * PI * paramValueX[0+ix*3] * paramValueY[0+iy*3] / qIon;
+	  if (tempQ[ix+iy*nFunctions]<1e-6*qIon)
+	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
+	    // can lead to numerical problems
+	    tempQ[ix+iy*nFunctions] = 0;
 	}
       }
     } else if (ionEffects->ionFieldMethod==ION_FIELD_BILORENTZIAN || ionEffects->ionFieldMethod==ION_FIELD_TRILORENTZIAN) {
@@ -2645,6 +2653,10 @@ void applyIonKicksToElectronBunch
 	  tempQ[ix+iy*nFunctions] = 
 	    paramValueX[2+ix*3]*PI*paramValueX[0+ix*3]/normX *
 	    paramValueY[2+iy*3]*PI*paramValueY[0+iy*3]/normY / qIon;
+	  if (tempQ[ix+iy*nFunctions]<1e-6*qIon)
+	    // Ignore these contributions, as they are likely to have wild values for centroid and size that
+	    // can lead to numerical problems
+	    tempQ[ix+iy*nFunctions] = 0;
 	}
       }
     } else
