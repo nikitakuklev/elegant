@@ -38,6 +38,7 @@ static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"auto"
 };
 static long ionFieldMethod = -1;
+static long isLorentzian = 0;
 
 #define ION_FIT_RESIDUAL_SUM_ABS_DEV 0
 #define ION_FIT_RESIDUAL_RMS_DEV 1
@@ -316,7 +317,7 @@ void setUpIonEffectsOutputFiles(long nPasses)
             !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nCoreMacroIons", NULL, SDDS_LONG) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Position", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "fitResidual", NULL, SDDS_DOUBLE) ||
-	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma1", "m", SDDS_DOUBLE) ||
+	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, isLorentzian?"a1":"sigma1", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid1", "m", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q1", "C", SDDS_DOUBLE) ||
 	    !SDDS_DefineSimpleColumn(SDDS_ionHistogramOutput, "Charge", "C", SDDS_DOUBLE)||
@@ -335,14 +336,14 @@ void setUpIonEffectsOutputFiles(long nPasses)
 #else
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "nEvaluations", NULL, SDDS_LONG) ||
 #endif
-	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma2", "m", SDDS_DOUBLE) ||
+	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, isLorentzian?"a2":"sigma2", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid2", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q2", "C", SDDS_DOUBLE))) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 	  exitElegant(1);
 	}
         if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
-            (!SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "sigma3", "m", SDDS_DOUBLE) ||
+            (!SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, isLorentzian?"a3":"sigma3", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "centroid3", "m", SDDS_DOUBLE) ||
 	     !SDDS_DefineSimpleParameter(SDDS_ionHistogramOutput, "q3", "C", SDDS_DOUBLE))) {
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -405,6 +406,9 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     nFunctions = 2;
   else if (ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
     nFunctions = 3;
+  isLorentzian = 0;
+  if (ionFieldMethod==ION_FIELD_BILORENTZIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
+    isLorentzian = 1;
 
   if (!fit_residual_type || !strlen(fit_residual_type))
     residualType = ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE;
@@ -1736,7 +1740,6 @@ double multiGaussianFunction(double *param, long *invalid)
     charge = 0;
     for (int j=0; j<mFunctions; j++)
       charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
-    // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
     result = max/peak + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
   default:
@@ -1826,7 +1829,7 @@ double multiLorentzianFunction(double *param, long *invalid)
   case ION_FIT_RESIDUAL_MAX_ABS_DEV_PLUS_ABS_DEV_CHARGE:
     charge = 0;
     for (int j=0; j<mFunctions; j++)
-      charge += param[3*j+2]*sqrt(PIx2)*param[3*j+0];
+      charge += param[3*j+2]*PI*param[3*j+0];
     // result = max/(yDataSum/nData) + abs(charge/dx-yDataSum)/yDataSum;
     result = max/peak + abs(charge/dx-ionChargeData)/ionChargeData;
     break;
@@ -2703,8 +2706,10 @@ void applyIonKicksToElectronBunch
 	  for (int i=0; i<nFunctions*nFunctions; i++)  {
 	    if (tempQ[i]) {
 	      gaussianBeamKick(part[ip], tempCentroid[i], tempSigma[i], 0, tempkick, tempQ[i], me_mks, 1);
-	      kick[0] += tempkick[0];
-	      kick[1] += tempkick[1];
+	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
+		kick[0] += tempkick[0];
+		kick[1] += tempkick[1];
+	      }
 	    }
 	  }
 	  part[ip][1] += kick[0] / c_mks / Po;
@@ -2720,8 +2725,10 @@ void applyIonKicksToElectronBunch
 	      evaluateVoltageFromLorentzian(tempkick, 
 					    tempSigma[i][0], tempSigma[i][1], 
 					    part[ip][0] - tempCentroid[i][0], part[ip][2] - tempCentroid[i][1]);
-	      kick[0] += tempQ[i]*tempkick[0];
-	      kick[1] += tempQ[i]*tempkick[1];
+	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
+		kick[0] += tempQ[i]*tempkick[0];
+		kick[1] += tempQ[i]*tempkick[1];
+	      }
 	    }
 	  }
 	  part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
@@ -2774,7 +2781,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"nCoreMacroIons", ionEffects->nCoreIons,
 				"Plane", iPlane==0?"x":"y", 
 				"fitResidual", ionEffects->xyFitResidual[iPlane],
-				"sigma1", ionEffects->xyFitParameter2[iPlane][0],
+				isLorentzian?"a1":"sigma1", ionEffects->xyFitParameter2[iPlane][0],
 				"centroid1", ionEffects->xyFitParameter2[iPlane][1],
 				"q1", ionEffects->xyFitParameter2[iPlane][2],
 				NULL) ||
@@ -2798,7 +2805,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 #else
 				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				  "sigma2", ionEffects->xyFitParameter2[iPlane][3],
+				  isLorentzian?"a2":"sigma2", ionEffects->xyFitParameter2[iPlane][3],
 				  "centroid2", ionEffects->xyFitParameter2[iPlane][4],
 				  "q2", ionEffects->xyFitParameter2[iPlane][5],
 				  NULL)) {
@@ -2807,7 +2814,7 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 	  }
 	  if ((ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN) &&
 	      !SDDS_SetParameters(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "sigma3", ionEffects->xyFitParameter3[iPlane][6],
+				  isLorentzian?"a3":"sigma3", ionEffects->xyFitParameter3[iPlane][6],
 				  "centroid3", ionEffects->xyFitParameter3[iPlane][7],
 				  "q3", ionEffects->xyFitParameter3[iPlane][8],
 				  NULL)) {
