@@ -2561,6 +2561,7 @@ void applyIonKicksToElectronBunch
   double kick[2];
   long ip;
   double paramValueX[9], paramValueY[9];
+  long circuitBreaker[9];
   double tempCentroid[9][2], tempSigma[9][2], tempkick[2];
   double tempQ[9];
   double normX, normY;
@@ -2683,6 +2684,8 @@ void applyIonKicksToElectronBunch
     }
   }
 
+  for (int i=0; i<9; i++)
+    circuitBreaker[i] = 0;
   if (isSlave || !notSinglePart) {
     /*** Determine and apply kicks to beam from the total ion field */
 #if MPI_DEBUG
@@ -2709,7 +2712,8 @@ void applyIonKicksToElectronBunch
 	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
 		kick[0] += tempkick[0];
 		kick[1] += tempkick[1];
-	      }
+	      } else
+		circuitBreaker[i] ++;
 	    }
 	  }
 	  part[ip][1] += kick[0] / c_mks / Po;
@@ -2728,7 +2732,8 @@ void applyIonKicksToElectronBunch
 	      if (!isnan(tempkick[0]) && !isinf(tempkick[0]) && !isnan(tempkick[1]) && !isinf(tempkick[1])) {
 		kick[0] += tempQ[i]*tempkick[0];
 		kick[1] += tempQ[i]*tempkick[1];
-	      }
+	      } else
+		circuitBreaker[i] ++;
 	    }
 	  }
 	  part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
@@ -2739,6 +2744,23 @@ void applyIonKicksToElectronBunch
 	bombElegant("invalid field method used for ION_EFFECTS, seek professional help", NULL);
 	break;
       }
+    }
+  }
+  if (verbosity) {
+#if USE_MPI
+    long circuitBreakerGlobal[9];
+    MPI_Allreduce(&circuitBreaker, &circuitBreakerGlobal, 9, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(circuitBreaker, circuitBreakerGlobal, sizeof(*circuitBreaker)*9);
+#endif
+    int count=0;
+    for (int i=0; i<nFunctions*nFunctions; i++) {
+      if (circuitBreaker[i])
+	count++;
+    }
+    if (count) {
+      printf("Warning: circuit breaker invoked for %d of %ld functions, bunch %ld, pass %ld\n",
+	     count, nFunctions*nFunctions, iBunch, iPass);
+      fflush(stdout);
     }
   }
 }
