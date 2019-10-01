@@ -637,6 +637,13 @@ void trackWithIonEffects
     }
     return ;
   }
+  if (disable_until_pass>iPass) {
+    if (verbosity>30) {
+      printf("ION_EFFECTS disabled until pass %ld, returning\n", disable_until_pass);
+      fflush(stdout);
+    }
+    return ;
+  }
 
   if (ionEffects->startPass<0)
     ionEffects->startPass = 0;
