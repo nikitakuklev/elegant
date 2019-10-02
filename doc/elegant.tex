@@ -45,6 +45,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The matrix for the \verb|SBEN| element was incorrect when the length was negative (which is needed for
   back-tracking). A. Zholents (ANL) and Y. Park (UCLA) helped identify the problem.
+\item The integrator used for the \verb|CSBEND| element with the expanded Hamiltonian (\verb|EXPAND_HAMILTONIAN=1|)
+  was very inaccurate and yieled poor results unless \verb|N_KICKS| was large. This problem, pointed out by Z. Duan (IHEP),
+  was fixed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}

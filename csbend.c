@@ -1387,11 +1387,16 @@ long integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 
 long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData)
+/* The Hamiltonian in this case is approximated as
+ * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
+ * Hd = Hd1 + Hd2 + Hd1, where
+ * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
+ * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
+ */
 {
   long i;
   double ds, dsh, dist;
   double Fx, Fy, x, y;
-  double f;
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -1430,12 +1435,11 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   for (i=0; i<n; i++) {
     if (i==0) {
       /* do half-length drift */
-      f = sqrt(2*sqr(1+DPoP) - sqr(QY));
-      QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      QX += dsh*(1+DPoP)/(2*rho0);
       dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-      Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-      QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
     }
 
     if (apData && !checkMultAperture(X, Y, apData)) {
@@ -1462,19 +1466,19 @@ long integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     
     if (i==n-1) {
       /* do half-length drift */
-      QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      QX += dsh*(1+DPoP)/(2*rho0);
       dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-      Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-      QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
     }
     else {
       /* do full-length drift */
-      QX = f*tanh(f*ds/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      QX += ds*(1+DPoP)/(2*rho0);
       dist += ds*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*ds*(1+X/rho0)/(1+DPoP); 
-      Y += QY*ds*(1+X/rho0)/(1+DPoP);
-      QX = f*tanh(f*ds/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+      X += QX*ds/(1+DPoP);
+      Y += QY*ds/(1+DPoP);
+      QX += ds*(1+DPoP)/(2*rho0);
     }
 
     if (refTrajectoryMode==RECORD_TRAJECTORY) {
@@ -1750,6 +1754,12 @@ long integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
 
 long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, double rho0, double p0,
                            double *s_lost, MULT_APERTURE_DATA *apData)
+/* The Hamiltonian in this case is approximated as
+ * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
+ * Hd = Hd1 + Hd2 + Hd1, where
+ * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
+ * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
+ */
 {
   long i;
   double ds, dsh, dist;
@@ -1791,12 +1801,11 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     
     /* do first drift */
     dsh = s/2/(2-BETA);
-    f = sqrt(2*sqr(1+DPoP) - sqr(QY));
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    QX += dsh*(1+DPoP)/(2*rho0);
     dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    X += QX*dsh/(1+DPoP);
+    Y += QY*dsh/(1+DPoP);
+    QX += dsh*(1+DPoP)/(2*rho0);
     
     if (apData && !checkMultAperture(X, Y, apData)) {
       *s_lost = dist;
@@ -1824,12 +1833,11 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
     /* do second drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
-    f = sqrt(2*sqr(1+DPoP) - sqr(QY));
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    QX += dsh*(1+DPoP)/(2*rho0);
     dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    X += QX*dsh/(1+DPoP);
+    Y += QY*dsh/(1+DPoP);
+    QX += dsh*(1+DPoP)/(2*rho0);
 
     if (apData && !checkMultAperture(X, Y, apData)) {
       *s_lost = dist;
@@ -1855,12 +1863,11 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
     /* do third drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
-    f = sqrt(2*sqr(1+DPoP) - sqr(QY));
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    QX += dsh*(1+DPoP)/(2*rho0);
     dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    X += QX*dsh/(1+DPoP);
+    Y += QY*dsh/(1+DPoP);
+    QX += dsh*(1+DPoP)/(2*rho0);
     if (apData && !checkMultAperture(X, Y, apData)) {
       *s_lost = dist;
       return 0;
@@ -1885,12 +1892,11 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
     
     /* do fourth drift */
     dsh = s/2/(2-BETA);
-    f = sqrt(2*sqr(1+DPoP) - sqr(QY));
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    QX += dsh*(1+DPoP)/(2*rho0);
     dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-    X += QX*dsh*(1+X/rho0)/(1+DPoP); 
-    Y += QY*dsh*(1+X/rho0)/(1+DPoP);
-    QX = f*tanh(f*dsh/2/(2*(1+DPoP)*rho0) + atanh(QX/f));
+    X += QX*dsh/(1+DPoP);
+    Y += QY*dsh/(1+DPoP);
+    QX += dsh*(1+DPoP)/(2*rho0);
     if (apData && !checkMultAperture(X, Y, apData)) {
       *s_lost = dist;
       return 0;
