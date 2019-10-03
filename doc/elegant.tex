@@ -48,6 +48,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The integrator used for the \verb|CSBEND| element with the expanded Hamiltonian (\verb|EXPAND_HAMILTONIAN=1|)
   was very inaccurate and yieled poor results unless \verb|N_KICKS| was large. This problem, pointed out by Z. Duan (IHEP),
   was fixed.
+\item The interpolation used for \verb|UKICKMAP| would previously produce invalid values for particles near the upper ($y>0$) and
+  left ($x>0$) edges of the grid. In essence, the interpolation assumed the kickmap was periodic in x and y.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
