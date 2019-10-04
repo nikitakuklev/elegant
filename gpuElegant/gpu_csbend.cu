@@ -726,10 +726,10 @@ extern "C"
           }
       }
     /* these adjustments ensure that we don't apply FSE+FSEDIPOLE twice for quadrupole and sextupole terms */
-    csbend->b[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
-    csbend->c[0] *= (1+csbend->fse+csbend->fseQuadrupole)/(1+csbend->fse+csbend->fseDipole);
-    csbend->b[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
-    csbend->c[1] *= (1+csbend->fse)/(1+csbend->fse+csbend->fseDipole);
+    csbend->b[0] *= (1 + csbend->fse + csbend->fseQuadrupole) / (1 + csbend->fse + csbend->fseDipole);
+    csbend->c[0] *= (1 + csbend->fse + csbend->fseQuadrupole) / (1 + csbend->fse + csbend->fseDipole);
+    csbend->b[1] *= (1 + csbend->fse) / (1 + csbend->fse + csbend->fseDipole);
+    csbend->c[1] *= (1 + csbend->fse) / (1 + csbend->fse + csbend->fseDipole);
 
     he1 = csbend->h[csbend->e1Index];
     he2 = csbend->h[csbend->e2Index];
@@ -846,11 +846,12 @@ extern "C"
         e1_kick_limit *= rho0 / rho_actual;
         e2_kick_limit *= rho0 / rho_actual;
       }
-    if (e1_kick_limit > 0 || e2_kick_limit > 0) {
-      printf("rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
-             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
-      fflush(stdout);
-    }
+    if (e1_kick_limit > 0 || e2_kick_limit > 0)
+      {
+        printf("rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
+               rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
+        fflush(stdout);
+      }
 
     /* angles for fringe-field effects */
     Kg1 = 2 * csbend->hgap * (csbend->fint[csbend->e1Index] >= 0 ? csbend->fint[csbend->e1Index] : csbend->fintBoth);
@@ -935,95 +936,95 @@ extern "C"
       *sigmaDelta2 = 0;
     double *d_sigmaDelta2 = NULL;
 
-        unsigned int particlePitch = gpuBase->gpu_array_pitch;
-        unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
-        cudaError_t err;
+    unsigned int particlePitch = gpuBase->gpu_array_pitch;
+    unsigned int *d_sortIndex = gpuBase->d_tempu_alpha;
+    cudaError_t err;
 
-        /* Copy Fx_xy, Fy_xy and table coefficients if needed */
-        double Fall_xy[2 * xOrderMax2];
-        for (int ii = 0; ii < expansionOrderMax; ii++)
+    /* Copy Fx_xy, Fy_xy and table coefficients if needed */
+    double Fall_xy[2 * xOrderMax2];
+    for (int ii = 0; ii < expansionOrderMax; ii++)
+      {
+        for (int jj = 0; jj < expansionOrderMax; jj++)
           {
-            for (int jj = 0; jj < expansionOrderMax; jj++)
+            Fall_xy[ii * expansionOrderMax + jj] = Fx_xy[ii][jj];
+            Fall_xy[ii * expansionOrderMax + jj + xOrderMax2] = Fy_xy[ii][jj];
+          }
+      }
+    err = cudaMemcpyToSymbol(c_Fx_xy, Fall_xy, sizeof(double) * xOrderMax2,
+                             0, cudaMemcpyHostToDevice);
+    gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
+    err = cudaMemcpyToSymbol(c_Fy_xy, &(Fall_xy[xOrderMax2]), sizeof(double) * xOrderMax2,
+                             0, cudaMemcpyHostToDevice);
+    gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
+    gpu_initializeInterpolationTables();
+
+    /* d_temp_particles conflicts with killParticles */
+    if (sigmaDelta2)
+      cudaMalloc((void **)&d_sigmaDelta2, sizeof(double) * particlePitch);
+
+    /* initalize random numbers as needed. */
+    curandState_t *state = NULL;
+    /*
+      double* d_gauss_rn =  gpuBase->d_temp_particles + particlePitch;
+      double* d_gauss_rn_p2 =  gpuBase->d_temp_particles + particlePitch*5;
+      double* d_gauss_rn_p3 =  gpuBase->d_temp_particles + particlePitch*6;
+    */
+    double *d_gauss_rn, *d_gauss_rn_p2, *d_gauss_rn_p3;
+    if (rad_coef || isrConstant)
+      {
+        err = cudaMalloc((void **)&d_gauss_rn, sizeof(double) * n_part * csbend->n_kicks);
+        gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
+        err = cudaMalloc((void **)&d_gauss_rn_p2, sizeof(double) * n_part * csbend->n_kicks);
+        gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
+        err = cudaMalloc((void **)&d_gauss_rn_p3, sizeof(double) * n_part * csbend->n_kicks);
+        gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
+        if (!distributionBasedRadiation && isrConstant)
+          {
+            gpu_d_gauss_rn_lim(d_gauss_rn, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+            if (csbend->integration_order == 4)
               {
-                Fall_xy[ii * expansionOrderMax + jj] = Fx_xy[ii][jj];
-                Fall_xy[ii * expansionOrderMax + jj + xOrderMax2] = Fy_xy[ii][jj];
+                gpu_d_gauss_rn_lim(d_gauss_rn_p2, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
+                gpu_d_gauss_rn_lim(d_gauss_rn_p3, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
               }
           }
-        err = cudaMemcpyToSymbol(c_Fx_xy, Fall_xy, sizeof(double) * xOrderMax2,
-                                 0, cudaMemcpyHostToDevice);
-        gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
-        err = cudaMemcpyToSymbol(c_Fy_xy, &(Fall_xy[xOrderMax2]), sizeof(double) * xOrderMax2,
-                                 0, cudaMemcpyHostToDevice);
-        gpuErrorHandler(err, "gpu_track_through_csbend: cudaMemcpyToSymbol failed");
-        gpu_initializeInterpolationTables();
-
-        /* d_temp_particles conflicts with killParticles */
-        if (sigmaDelta2)
-          cudaMalloc((void **)&d_sigmaDelta2, sizeof(double) * particlePitch);
-
-        /* initalize random numbers as needed. */
-        curandState_t *state = NULL;
-        /*
-          double* d_gauss_rn =  gpuBase->d_temp_particles + particlePitch;
-          double* d_gauss_rn_p2 =  gpuBase->d_temp_particles + particlePitch*5;
-          double* d_gauss_rn_p3 =  gpuBase->d_temp_particles + particlePitch*6;
-        */
-        double *d_gauss_rn, *d_gauss_rn_p2, *d_gauss_rn_p3;
-        if (rad_coef || isrConstant)
+        else if (distributionBasedRadiation)
           {
-            err = cudaMalloc((void **)&d_gauss_rn, sizeof(double) * n_part * csbend->n_kicks);
-            gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
-            err = cudaMalloc((void **)&d_gauss_rn_p2, sizeof(double) * n_part * csbend->n_kicks);
-            gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
-            err = cudaMalloc((void **)&d_gauss_rn_p3, sizeof(double) * n_part * csbend->n_kicks);
-            gpuErrorHandler(err, "gpu_track_through_csbend: cudaMalloc failed");
-            if (!distributionBasedRadiation && isrConstant)
-              {
-                gpu_d_gauss_rn_lim(d_gauss_rn, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
-                if (csbend->integration_order == 4)
-                  {
-                    gpu_d_gauss_rn_lim(d_gauss_rn_p2, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
-                    gpu_d_gauss_rn_lim(d_gauss_rn_p3, gpuBase->nOriginal, csbend->n_kicks, 0.0, 1.0, 3.0, random_2(0));
-                  }
-              }
-            else if (distributionBasedRadiation)
-              {
-                //FIX THIS
-                bombElegant("distributionBasedRadiation on the GPU is not working yet. (track_through_csbend)", NULL);
-                state =
-                  (curandState_t *)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
-              }
+            //FIX THIS
+            bombElegant("distributionBasedRadiation on the GPU is not working yet. (track_through_csbend)", NULL);
+            state =
+              (curandState_t *)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
           }
-        /* copy trajectory data if needed */
-        double *d_refTrajectoryData = gpuBase->d_temp_particles + 2 * particlePitch;
-        if (refTrajectoryMode)
-          {
-            cudaMemcpy(refTrajectoryData[0], d_refTrajectoryData,
-                       5 * refTrajectoryPoints, cudaMemcpyHostToDevice);
-          }
+      }
+    /* copy trajectory data if needed */
+    double *d_refTrajectoryData = gpuBase->d_temp_particles + 2 * particlePitch;
+    if (refTrajectoryMode)
+      {
+        cudaMemcpy(refTrajectoryData[0], d_refTrajectoryData,
+                   5 * refTrajectoryPoints, cudaMemcpyHostToDevice);
+      }
 
-        n_part = killParticles(n_part, d_sortIndex, accepted,
-                               gpu_track_through_csbend_kernel(d_sortIndex, d_sigmaDelta2,
-                                                               d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state,
-                                                               Po, z_start, dxi, dyi, dzi, dxf, dyf, dzf, cos_ttilt,
-                                                               sin_ttilt, e1, e2, he1, he2, psi1, psi2, n, dcoord_etilt[0],
-                                                               dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3],
-                                                               e1_kick_limit, e2_kick_limit,
-                                                               csbend->length, csbend->b[0], csbend->hgap, csbend->fint[csbend->e1Index], csbend->fint[csbend->e2Index], csbend->fintBoth,
-                                                               csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
-                                                               csbend->edge_order, csbend->n_kicks, csbend->integration_order,
-                                                               csbend->edgeFlags, csbend->expandHamiltonian, csbend->fseCorrection, csbend->fseCorrectionPathError, rho0, rho_actual, rad_coef, isrConstant,
-                                                               expansionOrder1, hasSkew, hasNormal, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
-                                                               distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
-                                                               d_refTrajectoryData, refTrajectoryMode, apertureData));
-        gpuErrorHandler("gpu_track_through_csbend: gpu_track_through_csbend_kernel");
-        if (rad_coef || isrConstant)
-          {
-            cudaFree(d_gauss_rn);
-            cudaFree(d_gauss_rn_p2);
-            cudaFree(d_gauss_rn_p3);
-          }
-      
+    n_part = killParticles(n_part, d_sortIndex, accepted,
+                           gpu_track_through_csbend_kernel(d_sortIndex, d_sigmaDelta2,
+                                                           d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state,
+                                                           Po, z_start, dxi, dyi, dzi, dxf, dyf, dzf, cos_ttilt,
+                                                           sin_ttilt, e1, e2, he1, he2, psi1, psi2, n, dcoord_etilt[0],
+                                                           dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3],
+                                                           e1_kick_limit, e2_kick_limit,
+                                                           csbend->length, csbend->b[0], csbend->hgap, csbend->fint[csbend->e1Index], csbend->fint[csbend->e2Index], csbend->fintBoth,
+                                                           csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
+                                                           csbend->edge_order, csbend->n_kicks, csbend->integration_order,
+                                                           csbend->edgeFlags, csbend->expandHamiltonian, csbend->fseCorrection, csbend->fseCorrectionPathError, rho0, rho_actual, rad_coef, isrConstant,
+                                                           expansionOrder1, hasSkew, hasNormal, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
+                                                           distributionBasedRadiation, includeOpeningAngle, srGaussianLimit,
+                                                           d_refTrajectoryData, refTrajectoryMode, apertureData));
+    gpuErrorHandler("gpu_track_through_csbend: gpu_track_through_csbend_kernel");
+    if (rad_coef || isrConstant)
+      {
+        cudaFree(d_gauss_rn);
+        cudaFree(d_gauss_rn_p2);
+        cudaFree(d_gauss_rn_p3);
+      }
+
     if (distributionBasedRadiation)
       {
         radiansTotal += fabs(csbend->angle);
@@ -1306,11 +1307,11 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       if (i == 0)
         {
           /* do half-length drift */
-          QX += dsh*(1+DPoP)/(2*rho0);
-          dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-          X += QX*dsh/(1+DPoP);
-          Y += QY*dsh/(1+DPoP);
-          QX += dsh*(1+DPoP)/(2*rho0);
+          QX += dsh * (1 + DPoP) / (2 * rho0);
+          dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+          X += QX * dsh / (1 + DPoP);
+          Y += QY * dsh / (1 + DPoP);
+          QX += dsh * (1 + DPoP) / (2 * rho0);
         }
 
       if (apData && !gpu_checkMultAperture(X, Y, apData))
@@ -1339,20 +1340,20 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       if (i == n - 1)
         {
           /* do half-length drift */
-          QX += dsh*(1+DPoP)/(2*rho0);
-          dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-          X += QX*dsh/(1+DPoP);
-          Y += QY*dsh/(1+DPoP);
-          QX += dsh*(1+DPoP)/(2*rho0);
+          QX += dsh * (1 + DPoP) / (2 * rho0);
+          dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+          X += QX * dsh / (1 + DPoP);
+          Y += QY * dsh / (1 + DPoP);
+          QX += dsh * (1 + DPoP) / (2 * rho0);
         }
       else
         {
           /* do full-length drift */
-          QX += ds*(1+DPoP)/(2*rho0);
-          dist += ds*(1 + (sqr(QX)+sqr(QY))/2);
-          X += QX*ds/(1+DPoP);
-          Y += QY*ds/(1+DPoP);
-          QX += ds*(1+DPoP)/(2*rho0);
+          QX += ds * (1 + DPoP) / (2 * rho0);
+          dist += ds * (1 + (sqr(QX) + sqr(QY)) / 2);
+          X += QX * ds / (1 + DPoP);
+          Y += QY * ds / (1 + DPoP);
+          QX += ds * (1 + DPoP) / (2 * rho0);
         }
 
       if (d_refTrajectoryMode == RECORD_TRAJECTORY)
@@ -1680,7 +1681,7 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 {
   int i;
   double ds, dsh, dist;
-  double Fx, Fy, x, y, f;
+  double Fx, Fy, x, y;
 
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -1722,11 +1723,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do first drift */
       dsh = s / 2 / (2 - BETA);
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
+      dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+      X += QX * dsh / (1 + DPoP);
+      Y += QY * dsh / (1 + DPoP);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1756,11 +1757,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do second drift */
       dsh = s * (1 - BETA) / (2 - BETA) / 2;
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
+      dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+      X += QX * dsh / (1 + DPoP);
+      Y += QY * dsh / (1 + DPoP);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1787,11 +1788,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do third drift */
       dsh = s * (1 - BETA) / (2 - BETA) / 2;
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
+      dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+      X += QX * dsh / (1 + DPoP);
+      Y += QY * dsh / (1 + DPoP);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1818,11 +1819,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do fourth drift */
       dsh = s / 2 / (2 - BETA);
-      QX += dsh*(1+DPoP)/(2*rho0);
-      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
-      X += QX*dsh/(1+DPoP);
-      Y += QY*dsh/(1+DPoP);
-      QX += dsh*(1+DPoP)/(2*rho0);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
+      dist += dsh * (1 + (sqr(QX) + sqr(QY)) / 2);
+      X += QX * dsh / (1 + DPoP);
+      Y += QY * dsh / (1 + DPoP);
+      QX += dsh * (1 + DPoP) / (2 * rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;

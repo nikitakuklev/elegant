@@ -94,8 +94,8 @@ template <bool S11, bool S12, bool S22, unsigned int NTHREADS>
 #define NTHREADS 256
 
 /*Changes were made to the CPU version that are not included here. 
-Calls that include non-null c1Return or c2Return must use the CPU version.
-Currently this is limited to ionErrects.cc*/
+  Calls that include non-null c1Return or c2Return must use the CPU version.
+  Currently this is limited to ionErrects.cc*/
 void gpu_rms_emittance(unsigned int i1, unsigned int i2, unsigned int n,
                        double *s11, double *s12, double *s22)
 {
@@ -158,8 +158,8 @@ void gpu_rms_emittance(unsigned int i1, unsigned int i2, unsigned int n,
 
 #if USE_MPI
 /*Changes were made to the CPU version that are not included here. 
-Calls that include non-null c1Return, c2Return or nTotal must use the CPU version.
-Currently this is limited to ionEffects.cc*/
+  Calls that include non-null c1Return, c2Return or nTotal must use the CPU version.
+  Currently this is limited to ionEffects.cc*/
 void gpu_rms_emittance_p(long i1, long i2, long n,
                          double *s11, double *s12, double *s22)
 {
