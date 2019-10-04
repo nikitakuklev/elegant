@@ -623,7 +623,7 @@ extern "C"
             csbend0.refKicks = csbend0.n_kicks;
             /* This forces us into the next branch on the next call to this routine */
             csbend0.refTrajectoryChangeSet = 1;
-            setTrackingContext((char *)"csbend0", 0, T_CSBEND, (char *)"none");
+            setTrackingContext((char *)"csbend0", 0, T_CSBEND, (char *)"none", NULL);
             // keep single particle csbend on CPU
             //gpuBase->elementOnGpu=0;
             gpu_track_through_csbend(1, &csbend0, p_error, Po, NULL, 0, NULL, NULL, maxamp, apFileData);
@@ -1258,6 +1258,12 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                                    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
                                    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, curandState_t *state,
                                    double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
+/* The Hamiltonian in this case is approximated as
+ * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
+ * Hd = Hd1 + Hd2 + Hd1, where
+ * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
+ * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
+ */
 {
   int i;
   double ds, dsh, dist;
@@ -1300,9 +1306,11 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       if (i == 0)
         {
           /* do half-length drift */
-          X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-          Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-          QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+          QX += dsh*(1+DPoP)/(2*rho0);
+          dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+          X += QX*dsh/(1+DPoP);
+          Y += QY*dsh/(1+DPoP);
+          QX += dsh*(1+DPoP)/(2*rho0);
         }
 
       if (apData && !gpu_checkMultAperture(X, Y, apData))
@@ -1331,16 +1339,20 @@ gpu_integrate_csbend_ord2_expanded(double *Qf, double *Qi, double *sigmaDelta2,
       if (i == n - 1)
         {
           /* do half-length drift */
-          X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-          Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-          QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+          QX += dsh*(1+DPoP)/(2*rho0);
+          dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+          X += QX*dsh/(1+DPoP);
+          Y += QY*dsh/(1+DPoP);
+          QX += dsh*(1+DPoP)/(2*rho0);
         }
       else
         {
           /* do full-length drift */
-          X += QX * ds * (1 + X / rho0) / (1 + DPoP);
-          Y += QY * ds * (1 + X / rho0) / (1 + DPoP);
-          QX += ds / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+          QX += ds*(1+DPoP)/(2*rho0);
+          dist += ds*(1 + (sqr(QX)+sqr(QY))/2);
+          X += QX*ds/(1+DPoP);
+          Y += QY*ds/(1+DPoP);
+          QX += ds*(1+DPoP)/(2*rho0);
         }
 
       if (d_refTrajectoryMode == RECORD_TRAJECTORY)
@@ -1659,10 +1671,16 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
                                    double d_meanPhotonsPerMeter0, double d_normalizedCriticalEnergy0,
                                    int d_expansionOrder, int d_hasSkew, int d_hasNormal, double *d_gauss_rn1, double *d_gauss_rn2, double *d_gauss_rn3, curandState_t *state,
                                    double srGaussianLimit, double *d_refTrajectoryData, double d_refTrajectoryMode, MULT_APERTURE_DATA *apData)
+/* The Hamiltonian in this case is approximated as
+ * H = Hd + Hf, where Hd is the drift part and Hf is the field part.
+ * Hd = Hd1 + Hd2 + Hd1, where
+ * Hd1 = -0.5*(1+x/rho0)*(1+delta) 
+ * Hd2 = 0.5*(qx^2+qy^2)/(1+delta)
+ */
 {
   int i;
   double ds, dsh, dist;
-  double Fx, Fy, x, y;
+  double Fx, Fy, x, y, f;
 
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -1704,9 +1722,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do first drift */
       dsh = s / 2 / (2 - BETA);
-      X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-      Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-      QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+      QX += dsh*(1+DPoP)/(2*rho0);
+      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1736,9 +1756,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do second drift */
       dsh = s * (1 - BETA) / (2 - BETA) / 2;
-      X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-      Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-      QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+      QX += dsh*(1+DPoP)/(2*rho0);
+      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1765,9 +1787,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do third drift */
       dsh = s * (1 - BETA) / (2 - BETA) / 2;
-      X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-      Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-      QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+      QX += dsh*(1+DPoP)/(2*rho0);
+      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
@@ -1794,9 +1818,11 @@ gpu_integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
 
       /* do fourth drift */
       dsh = s / 2 / (2 - BETA);
-      X += QX * dsh * (1 + X / rho0) / (1 + DPoP);
-      Y += QY * dsh * (1 + X / rho0) / (1 + DPoP);
-      QX += dsh / rho0 * ((1 + DPoP) - (sqr(QX) + sqr(QY)) / (2 * (1 + DPoP)));
+      QX += dsh*(1+DPoP)/(2*rho0);
+      dist += dsh*(1 + (sqr(QX)+sqr(QY))/2);
+      X += QX*dsh/(1+DPoP);
+      Y += QY*dsh/(1+DPoP);
+      QX += dsh*(1+DPoP)/(2*rho0);
       if (apData && !gpu_checkMultAperture(X, Y, apData))
         {
           s_lost = dist;
