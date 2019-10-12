@@ -2426,7 +2426,7 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
 {
   long i, offset, plane;
   VMATRIX  *M1;
-  double tune2pi, R11, R22, R12, sin_phi, cos_phi, alpha, beta;
+  double tune2pi, R11, R22, R12, sin_phi, cos_phi, alpha, beta, eta, etap;
   
   if (order<1)
     order = 1;
@@ -2439,6 +2439,8 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
     tune2pi = PIx2*ilmat->tune[plane];
     offset = 2*plane;
     beta = ilmat->beta[plane];
+    eta = ilmat->eta[0+offset];
+    etap = ilmat->eta[1+offset];
     /* R11=R22 or R33=R44 */
     sin_phi = sin(tune2pi);
     cos_phi = cos(tune2pi);
@@ -2451,21 +2453,26 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
     if ((R12 = M1->R[0+offset][1+offset] = beta*sin_phi)) {
       /* R21 or R43 */
       M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
-    }
-    else {
+    } else {
       printf("ILMATRIX problem: divide by zero\n");
       return NULL;
     }
+    /* R16 or R36 */
+    M1->R[0+offset][5] = eta - eta*cos_phi - (alpha*eta + beta*etap)*sin_phi;
+    /* R26 or R46 */
+    M1->R[1+offset][5] = etap - etap*cos_phi + (eta + sqr(alpha)*eta + alpha*beta*etap)*sin_phi/beta;
+    /* R51 or R53 */
+    M1->R[4][0+offset] = -etap + etap*cos_phi + (eta + sqr(alpha)*eta + alpha*beta*etap)*sin_phi/beta;
+    /* R52 or R54 */
+    M1->R[4][1+offset] = eta - eta*cos_phi + (alpha*eta + beta*etap)*sin_phi;
   }
-
-  /* Dispersive terms, assuming a flat ring (!) */
-  M1->R[0][5] = M1->R[4][1] = 
-    -((M1->R[0][0]-1)*ilmat->eta[0] + M1->R[0][1]    *ilmat->eta[1]);
-  M1->R[1][5] = M1->R[4][0] = 
-    -(M1->R[1][0]    *ilmat->eta[0] + (M1->R[1][1]-1)*ilmat->eta[1]);
-
-  M1->R[4][4] = M1->R[5][5] = 1;
-  M1->R[4][5] = ilmat->alphac[0]*ilmat->length - M1->R[4][0]*ilmat->eta[0] - M1->R[4][1]*ilmat->eta[1];
+  /* Other path-length terms */
+  M1->R[4][4] = 1;
+  M1->R[4][5] = ilmat->alphac[0]*ilmat->length 
+    - M1->R[4][0]*ilmat->eta[0] - M1->R[4][1]*ilmat->eta[1]
+    - M1->R[4][2]*ilmat->eta[2] - M1->R[4][3]*ilmat->eta[3];
+  
+  M1->R[5][5] = 1;
   M1->C[4] = ilmat->length;
 
   if (ilmat->tilt)
