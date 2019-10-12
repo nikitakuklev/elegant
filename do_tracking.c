@@ -3693,7 +3693,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
 {
   long ip, plane, offset, i, j, itop, is_lost;
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
-  double alpha[2], beta[2], eta[4], beta1, alpha1, A[2];
+  double alpha[2], beta[2], eta[4], beta1, alpha1, eta1, etap1, A[2];
   double R11, R22, R12;
   long allowResonanceCrossing = 0;
   static VMATRIX *M1 = NULL;
@@ -3756,6 +3756,8 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
                       deltaPoP*(chrom[plane] +
                                 deltaPoP/2*(chrom2[plane] + 
                                             deltaPoP/3*chrom3[plane])));
+      eta1  = eta[2*plane  ] + deltaPoP*eta2[2*plane  ];
+      etap1 = eta[2*plane+1] + deltaPoP*eta2[2*plane+1];
       if (ilmat)
         tune2pi += PIx2*(A[0]*(ilmat->tswax[plane] + A[0]*ilmat->tswax2[plane]/2) +
 			 A[1]*(ilmat->tsway[plane] + A[1]*ilmat->tsway2[plane]/2) +
@@ -3796,6 +3798,17 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       else {
         bombElegant("divided by zero in trackWithChromaticLinearMatrix", NULL);
       }
+      /* Don't actually need these as we've set delta=0 */
+      /* R16 or R36 */
+      M1->R[0+offset][5] = eta1 - eta1*cos_phi - (alpha1*eta1 + beta1*etap1)*sin_phi;
+      /* R26 or R46 */
+      M1->R[1+offset][5] = etap1 - etap1*cos_phi + (eta1 + sqr(alpha1)*eta1 + alpha1*beta1*etap1)*sin_phi/beta1;
+      /* We'll need these path-length terms later */
+      /* R51 or R53 */
+      M1->R[4][0+offset] = -etap1 + etap1*cos_phi + (eta1 + sqr(alpha1)*eta1 + alpha1*beta1*etap1)*sin_phi/beta1;
+      /* R52 or R54 */
+      M1->R[4][1+offset] = eta1 - eta1*cos_phi + (alpha1*eta1 + beta1*etap1)*sin_phi;
+
       det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
         M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
       if (fabs(det-1)>1e-6) {
@@ -3826,7 +3839,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         /* amplitude-dependent path length */
 	M1->C[4] += A[0]*(ilmat->dsdA[0] + A[0]*ilmat->dsdA2[0]/2) +
           A[1]*(ilmat->dsdA[1] + A[1]*ilmat->dsdA2[1]/2) + 
-            A[0]*A[1]*ilmat->dsdAxAy;
+          A[0]*A[1]*ilmat->dsdAxAy;
       track_particles(&coord, M1, &coord, 1);
       /* add back the dispersive orbit to the particle coordinates */
       coord[5] += deltaPoP;
