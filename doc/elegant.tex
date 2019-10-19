@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.3\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2019.4\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,60 +35,32 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2019.3.0}
+\section{Highlights of What's New in Version 2019.4.0}
 
-Here is a summary of what's changed since release 2019.2.1.
+Here is a summary of what's changed since release 2019.3.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The matrix for the \verb|SBEN| element was incorrect when the length was negative (which is needed for
-  back-tracking). A. Zholents (ANL) and Y. Park (UCLA) helped identify the problem.
-\item The integrator used for the \verb|CSBEND| element with the expanded Hamiltonian (\verb|EXPAND_HAMILTONIAN=1|)
-  was very inaccurate and yieled poor results unless \verb|N_KICKS| was large. This problem, pointed out by Z. Duan (IHEP),
-  was fixed.
-\item The interpolation used for \verb|UKICKMAP| would previously produce invalid values for particles near the upper ($y>0$) and
-  left ($x>0$) edges of the grid. In essence, the interpolation assumed the kickmap was periodic in x and y.
+\item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
+  also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime}$, as pointed out
+  by forum user Teresia. This was improved.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item DA trimming (to make the \verb|xClipped| and \verb|yClipped| columns, as well as the \verb|Area| parameter)
-  was not working properly in the parallel version for full-plane runs. This was fixed. In addition, the algorithm was improved for
-  both the serial and parallel versions to iterate the trimming until it converges.
-\item The multi-gaussian and multi-lorentzian feature of the \verb|ion_effects| command, added in the last release, proved unreliable, 
-  as reported by B. Podobedov (BNL). Several improvements and bug fixes were implemented that should improve
-  matters.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|SHRFDF| element was added, which models a deflecting rf cavity using a space harmonic expansion.
-  This was implemented by Y.P. Sun (APS). See \cite{Sun-NAPAC19} for details.
-\item The \verb|LSCDRIFT| element, which models longitudinal space charge, can now have its effective length
-  set automatically to correspond to the length of the upstream element.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|run_setup| command has a new parameter, \verb|back_tracking|, which allows invoking a limited
-  back-tracking capability. See the entry for \verb|run_setup| for more details.
-  This is an experimental feature and users are encouraged to report problems to the forum.
-\item The \verb|ion_effects| command was improved in several ways: 
-  \begin{itemize}
-  \item The default distribution fitting parameters were modified to give improved convergence
-  \item The default distribution fitting criterion is now the sum of the maximum fractional absolute deviation over the histogram
-    and the absolute fractional deviation of the ion charge. This makes it less likely that overfitting will result 
-    in large spikes in the distribution.
-  \item The new \verb|ion_histogram_max_bins| parameter allows restricting the maximum number of bins.
-  \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
-    macro ions per bin.
-  \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
-    ions and electrons until a specified pass number. This is useful for diagnostic purposes.
-  \item The new \verb|pressure_factor| parameter allows multiplying all the pressure profiles by a common factor.
-  \end{itemize}
-\item The \verb|matrix_output| command can now print the full matrix in a form accepted by Mathematica.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -7671,10 +7643,90 @@ terminal input and terminal output, respectively.
 
 \section{Change Log\label{sect:changeLog}}
 
+
+\subsection{Highlights of What's New in Version 2019.3.0}
+
+Here is a summary of what's changed since release 2019.2.1.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The matrix for the \verb|SBEN| element was incorrect when the length was negative (which is needed for
+  back-tracking). A. Zholents (ANL) and Y. Park (UCLA) helped identify the problem.
+\item The integrator used for the \verb|CSBEND| element with the expanded Hamiltonian (\verb|EXPAND_HAMILTONIAN=1|)
+  was very inaccurate and yieled poor results unless \verb|N_KICKS| was large. This problem, pointed out by Z. Duan (IHEP),
+  was fixed.
+\item The interpolation used for \verb|UKICKMAP| would previously produce invalid values for particles near the upper ($y>0$) and
+  left ($x>0$) edges of the grid. In essence, the interpolation assumed the kickmap was periodic in x and y.
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item DA trimming (to make the \verb|xClipped| and \verb|yClipped| columns, as well as the \verb|Area| parameter)
+  was not working properly in the parallel version for full-plane runs. This was fixed. In addition, the algorithm was improved for
+  both the serial and parallel versions to iterate the trimming until it converges.
+\item The multi-gaussian and multi-lorentzian feature of the \verb|ion_effects| command, added in the last release, proved unreliable, 
+  as reported by B. Podobedov (BNL). Several improvements and bug fixes were implemented that should improve
+  matters.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|SHRFDF| element was added, which models a deflecting rf cavity using a space harmonic expansion.
+  This was implemented by Y.P. Sun (APS). See \cite{Sun-NAPAC19} for details.
+\item The \verb|LSCDRIFT| element, which models longitudinal space charge, can now have its effective length
+  set automatically to correspond to the length of the upstream element.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|run_setup| command has a new parameter, \verb|back_tracking|, which allows invoking a limited
+  back-tracking capability. See the entry for \verb|run_setup| for more details.
+  This is an experimental feature and users are encouraged to report problems to the forum.
+\item The \verb|ion_effects| command was improved in several ways: 
+  \begin{itemize}
+  \item The default distribution fitting parameters were modified to give improved convergence
+  \item The default distribution fitting criterion is now the sum of the maximum fractional absolute deviation over the histogram
+    and the absolute fractional deviation of the ion charge. This makes it less likely that overfitting will result 
+    in large spikes in the distribution.
+  \item The new \verb|ion_histogram_max_bins| parameter allows restricting the maximum number of bins.
+  \item The new \verb|ion_histogram_min_per_bin| parameter allows setting a requirement on the minimum number of 
+    macro ions per bin.
+  \item The new \verb|freeze_ions_until_pass| and \verb|freeze_electrons_until_pass| parameters allow ``freezing'' the motion of the
+    ions and electrons until a specified pass number. This is useful for diagnostic purposes.
+  \item The new \verb|pressure_factor| parameter allows multiplying all the pressure profiles by a common factor.
+  \end{itemize}
+\item The \verb|matrix_output| command can now print the full matrix in a form accepted by Mathematica.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item Some apparent MPI-related issues were resolved for the \verb|ion_effects| command.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item The \verb|touschekLifetime| program now reports the value of \verb|deltaLimit| in the output file, whether that
+  value is given explicitly or computed via the rf voltage.
+\item Added the program \verb|sdds5x5sigmaproc|, which computes the 5x5 sigma matrix (i.e., all elements except those
+  related to the time coordinates) from a quadrupole scan.
+\end{itemize}
+
 \subsection{Highlights of What's New in Version 2019.2.1}
 
 Here is a summary of what's changed since release 2019.1.1.
-Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsubsection{Bug Fixes for Elements}
 
