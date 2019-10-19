@@ -29,7 +29,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1+2)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4+6+1+2+7)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define FINAL_PROPERTY_OTHER_PARAMETERS 1
 #define F_SIGMA_OFFSET 0
@@ -37,7 +37,7 @@ static double tmp_safe_sqrt;
 #define F_CENTROID_OFFSET F_SIGMA_OFFSET+F_SIGMA_QUANS
 #define F_CENTROID_QUANS 7
 #define F_SIGMAT_OFFSET F_CENTROID_OFFSET+F_CENTROID_QUANS
-#define F_SIGMAT_QUANS 15
+#define F_SIGMAT_QUANS 22
 #define F_T_OFFSET F_SIGMAT_OFFSET+F_SIGMAT_QUANS
 #define F_T_QUANS 5
 #define F_EMIT_OFFSET F_T_OFFSET+F_T_QUANS
@@ -81,16 +81,23 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"s14",    "&parameter name=s14, symbol=\"$gs$r$b14$n\", units=m, type=double, description=\"<x*y'>\" &end"},
     {"s15",    "&parameter name=s15, symbol=\"$gs$r$b15$n\", units=\"m^a2$n\", type=double, description=\"<x*s>\" &end"},
     {"s16",    "&parameter name=s16, symbol=\"$gs$r$b16$n\", units=m, type=double, description=\"<x*delta>\" &end"},
+    {"s17",    "&parameter name=s17, symbol=\"$gs$r$b17$n\", units=m*s, type=double, description=\"<x*t>\" &end"},
     {"s23",    "&parameter name=s23, symbol=\"$gs$r$b23$n\", units=m, type=double, description=\"<x'*y>\" &end"},
     {"s24",    "&parameter name=s24, symbol=\"$gs$r$b24$n\", type=double, description=\"<x'*y'>\" &end"},
     {"s25",    "&parameter name=s25, symbol=\"$gs$r$b25$n\", units=m, type=double, description=\"<x'*s>\" &end"},
     {"s26",    "&parameter name=s26, symbol=\"$gs$r$b26$n\", type=double, description=\"<x'*delta>\" &end"},
+    {"s27",    "&parameter name=s27, symbol=\"$gs$r$b27$n\", units=s, type=double, description=\"<x'*t>\" &end"},
     {"s34",    "&parameter name=s34, symbol=\"$gs$r$b34$n\", units=m, type=double, description=\"<y*y'>\" &end"},
     {"s35",    "&parameter name=s35, symbol=\"$gs$r$b35$n\", units=\"m^a2$n\", type=double, description=\"<y*s>\" &end"},
     {"s36",    "&parameter name=s36, symbol=\"$gs$r$b36$n\", units=m, type=double, description=\"<y*delta>\" &end"},
+    {"s37",    "&parameter name=s37, symbol=\"$gs$r$b37$n\", units=m*s, type=double, description=\"<y*t>\" &end"},
     {"s45",    "&parameter name=s45, symbol=\"$gs$r$b45$n\", units=m, type=double, description=\"<y'*s>\" &end"},
     {"s46",    "&parameter name=s46, symbol=\"$gs$r$b46$n\", type=double, description=\"<s'*delta>\" &end"},
+    {"s47",    "&parameter name=s47, symbol=\"$gs$r$b47$n\", units=s, type=double, description=\"<y'*t>\" &end"},
     {"s56",    "&parameter name=s56, symbol=\"$gs$r$b56$n\", units=m, type=double, description=\"<s*delta>\" &end"},
+    {"s57",    "&parameter name=s57, symbol=\"$gs$r$b57$n\", units=m*s, type=double, description=\"<s*t>\" &end"},
+    {"s67",    "&parameter name=s67, symbol=\"$gs$r$b67$n\", units=s, type=double, description=\"<delta*t>\" &end"},
+    {"s7",    "&parameter name=s7, symbol=\"$gs$r$b7$n\", type=double, description=\"sqrt(<t*t>)\" &end"},
     {"Transmission", "&parameter name=Transmission, description=Transmission, type=double &end"},
     {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double, description=\"Reference beta*gamma\" &end"},
     {"pAverage", "&parameter name=pAverage, symbol=\"p$bave$n\", units=\"m$be$nc\", type=double, description=\"Mean beta*gamma\" &end"},
@@ -459,9 +466,9 @@ long compute_final_properties
     offset = F_SIGMAT_OFFSET;
     /* index = 0; */
     /* sigma matrix elements sij */
-    for (i=0; i<6; i++) {
+    for (i=0; i<7; i++) {
       /* skip the diagonal element */
-      for (j=i+1; j<6; j++) 
+      for (j=i+1; j<7; j++) 
         data[offset++] = sums->sigma[i][j];
     }
     /* time centroid, sigma, and delta */
