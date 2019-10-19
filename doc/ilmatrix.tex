@@ -46,6 +46,7 @@ momentum-dependent closed orbit.
 The pathlength is computed using the expansion
 \begin{equation}
 \Delta s = L\sum_{n=1}^3 \alpha_{c,n} \delta^n + 
+\sum_{n=1}^4 R_{5n} x_{\beta,n} +
 \sum_{n=1}^2 \left(\frac{\partial^n s}{\partial A_x^n}\right)_0 \frac{A_x^n}{n!} +
 \sum_{n=1}^2 \left(\frac{\partial^n s}{\partial A_y^n}\right)_0 \frac{A_y^n}{n!} +
 \left(\frac{\partial^2 s}{\partial A_x\partial A_y}\right)_0 A_x A_y
@@ -55,6 +56,8 @@ Note that in keeping with convention the higher-order momentum compaction is exp
 by polynomial coefficients, not derivatives.
 The terms dependent on betatron amplitude are expressed in terms of the more typical
 derivatives.
+Note the difference between the $R_{5n}$ terms (added in version 2019.4) and those dependent on $A_{x,y}$: the
+former are oscillatory while the latter will accumulate. 
 The \verb|frequency_map| command can be used to compute path-length dependence on betatron
 amplitude.
 
