@@ -20,7 +20,6 @@
 #include "ionEffects.h"
 #include "constants.h"
 #include "pressureData.h"
-//#include <algorithm>
 
 #define ION_FIELD_GAUSSIAN 0
 #define ION_FIELD_BIGAUSSIAN 1
@@ -65,7 +64,6 @@ static char *ionFitResidualOption[N_ION_FIT_RESIDUAL_OPTIONS] = {
 };
 
 static long residualType = -1;
-
 static long ionsInitialized = 0;
 
 static PRESSURE_DATA pressureData;
@@ -117,6 +115,10 @@ void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
 
 #if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects);
+// This feature doesn't help, so it is disabled for now
+static long hybrid_simplex_comparison_interval =  -1;
+static long simplexComparisonStep = 0, targetReached = 0;
+void checkTargetIonFitting(double myResult, long invalid);
 #endif
 void determineOffsetAndActiveBins(double *histogram, long nBins, long *binOffset, long *activeBins);
 
@@ -1383,7 +1385,7 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
         lowerLimit[0] = paramValue[0]/100;
         if (ionEffects->sigmaLimitMultiplier[plane]>0 && 
 	    lowerLimit[0]<(ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]))
-          lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane];
+          lowerLimit[0] = ionEffects->sigmaLimitMultiplier[plane]*ionEffects->ionDelta[plane]; 
         lowerLimit[1] = xMin/10;
         lowerLimit[2] = peakVal/20;
         upperLimit[0] = paramValue[0]*10;
@@ -1412,6 +1414,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	  /* In this case, the odd processors will use the held-over values from 2-function fit */
 	  if (myid%2==0) {
 	    memcpy(paramValue, ionEffects->xyFitParameter3[plane], 9*sizeof(double));
+	    if (paramValue[6]<=0)
+	      paramValue[6] = 10*ionSigma[plane];
 	  } else {
 	    paramValue[6] = 10*ionSigma[plane];
 	    paramValue[7] = 0;
@@ -1456,7 +1460,7 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	    upperLimit[i] = paramValue[i]*10;
 	}
       }
-      
+
 #if USE_MPI
       /* Randomize step sizes and starting points */
       for (int i=0; i<3*mFunctions; i++) {
@@ -1489,10 +1493,12 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	nVariables = 3*mFunctions;
 	if (nSignificant<3) {
 	  nVariables = 3;
-	  paramValue[4] = paramValue[5] = 0;
-	  paramValue[3] = 1; // Doesn't matter, but can't be zero
+	  paramValue[3] = paramValue[6] = -1; // size parameter: value doesn't matter, but can't be zero
+	  paramValue[5] = paramValue[8] = 0;  // height parameter: must be zero
 	}
 	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
+	targetReached = 0;
+	simplexComparisonStep = 0;
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 				 NULL, nVariables, fitTarget, fitTolerance, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
@@ -1508,9 +1514,9 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	    yFit[i] = 0;
 	}
 	if (verbosity>100) {
-	  printf("Exited simplexMin, return=%ld, result=%le\n  ", fitReturn, result); 
+	  printf("Exited simplexMin, return=%ld, result=%le\nparam: ", fitReturn, result); 
 	  for (int i=0; i<3*mFunctions; i++)
-	    printf("param[%d] = %le, ", i, paramValue[i]);
+	    printf("[%d]=%le, ", i, paramValue[i]);
 	  printf("\n");
 	  fflush(stdout);
 	}
@@ -1524,6 +1530,9 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	if (bestResult<distribution_fit_target || fabs(lastBestResult - bestResult)<fitTolerance) {
 	  if (verbosity>100) {
 	    printf("Best result is good enough or hasn't changed, breaking from while loop\n");
+	    for (int i=0; i<3*mFunctions; i++)
+	      printf("[%d]=%le, ", i, paramValue[i]);
+	    printf("\n");
 	    fflush(stdout);
 	  }
 	  break;
@@ -1533,8 +1542,11 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	if (result<distribution_fit_target || (lastResult-result)<fitTolerance) {
 	  if (verbosity>100) {
 	    printf("Best result is good enough or hasn't changed, breaking from while loop\n");
+	    for (int i=0; i<3*mFunctions; i++)
+	      printf("[%d]=%le, ", i, paramValue[i]);
+	    printf("\n");
 	    fflush(stdout);
-	  }
+          }
 	  break;
 	}
 	lastResult = result;
@@ -1550,12 +1562,14 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	    fflush(stdout);
 	  }
 	  MPI_Bcast(paramValue, 3*mFunctions, MPI_DOUBLE, min_location, MPI_COMM_WORLD);
-	  for (int i=0; i<3*mFunctions; i++) {
-	    paramValue[i] *= (1+(random_2(0)-0.5)/20);
-	    if (paramValue[i]<lowerLimit[i])
-	      paramValue[i] = lowerLimit[i];
-	    if (paramValue[i]>upperLimit[i])
-	      paramValue[i] = upperLimit[i];
+	  if (myid!=0) {
+	    for (int i=0; i<3*mFunctions; i++) {
+	      paramValue[i] *= (1+(random_2(0)-0.5)/20);
+	      if (paramValue[i]<lowerLimit[i])
+		paramValue[i] = lowerLimit[i];
+	      if (paramValue[i]>upperLimit[i])
+		paramValue[i] = upperLimit[i];
+	    }
 	  }
 	}
 #endif
@@ -1563,6 +1577,9 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
       
       if (verbosity>100) {
 	printf("Exited nTries loop (nTries=%d)\n", nTries);
+	for (int i=0; i<3*mFunctions; i++)
+	  printf("[%d]=%le, ", i, paramValue[i]);
+	printf("\n");
 	fflush(stdout);
       }
 #if USE_MPI
@@ -1597,7 +1614,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
     
       if (result<distribution_fit_target) {
 	if (verbosity>100) {
-	  printf("Result %le better than target %le, breaking from mFunctions loops\n", result, distribution_fit_target);
+	  printf("Result %le better than target %le, breaking from mFunctions loop with mFunctions=%ld\n", 
+		 result, distribution_fit_target, mFunctions);
 	  fflush(stdout);
 	}
 	break;
@@ -1614,19 +1632,27 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
     }
     
     mFunctions = pFunctions; // Last values used, regardless of how exit from loop occurred
+
     if (mFunctions==2 && nFunctions==3) {
+      if (verbosity>100) {
+	printf("Setting up ionEffects->xyFitParameter3 for plane=%ld with mFunctions=2 data\n", plane);
+	fflush(stdout);
+      }
       ionEffects->xyFitSet[plane] |=  0x02;
-      for (int i=0; i<3*nFunctions; i++) {
-	if (i<3*mFunctions)
-	  ionEffects->xyFitParameter3[plane][i] = paramValue[i];
-	else
-	  ionEffects->xyFitParameter3[plane][i] = 0;
+      for (int i=0; i<3*mFunctions; i++)
+	ionEffects->xyFitParameter3[plane][i] = paramValue[i];
+      for (int i=3*mFunctions; i<3*nFunctions; i++) {
+	paramValue[i] = 0;
+	ionEffects->xyFitParameter3[plane][i] = 0;
       }
     }
 
     if (verbosity>100) {
       printf("Exited plane = %c optimization loop, result=%le, fitReturn=%ld, nEvaluations=%ld\n", 
 	     plane?'y':'x', result, fitReturn, nEvaluations); 
+      for (int i=0; i<3*nFunctions; i++)
+	printf("[%d]=%le, ", i, paramValue[i]);
+      printf("\n");
       fflush(stdout);
     }
 
@@ -1662,7 +1688,8 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	ionEffects->ionHistogramFit[plane][i] = -1;
     }
     
-    for (int i=0; i<3*mFunctions; i++) {
+    for (int i=0; i<3*nFunctions; i++) {
+      // Use of nFunctions is fine here since the arrays are sized to 9 and we initialized to zero.
       if (plane==0)
 	paramValueX[i] = paramValue[i];
       else
@@ -1680,12 +1707,29 @@ double multiGaussianFunction(double *param, long *invalid)
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0, peak = 0;
   double charge, dx;
+  double centroid[3], sigma[3], height[3];
 
   *invalid = 0;
 
-  //param[3*j+0] = sig[j]
-  //param[3*j+1] = cen[j]
-  //param[3*j+2] = h[j]
+  for (int j=0; j<mFunctions; j++) {
+    //param[3*j+0] = sig[j]
+    //param[3*j+1] = cen[j]
+    //param[3*j+2] = h[j]
+    sigma[j] = param[3*j];
+    centroid[j] = param[3*j+1];
+    height[j] = param[3*j+2];
+    if (height[j]>0 && sigma[j]<=0) {
+      *invalid = 1;
+      printf("invalid values in multiGaussianFunction: j=%d, sigma=%le, c=%le, h=%le\n",
+	     j, sigma[j], centroid[j], height[j]);
+      fflush(stdout);
+      result = DBL_MAX;
+#if USE_MPI
+      checkTargetIonFitting(result, *invalid);
+#endif
+      return result;
+    }
+  }
 
   dx = xData[1] - xData[0];
 
@@ -1696,9 +1740,9 @@ double multiGaussianFunction(double *param, long *invalid)
     wSumData += xData[i]*yData[i];
     yFit[i] = 0;
     for (int j=0; j<mFunctions; j++) {
-      z = (xData[i]-param[3*j+1])/param[3*j+0];
-      if (z<6 && z>-6)
-        yFit[i] += param[3*j+2] * exp(-z*z/2);
+      z = (xData[i]-centroid[j])/sigma[j];
+      if (z<6 && z>-6 && height[j])
+        yFit[i] += height[j] * exp(-z*z/2);
     }
     tmp = abs(yFit[i]-yData[i]);
     sum += tmp;
@@ -1760,6 +1804,10 @@ double multiGaussianFunction(double *param, long *invalid)
     result = DBL_MAX;
   }
 
+#if USE_MPI
+  checkTargetIonFitting(result, *invalid);
+#endif
+
   return result;
 }
 
@@ -1768,17 +1816,34 @@ double multiLorentzianFunction(double *param, long *invalid)
   double sum = 0, sum2 = 0, tmp = 0, result, max = 0, yFitSum = 0;
   double wSumData = 0, wSumFit = 0, peak = 0;
   double charge, dx;
+  double a[3], centroid[3], height[3];
 
   *invalid = 0;
 
   dx = xData[1] - xData[0];
   
   /* The parameters are different from the standard Lorentzian.
-   * Instead of A/(pi*a*(1 + (x/a)^2) we use peak/(1 + (x/a)^2)
+   * Instead of A/(pi*a*(1 + (x/a)^2) we use height/(1 + (x/a)^2)
    */
-  //param[3*j+0] = a[j]
-  //param[3*j+1] = cen[j]
-  //param[3*j+2] = peak[j]
+  for (int j=0; j<mFunctions; j++) {
+    //param[3*j+0] = a[j]
+    //param[3*j+1] = cen[j]
+    //param[3*j+2] = height[j]
+    a[j] = param[3*j];
+    centroid[j] = param[3*j+1];
+    height[j] = param[3*j+2];
+    if (height[j]>0 && a[j]<=0) {
+      *invalid = 1;
+      printf("invalid values in multiLorentzianFunction: j=%d, a=%le, c=%le, h=%le\n",
+	     j, a[j], centroid[j], height[j]);
+      fflush(stdout);
+      result = DBL_MAX;
+#if USE_MPI
+      checkTargetIonFitting(result, *invalid);
+#endif
+      return result;
+    }
+  }
   
   for (int i=0; i<nData; i++) {
     double z;
@@ -1787,8 +1852,8 @@ double multiLorentzianFunction(double *param, long *invalid)
     wSumData += xData[i]*yData[i];
     yFit[i] = 0;
     for (int j=0; j<mFunctions; j++) {
-      z = (xData[i]-param[3*j+1])/param[3*j+0];
-      yFit[i] += param[3*j+2]/(1+sqr(z));
+      z = (xData[i]-centroid[j])/a[j];
+      yFit[i] += height[j]/(1+sqr(z));
     }
     tmp = abs(yFit[i]-yData[i]);
     sum += tmp;
@@ -1862,8 +1927,58 @@ double multiLorentzianFunction(double *param, long *invalid)
     }
     fflush(stdout);
   }    
+
+#if USE_MPI
+  checkTargetIonFitting(result, *invalid);
+#endif
+
   return result;
 }
+
+#if USE_MPI
+void checkTargetIonFitting(double myResult, long invalid) {
+  MPI_Status status;
+  static int *targetBuffer = NULL;
+  int targetTag = 1;
+  if (hybrid_simplex_comparison_interval<=0)
+    return;
+  if (!targetBuffer)
+    targetBuffer = (int *)tmalloc(sizeof(*targetBuffer)*n_processors);
+  if (targetReached) {
+    simplexMinAbort(1);
+    return;
+  }
+  if (!invalid && distribution_fit_target > myResult) {
+    int i;
+    MPI_Request request;
+    targetReached = 1;
+    /* send message to other processors */
+    for (i=0; i<n_processors; i++) {
+      targetBuffer[i] = targetReached; /* Isend operations can't share memory */
+      if (i!=myid)
+        MPI_Isend(&targetBuffer[i], 1, MPI_SHORT, i, targetTag, MPI_COMM_WORLD, &request);
+    }
+  }
+  if (!targetReached && simplexComparisonStep%hybrid_simplex_comparison_interval==0) {
+    int i, flag;
+    /* check for messages from other processors */
+    targetReached = 0;
+    for (i=0; i<n_processors; i++) {
+      if (i!=myid) {
+        MPI_Iprobe(i, targetTag, MPI_COMM_WORLD, &flag, &status);
+        if (flag) {
+          MPI_Recv(&targetBuffer[i], 1, MPI_SHORT, i, targetTag, MPI_COMM_WORLD, &status);
+          targetReached += targetBuffer[i];
+        }
+      }
+    }
+  }
+  if (targetReached)
+    simplexMinAbort(1);
+  simplexComparisonStep++;  
+ 
+}
+#endif
 
 void report(double y, double *x, long pass, long nEval, long n_dimen)
 {
@@ -2810,9 +2925,12 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 				"nCoreMacroIons", ionEffects->nCoreIons,
 				"Plane", iPlane==0?"x":"y", 
 				"fitResidual", ionEffects->xyFitResidual[iPlane],
-				isLorentzian?"a1":"sigma1", ionEffects->xyFitParameter2[iPlane][0],
-				"centroid1", ionEffects->xyFitParameter2[iPlane][1],
-				"q1", ionEffects->xyFitParameter2[iPlane][2],
+				isLorentzian?"a1":"sigma1", 
+				nFunctions==2?ionEffects->xyFitParameter2[iPlane][0]:ionEffects->xyFitParameter3[iPlane][0],
+				"centroid1", 
+				nFunctions==2?ionEffects->xyFitParameter2[iPlane][1]:ionEffects->xyFitParameter3[iPlane][1],
+				"q1", 
+				nFunctions==2?ionEffects->xyFitParameter2[iPlane][2]:ionEffects->xyFitParameter3[iPlane][2],
 				NULL) ||
 	    !SDDS_SetColumn(SDDS_ionHistogramOutput, SDDS_SET_BY_NAME,
 			    ionEffects->xyIonHistogram[iPlane]+binOffset, activeBins, "Position") ||
@@ -2834,9 +2952,12 @@ void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iP
 #else
 				  "nEvaluations", ionEffects->nEvaluations[iPlane],
 #endif
-				  isLorentzian?"a2":"sigma2", ionEffects->xyFitParameter2[iPlane][3],
-				  "centroid2", ionEffects->xyFitParameter2[iPlane][4],
-				  "q2", ionEffects->xyFitParameter2[iPlane][5],
+				  isLorentzian?"a2":"sigma2", 
+				  nFunctions==2?ionEffects->xyFitParameter2[iPlane][3]:ionEffects->xyFitParameter3[iPlane][3],
+				  "centroid2", 
+				  nFunctions==2?ionEffects->xyFitParameter2[iPlane][4]:ionEffects->xyFitParameter3[iPlane][4],
+				  "q2", 
+				  nFunctions==2?ionEffects->xyFitParameter2[iPlane][5]:ionEffects->xyFitParameter3[iPlane][5],
 				  NULL)) {
 	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	    SDDS_Bomb((char*)"Problem writing ion histogram data");
