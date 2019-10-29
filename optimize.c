@@ -258,6 +258,10 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     name = item = NULL;
     step_size = 1;
     lower_limit = -(upper_limit = DBL_MAX);
+    differential_limits = 0;
+    force_inside = 0;
+    no_element = 0;
+    initial_value = 0;
     if (processNamelist(&optimization_variable, nltext)==NAMELIST_ERROR)
       bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimization_variable);
@@ -314,6 +318,10 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
       if (!get_parameter_value(variables->varied_quan_value+n_variables, name, variables->varied_param[n_variables],
                                context->type, beamline))
         bombElegant("unable to get initial value for parameter", NULL);
+      if (differential_limits) {
+        lower_limit += variables->varied_quan_value[n_variables];
+        upper_limit += variables->varied_quan_value[n_variables];
+      }
     } else {
       variables->varied_type[n_variables] = T_FREEVAR;
       cp_str(&variables->element[n_variables], name);
