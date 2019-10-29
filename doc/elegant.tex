@@ -60,7 +60,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item The \verb|optimization_variable| command has a new parameter \verb|differential_limits|, which 
+  permits specifying that the lower and upper limits are being given relative to the initial value,
+  rather than in absolute terms.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3954,9 +3956,12 @@ at the beginning of such a name.
     STRING item = NULL;
     double lower_limit = 0;
     double upper_limit = 0;
+    long differential_limits = 0;
     double step_size = 1;
     long disable = 0;
     long force_inside = 0;
+    long no_element = 0;
+    double initial_value = 0;
 &end
 \end{verbatim}
 
@@ -3965,9 +3970,14 @@ at the beginning of such a name.
 \item \verb|item| --- The parameter of the element to be varied.
 \item \verb|lower_limit|, \verb|upper_limit| --- The lower and upper limits allowed for the parameter.  If these are
 equal, the range of the parameter is unlimited.
+\item \verb|differential_limits| --- If nonzero, then the lower and upper limits are being given relative to the initial value,
+  rather than in absolute terms.
 \item \verb|step_size| --- The initial step size (``simplex'' optimization ) or the grid size in this dimension (``grid'' or ``sample'' optimization).
 \item \verb|disable| --- If nonzero, the variable is ignored.
 \item \verb|force_inside| --- If nonzero, the initial value is forced inside the allowed range defined by the \verb|lower_limit| and \verb|upper_limit| parameters.
+\item \verb|no_element|, \verb|initial_value|  --- Allows defining a variable that is not connected to a beamline element, and giving
+  the initial value for the variable. The variable can them be used in other optimization-related commands, e.g., 
+  \verb|optimization_covariable|.
 \end{itemize}
 
 %\begin{latexonly}
