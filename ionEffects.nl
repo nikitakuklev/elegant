@@ -20,6 +20,7 @@
 	  long distribution_fit_evaluations = 300;
 	  long distribution_fit_passes = 3;
 	  long distribution_fit_restarts = 10;
+	  long hybrid_simplex_comparison_interval = -1;
 	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
           long symmetrize = 0;

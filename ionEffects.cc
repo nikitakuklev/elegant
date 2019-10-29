@@ -26,7 +26,7 @@
 #define ION_FIELD_BILORENTZIAN 2
 #define ION_FIELD_TRIGAUSSIAN 3
 #define ION_FIELD_TRILORENTZIAN 4
-#define ION_FIELD_AUTO 5
+#define ION_FIELD_EGAUSSIAN 5
 #define N_ION_FIELD_METHODS 6
 static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"gaussian",
@@ -34,7 +34,7 @@ static char *ionFieldMethodOption[N_ION_FIELD_METHODS] = {
   (char*)"bilorentzian",
   (char*)"trigaussian",
   (char*)"trilorentzian",
-  (char*)"auto"
+  (char*)"egaussian"
 };
 static long ionFieldMethod = -1;
 static long isLorentzian = 0;
@@ -104,19 +104,19 @@ void advanceIonPositions(IONEFFECTS *ionEffects, long iPass, double tNow);
 void computeIonOverallParameters(IONEFFECTS *ionEffects, double ionCentroid[2], double ionSigma[2], double *qIonReturn,
 				 long *nIonsTotal, double bunchCentroid[4], double bunchSigma[4], long iBunch);
 void eliminateIonsOutsideSpan(IONEFFECTS *ionEffects);
-void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4]);
+void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4],
+				   double dpSum[2]);
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches, 
 		  double qBunch, double bunchCentroid[4], double bunchSigma[4]);
 void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np, double Po, long iBunch, long iPass, 
 				  double bunchCentroid[4], double bunchSigma[4],
-				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2]);
+				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2],
+				  double dpSum[2]);
 void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow);
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
 
 #if USE_MPI
 void shareIonHistograms(IONEFFECTS *ionEffects);
-// This feature doesn't help, so it is disabled for now
-static long hybrid_simplex_comparison_interval =  -1;
 static long simplexComparisonStep = 0, targetReached = 0;
 void checkTargetIonFitting(double myResult, long invalid);
 #endif
@@ -402,8 +402,6 @@ void setupIonEffects(NAMELIST_TEXT *nltext, VARY *control, RUN *run)
     bombElegant("field_calculation_method undefined", NULL);
   if ((ionFieldMethod = match_string(field_calculation_method, ionFieldMethodOption, N_ION_FIELD_METHODS, EXACT_MATCH))<0)
     bombElegantVA((char*)"field_calculation_method=\"%s\" not recognized", field_calculation_method);
-  if (ionFieldMethod==ION_FIELD_AUTO)
-    bombElegantVA((char*)"field_calculation_method=\"%s\" is not yet implemented", field_calculation_method);
   if (ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionFieldMethod==ION_FIELD_BILORENTZIAN)
     nFunctions = 2;
   else if (ionFieldMethod==ION_FIELD_TRIGAUSSIAN || ionFieldMethod==ION_FIELD_TRILORENTZIAN)
@@ -620,6 +618,7 @@ void trackWithIonEffects
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
   long nIonsTotal;
+  double dpSum[2];
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -755,7 +754,7 @@ void trackWithIonEffects
     if (npTotal) {
       generateIons(ionEffects, iPass, iBunch, nBunches, qBunch, bunchCentroid, bunchSigma);
 
-      applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma);
+      applyElectronBunchKicksToIons(ionEffects, iPass, qBunch, bunchCentroid, bunchSigma, dpSum);
     }
 
     computeIonOverallParameters(ionEffects, ionCentroid, ionSigma, &qIon, &nIonsTotal, bunchCentroid, bunchSigma, iBunch);
@@ -764,7 +763,7 @@ void trackWithIonEffects
 
     if (npTotal)
       applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, bunchCentroid, bunchSigma, 
-				   qIon, nIonsTotal, ionCentroid, ionSigma);
+				   qIon, nIonsTotal, ionCentroid, ionSigma, dpSum);
     
     if (isSlave || !notSinglePart) {
       if (nBunches!=1) {
@@ -2349,7 +2348,8 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
   }
 }
 
-void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4])
+void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4],
+				   double dpSum[2])
 {
   long localCount;
   double ionMass, ionCharge, *coord, kick[2];
@@ -2360,6 +2360,8 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
     printf("Applying bunch kicks to ions\n");
     fflush(stdout);
   }
+
+  dpSum[0] = dpSum[1] = 0;
 
   if (isSlave || !notSinglePart) {
     if (iPass>=freeze_ions_until_pass) {
@@ -2402,11 +2404,22 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
 	    ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
+	    // Transverse momentum change in kg*m/s
+	    dpSum[0] += kick[0]*ionMass; 
+	    dpSum[1] += kick[1]*ionMass;
 	  } 
 	}
       }
     }
   } 
+
+#if USE_MPI
+  // Share dpSum across all cores
+  double dpSumGlobal[2];
+  MPI_Allreduce(dpSum, dpSumGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  dpSum[0] = dpSumGlobal[0];
+  dpSum[1] = dpSumGlobal[1];
+#endif
 }
 
 void computeIonOverallParameters
@@ -2677,7 +2690,8 @@ void applyIonKicksToElectronBunch
  double qIon,
  long nIonsTotal,
  double ionCentroid[2],
- double ionSigma[2]
+ double ionSigma[2],
+ double dpSum[2] // sum of momentum change applied to ions
  )
 {
   double kick[2];
@@ -2696,6 +2710,26 @@ void applyIonKicksToElectronBunch
   ionEffects->ionChargeFromFit[0] = ionEffects->ionChargeFromFit[1] = -1;
 
   makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
+
+  if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN) {
+    double slopeChange[2]={0,0};
+    long npTotal;
+    // The kicks from ions are the same for all electrons; 
+    // Using conservation of momentum, the total is equal and opposite to the kick from
+    // the electrons to the ions.
+#if USE_MPI
+    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (npTotal) {
+      slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
+      slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
+    }
+#endif
+    for (ip=0; ip<np; ip++) {
+      part[ip][1] += slopeChange[0];
+      part[ip][3] += slopeChange[1];
+    }
+    return;
+  }
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
     // multi-gaussian or multi-lorentzian kick
