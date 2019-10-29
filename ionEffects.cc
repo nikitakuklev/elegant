@@ -105,13 +105,13 @@ void computeIonOverallParameters(IONEFFECTS *ionEffects, double ionCentroid[2], 
 				 long *nIonsTotal, double bunchCentroid[4], double bunchSigma[4], long iBunch);
 void eliminateIonsOutsideSpan(IONEFFECTS *ionEffects);
 void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4],
-				   double dpSum[2]);
+				   double dpSum[3]);
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches, 
 		  double qBunch, double bunchCentroid[4], double bunchSigma[4]);
 void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np, double Po, long iBunch, long iPass, 
 				  double bunchCentroid[4], double bunchSigma[4],
 				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2],
-				  double dpSum[2]);
+				  double dpSum[3]);
 void doIonEffectsIonHistogramOutput(IONEFFECTS *ionEffects, long iBunch, long iPass, double tNow);
 void flushIonEffectsSummaryOutput(IONEFFECTS *ionEffects);
 
@@ -618,7 +618,7 @@ void trackWithIonEffects
   /* properties of the ion cloud */
   double ionCentroid[2], ionSigma[2], qIon;
   long nIonsTotal;
-  double dpSum[2];
+  double dpSum[3];
 #if USE_MPI
   MPI_Status mpiStatus;
 #endif
@@ -1496,8 +1496,10 @@ short multipleWhateverFit(double bunchSigma[4], double bunchCentroid[4], double 
 	  paramValue[5] = paramValue[8] = 0;  // height parameter: must be zero
 	}
 	memcpy(paramDeltaSave, paramDelta, sizeof(*paramDelta)*9); 
+#if USE_MPI
 	targetReached = 0;
 	simplexComparisonStep = 0;
+#endif
 	fitReturn +=  simplexMin(&result, paramValue, paramDelta, lowerLimit, upperLimit,
 				 NULL, nVariables, fitTarget, fitTolerance, 
 				 ionEffects->ionFieldMethod==ION_FIELD_BIGAUSSIAN || ionEffects->ionFieldMethod==ION_FIELD_TRIGAUSSIAN
@@ -2349,7 +2351,7 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
 }
 
 void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qBunch, double bunchCentroid[4], double bunchSigma[4],
-				   double dpSum[2])
+				   double dpSum[3])
 {
   long localCount;
   double ionMass, ionCharge, *coord, kick[2];
@@ -2361,7 +2363,7 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
     fflush(stdout);
   }
 
-  dpSum[0] = dpSum[1] = 0;
+  memset(&dpSum[0], 0, sizeof(dpSum[0])*3);
 
   if (isSlave || !notSinglePart) {
     if (iPass>=freeze_ions_until_pass) {
@@ -2404,9 +2406,12 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 	  if (abs(kick[0]) < maxkick[0] && abs(kick[1]) < maxkick[1]) {
 	    ionEffects->coordinate[iSpecies][iIon][1] += kick[0];
 	    ionEffects->coordinate[iSpecies][iIon][3] += kick[1];
-	    // Transverse momentum change in kg*m/s
-	    dpSum[0] += kick[0]*ionMass; 
-	    dpSum[1] += kick[1]*ionMass;
+	    // Transverse momentum change in kg*m/s, weighted by macro-ion charge
+	    // in order to account for fact that different macro-ions may represent different
+	    // numbers of actual ions
+	    dpSum[0] += kick[0]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
+	    dpSum[1] += kick[1]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
+	    dpSum[2] += ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge; 
 	  } 
 	}
       }
@@ -2415,10 +2420,13 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 
 #if USE_MPI
   // Share dpSum across all cores
-  double dpSumGlobal[2];
-  MPI_Allreduce(dpSum, dpSumGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  dpSum[0] = dpSumGlobal[0];
-  dpSum[1] = dpSumGlobal[1];
+  double dpSumGlobal[3];
+  MPI_Allreduce(dpSum, dpSumGlobal, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  memcpy(&dpSum[0], &dpSumGlobal[0], sizeof(dpSum[0])*3);
+  if (dpSum[2]) {
+    dpSum[0] /= dpSum[2];
+    dpSum[1] /= dpSum[2];
+  }
 #endif
 }
 
@@ -2691,7 +2699,7 @@ void applyIonKicksToElectronBunch
  long nIonsTotal,
  double ionCentroid[2],
  double ionSigma[2],
- double dpSum[2] // sum of momentum change applied to ions
+ double dpSum[3] // sum of momentum change applied to ions
  )
 {
   double kick[2];
@@ -2712,21 +2720,23 @@ void applyIonKicksToElectronBunch
   makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN) {
-    double slopeChange[2]={0,0};
-    long npTotal;
-    // The kicks from ions are the same for all electrons; 
-    // Using conservation of momentum, the total is equal and opposite to the kick from
-    // the electrons to the ions.
+    if (iPass>=freeze_electrons_until_pass) {
+      double slopeChange[2]={0,0};
+      long npTotal;
+      // The kicks from ions are the same for all electrons; 
+      // Using conservation of momentum, the total is equal and opposite to the kick from
+      // the electrons to the ions.
 #if USE_MPI
-    MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    if (npTotal) {
-      slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
-      slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
-    }
+      MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      if (npTotal) {
+	slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
+	slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
+      }
 #endif
-    for (ip=0; ip<np; ip++) {
-      part[ip][1] += slopeChange[0];
-      part[ip][3] += slopeChange[1];
+      for (ip=0; ip<np; ip++) {
+	part[ip][1] += slopeChange[0];
+	part[ip][3] += slopeChange[1];
+      }
     }
     return;
   }
