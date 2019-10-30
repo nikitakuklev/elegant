@@ -14,6 +14,7 @@
     double ymax =  0.02;
     double x_for_delta = 1e-6;
     double y_for_delta = 1e-6;
+    double separate_xy_for_delta = 0;
     double delta_min = 0;
     double delta_max = 0;
     long nx = 20;

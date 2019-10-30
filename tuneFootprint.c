@@ -61,7 +61,8 @@ int deltaTfDataCompare(const void *delta1c, const void *delta2c)
   return delta1->idelta - delta2->idelta;
 }
 
-void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
+void determineDeltaTuneFootprint(DELTA_TF_DATA *deltaTfData, long nDelta, double *tuneRange, double *deltaRange, 
+				 double *diffusionRateMax, double *nuxLimit, double *nuyLimit)
 {
   long id, id0, id1, id2, coord;
   /* double delta0; */
@@ -454,6 +455,7 @@ long doTuneFootprint(
   long my_nxy, my_ndelta;
   double chromTuneRange[2], chromDeltaRange[2], xyTuneRange[2], xyPositionRange[2], diffusionRateMax, xyArea;
   double nuxLimit[2], nuyLimit[2];
+  unsigned long ctftFlags;
 
 #ifdef DEBUG
   FILE *fpdebug = NULL;
@@ -545,7 +547,7 @@ long doTuneFootprint(
   turns = control->n_passes/2;
 
   if (ndelta) {
-    /* First perform delta scan */
+    short plane;
     x = x_for_delta;
     y = y_for_delta;
     if (ndelta>1)
@@ -562,31 +564,43 @@ long doTuneFootprint(
 	else
 	  delta = ((delta_max-delta_min)*sqrt(fabs((idelta-(ndelta-1)/2.)/((ndelta-1)/2.)))+delta_min);
       }
-      memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
 #if USE_MPI
-      if (myid == idelta%n_processors) /* Partition the job according to particle ID */
+      if (myid == idelta%n_processors) { 
+	/* Partition the job according to particle ID */
 #endif
-	{
-	  if (verbosity>=2) {
+	if (verbosity>=2) {
 #if USE_MPI
-	    if (myid==0)
+	  if (myid==0)
 #endif
-	      printf("computing tune for delta = %le\n", delta);
+	    printf("computing tune for delta = %le\n", delta);
+	}
+	lost = 0;
+	plane = separate_xy_for_delta ? 2 : 1;
+	while (!lost && plane--) {
+	  memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
+	  /* First perform delta scan */
+	  ctftFlags = CTFT_INCLUDE_X|CTFT_INCLUDE_Y;
+	  if (separate_xy_for_delta) {
+	    if (plane==0)
+	      ctftFlags = CTFT_INCLUDE_X;
+	    else
+	      ctftFlags = CTFT_INCLUDE_Y;
 	  }
-	  lost = 0;
 	  if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					beamline->matrix, beamline, run,
 					startingCoord, x, y, delta, turns, 0,
-					0, endingCoord, NULL, NULL, 1, 1) ||
-	      firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
+					endingCoord, NULL, NULL, 1, 1, ctftFlags) ||
+	      (ctftFlags&CTFT_INCLUDE_X && (firstTune[0]>1.0 || firstTune[0]<0)) || 
+	      (ctftFlags&CTFT_INCLUDE_Y && (firstTune[1]>1.0 || firstTune[1]<0))) {
 	    lost = 1;
 	  } else if (compute_diffusion) {
 	    memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
 	    if (!computeTunesFromTracking(secondTune, secondAmplitude,
 					  beamline->matrix, beamline, run,
 					  startingCoord, 0.0, 0.0, 0.0, turns, turns,
-					  0, endingCoord, NULL, NULL, 1, 1) || 
-		secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
+					  endingCoord, NULL, NULL, 1, 1, ctftFlags) || 
+		(ctftFlags&CTFT_INCLUDE_X && (secondTune[0]>1.0 || secondTune[0]<0)) || 
+		(ctftFlags&CTFT_INCLUDE_Y && (secondTune[1]>1.0 || secondTune[1]<0))) {
 	      lost = 1;
 	    }
 	  }             
@@ -599,35 +613,39 @@ long doTuneFootprint(
 	  deltaTfData[my_idelta].idelta = idelta;
 	  deltaTfData[my_idelta].delta = delta;
 	  deltaTfData[my_idelta].used = 1;
-	  if (lost) {
-	    deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
-	    deltaTfData[my_idelta].diffusionRate = DBL_MAX;
-	  } else {
-	    deltaTfData[my_idelta].nu[0] = firstTune[0];
-	    deltaTfData[my_idelta].nu[1] = firstTune[1];
-	    if (compute_diffusion)
-	      deltaTfData[my_idelta].diffusionRate = log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
-	    else
-	      deltaTfData[my_idelta].diffusionRate = -DBL_MAX;
-	  }
-	  my_idelta ++;
-	  if (verbosity>=2) {
-#if USE_MPI
-	    if (myid==0) {
-	      double newPercentage = (100.0*idelta)/ndelta;
-	      if ((newPercentage-oldPercentage)>=1) {
-		printf("About %.1f%% done with energy scan\n", newPercentage);
-		oldPercentage = newPercentage;
-		fflush(stdout);
-	      }
-	    }
-#else
-	    printf("Done with particle %ld of %ld for energy scan\n",
-		    idelta+1, ndelta);
-	    fflush(stdout);
-#endif
-	  }
 	}
+	if (lost) {
+	  deltaTfData[my_idelta].nu[0] = deltaTfData[my_idelta].nu[1] = -2;
+	  deltaTfData[my_idelta].diffusionRate = DBL_MAX;
+	} else {
+	  deltaTfData[my_idelta].nu[0] = firstTune[0];
+	  deltaTfData[my_idelta].nu[1] = firstTune[1];
+	  if (compute_diffusion)
+	    deltaTfData[my_idelta].diffusionRate = 
+	      log10((sqr(secondTune[0] - firstTune[0]) + sqr(secondTune[1] - firstTune[1]))/turns);
+	  else
+	    deltaTfData[my_idelta].diffusionRate = -DBL_MAX;
+	}
+	my_idelta ++;
+	if (verbosity>=2) {
+#if USE_MPI
+	  if (myid==0) {
+	    double newPercentage = (100.0*idelta)/ndelta;
+	    if ((newPercentage-oldPercentage)>=1) {
+	      printf("About %.1f%% done with energy scan\n", newPercentage);
+	      oldPercentage = newPercentage;
+	      fflush(stdout);
+	    }
+	  }
+#else
+	  printf("Done with particle %ld of %ld for energy scan\n",
+		 idelta+1, ndelta);
+	  fflush(stdout);
+#endif
+	}
+#if USE_MPI
+      }
+#endif
     }
 
 #if USE_MPI
@@ -705,6 +723,7 @@ long doTuneFootprint(
 
   if (nx!=0 && ny!=0) {
     dx = dy = delta = 0;
+    ctftFlags = CTFT_INCLUDE_X|CTFT_INCLUDE_Y;
     if (!quadratic_spacing) {
       if (nx>1)
 	dx  = (xmax-xmin)/(nx-1);
@@ -740,7 +759,7 @@ long doTuneFootprint(
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
 					  startingCoord, x, y, delta, turns, 0,
-					  0, endingCoord, NULL, NULL, 1, 1) ||
+					  endingCoord, NULL, NULL, 1, 1, ctftFlags) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
               lost = 1;
             } else if (compute_diffusion) {
@@ -748,7 +767,7 @@ long doTuneFootprint(
               if (!computeTunesFromTracking(secondTune, secondAmplitude,
                                             beamline->matrix, beamline, run,
                                             startingCoord, 0.0, 0.0, 0.0, turns, turns,
-                                            0, endingCoord, NULL, NULL, 1, 1) || 
+                                            endingCoord, NULL, NULL, 1, 1, ctftFlags) || 
                   secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                 lost = 1;
               }

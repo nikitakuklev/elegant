@@ -3395,8 +3395,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	}
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y, 0,
-                                      tune_shift_with_amplitude_struct.turns, 0, 0, NULL,
-				      tuneLowerLimit, tuneUpperLimit, 0, nPeriods)) {
+                                      tune_shift_with_amplitude_struct.turns, 0, NULL,
+				      tuneLowerLimit, tuneUpperLimit, 0, nPeriods, CTFT_INCLUDE_X|CTFT_INCLUDE_Y)) {
 	  lost[ix][iy] = 1;
 	  nLost ++;
         }
@@ -3709,9 +3709,9 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, double deltaOffset, long turns, long turnOffset,
-                              long useMatrix,
                               double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit,
-			      long allowLosses, long nPeriods)
+			      long allowLosses, long nPeriods,
+                              unsigned long flags)
 {
   double **oneParticle, dummy;
   double frequency[4], amplitude[4], phase[4];
@@ -3743,7 +3743,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fflush(stdout);
 #endif
   x = xp = y = yp = NULL;
-  if (useMatrix) {
+  if (flags&CTFT_USE_MATRIX) {
     /* this is necessary because the concatenated matrix includes the closed orbit in 
      * C.  We don't want to put this in at each turn.
      */
@@ -3759,8 +3759,13 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     memcpy(oneParticle[0], startingCoord, 6*sizeof(**oneParticle));
     oneParticle[0][6] = 0;
   }
-  oneParticle[0][0] += xAmplitude;
+  if (!(flags&CTFT_INCLUDE_X))
+    xAmplitude = 0;
+  if (!(flags&CTFT_INCLUDE_Y))
+    yAmplitude = 0;
+  
   oneParticle[0][2] += yAmplitude;
+  oneParticle[0][0] += xAmplitude;
   oneParticle[0][5] += deltaOffset;
 
 #ifdef DEBUG
@@ -3803,7 +3808,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
   for (i=1; i<turns; i++) {
-    if (useMatrix) {
+    if (flags&CTFT_USE_MATRIX) {
       long j;
       for (j=0; j<nPeriods; j++)
         track_particles(oneParticle, M, oneParticle, one);
@@ -3855,7 +3860,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   printf((char*)"Performing NAFF (1)\n");
   fflush(stdout);
 #endif
-  if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
+  if (flags&CTFT_INCLUDE_X &&
+      PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
 		  &dummy, 0.0, 1.0, x, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
@@ -3871,7 +3877,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   printf((char*)"Performing NAFF (2)\n");
   fflush(stdout);
 #endif
-  if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
+  if (flags&CTFT_INCLUDE_X &&
+      PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
 		  &dummy, 0.0, 1.0, xp, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
@@ -3887,7 +3894,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   printf((char*)"Performing NAFF (3)\n");
   fflush(stdout);
 #endif
-  if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
+  if (flags&CTFT_INCLUDE_Y &&
+      PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
 		  &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
@@ -3903,7 +3911,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   printf((char*)"Performing NAFF (4)\n");
   fflush(stdout);
 #endif
-  if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
+  if (flags&CTFT_INCLUDE_Y &&
+      PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
 		  &dummy, 0.0, 1.0, yp, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
@@ -3924,11 +3933,15 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fflush(stdout);
 #endif
 
-  tune[0] = adjustTuneHalfPlane(frequency[0], phase[0], phase[1]);
-  tune[1] = adjustTuneHalfPlane(frequency[2], phase[2], phase[3]);
+  if (flags&CTFT_INCLUDE_X)
+    tune[0] = adjustTuneHalfPlane(frequency[0], phase[0], phase[1]);
+  if (flags&CTFT_INCLUDE_Y)
+    tune[1] = adjustTuneHalfPlane(frequency[2], phase[2], phase[3]);
   if (amp) {
-    amp[0] = amplitude[0];
-    amp[1] = amplitude[2];
+    if (flags&CTFT_INCLUDE_X)
+      amp[0] = amplitude[0];
+    if (flags&CTFT_INCLUDE_Y)
+      amp[1] = amplitude[2];
   }
 #ifdef DEBUG
   printf((char*)"xtune = %e, ytune = %e\n", tune[0], tune[1]);
@@ -3939,7 +3952,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   free(xp);
   free(yp);
   free_czarray_2d((void**)oneParticle, 1, COORDINATES_PER_PARTICLE);
-  if (useMatrix) {
+  if (flags&CTFT_USE_MATRIX) {
     M->C[i] = CSave[i];
   }
   return 1;

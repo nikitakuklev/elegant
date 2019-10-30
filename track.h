@@ -3828,12 +3828,14 @@ void copy_doubles(double *source, double *target, long n);
 void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, LINE_LIST *beamline, double Po);
 void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
                                LINE_LIST *beamline);
+#define CTFT_INCLUDE_X  0x0001UL
+#define CTFT_INCLUDE_Y  0x0002UL
+#define CTFT_USE_MATRIX 0x0004UL
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, double deltaOffset, long turns, long turnOffset,
-                              long useMatrix, double *endingCoord,
-			      double *lowerLimit, double *upperLimit,
-			      long allowLosses, long nPeriods);
+                              double *endingCoord, double *lowerLimit, double *upperLimit,
+			      long allowLosses, long nPeriods, unsigned long flags);
 double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 
 /* chrom.c */

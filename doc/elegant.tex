@@ -63,6 +63,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|optimization_variable| command has a new parameter \verb|differential_limits|, which 
   permits specifying that the lower and upper limits are being given relative to the initial value,
   rather than in absolute terms.
+\item The \verb|tune_footprint| command has a new parameter \verb|separate_xy_for_delta|, which permits
+  specifying that tracking for the x and y momentum-dependent tunes should be done either in a combined 
+  fashion (default) or separately. The latter might be helpful if nonlinear coupling of y motion into the x plane
+  causes the x tune to be poorly determined for small x amplitudes.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5098,9 +5102,10 @@ A literal ``\%s'' must be entered as ``\%\%s''.
     double y_for_delta = 1e-6,
     double delta_min = 0,
     double delta_max = 0,
+    long ndelta = 21,
+    long separate_xy_for_delta =  0;
     long nx = 20,
     long ny = 21,
-    long ndelta = 21,
     long verbosity = 1,
     long quadratic_spacing = 1,
     long compute_diffusion = 1;
@@ -5122,9 +5127,14 @@ A literal ``\%s'' must be entered as ``\%\%s''.
  is some betatron oscillation from which to get the tune.                      
 \item \verb|delta_min|, \verb|delta_max| --- Limits of grid of initial $\delta$ coordinates
 for tracking.  Not that particles are not centered around the dispersive closed orbit.
+\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid. If zero, chromatic footprint is not determined.
+\item \verb|separate_xy_for_delta| --- If nonzero, tracking for the x and y momentum-dependent tunes will be done 
+  separately, so that when x-plane tracking is performed, $y=0$ initially.
+  This might be helpful if nonlinear coupling of y motion into the x plane
+  causes the x tune to be poorly determined for small x amplitudes.
+  Increase the tracking time by a factor of two.
 \item \verb|nx| --- Number of values of x coordinate in the grid. If zero, amplitude footprint is not determined.
 \item \verb|ny| --- Number of values of y coordinate in the grid. If zero, amplitude footprint is not determined.
-\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid. If zero, chromatic footprint is not determined.
 \item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
 \item \verb|quadratic_spacing| --- If nonzero, points are spaced ``quadratically,'' which actually means that
   their squares are spaced linearly. It is highly recommended to keep this turned on, since otherwise problems determining the

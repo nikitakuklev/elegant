@@ -244,8 +244,8 @@ long doFrequencyMap(
             badPoint = 0;
 	    if (!computeTunesFromTracking(firstTune, firstAmplitude,
 					  beamline->matrix, beamline, run,
-					  startingCoord, x, y, delta, turns, 0,
-					  0, endingCoord, NULL, NULL, 1, 1) ||
+					  startingCoord, x, y, delta, turns, 
+					  0, endingCoord, NULL, NULL, 1, 1, CTFT_INCLUDE_X|CTFT_INCLUDE_Y) ||
 		firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
 	      if (verbosity && !USE_MPI) 
 		printf("Problem with particle %ld tune determination\n", ip);
@@ -281,7 +281,8 @@ long doFrequencyMap(
                 if (!computeTunesFromTracking(secondTune, secondAmplitude,
                                               beamline->matrix, beamline, run,
                                               startingCoord, 0.0, 0.0, 0.0, turns, turns,
-                                              0, endingCoord, NULL, NULL, 1, 1) || 
+                                              endingCoord, NULL, NULL, 1, 1, 
+					      CTFT_INCLUDE_X|CTFT_INCLUDE_Y) || 
                     secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
                   if (verbosity && !USE_MPI)
                     printf("Problem with particle %ld tune determination\n", ip);
