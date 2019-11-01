@@ -3507,8 +3507,8 @@ extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2,
                             double k1, double k2, double tilt, double fint1, double fint2, double gap, 
                             double fse, double fseDipole, double fseQuadrupole, double etilt,
                             long order, long edge_order, long flags, long TRANSPORT);
-extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,             
-    double gK, long order, long all_terms, long TRANSPORT);
+extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,
+                            double gK, long order, long all_terms, long TRANSPORT, double length);
 extern VMATRIX *corrector_matrix(double length, double kick, double tilt, double b2, double calibration,
     long do_edges, long max_order);
 extern VMATRIX *hvcorrector_matrix(double length, double xkick, double ykick, double tilt, double b2,

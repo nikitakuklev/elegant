@@ -2179,13 +2179,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   
   if (csbend->useMatrix) {
     csbend->nonlinear = 0;
-    Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0);
+    Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0, csbend->length);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
                            angle/csbend->n_kicks, 0.0, 0.0, 
                            0.0, 0.0, csbend->b[0]*h,  0.0,
                            0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0, 
                            csbend->etilt, 1, 1, 0, 0);
-    Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
+    Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0, csbend->length);
   }
   computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
 

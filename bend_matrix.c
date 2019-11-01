@@ -84,7 +84,7 @@ VMATRIX *bend_matrix(
         initialize_matrices(Mtot, M->order);
 
         if ((flags&BEND_EDGE1_EFFECTS) && !(flags&SAME_BEND_PRECEDES)) {
-            Medge = edge_matrix(ea1, ha, hPole1, n, -1, fint1*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea1, ha, hPole1, n, -1, fint1*gap, order, edge_order>=2, TRANSPORT, length);
             concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -93,7 +93,7 @@ VMATRIX *bend_matrix(
             }
 
         if ((flags&BEND_EDGE2_EFFECTS) && !(flags&SAME_BEND_FOLLOWS)) {
-            Medge = edge_matrix(ea2, ha, hPole2, n, 1, fint2*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea2, ha, hPole2, n, 1, fint2*gap, order, edge_order>=2, TRANSPORT, length);
             concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -155,7 +155,8 @@ VMATRIX *edge_matrix(
     double gK,                   /* gap*K (see SLAC 75, pg117) */
     long order,                  /* order desired */
     long all_terms,              /* if zero, only chromatic second-order terms are included */
-    long TRANSPORT                  /* if nonzero, uses TRANSPORT equation for T436, which I think is incorrect... */
+    long TRANSPORT,                  /* if nonzero, uses TRANSPORT equation for T436, which I think is incorrect... */
+    double length
     )
 {
     double tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
@@ -174,7 +175,7 @@ VMATRIX *edge_matrix(
     R[1][0] = h*(tan_beta=tan(beta));
     sec_beta = 1./cos(beta);
     if (gK) {
-        psi = gK*h*sec_beta*(1+sqr(sin(beta)));
+        psi = (length<0?-1:1)*gK*h*sec_beta*(1+sqr(sin(beta)));
         R[3][2] = -h*tan(beta-psi);
         }
     else
@@ -517,14 +518,14 @@ VMATRIX *corrector_matrix(
       h = kick/length;
       Mtot =  tmalloc(sizeof(*Mtot));
       initialize_matrices(Mtot, Mtot->order=max_order);
-      Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, max_order, 1, 0);
+      Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, max_order, 1, 0, length);
       concat_matrices(Mtot, M, Medge, 0);
       tmp  = Mtot;
       Mtot = M;
       M    = tmp;
       free_matrices(Medge); tfree(Medge);  Medge = NULL;
       
-      Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, max_order, 1, 0);
+      Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, max_order, 1, 0, length);
       concat_matrices(Mtot, Medge, M, 0);
       tmp  = Mtot;
       Mtot = M;
