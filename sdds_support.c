@@ -775,7 +775,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       abort();
     }
   }
-  if (!SDDS_StartTable(watch->SDDS_table, particles)) {
+  if (watch->sparseInterval<=0)
+    watch->sparseInterval = 1;
+  if (!SDDS_StartTable(watch->SDDS_table, particles/watch->sparseInterval+1)) {
     SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -785,7 +787,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 #if SDDS_MPI_IO
   if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
 #endif
-  for (i=0; i<particles; i++) {
+  for (i=0; i<particles; i+=watch->sparseInterval) {
     if (!((watch->startPID<0 && watch->endPID<0) || (particle[i][6]>=watch->startPID && particle[i][6]<=watch->endPID)))
       continue;
     count++;

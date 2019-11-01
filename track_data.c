@@ -750,6 +750,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"LONGIT_DATA", "", IS_SHORT, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1, "include longitudinal data in coordinate mode?"},
     {"EXCLUDE_SLOPES", "", IS_SHORT, 0, (long)((char*)&watch_example.excludeSlopes), NULL, 0.0, 0, "exclude slopes in coordinate mode?"},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.flushInterval), NULL, 0.0, 100, "file flushing interval (parameter or centroid mode)"},    
+    {"SPARSE_INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.sparseInterval), NULL, 0.0, 1, "interval for particle output (coordinate mode)"},
     {"DISABLE", "", IS_SHORT, 0, (long)((char *)&watch_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
     {"USE_DISCONNECT", "", IS_SHORT, 0, (long)((char *)&watch_example.useDisconnect), NULL, 0.0, 0, "If nonzero, files are disconnected between each write operation. May be useful for parallel operation.  Ignored otherwise."},
     {"INDEX_OFFSET", "", IS_LONG, 0, (long)((char *)&watch_example.indexOffset), NULL, 0.0, 0, "Offset for file indices for sequential file naming."},

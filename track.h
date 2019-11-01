@@ -966,7 +966,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 18
+#define N_WATCH_PARAMS 19
 #define N_MALIGN_PARAMS 12
 #define N_TWLA_PARAMS 20
 #define N_PEPPOT_PARAMS 6
@@ -1690,7 +1690,7 @@ typedef struct {
     long startPID, endPID, interval, start_pass, end_pass;
     char *filename, *label, *mode;
     short xData, yData, longitData, excludeSlopes;
-    long flushInterval;
+    long flushInterval, sparseInterval;
     short disable, useDisconnect;
     long indexOffset;
     double referenceFrequency;
