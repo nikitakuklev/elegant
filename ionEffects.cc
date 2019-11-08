@@ -108,7 +108,7 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 				   double dpSum[3]);
 void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches, 
 		  double qBunch, double bunchCentroid[4], double bunchSigma[4]);
-void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np, double Po, long iBunch, long iPass, 
+void applyIonKicksToElectronBunch(IONEFFECTS *ionEffects, double **part, long np, double Po, long iBunch, long iPass, double qBunch, 
 				  double bunchCentroid[4], double bunchSigma[4],
 				  double qIon, long nIonsTotal, double ionCentroid[2], double ionSigma[2],
 				  double dpSum[3]);
@@ -762,7 +762,7 @@ void trackWithIonEffects
     setIonEffectsIonParameterOutput(ionEffects, tNow, iPass, iBunch, qIon, ionSigma, ionCentroid);
 
     if (npTotal)
-      applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, bunchCentroid, bunchSigma, 
+      applyIonKicksToElectronBunch(ionEffects, part, np, Po, iBunch, iPass, qBunch, bunchCentroid, bunchSigma, 
 				   qIon, nIonsTotal, ionCentroid, ionSigma, dpSum);
     
     if (isSlave || !notSinglePart) {
@@ -2326,7 +2326,8 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
 	      // Initial kinetic energy
 	      double vmag, ionMass, vx, vy, rangle, Emi;	      
 	      ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
-	      Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
+	      Emi = fabs(gauss_rn_lim(mult_ion_energy_peak, mult_ion_energy_rms, 3, random_4));
+	      //Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
 	      //Emi = 0;
 	      vmag = sqrt(2 * Emi * e_mks / ionMass);
 	      rangle = random_2(0) * 2 * PI;
@@ -2409,9 +2410,15 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
 	    // Transverse momentum change in kg*m/s, weighted by macro-ion charge
 	    // in order to account for fact that different macro-ions may represent different
 	    // numbers of actual ions
-	    dpSum[0] += kick[0]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
-	    dpSum[1] += kick[1]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
-	    dpSum[2] += ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge; 
+	    
+	    //dpSum[0] += kick[0]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
+	    //dpSum[1] += kick[1]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge); 
+	    //dpSum[2] += ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge; 
+
+	    //momentum change = (velocity change) x (mass of ion) x (number of ions in macroparticle)
+	    dpSum[0] += kick[0]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge);
+	    dpSum[1] += kick[1]*ionMass*(ionEffects->coordinate[iSpecies][iIon][4]/e_mks/ionCharge);
+
 	  } 
 	}
       }
@@ -2423,10 +2430,10 @@ void applyElectronBunchKicksToIons(IONEFFECTS *ionEffects, long iPass, double qB
   double dpSumGlobal[3];
   MPI_Allreduce(dpSum, dpSumGlobal, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   memcpy(&dpSum[0], &dpSumGlobal[0], sizeof(dpSum[0])*3);
-  if (dpSum[2]) {
-    dpSum[0] /= dpSum[2];
-    dpSum[1] /= dpSum[2];
-  }
+  //if (dpSum[2]) {
+    //dpSum[0] /= dpSum[2];
+    //dpSum[1] /= dpSum[2];
+  //}
 #endif
 }
 
@@ -2693,6 +2700,7 @@ void applyIonKicksToElectronBunch
  double Po,
  long iBunch,
  long iPass, 
+ double qBunch,
  double bunchCentroid[4],
  double bunchSigma[4],
  double qIon,
@@ -2729,8 +2737,12 @@ void applyIonKicksToElectronBunch
 #if USE_MPI
       MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if (npTotal) {
-	slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
-	slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
+	//slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
+	//slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
+
+	// momentum change per electron = -(total momentum change of ions) / (number of electrons)
+	slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
+	slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
       }
 #endif
       for (ip=0; ip<np; ip++) {

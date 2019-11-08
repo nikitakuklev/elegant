@@ -38,6 +38,8 @@
 	  long ion_histogram_output_interval = 1000;
 	  long ion_histogram_min_output_bins = 200;
           long verbosity = 0;
+	  double mult_ion_energy_peak = 20;
+	  double mult_ion_energy_rms = 10;
 	  long disable_until_pass = 0;
 	  long freeze_ions_until_pass = 0;
 	  long freeze_electrons_until_pass = 0;
