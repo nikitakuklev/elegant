@@ -2326,7 +2326,7 @@ void generateIons(IONEFFECTS *ionEffects, long iPass, long iBunch, long nBunches
 	      // Initial kinetic energy
 	      double vmag, ionMass, vx, vy, rangle, Emi;	      
 	      ionMass = 1.672621898e-27 * ionProperties.mass[iSpecies]; 
-	      Emi = fabs(gauss_rn_lim(mult_ion_energy_peak, mult_ion_energy_rms, 3, random_4));
+	      Emi = fabs(gauss_rn_lim(multiple_ionization_energy_peak, multiple_ionization_energy_rms, 3, random_4));
 	      //Emi = fabs(gauss_rn_lim(20, 10, 3, random_4));
 	      //Emi = 0;
 	      vmag = sqrt(2 * Emi * e_mks / ionMass);
