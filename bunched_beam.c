@@ -1289,6 +1289,23 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
   double Mm[6][6], ptemp[6];
   gsl_matrix *M;
 
+#if USE_MPI
+  long sum=0, tmp, my_offset=0, *offset = tmalloc(n_processors*sizeof(*offset)), total_particles=0;
+  if (isSlave && notSinglePart) {
+    MPI_Allgather (&np, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
+    tmp = offset[0];
+    for (i=1; i<n_processors; i++) {
+      sum += tmp;
+      tmp = offset[i];
+      offset[i] = sum; 
+    }
+    offset[0] = 0; 
+    my_offset = offset[myid-1];
+    particleID += my_offset;
+    total_particles =  sum;
+  }
+#endif
+
   if (np<=0)
     return np;
 
@@ -1328,6 +1345,15 @@ long generateBunchForMoments(double **particle, long np, long symmetrize,
         particle[ip][i] += Mm[i][j]*ptemp[j];
     }
   }
+
+  /* Provide particle IDs */
+  for (ip=0; ip<np; ip++)
+    particle[ip][6] = particleID++;
+
+#if USE_MPI
+  /* prepare for the next bunch */
+  particleID += (total_particles - np - my_offset);
+#endif
 
   return np;
 }

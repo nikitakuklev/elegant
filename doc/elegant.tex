@@ -46,19 +46,21 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
   also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime}$, as pointed out
   by forum user Teresia. This was improved.
+\item Fixed bug in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
+  This bug was reported by Y. Park (UCLA).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The \verb|bunched_beam| command was not generating particle ID values when \verb|use_moments_output_values=1|,
+  as reported by Z. Duan (IHEP). 
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added \verb|SPARSE_INTERVAL| parameter to the \verb|WATCH| element, to allow sparsing coordinate output
-  with regular spacing.
-\item Fixed bug in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
-  This bug was reported by Y. Park (UCLA).
+  with regular spacing.  This supplements the \verb|FRACTION| parameter, which provides random sampling, and the
+  \verb|START_PID| and \verb|END_PID| parameters, which provide sampling of a subset defined by particle ID.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -75,7 +77,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{Changes Specific to the MPI Parallel Version}
 
 \begin{itemize}
-\item Some apparent MPI-related issues were resolved for the \verb|ion_effects| command.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the GPU Version}
@@ -90,10 +92,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item The \verb|touschekLifetime| program now reports the value of \verb|deltaLimit| in the output file, whether that
-  value is given explicitly or computed via the rf voltage.
-\item Added the program \verb|sdds5x5sigmaproc|, which computes the 5x5 sigma matrix (i.e., all elements except those
-  related to the time coordinates) from a quadrupole scan.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
