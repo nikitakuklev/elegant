@@ -44,7 +44,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
-  also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime}$, as pointed out
+  also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime$, as pointed out
   by forum user Teresia. This was improved.
 \item Fixed bug in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
   This bug was reported by Y. Park (UCLA).
@@ -61,6 +61,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Added \verb|SPARSE_INTERVAL| parameter to the \verb|WATCH| element, to allow sparsing coordinate output
   with regular spacing.  This supplements the \verb|FRACTION| parameter, which provides random sampling, and the
   \verb|START_PID| and \verb|END_PID| parameters, which provide sampling of a subset defined by particle ID.
+\item Added \verb|RPN_PARAMETERS| parameter to the \verb|SCRIPT| element, which directs the program to load
+  SDDS parameter values from the script output file into \verb|rpn| variables, where they may be used for
+  optimization. This provides the user the ability to perform script-based analysis of particle distributions and
+  then optimize the results of that analysis.
 \end{itemize}
 
 \subsection{New and Modified Commands}

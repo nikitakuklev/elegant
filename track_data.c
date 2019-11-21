@@ -2579,6 +2579,7 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"COMMAND", "", IS_STRING, 0, (long)((char *)&script_example.command), NULL, 0.0, 0, "SDDS-compliant command to apply to the beam.  Use the sequence %i to represent the input filename and %o to represent the output filename."},
   {"USE_CSH", "", IS_SHORT, 0, (long)((char *)&script_example.useCsh), NULL, 0.0, 1, "Use C-shell for execution (may be slower)?"},
   {"VERBOSITY", "", IS_SHORT, 0, (long)((char *)&script_example.verbosity), NULL, 0.0, 0, "Set the verbosity level."},
+  {"RPN_PARAMETERS", "", IS_SHORT, 0, (long)((char *)&script_example.rpnParameters), NULL, 0.0, 0, "If nonzero, then parameters from the script output file are loaded into RPN variables."},
   {"START_PASS", "", IS_LONG, 0, (long)((char *)&script_example.startPass), NULL, 0.0, -1, "Start script action on this pass.  Before that, behaves like a drift space."},
   {"END_PASS", "", IS_LONG, 0, (long)((char *)&script_example.endPass), NULL, 0.0, -1, "End script action after this pass.  Before that, behaves like a drift space."},
   {"PASS_INTERVAL", "", IS_LONG, 0, (long)((char *)&script_example.passInterval), NULL, 0.0, -1, "Execute script only every Nth pass following START_PASS, including START_PASS. Otherwise, behaves like a drift space."},

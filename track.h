@@ -3109,7 +3109,7 @@ extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
   double length;
   char *command;
-  short useCsh, verbosity;
+  short useCsh, verbosity, rpnParameters;
   long startPass, endPass, passInterval, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
   short keepFiles, driftMatrix;

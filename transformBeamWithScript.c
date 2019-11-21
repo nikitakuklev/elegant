@@ -221,9 +221,11 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
   long k;
   double *pID = NULL;
   short failSoftly = 0;
+  TRACKING_CONTEXT trackingContext;
 
   if (np==0)
     return 0;
+  getTrackingContext(&trackingContext);
 
   determineScriptNames(script, &rootname, &input, &output, &nameLength, mainRootname, 1, iPass, occurence);
   if (script->verbosity>0) {
@@ -428,6 +430,29 @@ long transformBeamWithScript_s(SCRIPT *script, double pCentral, CHARGE *charge,
     }
   }
 
+  if (script->rpnParameters) {
+    char **pName;
+    int32_t pNames, iName;
+    if (!(pName=SDDS_GetParameterNames(&SDDSin, &pNames))) {
+      SDDS_SetError("Unable to get names of parameters from script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    for (iName=0; iName<pNames; iName++) {
+      double paramValue;
+      double rpnNameBuffer[16384];
+      if (SDDS_NUMERIC_TYPE(SDDS_GetParameterType(&SDDSin, iName))) {
+        if (!(SDDS_GetParameterAsDouble(&SDDSin, pName[iName], &paramValue))) {
+          SDDS_SetError("Unable to get values of parameters from script output file");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+        snprintf(rpnNameBuffer, 16384, "%s#%ld.%s", trackingContext.elementName, 
+                 trackingContext.elementOccurrence, pName[iName]);
+        rpn_store(paramValue, NULL, rpn_create_mem(rpnNameBuffer, 0));
+      }
+    }
+    free(pName);
+  }
+
   /* Close files */
   if (!failSoftly) {
     if (SDDS_ReadPage(&SDDSin)!=-1)
@@ -474,6 +499,9 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   char *dataname[6] = {"x","xp","y","yp","t","p"};
   long i, j, npNew, npTotal, npNewTotal, nameLength;
   double *pID = NULL;
+  TRACKING_CONTEXT trackingContext;
+
+  getTrackingContext(&trackingContext);
 
 #if MPI_DEBUG
   printf("transformBeamWithScript_p: isMaster = %ld, notSinglePart = %ld, isSlave = %ld\n",
@@ -799,6 +827,29 @@ long transformBeamWithScript_p(SCRIPT *script, double pCentral, CHARGE *charge,
   if (script->verbosity>3) {
     printf("Charge value broadcast\n");
     fflush(stdout);
+  }
+
+  if (script->rpnParameters) {
+    char **pName;
+    int32_t pNames, iName;
+    if (!(pName=SDDS_GetParameterNames(&SDDSin, &pNames))) {
+      SDDS_SetError("Unable to get names of parameters from script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    for (iName=0; iName<pNames; iName++) {
+      double paramValue;
+      double rpnNameBuffer[16384];
+      if (SDDS_NUMERIC_TYPE(SDDS_GetParameterType(&SDDSin, iName))) {
+        if (!(SDDS_GetParameterAsDouble(&SDDSin, pName[iName], &paramValue))) {
+          SDDS_SetError("Unable to get values of parameters from script output file");
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+        snprintf(rpnNameBuffer, 16384, "%s#%ld.%s", trackingContext.elementName, 
+                 trackingContext.elementOccurrence, pName[iName]);
+        rpn_store(paramValue, NULL, rpn_create_mem(rpnNameBuffer, 0));
+      }
+    }
+    free(pName);
   }
 
   /* Close files */
