@@ -36,9 +36,10 @@ static char *particleDeviationComparisonMode[N_PARTICLE_COMPARISON_MODES] = {
 #define STATISTIC_MAXIMUM  1
 #define STATISTIC_MINIMUM  2
 #define STATISTIC_SUM_SQR 3
-#define N_OPTIM_STATS 4
+#define STATISTIC_SUM 4
+#define N_OPTIM_STATS 5
 static char *optimize_statistic[N_OPTIM_STATS] = {
-  "sum-absolute-value", "maximum", "minimum", "sum-squares"
+  "sum-absolute-value", "maximum", "minimum", "sum-squares", "plain-sum"
    };
 
 static long stopOptimization = 0;
@@ -47,9 +48,9 @@ void storeOptimRecord(double *value, long values, long invalid, double result);
 void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
 double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimData, long *invalid);
 
-void initializeOptimizationStatistics(double *sum, double *sum2, double *min, double *max);
-void updateOptimizationStatistics(double *sum, double *sum2, double *min, double *max, double value);
-double chooseOptimizationStatistic(double sum, double sum2, double min, double max, long stat);
+void initializeOptimizationStatistics(double *sum, double *sumAbs, double *sum2, double *min, double *max);
+void updateOptimizationStatistics(double *sum, double *sumAbs, double *sum2, double *min, double *max, double value);
+double chooseOptimizationStatistic(double sum, double sumAbs, double sum2, double min, double max, long stat);
 
 #if USE_MPI
 /* Find the global minimal value and its location across all the processors */
@@ -102,6 +103,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       fprintf(stderr, "Unknown optimization statistic: %s.  Known values are ", statistic);
       for (i=0; i<N_OPTIM_STATS; i++)
 	fprintf(stderr, "\"%s\"%s", optimize_statistic[i], i==(N_OPTIM_STATS-1)?"\n":", ");
+      exit(1);
     }
     if ((optimization_data->tolerance=tolerance)==0)
         bombElegant("tolerance == 0", NULL);
@@ -2512,8 +2514,8 @@ double optimization_function(double *value, long *invalid)
           }
 	if (!*invalid) {
 	  long i=0, terms=0;
-	  double value, sum, min, max, sum2;
-	  initializeOptimizationStatistics(&sum, &sum2, &min, &max);
+	  double value, sum, min, max, sum2, sumAbs;
+	  initializeOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max);
 	  if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
 	    for (i=0; i<optimization_data->terms; i++) {
 	      rpn_clear();
@@ -2523,7 +2525,7 @@ double optimization_function(double *value, long *invalid)
 	      }
 	      else
 		optimization_data->termWeight[i] = 0;
-	      updateOptimizationStatistics(&sum, &sum2, &min, &max, value);
+	      updateOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max, value);
 	      if (rpn_check_error()) {
 		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 		rpn_clear_error();
@@ -2552,31 +2554,31 @@ double optimization_function(double *value, long *invalid)
 	  /* compute and return quantity to be optimized */
 	  if (optimization_data->terms) {
 	    long i;
-	    double sum, min, max, sum2;
-	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
+	    double sum, min, max, sum2, sumAbs;
+	    initializeOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max);
 	    if (psum>=0)
-	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
+	      updateOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max, psum);
 	    for (i=0; i<optimization_data->terms; i++)  {
 	      rpn_clear();
 	      value = optimization_data->termValue[i]
 		= optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
-	      updateOptimizationStatistics(&sum, &sum2, &min, &max, value);
+	      updateOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max, value);
 	      if (rpn_check_error()) {
 		printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 		rpn_clear_error();
 		rpnError++;
 	      }
 	    }
-	    result = chooseOptimizationStatistic(sum, sum2, min, max, optimization_data->statistic);
+	    result = chooseOptimizationStatistic(sum, sumAbs, sum2, min, max, optimization_data->statistic);
 	  }
 	  else {
-	    double sum, min, max, sum2;
-	    initializeOptimizationStatistics(&sum, &sum2, &min, &max);
+	    double sum, min, max, sum2, sumAbs;
+	    initializeOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max);
 	    if (psum>=0)
-	      updateOptimizationStatistics(&sum, &sum2, &min, &max, psum);
+	      updateOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max, psum);
 	    rpn_clear();    /* clear rpn stack */
-	    updateOptimizationStatistics(&sum, &sum2, &min, &max, rpn(optimization_data->UDFname));
-	    result = chooseOptimizationStatistic(sum, sum2, min, max, optimization_data->statistic);
+	    updateOptimizationStatistics(&sum, &sumAbs, &sum2, &min, &max, rpn(optimization_data->UDFname));
+	    result = chooseOptimizationStatistic(sum, sumAbs, sum2, min, max, optimization_data->statistic);
 	    if (rpn_check_error()) {
 	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
 	      rpnError++;
@@ -3197,16 +3199,17 @@ double particleComparisonForOptimization(BEAM *beam, OPTIMIZATION_DATA *optimDat
   }
 }
 
-void initializeOptimizationStatistics(double *sum, double *sum2, double *min, double *max)
+void initializeOptimizationStatistics(double *sum, double *sumAbs, double *sum2, double *min, double *max)
 {
-  *sum = *sum2 = 0;
+  *sum = *sum2 = *sumAbs = 0;
   *min = DBL_MAX;
   *max = -DBL_MAX;
 }
 
-void updateOptimizationStatistics(double *sum, double *sum2, double *min, double *max, double value)
+void updateOptimizationStatistics(double *sum, double *sumAbs, double *sum2, double *min, double *max, double value)
 {
-  *sum += fabs(value);
+  *sum += value;
+  *sumAbs += fabs(value);
   *sum2 += sqr(value);
   if (value>*max)
     *max = value;
@@ -3214,12 +3217,12 @@ void updateOptimizationStatistics(double *sum, double *sum2, double *min, double
     *min = value;
 }
 
-double chooseOptimizationStatistic(double sum, double sum2, double min, double max, long stat)
+double chooseOptimizationStatistic(double sum, double sumAbs, double sum2, double min, double max, long stat)
 {
   double result;
   switch (stat) {
   case STATISTIC_SUM_ABS:
-    result = sum;
+    result = sumAbs;
     break;
   case STATISTIC_MAXIMUM:
     result = max;
