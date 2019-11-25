@@ -26,6 +26,8 @@
           long symmetrize = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;
+	  double multiple_ionization_energy_peak = 20;
+	  double multiple_ionization_energy_rms = 10;
           double ion_span[2] = {0, 0};
 	  double ion_bin_divisor[2] = {10.0, 10.0};
 	  double ion_range_multiplier[2] = {2.0, 2.0};
@@ -37,11 +39,9 @@
 	  double ion_histogram_output_s_end = -1;
 	  long ion_histogram_output_interval = 1000;
 	  long ion_histogram_min_output_bins = 200;
-          long verbosity = 0;
-	  double multiple_ionization_energy_peak = 20;
-	  double multiple_ionization_energy_rms = 10;
 	  long disable_until_pass = 0;
 	  long freeze_ions_until_pass = 0;
 	  long freeze_electrons_until_pass = 0;
+          long verbosity = 0;
 #end
 

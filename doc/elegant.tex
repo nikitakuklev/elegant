@@ -76,6 +76,12 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   specifying that tracking for the x and y momentum-dependent tunes should be done either in a combined 
   fashion (default) or separately. The latter might be helpful if nonlinear coupling of y motion into the x plane
   causes the x tune to be poorly determined for small x amplitudes.
+\item Added \verb|egaussian| mode to the \verb|ion_effects| command. This mode results in computation of the fields
+  from the electrons assuming a gaussian distribution, as normal, but determines the kick to the ions based purely on
+  momentum conservation. This was inspired by the work of M. Blasciewicz (BNL) and implemented with J. Calvey (ANL).
+\item Added \verb|multiple_ionization_energy_peak| and \verb|multiple_ionization_energy_rms| parameters to 
+  the \verb|ion_effects| command, allowing control of the peak and rms energy of ions produced by multiple ionization.
+  This was done by J. Calvey (ANL).
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -2587,7 +2593,7 @@ included in the plane in question.
 \begin{verbatim}
 &ion_effects
           STRING pressure_profile = NULL;
-          double pressure_factor = 1.0;
+	  double pressure_factor = 1.0;
           STRING ion_properties = NULL;
           STRING beam_output = NULL;
           long beam_output_all_locations = 0;
@@ -2595,26 +2601,31 @@ included in the plane in question.
           long ion_output_all_locations = 1;
           long ion_species_output = 0;
           STRING field_calculation_method = NULL;
-          double distribution_fit_target = 0.1;
-          double distribution_fit_tolerance = 1e-3;
-          long distribution_fit_evaluations = 100;
-          long distribution_fit_passes = 1;
-          long distribution_fit_restarts = 1;
-          STRING fit_residual_type = NULL;
+	  double distribution_fit_target = 0.03;
+	  double distribution_fit_tolerance = 1e-5;
+	  long distribution_fit_evaluations = 300;
+	  long distribution_fit_passes = 3;
+	  long distribution_fit_restarts = 10;
+	  long hybrid_simplex_comparison_interval = -1;
+	  STRING fit_residual_type = NULL;
           long macro_ions = 0;
           long symmetrize = 0;
           long generation_interval = 1;
           long multiple_ionization_interval = 100;
+	  double multiple_ionization_energy_peak = 20;
+	  double multiple_ionization_energy_rms = 10;
           double ion_span[2] = {0, 0};
-          double ion_bin_divisor[2] = {10.0, 10.0};
-          double ion_range_multiplier[2] = {2.0, 2.0};
-          double ion_sigma_limit_multiplier[2] = {0, 0};
+	  double ion_bin_divisor[2] = {10.0, 10.0};
+	  double ion_range_multiplier[2] = {2.0, 2.0};
+	  double ion_sigma_limit_multiplier[2] = {0, 0};
 	  long ion_histogram_max_bins = 1000;
 	  long ion_histogram_min_per_bin = 5;
-          STRING ion_histogram_output = NULL;
-          double ion_histogram_output_s_start = 0;
-          double ion_histogram_output_s_end = 10;
-          long ion_histogram_output_interval = 1000;
+	  STRING ion_histogram_output = NULL;
+	  double ion_histogram_output_s_start = -1;
+	  double ion_histogram_output_s_end = -1;
+	  long ion_histogram_output_interval = 1000;
+	  long ion_histogram_min_output_bins = 200;
+	  long disable_until_pass = 0;
 	  long freeze_ions_until_pass = 0;
 	  long freeze_electrons_until_pass = 0;
           long verbosity = 0;
@@ -2694,6 +2705,8 @@ included in the plane in question.
 \item \verb|multiple_ionization_interval| --- The number of bunches between multiple ionization calculations.  
       The macro ion charge is adjusted
       to account for this, so the effective ion charge after many turns is the same.
+\item \verb|multiple_ionization_energy_peak|, \verb|multiple_ionization_energy_rms| --- Specifies the distribution of
+  the energy of multiply-ionized ions in terms of the peak (or centroid) of the distribution and its rms width, in eV.
 \item \verb|ion_span| --- The transverse half-extent, in meters, of the region within which ions are modeled.
   Ions moving outside this region are considered lost. May be overriden by the \verb|X_SPAN| and \verb|Y_SPAN| parameters
   on individual \verb|IONEFFECTS| elements.
@@ -2725,7 +2738,7 @@ included in the plane in question.
 \item \verb|verbosity| --- Larger values result in more output during running. Used for debugging only.
 \end{itemize}
 
-The user is strongly advise to study the ion histograms by using the \verb|ion_histogram_output| parameter to request
+The user is strongly advised to study the ion histograms by using the \verb|ion_histogram_output| parameter to request
 this data.
 The histograms should not be excessively noisy.
 The data also includes the fits, which should be close to the data.
