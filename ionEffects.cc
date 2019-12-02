@@ -2730,11 +2730,10 @@ void applyIonKicksToElectronBunch
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN || conserve_momentum) {
     if (iPass>=freeze_electrons_until_pass) {
-      long npTotal;
       // The kicks from ions are the same for all electrons; 
       // Using conservation of momentum, the total is equal and opposite to the kick from
       // the electrons to the ions.
-      if (qBunch)
+      if (qBunch) {
 	// momentum change per electron = -(total momentum change of ions) / (number of electrons)
 	slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
 	slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
