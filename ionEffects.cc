@@ -2710,13 +2710,14 @@ void applyIonKicksToElectronBunch
  double dpSum[3] // sum of momentum change applied to ions
  )
 {
-  double kick[2];
+  double kick[2], dpSumBunch[2];
   long ip;
   double paramValueX[9], paramValueY[9];
   long circuitBreaker[9];
   double tempCentroid[9][2], tempSigma[9][2], tempkick[2];
   double tempQ[9];
   double normX, normY;
+  double slopeChange[2]={0,0};
 
   if (verbosity>30) {
     printf("Applying ion kicks to bunch\n");
@@ -2727,9 +2728,8 @@ void applyIonKicksToElectronBunch
 
   makeIonHistograms(ionEffects, ionProperties.nSpecies, bunchSigma, ionSigma);
 
-  if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN) {
+  if ((ionEffects->ionFieldMethod = ionFieldMethod)==ION_FIELD_EGAUSSIAN || conserve_momentum) {
     if (iPass>=freeze_electrons_until_pass) {
-      double slopeChange[2]={0,0};
       long npTotal;
       // The kicks from ions are the same for all electrons; 
       // Using conservation of momentum, the total is equal and opposite to the kick from
@@ -2737,20 +2737,19 @@ void applyIonKicksToElectronBunch
 #if USE_MPI
       MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if (npTotal) {
-	//slopeChange[0] = -dpSum[0]/npTotal/(me_mks*c_mks*Po);
-	//slopeChange[1] = -dpSum[1]/npTotal/(me_mks*c_mks*Po);
-
 	// momentum change per electron = -(total momentum change of ions) / (number of electrons)
 	slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
 	slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
       }
 #endif
-      for (ip=0; ip<np; ip++) {
-	part[ip][1] += slopeChange[0];
-	part[ip][3] += slopeChange[1];
+      if (!conserve_momentum) {
+        for (ip=0; ip<np; ip++) {
+          part[ip][1] += slopeChange[0];
+          part[ip][3] += slopeChange[1];
+        }
       }
+      return;
     }
-    return;
   }
 
   if ((ionEffects->ionFieldMethod = ionFieldMethod)!=ION_FIELD_GAUSSIAN) {
@@ -2864,6 +2863,7 @@ void applyIonKicksToElectronBunch
 
   for (int i=0; i<9; i++)
     circuitBreaker[i] = 0;
+  dpSumBunch[0] = dpSumBunch[1] = 0;
   if (isSlave || !notSinglePart) {
     /*** Determine and apply kicks to beam from the total ion field */
 #if MPI_DEBUG
@@ -2878,6 +2878,8 @@ void applyIonKicksToElectronBunch
 	  gaussianBeamKick(part[ip], ionCentroid, ionSigma, 0, kick, qIon, me_mks, 1);
 	  part[ip][1] += kick[0] / c_mks / Po;
 	  part[ip][3] += kick[1] / c_mks / Po; 
+          dpSumBunch[0] += kick[0]*me_mks;
+          dpSumBunch[1] += kick[1]*me_mks;
 	}
 	break;
       case ION_FIELD_BIGAUSSIAN:
@@ -2896,10 +2898,13 @@ void applyIonKicksToElectronBunch
 	  }
 	  part[ip][1] += kick[0] / c_mks / Po;
 	  part[ip][3] += kick[1] / c_mks / Po; 
+          dpSumBunch[0] += kick[0]*me_mks;
+          dpSumBunch[1] += kick[1]*me_mks;
 	}
 	break;
       case ION_FIELD_BILORENTZIAN:
       case ION_FIELD_TRILORENTZIAN:
+        dpSumBunch[0] = dpSumBunch[1] = 0;
 	for (ip=0; ip<np; ip++) {
 	  kick[0] = kick[1] = 0;
 	  for (int i=0; i<nFunctions*nFunctions; i++) {
@@ -2916,6 +2921,8 @@ void applyIonKicksToElectronBunch
 	  }
 	  part[ip][1] -= kick[0] / (Po*particleMassMV*1e6*particleRelSign);
 	  part[ip][3] -= kick[1] / (Po*particleMassMV*1e6*particleRelSign);
+          dpSumBunch[0] += kick[0]*e_mks/c_mks;
+          dpSumBunch[1] += kick[1]*e_mks/c_mks;
 	}
 	break;
       default:
@@ -2924,6 +2931,25 @@ void applyIonKicksToElectronBunch
       }
     }
   }
+
+  if (conserve_momentum) {
+    if (isSlave || !notSinglePart) {
+#if USE_MPI
+      // Share dpSumBunch across all cores
+      double dpSumBunchGlobal[2];
+      MPI_Allreduce(dpSumBunch, dpSumBunchGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
+#endif
+      // Slope corrections to force momentum conservation
+      slopeChange[0] = -(dpSumBunch[0]-dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
+      slopeChange[1] = -(dpSumBunch[1]-dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
+      for (ip=0; ip<np; ip++) {
+        part[ip][1] += slopeChange[0];
+        part[ip][3] += slopeChange[1];
+      }
+    }
+  }
+  
   if (verbosity) {
 #if USE_MPI
     long circuitBreakerGlobal[9];
