@@ -2734,14 +2734,11 @@ void applyIonKicksToElectronBunch
       // The kicks from ions are the same for all electrons; 
       // Using conservation of momentum, the total is equal and opposite to the kick from
       // the electrons to the ions.
-#if USE_MPI
-      MPI_Allreduce(&np, &npTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-      if (npTotal) {
+      if (qBunch)
 	// momentum change per electron = -(total momentum change of ions) / (number of electrons)
 	slopeChange[0] = -dpSum[0]/(qBunch/e_mks)/(me_mks*c_mks*Po);
 	slopeChange[1] = -dpSum[1]/(qBunch/e_mks)/(me_mks*c_mks*Po);
       }
-#endif
       if (!conserve_momentum) {
         for (ip=0; ip<np; ip++) {
           part[ip][1] += slopeChange[0];
@@ -2932,7 +2929,7 @@ void applyIonKicksToElectronBunch
     }
   }
 
-  if (conserve_momentum) {
+  if (conserve_momentum && qBunch) {
     if (isSlave || !notSinglePart) {
 #if USE_MPI
       // Share dpSumBunch across all cores
