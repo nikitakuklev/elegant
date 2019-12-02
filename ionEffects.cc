@@ -2937,8 +2937,8 @@ void applyIonKicksToElectronBunch
       memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
 #endif
       // Slope corrections to force momentum conservation
-      slopeChange[0] = -(dpSumBunch[0]-dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
-      slopeChange[1] = -(dpSumBunch[1]-dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
+      slopeChange[0] = -(dpSumBunch[0]+dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
+      slopeChange[1] = -(dpSumBunch[1]+dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
       for (ip=0; ip<np; ip++) {
         part[ip][1] += slopeChange[0];
         part[ip][3] += slopeChange[1];
