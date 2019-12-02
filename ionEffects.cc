@@ -2747,8 +2747,8 @@ void applyIonKicksToElectronBunch
           part[ip][1] += slopeChange[0];
           part[ip][3] += slopeChange[1];
         }
+        return;
       }
-      return;
     }
   }
 
