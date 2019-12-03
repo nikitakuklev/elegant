@@ -2901,7 +2901,6 @@ void applyIonKicksToElectronBunch
 	break;
       case ION_FIELD_BILORENTZIAN:
       case ION_FIELD_TRILORENTZIAN:
-        dpSumBunch[0] = dpSumBunch[1] = 0;
 	for (ip=0; ip<np; ip++) {
 	  kick[0] = kick[1] = 0;
 	  for (int i=0; i<nFunctions*nFunctions; i++) {
@@ -2930,13 +2929,13 @@ void applyIonKicksToElectronBunch
   }
 
   if (conserve_momentum && qBunch) {
-    if (isSlave || !notSinglePart) {
 #if USE_MPI
-      // Share dpSumBunch across all cores
-      double dpSumBunchGlobal[2];
-      MPI_Allreduce(dpSumBunch, dpSumBunchGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
+    // Share dpSumBunch across all cores
+    double dpSumBunchGlobal[2];
+    MPI_Allreduce(dpSumBunch, dpSumBunchGlobal, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(&dpSumBunch[0], &dpSumBunchGlobal[0], sizeof(dpSumBunch[0])*2);
 #endif
+    if (isSlave || !notSinglePart) {
       // Slope corrections to force momentum conservation
       slopeChange[0] = -(dpSumBunch[0]+dpSum[0])/(qBunch/e_mks)/(me_mks*c_mks*Po);
       slopeChange[1] = -(dpSumBunch[1]+dpSum[1])/(qBunch/e_mks)/(me_mks*c_mks*Po);
