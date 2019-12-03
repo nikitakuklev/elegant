@@ -2056,6 +2056,7 @@ void computeIonEffectsElectronBunchParameters
   rms_emittance_p(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3], npTotal);
   *tNow = computeAverage_p(time, np, MPI_COMM_WORLD);
 #else
+  *npTotal = np;
   rms_emittance(part, 0, 1, np, &bunchSigma[0], NULL, &bunchSigma[1], &bunchCentroid[0], &bunchCentroid[1]);
   rms_emittance(part, 2, 3, np, &bunchSigma[2], NULL, &bunchSigma[3], &bunchCentroid[2], &bunchCentroid[3]);
   compute_average(tNow, time, np);
