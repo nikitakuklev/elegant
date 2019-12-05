@@ -2101,6 +2101,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
     fprintf(fp, "&parameter name=ElementType, type=string &end\n");
     fprintf(fp, "&parameter name=ParallelCapable, type=short &end\n");
     fprintf(fp, "&parameter name=GPUCapable, type=short &end\n");
+    fprintf(fp, "&parameter name=BacktrackCapable, type=short &end\n");
     fprintf(fp, "&parameter name=Size, type=long, units=bytes &end\n");
     fprintf(fp, "&column name=ParameterName, type=string &end\n");
     fprintf(fp, "&column name=Units, type=string &end\n");
@@ -2162,6 +2163,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&UNIPROCESSOR?0:1));
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&GPU_SUPPORT?1:0));
+      fprintf(fp, "%ld\n", (long)(entity_description[type].flags&BACKTRACK?1:0));
       fprintf(fp, "%ld\n", entity_description[type].structure_size);
       fprintf(fp, "%ld\n", entity_description[type].n_params+1);
     }
