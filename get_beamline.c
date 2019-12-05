@@ -602,6 +602,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         ((BEND*)(eptr->p_elem))->e[0] *= -1;
         ((BEND*)(eptr->p_elem))->e[1] *= -1;
         break;
+      case T_CSBEND:
+        ((CSBEND*)(eptr->p_elem))->angle *= -1;
+        ((CSBEND*)(eptr->p_elem))->e[0] *= -1;
+        ((CSBEND*)(eptr->p_elem))->e[1] *= -1;
+        break;
       case T_RFCA:
         ((RFCA*)(eptr->p_elem))->volt *= -1;
         break;
