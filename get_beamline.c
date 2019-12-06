@@ -1758,6 +1758,16 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       ((CSBEND*)(eptr->p_elem))->e[0] *= -1;
       ((CSBEND*)(eptr->p_elem))->e[1] *= -1;
       break;
+    case T_EHCOR:
+      ((EHCOR*)(eptr->p_elem))->kick *= -1;
+      break;
+    case T_EVCOR:
+      ((EVCOR*)(eptr->p_elem))->kick *= -1;
+      break;
+    case T_EHVCOR:
+      ((EHVCOR*)(eptr->p_elem))->xkick *= -1;
+      ((EHVCOR*)(eptr->p_elem))->ykick *= -1;
+      break;
     case T_RFCA:
       ((RFCA*)(eptr->p_elem))->volt *= -1;
       break;

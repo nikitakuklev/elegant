@@ -195,8 +195,10 @@ long trackThroughExactCorrector(double **part, long n_part, ELEMENT_LIST  *eptr,
   /* the tilt will account for the direction of bending */
   /* theta0 and rho0 are positive values */
   tilt += atan2(tan(ykick), tan(xkick));
-  rho0 = length/sin(theta0);
-  
+  rho0 = fabs(length)/sin(theta0);
+  if (length<0) /* back tracking */
+    tilt += PI;
+
   if (sigmaDelta2)
     *sigmaDelta2 = 0;
 
