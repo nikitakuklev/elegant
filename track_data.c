@@ -3655,7 +3655,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_IONEFFECTS_PARAMS, MPALGORITHM,     sizeof(IONEFFECTS),  ionEffects_param    },
     { N_SLICE_POINT_PARAMS, MPALGORITHM|RUN_ZERO_PARTICLES|NO_APERTURE, sizeof(SLICE_POINT),    slice_point_param   }, 
     { N_SPEEDBUMP_PARAMS, MAT_LEN_NCAT|BACKTRACK, sizeof(SPEEDBUMP),    speedbump_param   }, 
-    { N_CCBEND_PARAMS, MAT_LEN_NCAT, sizeof(CCBEND),    ccbend_param   }, 
+    { N_CCBEND_PARAMS, MAT_LEN_NCAT|BACKTRACK, sizeof(CCBEND),    ccbend_param   }, 
     { N_HKPOLY_PARAMS, MAT_LEN_NCAT, sizeof(HKPOLY),    hkpoly_param   },
     { N_BOFFAXE_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,   sizeof(BOFFAXE),  boffaxe_param  },
     { N_APCONTOUR_PARAMS, MAT_LEN_NCAT, sizeof(APCONTOUR), apcontour_param},
