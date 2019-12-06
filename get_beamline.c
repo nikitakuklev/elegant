@@ -1786,6 +1786,9 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       ((HVCOR*)eptr->p_elem)->xkick *= -1;
       ((HVCOR*)eptr->p_elem)->ykick *= -1;
       break;
+    case T_UKICKMAP:
+      ((UKICKMAP*)eptr->p_elem)->flipSign = 1;
+      break;
     default:
       break;
     }

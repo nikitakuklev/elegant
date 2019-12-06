@@ -3256,6 +3256,7 @@ typedef struct {
   short synchRad, isr, yawEnd, singlePeriodMap;
   /* for internal use only */
   short initialized;
+  short flipSign; /* 0 for forward tracking, 1 for backward */
   long points, nx, ny;
   double *xpFactor, *ypFactor;
   double xmin, xmax, dxg;

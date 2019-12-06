@@ -31,7 +31,7 @@ long trackUndulatorKickMap(
                double zStart
                )
 {
-  long ip, iTop, ik, nKicks;
+  long ip, iTop, ik, nKicks, kickSign=1;
   double *coord;
   double eomc, H;
   double dxpFactor, dypFactor;
@@ -42,6 +42,8 @@ long trackUndulatorKickMap(
   
   length = map->length;
   fieldFactor = map->fieldFactor;
+  if (map->flipSign) 
+    kickSign = -1;
   if (!map->initialized)
     initializeUndulatorKickMap(map);
 
@@ -164,11 +166,11 @@ long trackUndulatorKickMap(
         } else {
           H = pRef*(1+coord[5])/eomc;
 	  if (map->singlePeriodMap) {
-	    coord[1] += dxpFactor*sqr(fieldFactor/H);
-	    coord[3] += dypFactor*sqr(fieldFactor/H);
+	    coord[1] += dxpFactor*sqr(fieldFactor/H)*kickSign;
+	    coord[3] += dypFactor*sqr(fieldFactor/H)*kickSign;
           } else {
-	    coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks;
-	    coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks;
+	    coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks*kickSign;
+	    coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks*kickSign;
 	  }
 
           /* 3. go through another half length */

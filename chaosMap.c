@@ -166,6 +166,7 @@ long doChaosMap(
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT))
     bombElegant("Must compute twiss parameters for chaos map\n", NULL);
 
+  btBeamline = NULL;
   if (forward_backward>0) {
     btBeamline = tmalloc(sizeof(*btBeamline));
     memcpy(btBeamline, beamline, sizeof(*btBeamline));
@@ -258,17 +259,15 @@ long doChaosMap(
               /* Compute deltas */
               dF = 0;
               if (survived[0] && survived[1]) {
-                double beta, alpha, gamma, du, dup;
+                double beta, alpha, du, dup;
                 beta = beamline->twiss0->betax;
                 alpha = beamline->twiss0->alphax;
-                gamma = (1+alpha*alpha)/beta;
                 du = (startingCoord[0] - trackingBuffer[0][0])/beta;
                 dup = (startingCoord[1] - trackingBuffer[0][1]) + alpha*du;
                 dF = fabs(du) + fabs(dup);
 
                 beta = beamline->twiss0->betay;
                 alpha = beamline->twiss0->alphay;
-                gamma = (1+alpha*alpha)/beta;
                 du = (startingCoord[2] - trackingBuffer[0][2])/beta;
                 dup = (startingCoord[3] - trackingBuffer[0][3]) + alpha*du;
                 dF += fabs(du) + fabs(dup);
@@ -360,9 +359,8 @@ long doChaosMap(
     }
   }
 
-  if (forward_backward>0) {
+  if (forward_backward>0)
     free_beamlines(btBeamline);
-  }
 
   if (!inhibitFileSync)
     SDDS_DoFSync(&SDDS_cmap);
