@@ -25,8 +25,8 @@
 #define IC_DJY 5
 #define IC_LOGDJX 6
 #define IC_LOGDJY 7
-#define N_COLUMNS 8
-static SDDS_DEFINITION column_definition[N_COLUMNS] = {
+#define N_COLUMNS1 8
+static SDDS_DEFINITION column_definition1[N_COLUMNS1] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
     {"delta", "&column name=delta, type=double &end"},
@@ -36,6 +36,18 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"Log10dJx", "&column name=Log10dJx, type=double &end"},
     {"Log10dJy", "&column name=Log10dJy, type=double &end"},
     } ;
+
+#define IC_DF 4
+#define IC_LOGDF 5
+#define N_COLUMNS2 6
+static SDDS_DEFINITION column_definition2[N_COLUMNS2] = {
+    {"x", "&column name=x, symbol=x, units=m, type=double &end"},
+    {"y", "&column name=y, symbol=y, units=m, type=double &end"},
+    {"delta", "&column name=delta, type=double &end"},
+    {"Survived", "&column name=Survived, type=short &end"},
+    {"dF", "&column name=dF, type=double &end"},
+    {"Log10dF", "&column name=Log10dF, type=double &end"},
+} ;
 
 #define IP_STEP 0
 #define N_PARAMETERS 2
@@ -79,12 +91,18 @@ void setupChaosMap(
   
   output = compose_filename(output, run->rootname);
  #if SDDS_MPI_IO
-     SDDS_cmap.parallel_io = 1;
-     SDDS_MPI_Setup(&SDDS_cmap, 1, n_processors, myid, MPI_COMM_WORLD, 1);
+  SDDS_cmap.parallel_io = 1;
+  SDDS_MPI_Setup(&SDDS_cmap, 1, n_processors, myid, MPI_COMM_WORLD, 1);
  #endif
+  if (forward_backward>0) 
   SDDS_ElegantOutputSetup(&SDDS_cmap, output, SDDS_BINARY, 1, "chaos map analysis",
                           run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
-                          column_definition, N_COLUMNS,
+                          column_definition2, N_COLUMNS2,
+			  "setup_chaosMap", SDDS_EOS_NEWFILE);
+  else 
+  SDDS_ElegantOutputSetup(&SDDS_cmap, output, SDDS_BINARY, 1, "chaos map analysis",
+                          run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
+                          column_definition1, N_COLUMNS1,
 			  "setup_chaosMap", SDDS_EOS_NEWFILE);
   
   if (control->n_elements_to_vary) 
@@ -114,9 +132,9 @@ long doChaosMap(
   double **trackingBuffer = NULL;
   double dx, dy, ddelta, x, y, delta;
   long ix, iy, idelta, ip;
-  /* long turns; */
+  LINE_LIST *btBeamline; /* back-tracking beamline */
   static double **one_part;
-  double p, dJx, dJy;
+  double p, dJx, dJy, dF;
   long n_part;
 #if USE_MPI
   double oldPercentage=0;
@@ -147,7 +165,14 @@ long doChaosMap(
 
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT))
     bombElegant("Must compute twiss parameters for chaos map\n", NULL);
-  
+
+  if (forward_backward>0) {
+    btBeamline = tmalloc(sizeof(*btBeamline));
+    memcpy(btBeamline, beamline, sizeof(*btBeamline));
+    copy_line(&(btBeamline->elem), &(beamline->elem), beamline->n_elems, 1, NULL, NULL); 
+    modify_for_backtracking(&(btBeamline->elem));
+  }
+
 #if USE_MPI
   if (verbosity && myid == 1)
     dup2(fd, fileno(stdout));  /* slave will provide warnings etc */
@@ -178,6 +203,8 @@ long doChaosMap(
     printf("Error: lost particle when fiducializing\n");
     exitElegant(1);
   }
+  printf("Tracked fiducial particle\n"); 
+  fflush(stdout);
   
   if (nx>1)
     dx  = (xmax-xmin)/(nx-1);
@@ -210,61 +237,108 @@ long doChaosMap(
 	if (myid == (idelta*nx*ny+ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
 #endif
 	  {
-            /* Do the tracking */
-            memcpy(trackingBuffer[0], startingCoord, sizeof(*startingCoord)*6);
-            trackingBuffer[0][6] = 1;
-            p = run->p_central;
-            memset(survived, 0, 3*sizeof(*survived));
-            if ((survived[0]=do_tracking(NULL, trackingBuffer, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                                         NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
-                                         NULL, NULL, NULL, NULL, NULL))) {
-              memcpy(trackingBuffer[1], startingCoord, sizeof(*startingCoord)*6);
-              trackingBuffer[1][0] += epsilon_x;
-              trackingBuffer[1][6] = 2;
-              survived[1] = do_tracking(NULL, trackingBuffer+1, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                                        NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
-                                        NULL, NULL, NULL, NULL, NULL);
-
-              memcpy(trackingBuffer[2], startingCoord, sizeof(*startingCoord)*6);
-              trackingBuffer[2][2] += epsilon_y;
-              trackingBuffer[2][6] = 3;
-              survived[2] = do_tracking(NULL, trackingBuffer+2, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                                        NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
-                                        NULL, NULL, NULL, NULL, NULL);
-            } 
-            /* Compute deltas */
-            dJx = dJy = DBL_MAX;
-            if (survived[0]) {
-              if (survived[1]) {
-                double J1, J2, beta, alpha, gamma;
+            if (forward_backward>0) {
+              int iteration;
+              memcpy(trackingBuffer[0], startingCoord, sizeof(*startingCoord)*6);
+              trackingBuffer[0][6] = 1;
+              p = run->p_central;
+              memset(survived, 0, 3*sizeof(*survived));
+              for (iteration=0; iteration<forward_backward; iteration++) {
+                if (!(survived[0]=do_tracking(NULL, trackingBuffer, 1, NULL, beamline, 
+                                              &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                                              NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
+                                              NULL, NULL, NULL, NULL, NULL))) 
+                  break;
+                if (!(survived[1]=do_tracking(NULL, trackingBuffer, 1, NULL, btBeamline, 
+                                              &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                                              NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
+                                              NULL, NULL, NULL, NULL, NULL)))
+                  break;
+              }
+              /* Compute deltas */
+              dF = 0;
+              if (survived[0] && survived[1]) {
+                double beta, alpha, gamma, du, dup;
                 beta = beamline->twiss0->betax;
                 alpha = beamline->twiss0->alphax;
                 gamma = (1+alpha*alpha)/beta;
-                J1 = (sqr(trackingBuffer[0][0])*gamma + 2*alpha*trackingBuffer[0][0]*trackingBuffer[0][1] + sqr(trackingBuffer[0][1])*beta)/2;
-                J2 = (sqr(trackingBuffer[1][0])*gamma + 2*alpha*trackingBuffer[1][0]*trackingBuffer[1][1] + sqr(trackingBuffer[1][1])*beta)/2;
-                dJx = J2-J1;
-              }
-              if (survived[2]) {
-                double J1, J2, beta, alpha, gamma;
+                du = (startingCoord[0] - trackingBuffer[0][0])/beta;
+                dup = (startingCoord[1] - trackingBuffer[0][1]) + alpha*du;
+                dF = fabs(du) + fabs(dup);
+
                 beta = beamline->twiss0->betay;
                 alpha = beamline->twiss0->alphay;
                 gamma = (1+alpha*alpha)/beta;
-                J1 = (sqr(trackingBuffer[0][2])*gamma + 2*alpha*trackingBuffer[0][2]*trackingBuffer[0][3] + sqr(trackingBuffer[0][3])*beta)/2;
-                J2 = (sqr(trackingBuffer[1][2])*gamma + 2*alpha*trackingBuffer[1][2]*trackingBuffer[1][3] + sqr(trackingBuffer[1][3])*beta)/2;
-                dJy = J2-J1;
+                du = (startingCoord[2] - trackingBuffer[0][2])/beta;
+                dup = (startingCoord[3] - trackingBuffer[0][3]) + alpha*du;
+                dF += fabs(du) + fabs(dup);
+              }
+              /* Log the data */
+              if (!SDDS_SetRowValues(&SDDS_cmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+                                     IC_X, x, IC_Y, y, IC_DELTA, delta,
+                                     IC_SURVIVED, survived[0]*survived[1],
+                                     IC_DF, dF, IC_LOGDF, log(dF+1e-300),
+                                     -1)) {
+                SDDS_SetError("Problem setting SDDS row values (doChaosMap)");
+                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+              }
+            } else {
+              /* Method using multi-turn tracking */
+              /* Do the tracking */
+              memcpy(trackingBuffer[0], startingCoord, sizeof(*startingCoord)*6);
+              trackingBuffer[0][6] = 1;
+              p = run->p_central;
+              memset(survived, 0, 3*sizeof(*survived));
+              if ((survived[0]=do_tracking(NULL, trackingBuffer, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                                           NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
+                                           NULL, NULL, NULL, NULL, NULL))) {
+                memcpy(trackingBuffer[1], startingCoord, sizeof(*startingCoord)*6);
+                trackingBuffer[1][0] += epsilon_x;
+                trackingBuffer[1][6] = 2;
+                survived[1] = do_tracking(NULL, trackingBuffer+1, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                                          NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
+                                          NULL, NULL, NULL, NULL, NULL);
+                
+                memcpy(trackingBuffer[2], startingCoord, sizeof(*startingCoord)*6);
+                trackingBuffer[2][2] += epsilon_y;
+                trackingBuffer[2][6] = 3;
+                survived[2] = do_tracking(NULL, trackingBuffer+2, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                                          NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
+                                          NULL, NULL, NULL, NULL, NULL);
+              }
+              /* Compute deltas */
+              dJx = dJy = DBL_MAX;
+              if (survived[0]) {
+                if (survived[1]) {
+                  double J1, J2, beta, alpha, gamma;
+                  beta = beamline->twiss0->betax;
+                  alpha = beamline->twiss0->alphax;
+                  gamma = (1+alpha*alpha)/beta;
+                  J1 = (sqr(trackingBuffer[0][0])*gamma + 2*alpha*trackingBuffer[0][0]*trackingBuffer[0][1] + sqr(trackingBuffer[0][1])*beta)/2;
+                  J2 = (sqr(trackingBuffer[1][0])*gamma + 2*alpha*trackingBuffer[1][0]*trackingBuffer[1][1] + sqr(trackingBuffer[1][1])*beta)/2;
+                  dJx = J2-J1;
+                }
+                if (survived[2]) {
+                  double J1, J2, beta, alpha, gamma;
+                  beta = beamline->twiss0->betay;
+                  alpha = beamline->twiss0->alphay;
+                  gamma = (1+alpha*alpha)/beta;
+                  J1 = (sqr(trackingBuffer[0][2])*gamma + 2*alpha*trackingBuffer[0][2]*trackingBuffer[0][3] + sqr(trackingBuffer[0][3])*beta)/2;
+                  J2 = (sqr(trackingBuffer[1][2])*gamma + 2*alpha*trackingBuffer[1][2]*trackingBuffer[1][3] + sqr(trackingBuffer[1][3])*beta)/2;
+                  dJy = J2-J1;
+                }
+              }
+              /* Log the data */
+              if (!SDDS_SetRowValues(&SDDS_cmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+                                     IC_X, x, IC_Y, y, IC_DELTA, delta,
+                                     IC_DJX, dJx, IC_DJY, dJy, IC_SURVIVED, survived[0]*survived[1]*survived[2],
+                                     IC_LOGDJX, log(fabs(dJx)), IC_LOGDJY, log(fabs(dJy)),
+                                     -1)) {
+                SDDS_SetError("Problem setting SDDS row values (doChaosMap)");
+                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
               }
             }
-             
-            /* Log the data */
-            if (!SDDS_SetRowValues(&SDDS_cmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
-                                   IC_X, x, IC_Y, y, IC_DELTA, delta,
-                                   IC_DJX, dJx, IC_DJY, dJy, IC_SURVIVED, survived[0]*survived[1]*survived[2],
-                                   IC_LOGDJX, log(fabs(dJx)), IC_LOGDJY, log(fabs(dJy)),
-                                   -1)) {
-              SDDS_SetError("Problem setting SDDS row values (doChaosMap)");
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-	    ip++;
+            ip++;
 	    if (verbosity) {
 #if USE_MPI
 	      if (myid==1) {
@@ -284,6 +358,10 @@ long doChaosMap(
 	  }
       }
     }
+  }
+
+  if (forward_backward>0) {
+    free_beamlines(btBeamline);
   }
 
   if (!inhibitFileSync)

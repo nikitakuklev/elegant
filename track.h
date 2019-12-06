@@ -3976,8 +3976,9 @@ extern long expand_phys(ELEMENT_LIST *leptr, char *entity, ELEMENT_LIST *elem_li
     long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of);
 extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division,
                          long divisions, char *editCmd);
-void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
-  extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of, char *editCmd);
+extern void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
+extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of, char *editCmd);
+extern void modify_for_backtracking(ELEMENT_LIST *eptr);
 extern long tell_type(char *s, ELEMENT_LIST *elem);
 extern char *get_param_name(char *s);
 extern char *find_param(char *s, char *param);

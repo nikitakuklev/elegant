@@ -590,61 +590,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     copy_line(&(lptr->elem), &ecopy, lptr->n_elems, 1, NULL, NULL);
     /* free_elements(&ecopy); */
     eptr = &(lptr->elem);
-    while (eptr) {
-      if (!(entity_description[eptr->type].flags&BACKTRACK))
-        bombElegantVA("Error: no backtracking method for element %s (type %s)",
-                      eptr->name, entity_name[eptr->type]);
-      if (entity_description[eptr->type].flags&HAS_LENGTH)
-        ((DRIFT*)(eptr->p_elem))->length *= -1;
-      switch (eptr->type) {
-      case T_SBEN:
-        ((BEND*)(eptr->p_elem))->angle *= -1;
-        ((BEND*)(eptr->p_elem))->e[0] *= -1;
-        ((BEND*)(eptr->p_elem))->e[1] *= -1;
-        break;
-      case T_CSBEND:
-        ((CSBEND*)(eptr->p_elem))->angle *= -1;
-        ((CSBEND*)(eptr->p_elem))->e[0] *= -1;
-        ((CSBEND*)(eptr->p_elem))->e[1] *= -1;
-        break;
-      case T_RFCA:
-        ((RFCA*)(eptr->p_elem))->volt *= -1;
-        break;
-      case T_WAKE:
-        ((WAKE*)(eptr->p_elem))->factor *= -1;
-        break;
-      case T_TRWAKE:
-        ((TRWAKE*)(eptr->p_elem))->factor *= -1;
-        break;
-      case T_MALIGN:
-        ((MALIGN*)eptr->p_elem)->dx *= -1;
-        ((MALIGN*)eptr->p_elem)->dxp *= -1;
-        ((MALIGN*)eptr->p_elem)->dy *= -1;
-        ((MALIGN*)eptr->p_elem)->dyp *= -1;
-        break;
-      case T_ROTATE:
-        ((ROTATE*)eptr->p_elem)->tilt *= -1;
-        break;
-      case T_HCOR:
-        ((HCOR*)eptr->p_elem)->kick *= -1;
-        break;
-      case T_VCOR:
-        ((VCOR*)eptr->p_elem)->kick *= -1;
-        break;
-      case T_HVCOR:
-        ((HVCOR*)eptr->p_elem)->xkick *= -1;
-        ((HVCOR*)eptr->p_elem)->ykick *= -1;
-        break;
-      default:
-        break;
-      }
-      eptr = eptr->succ;
-      if (eptr && eptr->name==NULL) {
-        eptr->pred->succ = NULL;
-        free(eptr);
-        eptr = NULL;
-      }
-    }
+    modify_for_backtracking(eptr);
   }
 
   if (echo) {
@@ -1792,3 +1738,63 @@ void print_beamlines(FILE *fp)
       }
     } while ((object=object->next));
 }
+
+void modify_for_backtracking(ELEMENT_LIST *eptr)
+{
+  while (eptr) {
+    if (!(entity_description[eptr->type].flags&BACKTRACK))
+      bombElegantVA("Error: no backtracking method for element %s (type %s)",
+                    eptr->name, entity_name[eptr->type]);
+    if (entity_description[eptr->type].flags&HAS_LENGTH)
+      ((DRIFT*)(eptr->p_elem))->length *= -1;
+    switch (eptr->type) {
+    case T_SBEN:
+      ((BEND*)(eptr->p_elem))->angle *= -1;
+      ((BEND*)(eptr->p_elem))->e[0] *= -1;
+      ((BEND*)(eptr->p_elem))->e[1] *= -1;
+      break;
+    case T_CSBEND:
+      ((CSBEND*)(eptr->p_elem))->angle *= -1;
+      ((CSBEND*)(eptr->p_elem))->e[0] *= -1;
+      ((CSBEND*)(eptr->p_elem))->e[1] *= -1;
+      break;
+    case T_RFCA:
+      ((RFCA*)(eptr->p_elem))->volt *= -1;
+      break;
+    case T_WAKE:
+      ((WAKE*)(eptr->p_elem))->factor *= -1;
+      break;
+    case T_TRWAKE:
+      ((TRWAKE*)(eptr->p_elem))->factor *= -1;
+      break;
+    case T_MALIGN:
+      ((MALIGN*)eptr->p_elem)->dx *= -1;
+      ((MALIGN*)eptr->p_elem)->dxp *= -1;
+      ((MALIGN*)eptr->p_elem)->dy *= -1;
+      ((MALIGN*)eptr->p_elem)->dyp *= -1;
+      break;
+    case T_ROTATE:
+      ((ROTATE*)eptr->p_elem)->tilt *= -1;
+      break;
+    case T_HCOR:
+      ((HCOR*)eptr->p_elem)->kick *= -1;
+      break;
+    case T_VCOR:
+      ((VCOR*)eptr->p_elem)->kick *= -1;
+      break;
+    case T_HVCOR:
+      ((HVCOR*)eptr->p_elem)->xkick *= -1;
+      ((HVCOR*)eptr->p_elem)->ykick *= -1;
+      break;
+    default:
+      break;
+    }
+    eptr = eptr->succ;
+    if (eptr && eptr->name==NULL) {
+      eptr->pred->succ = NULL;
+      free(eptr);
+      eptr = NULL;
+    }
+  }
+}
+

@@ -19,5 +19,6 @@
     long ny = 21;
     long ndelta = 1;
     long verbosity = 1;
+    long forward_backward = 0;
 #end
 
