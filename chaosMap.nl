@@ -13,12 +13,12 @@
     double ymax =  0.1;
     double delta_min = 0;
     double delta_max = 0;
-    double epsilon_x = 1e-6;
-    double epsilon_y = 1e-6;
     long nx = 20;
     long ny = 21;
     long ndelta = 1;
-    long verbosity = 1;
     long forward_backward = 0;
+    double change_x = 1e-6;
+    double change_y = 1e-6;
+    long verbosity = 1;
 #end
 

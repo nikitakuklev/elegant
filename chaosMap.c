@@ -86,8 +86,8 @@ void setupChaosMap(
     ny = 1;
   if (ndelta<1)
     ndelta = 1;
-  if (epsilon_x==0  || epsilon_y==0)
-    bombElegant("must have epsilon_x and epsilon_y nonzero", NULL);
+  if (change_x==0  || change_y==0)
+    bombElegant("must have change_x and change_y nonzero", NULL);
   
   output = compose_filename(output, run->rootname);
  #if SDDS_MPI_IO
@@ -293,14 +293,14 @@ long doChaosMap(
                                            NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
                                            NULL, NULL, NULL, NULL, NULL))) {
                 memcpy(trackingBuffer[1], startingCoord, sizeof(*startingCoord)*6);
-                trackingBuffer[1][0] += epsilon_x;
+                trackingBuffer[1][0] += change_x;
                 trackingBuffer[1][6] = 2;
                 survived[1] = do_tracking(NULL, trackingBuffer+1, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                                           NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,
                                           NULL, NULL, NULL, NULL, NULL);
                 
                 memcpy(trackingBuffer[2], startingCoord, sizeof(*startingCoord)*6);
-                trackingBuffer[2][2] += epsilon_y;
+                trackingBuffer[2][2] += change_y;
                 trackingBuffer[2][6] = 3;
                 survived[2] = do_tracking(NULL, trackingBuffer+2, 1, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                                           NULL, run, 0, TEST_PARTICLES, control->n_passes, 0,

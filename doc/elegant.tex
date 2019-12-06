@@ -73,6 +73,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|chaos_map| command is now available. As the name suggests, it is similar to
+  a frequency map, but provides other measures of chaotic motion. This includes a promising new
+  approach outlined by Y. Li {\em et al.} \cite{Li-arxiv-1912.00121}.
 \item The \verb|optimization_variable| command has a new parameter \verb|differential_limits|, which 
   permits specifying that the lower and upper limits are being given relative to the initial value,
   rather than in absolute terms.
@@ -704,6 +707,7 @@ Command name & Type & Description \\\hline
 \hyperref[subsec:aperturedata]{\tt aperture\_data} & setup & Define aperture using an SDDS file. \\ \hline
 \hyperref[subsec:bunchedbeam]{\tt bunched\_beam} & setup & Set up beam generation. \\ \hline
 \hyperref[subsec:changeparticle]{\tt change\_particle} & action & Change the type of particle. Default is electron.\\ \hline
+\hyperref[subsec:chaosmap]{\tt chaos\_map} & action & Compute a map of the degree of chaos in particle motion.\\ \hline
 \hyperref[subsec:chromaticity]{\tt chromaticity} & setup & Correct the chromaticity. \\ \hline
 \hyperref[subsec:closedorbit]{\tt closed\_orbit} & setup & Compute the closed orbit. \\ \hline
 \hyperref[subsec:correct]{\tt correct} & setup & Correct the orbit or trajectory. \\ \hline
@@ -1242,6 +1246,64 @@ particles.
 \item \verb|mass_ratio|, \verb|charge_ratio| --- If the particle name is ``custom,'' these parameters specify the
   mass and charge of the particle relative to the electron.  E.g., for an anti-proton, one would use
   a mass ratio of 1836.18 and a charge ratio of 1.
+\end{itemize}
+
+%\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|chaos_map|}\end{center}
+%\end{latexonly}
+\subsection{chaos\_map \label{subsec:chaosmap}}
+
+\begin{itemize}
+\item type: major action command.  
+\item function: compute chaos map from tracking.
+      Note that the number of turns tracked is set by the \verb|run_control| command.
+\item can use parallel resources (\verb|Pelegant|)
+\item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\end{itemize}
+
+\begin{verbatim}
+&chaos_map
+    STRING output = NULL;
+    double xmin =  -0.1;
+    double xmax =  0.1;
+    double ymin =  1e-6;
+    double ymax =  0.1;
+    double delta_min = 0;
+    double delta_max = 0;
+    long nx = 20;
+    long ny = 21;
+    long ndelta = 1;
+    long forward_backward = 0;
+    double change_x = 1e-6;
+    double change_y = 1e-6;
+    long verbosity = 1;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
+ Recommended value: ``\%s.cmap''.  For the parallel version, particles will be listed in essentially
+ random order.  If needed, \verb|sddssort| can be used to sort particles by initial coordinates.
+\item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.             
+\item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.             
+ \verb|ymin| should be a small, positive value so that there                               
+ is some betatron oscillation from which to get the tune.                      
+\item \verb|delta_min|, \verb|delta_max| --- Limits of grid of initial $\delta$ coordinates
+for tracking.  Note that particles are not centered around the dispersive closed orbit.  Hence,
+the tracking is appropriate to simulation of dynamics from a touschek scattering event.
+\item \verb|nx| --- Number of values of x coordinate in the grid.
+\item \verb|ny| --- Number of values of y coordinate in the grid.
+\item \verb|ndelta| --- Number of values of $\delta$ coordinate in the grid.
+\item \verb|forward_backward| --- If non-zero, uses the forward/backward integration technique of Y. Li {\em et al.} 
+  \cite{Li-arxiv-1912.00121}. The number of passes tracked is still controlled by the \verb|n_passes| parameter of 
+  \verb|run_control|. In addition, the number of iterations of forward and backward tracking is given by the
+  value of \verb|forward_backward|.
+  If zero, a less interesting technique is used that computes the change in $J_x$ and $J_y$ from tracking with
+  small changes in initial conditions.
+\item \verb|change_x|, \verb|change_y| --- If  \verb|forward_backward| is zero, gives the perturbation to 
+  initial x and y used to assess chaotic motion from divergence of trajectories.
+\item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
 \end{itemize}
 
 %\begin{latexonly}
@@ -9389,6 +9451,10 @@ R. Lindberg, private communication, 2018.
 
 \bibitem{Sun-NAPAC19}
 Y.-P. Sun and C.-Y. Yao, ``Tracking With Space Harmonics in ELEGANT Code,'' Proc. NAPAC19.
+
+\bibitem{Li-arxiv-1912.00121}
+  Y. Li {\em et al.}, ``Fast dynamic aperture optimization with reversal integration,''
+  arXiv:1912.00121, 30 November 2019.
 
 \end{thebibliography}
 
