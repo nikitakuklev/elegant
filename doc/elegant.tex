@@ -45,7 +45,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
   also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime$, as pointed out
-  by forum user Teresia. This was improved.
+  by forum user Teresia.
 \item A bug was fixed in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
   This was reported by Y. Park (UCLA).
 \end{itemize}
@@ -1260,6 +1260,7 @@ particles.
       Note that the number of turns tracked is set by the \verb|run_control| command.
 \item can use parallel resources (\verb|Pelegant|)
 \item Command syntax, including use of equations and subcommands, is discussed in \ref{sect:generalCommandSyntax}.
+\item NB: this feature is new in 2019.4 and somewhat experimental. Please report problems on the forum.
 \end{itemize}
 
 \begin{verbatim}
