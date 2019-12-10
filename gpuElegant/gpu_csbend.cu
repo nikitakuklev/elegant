@@ -858,6 +858,10 @@ extern "C"
     psi1 = Kg1 / rho_actual / cos(e1) * (1 + sqr(sin(e1)));
     Kg2 = 2 * csbend->hgap * (csbend->fint[csbend->e2Index] >= 0 ? csbend->fint[csbend->e2Index] : csbend->fintBoth);
     psi2 = Kg2 / rho_actual / cos(e2) * (1 + sqr(sin(e2)));
+    if (csbend->length<0) {
+      psi1 *=  -1;
+      psi2 *=  -1;
+    }
 
     /* rad_coef is d((P-Po)/Po)/ds for the on-axis, on-momentum particle, where po is the momentum of
      * the central particle.
