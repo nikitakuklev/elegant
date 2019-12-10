@@ -323,6 +323,18 @@ Pelegant = $(words $(notdir $(PelegantLocation)))
 
 
 PelegantNewer=0
+
+ifeq ($(EPICS_HOST_ARCH),darwin-x86)
+ifeq ($(Pelegant), 1)
+PelegantTime=$(shell stat -f %m $(PelegantLocation))
+ifeq ($(elegant), 1)
+elegantTime=$(shell stat -f %m $(elegantLocation))
+PelegantNewer=$(shell rpnl "$(elegantTime) $(PelegantTime) < ? 1 : 0 $$")
+else
+PelegantNewer=1
+endif
+endif
+else
 ifeq ($(Pelegant), 1)
 PelegantTime=$(shell stat --format=%Y $(PelegantLocation))
 ifeq ($(elegant), 1)
@@ -330,6 +342,7 @@ elegantTime=$(shell stat --format=%Y $(elegantLocation))
 PelegantNewer=$(shell rpnl "$(elegantTime) $(PelegantTime) < ? 1 : 0 $$")
 else
 PelegantNewer=1
+endif
 endif
 endif
 
