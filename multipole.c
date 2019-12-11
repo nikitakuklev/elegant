@@ -1061,7 +1061,7 @@ long multipole_tracking2(
   switch (elem->type) {
   case T_KQUAD:
     if (kquad->edge1_effects>0)
-      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, -1, 
+      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, -1, 
                  kquad->edge1_effects, kquad->edge1Linear, kquad->edge1NonlinearFactor);
     break;
   default:
@@ -1115,7 +1115,7 @@ long multipole_tracking2(
   switch (elem->type) {
   case T_KQUAD:
     if (kquad->edge2_effects>0)
-      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, 1, 
+      quadFringe(particle, n_part, kquad->k1, kquad->fringeIntM, kquad->fringeIntP, kquad->length<0, 1, 
                  kquad->edge2_effects, kquad->edge2Linear, kquad->edge2NonlinearFactor);
     break;
   default:

@@ -23,6 +23,7 @@
 void quadFringe(double **coord, long np, double K1, 
                 double *fringeIntM0,  /* I0m/K1, I1m/K1, I2m/K1, I3m/K1, Lambda2m/K1 */
                 double *fringeIntP0,  /* I0p/K1, I1p/K1, I2p/K1, I3p/K1, Lambda2p/K1 */
+                int backtrack,       /* 0 = forward, otherwise backward */
                 int inFringe,        /* -1 = entrance, +1 = exit */
                 int higherOrder,     /* +/-1=linear, +/-2=linear+3rd order, +/-3=linear+higher order */
                 int linearFlag,
@@ -45,7 +46,7 @@ void quadFringe(double **coord, long np, double K1,
     /* determine linear matrix for this delta */
     quadPartialFringeMatrix(M1, K1, 1, fringeIntM0, 1);
     quadPartialFringeMatrix(M2, K1, 1, fringeIntP0, 2);
-    if (inFringe==-1) {
+    if (inFringe*(backtrack?-1:1)==-1) {
       VMATRIX *Mtmp;
       SWAP_DOUBLE(M1->R[0][0], M1->R[1][1]);
       SWAP_DOUBLE(M1->R[2][2], M1->R[3][3]);
@@ -54,6 +55,21 @@ void quadFringe(double **coord, long np, double K1,
       Mtmp = M1;
       M1 = M2;
       M2 = Mtmp;
+    }
+    if (backtrack) {
+      /* invert the matrices */
+      SWAP_DOUBLE(M1->R[0][0], M1->R[1][1]);
+      SWAP_DOUBLE(M1->R[2][2], M1->R[3][3]);
+      M1->R[0][1] *= -1;
+      M1->R[1][0] *= -1;
+      M1->R[2][3] *= -1;
+      M1->R[3][2] *= -1;
+      SWAP_DOUBLE(M2->R[0][0], M2->R[1][1]);
+      SWAP_DOUBLE(M2->R[2][2], M2->R[3][3]);
+      M2->R[0][1] *= -1;
+      M2->R[1][0] *= -1;
+      M2->R[2][3] *= -1;
+      M2->R[3][2] *= -1;
     }
   }
 

@@ -35,60 +35,30 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2019.4.0}
+\section{Highlights of What's New in Version 2020.1.0}
 
-Here is a summary of what's changed since release 2019.3.0.
+Here is a summary of what's changed since release 2019.4.0.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
-  also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime$, as pointed out
-  by forum user Teresia.
-\item A bug was fixed in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
-  This was reported by Y. Park (UCLA).
+\item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The \verb|bunched_beam| command was not generating particle ID values when \verb|use_moments_output_values=1|,
-  as reported by Z. Duan (IHEP). 
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added \verb|SPARSE_INTERVAL| parameter to the \verb|WATCH| element, to allow sparsing coordinate output
-  with regular spacing.  This supplements the \verb|FRACTION| parameter, which provides random sampling, and the
-  \verb|START_PID| and \verb|END_PID| parameters, which provide sampling of a subset defined by particle ID.
-\item Added \verb|RPN_PARAMETERS| parameter to the \verb|SCRIPT| element, which directs the program to load
-  SDDS parameter values from the script output file into \verb|rpn| variables, where they may be used for
-  optimization. This provides the user the ability to perform script-based analysis of particle distributions and
-  then optimize the results of that analysis.
-\item The \verb|N_BINS| parameter of the \verb|WAKE| and \verb|TRWAKE| elements now defaults to zero, which
-  prevents some undesirable behavior when warnings are overlooked. This was requested by R. Lindberg (ANL).
-\item The \verb|EDRIFT|, \verb|EHVCOR|, \verb|EHCOR|, \verb|EVCOR|, \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, 
-  \verb|KOCT|, and \verb|UKICKMAP| elements can now be used with back-tracking (see \verb|run_setup|).
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|chaos_map| command is now available. As the name suggests, it is similar to
-  a frequency map, but provides other measures of chaotic motion. This includes a promising new
-  approach outlined by Y. Li {\em et al.} \cite{Li-arxiv-1912.00121}.
-\item The \verb|optimization_variable| command has a new parameter \verb|differential_limits|, which 
-  permits specifying that the lower and upper limits are being given relative to the initial value,
-  rather than in absolute terms.
-\item The \verb|tune_footprint| command has a new parameter \verb|separate_xy_for_delta|, which permits
-  specifying that tracking for the x and y momentum-dependent tunes should be done either in a combined 
-  fashion (default) or separately. The latter might be helpful if nonlinear coupling of y motion into the x plane
-  causes the x tune to be poorly determined for small x amplitudes.
-\item Added \verb|egaussian| mode to the \verb|ion_effects| command. This mode results in computation of the fields
-  from the electrons assuming a gaussian distribution, as normal, but determines the kick to the ions based purely on
-  momentum conservation. This was inspired by the work of M. Blasciewicz (BNL) and implemented with J. Calvey (ANL).
-\item Added \verb|multiple_ionization_energy_peak| and \verb|multiple_ionization_energy_rms| parameters to 
-  the \verb|ion_effects| command, allowing control of the peak and rms energy of ions produced by multiple ionization.
-  This was done by J. Calvey (ANL).
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -7752,6 +7722,83 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2019.4.0}
+
+Here is a summary of what's changed since release 2019.3.0.
+Historical change logs are collected in Section \ref{sect:changeLog}.
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item The \verb|ILMATRIX| element lacked path-length terms related to the betatron amplitude, and 
+  also did not properly handle non-zero $\alpha_{x,y}$ and $\eta_{x,y}^\prime$, as pointed out
+  by forum user Teresia.
+\item A bug was fixed in back-tracking for \verb|SBEN| elements with nonzero values for \verb|HGAP| and \verb|FINT|.
+  This was reported by Y. Park (UCLA).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The \verb|bunched_beam| command was not generating particle ID values when \verb|use_moments_output_values=1|,
+  as reported by Z. Duan (IHEP). 
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Added \verb|SPARSE_INTERVAL| parameter to the \verb|WATCH| element, to allow sparsing coordinate output
+  with regular spacing.  This supplements the \verb|FRACTION| parameter, which provides random sampling, and the
+  \verb|START_PID| and \verb|END_PID| parameters, which provide sampling of a subset defined by particle ID.
+\item Added \verb|RPN_PARAMETERS| parameter to the \verb|SCRIPT| element, which directs the program to load
+  SDDS parameter values from the script output file into \verb|rpn| variables, where they may be used for
+  optimization. This provides the user the ability to perform script-based analysis of particle distributions and
+  then optimize the results of that analysis.
+\item The \verb|N_BINS| parameter of the \verb|WAKE| and \verb|TRWAKE| elements now defaults to zero, which
+  prevents some undesirable behavior when warnings are overlooked. This was requested by R. Lindberg (ANL).
+\item The \verb|EDRIFT|, \verb|EHVCOR|, \verb|EHCOR|, \verb|EVCOR|, \verb|CSBEND|, \verb|KQUAD|, \verb|KSEXT|, 
+  \verb|KOCT|, and \verb|UKICKMAP| elements can now be used with back-tracking (see \verb|run_setup|).
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|chaos_map| command is now available. As the name suggests, it is similar to
+  a frequency map, but provides other measures of chaotic motion. This includes a promising new
+  approach outlined by Y. Li {\em et al.} \cite{Li-arxiv-1912.00121}.
+\item The \verb|optimization_variable| command has a new parameter \verb|differential_limits|, which 
+  permits specifying that the lower and upper limits are being given relative to the initial value,
+  rather than in absolute terms.
+\item The \verb|tune_footprint| command has a new parameter \verb|separate_xy_for_delta|, which permits
+  specifying that tracking for the x and y momentum-dependent tunes should be done either in a combined 
+  fashion (default) or separately. The latter might be helpful if nonlinear coupling of y motion into the x plane
+  causes the x tune to be poorly determined for small x amplitudes.
+\item Added \verb|egaussian| mode to the \verb|ion_effects| command. This mode results in computation of the fields
+  from the electrons assuming a gaussian distribution, as normal, but determines the kick to the ions based purely on
+  momentum conservation. This was inspired by the work of M. Blasciewicz (BNL) and implemented with J. Calvey (ANL).
+\item Added \verb|multiple_ionization_energy_peak| and \verb|multiple_ionization_energy_rms| parameters to 
+  the \verb|ion_effects| command, allowing control of the peak and rms energy of ions produced by multiple ionization.
+  This was done by J. Calvey (ANL).
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item None.
+\end{itemize}
 
 
 \subsection{Highlights of What's New in Version 2019.3.0}
