@@ -357,12 +357,30 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           if (hasFringeIntegrals) {
             Mfringe = NULL;
             if (edge1_effects) {
-              Mfringe = quadFringeMatrix(NULL, K1, -1, fringeIntM, fringeIntP);
+              Mfringe = quadFringeMatrix(NULL, K1, lHC<0?1:-1, fringeIntM, fringeIntP);
+              if (lHC<0) {
+                printf("Inverting quad fringe entrance matrix\n");
+                SWAP_DOUBLE(Mfringe->R[0][0], Mfringe->R[1][1]);
+                SWAP_DOUBLE(Mfringe->R[2][2], Mfringe->R[3][3]);
+                Mfringe->R[0][1] *= -1;
+                Mfringe->R[1][0] *= -1;
+                Mfringe->R[2][3] *= -1;
+                Mfringe->R[3][2] *= -1;
+              }
               concat_matrices(Mtot, M, Mfringe, 0);
               tmp = M; M = Mtot; Mtot = tmp;
             }
             if (edge2_effects) {
-              Mfringe = quadFringeMatrix(Mfringe, K1, 1, fringeIntM, fringeIntP);
+              Mfringe = quadFringeMatrix(Mfringe, K1, lHC<0?-1:1, fringeIntM, fringeIntP);
+              if (lHC<0) {
+                printf("Inverting quad fringe exit matrix\n");
+                SWAP_DOUBLE(Mfringe->R[0][0], Mfringe->R[1][1]);
+                SWAP_DOUBLE(Mfringe->R[2][2], Mfringe->R[3][3]);
+                Mfringe->R[0][1] *= -1;
+                Mfringe->R[1][0] *= -1;
+                Mfringe->R[2][3] *= -1;
+                Mfringe->R[3][2] *= -1;
+              }
               concat_matrices(Mtot, Mfringe, M, 0);
               tmp = M; M = Mtot; Mtot = tmp;
             }
