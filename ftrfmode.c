@@ -376,7 +376,7 @@ void track_through_ftrfmode(
         fflush(stdout);
 #endif
         for (ib=firstBin; ib<=lastBin; ib++) {
-          if (!count[ib] || (!xsum[ib] && !ysum[ib]))
+          if (!count[ib])
             continue;
           t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
           if (t<trfmode->last_t) {

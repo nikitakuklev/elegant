@@ -339,7 +339,7 @@ void track_through_trfmode(
     if (isSlave) {
 #endif
       for (ib=firstBin; ib<=lastBin; ib++) {
-        if (!trfmode->interpolate && (count[ib]==0 || (xsum[ib]==0 && ysum[ib]==0)))
+        if (!trfmode->interpolate && count[ib]==0)
           continue;
         
         t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
