@@ -140,6 +140,11 @@ long track_through_ccbend(
       if (!disable[0] || !disable[1]) {
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
+        if (ccbend->length<0) {
+          ccbendCopy.length = fabs(ccbend->length);
+          ccbendCopy.angle =  -ccbend->angle;
+          ccbendCopy.yaw = -ccbend->yaw;
+        }
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = 
           ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = 
@@ -242,11 +247,11 @@ long track_through_ccbend(
       bombElegant("REFERENCE_ORDER must be 0, 1, or 2 for CCBEND", NULL);
   }
   if (ccbend->edgeFlip==0) {
-    gK[0] = 2*ccbend->fint1*ccbend->hgap;
-    gK[1] = 2*ccbend->fint2*ccbend->hgap;
+    gK[0] = 2*ccbend->fint1*ccbend->hgap*(length<0?-1:1);
+    gK[1] = 2*ccbend->fint2*ccbend->hgap*(length<0?-1:1);
   } else {
-    gK[1] = 2*ccbend->fint1*ccbend->hgap;
-    gK[0] = 2*ccbend->fint2*ccbend->hgap;
+    gK[1] = 2*ccbend->fint1*ccbend->hgap*(length<0?-1:1);
+    gK[0] = 2*ccbend->fint2*ccbend->hgap*(length<0?-1:1);
   }
 
   integ_order = ccbend->integration_order;
