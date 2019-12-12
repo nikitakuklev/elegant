@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2019.4\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2020.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -44,6 +44,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \begin{itemize}
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
+\item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
+  for this element is still doubtful for large-angle dipoles with significant gradients.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -58,7 +60,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None.
+\item Added more controls for mathematica-compatible output from the \verb|matrix_output|.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -3071,8 +3073,10 @@ changes to parameters.
     long printout_order = 1;
     STRING printout_format = "%22.15e ";
     long full_matrix_only = 0;
-    long mathematica_full_matrix = 0;
     long print_element_data = 1;
+    long mathematica_full_matrix = 0;
+    STRING mathematica_matrix_name = "MFull";
+    STRING mathematica_matrix_file = NULL;
     STRING SDDS_output = NULL;
     long SDDS_output_order = 1;
     long individual_matrices = 0;
