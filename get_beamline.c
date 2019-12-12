@@ -1760,6 +1760,7 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       break;
     case T_CCBEND:
       ((CCBEND*)(eptr->p_elem))->angle *= -1;
+      ((CCBEND*)(eptr->p_elem))->yaw *= -1;
       break;
     case T_EHCOR:
       ((EHCOR*)(eptr->p_elem))->kick *= -1;
