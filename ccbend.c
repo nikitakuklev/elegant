@@ -141,6 +141,8 @@ long track_through_ccbend(
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
         if (ccbend->length<0) {
+          /* For backtracking. This seems to help improve results. Otherwise, the offsets are different, which doesn't
+           * make sense. */
           ccbendCopy.length = fabs(ccbend->length);
           ccbendCopy.angle =  -ccbend->angle;
           ccbendCopy.yaw = -ccbend->yaw;
