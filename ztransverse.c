@@ -61,7 +61,7 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
   long **ipBucket = NULL;                /* array to record particle indices in part0 array for all particles in each bucket */
   long *npBucket = NULL;                 /* array to record how many particles are in each bucket */
   long max_np = 0;
-  double *Vfreq = NULL, *iZ = NULL;
+  double *Vfreq = NULL, *Z = NULL;
   long nBuckets, iBucket, np;
 #if USE_MPI
   long offset, length;
@@ -288,20 +288,20 @@ void track_through_ztransverse(double **part0, long np0, ZTRANSVERSE *ztransvers
            */
           Vfreq = Vtime;
           factor = ztransverse->macroParticleCharge*particleRelSign/dt*userFactor[plane];
-          iZ = ztransverse->iZ[plane];
-          Vfreq[0] = posIfreq[0]*iZ[0]*factor;
+          Z = ztransverse->Z[plane];
+          Vfreq[0] = posIfreq[0]*Z[0]*factor;
           nfreq = nb/2 + 1;
           if (nb%2==0)
             /* Nyquist term */
-            Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
+            Vfreq[nb-1] = posIfreq[nb-1]*Z[nb-1]*factor;
           for (ib=1; ib<nfreq-1; ib++) {
             iImag = (iReal = 2*ib-1)+1;
             /* The signs are chosen here to get agreement with TRFMODE.
                In particular, test particles following closely behind the 
                drive particle get defocused.
                */
-            Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
-            Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+            Vfreq[iReal] = (posIfreq[iReal]*Z[iReal] - posIfreq[iImag]*Z[iImag])*factor;
+            Vfreq[iImag] = (posIfreq[iReal]*Z[iImag] + posIfreq[iImag]*Z[iReal])*factor; 
           }
 #if MPI_DEBUG
           printf("Product completed\n");
@@ -489,28 +489,27 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
                                     ztransverse->max_n_bins);
     
     nfreq = ztransverse->n_bins/2 + 1;
-    ztransverse->iZ[0] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
-    ztransverse->iZ[1] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
+    ztransverse->Z[0] = tmalloc(sizeof(**(ztransverse->Z))*ztransverse->n_bins);
+    ztransverse->Z[1] = tmalloc(sizeof(**(ztransverse->Z))*ztransverse->n_bins);
     /* df is the frequency spacing normalized to the resonant frequency */
     df = 1/(ztransverse->n_bins*ztransverse->bin_size)/(ztransverse->freq);
-    /* DC term of iZ is 0  */
-    ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 0;
+    /* DC term of Z is pure real */
+    ztransverse->Z[0][0] = 2*ztransverse->Rs/ztransverse->Q;
+    ztransverse->Z[1][0] = 2*ztransverse->Rs/ztransverse->Q;
     for (i=1; i<nfreq-1; i++) {
       term = ztransverse->Q*(i*df-1.0/(i*df));
-      /* real part of i*Z */
-      ztransverse->iZ[0][2*i-1] =  
-        ztransverse->iZ[1][2*i-1] =  
-	ztransverse->Rs/(i*df)/(1+term*term);
-      /* imaginary part of i*Z is -Real[i*Z]*term */
-      ztransverse->iZ[0][2*i] = 
-        ztransverse->iZ[1][2*i] = 
-	-term*ztransverse->iZ[0][2*i-1];
+      /* imaginary part of Z */
+      ztransverse->Z[0][2*i] = ztransverse->Z[1][2*i] =  
+	-ztransverse->Rs/(i*df)/(1+term*term);
+      /* real part of Z */
+      ztransverse->Z[0][2*i-1] = ztransverse->Z[1][2*i-1] = 
+	term*ztransverse->Z[0][2*i];
     }
-    /* Nyquist term--real part of iZ only */
+    /* Nyquist term--real part of Z only */
     term = ztransverse->Q*(1.0/(nfreq*df)-nfreq*df);
-    ztransverse->iZ[0][ztransverse->n_bins-1] = 
-      ztransverse->iZ[1][ztransverse->n_bins-1] = 
-      ztransverse->Rs/(nfreq*df)/(1+term*term);
+    ztransverse->Z[0][ztransverse->n_bins-1] = 
+      ztransverse->Z[1][ztransverse->n_bins-1] = 
+      -term*ztransverse->Rs/(nfreq*df)/(1+term*term);
     df *= ztransverse->freq;
   } else {
     double *ZReal[2], *ZImag[2], *freqData;
@@ -566,27 +565,30 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exitElegant(1);
     }
-    if (!(ztransverse->iZ[0] =
-          calloc(sizeof(*ztransverse->iZ[0]), n_spect*2)) ||
-        !(ztransverse->iZ[1] =
-          calloc(sizeof(*ztransverse->iZ[1]), n_spect*2)))
+    if (!(ztransverse->Z[0] =
+          calloc(sizeof(*ztransverse->Z[0]), n_spect*2)) ||
+        !(ztransverse->Z[1] =
+          calloc(sizeof(*ztransverse->Z[1]), n_spect*2)))
       bombElegant("memory allocation failure (ZTRANSVERSE)", NULL);
     for (i=0; i<n_spect; i++) {
       if (i==0) {
-        /* DC term */
-        ztransverse->iZ[0][i] = -ZImag[0][i];
-        ztransverse->iZ[1][i] = -ZImag[1][i];
+        /* DC term needs a factor of two, because we assume that the impedance is created
+         * by sddsfft'ing the impedance, which folds the frequency range. We compensate
+         * for that (e.g., trwake2impedance) by dividing by two, but need to fix the
+         * DC term. */
+        ztransverse->Z[0][i] = 2*ZReal[0][i];
+        ztransverse->Z[1][i] = 2*ZReal[1][i];
       } else if (i==n_spect-1 && ztransverse->n_bins%2==0) {
         /* Nyquist term */
-        ztransverse->iZ[0][2*i-1] = -ZImag[0][i];
-        ztransverse->iZ[1][2*i-1] = -ZImag[1][i];
+        ztransverse->Z[0][2*i-1] = ZReal[0][i];
+        ztransverse->Z[1][2*i-1] = ZReal[1][i];
       } else {
-        /* real part of iZ */
-        ztransverse->iZ[0][2*i-1] = -ZImag[0][i];
-        ztransverse->iZ[1][2*i-1] = -ZImag[1][i];
-        /* imaginary part of iZ */
-        ztransverse->iZ[0][2*i  ] = ZReal[0][i];
-        ztransverse->iZ[1][2*i  ] = ZReal[1][i];
+        /* real part of Z */
+        ztransverse->Z[0][2*i-1] = ZReal[0][i];
+        ztransverse->Z[1][2*i-1] = ZReal[1][i];
+        /* imaginary part of Z */
+        ztransverse->Z[0][2*i  ] = ZImag[0][i];
+        ztransverse->Z[1][2*i  ] = ZImag[1][i];
       }
     }
     free(ZReal[0]);
@@ -618,10 +620,10 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
 #endif
 
   if (ztransverse->highFrequencyCutoff0>0) {
-    applyLowPassFilterToImpedance(ztransverse->iZ[0], nfreq,
+    applyLowPassFilterToImpedance(ztransverse->Z[0], nfreq,
                                   ztransverse->highFrequencyCutoff0, 
                                   ztransverse->highFrequencyCutoff1);
-    applyLowPassFilterToImpedance(ztransverse->iZ[1], nfreq,
+    applyLowPassFilterToImpedance(ztransverse->Z[1], nfreq,
                                   ztransverse->highFrequencyCutoff0, 
                                   ztransverse->highFrequencyCutoff1);
   }
@@ -636,7 +638,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
     for (i=0; i<nfreq; i++) 
       fprintf(fp, "%21.15e %21.15e %21.15e\n",
-              i*df, ztransverse->iZ[0][2*i], i>0?-ztransverse->iZ[0][2*i-1]:0);
+              i*df, ztransverse->Z[0][2*i], i>0?-ztransverse->Z[0][2*i-1]:0);
     fclose(fp);
   }
 #endif

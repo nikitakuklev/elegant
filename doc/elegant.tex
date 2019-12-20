@@ -46,6 +46,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
   for this element is still doubtful for large-angle dipoles with significant gradients.
+\item Corrected the handling of the DC term for \verb|ZTRANSVERSE|. The code was ignoring the real part of the impedance
+  at DC. The issue was pointed out by R. Lindberg (APS).
+  The new script \verb|trwake2impedance| illustrates how to create a transverse impedance from a wake function using \verb|sddsfft|.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -55,7 +58,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item The handling of the DC term in \verb|ZLONGIT| was modified to conform to the FFT conventions used by \verb|sddsfft|.
+  In particular, the term is multipled by two internally. The new script \verb|wake2impedance| illustrates how to 
+  create a longitudinal impedance from a wake function using \verb|sddsfft|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -81,7 +86,8 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item None.
+\item Added the scripts \verb|wake2impedance| and \verb|trwake2impedance| to translate wake function data into a
+  form accepted by the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements, respectively.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}

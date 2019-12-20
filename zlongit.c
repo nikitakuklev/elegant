@@ -610,12 +610,12 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                 nfreq, df);
         fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
-        zlongit->Z[0] = 0;
+        zlongit->Z[0] = 0;                    /* DC term */
         zlongit->Z[zlongit->n_bins-1] = 0;    /* Nyquist term */
         for (i=1; i<nfreq-1; i++) {
             term = zlongit->Q*(1.0/(i*df)-i*df);
-            zlongit->Z[2*i-1] =  zlongit->Ra/2/(1+sqr(term));
-            zlongit->Z[2*i  ] =  zlongit->Z[2*i-1]*term;
+            zlongit->Z[2*i-1] =  zlongit->Ra/2/(1+sqr(term));  /* Real part */
+            zlongit->Z[2*i  ] =  zlongit->Z[2*i-1]*term;       /* Imaginary part */
             }
         if (0) {
             FILE *fp;
@@ -693,11 +693,11 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
         for (i=0; i<n_spect; i++) {
             if (i==0)
-                /* DC term */
-                zlongit->Z[0] = Zr[0];
+                /* DC term (multiply by 2 for consistency with sddsfft) */
+                zlongit->Z[0] = 2*Zr[0];
             else if (i==n_spect-1 && zlongit->n_bins%2==0)
                 /* Nyquist term */
-                zlongit->Z[2*i-1] = Zr[i];
+                zlongit->Z[2*i-1] = 2*Zr[i];
             else {
                 zlongit->Z[2*i-1] = Zr[i];
                 zlongit->Z[2*i  ] = Zi[i];

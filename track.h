@@ -2751,7 +2751,7 @@ typedef struct {
     long bunchedBeamMode;
     long allowLongBeam;       /* If nonozero, then long bunches don't cause abort */
     /* for internal use */
-    double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
+    double *Z[2];             /* Z (Re Z, Im Z) pairs for each plane */
     long initialized;
     double macroParticleCharge;
     /* variables for SDDS output of wakes */
