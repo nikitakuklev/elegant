@@ -109,12 +109,12 @@ void setup_matrix_output(
   individualMatrices = trealloc(individualMatrices, sizeof(*individualMatrices)*(n_outputs+1));
   printElementData = trealloc(printElementData, sizeof(*printElementData)*(n_outputs+1));
 
+  individualMatrices[n_outputs] = individual_matrices;
+  printElementData[n_outputs] = print_element_data;
+
   fpMathematica = trealloc(fpMathematica, sizeof(*fpMathematica)*(n_outputs+1));
   mathematicaName = trealloc(mathematicaName, sizeof(*mathematicaName)*(n_outputs+1));
   mathematicaFullMatrix = trealloc(mathematicaFullMatrix, sizeof(*mathematicaFullMatrix)*(n_outputs+1));
-
-  individualMatrices[n_outputs] = individual_matrices;
-  printElementData[n_outputs] = print_element_data;
 
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
@@ -149,9 +149,11 @@ void setup_matrix_output(
     if (mathematica_matrix_file && strlen(mathematica_matrix_file)) {
       mathematica_matrix_file = compose_filename(mathematica_matrix_file, run->rootname);
       fpMathematica[n_outputs] = fopen_e(mathematica_matrix_file, "w", 0);
+      free(mathematica_matrix_file);
     } else
       fpMathematica[n_outputs] = NULL;
-  }
+  } else
+    fpMathematica[n_outputs] = NULL;
 
   if (SDDS_output) {
     SDDS_ElegantOutputSetup(SDDS_matrix+n_outputs, SDDS_output, SDDS_BINARY, 1, "matrix", 
