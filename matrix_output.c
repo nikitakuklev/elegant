@@ -15,7 +15,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
-
+#define DEBUG 1
 static long output_now = 0;
 static long n_outputs = 0;
 static FILE **fp_printout;      /* for printout */
@@ -33,7 +33,7 @@ static long *SDDS_matrix_initialized = NULL;
 static long *SDDS_matrix_count = NULL;
 static long *individualMatrices = NULL, *printElementData=NULL;
 
-long *mathematicaFullMatrix = NULL;
+static long *mathematicaFullMatrix = NULL;
 static char **mathematicaName = NULL;
 static FILE **fpMathematica;
 
@@ -100,9 +100,9 @@ void setup_matrix_output(
   start_name = trealloc(start_name, sizeof(*start_name)*(n_outputs+1));
   start_occurence = trealloc(start_occurence, sizeof(*start_occurence)*(n_outputs+1));
   SDDS_match = trealloc(SDDS_match, sizeof(*SDDS_match)*(n_outputs+1));
-  SDDS_order= trealloc(SDDS_order, sizeof(*SDDS_order)*(n_outputs+1));
-  SDDS_matrix= trealloc(SDDS_matrix, sizeof(*SDDS_matrix)*(n_outputs+1));
-  SDDS_matrix_initialized= trealloc(SDDS_matrix_initialized, sizeof(*SDDS_matrix_initialized)*(n_outputs+1));
+  SDDS_order = trealloc(SDDS_order, sizeof(*SDDS_order)*(n_outputs+1));
+  SDDS_matrix = trealloc(SDDS_matrix, sizeof(*SDDS_matrix)*(n_outputs+1));
+  SDDS_matrix_initialized = trealloc(SDDS_matrix_initialized, sizeof(*SDDS_matrix_initialized)*(n_outputs+1));
   SDDS_matrix_count= trealloc(SDDS_matrix_count, sizeof(*SDDS_matrix_count)*(n_outputs+1));
   if (individual_matrices && full_matrix_only)
     bombElegant("individual_matrices and full_matrix_only are incompatible", NULL);
@@ -438,6 +438,10 @@ void run_matrix_output(
       member = member->succ;
     }
     if (SDDS_matrix_initialized[i_output]) {
+#if DEBUG
+      printf("Writing  table for output %ld\n", i_output);
+      fflush(stdout);
+#endif
       if (!SDDS_WriteTable(SDDS_matrix+i_output)) {
 	SDDS_SetError("Unable to write matrix data (run_matrix_output)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -652,12 +656,20 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
     bombElegant("bad matrix passed to SDDS_set_matrices()", NULL);
 
   if (i_element==0) {
-    if (!SDDS_StartTable(SDDS_table, n_elements)) {
+#if DEBUG
+    printf("starting table with %ld rows\n", n_elements);
+    fflush(stdout);
+#endif
+    if (!SDDS_StartTable(SDDS_table, n_elements+1)) {
       SDDS_SetError("Problem starting SDDS table for matrix output (SDDS_set_matrices)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
             
+#if DEBUG
+    printf("setting values for row %ld\n", i_element);
+    fflush(stdout);
+#endif
   if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i_element, 
 			 IC_S, elem->end_pos, IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence,
 			 IC_TYPE, entity_name[elem->type], -1)) {
