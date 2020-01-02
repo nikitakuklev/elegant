@@ -506,7 +506,7 @@ long doMomentumApertureSearch(
     if (!code) {
       printf("Fiducial particle lost. Don't know what to do.\n");
       fflush(stdout);
-      exitElegant(1);
+      bombElegant(NULL, NULL);
     }
     printf("Fiducialization completed\n");
     fflush(stdout);
@@ -631,7 +631,7 @@ long doMomentumApertureSearch(
           if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
             printf("Fiducial particle tune is undefined.\n");
 	    fflush(stdout);
-            exitElegant(1);
+	    bombElegant(NULL, NULL);
           }
           if (verbosity>3) {
             printf("  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
@@ -756,7 +756,7 @@ long doMomentumApertureSearch(
             if (!loserFound[slot][outputRow]) {
               if (!soft_failure) {
                 printf("Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-                exitElegant(1);
+		bombElegant(NULL, NULL);
               }
 	      loserFound[slot][outputRow] = 1;
 	      split = splits;
@@ -996,7 +996,7 @@ long multiparticleLocalMomentumAcceptance(
   if (!code) {
     if (myid==0)
       printf("Fiducial particle lost. Don't know what to do.\n");
-    exitElegant(1);
+    bombElegant(NULL, NULL);
   }
   if (myid==0) {
     printf("Fiducial particle tracked.\n");
