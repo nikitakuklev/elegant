@@ -360,7 +360,7 @@ void run_matrix_output(
 	member = member->succ;
       }
     }
-    if (fp_printout[i_output] && printElementData)
+    if (fp_printout[i_output] && printElementData[i_output])
       print_line(fp_printout[i_output], beamline);
     if (SDDS_matrix_initialized[i_output]) {
       ELEMENT_LIST start_elem;
@@ -393,7 +393,7 @@ void run_matrix_output(
 		entity_name[member->type], member->name);
 	fflush(stdout);
 #endif
-        if (individualMatrices) 
+        if (individualMatrices[i_output]) 
           /* exclude C so that the effect of the trajectory is included */
           null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
 	concat_matrices(M2, member->matrix, M1, 
@@ -404,7 +404,7 @@ void run_matrix_output(
 	M1  = tmp;
 	if (fp_printout[i_output] && !print_full_only[i_output]) {
           sprintf(s, "%s matrix after last element",
-                  individualMatrices ? "Effective element" : "Concatenated");
+                  individualMatrices[i_output] ? "Effective element" : "Concatenated");
 	  if (M1->order > print_order[i_output]) {
 	    SWAP_LONG(M1->order, print_order[i_output]);
 	    print_matrices1(fp_printout[i_output], s, printoutFormat[i_output], M1);
@@ -415,14 +415,14 @@ void run_matrix_output(
 	}
       } else {
 	n_elem_no_matrix++;
-        if (individualMatrices) {
+        if (individualMatrices[i_output]) {
           copy_matrices1(M2, M1);
           null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
         }
       }
       if (SDDS_matrix_initialized[i_output] && 
 	  (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
-        if (individualMatrices) {
+        if (individualMatrices[i_output]) {
           /* output change in C, rather than C itself */
           copy_doubles(Ccopy, M1->C, 6);
           for (i=0; i<6; i++)
