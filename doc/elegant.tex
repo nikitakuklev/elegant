@@ -58,14 +58,14 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The handling of the DC term in \verb|ZLONGIT| was modified to conform to the FFT conventions used by \verb|sddsfft|.
-  In particular, the term is multipled by two internally. The new script \verb|wake2impedance| illustrates how to 
-  create a longitudinal impedance from a wake function using \verb|sddsfft|.
+\item The handling of the DC term in \verb|ZLONGIT| was corrected.  In particular, the term is now multipled by two internally. 
+  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake function using \verb|sddsfft|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added more controls for mathematica-compatible output from the \verb|matrix_output|.
+\item Added more controls for mathematica-compatible output from the \verb|matrix_output|. In particular, it is now possible to
+  put the output separately-named files, which makes importation into mathematica much simpler.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
