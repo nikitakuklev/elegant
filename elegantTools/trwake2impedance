@@ -11,7 +11,7 @@ WxName=$3
 WyName=$4
 imped=$5
 
-sddsfft $wake -pipe=out -col=$tName,$WxName,$WyName -full \
+sddsfft $wake -pipe=out -col=$tName,$WxName,$WyName -full -nowarning \
     | sddsprocess -pipe=in $imped \
     "-define=col,ZxReal,RealFFT$WxName fftFrequencySpacing / 2 /,units=V/C/m" \
     "-define=col,ZxImag,ImagFFT$WxName fftFrequencySpacing / 2 /,units=V/C/m" \
