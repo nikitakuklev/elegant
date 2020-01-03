@@ -24,6 +24,11 @@ Other notes:
   $f = \omega/(2 \pi)$.
 \item The default smoothing setting ({\tt SG\_HALFWIDTH=4}), may apply too much smoothing.
   It is recommended that the user vary this parameter if smoothing is employed.
+\item Impedance data can be created from a wake function using the script \verb|wake2impedance|,
+  which is supplied with \verb|elegant|. This script also illustrates how to scale the data 
+  with the frequency spacing. The script uses \verb|sddsfft|, which produces a
+  folded FFT ($f\ge 0$) from a real function. The folded FFT representation involves multiplying the
+  non-DC terms by 2. \verb|elegant| expects this and internally multiplies the DC term by 2 as well.
 \item Using the broad-brand resonator model can often result in a very large number of bins
  being used, as {\tt elegant} will try to resolve the resonance peak and achieve the desired
  bin spacing. This can result in poor performance, particularly for the parallel version.
