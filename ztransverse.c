@@ -630,15 +630,21 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
 
 #if 0
   if (!ztransverse->initialized) {
+    static long index = 0;
+    char buffer[1024];
     FILE *fp;
-    fp = fopen_e("ztransverse.sdds", "w", 0);
+    sprintf(buffer, "ztransverse-%03d.sdds", index++);
+    fp = fopen_e(buffer, "w", 0);
     fprintf(fp, "SDDS1\n&column name=f units=Hz type=double &end\n");
     fprintf(fp, "&column name=ZReal type=double &end\n");
     fprintf(fp, "&column name=ZImag type=double &end\n");
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
     for (i=0; i<nfreq; i++) 
       fprintf(fp, "%21.15e %21.15e %21.15e\n",
-              i*df, ztransverse->Z[0][2*i], i>0?-ztransverse->Z[0][2*i-1]:0);
+              i*df, 
+              i==0?ztransverse->Z[0][i]:ztransverse->Z[0][2*i-1],
+              i==0?                 0.0:ztransverse->Z[0][2*i]);
+
     fclose(fp);
   }
 #endif
