@@ -46,6 +46,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
   for this element is still doubtful for large-angle dipoles with significant gradients.
+\item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
+  the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This is bug was reported by G. Penn (LBNL), and has been
+  fixed.
 \item Corrected the handling of the DC term for \verb|ZTRANSVERSE|. The code was ignoring the real part of the impedance
   at DC. The issue was pointed out by R. Lindberg (APS).
   The new script \verb|trwake2impedance| illustrates how to create a transverse impedance from a wake function using \verb|sddsfft|.
@@ -65,7 +68,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item Added more controls for mathematica-compatible output from the \verb|matrix_output|. In particular, it is now possible to
-  put the output separately-named files, which makes importation into mathematica much simpler.
+  put the output in separately-named files, which makes importation into mathematica much simpler.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -5953,11 +5956,15 @@ up-to-date than these manual pages.
 \item {\tt track2mag} --- Uses TRACK output files to create a file similar to the magnets outupt file from {\tt elegant}.
   This gives a profile of the beamline that can be plotted with other data.
   (Program by M. Borland.)
+\item {\tt trwake2impedance} --- Translates a transverse wake (e.g., used for \verb|TRWAKE|) into an impedance usable with
+  \verb|ZTRANSVERSE|. (Script by M. Borland.)
+\item {\tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
+  (Program by A. Petrenko and M. Borland.)
+\item {\tt wake2impedance} --- Translates a longitudinal wake (e.g., used for \verb|WAKE|) into an impedance usable with
+  \verb|ZLONGIT|. (Script by M. Borland.)
 \item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
   matrices for skew quadrupoles and to perform coupling correction using those matrices.
   (Program by M. Borland.)
-\item {\tt view3dGeometry} --- Uses freewrl viewer to display 3D geometry of a lattice. 
-  (Program by A. Petrenko and M. Borland.)
 \end{itemize}
 
 %\begin{latexonly}
