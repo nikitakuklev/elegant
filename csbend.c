@@ -666,7 +666,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       part0 = (double**)czarray_2d(sizeof(double), 1, COORDINATES_PER_PARTICLE);
       memset(part0[0], 0, sizeof(**part0)*COORDINATES_PER_PARTICLE);
       memcpy(&csbend0, csbend, sizeof(*csbend));
-      csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
+      csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 
+        csbend0.fseDipole = csbend0.fseQuadrupole = 0;
       
       csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double**)czarray_2d(sizeof(double), csbend->n_kicks, 5);
       refTrajectoryPoints = csbend->n_kicks;
