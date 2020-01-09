@@ -46,12 +46,19 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
   for this element is still doubtful for large-angle dipoles with significant gradients.
+\item The \verb|ETILT| parameter of the \verb|CSBEND| and \verb|CSRCSBEND| elements was not implemented correctly. Although
+  the magnitude of the trajectory error was correct, it had the wrong sign compared to the dynamic effects (e.g., vertical 
+  dispersion). This bug was reported by G. Penn (LBNL), and has been fixed.
 \item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
-  the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This is bug was reported by G. Penn (LBNL), and has been
-  fixed.
-\item Corrected the handling of the DC term for \verb|ZTRANSVERSE|. The code was ignoring the real part of the impedance
+  the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This bug was reported by G. Penn (LBNL), and has been fixed.
+\item The handling of the DC term in \verb|ZTRANSVERSE|. The code was ignoring the real part of the impedance
   at DC. The issue was pointed out by R. Lindberg (APS).
   The new script \verb|trwake2impedance| illustrates how to create a transverse impedance from a wake function using \verb|sddsfft|.
+\item The handling of the DC term in \verb|ZLONGIT| was corrected.  In particular, the term is needed to be multipled by 
+  two internally.  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake 
+  function using \verb|sddsfft|.
+\item The matrix for the \verb|MULT| element, used in computation of twiss parameters and beam moments, was not being updated
+  when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_elements|).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -61,8 +68,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The handling of the DC term in \verb|ZLONGIT| was corrected.  In particular, the term is now multipled by two internally. 
-  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake function using \verb|sddsfft|.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Commands}
