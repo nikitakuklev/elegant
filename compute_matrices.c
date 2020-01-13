@@ -1199,7 +1199,8 @@ VMATRIX *compute_matrix(
                         bend->h[bend->e1Index], bend->h[bend->e2Index], 
                         bend->k1_internal, bend->k2_internal, 
                         bend->tilt, bend->fint, bend->fint, 
-                        bend->hgap*2, bend->fse, bend->fseDipole, bend->fseQuadrupole, bend->etilt,
+                        bend->hgap*2, bend->fse, bend->fseDipole, bend->fseQuadrupole, 
+                        bend->etiltSign*bend->etilt,
                         bend->order?bend->order:run->default_order, bend->edge_order, 
 			bend->edgeFlags, bend->TRANSPORT);
         if (bend->dx || bend->dy || bend->dz) {
@@ -1495,7 +1496,7 @@ VMATRIX *compute_matrix(
                                      csbend->hgap*2, 
                                      csbend->fse + (csbend->fseCorrection?csbend->fseCorrectionValue:0),
                                      csbend->fseDipole, csbend->fseQuadrupole, 
-                                     csbend->etilt,
+                                     csbend->etiltSign*csbend->etilt,
                                      csbend->nonlinear?2:(run->default_order?run->default_order:1),
                                      csbend->edge_order, csbend->edgeFlags, 0);
           if (csbend->dx || csbend->dy || csbend->dz) {
@@ -1537,7 +1538,7 @@ VMATRIX *compute_matrix(
                         csrcsbend->use_bn ? csrcsbend->b1/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k1,
                         csrcsbend->use_bn ? csrcsbend->b2/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k2,
                         csrcsbend->tilt, csrcsbend->fint, csrcsbend->fint, 
-                        csrcsbend->hgap*2, csrcsbend->fse, 0, 0, csrcsbend->etilt,
+                        csrcsbend->hgap*2, csrcsbend->fse, 0, 0, csrcsbend->etiltSign*csrcsbend->etilt,
                         csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
                         csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
         if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {

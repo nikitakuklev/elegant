@@ -942,7 +942,7 @@ extern char *entity_text[N_TYPES];
  * a zero indicates an unsupported element
  */
 #define N_QUAD_PARAMS 30
-#define N_BEND_PARAMS 26
+#define N_BEND_PARAMS 27
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 11
 #define N_OCTU_PARAMS 8
@@ -992,7 +992,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 74
+#define N_CSBEND_PARAMS 75
 #define N_MATTER_PARAMS 18
 #define N_RFMODE_PARAMS 56
 #define N_TRFMODE_PARAMS 25
@@ -1010,7 +1010,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 3
 #define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 14
-#define N_CSRCSBEND_PARAMS 70
+#define N_CSRCSBEND_PARAMS 71
 #define N_CSRDRIFT_PARAMS 27
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1185,7 +1185,7 @@ typedef struct {
     double dx, dy, dz;
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
-    short edge_effects[2];
+    short etiltSign, edge_effects[2];
     short order, edge_order, TRANSPORT;
     short use_bn;
     double b1, b2;
@@ -2291,7 +2291,7 @@ typedef struct {
     double fse, fseDipole, fseQuadrupole;     /* Fractional Strength Error (combined, dipole, quadrupole) */
     double etilt;   /* error tilt angle */
     long n_kicks;
-    short nonlinear, synch_rad;
+    short etiltSign, nonlinear, synch_rad;
     short edge_effects[2], edge_order;
     short integration_order, expandHamiltonian;
     double edge_kick_limit[2];
@@ -2357,7 +2357,7 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks;
-    short nonlinear, useMatrix, synch_rad;
+    short etiltSign, nonlinear, useMatrix, synch_rad;
     short edge_effects[2],  edge_order;
     short integration_order;
     long bins;

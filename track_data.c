@@ -266,6 +266,7 @@ PARAMETER sbend_param[N_BEND_PARAMS] = {
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.etiltSign), NULL, 0.0, -1,  "Sign of ETILT relative to TILT. -1 is the old convention and is the default for backwards compatibility"},
     {"EDGE1_EFFECTS", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&sbend_example.order), NULL, 0.0, 0, "matrix order"},
@@ -298,6 +299,7 @@ PARAMETER rbend_param[N_BEND_PARAMS] = {
     {"FSE_DIPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.fseDipole), NULL, 0.0, 0, "fractional strength error of dipole component"},
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.etiltSign), NULL, 0.0, -1,  "Sign of ETILT relative to TILT. -1 is the old convention and is the default for backwards compatibility"},
     {"EDGE1_EFFECTS", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
     {"EDGE2_EFFECTS", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.edge_effects[1]), NULL, 0.0, 1, "include exit edge effects?"},
     {"ORDER", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&rbend_example.order), NULL, 0.0, 0, "matrix order"},
@@ -1757,6 +1759,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"FSE_QUADRUPOLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fseQuadrupole), NULL, 0.0, 0, "fractional strength error of quadrupole component"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etiltSign), NULL, 0.0, -1, "Sign of ETILT relative to TILT. -1 is the old convention and is the default for backwards compatibility"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
     {"EDGE1_EFFECTS", "", IS_SHORT, 0, (long)((char *)&csbend_example.edge_effects[0]), NULL, 0.0, 1, "include entrance edge effects?"},
@@ -1833,6 +1836,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"ETILT_SIGN", "", IS_SHORT, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etiltSign), NULL, 0.0, -1, "Sign of ETILT relative to TILT. -1 is the old convention and is the default for backwards compatibility"},
     {"NONLINEAR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"LINEARIZE", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.useMatrix), NULL, 0.0, 0, "use linear matrix instead of symplectic integrator?"},
     {"SYNCH_RAD", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.synch_rad), NULL, 0.0, 0, "include classical, single-particle synchrotron radiation?"},
@@ -3686,9 +3690,10 @@ void compute_offsets()
 	typeSize = sizeof(char*);
 	break;
       default:
-	fprintf(stderr, "Error: invalid item type code %ld for %s parameter of %s\n",
+	fprintf(stderr, "Error: invalid item type code %ld for %s parameter (%ld) of %s\n",
 		entity_description[i].parameter[j].type, 
 		entity_description[i].parameter[j].name,
+                j, 
 		entity_name[i]);
 	exit(1);
 	break;

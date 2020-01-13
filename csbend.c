@@ -774,7 +774,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     angle = -csbend->angle;
     e1    = -csbend->e[csbend->e1Index];
     e2    = -csbend->e[csbend->e2Index];
-    etilt = csbend->etilt;
+    etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
     rho0  = csbend->length/angle;
     for (i=0; i<8; i+=2) {
@@ -786,7 +786,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     angle = csbend->angle;
     e1    = csbend->e[csbend->e1Index];
     e2    = csbend->e[csbend->e2Index];
-    etilt = csbend->etilt;
+    etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
   }
@@ -1769,7 +1769,6 @@ long integrate_csbend_ord4_expanded(double *Qf, double *Qi, double *sigmaDelta2,
   long i;
   double ds, dsh, dist;
   double Fx, Fy, x, y;
-  double f;
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -2127,7 +2126,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     angle = -csbend->angle;
     e1    = -csbend->e[csbend->e1Index];
     e2    = -csbend->e[csbend->e2Index];
-    etilt = csbend->etilt;
+    etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt + PI;
     rho0  = csbend->length/angle;
     for (i=0; i<8; i+=2) {
@@ -2139,7 +2138,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     angle = csbend->angle;
     e1    = csbend->e[csbend->e1Index];
     e2    = csbend->e[csbend->e2Index];
-    etilt = csbend->etilt;
+    etilt = csbend->etilt*csbend->etiltSign;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
   }
@@ -2189,7 +2188,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                            angle/csbend->n_kicks, 0.0, 0.0, 
                            0.0, 0.0, csbend->b[0]*h,  0.0,
                            0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0, 
-                           csbend->etilt, 1, 1, 0, 0);
+                           csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
     Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0, csbend->length);
   }
   computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
@@ -2217,39 +2216,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
 
 
-  if (etilt) {
-    /* compute final offsets due to error-tilt of the magnet */
-    /* see pages 90-93 of notebook 1 about this */
-    double q1a, q2a, q3a;
-    double q1b, q2b, q3b;
-    double qp1, qp2, qp3; 
-    double dz, tan_alpha, k;
-
-    q1a = (1-cos(angle))*rho0*(cos(etilt)-1);
-    q2a = 0;
-    q3a = (1-cos(angle))*rho0*sin(etilt);
-    qp1 = sin(angle)*cos(etilt);
-    qp2 = cos(angle);
-    k = sqrt(sqr(qp1)+sqr(qp2));
-    qp1 /= k;
-    qp2 /= k;
-    qp3 = sin(angle)*sin(etilt)/k;
-    tan_alpha = 1./tan(angle)/cos(etilt);
-    q1b = q1a*tan_alpha/(tan(angle)+tan_alpha);
-    q2b = -q1b*tan(angle);
-    dz  = sqrt(sqr(q1b-q1a)+sqr(q2b-q2a));
-    q3b = q3a + qp3*dz;
-
-    dcoord_etilt[0] = sqrt(sqr(q1b) + sqr(q2b));
-    dcoord_etilt[1] = tan(atan(tan_alpha)-(PIo2-angle));
-    dcoord_etilt[2] = q3b;
-    dcoord_etilt[3] = qp3;
-    dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
-    dcoord_etilt[5] = 0;
-
-    /* rotate by tilt to get into same frame as bend equations. */
-    rotate_coordinates(dcoord_etilt, tilt);
-  }
+  if (etilt)
+    computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
   else
     fill_double_array(dcoord_etilt, 6L, 0.0);
 
@@ -4770,6 +4738,8 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
     return;
   }
 
+  etilt *=  -1; /* use consistent sign convention with TILT */
+
   q1a = (1-cos(angle))*rho0*(cos(etilt)-1);
   q2a = 0;
   q3a = (1-cos(angle))*rho0*sin(etilt);
@@ -4791,6 +4761,7 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
   dcoord_etilt[3] = qp3;
   dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
   dcoord_etilt[5] = 0;
+
 #ifdef DEBUG
   printf("pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
           etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],

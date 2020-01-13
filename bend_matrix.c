@@ -116,6 +116,7 @@ VMATRIX *bend_matrix(
         double qp1, qp2, qp3; 
         double dz, alpha, dcoord[4];
 
+        etilt *= -1;
         q1a = (1-cos(angle))/h*(cos(etilt)-1);
         q2a = 0;
         q3a = (1-cos(angle))/h*sin(etilt);
@@ -140,6 +141,7 @@ VMATRIX *bend_matrix(
         M->C[2] += dcoord[2];
         M->C[3] += dcoord[3];
         M->C[4] += dz*sqrt(1+sqr(qp3));
+        etilt *= -1;
         }
 
     log_exit("bend_matrix");

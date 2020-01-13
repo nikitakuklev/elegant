@@ -46,9 +46,10 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
   for this element is still doubtful for large-angle dipoles with significant gradients.
-\item The \verb|ETILT| parameter of the \verb|CSBEND| and \verb|CSRCSBEND| elements was not implemented correctly. Although
-  the magnitude of the trajectory error was correct, it had the wrong sign compared to the dynamic effects (e.g., vertical 
-  dispersion). This bug was reported by G. Penn (LBNL), and has been fixed.
+\item The \verb|ETILT| parameter of the \verb|CSBEND|, \verb|CSRCSBEND|, \verb|SBEN|, and \verb|RBEN| elements was not
+  implemented correctly. Although the magnitude of the trajectory error was correct, it had the wrong sign compared to the
+  dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), and has been fixed.
+  A new parameter \verb|ETILT_SIGN| allows changing the sign convention to match that of \verb|TILT|.
 \item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
   the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This bug was reported by G. Penn (LBNL), and has been fixed.
 \item The handling of the DC term in \verb|ZTRANSVERSE|. The code was ignoring the real part of the impedance
