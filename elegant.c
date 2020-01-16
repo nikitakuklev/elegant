@@ -362,7 +362,7 @@ char **argv;
   /* long correctionDone, moments_computed = 0, links_present; */
   long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
   double *starting_coord, finalCharge;
-  long namelists_read = 0, failed, firstPass;
+  long namelists_read = 0, failed, firstPass, namelistErrorCode=0;
   unsigned long pipeFlags = 0;
   double apertureReturn;
   char *rpnDefns = NULL, *configurationFile = NULL;
@@ -664,7 +664,9 @@ char **argv;
   iInput = 0;
   while (iInput<2 && (inputfile=inputFileArray[iInput++])!=NULL) {
     fp_in = fopen_e(inputfile, "r", 0);
-  while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
+  while (get_namelist_e(s, NAMELIST_BUFLEN, fp_in, &namelistErrorCode)) {
+    if (namelistErrorCode!=NAMELIST_NO_ERROR)
+      break;
     substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
 #if DEBUG
     fprintf(stderr, "%s\n", s);
@@ -1870,6 +1872,21 @@ char **argv;
     check_heap();
 #endif
   }
+
+  switch (namelistErrorCode) {
+  case NAMELIST_NO_ERROR:
+    break;
+  case NAMELIST_BUFFER_TOO_SMALL:
+    bombElegant("Error: namelist buffer too small. Check for improper construction.\n", NULL);
+    break;
+  case NAMELIST_IMPROPER_CONSTRUCTION:
+    bombElegant("Error: namelist construction error. Check for missing &end.\n", NULL);
+    break;
+  default:
+    bombElegant("Error: Invalid return from namelist scan. Seek expert help.\n", NULL);
+      break;
+  }
+
   }
 #if DEBUG
   printf("semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
