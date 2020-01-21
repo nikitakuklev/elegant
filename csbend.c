@@ -2426,76 +2426,83 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* Now do the body of the sector dipole */
   phiBend = accumulatedAngle; 
   i_top = n_part - 1;
-  for (kick=0; kick<csbend->n_kicks; kick++) {
+  for (kick=0; kick<(csbend->n_kicks+1); kick++) {
+    if (!csbend->backtrack && kick==csbend->n_kicks)
+      break;
     if (isSlave || !notSinglePart) {
-      for (i_part=0; i_part<=i_top; i_part++) {
-	coord = part[i_part];
-
-	if (csbend->useMatrix) {
-	  track_particles(&coord, Msection, &coord, 1);
-	} else {
-	  /* load input coordinates into arrays */
-	  Qi[0] = X;
-	  Qi[1] = XP;
-	  Qi[2] = Y;
-	  Qi[3] = YP;
-	  Qi[4] = 0;  
-	  Qi[5] = DP;
-          convertToDipoleCanonicalCoordinates(Qi, 0);
-        
-	  if (csbend->integration_order==4)
-	    particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
-	  else
-	    particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
-      
-	  /* retrieve coordinates from arrays */
-          convertFromDipoleCanonicalCoordinates(Qf, 0);
-	  X  = Qf[0];  
-	  XP = Qf[1];  
-	  Y  = Qf[2];  
-	  YP = Qf[3];  
-	  DP = Qf[5];
-
-          if (particleLost) {
-            if (!part[i_top]) {
-              printf("error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-                      i_part, i_top);
-              fflush(stdout);
-              abort();
-            }
-            memcpy(part[i_part],  Qf, sizeof(part[i_part][0])*6);
-            convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
-            swapParticles(part[i_part], part[i_top]);
-            if (accepted) {
-              if (!accepted[i_top]) {
-                printf(
-                        "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-                        i_part, i_top);
+      if (!csbend->backtrack || kick!=0) {
+        for (i_part=0; i_part<=i_top; i_part++) {
+          coord = part[i_part];
+          
+          if (csbend->useMatrix) {
+            track_particles(&coord, Msection, &coord, 1);
+          } else {
+            /* load input coordinates into arrays */
+            Qi[0] = X;
+            Qi[1] = XP;
+            Qi[2] = Y;
+            Qi[3] = YP;
+            Qi[4] = 0;  
+            Qi[5] = DP;
+            convertToDipoleCanonicalCoordinates(Qi, 0);
+            
+            if (csbend->integration_order==4)
+              particleLost = !integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
+            else
+              particleLost = !integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, rho0, Po, &s_lost, &apertureData);
+            
+            /* retrieve coordinates from arrays */
+            convertFromDipoleCanonicalCoordinates(Qf, 0);
+            X  = Qf[0];  
+            XP = Qf[1];  
+            Y  = Qf[2];  
+            YP = Qf[3];  
+            DP = Qf[5];
+            
+            if (particleLost) {
+              if (!part[i_top]) {
+                printf("error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+                       i_part, i_top);
                 fflush(stdout);
                 abort();
               }
-              swapParticles(accepted[i_part], accepted[i_top]);
-            }
-            part[i_top][4] = z_start + s_lost;
-            part[i_top][5] = Po*(1+part[i_top][5]);
-            
-            i_top--;
-            i_part--;
-          } else {
-            if (rad_coef || isrConstant) {
-              /* convert additional distance traveled to ct using mean velocity */
-              p1 = Po*(1+DP);
-              beta1 = p1/sqrt(p1*p1+1);
-              CT += Qf[4]*2/(beta0[i_part]+beta1);
-              beta0[i_part] = beta1;
+              memcpy(part[i_part],  Qf, sizeof(part[i_part][0])*6);
+              convertFromCSBendCoords(part+i_part, 1, rho0, cos_ttilt, sin_ttilt, 0);
+              swapParticles(part[i_part], part[i_top]);
+              if (accepted) {
+                if (!accepted[i_top]) {
+                  printf(
+                         "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+                         i_part, i_top);
+                  fflush(stdout);
+                  abort();
+                }
+                swapParticles(accepted[i_part], accepted[i_top]);
+              }
+              part[i_top][4] = z_start + s_lost;
+              part[i_top][5] = Po*(1+part[i_top][5]);
+              
+              i_top--;
+              i_part--;
             } else {
-              CT += Qf[4]/beta0[i_part];  
+              if (rad_coef || isrConstant) {
+                /* convert additional distance traveled to ct using mean velocity */
+                p1 = Po*(1+DP);
+                beta1 = p1/sqrt(p1*p1+1);
+                CT += Qf[4]*2/(beta0[i_part]+beta1);
+                beta0[i_part] = beta1;
+              } else {
+                CT += Qf[4]/beta0[i_part];  
+              }
             }
           }
-	}
+        }
+        n_part = i_top + 1;
       }
-      n_part = i_top + 1;
     }
+
+    if (csbend->backtrack && kick==csbend->n_kicks)
+      break;
 
     if (n_partMoreThanOne && csbend->derbenevCriterionMode) {
       /* evaluate Derbenev criterion from TESLA-FEL 1995-05: sigma_x/sigma_z << (R/sigma_z)^(1/3) */
@@ -2628,7 +2635,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       
       
       phiBend += angle/csbend->n_kicks;
-      slippageLength = rho0*ipow(phiBend, 3)/24.0;
+      slippageLength = fabs(rho0*ipow(phiBend, 3)/24.0);
       slippageLength13 = pow(slippageLength, 1./3.);
       diSlippage = slippageLength/dct;
       diSlippage4 = 4*slippageLength/dct;

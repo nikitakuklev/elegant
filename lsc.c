@@ -89,7 +89,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   }
   
 #if DEBUG
-  printf("LSC: np=%ld, nb=%ld\n", np, nb);
+  printf("LSC: np=%ld, nb=%ld, L=%le, bt=%d\n", np, nb, LSC->length, LSC->backtrack);
   fflush(stdout);
 #endif
 
@@ -120,11 +120,15 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       }
     }
 #endif 
-  if ((lengthLeft = LSC->length)==0) {
-    lengthLeft = LSC->lEffective;
+  if ((lengthLeft = fabs(LSC->length))==0) {
+    lengthLeft = fabs(LSC->lEffective);
     kickMode = 1;
   }
   while (lengthLeft>0) {
+#if DEBUG
+    printf("lengthLeft = %le\n", lengthLeft);
+    fflush(stdout);
+#endif
     /* compute time coordinates and make histogram */
     if (isSlave ||  !notSinglePart)
       computeTimeCoordinatesOnly(time, Po, part, np);
@@ -202,7 +206,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if DEBUG
     printf("Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
             Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
-  fflush(stdout);
+    fflush(stdout);
 #endif
     Imax *= charge->macroParticleCharge/dt;
     /* - compute beam radius as the average rms beam size in x and y */
@@ -305,8 +309,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
      */
     if (nb%2==0)
       Vfreq[nb-1] = 0;
-    
+      
     factor = charge->macroParticleCharge/dt;
+    if (LSC->backtrack)
+      factor *= -1;
     a2 = Z0/(PI*sqr(beamRadius))*length;
 #if DEBUG
     printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
@@ -354,9 +360,9 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       if (!kickMode) {
         /* advance particles to the next step */
         for (ib=0; ib<np; ib++) {
-          part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
-          part[ib][0] += length*part[ib][1];
-          part[ib][2] += length*part[ib][3];
+          part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]))*(LSC->backtrack?-1:1);
+          part[ib][0] += length*part[ib][1]*(LSC->backtrack?-1:1);
+          part[ib][2] += length*part[ib][3]*(LSC->backtrack?-1:1);
         }
       }
     }
@@ -595,6 +601,8 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     Vfreq[nb-1] = 0;
   
   factor = charge->macroParticleCharge/dt;
+  if (LSC->backtrack)
+    factor *= -1;
   a2 = Z0/(PI*sqr(beamRadius))*lengthScale;
 #if DEBUG
   printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);

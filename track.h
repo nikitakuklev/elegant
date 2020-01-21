@@ -2377,7 +2377,7 @@ typedef struct {
     short clipNegativeBins;
     char *wakeFilterFile, *wffFreqColumn, *wffRealColumn, *wffImagColumn;
     /* for internal use only: */
-    short wakeFileActive, particleFileActive;
+    short wakeFileActive, particleFileActive, backtrack;
     SDDS_DATASET *SDDSout, *SDDSpart;
     double b[8], c[8];
     short xIndex, xpIndex, tIndex, pIndex;
@@ -2843,6 +2843,8 @@ typedef struct {
   double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1;
   double radiusFactor;
+  /* internal use only */
+  double backtrack;
 } LSCKICK;
 
 typedef struct {
@@ -2864,7 +2866,7 @@ typedef struct {
     double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
     long wakesAtEnd;
     /* for internal use only: */
-    long initialized;
+    short initialized, backtrack;
     RFCA rfca;
     TRWAKE trwake;
     WAKE wake;
@@ -3195,6 +3197,8 @@ typedef struct {
   short smoothing, SGHalfWidth, SGOrder, interpolate, lsc, autoLEffective;
   double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
+  /* internal use only */
+  short backtrack;
 } LSCDRIFT;
 
 /* PLanar Undulator with optional laser heater */

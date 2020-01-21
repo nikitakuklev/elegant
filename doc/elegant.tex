@@ -64,12 +64,14 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None.
+\item The namelist parser was improved so that it now detects a common error, namely, a missing (or incorrectly typed)
+  \verb|&end| token.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item None.
+\item Backtracking is now available for the \verb|RFCW| and \verb|LSCDRIFT| elements, as well as for \verb|CSRCSBEND| with
+  \verb|STEADY_STATE=1|.
 \end{itemize}
 
 \subsection{New and Modified Commands}

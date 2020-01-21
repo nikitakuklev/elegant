@@ -1758,6 +1758,14 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       ((CSBEND*)(eptr->p_elem))->e[0] *= -1;
       ((CSBEND*)(eptr->p_elem))->e[1] *= -1;
       break;
+    case T_CSRCSBEND:
+      if (!((CSRCSBEND*)(eptr->p_elem))->steadyState) 
+        bombElegant("CSRCSBEND in backtrack mode requires STEADY_STATE=1", NULL);
+      ((CSRCSBEND*)(eptr->p_elem))->angle *= -1;
+      ((CSRCSBEND*)(eptr->p_elem))->e[0] *= -1;
+      ((CSRCSBEND*)(eptr->p_elem))->e[1] *= -1;
+      ((CSRCSBEND*)(eptr->p_elem))->backtrack = 1;
+      break;
     case T_CCBEND:
       ((CCBEND*)(eptr->p_elem))->angle *= -1;
       ((CCBEND*)(eptr->p_elem))->yaw *= -1;
@@ -1774,6 +1782,10 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       break;
     case T_RFCA:
       ((RFCA*)(eptr->p_elem))->volt *= -1;
+      break;
+    case T_RFCW:
+      ((RFCW*)(eptr->p_elem))->volt *= -1;
+      ((RFCW*)(eptr->p_elem))->backtrack = 1;
       break;
     case T_WAKE:
       ((WAKE*)(eptr->p_elem))->factor *= -1;
@@ -1802,6 +1814,9 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       break;
     case T_UKICKMAP:
       ((UKICKMAP*)eptr->p_elem)->flipSign = 1;
+      break;
+    case T_LSCDRIFT:
+      ((LSCDRIFT*)eptr->p_elem)->backtrack = 1;
       break;
     default:
       break;

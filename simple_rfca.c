@@ -1,3 +1,4 @@
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -917,7 +918,7 @@ long track_through_rfcw
   }
 
   rfcw->trwake.charge = 0;
-  rfcw->trwake.xfactor = rfcw->trwake.yfactor = 1;
+  rfcw->trwake.xfactor = rfcw->trwake.yfactor = rfcw->trwake.factor = 1;
   rfcw->trwake.n_bins = rfcw->n_bins;
   rfcw->trwake.interpolate = rfcw->interpolate;
   rfcw->trwake.smoothing = rfcw->smoothing;
@@ -961,6 +962,7 @@ long track_through_rfcw
   rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
   rfcw->wake.SGOrder = rfcw->SGOrder;
   rfcw->wake.change_p0 = rfcw->change_p0;
+  rfcw->wake.factor = 1;
   if (!rfcw->initialized && rfcw->includeZWake) {
     if (rfcw->WzColumn) {
       if (!rfcw->zWakeFile)
@@ -982,6 +984,7 @@ long track_through_rfcw
   rfcw->LSCKick.highFrequencyCutoff0 = rfcw->LSCHighFrequencyCutoff0;
   rfcw->LSCKick.highFrequencyCutoff1 = rfcw->LSCHighFrequencyCutoff1;
   rfcw->LSCKick.radiusFactor = rfcw->LSCRadiusFactor;
+  rfcw->LSCKick.backtrack = 0;
   
   rfcw->initialized = 1;
 
@@ -989,6 +992,14 @@ long track_through_rfcw
     rfcw->wake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
   if ((rfcw->WxColumn || rfcw->WyColumn) && rfcw->includeTrWake)
     rfcw->trwake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
+  if (rfcw->backtrack) {
+    rfcw->LSCKick.backtrack = 1;
+    /*
+    rfcw->wake.factor *= -1;
+    rfcw->trwake.factor *= -1;
+    */
+  }
+
   np = trackRfCavityWithWakes(part, np, &rfcw->rfca, accepted, P_central, zEnd,
                               i_pass, run, charge, 
                               (rfcw->WzColumn && rfcw->includeZWake) ? &rfcw->wake : NULL,
