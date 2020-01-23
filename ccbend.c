@@ -173,7 +173,7 @@ long track_through_ccbend(
         ccbend->referenceData[4] = ccbend->yaw;
 
         particle0 = (double**)czarray_2d(sizeof(**particle0), 1, COORDINATES_PER_PARTICLE);
-        memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+        memset(particle0[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
         track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, -1, 0);
         ccbend->lengthCorrection = ccbend->length - particle0[0][4];
         free_czarray_2d((void**)particle0, 1, COORDINATES_PER_PARTICLE);
