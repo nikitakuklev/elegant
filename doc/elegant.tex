@@ -46,6 +46,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
 \item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
   for this element is still doubtful for large-angle dipoles with significant gradients.
+\item The \verb|CCBEND| element now incorporates a path-length correction to ensure that the central path length
+  in tracking is the same as the user-defined arc length. This prevents issues with rf cavity setup and closed orbit
+  determination. V. Sajaev (APS) reported this bug.
 \item The \verb|ETILT| parameter of the \verb|CSBEND|, \verb|CSRCSBEND|, \verb|SBEN|, and \verb|RBEN| elements was not
   implemented correctly. Although the magnitude of the trajectory error was correct, it had the wrong sign compared to the
   dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), and has been fixed.
@@ -71,7 +74,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Backtracking is now available for the \verb|RFCW| and \verb|LSCDRIFT| elements, as well as for \verb|CSRCSBEND| with
-  \verb|STEADY_STATE=1|.
+  \verb|STEADY_STATE=1|. Y. Park (UCLA) motivated the work and helped with testing.
 \end{itemize}
 
 \subsection{New and Modified Commands}

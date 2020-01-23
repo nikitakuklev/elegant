@@ -937,6 +937,7 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 	  crbptr1->referenceData[2] = crbptr0->referenceData[2];
 	  crbptr1->referenceData[3] = crbptr0->referenceData[3];
 	  crbptr1->referenceData[4] = crbptr0->referenceData[4];
+	  crbptr1->lengthCorrection = crbptr0->lengthCorrection;
 	  copied = 1;
 #ifdef DEBUG_CCBEND
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,

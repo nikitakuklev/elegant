@@ -138,6 +138,7 @@ long track_through_ccbend(
         }
       }
       if (!disable[0] || !disable[1]) {
+        double **particle0; 
         ccbend->optimized = -1; /* flag to indicate calls to track_through_ccbend will be for FSE optimization */
         memcpy(&ccbendCopy, ccbend, sizeof(ccbendCopy));
         if (ccbend->length<0) {
@@ -150,7 +151,7 @@ long track_through_ccbend(
         eptrCopy = eptr;
         ccbendCopy.fse = ccbendCopy.fseDipole = ccbendCopy.fseQuadrupole = ccbendCopy.dx = ccbendCopy.dy = ccbendCopy.dz = 
           ccbendCopy.etilt = ccbendCopy.tilt = ccbendCopy.isr = ccbendCopy.synch_rad = ccbendCopy.isr1Particle = 
-          ccbendCopy.KnDelta = 0;
+          ccbendCopy.KnDelta = ccbendCopy.lengthCorrection = 0;
         PoCopy = Po;
         stepSize[0] = 1e-3; /* FSE */
         stepSize[1] = 1e-4; /* X */
@@ -170,14 +171,22 @@ long track_through_ccbend(
         ccbend->referenceData[2] = ccbend->K1;
         ccbend->referenceData[3] = ccbend->K2;
         ccbend->referenceData[4] = ccbend->yaw;
+
+        particle0 = (double**)czarray_2d(sizeof(**particle0), 1, COORDINATES_PER_PARTICLE);
+        memset(particle[0], 0, COORDINATES_PER_PARTICLE*sizeof(**particle));
+        track_through_ccbend(particle0, 1, eptr, ccbend, Po, NULL, 0.0, NULL, NULL, NULL, NULL, -1, 0);
+        ccbend->lengthCorrection = ccbend->length - particle0[0][4];
+        free_czarray_2d((void**)particle0, 1, COORDINATES_PER_PARTICLE);
+        ccbend->optimized = 1;
 	if (ccbend->verbose) {
-	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n", 
+	  printf("CCBEND %s#%ld optimized: FSE=%le, dx=%le, accuracy=%le\n",
 		 eptr?eptr->name:"?", eptr?eptr->occurence:-1, ccbend->fseOffset, ccbend->dxOffset, acc);
+          printf("length = %18.12le, lengthCorrection = %21.12le\n",
+                 ccbend->length, ccbend->lengthCorrection);
           printf("xMin = %le, xMax = %le, xAve = %le, xFinal = %le, xpError = %le\n", 
                  xMin, xMax, xAve, xFinal, xpError);
 	  fflush(stdout);
 	}
-        ccbend->optimized = 1;
       }
     }
   }
@@ -357,6 +366,11 @@ long track_through_ccbend(
   setupMultApertureData(&apertureData, maxamp, tilt, apFileData, z_start+length/2);
 
   if (iPart<=0) {
+    /*
+    printf("input before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
+           particle[0][0], particle[0][1], particle[0][2],
+           particle[0][3], particle[0][4], particle[0][5]);
+    */
     xpError = particle[0][1];
     if (tilt)
       rotateBeamCoordinates(particle, n_part, tilt);
@@ -366,6 +380,12 @@ long track_through_ccbend(
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, n_part, ccbend->dxOffset, 0, 0);
     verticalRbendFringe(particle, n_part, angle/2-yaw, rho0, KnL[1]/length, KnL[2]/length, gK[0], ccbend->edgeOrder);
+    /*
+    printf("input after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
+           particle[0][0], particle[0][1], particle[0][2],
+           particle[0][3], particle[0][4], particle[0][5]);
+    fflush(stdout);
+    */
   }
 
   nTerms = 0;
@@ -404,6 +424,11 @@ long track_through_ccbend(
     *sigmaDelta2 /= i_top+1;
 
   if ((iPart<0 || iPart==(ccbend->n_kicks-1)) && iFinalSlice<=0) {
+    /*
+    printf("output before adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
+           particle[0][0], particle[0][1], particle[0][2],
+           particle[0][3], particle[0][4], particle[0][5]);
+    */
     verticalRbendFringe(particle, i_top+1, angle/2+yaw, rho0, KnL[1]/length, KnL[2]/length, gK[1], ccbend->edgeOrder);
     if (ccbend->optimized)
       offsetBeamCoordinates(particle, i_top+1, ccbend->xAdjust, 0, 0);
@@ -412,6 +437,16 @@ long track_through_ccbend(
     switchRbendPlane(particle, i_top+1, angle/2+yaw, Po);
     if (tilt)
       rotateBeamCoordinates(particle, i_top+1, -tilt);
+    if (ccbend->optimized) {
+      for (i_part=0; i_part<=i_top; i_part++)
+        particle[i_part][4] += ccbend->lengthCorrection;
+    }
+    /*
+    printf("output after adjustments: %16.10le %16.10le %16.10le %16.10le %16.10le %16.10le\n",
+           particle[0][0], particle[0][1], particle[0][2],
+           particle[0][3], particle[0][4], particle[0][5]);
+    fflush(stdout);
+    */
     xpError = fabs(xpError+particle[0][1]);
   }
 

@@ -2337,6 +2337,7 @@ typedef struct {
     short optimized, edgeFlip;
     double fseOffset, dxOffset, KnDelta, xAdjust;
     double referenceData[5]; /* length, angle, K1, K2, yaw */
+    double lengthCorrection;
     short multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
     MULTIPOLE_DATA edge1MultipoleData; 
