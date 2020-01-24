@@ -1243,6 +1243,7 @@ void copy_p_elem(char *target, char *source, long type)
     ((CCBEND*)target)->dxOffset = ((CCBEND*)source)->dxOffset;
     ((CCBEND*)target)->xAdjust = ((CCBEND*)source)->xAdjust;
     ((CCBEND*)target)->KnDelta = ((CCBEND*)source)->KnDelta;
+    ((CCBEND*)target)->lengthCorrection = ((CCBEND*)source)->lengthCorrection;
     ((CCBEND*)target)->referenceData[0] = ((CCBEND*)source)->referenceData[0];
     ((CCBEND*)target)->referenceData[1] = ((CCBEND*)source)->referenceData[1];
     ((CCBEND*)target)->referenceData[2] = ((CCBEND*)source)->referenceData[2];

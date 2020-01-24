@@ -942,11 +942,11 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
 #ifdef DEBUG_CCBEND
 	  printf("Using stored matrix for CCBEND %s#%ld from %s#%ld\n", eptr->name, eptr->occurence,
 		 storedElement[i]->name, storedElement[i]->occurence);
-	  printf("optimized = %ld, fseOffset=%le, dxOffset=%le, KnDelta=%le\n",
+	  printf("optimized = %hd, fseOffset=%le, dxOffset=%le, KnDelta=%le, lengthCorrection=%le\n",
                  crbptr1->optimized,
                  crbptr1->fseOffset,
                  crbptr1->dxOffset,
-                 crbptr1->KnDelta);
+                 crbptr1->KnDelta, crbptr1->lengthCorrection);
 	  printf("refData = %le, %le, %le, %le, %le\n", 
                  crbptr1->referenceData[0],
                  crbptr1->referenceData[1],
@@ -1372,6 +1372,15 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
       
 #ifdef DEBUG_CCBEND
       printf("Storing tracking-based matrix for %s#%ld\n", eptr->name, eptr->occurence);
+      if (eptr->type==T_CCBEND) {
+        CCBEND *ccb;
+        ccb = (CCBEND*)(eptr->p_elem);
+        printf("optimized = %hd, fseOffset=%le, dxOffset=%le, KnDelta=%le, lengthCorrection=%le\n",
+               ccb->optimized, ccb->fseOffset, ccb->dxOffset, ccb->KnDelta, ccb->lengthCorrection);
+        printf("refData = %le, %le, %le, %le, %le\n", 
+               ccb->referenceData[0], ccb->referenceData[1], ccb->referenceData[2], ccb->referenceData[3],
+               ccb->referenceData[4]);
+      }
       fflush(stdout);
 #endif
       
