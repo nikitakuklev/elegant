@@ -703,6 +703,30 @@ long trackRfCavityWithWakes
 
       for (ik=0; ik<nKicks; ik++) {
 	dgammaOverGammaAve = dgammaOverGammaNp = 0;
+                                                   
+        if (length<0) {
+          /* do wakes */
+          if (wake) 
+            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+          if (trwake)
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          if (LSCKick) {
+            if (dgammaOverGammaNp)
+#if !USE_MPI
+              dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+            if (USE_MPI) {
+              double t1 = dgammaOverGammaAve;
+              long t2 = dgammaOverGammaNp;
+              MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+              dgammaOverGammaAve /= dgammaOverGammaNp; 
+            }
+#endif
+            addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+          }
+        }
+
 	if (isSlave || !notSinglePart) {
           for (ip=0; ip<np; ip++) {
             coord = part[ip];
@@ -792,30 +816,32 @@ long trackRfCavityWithWakes
             coord[4] = (P+dP)/gamma*coord[4]/beta_i;
           }
         }
-        
-        /* do wakes */
-        if (wake) 
-          track_through_wake(part, np, wake, P_central, run, iPass, charge);
-        if (trwake)
-          track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
-        if (LSCKick) {
-          if (dgammaOverGammaNp)
+
+        if (length>=0) {
+          /* do wakes */
+          if (wake) 
+            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+          if (trwake)
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          if (LSCKick) {
+            if (dgammaOverGammaNp)
 #if !USE_MPI
-            dgammaOverGammaAve /= dgammaOverGammaNp;           
+              dgammaOverGammaAve /= dgammaOverGammaNp;           
 #else
-          if (USE_MPI) {
-            double t1 = dgammaOverGammaAve;
-            long t2 = dgammaOverGammaNp;
-            MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
-            MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
-            dgammaOverGammaAve /= dgammaOverGammaNp; 
-          }
+            if (USE_MPI) {
+              double t1 = dgammaOverGammaAve;
+              long t2 = dgammaOverGammaNp;
+              MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+              dgammaOverGammaAve /= dgammaOverGammaNp; 
+            }
 #endif
-          addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
-        }
-      }     
+            addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+          }
+        }     
+      }
     }
-    
+
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<np; ip++) {
 	coord = part[ip];
