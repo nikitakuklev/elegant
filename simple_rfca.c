@@ -984,7 +984,7 @@ long track_through_rfcw
   rfcw->LSCKick.highFrequencyCutoff0 = rfcw->LSCHighFrequencyCutoff0;
   rfcw->LSCKick.highFrequencyCutoff1 = rfcw->LSCHighFrequencyCutoff1;
   rfcw->LSCKick.radiusFactor = rfcw->LSCRadiusFactor;
-  rfcw->LSCKick.backtrack = 0;
+  rfcw->LSCKick.backtrack = 1;
   
   rfcw->initialized = 1;
 
