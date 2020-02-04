@@ -755,6 +755,7 @@ char **argv;
       run_conditions.wrap_around = wrap_around;
       run_conditions.showElementTiming = show_element_timing;
       run_conditions.monitorMemoryUsage = monitor_memory_usage;
+      run_conditions.backtrack = back_tracking; 
       if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;

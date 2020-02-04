@@ -133,6 +133,10 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   insertCount = 0;
   beamline = get_beamline(NULL, beamline->name, run->p_central, 0, 0);
+  if (run->backtrack)
+    beamline->flags |= BEAMLINE_BACKTRACKING;
+  compute_end_positions(beamline);
+
   add_elem_flag = 0;
   if (verbose)
     printf("%ld elements inserted in total\n", insertCount);

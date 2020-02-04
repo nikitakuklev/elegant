@@ -415,6 +415,7 @@ typedef struct line_list {
 #define BEAMLINE_RADINT_WANTED    0x00000020
 #define BEAMLINE_RADINT_CURRENT   0x00000040
 #define BEAMLINE_RADINT_DONE      0x00000080
+#define BEAMLINE_BACKTRACKING     0x00000100
     unsigned long fiducial_flag;  /* same bits as used by VARY, but only used to keep track of status */
     } LINE_LIST;
 
@@ -465,8 +466,8 @@ typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
-  long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
-    long showElementTiming, monitorMemoryUsage;
+    long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No, checkBeamStructure;
+    long showElementTiming, monitorMemoryUsage, backtrack;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;

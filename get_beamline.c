@@ -591,6 +591,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     /* free_elements(&ecopy); */
     eptr = &(lptr->elem);
     modify_for_backtracking(eptr);
+    lptr->flags |= BEAMLINE_BACKTRACKING;
   }
 
   if (echo) {
@@ -739,6 +740,16 @@ double compute_end_positions(LINE_LIST *lptr)
 
     resolveBranchPoints(lptr);
     
+    if (lptr->flags&BEAMLINE_BACKTRACKING) {
+      printf("Offseting z coordinates by %le for backtracking\n", -z);
+      eptr = &(lptr->elem);
+      do {
+        eptr->end_pos -= z;
+        } while ((eptr=eptr->succ));
+    } else {
+      printf("NOT offseting z coordinates by %le for backtracking\n", -z);
+    }
+
     /* Compute revolution length, respecting BRANCH elements */
     eptr = &(lptr->elem);
     z = z_recirc = 0;
@@ -779,6 +790,7 @@ double compute_end_positions(LINE_LIST *lptr)
     } while ((eptr=eptr->succ));
 
     lptr->revolution_length = z - z_recirc;
+
     return lptr->revolution_length;
     }
 
@@ -1786,7 +1798,7 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
     case T_RFCW:
       ((RFCW*)(eptr->p_elem))->volt *= -1;
       ((RFCW*)(eptr->p_elem))->backtrack = 1;
-      if ((RFCW*)(eptr->p_elem)->nKicks!=0)
+      if (((RFCW*)(eptr->p_elem))->nKicks!=0)
         bombElegant("RFCW in backtrack mode requires N_KICKS=0", NULL);
       break;
     case T_WAKE:
