@@ -51,7 +51,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   determination. V. Sajaev (APS) reported this bug.
 \item The \verb|ETILT| parameter of the \verb|CSBEND|, \verb|CSRCSBEND|, \verb|SBEN|, and \verb|RBEN| elements was not
   implemented correctly. Although the magnitude of the trajectory error was correct, it had the wrong sign compared to the
-  dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), and has been fixed.
+  dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), who also reported an error in
+  adjustment of the path-length when \verb|ETILT| was nonzero (no adjustment was made).
   A new parameter \verb|ETILT_SIGN| allows changing the sign convention to match that of \verb|TILT|.
 \item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
   the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This bug was reported by G. Penn (LBNL), and has been fixed.

@@ -1153,7 +1153,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[2] =  x*sin_ttilt +  y*cos_ttilt + dcoord_etilt[2];
     coord[1] = xp*cos_ttilt - yp*sin_ttilt + dcoord_etilt[1];
     coord[3] = xp*sin_ttilt + yp*cos_ttilt + dcoord_etilt[3];
-    coord[4] = s;
+    coord[4] = s + dcoord_etilt[4];
     coord[5] = dp;
 
     coord[0] += dxf + dzf*coord[1];
@@ -2999,7 +2999,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       YP = yp;
       coord[0] += dxf + dzf*coord[1];
       coord[2] += dyf + dzf*coord[3];
-      coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+      coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3])) + dcoord_etilt[4];
     }
     n_part = i_top + 1;
   }
