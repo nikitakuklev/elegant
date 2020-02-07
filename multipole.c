@@ -1155,7 +1155,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 				  long radial) 
 {
   double p, qx, qy, beta0, beta1, dp, s;
-  double x, y, xp, yp, sum_Fx, sum_Fy;
+  double x, y, xp, yp, sum_Fx, sum_Fy, sum_FxKick, sum_FyKick;
   long i_kick, imult, iOrder;
   long maxOrder;
   double *xpow, *ypow;
@@ -1229,6 +1229,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     fillPowerArray(y, ypow, maxOrder);
 
     sum_Fx = sum_Fy = 0;
+    sum_FxKick = sum_FyKick = 0;
 
     if (!radial) {
       for (iOrder=0; iOrder<3; iOrder++)
@@ -1240,9 +1241,9 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
                                          order[0], KnL[0]/n_kicks, 0);
 
     if (xkick)
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -xkick, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -xkick, 0);
     if (ykick)
-      apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -ykick, 1);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -ykick, 1);
 
     if (steeringMultData && steeringMultData->orders) {
       /* apply steering corrector multipoles */
@@ -1276,7 +1277,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     if ((rad_coef || isr_coef) && drift) {
       double deltaFactor, F2, dsFactor;
       deltaFactor = sqr(1+dp);
-      F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL[0]/(2*n_kicks*drift));
+      F2 = (sqr(sum_Fy*KnL[0]/n_kicks-xkick)+sqr(sum_Fx*KnL[0]/n_kicks+ykick))/sqr((2*drift));
       dsFactor = sqrt(1+sqr(xp)+sqr(yp))*2*drift;
       qx /= (1+dp);
       qy /= (1+dp);
