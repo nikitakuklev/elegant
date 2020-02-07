@@ -353,8 +353,10 @@ long new_bunched_beam(
 #endif
     }
     else {
-      if (firstIsFiducial && beamCounter==2)
+      if (firstIsFiducial && beamCounter==2) {
         bunchGenerated = 0;
+        particleID = 1;
+      }
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
 #if USE_MPI
       if (isMaster) {

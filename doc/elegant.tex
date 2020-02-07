@@ -70,6 +70,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The namelist parser was improved so that it now detects a common error, namely, a missing (or incorrectly typed)
   \verb|&end| token.
+\item The \verb|bunched_beam| command was giving inconsitent particle ID values between the serial and parallel versions
+  when \verb|first_is_fiducial=1|, as reported by Duan Zhe (IHEP).
 \end{itemize}
 
 \subsection{New and Modified Elements}
