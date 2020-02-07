@@ -64,6 +64,8 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   function using \verb|sddsfft|.
 \item The matrix for the \verb|MULT| element, used in computation of twiss parameters and beam moments, was not being updated
   when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_elements|).
+\item Synchrotron radiation was computed incorrectly for \verb|KQUAD| and \verb|KSEXT| elements when the \verb|HKICK| or
+  \verb|VKICK| steering parameters were non-zero, as reported by G. Penn (LBNL).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}

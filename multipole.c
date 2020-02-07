@@ -1155,7 +1155,7 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
 				  long radial) 
 {
   double p, qx, qy, beta0, beta1, dp, s;
-  double x, y, xp, yp, sum_Fx, sum_Fy, sum_FxKick, sum_FyKick;
+  double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, imult, iOrder;
   long maxOrder;
   double *xpow, *ypow;
@@ -1229,7 +1229,6 @@ int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xk
     fillPowerArray(y, ypow, maxOrder);
 
     sum_Fx = sum_Fy = 0;
-    sum_FxKick = sum_FyKick = 0;
 
     if (!radial) {
       for (iOrder=0; iOrder<3; iOrder++)
