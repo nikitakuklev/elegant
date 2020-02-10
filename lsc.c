@@ -495,6 +495,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
 
   /* - compute maximum length that we should be traveling between kicks */
+  lengthScale = fabs(lengthScale);
 #if DEBUG
   printf("rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
           beamRadius, Imax, kSC, dt, df, dk);
@@ -605,7 +606,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     factor *= -1;
   a2 = Z0/(PI*sqr(beamRadius))*lengthScale;
 #if DEBUG
-  printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
+  printf("nfreq = %ld   a2 = %e Ohms/m  factor = %le\n", nfreq, a2, factor);
   fflush(stdout);
 #endif
   Zmax = 0;
