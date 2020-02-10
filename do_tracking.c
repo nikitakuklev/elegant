@@ -894,7 +894,7 @@ long do_tracking(
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0) 
-            printWarning("particle ID sort not being performed because bunch frequency is nonzero");
+            printWarning("particle ID sort not being performed because bunch frequency is nonzero", NULL);
           else {
 #ifdef HAVE_GPU
             if (getElementOnGpu())
@@ -946,7 +946,7 @@ long do_tracking(
               if(usefulOperation(eptr, flags, i_pass)) {
                 char buffer[16384];
                 snprintf(buffer, 16384, "%s (%s) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
-                printWarning(buffer);
+                printWarning(buffer, NULL);
 		gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, 
 				n_processors, myid, &round);
 		if (isMaster)
@@ -1531,7 +1531,7 @@ long do_tracking(
 		      /* This part will be done in serial for now. A parallel version of FFT could be used here */
 		      if (!partOnMaster && notSinglePart) {
                         char buffer[16384];
-                        sprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.\n", eptr->name, entity_name[eptr->type]);
+                        sprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
                         printWarning(buffer, NULL);
 		      }
                       gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
