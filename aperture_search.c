@@ -1062,7 +1062,7 @@ long do_aperture_search_line(
       if ((verbosity>=1) && isMaster && split==0) {
 	if (nSteps <= n_processors) {
           char buffer[16384];
-          snprintf(buffer, ". Using %ld or fewer CPUs is suggested.", nSteps-1);
+          snprintf(buffer, 16384, ". Using %ld or fewer CPUs is suggested.", nSteps-1);
 	  printWarning("find_aperture: please reduce the number of CPUs or use a finer grid to avoid wasting resources", buffer);
         }
       }
