@@ -227,11 +227,16 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
         }
         if (iParam<0) {
           if (printingEnabled && warningCountDown>0) {
-            fprintf(stderr, "%s: element %s does not have parameter %s\n", 
-                    alterSpec[i].allow_missing_parameters?"Warning":"Error",
-                    eptr->name, alterSpec[i].item);
-            if (--warningCountDown==0 && alterSpec[i].allow_missing_parameters)
-              fprintf(stderr, "*** Further messages suppressed!\n");
+            char buffer[16834];
+            if (alterSpec[i].allow_missing_parameters) {
+              snprintf(buffer, 16384, "alter_elements: element does not have parameter %s: %s",
+                       alterSpec[i].item, eptr->name);
+              printWarning(buffer, NULL);
+              if (--warningCountDown==0 && alterSpec[i].allow_missing_parameters)
+                fprintf(stderr, "*** Further messages suppressed!\n");
+            } else 
+              printf("Element does not have parameter %s: %s",
+                     alterSpec[i].item, eptr->name);
           }
           if (!alterSpec[i].allow_missing_parameters)
             exitElegant(1);
@@ -392,7 +397,7 @@ void do_alter_elements(RUN *run, LINE_LIST *beamline, short before_load_paramete
       if (nMatches==0)  {
         if (alterSpec[i].allow_missing_elements) {
           if (printingEnabled)
-            printf("Warning: no matches for %s\n", alterSpec[i].name);
+            printWarning("alter_elements: No matches for name: ", alterSpec[i].name);
         } else {
           if (printingEnabled)
             printf("Error: no matches for %s\n", alterSpec[i].name);

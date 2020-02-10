@@ -363,6 +363,7 @@ char **argv;
   long linear_chromatic_tracking_setup_done = 0, ionEffectsSeen = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass, namelistErrorCode=0;
+  long lastCommandCode = 0;
   unsigned long pipeFlags = 0;
   double apertureReturn;
   char *rpnDefns = NULL, *configurationFile = NULL;
@@ -419,7 +420,7 @@ char **argv;
     isSlave = 0;
 
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
-    printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
+    printWarning("The INT_MAX could be too small to record the number of particles.", NULL); 
   }
 #if !SDDS_MPI_IO
   if (isSlave && (n_processors>3))   /* This will avoid wasting memory on a laptop with a small number of cores */    
@@ -664,6 +665,7 @@ char **argv;
   iInput = 0;
   while (iInput<2 && (inputfile=inputFileArray[iInput++])!=NULL) {
     fp_in = fopen_e(inputfile, "r", 0);
+  commandCode = -1;
   while (get_namelist_e(s, NAMELIST_BUFLEN, fp_in, &namelistErrorCode)) {
     if (namelistErrorCode!=NAMELIST_NO_ERROR)
       break;
@@ -682,6 +684,7 @@ char **argv;
 #if USE_MPI /* synchronize all the processes before execute an input statement */ 
     MPI_Barrier (MPI_COMM_WORLD);
 #endif
+    lastCommandCode = commandCode;
     switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
     case CHANGE_PARTICLE:
       if (run_setuped)
@@ -1049,15 +1052,13 @@ char **argv;
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) && 
             !soft_failure) {
-          printf("Closed orbit not found---continuing to next step\n");
-          fflush(stdout);
+          printWarning("Closed orbit not found", ". Continuing to next step");
           continue;
         }
         /* Compute twiss parameters with starting_coord as the start of the orbit */
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
             !soft_failure) {
-          printf("Twiss parameters not defined---continuing to next step\n");
-          fflush(stdout);
+          printWarning("Twiss parameters not defined", ". Continuing to next step");
           continue;
         }
         if (do_rf_setup)
@@ -1089,23 +1090,21 @@ char **argv;
                 !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                run_control.i_step, 
                                (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              fputs("warning: orbit correction failed--continuing with next step\n", stdout);
+              printWarning("Orbit correction failed", ". Continuing with next step");
               continue;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                printf("Closed orbit not found---continuing to next step\n");
-                fflush(stdout);
+                printWarning("Closed orbit not found", ". Continuing to next step");
                 failed = 1;
                 break;
               }
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                printf("Tune correction failed---continuing to next step\n");
-                fflush(stdout);
+                printWarning("Tune correction failed", ". Continuing to next step");
                 failed = 1;
                 break;
               }
@@ -1114,16 +1113,14 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                printf("Closed orbit not found---continuing to next step\n");
-                fflush(stdout);
+                printWarning("Closed orbit not found", ". Continuing to next step");
                 failed = 1;
                 break;
               }
               if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                               run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                printf("Chromaticity correction failed---continuing to next step\n");
-                fflush(stdout);
+                printWarning("Chromaticity correction failed", ". Continuing to next step");
                 failed = 1;
                 break;
               }
@@ -1153,14 +1150,12 @@ char **argv;
         /* Do post-correction output */
         if (do_closed_orbit && !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1) &&
             !soft_failure) {
-          printf("Closed orbit not found---continuing to next step\n");
-          fflush(stdout);
+          printWarning("Closed orbit not found", ". Continuing to next step");
           continue;
         }
         if (do_twiss_output && !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
             !soft_failure) {
-          printf("Twiss parameters not defined---continuing to next step\n");
-          fflush(stdout);
+          printWarning("Twiss parameters not defined", ". Continuing to next step");
           continue;
         }
         if (do_rf_setup)
@@ -1170,8 +1165,7 @@ char **argv;
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
-          printf("Coupled twiss parameters computation failed\n");
-          fflush(stdout);
+          printWarning("Coupled twiss parameters computation failed", NULL);
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
@@ -1434,8 +1428,10 @@ char **argv;
       break;
     case CLOSED_ORBIT:
       do_closed_orbit = setup_closed_orbit(&namelist_text, &run_conditions, beamline);
+      /*
       if (correction_setuped)
-        printf("warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
+        printWarning("You've asked to do both closed-orbit calculation and orbit correction, which may duplicate effort.\n");
+      */
       fflush(stdout);
       break;
     case TUNE_FOOTPRINT:
@@ -1501,23 +1497,20 @@ char **argv;
                 !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                run_control.i_step, 
                                (i==0?INITIAL_CORRECTION:0)+(i==correction_iterations-1?FINAL_CORRECTION:0))) {
-              fputs("warning: orbit correction failed--continuing with next step\n", stdout);
+              printWarning("Orbit correction failed", ". Continuing with next step");
               continue;
             }
             if (fl_do_tune_correction) {
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                printf("Closed orbit not found---continuing to next step\n");
-                fflush(stdout);
-                failed = 1;
+                printWarning("Closed orbit not found", ". Continuing to next step");
                 break;
               }
               if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord, do_closed_orbit,
                                       run_control.i_step, i==correction_iterations-1) &&
                   !soft_failure) {
-                printf("Tune correction failed---continuing to next step\n");
-                fflush(stdout);
+                printWarning("Tune correction failed", ". Continuing to next step");
                 failed = 1;
                 break;
               }
@@ -1526,7 +1519,7 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0) &&
                   !soft_failure) {
-                printf("Closed orbit not found---continuing to next step\n");
+                printWarning("Closed orbit not found", ". Continuing to next step\n");
                 fflush(stdout);
                 failed = 1;
                 break;
@@ -1826,11 +1819,15 @@ char **argv;
     case INSERT_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede insert_element namelist", NULL);
+      if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
+        printWarning("To avoid possible calculation errors, insert_elements commands should immediately follow run_setup", NULL);
       do_insert_elements(&namelist_text, &run_conditions, beamline);
       break;
     case REPLACE_ELEMENTS:
       if (!run_setuped)
         bombElegant("run_setup must precede replace_element namelist", NULL);
+      if (lastCommandCode!=RUN_SETUP && lastCommandCode!=INSERT_ELEMENTS && lastCommandCode!=REPLACE_ELEMENTS)
+        printWarning("To avoid possible calculation errors, replace_elements commands should immediately follow run_setup", NULL);
       do_replace_elements(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
@@ -1915,6 +1912,7 @@ char **argv;
 
 void printFarewell(FILE *fp)
 {
+  summarizeWarnings();
 #if (USE_MPI)
   printf("=====================================================================================\n");
   printf("Thanks for using Pelegant.  Please cite the following references in your publications:\n");
@@ -1971,8 +1969,9 @@ double find_beam_p_central(char *input)
   for (i=psum=0; i<rows; i++) 
     psum += p[i];
   if (SDDS_ReadPage(&SDDSin)>0) {
-    printf("Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
-            input);
+    char buffer[16384];
+    snprintf(buffer, 16384, ": %s", input);
+    printWarning("Only the first page of a file is used by expand_for", buffer);
     fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
@@ -2548,8 +2547,10 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   }
 
   if ((run->apertureData.points=SDDS_RowCount(&SDDSin))<2) {
-    printf("** Warning: aperture input file %s has only %ld rows!",
+    char buffer[16384];
+    snprintf(buffer, 16384, "Aperture input file %s has only %ld rows",
             input, run->apertureData.points);
+    printWarning(buffer, NULL);
   }
 
   if (!(run->apertureData.s = SDDS_GetColumnInDoubles(&SDDSin, "s")) ||
@@ -2792,12 +2793,8 @@ void process_particle_command(NAMELIST_TEXT *nltext)
     printf("particleMass = %e, particleRadius = %e, particleCharge = %e, particleMassMV = %e, particleRelSign = %e\n",
     particleMass, particleRadius, particleCharge, particleMassMV, particleRelSign);
     */
-  printf("************************************************\n");
-  printf("* WARNING ! \n");
-  printf("* Changing the particle type is not a fully tested\n");
-  printf("* feature.\n");
-  printf("* Please be alert for results that don't make sense!\n");
-  printf("************************************************\n");
+  printWarning("Changing the particle type is not a fully tested feature",
+               ". Please be alert for results that don't make sense.");
 }
 
 void processGlobalSettings(NAMELIST_TEXT *nltext)
@@ -2961,6 +2958,7 @@ void bombElegant(const char *error, const char *usage)
   close(fd); 
   MPI_Finalize();
 #endif
+  summarizeWarnings();
   exit(1);
 }
 
@@ -3030,7 +3028,7 @@ void runFiducialParticle(RUN *run, VARY *control, double *startCoord, LINE_LIST 
       printf("Fiducial particle lost. Don't know what to do.\n");
       exitElegant(1);
     } else {
-      printf("Warning: Fiducial particle lost!\n");
+      printWarning("Fiducial particle lost", NULL);
     }
   } else  {
     printf("Tracking fiducial particle completed.\n");

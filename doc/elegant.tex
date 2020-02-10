@@ -72,7 +72,7 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item The namelist parser was improved so that it now detects a common error, namely, a missing (or incorrectly typed)
   \verb|&end| token.
-\item The \verb|bunched_beam| command was giving inconsitent particle ID values between the serial and parallel versions
+\item The \verb|bunched_beam| command was giving inconsistent particle ID values between the serial and parallel versions
   when \verb|first_is_fiducial=1|, as reported by Duan Zhe (IHEP).
 \end{itemize}
 
@@ -80,12 +80,14 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
 \begin{itemize}
 \item Backtracking is now available for the \verb|RFCW| and \verb|LSCDRIFT| elements, as well as for \verb|CSRCSBEND| with
   \verb|STEADY_STATE=1|. Y. Park (UCLA) motivated the work and helped with testing.
+\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item Added more controls for mathematica-compatible output from the \verb|matrix_output|. In particular, it is now possible to
   put the output in separately-named files, which makes importation into mathematica much simpler.
+\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}

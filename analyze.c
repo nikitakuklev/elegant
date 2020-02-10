@@ -95,7 +95,7 @@ void setup_transport_analysis(
     if (!output && !printout)
         bombElegant("no output filename or printout filename specified", NULL);
     if (printout_order>3) {
-      printf("warning: maximum printout_order is 3\n");
+      printWarning("analyze_map: maximum printout order is 3", NULL);;
       printout_order = 3;
     }
     if (n_points<=max_fit_order)
@@ -290,7 +290,9 @@ void do_transport_analysis(
 #endif
     MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (n_leftTotal!=(n_track-1)) {
-      printf("warning: %ld particle(s) lost during transport analysis--continuing with next step", n_track-1-n_leftTotal);
+      char buffer[16834];
+      snprintf(buffer, ": %ld particles lost", n_track-1-n_leftTotal);
+      printWarning("particle(s) lost during transport analysis---continuing with next step", buffer); 
       return;
     }
 #else
@@ -299,7 +301,7 @@ void do_transport_analysis(
 			 FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
 			 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (n_left!=(n_track-1)) {
-      fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
+      printWarning("particle(s) lost during transport analysis---continuing with next step", NULL);;
       return;
     }
 #endif
@@ -2045,8 +2047,10 @@ void performChromaticAnalysisFromMap(VMATRIX *M, TWISS *twiss, CHROM_DERIVS *chr
     for (i=0; i<4; i+=2) {
       /* find nu, beta, alpha */
       if (fabs(cos_phi = (M->R[i][i] + M->R[i+1][i+1])/2)>1) {
-        printf("warning: beamline unstable for %c plane\n", i==0?'x':'y');
-        fflush(stdout);
+        if (i==0)
+          printWarning("analyze_map: beamline unstable for x plane", NULL);
+        else
+          printWarning("analyze_map: beamline unstable for y plane", NULL);
         beta = alpha = phi = 0;
       } else {
         beta = fabs(M->R[i][i+1]/sin(acos(cos_phi)));

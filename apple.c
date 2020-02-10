@@ -82,7 +82,7 @@ void APPLE_Track(double **coord, long np, double pCentral, APPLE *apple)
       } else {
 	apple->End_Pole = 0;
 	nleft = apple->periods;
-	printf("warning: apple.c periods <2, set end_pole to zero\n");
+        printWarning("GFWIGGLER has PERIODS<2, set END_POLE=0", NULL);
       }
     } else {
       nleft = apple->periods;
@@ -385,8 +385,8 @@ void InitializeAPPLE(char *file, APPLE *apple)
       printf("Error: problem reading file column data %s\n",apple->shimInput );
       exitElegant(1);
     }
-    if (!SDDS_Terminate(&SDDSshim))
-      printf("*** Warning: problem terminating APPLE shim_input file\n");
+    if (!SDDS_Terminate(&SDDSshim)) 
+      printWarning("Problem terminating GFWIGGLER SHIM_INPUT file", NULL);
     
     apple->kx_shim = kx_shim;
     for (row=0; row<rows; row++) {
@@ -428,7 +428,7 @@ void InitializeAPPLE(char *file, APPLE *apple)
     exitElegant(1);
   }
   if (!SDDS_Terminate(&SDDSin))
-    printf("*** Warning: problem terminating APPLE input file\n");
+    printWarning("Problem terminating GFWIGGLER INPUT_FILE file", NULL);
   
   /* Count total longitudinal and transverse harmonics */ 
   for (row=0; row<rows; row++) {

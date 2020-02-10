@@ -4632,7 +4632,10 @@ extern int makeInitialParticleEnsemble(double ***initial, double *reference, dou
 
 extern time_t get_mtime(char *filename);  
 
-  long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
+extern long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
+
+extern void printWarning(char *text,  char *detail);
+extern void summarizeWarnings();
 
 #ifdef __cplusplus
 }

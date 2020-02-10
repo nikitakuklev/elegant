@@ -771,8 +771,13 @@ long do_tracking(
         } else if (eptr->type==T_CHARGE) {
           if (elementsTracked!=0 && !warnedAboutChargePosition) {
 	    warnedAboutChargePosition = 1;
-            printf("Warning: the CHARGE element is not at the start of the beamline.\n");
-	    fflush(stdout);
+            if (eptr->pred && eptr->pred->name) {
+              char buffer[16384];
+              snprintf(buffer, 16384, ". Preceeded by %s.", eptr->pred->name);
+              printWarning("CHARGE element is not at the start of the beamline", buffer);
+            }
+            else
+              printWarning("CHARGE element is not at the start of the beamline", ". Preceeded by ?.");
 	  }
 	  if (charge!=NULL) {
 	    printf("Fatal error: multipole CHARGE elements in one beamline.\n");
@@ -888,8 +893,8 @@ long do_tracking(
 #ifdef SORT
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
-          if (beam && beam->bunchFrequency!=0)
-            printf("*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+          if (beam && beam->bunchFrequency!=0) 
+            printWarning("particle ID sort not being performed because bunch frequency is nonzero");
           else {
 #ifdef HAVE_GPU
             if (getElementOnGpu())
@@ -939,7 +944,9 @@ long do_tracking(
 	  if (parallelStatus==trueParallel) {
 	    if (!partOnMaster) {
               if(usefulOperation(eptr, flags, i_pass)) {
-		printf("Warning: %s (%s) is a serial element. It is not recommended for the simulation with a large number of particles because of memory issue.\n", eptr->name, entity_name[eptr->type]);
+                char buffer[16384];
+                snprintf(buffer, 16384, "%s (%s) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
+                printWarning(buffer);
 		gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, 
 				n_processors, myid, &round);
 		if (isMaster)
@@ -1145,9 +1152,9 @@ long do_tracking(
               bombElegant("no matrix for element that must have matrix", NULL);
           }
           if (eptr->matrix->C[5]!=0) {
-            printf("Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
-            printf("Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
-            fflush(stdout);
+            char buffer[16384];
+            snprintf(buffer, 16384, " Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
+            printWarning("Matrix with C5!=0 detected in matrix multiplier. All particles considered lost!", buffer);
             nLeft = 0;
           } else {
             if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
@@ -1214,8 +1221,12 @@ long do_tracking(
 	      if ((i_pass==0 && !startElem) || ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning) {
 		if (elementsTracked!=0 && !warnedAboutChargePosition) {
 		  warnedAboutChargePosition = 1;
-		  printf("Warning: the CHARGE element is not at the start of the beamline.\n");
-		  fflush(stdout);
+                  if (eptr->pred && eptr->pred->name) {
+                    char buffer[16384];
+                    snprintf(buffer, 16384, ". Preceeded by %s.", eptr->pred->name);
+                    printWarning("CHARGE element is not at the start of the beamline", buffer);
+                  } else
+                    printWarning("CHARGE element is not at the start of the beamline", ". Preceeded by ?.");
 		}
 		if (charge!=NULL && !( ((CHARGE*)(eptr->p_elem))->allowChangeWhileRunning && charge==((CHARGE*)(eptr->p_elem)))) {
 		  printf("Fatal error: multiple CHARGE elements in one beamline.\n");
@@ -1475,9 +1486,13 @@ long do_tracking(
 	          watch_pt_seen = 1;
 	          if (!watch->initialized) 
 	            set_up_watch_point(watch, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL, i_pass);
-	          if (i_pass==0 && (n_passes/watch->interval)==0)
-	            printf("warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
-	     	     n_passes, watch->interval);
+	          if (i_pass==0 && (n_passes/watch->interval)==0) {
+                    char buffer[16384];
+                    snprintf(buffer, 16384,
+                             "Settings n_passes=%ld and INTERVAL=%ld prevent WATCH output to file %s",
+                             n_passes, watch->interval, watch->filename);
+                    printWarning(buffer, NULL);
+                  }
 #if SDDS_MPI_IO
 		  if(watch_not_allowed) {
 		    dup2(fd,fileno(stdout));
@@ -1515,7 +1530,9 @@ long do_tracking(
 #if SDDS_MPI_IO
 		      /* This part will be done in serial for now. A parallel version of FFT could be used here */
 		      if (!partOnMaster && notSinglePart) {
-			printf("Warning: %s (%s FFT) is a serial element. It is not recommended for the simulation with a large number of particles because of memory issue.\n", eptr->name, entity_name[eptr->type]);
+                        char buffer[16384];
+                        sprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.\n", eptr->name, entity_name[eptr->type]);
+                        printWarning(buffer, NULL);
 		      }
                       gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
 		      if (isMaster)
@@ -1563,9 +1580,13 @@ long do_tracking(
 	          watch_pt_seen = 1; /* sic */
 	          if (!slicePoint->initialized) 
 	            set_up_slice_point(slicePoint, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
-	          if (i_pass==0 && (n_passes/slicePoint->interval)==0)
-	            printf("warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
-	     	     n_passes, watch->interval);
+	          if (i_pass==0 && (n_passes/slicePoint->interval)==0) {
+                    char buffer[16384];
+                    snprintf(buffer, 16384, 
+                             "Settings n_passes=%ld and INTERVAL=%ld prevent SLICE output to file %s for element %s",
+                             n_passes, slicePoint->interval, slicePoint->filename, eptr->name);
+                    printWarning(buffer, NULL);
+                  }
 #if SDDS_MPI_IO
 		  if (watch_not_allowed) {
 		    dup2(fd,fileno(stdout));
@@ -1588,9 +1609,13 @@ long do_tracking(
 		  watch_pt_seen = 1;   /* yes, this should be here */
 		  if (!histogram->initialized) 
 		    set_up_histogram(histogram, run, eptr->occurence);
-		  if (i_pass==0 && (n_passes/histogram->interval)==0)
-		    printf("warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
-			    n_passes, histogram->interval);
+		  if (i_pass==0 && (n_passes/histogram->interval)==0) {
+                    char buffer[16384];
+                    snprintf(buffer, 16384, 
+                             "Settings n_passes=%ld and INTERVAL=%ld prevent SLICE output to file %s for element %s",
+                             n_passes, histogram->interval, histogram->filename, eptr->name);
+                    printWarning(buffer, NULL);
+                  }
 		  fflush(stdout);
 		  if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
 #if !SDDS_MPI_IO   
@@ -1614,10 +1639,13 @@ long do_tracking(
                 mhist = (MHISTOGRAM*)eptr->p_elem;
                 if (!mhist->disable) {
                   watch_pt_seen = 1;   /* yes, this should be here */
-                  if (i_pass==0 && (n_passes/mhist->interval)==0)
-                    printf("warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
-                            n_passes, mhist->interval);
-                  fflush(stdout);
+                  if (i_pass==0 && (n_passes/mhist->interval)==0) {
+                    char buffer[16384];
+                    snprintf(buffer, 16384, 
+                             "Settings n_passes=%ld and INTERVAL=%ld prevent MHISTOGRAM output for element %s",
+                             n_passes, mhist->interval, eptr->name);
+                    printWarning(buffer, NULL);
+                  }
                   if (i_pass>=mhist->startPass && (i_pass-mhist->startPass)%mhist->interval==0) {
 
                     ELEMENT_LIST *eptr0;
@@ -2746,7 +2774,7 @@ long do_tracking(
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack)  {/* indicates more particles are lost, need sort */
           if (beam && beam->bunchFrequency!=0)
-            printf("*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+            printWarning("particle ID sort not being performed because bunch frequency is nonzero");
           else { 
 #ifdef HAVE_GPU
             if (getElementOnGpu()) 
@@ -3664,12 +3692,9 @@ ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
     bombElegant("Can't do \"linear chromatic\" or \"longitudinal-only\" matrix tracking---no matrices!", NULL);
   while (eptr) {
     if ((eptr->p_elem || eptr->matrix) && eptr->type==T_MATR) {
-      fprintf(stderr, "***** WARNING ****\n");
-      fprintf(stderr, "Possible problem with \"linear chromatic\" or \"longitudinal-only\" matrix tracking\n");
-      fprintf(stderr, "Concatenation resulted in more than one matrix.  Make sure the additional matrices do\n");
-      fprintf(stderr, "not affect the revolution matrix!\n");
-      print_elem_list(stderr, eptrPassed);
-      fprintf(stderr, "***** WARNING ****\n");
+      printWarning("Possible matrix concatenation problem with \"linear chromatic\" or \"longitudinal-only\" matrix tracking",
+                   "Concatenation resulted in more than one matrix.  Make sure the additional matrices do not affect the revolution matrix.\n");
+      print_elem_list(stdout, eptrPassed);
       break;
     }
     eptr = eptr->succ;
@@ -4208,9 +4233,12 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     amplitude = scat->factor*interp(scat->indepData, scat->cdfData, scat->nData, cdf, 0, 1, &interpCode);
     if (scat->randomSign)
       amplitude *= random_2(1)>0.5 ? 1 : -1;
-    if (!interpCode)
-      fprintf(stderr, "Warning: interpolation error for %s.  cdf=%e\n",
-              context.elementName, cdf);
+    if (!interpCode) {
+      char buffer[16384];
+      snprintf(buffer, 16384, ". Element %s, CDF=%e",
+               context.elementName, cdf);
+      printWarning("DSCATTER interpolation error", buffer);
+    }
     if (scat->iPlane==5) {
       /* momentum scattering */
       P = (1+part[ip][5])*Po;

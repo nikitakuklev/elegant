@@ -149,9 +149,8 @@ void setup_aperture_search(
   }
 #endif
   if (mode_code<ONE_LINE_MODE) {
-    printf("*** Warning: using one of the line-based search methods is strongly recommended.\n");
-    printf("*** Other methods, which search from large amplitude to small amplitude,\n");
-    printf("*** may overstate the aperture because of stable islands\n");
+    printWarning("find_aperture: using one of the line-based search methods is strongly recommended",
+                 ". Other methods, which search from large amplitude to small amplitude, may overstate the aperture because of stable islands");
   }
   if (full_plane!=0 && mode_code<ONE_LINE_MODE)
     bombElegant("full_plane=1 is only supported for line-based modes at present", NULL);
@@ -1061,8 +1060,11 @@ long do_aperture_search_line(
       break_index = nSteps;  /* Initialization, no particle has been lost */
       last_index = -1;
       if ((verbosity>=1) && isMaster && split==0) {
-	if (nSteps <= n_processors)
-	  printf("Warning: Please reduce the number of CPUs to %ld, or search aperture with finer grid to avoid wasting resources.\n", nSteps-1);
+	if (nSteps <= n_processors) {
+          char buffer[16384];
+          snprintf(buffer, ". Using %ld or fewer CPUs is suggested.", nSteps-1);
+	  printWarning("find_aperture: please reduce the number of CPUs or use a finer grid to avoid wasting resources", buffer);
+        }
       }
 #endif	
       for (index=0; index<nSteps; index++) {

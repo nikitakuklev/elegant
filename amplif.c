@@ -91,12 +91,10 @@ void compute_amplification_factors(
   if (type) {
     str_toupper(type);
     if ((type_code=match_string(type, entity_name, N_TYPES, EXACT_MATCH))<0) {
-      printf("warning: no exact match for type %s\n", type);
-      fflush(stdout);
+      printWarning("amplification_factors: No exact match for type ", type);
       if ((type_code=match_string(type, entity_name, N_TYPES, DCL_STYLE_MATCH|RETURN_FIRST_MATCH))<0)
         bombElegant("unknown type name", NULL);
-      printf("assuming that you meant type %s\n", entity_name[type_code]);
-      fflush(stdout);
+      printf("amplification_factors: Assuming that you meant other type %s", entity_name[type_code]);
       cp_str(&type, entity_name[type_code]);
     }
   }

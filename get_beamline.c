@@ -746,8 +746,6 @@ double compute_end_positions(LINE_LIST *lptr)
       do {
         eptr->end_pos -= z;
         } while ((eptr=eptr->succ));
-    } else {
-      printf("NOT offseting z coordinates by %le for backtracking\n", -z);
     }
 
     /* Compute revolution length, respecting BRANCH elements */
