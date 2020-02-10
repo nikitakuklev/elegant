@@ -1873,7 +1873,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"BLOCK_CSR", "", IS_SHORT, 0, (long)((char *)&csrcsbend_example.csrBlock), NULL, 0.0, 0, "block CSR from entering CSRDRIFT?"},
     {"DERBENEV_CRITERION_MODE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.derbenevCriterionMode), "disable", 0.0, 1, "disable, evaluate, or enforce"},
     {"PARTICLE_OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&csrcsbend_example.particleOutputFile), NULL, 0.0, 0, "name of file for phase-space output"},
-    {"PARTICLE_OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrcsbend_example.particleOutputInterval), NULL, 0.0, 0, "interval (in kicks) of output to PARTICLE_OUTPUT_FILE"},
+    {"PARTICLE_OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrcsbend_example.particleOutputInterval), NULL, 0.0, 1, "interval (in kicks) of output to PARTICLE_OUTPUT_FILE"},
     {"SLICE_ANALYSIS_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrcsbend_example.sliceAnalysisInterval), NULL, 0.0, 0, "interval (in kicks) of output to slice analysis file (from slice_analysis command)"},    
     {"LOW_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&csrcsbend_example.lowFrequencyCutoff0), NULL, -1.0, 0, "Highest spatial frequency at which low-frequency cutoff filter is zero.  If not positive, no low-frequency cutoff filter is applied. Frequency is in units of Nyquist (0.5/binsize)."},
     {"LOW_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&csrcsbend_example.lowFrequencyCutoff1), NULL, -1.0, 0, "Lowest spatial frequency at which low-frequency cutoff filter is 1.  If not given, defaults to LOW_FREQUENCY_CUTOFF1."},
