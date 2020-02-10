@@ -2495,9 +2495,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                 beta1 = p1/sqrt(p1*p1+1);
                 CT += Qf[4]*2/(beta0[i_part]+beta1);
                 beta0[i_part] = beta1;
-              } else {
+              } else
                 CT += Qf[4]/beta0[i_part];  
-              }
             }
           }
         }
@@ -2754,8 +2753,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             /* apply CSR kick */
             iBin = (f=(CT-ctLower)/dct);
             f -= iBin;
-            if (iBin>=0 && iBin<nBins1)
-              DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po*(1+X/rho0);
+            if (iBin>=0 && iBin<nBins1) {
+              DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po*(1+X/rho0); 
+              /* This code probably should be uncommented, but makes very little difference.
+              p1 = Po*(1+DP);
+              beta1 = p1/sqrt(p1*p1+1);
+              CT *= beta0[i_part]/beta1;
+              beta0[i_part] = beta1;
+              *?
+            }
 	  }
 	}
       }
@@ -2862,8 +2868,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     ctLower = ctUpper = dct = 0;
 
     nBinned =  binParticleCoordinate(&ctHist, &maxBins,
-                               &ctLower, &ctUpper, &dct, &nBins, 
-                               csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
+                                     &ctLower, &ctUpper, &dct, &nBins, 
+                                     csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
 				     part, n_part, 4);
 #if (!USE_MPI)
     if (nBinned!=n_part) {
