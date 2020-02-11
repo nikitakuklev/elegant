@@ -2760,7 +2760,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
               beta1 = p1/sqrt(p1*p1+1);
               CT *= beta0[i_part]/beta1;
               beta0[i_part] = beta1;
-              *?
+              */
             }
 	  }
 	}
