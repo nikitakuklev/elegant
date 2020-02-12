@@ -1751,6 +1751,7 @@ void print_beamlines(FILE *fp)
 
 void modify_for_backtracking(ELEMENT_LIST *eptr)
 {
+  ENERGY *en;
   while (eptr) {
     if (!(entity_description[eptr->type].flags&BACKTRACK))
       bombElegantVA("Error: no backtracking method for element %s (type %s)",
@@ -1792,6 +1793,7 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       break;
     case T_RFCA:
       ((RFCA*)(eptr->p_elem))->volt *= -1;
+      ((RFCA*)(eptr->p_elem))->backtrack = 1;
       break;
     case T_RFCW:
       ((RFCW*)(eptr->p_elem))->volt *= -1;
@@ -1829,6 +1831,11 @@ void modify_for_backtracking(ELEMENT_LIST *eptr)
       break;
     case T_LSCDRIFT:
       ((LSCDRIFT*)eptr->p_elem)->backtrack = 1;
+      break;
+    case T_ENERGY:
+      en = (ENERGY*)eptr->p_elem;
+      if (en->match_beamline || en->match_particles)
+        bombElegant("Can't use ENERGY element with MATCH_BEAMLINE=1 or MATCH_PARTICLES=1 in backtracking mode", NULL);
       break;
     default:
       break;

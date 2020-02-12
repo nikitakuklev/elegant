@@ -1069,7 +1069,8 @@ long do_tracking(
               MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 	  }
 #endif
-          printf("Starting %s#%ld at s=%le m, pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, last_z, i_pass, 
+          printf("Starting %s#%ld at s=%le m (%le), pass %ld, %ld particles, memory %ld kB\n", eptr->name, eptr->occurence, 
+                 eptr->end_pos, last_z, i_pass, 
 #if USE_MPI
                   myid==0 ? (beam?beam->n_to_track_total:-1) : nToTrack,
 #else

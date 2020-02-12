@@ -3557,7 +3557,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_TWLA_PARAMS,  MAT_LEN_NCAT|MAY_CHANGE_ENERGY|HAS_RF_MATRIX|MPALGORITHM,   sizeof(TW_LINAC),    twla_param     },
 
     {  N_PEPPOT_PARAMS,  MAT_LEN_NCAT,     sizeof(PEPPOT),    peppot_param   },
-    {  N_ENERGY_PARAMS,          MPALGORITHM|GPU_SUPPORT,     sizeof(ENERGY),    energy_param   },
+    {  N_ENERGY_PARAMS,          MPALGORITHM|GPU_SUPPORT|BACKTRACK,     sizeof(ENERGY),    energy_param   },
     {  N_MAXAMP_PARAMS,           GPU_SUPPORT|BACKTRACK,     sizeof(MAXAMP),    maxamp_param   },
     {  N_ROTATE_PARAMS,  HAS_MATRIX|BACKTRACK|MATRIX_TRACKING|GPU_SUPPORT,     sizeof(ROTATE),    rotate_param   },
     { N_TRCOUNT_PARAMS,           UNIDIAGNOSTIC|NO_APERTURE,    sizeof(TRCOUNT),    trcount_param  },

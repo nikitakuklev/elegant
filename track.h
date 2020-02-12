@@ -1340,7 +1340,7 @@ typedef struct {
     double tReference;
     short linearize, lockPhase;
     /* for internal use only: */
-    short fiducial_seen;
+    short fiducial_seen, backtrack;
     double phase_fiducial;
     } RFCA;
 

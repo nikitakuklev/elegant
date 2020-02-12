@@ -451,7 +451,6 @@ long trackRfCavityWithWakes
 #endif
     }
     
-
     switch (get_phase_reference(&phase, rfca->phase_reference)) {
         case REF_PHASE_RETURNED:
             break;
@@ -1020,10 +1019,7 @@ long track_through_rfcw
     rfcw->trwake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
   if (rfcw->backtrack) {
     rfcw->LSCKick.backtrack = 1;
-    /*
-    rfcw->wake.factor *= -1;
-    rfcw->trwake.factor *= -1;
-    */
+    rfcw->rfca.backtrack = 1;
   }
 
   np = trackRfCavityWithWakes(part, np, &rfcw->rfca, accepted, P_central, zEnd,
