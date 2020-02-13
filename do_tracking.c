@@ -1532,7 +1532,7 @@ long do_tracking(
 		      /* This part will be done in serial for now. A parallel version of FFT could be used here */
 		      if (!partOnMaster && notSinglePart) {
                         char buffer[16384];
-                        sprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
+                        snprintf(buffer, 16384, "%s (%s FFT) is a serial element. It is not recommended for simulations with a large number of particles because of possible memory issues.", eptr->name, entity_name[eptr->type]);
                         printWarning(buffer, NULL);
 		      }
                       gatherParticles(&coord, NULL, &nToTrack, &nLost, &accepted, n_processors, myid, &round);
