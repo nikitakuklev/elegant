@@ -1463,9 +1463,9 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
 					   order[0], KnL[0]/n_parts*kickFrac[step], 0);
 
       if (xkick)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -xkick*kickFrac[step], 0);
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -xkick*kickFrac[step], 0);
       if (ykick)
-        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, xpow, ypow, 0, -ykick*kickFrac[step], 1);
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, xpow, ypow, 0, -ykick*kickFrac[step], 1);
 	
       if (steeringMultData && steeringMultData->orders) {
         /* apply steering corrector multipoles */
@@ -1507,7 +1507,7 @@ int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xk
         qx /= (1+dp);
         qy /= (1+dp);
 	deltaFactor = sqr(1+dp);
-	F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL[0]/(n_parts*drift));
+	F2 = (sqr(sum_Fy*KnL[0]/n_parts-xkick)+sqr(sum_Fx*KnL[0]/n_parts+ykick))/sqr(drift);
 	dsFactor = sqrt(1+sqr(xp)+sqr(yp));
 	dsISRFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
 	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
