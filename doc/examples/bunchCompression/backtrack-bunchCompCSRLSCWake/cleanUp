@@ -1,0 +1,3 @@
+#!/bin/bash
+
+\rm run?.w* run?.out run?.sig run?.cen run?.bun run?.mag run1.enparam *.fin

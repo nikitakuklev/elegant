@@ -1,0 +1,37 @@
+&run_setup
+        lattice = lattice.lte,
+        default_order = 1,
+        use_beamline = bl,
+        p_central = 107.6,
+        sigma = %s.sig,
+        centroid = %s.cen,
+        output = %s.out,
+        final = %s.fin,
+        magnets = %s.mag,
+        print_statistics = 1
+&end
+
+&alter_elements name=ENMATCH, item=MATCH_BEAMLINE, value=1 &end
+
+&run_control
+&end
+
+&bunched_beam
+        n_particles_per_bunch = 500000,
+        one_random_bunch=0,
+        emit_x = 4.6e-8,
+        emit_y = 4.6e-8,
+        beta_x = 10, alpha_x = 1,
+        beta_y = 10, alpha_y = 1,
+        sigma_dp = 0.001,
+        sigma_s = 650e-6,
+        distribution_type[0] = 3*"gaussian",
+        distribution_cutoff[0] = 3*3,
+        symmetrize = 1,
+        enforce_rms_values[0] = 1,1,1,
+        bunch = %s.bun
+        halton_sequence[0] = 3*1,
+        optimized_halton = 1
+&end
+ 
+&track &end

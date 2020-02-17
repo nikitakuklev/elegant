@@ -1,0 +1,29 @@
+&run_setup
+        lattice = lattice.lte,
+        default_order = 1,
+        use_beamline = blb,
+        expand_for = run1.out,
+        sigma = %s.sig,
+        centroid = %s.cen,
+        output = %s.out,
+        final = %s.fin,
+        magnets = %s.mag,
+        print_statistics = 1
+        back_tracking = 1
+&end
+
+&load_parameters
+        filename = run1.enparam,
+        change_defined_values = 1
+        force_occurence_data = 1
+        verbose = 1
+&end
+        
+&run_control
+&end
+
+&sdds_beam
+        input = run1.out,
+&end
+ 
+&track &end

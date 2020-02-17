@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Forward run
+
+mpiexec -np 18 Pelegant run1.ele 
+
+# Create an energy profile from the forward run that will be used to
+# ensure that the reference energy is correct for the backward run
+
+sddsprocess run1.cen -pipe=out -match=col,ElementName=ENMARK \
+            | sddsconvert -pipe -retain=col,Element*,pCentral \
+            | sddsprocess -pipe=in run1.enparam \
+            -reedit=col,ElementName,%/MARK/MATCH/ -reprint=col,ElementType,ENERGY \
+            -print=col,ElementParameter,CENTRAL_MOMENTUM -define=col,ParameterValue,pCentral 
+
+# Backward run
+
+mpiexec -np 18 Pelegant run2.ele 
+
+# Compare
+plotScript
+

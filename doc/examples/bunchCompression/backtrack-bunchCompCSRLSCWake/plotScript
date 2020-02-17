@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Compare forward/backward tracking with final result
+sddsplot -mode=x=meancenter -graph=dot,vary -layout=1,2 -join=x -column=t,p run1.bun run2.out -end -column=t,p run1.out 
+
+sddsplot -group=names -sep=names -legend=file -graph=line,vary -clip=1,0 \
+    -column=s,S[xy] run[12].sig -column=s,Sdelta run[12].sig
+
+sddsplot -group=names -sep=names -legend=file -graph=line,vary -clip=1,0 \
+    -column=s,C[xy] run[12].cen -column=s,Cdelta run[12].cen
+
+# Compare along the beamline
+sddsplot -presparse=10 -groupby=fileindex -separate=fileindex -graph=dot,vary -filename \
+    -column=t,p run1.wa??? run1.wc?? run1.wb??? -column=t,p run2.wa??? run2.wc?? run2.wb???
+

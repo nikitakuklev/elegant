@@ -1,0 +1,23 @@
+q: charge,total=1e-9
+enmark: mark
+enmatch: energy
+en: line=(enmark,enmatch)
+linA10: rfcw,freq=2856e6,l=0.3,volt="48e6 10 /",phase="90 28 -",n_kicks=0,cell_length=0.1,lsc=1,&
+        zwakefile="knsl45.liwake.sdds",tcolumn="t",WzColumn="W"
+linB10: rfcw,freq=2856e6,l=0.3,volt="48e6 10 /",phase="90 6 +",n_kicks=0,cell_length=0.1,lsc=1,&
+        zwakefile="knsl45.liwake.sdds",tcolumn="t",WzColumn="W"
+B1: csrcsben,bins=500,n_kicks=50,angle=0.146607657167524,l=0.200718260855179,e1=0,e2=0.146607657167524,steady_state=1,fint=0.5,hgap=0.02
+B2: csrcsben,bins=500,n_kicks=50,angle=-0.146607657167524,l=0.200718260855179,e1=-0.146607657167524,e2=0,steady_state=1,fint=0.5,hgap=0.02
+B3: csrcsben,bins=500,n_kicks=50,angle=-0.146607657167524,l=0.200718260855179,e1=0,e2=-0.146607657167524,steady_state=1,fint=0.5,hgap=0.02
+B4: csrcsben,bins=500,n_kicks=50,angle=0.146607657167524,l=0.200718260855179,e1=0.146607657167524,e2=0,steady_state=1,fint=0.5,hgap=0.02
+l1: lscdrift,l=1.0,bins=500,lsc=1
+l2: lscdrift,l=0.5,bins=500,lsc=1
+l3: lscdrift,l=1.0,bins=500,lsc=1
+wa: watch,filename="%s.wa%03ld",mode="coord"
+wb: watch,filename="%s.wb%03ld",mode="coord"
+linacA: line=(30*(en,linA10,en,wa))
+linacB: line=(80*(en,linB10,en,wb))
+wc: watch,filename="%s.wc%02ld",mode="coord"
+chicane: line=(en,wc,B1,wc,L1,wc,B2,wc,L2,wc,B3,wc,L1,wc,B4,wc,en)
+blb: line=(linacA,chicane,l3,linacB,q)
+bl: line=(q,linacA,chicane,l3,linacB)
