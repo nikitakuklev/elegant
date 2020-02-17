@@ -922,6 +922,8 @@ long do_tracking(
 			     charge ? charge->macroParticleCharge : 0.0,
 			     NULL, 0.0, 0.0, 0, 0, 0);
         (*sums_vs_z)[i_sums].z = z;
+        if (run->backtrack && i_sums==0)
+          (*sums_vs_z)[i_sums].z = beamline->elem.end_pos;
 #if defined(BEAM_SUMS_DEBUG)
         printMessageAndTime(stdout, "Done accumulating beam sums\n");
         printf("beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
