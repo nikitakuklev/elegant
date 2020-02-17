@@ -1625,8 +1625,11 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   
   if (filename)
     filename = compose_filename(filename, run->rootname);
-  if (s_dependent_driving_terms_file)
+  if (s_dependent_driving_terms_file) {
     s_dependent_driving_terms_file = compose_filename(s_dependent_driving_terms_file, run->rootname);
+    if (!filename)
+      bombElegant("You must give a value for filename if you give one for s_dependent_driving_terms_file", NULL);
+  }
   twissConcatOrder = concat_order;
   if (twissConcatOrder<default_order)
     twissConcatOrder = default_order;

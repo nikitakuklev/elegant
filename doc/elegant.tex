@@ -74,6 +74,9 @@ Historical change logs are collected in Section \ref{sect:changeLog}.
   \verb|&end| token.
 \item The \verb|bunched_beam| command was giving inconsistent particle ID values between the serial and parallel versions
   when \verb|first_is_fiducial=1|, as reported by Duan Zhe (IHEP).
+\item The \verb|twiss_output| command would fail to deliver data to the s-dependent driving terms output file if
+  no file was giving for twiss parameters, as reported by forum user \verb|felix_armborst|. This is now flagged as an 
+  error.
 \end{itemize}
 
 \subsection{New and Modified Elements}
