@@ -291,7 +291,7 @@ void do_transport_analysis(
     MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (n_leftTotal!=(n_track-1)) {
       char buffer[16834];
-      snprintf(buffer, ": %ld particles lost", n_track-1-n_leftTotal);
+      sprintf(buffer, ": %ld particles lost", n_track-1-n_leftTotal);
       printWarning("particle(s) lost during transport analysis---continuing with next step", buffer); 
       return;
     }
