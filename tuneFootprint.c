@@ -344,7 +344,7 @@ void setupTuneFootprintDataTypes ()
   MPI_Get_address(&deltaTfExample.diffusionRate, &offset[1]);
   for (i=1; i>=0; i--)
     offset[i] -= offset[0];
-  MPI_Type_struct(2, blockLength, offset, oldType, &deltaTfDataType);
+  MPI_Type_create_struct(2, blockLength, offset, oldType, &deltaTfDataType);
   MPI_Type_commit(&deltaTfDataType);
 
   oldType[0] = oldType[1] = oldType[2] = oldType[3] = oldType[4] = oldType[5] =
@@ -369,7 +369,7 @@ void setupTuneFootprintDataTypes ()
   MPI_Get_address(&tfExample.nuyAmpLimit, &offset[8]);
   for (i=8; i>=0; i--)
     offset[i] -= offset[0];
-  MPI_Type_struct(9, blockLength, offset, oldType, &tfReturnDataType);
+  MPI_Type_create_struct(9, blockLength, offset, oldType, &tfReturnDataType);
   MPI_Type_commit(&tfReturnDataType);
 }
 #endif
