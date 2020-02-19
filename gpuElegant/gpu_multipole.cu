@@ -227,9 +227,9 @@ class gpu_multipole_tracking2_kernel
                                                  order[0], KnL[0]/n_kicks, 0);
 
         if (xkick)
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick, 0);
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -xkick, 0);
         if (ykick)
-          gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick, 1);
+          gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -ykick, 1);
 
         /* apply steering corrector multipoles */
         if (steeringMultDataOrders >= 0)
@@ -265,7 +265,7 @@ class gpu_multipole_tracking2_kernel
           {
             double deltaFactor, F2, dsFactor;
             deltaFactor = sqr(1 + dp);
-            F2 = (sqr(sum_Fy) + sqr(sum_Fx)) * sqr(KnL[0] / (2*n_kicks * drift));
+            F2 = (sqr(sum_Fy * KnL[0] / n_kicks - xkick) + sqr(sum_Fx * KnL[0] / n_kicks + ykick)) / sqr((2*drift));
             dsFactor = xp * xp + yp * yp;
             dsFactor = sqrt(1 + dsFactor) * 2 * drift;
             qx /= (1 + dp);
@@ -463,9 +463,9 @@ class gpu_multipole_tracking2_kernel
                                                      order[0], KnL[0]/n_parts*kickFrac[step], 0);
 
             if (xkick)
-              gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -xkick * kickFrac[step], 0);
+              gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -xkick * kickFrac[step], 0);
             if (ykick)
-              gpu_apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 0, -ykick * kickFrac[step], 1);
+              gpu_apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 0, -ykick * kickFrac[step], 1);
 
             /* apply steering corrector multipoles */
             if (steeringMultDataOrders >= 0)
@@ -509,7 +509,7 @@ class gpu_multipole_tracking2_kernel
                 qx /= (1 + dp);
                 qy /= (1 + dp);
                 deltaFactor = sqr(1 + dp);
-                F2 = (sqr(sum_Fy) + sqr(sum_Fx)) * sqr(KnL[0] /(n_parts * drift));
+                F2 = (sqr(sum_Fy * KnL[0] / n_parts - xkick) + sqr(sum_Fx * KnL[0] / n_parts + ykick)) / sqr(drift);
                 dsFactor = xp * xp + yp * yp;
                 dsFactor = sqrt(1 + dsFactor);
                 dsISRFactor = dsFactor * drift / 3; /* recall that kickFrac may be negative */

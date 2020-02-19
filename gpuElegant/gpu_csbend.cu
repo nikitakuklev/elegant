@@ -242,7 +242,7 @@ class gpu_track_through_csbend_kernel
   double dxi, dyi, dzi, dxf, dyf, dzf;
   double cos_ttilt, sin_ttilt;
   double e1, e2, he1, he2, psi1, psi2, n;
-  double dcet0, dcet1, dcet2, dcet3;
+  double dcet0, dcet1, dcet2, dcet3, dcet4;
   double e1_kick_limit, e2_kick_limit;
   // From CSBEND struct
   double length, b0, hgap, fint1, fint2, fintBoth;
@@ -267,7 +267,7 @@ class gpu_track_through_csbend_kernel
                                  double dyi, double dzi, double dxf, double dyf, double dzf,
                                  double cos_ttilt, double sin_ttilt, double e1, double e2,
                                  double he1, double he2, double psi1, double psi2, double n,
-                                 double dcet0, double dcet1, double dcet2, double dcet3,
+                                 double dcet0, double dcet1, double dcet2, double dcet3, double dcet4,
                                  double e1_kick_limit, double e2_kick_limit,
                                  double length, double b0, double hgap, double fint1, double fint2, double fintBoth, double h1, double h2,
                                  int edge1_effects, int edge2_effects,
@@ -282,7 +282,7 @@ class gpu_track_through_csbend_kernel
     dxi(dxi), dyi(dyi), dzi(dzi), dxf(dxf), dyf(dyf),
     dzf(dzf), cos_ttilt(cos_ttilt), sin_ttilt(sin_ttilt), e1(e1), e2(e2),
     he1(he1), he2(he2), psi1(psi1), psi2(psi2), n(n), dcet0(dcet0),
-    dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), e1_kick_limit(e1_kick_limit),
+    dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), dcet4(dcet4), e1_kick_limit(e1_kick_limit),
     e2_kick_limit(e2_kick_limit), length(length),
     b0(b0), hgap(hgap), fint1(fint1), fint2(fint2), fintBoth(fintBoth), h1(h1), h2(h2),
     edge1_effects(edge1_effects), edge2_effects(edge2_effects),
@@ -543,7 +543,7 @@ class gpu_track_through_csbend_kernel
     coord[2] = x * sin_ttilt + y * cos_ttilt + dcet2;   // dcoord_etilt[2];
     coord[1] = xp * cos_ttilt - yp * sin_ttilt + dcet1; // dcoord_etilt[1];
     coord[3] = xp * sin_ttilt + yp * cos_ttilt + dcet3; // dcoord_etilt[3];
-    coord[4] = s;
+    coord[4] = s + dcet4;
     coord[5] = dp;
 
     coord[0] += dxf + dzf * coord[1];
@@ -615,6 +615,7 @@ extern "C"
             memset(part0[0], 0, sizeof(**part0) * COORDINATES_PER_PARTICLE);
             memcpy(&csbend0, csbend, sizeof(*csbend));
             csbend0.dx = csbend0.dy = csbend0.dz = csbend0.fse = csbend0.etilt = csbend0.isr = csbend0.synch_rad = 0;
+            csbend0.fseDipole = csbend0.fseQuadrupole = 0;
 
             csbend0.refTrajectoryChange = csbend->refTrajectoryChange = (double **)czarray_2d(sizeof(double), csbend->n_kicks, 5);
             refTrajectoryPoints = csbend->n_kicks;
@@ -739,7 +740,7 @@ extern "C"
         angle = -csbend->angle;
         e1 = -csbend->e[csbend->e1Index];
         e2 = -csbend->e[csbend->e2Index];
-        etilt = csbend->etilt;
+        etilt = csbend->etilt*csbend->etiltSign;
         tilt = csbend->tilt + PI; /* work in rotated system */
         rho0 = csbend->length / angle;
         for (i = 0; i < 8; i += 2)
@@ -753,7 +754,7 @@ extern "C"
         angle = csbend->angle;
         e1 = csbend->e[csbend->e1Index];
         e2 = csbend->e[csbend->e2Index];
-        etilt = csbend->etilt;
+        etilt = csbend->etilt*csbend->etiltSign;
         tilt = csbend->tilt;
         rho0 = csbend->length / angle;
       }
@@ -1012,7 +1013,7 @@ extern "C"
                                                            d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state,
                                                            Po, z_start, dxi, dyi, dzi, dxf, dyf, dzf, cos_ttilt,
                                                            sin_ttilt, e1, e2, he1, he2, psi1, psi2, n, dcoord_etilt[0],
-                                                           dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3],
+                                                           dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3], dcoord_etilt[4],
                                                            e1_kick_limit, e2_kick_limit,
                                                            csbend->length, csbend->b[0], csbend->hgap, csbend->fint[csbend->e1Index], csbend->fint[csbend->e2Index], csbend->fintBoth,
                                                            csbend->h[csbend->e1Index], csbend->h[csbend->e2Index], csbend->edge_effects[csbend->e1Index], csbend->edge_effects[csbend->e2Index],
@@ -2152,8 +2153,15 @@ class gpu_track_through_csbendCSR_kernel6
         /* apply CSR kick */
         iBin = (f = (CT - ctLower) / dct);
         f -= iBin;
-        if (iBin >= 0 && iBin < nBins1)
+        if (iBin >= 0 && iBin < nBins1) {
           DP += ((1 - f) * d_dGamma[iBin] + f * d_dGamma[iBin + 1]) / Po * (1 + X / d_rho0);
+              /* This code probably should be uncommented, but makes very little difference.
+              p1 = Po*(1+DP);
+              beta1 = p1/sqrt(p1*p1+1);
+              CT *= beta0[i_part]/beta1;
+              beta0[i_part] = beta1;
+              */
+        }
       }
   }
 };
@@ -2281,13 +2289,13 @@ class gpu_track_through_csbendCSR_kernel9
 {
  public:
   double dxf, dyf, dzf;
-  double dcet0, dcet1, dcet2, dcet3;
+  double dcet0, dcet1, dcet2, dcet3, dcet4;
   double cos_ttilt, sin_ttilt;
 
  gpu_track_through_csbendCSR_kernel9(double dxf, double dyf, double dzf,
-                                     double dcet0, double dcet1, double dcet2, double dcet3,
+                                     double dcet0, double dcet1, double dcet2, double dcet3, double dcet4,
                                      double cos_ttilt, double sin_ttilt) : dxf(dxf), dyf(dyf), dzf(dzf),
-    dcet0(dcet0), dcet1(dcet1), dcet2(dcet2), dcet3(dcet3),
+    dcet0(dcet0), dcet1(dcet1), dcet2(dcet2), dcet3(dcet3), dcet4(dcet4),
     cos_ttilt(cos_ttilt), sin_ttilt(sin_ttilt){};
 
   __device__ inline void operator()(gpuParticleAccessor &coord)
@@ -2305,7 +2313,7 @@ class gpu_track_through_csbendCSR_kernel9
     YP = yp;
     coord[0] += dxf + dzf * coord[1];
     coord[2] += dyf + dzf * coord[3];
-    coord[4] += dzf * sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+    coord[4] += dzf * sqrt(1 + sqr(coord[1]) + sqr(coord[3])) + dcet4;
   }
 };
 
@@ -2489,7 +2497,7 @@ extern "C"
         angle = -csbend->angle;
         e1 = -csbend->e[csbend->e1Index];
         e2 = -csbend->e[csbend->e2Index];
-        etilt = csbend->etilt;
+        etilt = csbend->etilt*csbend->etiltSign;
         tilt = csbend->tilt + PI;
         rho0 = csbend->length / angle;
         for (i = 0; i < 8; i += 2)
@@ -2503,7 +2511,7 @@ extern "C"
         angle = csbend->angle;
         e1 = csbend->e[csbend->e1Index];
         e2 = csbend->e[csbend->e2Index];
-        etilt = csbend->etilt;
+        etilt = csbend->etilt*csbend->etiltSign;
         tilt = csbend->tilt;
         rho0 = csbend->length / angle;
       }
@@ -2531,6 +2539,10 @@ extern "C"
     Kg = 2 * csbend->hgap * csbend->fint;
     psi1 = Kg / rho_actual / cos(e1) * (1 + sqr(sin(e1)));
     psi2 = Kg / rho_actual / cos(e2) * (1 + sqr(sin(e2)));
+    if (csbend->length<0) {
+      psi1 *=  -1;
+      psi2 *=  -1;
+    }
 
     /* rad_coef is d((P-Po)/Po)/ds for the on-axis, on-momentum particle, where po is the momentum of
      * the central particle.
@@ -2556,7 +2568,7 @@ extern "C"
                                angle / csbend->n_kicks, 0.0, 0.0,
                                0.0, 0.0, csbend->b[0] * h, 0.0,
                                0.0, 0.0, 0.0, 0.0, csbend->fse, 0.0, 0.0,
-                               csbend->etilt, 1, 1, 0, 0);
+                               csbend->etilt*csbend->etiltSign, 1, 1, 0, 0);
         Me2 = edge_matrix(e2, 1. / (rho0 / (1 + csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0, csbend->length);
       }
     computeCSBENDFieldCoefficients(csbend->b, csbend->c, h, csbend->nonlinear, csbend->expansionOrder);
@@ -2590,37 +2602,7 @@ extern "C"
 
     if (etilt)
       {
-        /* compute final offsets due to error-tilt of the magnet */
-        /* see pages 90-93 of notebook 1 about this */
-        double q1a, q2a, q3a;
-        double q1b, q2b, q3b;
-        double qp1, qp2, qp3;
-        double dz, tan_alpha, k;
-
-        q1a = (1 - cos(angle)) * rho0 * (cos(etilt) - 1);
-        q2a = 0;
-        q3a = (1 - cos(angle)) * rho0 * sin(etilt);
-        qp1 = sin(angle) * cos(etilt);
-        qp2 = cos(angle);
-        k = sqrt(sqr(qp1) + sqr(qp2));
-        qp1 /= k;
-        qp2 /= k;
-        qp3 = sin(angle) * sin(etilt) / k;
-        tan_alpha = 1. / tan(angle) / cos(etilt);
-        q1b = q1a * tan_alpha / (tan(angle) + tan_alpha);
-        q2b = -q1b * tan(angle);
-        dz = sqrt(sqr(q1b - q1a) + sqr(q2b - q2a));
-        q3b = q3a + qp3 * dz;
-
-        dcoord_etilt[0] = sqrt(sqr(q1b) + sqr(q2b));
-        dcoord_etilt[1] = tan(atan(tan_alpha) - (PIo2 - angle));
-        dcoord_etilt[2] = q3b;
-        dcoord_etilt[3] = qp3;
-        dcoord_etilt[4] = dz * sqrt(1 + sqr(qp3));
-        dcoord_etilt[5] = 0;
-
-        /* rotate by tilt to get into same frame as bend equations. */
-        rotate_coordinates(dcoord_etilt, tilt);
+        computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
       }
     else
       fill_double_array(dcoord_etilt, 6L, 0.0);
@@ -2792,46 +2774,52 @@ extern "C"
           (curandState_t*)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
         */
       }
-    for (kick = 0; kick < csbend->n_kicks; kick++)
+    for (kick = 0; kick < csbend->n_kicks+1; kick++)
       {
+        if (!csbend->backtrack && kick==csbend->n_kicks)
+          break;
         if (isSlave || !notSinglePart)
           {
-            if (csbend->useMatrix)
-              {
-                gpu_track_particles(Msection, n_part);
-              }
-            else
-              {
-                if (rad_coef || isrConstant)
-                  {
-                    if (!distributionBasedRadiation && isrConstant)
-                      {
-                        if (csbend->integration_order == 4)
-                          {
-                            gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
-                            gpu_d_gauss_rn_lim(d_gauss_rn_p2, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
-                            gpu_d_gauss_rn_lim(d_gauss_rn_p3, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
-                          }
-                        else
-                          {
-                            gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
-                          }
-                      }
-                    else if (distributionBasedRadiation)
-                      {
-                        state =
-                          (curandState_t *)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
-                      }
-                  }
-                gpuDriver(n_part,
-                          gpu_track_through_csbendCSR_kernel5(d_sortIndex, d_beta0,
-                                                              d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state, Po, csbend->integration_order, csbend->length,
-                                                              csbend->n_kicks, expansionOrder1, hasSkew, hasNormal, rho0, rho_actual, rad_coef,
-                                                              isrConstant, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
-                                                              distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData));
-                gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel5");
-              }
+            if (!csbend->backtrack || kick!=0) {
+              if (csbend->useMatrix)
+                {
+                  gpu_track_particles(Msection, n_part);
+                }
+              else
+                {
+                  if (rad_coef || isrConstant)
+                    {
+                      if (!distributionBasedRadiation && isrConstant)
+                        {
+                          if (csbend->integration_order == 4)
+                            {
+                              gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+                              gpu_d_gauss_rn_lim(d_gauss_rn_p2, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+                              gpu_d_gauss_rn_lim(d_gauss_rn_p3, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+                            }
+                          else
+                            {
+                              gpu_d_gauss_rn_lim(d_gauss_rn, n_part, 1, 0.0, 1.0, srGaussianLimit, random_2(0));
+                            }
+                        }
+                      else if (distributionBasedRadiation)
+                        {
+                          state =
+                            (curandState_t *)gpu_get_rand_state(d_gauss_rn, n_part, random_2(0));
+                        }
+                    }
+                  gpuDriver(n_part,
+                            gpu_track_through_csbendCSR_kernel5(d_sortIndex, d_beta0,
+                                                                d_gauss_rn, d_gauss_rn_p2, d_gauss_rn_p3, state, Po, csbend->integration_order, csbend->length,
+                                                                csbend->n_kicks, expansionOrder1, hasSkew, hasNormal, rho0, rho_actual, rad_coef,
+                                                                isrConstant, meanPhotonsPerMeter0, normalizedCriticalEnergy0,
+                                                                distributionBasedRadiation, includeOpeningAngle, srGaussianLimit, apertureData));
+                  gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel5");
+                }
+            }
           }
+        if (csbend->backtrack && kick==csbend->n_kicks)
+          break;
 
         if (n_partMoreThanOne && csbend->derbenevCriterionMode)
           {
@@ -2985,7 +2973,7 @@ extern "C"
                   }
 
                 phiBend += angle / csbend->n_kicks;
-                slippageLength = rho0 * pow(phiBend, 3) / 24.0;
+                slippageLength = fabs(rho0 * pow(phiBend, 3) / 24.0);
                 slippageLength13 = pow(slippageLength, 1. / 3.);
                 diSlippage = slippageLength / dct;
                 diSlippage4 = 4 * slippageLength / dct;
@@ -3310,7 +3298,7 @@ extern "C"
               }
             gpuDriver(n_part,
                       gpu_track_through_csbendCSR_kernel9(dxf, dyf, dzf,
-                                                          dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3],
+                                                          dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2], dcoord_etilt[3], dcoord_etilt[4],
                                                           cos_ttilt, sin_ttilt));
             gpuErrorHandler("gpu_track_through_csbendCSR: gpu_track_through_csbendCSR_kernel9");
           }

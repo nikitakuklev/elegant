@@ -85,13 +85,17 @@ extern "C"
         allocGpuMem = true;
       }
 
-    if ((lengthLeft = LSC->length) == 0)
+    if ((lengthLeft = fabs(LSC->length)) == 0)
       {
-        lengthLeft = LSC->lEffective;
+        lengthLeft = fabs(LSC->lEffective);
         kickMode = 1;
       }
     while (lengthLeft > 0)
       {
+#if DEBUG
+        printf("lengthLeft = %le\n", lengthLeft);
+        fflush(stdout);
+#endif
         /* compute time coordinates and make histogram */
         if (isSlave || !notSinglePart)
           // note that tmean is not computed here because it's only used in debug mode.
@@ -302,6 +306,8 @@ extern "C"
           Vfreq[nb - 1] = 0;
 
         factor = charge->macroParticleCharge / dt;
+        if (LSC->backtrack)
+          factor *= -1;
         a2 = Z0 / (PI * sqr(beamRadius)) * length;
 #if DEBUG
         printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);
@@ -355,7 +361,14 @@ extern "C"
 
             if (!kickMode)
               {
-                gpu_applyLongitudinalWakeKicksAndDrift(d_particles, particlePitch, np, d_time, Po, d_Vtime, nb, tmin, dt, LSC->interpolate, particleMassMV * particleRelSign, length);
+                if (LSC->backtrack) 
+                  {
+                    gpu_applyLongitudinalWakeKicksAndDrift(d_particles, particlePitch, np, d_time, Po, d_Vtime, nb, tmin, dt, LSC->interpolate, particleMassMV * particleRelSign, length * -1);
+                  }
+                else
+                  {
+                    gpu_applyLongitudinalWakeKicksAndDrift(d_particles, particlePitch, np, d_time, Po, d_Vtime, nb, tmin, dt, LSC->interpolate, particleMassMV * particleRelSign, length);
+                  }
               }
             else
               {
@@ -503,6 +516,7 @@ extern "C"
     kSC = 2 / beamRadius * sqrt(Imax / (Po * Po * Po) / Ia);
 
     /* - compute maximum length that we should be traveling between kicks */
+    lengthScale = fabs(lengthScale);
 #if DEBUG
     printf("rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
            beamRadius, Imax, kSC, dt, df, dk);
@@ -618,6 +632,8 @@ extern "C"
       Vfreq[nb - 1] = 0;
 
     factor = charge->macroParticleCharge / dt;
+    if (LSC->backtrack)
+      factor *= -1;
     a2 = Z0 / (PI * sqr(beamRadius)) * lengthScale;
 #if DEBUG
     printf("nfreq = %ld   a2 = %e Ohms/m\n", nfreq, a2);

@@ -900,6 +900,31 @@ extern "C"
         for (ik = 0; ik < nKicks; ik++)
           {
             dgammaOverGammaAve = dgammaOverGammaNp = 0;
+                                                   
+            if (length<0) {
+              /* do wakes */
+              if (wake) 
+                gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
+              if (trwake)
+                gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
+              if (LSCKick) {
+                if (dgammaOverGammaNp)
+#if !USE_MPI
+                  dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+                if (USE_MPI) {
+                  double t1 = dgammaOverGammaAve;
+                  long t2 = dgammaOverGammaNp;
+                  MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+                  MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+                  dgammaOverGammaAve /= dgammaOverGammaNp; 
+                }
+#endif
+                gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central, 
+                               charge, length, dgammaOverGammaAve, d_temp_particles);
+              }
+            }
+
             if (isSlave || !notSinglePart)
               {
                 gpuDriver(np,
@@ -912,31 +937,33 @@ extern "C"
                 dgammaOverGammaAve = gpuReduceAdd(d_dgammaOverGammaAve, np);
               }
 
-            /* do wakes */
-            if (wake)
-              {
-                gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
-              }
-            if (trwake)
-              gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
-            if (LSCKick)
-              {
-                if (dgammaOverGammaNp)
+            if (length>=0) {
+              /* do wakes */
+              if (wake)
+                {
+                  gpu_track_through_wake(np, wake, P_central, run, iPass, charge);
+                }
+              if (trwake)
+                gpu_track_through_trwake(np, trwake, *P_central, run, iPass, charge);
+              if (LSCKick)
+                {
+                  if (dgammaOverGammaNp)
 #if !USE_MPI
-                  dgammaOverGammaAve /= dgammaOverGammaNp;
-#else
-                if (USE_MPI)
-                  {
-                    double t1 = dgammaOverGammaAve;
-                    long t2 = dgammaOverGammaNp;
-                    MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
-                    MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);
                     dgammaOverGammaAve /= dgammaOverGammaNp;
-                  }
+#else
+                  if (USE_MPI)
+                    {
+                      double t1 = dgammaOverGammaAve;
+                      long t2 = dgammaOverGammaNp;
+                      MPI_Allreduce(&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+                      MPI_Allreduce(&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);
+                      dgammaOverGammaAve /= dgammaOverGammaNp;
+                    }
 #endif
-                gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
-                               charge, length, dgammaOverGammaAve, d_temp_particles);
-              }
+                  gpu_addLSCKick(d_particles, particlePitch, np, LSCKick, *P_central,
+                                 charge, length, dgammaOverGammaAve, d_temp_particles);
+                }
+            }
           }
       }
 
@@ -998,7 +1025,7 @@ extern "C"
       }
 
     rfcw->trwake.charge = 0;
-    rfcw->trwake.xfactor = rfcw->trwake.yfactor = 1;
+    rfcw->trwake.xfactor = rfcw->trwake.yfactor = rfcw->trwake.factor = 1;
     rfcw->trwake.n_bins = rfcw->n_bins;
     rfcw->trwake.interpolate = rfcw->interpolate;
     rfcw->trwake.smoothing = rfcw->smoothing;
@@ -1046,6 +1073,7 @@ extern "C"
     rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
     rfcw->wake.SGOrder = rfcw->SGOrder;
     rfcw->wake.change_p0 = rfcw->change_p0;
+    rfcw->wake.factor = 1;
     if (!rfcw->initialized && rfcw->includeZWake)
       {
         if (rfcw->WzColumn)
@@ -1070,6 +1098,7 @@ extern "C"
     rfcw->LSCKick.highFrequencyCutoff0 = rfcw->LSCHighFrequencyCutoff0;
     rfcw->LSCKick.highFrequencyCutoff1 = rfcw->LSCHighFrequencyCutoff1;
     rfcw->LSCKick.radiusFactor = rfcw->LSCRadiusFactor;
+    rfcw->LSCKick.backtrack = 0;
 
     rfcw->initialized = 1;
 
@@ -1077,6 +1106,10 @@ extern "C"
       rfcw->wake.factor = rfcw->length / rfcw->cellLength / (rfcw->rfca.nKicks ? rfcw->rfca.nKicks : 1);
     if ((rfcw->WxColumn || rfcw->WyColumn) && rfcw->includeTrWake)
       rfcw->trwake.factor = rfcw->length / rfcw->cellLength / (rfcw->rfca.nKicks ? rfcw->rfca.nKicks : 1);
+    if (rfcw->backtrack) {
+      rfcw->LSCKick.backtrack = 1;
+      rfcw->rfca.backtrack = 1;
+    }
 
     return gpu_trackRfCavityWithWakes(np, &rfcw->rfca, accepted, P_central, zEnd,
                                       i_pass, run, charge,
