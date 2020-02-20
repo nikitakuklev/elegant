@@ -314,7 +314,8 @@ long track_through_ccbend(
                                      &(ccbend->randomMultipoleData), ccbend->randomMultipoleFactor,
                                      NULL, 0.0,
                                      referenceKnL, 
-                                     ccbend->referenceOrder, 0
+                                     ccbend->referenceOrder, 0,
+                                     ccbend->minMultipoleOrder, ccbend->maxMultipoleOrder
                                      );
     if (angleSign<0) {
       long i;

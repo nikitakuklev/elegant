@@ -173,12 +173,14 @@ unsigned long optimizeFlags;
 #define OPTIMIZE_PERMISSIVE 0x0200
 #define TOLERANCE_FACTOR 1e-14
 
+/*
 double particleMass = me_mks;
 double particleCharge = e_mks;
 double particleMassMV = me_mev;
 double particleRadius = re_mks;
-double particleRelSign = 1; /* relative to electron */
+double particleRelSign = 1;
 long particleIsElectron = 1;
+*/
 
 int make_fieldmap_file(char *filename, char *data_file, double Zi, double Zf, long nZ, double Xi, double Xf, long nX);
 int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inputfile, char *field_map_file,
@@ -215,6 +217,10 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
   char *arcSName, *arcFieldName;
   double Breference = 0;
   double idealB;
+
+#if !defined(SUBROUTINE)
+  setWarningFilePointer(stderr);
+#endif
 
   if ((argc = scanargsg(&scanned, argc, argv)) < 2)
     {
@@ -1024,4 +1030,8 @@ int setup_integration_output(SDDS_TABLE *SDDS_output, char *filename, char *inpu
       return (1);
     }
   return (0);
+}
+
+void exitElegant(long status) 
+{
 }

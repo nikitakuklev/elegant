@@ -154,7 +154,7 @@ void setup_bunched_beam(
     bombElegant("missing or unknown longitudinal distribution type", NULL);
   if (use_moments_output_values) {
     if (x_beam_type!=GAUSSIAN_BEAM || y_beam_type!=GAUSSIAN_BEAM || longit_beam_type!=GAUSSIAN_BEAM) 
-      printf("Warning: beam distributions to gaussian since use_moments_output_values is nonzero.\n");
+      printWarning("bunched_beam: setting distribution types to gaussian since use_moments_output_values is nonzero.", NULL);
     x_beam_type = y_beam_type = longit_beam_type = GAUSSIAN_BEAM;
   }
 
@@ -173,8 +173,12 @@ void setup_bunched_beam(
     for (i=0; i<3; i++)
       if (distribution_cutoff[i]<maxCutoff) {
         distribution_cutoff[i] = maxCutoff;
-        if (!warned)
-          printf("Warning: all distribution cutoff values set to %le since use_moments_output_values is nonzero.\n", maxCutoff);
+        if (!warned) {
+          char buffer[1024];
+          snprintf(buffer, 1024, 
+                   "set bunched_beam distribution cutoff values set to %le since use_moments_output_values is nonzero", maxCutoff);
+          printf(buffer, NULL);
+        }
         warned = 1;
       }
   }
@@ -636,14 +640,8 @@ long track_beam(
   effort = 0;
 
 #if USE_MPI
-  if (isSlave && beam->n_to_track<1 && !lessPartAllowed) {
-    printf("*************************************************************************************\n");
-    printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
-    printf("* Less number of processors are recommended!                                        *\n");
-    printf("* n_to_track = %ld                                                                  *\n", beam->n_to_track);
-    printf("*************************************************************************************\n");
-    /*  MPI_Abort(workers, 2); */
-  }
+  if (isSlave && beam->n_to_track<1 && !lessPartAllowed) 
+    printWarning("The number of particles shouldn't be less than the number of processors", NULL);
   else { /* do tracking in parallel */ 
     if (partOnMaster) { /* all processors will excute the same code */
       notSinglePart = 0;
@@ -935,9 +933,9 @@ void setup_output(
 #if USE_MPI
   if (runInSinglePartMode && (!enableOutput)) {
     if (run->acceptance || run->centroid || run->sigma || run->final || run->output || run->losses ) {
-      printf ("\nWarning: Tracking will be done independently on each processor for this simulation\n");
+      printf ("\nN.B.: Tracking will be done independently on each processor for this simulation\n");
       printf ("Pelegant does not provide intermediate output for optimization now.\n\n");
-	run->acceptance = run->centroid = run->sigma = run->final = run->output = run->losses = NULL;
+      run->acceptance = run->centroid = run->sigma = run->final = run->output = run->losses = NULL;
     }
     return;
   }
@@ -1034,10 +1032,10 @@ void finish_output(
       if (watch->initialized) {
         if ((watch->useDisconnect && SDDS_IsDisconnected(watch->SDDS_table) && 
              !SDDS_ReconnectFile(watch->SDDS_table)) || !SDDS_Terminate(watch->SDDS_table)) {
-          char s[1024];
-          sprintf(s, "Warning: error terminating watch file %s\n", 
-                  watch->filename);
+          char s[16384];
+          snprintf(s, 16384, "Error terminating watch file %s\n", watch->filename);
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          printWarning(s, NULL);
         }
       }
     }

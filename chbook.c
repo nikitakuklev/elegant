@@ -263,6 +263,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
   static long max_nD = 0;
   double value, result;
   long i, j, np, vIndex, temp, flag=0;
+  char warningBuffer[16384];
 
   np = (long)ipow(2, bName->nD); 
   if (max_nD<bName->nD) {
@@ -291,9 +292,12 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
       x[i+offset] = x0[i+offset]*(bName->xmax[i] - bName->xmin[i]) + bName->xmin[i];
     } else {
       if (x[i+offset]>bName->xmax[i]) {
-        if (verbose)           
-          printf("warning: interpolate_bookn - %s value is out of up boundary. xmax=%g, x=%g\n", 
+        if (verbose) {      
+          sprintf(warningBuffer, 16384, 
+                  "quantity is %s, xmax=%g, x=%g", 
                   bName->vname[i], bName->xmax[i], x[i+offset]);
+          printWarning("interpolate_bookn: value is outside upper boundary", warningBuffer);
+        }
         if (zero_Edge) {
           flag=1;
           if (verbose) printf("set output to zero\n");
@@ -303,9 +307,12 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
         }
       }
       if (x[i+offset]<bName->xmin[i]) {
-        if (verbose)           
-          printf("warning: interpolate_bookn - %s value is out of lower boundary. xmin=%g, x=%g\n", 
+        if (verbose) {         
+          sprintf(warningBuffer, 16384, 
+                  "quantity is %s, xmin=%g, x=%g", 
                   bName->vname[i], bName->xmin[i], x[i+offset]);
+          printWarning("interpolate_bookn: value is outside lower boundary", warningBuffer);
+        }
         if (zero_Edge) {
           flag=1;
           if (verbose) printf("set output to zero\n");
@@ -482,8 +489,8 @@ void chprint1(book1 *bName, char *filename, char *description, char *frequencyUn
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
-      fflush(stdout);
+        printWarning("chprint1: parameter indices for SDDS file are not sequential. This will probably cause unexpected results. File",
+                     filename);
       last_index = index;
     }
 
@@ -579,8 +586,8 @@ void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
-      fflush(stdout);
+        printWarning("chprint2: parameter indices for SDDS file are not sequential. This will probably cause unexpected results. File",
+                     filename);
       last_index = index;
     }
 
@@ -690,7 +697,8 @@ void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION 
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        printf("WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+        printWarning("chprintn: parameter indices for SDDS file are not sequential. This will probably cause unexpected results. File",
+                     filename);
       fflush(stdout);
       last_index = index;
     }
@@ -813,8 +821,8 @@ void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION
         exitElegant(1);
       }
       if (index!=(last_index+1))
-        printf("\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
-      fflush(stdout);
+        printWarning("chprint1m: parameter indices for SDDS file are not sequential. This will probably cause unexpected results. File",
+                     filename);
       last_index = index;
     }
 

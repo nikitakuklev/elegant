@@ -4,24 +4,59 @@
 static long warnings = 0;
 static char **warningText = NULL;
 static long *warningCount = NULL;
+static FILE *fpWarn = NULL;
+
+void setWarningFilePointer(FILE *fp)
+{
+  fpWarn = fp;
+}
 
 void printWarning(char *text,  char *detail)
 {
+  printWarningWithContext(NULL, NULL, text, detail);
+}
+
+void printWarningForTracking(char *text, char *detail)
+/* extracts element info from tracking context */
+{
+  TRACKING_CONTEXT trackingContext;
+  getTrackingContext(&trackingContext);
+  if (!strlen(trackingContext.elementName) || trackingContext.elementOccurrence || !trackingContext.element)
+    printWarning(text, detail);
+  printWarningWithContext(entity_name[trackingContext.element->type], trackingContext.elementName,
+                          text, detail);
+}
+
+void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail)
+{
   long i;
-  if (detail && strlen(detail))
-    printf("*** Warning: %s%s\n", text, detail);
+  char buffer[32768];
+  if (!fpWarn)
+    fpWarn = stdout;
+  if (context1 && strlen(context1)) {
+    if (context2 && strlen(context2))
+      /* context1 is typically the element type name, context2 is typically the element name */
+      snprintf(buffer, 32768, "%s %s: %s", context1, context2, text);
+    else
+      /* context1 is typically the command name or subroutine name */
+      snprintf(buffer, 32768, "%s: %s", context1, text);
+  }
   else
-    printf("*** Warning: %s.\n", text);
+    strncpy(buffer, text, 32768);
+  if (detail && strlen(detail))
+    fprintf(fpWarn, "*** Warning: %s---%s\n", buffer, detail);
+  else
+    fprintf(fpWarn, "*** Warning: %s.\n", buffer);
   fflush(stdout);
   for (i=0; i<warnings; i++) 
-    if (strcmp(warningText[i], text)==0)
+    if (strcmp(warningText[i], buffer)==0)
       break;
   if (i==warnings)  {
     if (!(warningText = SDDS_Realloc(warningText, sizeof(*warningText)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
     if (!(warningCount = SDDS_Realloc(warningCount, sizeof(*warningCount)*(warnings+1))))
       bombElegant("Memory allocation error in printWarning\n", NULL);
-    cp_str(&warningText[warnings], text);
+    cp_str(&warningText[warnings], buffer);
     warningCount[warnings] = 1;
     warnings++;
   } else 
@@ -31,19 +66,21 @@ void printWarning(char *text,  char *detail)
 void summarizeWarnings()
 {
   long i;
+  if (!fpWarn)
+    fpWarn = stdout;
   if (warnings) {
-    printf("\n************************** Summary of warnings ****************************\n");
-    printf("*** NB: the warning summary is still in development and covers only some warnings.\n\n");
-    printf("%ld types of warnings were recorded:\n", warnings);
+    fprintf(fpWarn, "\n************************** Summary of warnings ****************************\n");
+    fprintf(fpWarn, "*** NB: the warning summary is still in development and covers only some warnings.\n\n");
+    fprintf(fpWarn, "%ld types of warnings were recorded:\n", warnings);
     for (i=0; i<warnings; i++) {
-      printf("%ld* %s\n",
+      fprintf(fpWarn, "%ld* %s\n",
              warningCount[i], warningText[i]);
       free(warningText[i]);
       warningCount[i] = 0;
       warningText[i] = NULL;
     }
-    printf("\n*** NB: the warning summary is still in development and covers only some warnings.\n");
-    printf("*****************************************************************************\n\n");
+    fprintf(fpWarn, "\n*** NB: the warning summary is still in development and covers only some warnings.\n");
+    fprintf(fpWarn, "*****************************************************************************\n\n");
 
     warnings = 0;
   }

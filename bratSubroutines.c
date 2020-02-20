@@ -477,7 +477,7 @@ void BRAT_optimize_magnet(unsigned long flags)
   if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
                  N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
-    fprintf(stderr, "warning: optimization of magnet `failed'\n");
+    printWarningForTracking("optimization of magnet failed", NULL);
   }
   dx[0] = dx[1] = dx[2] = dx[3] = 1e-4;
   if (length2dMapList>1)
@@ -485,7 +485,7 @@ void BRAT_optimize_magnet(unsigned long flags)
   if (simplexMin(&result, x, dx, xlo, xhi, disable, 5, tolerance,
                  tolerance, BRAT_optim_function, BRAT_report_function,
                  N_EVAL_MAX, N_PASS_MAX, 12, 3.0, 1.0, 0)<0) {
-    fprintf(stderr, "warning: optimization of magnet `failed'\n");
+    printWarningForTracking("optimization of magnet failed", NULL);
   }
   fse = x[0];
   dXOffset = x[1];
@@ -618,7 +618,7 @@ void BRAT_lorentz_integration(
       break;
     default:
       if ((exvalue = BRAT_exit_function(NULL, q, 0.0L))>exit_toler)
-        bomb("warning: exit value of exceeds tolerance", NULL);
+        bomb("error: exit value of exceeds tolerance for BRAT (please report to developers)", NULL);
       break;
     }
 #ifdef DEBUG
@@ -1143,10 +1143,12 @@ double BRAT_setup_field_data(char *input, double xCenter, double zCenter, char *
             Bnorm[ix][iz] = 0;
           }
         }
-      if (idata && !quiet)
-        fprintf(stderr, "Warning: no data for %ld of %ld points\n",
-                idata, nx*nz);
-    
+      if (idata && !quiet) {
+        char buffer[16384];
+        snprintf(buffer, 16384, "No data for %ld of %ld points\n", idata, nx*nz);
+        printWarningForTracking(buffer, NULL);
+      }
+
       if (fabs(Bmin)>fabs(Bmax))
         Bmax = Bmin;
       if (Bmax==0)

@@ -1031,6 +1031,8 @@ VMATRIX *compute_matrix(
     long fiducialize;
     double tStart = 0;
 
+    setTrackingContext(elem->name, elem->occurence, elem->type, run->rootname, elem);
+
     getRunControlContext(&rcContext);
     fiducialize = 1;
     if (rcContext.ready) {
@@ -1096,7 +1098,7 @@ VMATRIX *compute_matrix(
 	cwiggler = (CWIGGLER*)elem->p_elem;
         InitializeCWiggler(cwiggler, elem->name);
 	if (cwiggler->BPeak[0]==0 && cwiggler->BPeak[1]==0) {
-	  fprintf(stderr, "*** Warning: CWIGGLER has zero field in both planes\n");
+          printWarningForTracking("zero field in both planes", NULL);
           elem->matrix = drift_matrix(cwiggler->length, run->default_order);
           cwiggler->radiusInternal[0] = cwiggler->radiusInternal[1] = HUGE_VAL;
 	} else {
@@ -1119,7 +1121,7 @@ VMATRIX *compute_matrix(
 	apple = (APPLE*)elem->p_elem;
         InitializeAPPLE(apple->Input, apple);
 	if (apple->BPeak[0]==0 && apple->BPeak[1]==0) {
-	  fprintf(stderr, "*** Warning: APPLE has zero field in both planes\n");
+	  printWarningForTracking("zero field in both planes", NULL);
           elem->matrix = drift_matrix(apple->length, run->default_order);
           apple->radiusInternal[0] = apple->radiusInternal[1] = HUGE_VAL;
 	} else {

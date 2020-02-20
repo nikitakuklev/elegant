@@ -445,9 +445,11 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           change_fraction = change_fraction/2;
           goodCount = -10;
           if (change_fraction<0.01) {
-            printf("warning: closed orbit diverging--iteration stopped (accuracy requirement is %e)\n", clorb_acc);
-            printf("last error was %e, current is %e\n", last_error, error);
-            fflush(stdout);
+            char buffer[16384];
+            snprintf(buffer, 16834, 
+                     "accuracy requirement: %e, previous error: %e, current error: %e", 
+                     clorb_acc, last_error, error);
+            printWarning("closed_orbit: closed orbit diverging, iteration stopped", buffer);
             n_iter = clorb_iter;
             break;
           }
@@ -695,8 +697,8 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
 #endif
   if (iterationsDone<iterationsLeft)
     return 1;
-  printf("Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
-  printf("dp = %le, %le\n", dp, last_dp);
+  printWarning("closed_orbit: fixed length orbit iteration didn't converge", NULL);
+  printf("error is %le, dp = %le, %le\n", error, dp, last_dp);
   for (i=0; i<6; i++)
     printf("%10.3e ", clorb[0].centroid[i]);
   printf("\n");

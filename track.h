@@ -764,7 +764,6 @@ typedef struct {
 #endif
 } TRACKING_CONTEXT;
 
-
 /* data arrays for awe dumps, found in dump_particlesX.c */
 #define N_BEAM_QUANTITIES 9
 extern char *beam_quan[N_BEAM_QUANTITIES];
@@ -980,9 +979,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 15
 #define N_CENTER_PARAMS 9
 #define N_KICKER_PARAMS 14
-#define N_KSEXT_PARAMS 31
+#define N_KSEXT_PARAMS 33
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 48
+#define N_KQUAD_PARAMS 50
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 13
@@ -1061,7 +1060,7 @@ extern char *entity_text[N_TYPES];
 #define N_SLICE_POINT_PARAMS 12
 #define N_IONEFFECTS_PARAMS 14
 #define N_SPEEDBUMP_PARAMS 8
-#define N_CCBEND_PARAMS 44
+#define N_CCBEND_PARAMS 46
 #define N_HKPOLY_PARAMS (2*49+7*7*7+8)
 #define N_BOFFAXE_PARAMS 19
 #define N_APCONTOUR_PARAMS 10
@@ -1981,6 +1980,7 @@ typedef struct {
     short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
+    short minMultipoleOrder, maxMultipoleOrder;
     short integration_order, sqrtOrder, isr, isr1Particle, expandHamiltonian;
     /* for internal use */
     short multipolesInitialized, totalMultipolesComputed;
@@ -2036,6 +2036,7 @@ typedef struct {
     short xSteering, ySteering, synch_rad;
     char *systematic_multipoles, *edge_multipoles, *random_multipoles, *steering_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor, steeringMultipoleFactor;
+    short minMultipoleOrder, maxMultipoleOrder;
     short integration_order, sqrtOrder, isr, isr1Particle;
     short edge1_effects, edge2_effects;
     double lEffective;
@@ -2332,6 +2333,7 @@ typedef struct {
     char *systematic_multipoles, *edge_multipoles, *edge1_multipoles, *edge2_multipoles, *random_multipoles;
     double systematicMultipoleFactor, randomMultipoleFactor;
     short referenceOrder;
+    short minMultipoleOrder, maxMultipoleOrder;
     short synch_rad, isr, isr1Particle, distributionBasedRadiation, includeOpeningAngle;
     short optimizeFse, optimizeDx, optimizeFseOnce, optimizeDxOnce, compensateKn, edgeOrder, verbose;
     /* for internal use only: */
@@ -3684,8 +3686,11 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
 extern void recordLostParticles(double **coord, long nLeft, long nLostNew, LOST_BEAM *lostBeam, long pass);
 extern void resetElementTiming();
 extern void reportElementTiming();
-extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
+
 extern void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr);
+extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
+extern TRACKING_CONTEXT trackingContext;
+
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
@@ -4635,6 +4640,9 @@ extern time_t get_mtime(char *filename);
 extern long trackBRAT(double **part, long np, BRAT *brat, double pCentral, double **accepted);
 
 extern void printWarning(char *text,  char *detail);
+extern void printWarningForTracking(char *text, char *detail);
+extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
+extern void setWarningFilePointer(FILE *fp);
 extern void summarizeWarnings();
 
 #ifdef __cplusplus

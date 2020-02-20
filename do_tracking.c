@@ -94,7 +94,6 @@ void checkBeamStructure(BEAM *beam);
 #ifdef SORT   
 int comp_IDs(const void *coord1, const void *coord2);
 #endif
-static TRACKING_CONTEXT trackingContext;
 
 double beta_from_delta(double p, double delta)
 {
@@ -3900,33 +3899,6 @@ void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha
   }
 }
 
-void getTrackingContext(TRACKING_CONTEXT *trackingContext0) 
-{
-  memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
-}
-
-void setTrackingContext(char *name, long occurence, long type, char *rootname, ELEMENT_LIST *eptr) 
-{
-#if USE_MPI
-  trackingContext.myid = myid;
-#endif
-  trackingContext.element = eptr;
-  trackingContext.sliceAnalysis = NULL;
-  trackingContext.zStart = 0;
-  trackingContext.zEnd = 0;
-  trackingContext.step = 0;
-  if (name)
-    strncpy(trackingContext.elementName, name, CONTEXT_BUFSIZE);
-  else
-    trackingContext.elementName[0] = 0;
-  trackingContext.elementOccurrence = occurence;
-  trackingContext.elementType = type;
-  if (rootname)
-    strncpy(trackingContext.rootname, rootname, CONTEXT_BUFSIZE);
-  else
-    trackingContext.rootname[0] = 0;
-}
- 
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z)
 /* subtract off <s> prior to using a user-supplied matrix to avoid possible

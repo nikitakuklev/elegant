@@ -95,7 +95,7 @@ void setup_transport_analysis(
     if (!output && !printout)
         bombElegant("no output filename or printout filename specified", NULL);
     if (printout_order>3) {
-      printWarning("analyze_map: maximum printout order is 3", NULL);;
+      printWarning("analyze_map: maximum printout order is 3", NULL);
       printout_order = 3;
     }
     if (n_points<=max_fit_order)
@@ -291,8 +291,8 @@ void do_transport_analysis(
     MPI_Allreduce(&n_left, &n_leftTotal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if (n_leftTotal!=(n_track-1)) {
       char buffer[16834];
-      sprintf(buffer, ": %ld particles lost", n_track-1-n_leftTotal);
-      printWarning("particle(s) lost during transport analysis---continuing with next step", buffer); 
+      snprintf(buffer, 16384, "%ld particles lost, continuing with next step", n_track-1-n_leftTotal);
+      printWarning("analyze_map: particle(s) lost during transport analysis", buffer); 
       return;
     }
 #else
@@ -301,7 +301,9 @@ void do_transport_analysis(
 			 FIDUCIAL_BEAM_SEEN+FIRST_BEAM_IS_FIDUCIAL+SILENT_RUNNING+INHIBIT_FILE_OUTPUT,
 			 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (n_left!=(n_track-1)) {
-      printWarning("particle(s) lost during transport analysis---continuing with next step", NULL);;
+      char buffer[16834];
+      snprintf(buffer, 16384, "%ld particles lost, continuing with next step", n_track-1-n_left);
+      printWarning("analyze_map: particle(s) lost during transport analysis", buffer); 
       return;
     }
 #endif
@@ -634,7 +636,9 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
   double dgamma, dtmp1, dP[3];
- 
+
+  setTrackingContext(eptr->name, eptr->occurence, eptr->type, run->rootname, eptr);
+
 #if USE_MPI
   long notSinglePart_saved = notSinglePart;
 
@@ -894,6 +898,8 @@ VMATRIX *determineMatrixHigherOrder(RUN *run, ELEMENT_LIST *eptr, double *starti
   static ELEMENT_LIST **storedElement=NULL;
   static VMATRIX **storedMatrix=NULL;
   long my_nTrack, my_offset;
+
+  setTrackingContext(eptr->name, eptr->occurence, eptr->type, run->rootname, eptr);
 
   memcpy(defaultStep, trackingMatrixStepSize, sizeof(double)*6);
 
@@ -1455,6 +1461,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   fprintf(fpdeb, "&column name=s type=double &end\n&column name=p type=double &end\n");
   fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
 */
+
+  setTrackingContext(eptr->name, eptr->occurence, eptr->type, run->rootname, eptr);
 
   /* Accumulated diffusion matrix */
   accumD1 = tmalloc(21*sizeof(*(accumD1)));

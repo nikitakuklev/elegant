@@ -150,7 +150,7 @@ void setup_aperture_search(
 #endif
   if (mode_code<ONE_LINE_MODE) {
     printWarning("find_aperture: using one of the line-based search methods is strongly recommended",
-                 ". Other methods, which search from large amplitude to small amplitude, may overstate the aperture because of stable islands");
+                 "other methods, which search from large amplitude to small amplitude, may overstate the aperture because of stable islands");
   }
   if (full_plane!=0 && mode_code<ONE_LINE_MODE)
     bombElegant("full_plane=1 is only supported for line-based modes at present", NULL);
