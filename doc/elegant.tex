@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 2020.1\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
+\author{Program Version 2020.2\\Advanced Photon Source\\Michael Borland, Tim Berenc\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -35,64 +35,31 @@ available from the software download page that demonstrates many features of {\t
 overview}{http://ops.aps.anl.gov/elegant.html} of {\tt elegant} is also available, which introduces the capabilities
 at a high level.
 
-\section{Highlights of What's New in Version 2020.1.0}
+\section{Highlights of What's New in Version 2020.2}
 
-Here is a summary of what's changed since release 2019.4.0.
+Here is a summary of what's changed since release 2020.1.
 Historical change logs are collected in Section \ref{sect:changeLog}.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
-\item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
-  for this element is still doubtful for large-angle dipoles with significant gradients.
-\item The \verb|CCBEND| element now incorporates a path-length correction to ensure that the central path length
-  in tracking is the same as the user-defined arc length. This prevents issues with rf cavity setup and closed orbit
-  determination. V. Sajaev (APS) reported this bug.
-\item The \verb|ETILT| parameter of the \verb|CSBEND|, \verb|CSRCSBEND|, \verb|SBEN|, and \verb|RBEN| elements was not
-  implemented correctly. Although the magnitude of the trajectory error was correct, it had the wrong sign compared to the
-  dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), who also reported an error in
-  adjustment of the path-length when \verb|ETILT| was nonzero (no adjustment was made).
-  A new parameter \verb|ETILT_SIGN| allows changing the sign convention to match that of \verb|TILT|.
-\item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
-  the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This bug was reported by G. Penn (LBNL), and has been fixed.
-\item The handling of the DC term in \verb|ZTRANSVERSE| was corrected. The code was ignoring the real part of the impedance
-  at DC. The issue was pointed out by R. Lindberg (APS).
-  The new script \verb|trwake2impedance| illustrates how to create a transverse impedance from a wake function using \verb|sddsfft|.
-\item The handling of the DC term in \verb|ZLONGIT| was corrected.  In particular, the term needed to be multipled by 
-  two internally.  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake 
-  function using \verb|sddsfft|.
-\item The matrix for the \verb|MULT| element, used in computation of twiss parameters and beam moments, was not being updated
-  when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_elements|).
-\item Synchrotron radiation was computed incorrectly for \verb|KQUAD| and \verb|KSEXT| elements when the \verb|HKICK| or
-  \verb|VKICK| steering parameters were non-zero, as reported by G. Penn (LBNL).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The namelist parser was improved so that it now detects a common error, namely, a missing (or incorrectly typed)
-  \verb|&end| token.
-\item The \verb|bunched_beam| command was giving inconsistent particle ID values between the serial and parallel versions
-  when \verb|first_is_fiducial=1|, as reported by Duan Zhe (IHEP).
-\item The \verb|twiss_output| command would fail to deliver data to the s-dependent driving terms output file if
-  no file was giving for twiss parameters, as reported by forum user \verb|felix_armborst|. This is now flagged as an 
-  error.
+\item None.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Backtracking is now available for the \verb|RFCW| and \verb|LSCDRIFT| elements, as well as for \verb|CSRCSBEND| with
-  \verb|STEADY_STATE=1|. The \verb|ENERGY| element can also be used in backtracking, and is essential in some cases to
-  ensure matching reference energy profiles between forward and backward tracking; an example is provided in the
-  examples collection.  Y. Park (UCLA) motivated the work and helped with testing.
-\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
+\item Added \verb|MIN_MULTIPOLE_ORDER| and \verb|MAX_MULTIPOLE_ORDER| to the \verb|KQUAD|, \verb|KSEXT|, and \verb|CCBEND| elements.
+  This allows easily restricting which systematic and random multipole orders are included without changing the data files.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added more controls for mathematica-compatible output from the \verb|matrix_output|. In particular, it is now possible to
-  put the output in separately-named files, which makes importation into mathematica much simpler.
-\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
+\item None.
 \end{itemize}
 
 \subsection{Changes Specific to the MPI Parallel Version}
@@ -113,8 +80,7 @@ Users are encouraged to check results against the serial or parallel versions an
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item Added the scripts \verb|wake2impedance| and \verb|trwake2impedance| to translate wake function data into a
-  form accepted by the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements, respectively.
+\item None.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -7763,6 +7729,85 @@ terminal input and terminal output, respectively.
 \newpage
 
 \section{Change Log\label{sect:changeLog}}
+
+\subsection{Highlights of What's New in Version 2020.1.1}
+
+\subsubsection{Bug Fixes for Elements}
+
+\begin{itemize}
+\item Edge effects are now correctly handled for the \verb|KQUAD| element in backtracking.
+\item Improved backtracking for the \verb|CCBEND| element (Cartesian Canonically-integrated Bend). Backtracking
+  for this element is still doubtful for large-angle dipoles with significant gradients.
+\item The \verb|CCBEND| element now incorporates a path-length correction to ensure that the central path length
+  in tracking is the same as the user-defined arc length. This prevents issues with rf cavity setup and closed orbit
+  determination. V. Sajaev (APS) reported this bug.
+\item The \verb|ETILT| parameter of the \verb|CSBEND|, \verb|CSRCSBEND|, \verb|SBEN|, and \verb|RBEN| elements was not
+  implemented correctly. Although the magnitude of the trajectory error was correct, it had the wrong sign compared to the
+  dynamic effects (e.g., vertical dispersion). This bug was reported by G. Penn (LBNL), who also reported an error in
+  adjustment of the path-length when \verb|ETILT| was nonzero (no adjustment was made).
+  A new parameter \verb|ETILT_SIGN| allows changing the sign convention to match that of \verb|TILT|.
+\item The \verb|FSE_DIPOLE| and \verb|FSE_QUADRUPOLE| values were being left at the user-defined values when determining
+  the reference trajectory when \verb|REFERENCE_CORRECTION=1|. This bug was reported by G. Penn (LBNL), and has been fixed.
+\item The handling of the DC term in \verb|ZTRANSVERSE| was corrected. The code was ignoring the real part of the impedance
+  at DC. The issue was pointed out by R. Lindberg (APS).
+  The new script \verb|trwake2impedance| illustrates how to create a transverse impedance from a wake function using \verb|sddsfft|.
+\item The handling of the DC term in \verb|ZLONGIT| was corrected.  In particular, the term needed to be multipled by 
+  two internally.  The new script \verb|wake2impedance| illustrates how to create a longitudinal impedance from a wake 
+  function using \verb|sddsfft|.
+\item The matrix for the \verb|MULT| element, used in computation of twiss parameters and beam moments, was not being updated
+  when parameters were changed during a run (e.g., with \verb|vary_element| or \verb|error_elements|).
+\item Synchrotron radiation was computed incorrectly for \verb|KQUAD| and \verb|KSEXT| elements when the \verb|HKICK| or
+  \verb|VKICK| steering parameters were non-zero, as reported by G. Penn (LBNL).
+\end{itemize}
+
+\subsubsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The namelist parser was improved so that it now detects a common error, namely, a missing (or incorrectly typed)
+  \verb|&end| token.
+\item The \verb|bunched_beam| command was giving inconsistent particle ID values between the serial and parallel versions
+  when \verb|first_is_fiducial=1|, as reported by Duan Zhe (IHEP).
+\item The \verb|twiss_output| command would fail to deliver data to the s-dependent driving terms output file if
+  no file was giving for twiss parameters, as reported by forum user \verb|felix_armborst|. This is now flagged as an 
+  error.
+\end{itemize}
+
+\subsubsection{New and Modified Elements}
+\begin{itemize}
+\item Backtracking is now available for the \verb|RFCW| and \verb|LSCDRIFT| elements, as well as for \verb|CSRCSBEND| with
+  \verb|STEADY_STATE=1|. The \verb|ENERGY| element can also be used in backtracking, and is essential in some cases to
+  ensure matching reference energy profiles between forward and backward tracking; an example is provided in the
+  examples collection.  Y. Park (UCLA) motivated the work and helped with testing.
+\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
+\end{itemize}
+
+\subsubsection{New and Modified Commands}
+\begin{itemize}
+\item Added more controls for mathematica-compatible output from the \verb|matrix_output|. In particular, it is now possible to
+  put the output in separately-named files, which makes importation into mathematica much simpler.
+\item Work began on a mechanism for summarizing warnings at the end of a run. At present, the summary is incomplete.
+\end{itemize}
+
+\subsubsection{Changes Specific to the MPI Parallel Version}
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes Specific to the GPU Version}
+
+{\bf The GPU version continues to be an alpha release and contains bugs.}
+Users are encouraged to check results against the serial or parallel versions and report issues to the developers.
+
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\subsubsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item Added the scripts \verb|wake2impedance| and \verb|trwake2impedance| to translate wake function data into a
+  form accepted by the \verb|ZLONGIT| and \verb|ZTRANSVERSE| elements, respectively.
+\end{itemize}
 
 \subsection{Highlights of What's New in Version 2019.4.0}
 
