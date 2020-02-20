@@ -52,7 +52,10 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   if (processNamelist(&rpn_load, nltext)==NAMELIST_ERROR)
     bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &rpn_load);
-  
+
+  if (!tag || strlen(tag)==0) 
+    printWarning("rpn_load: tag is blank, which could cause confusion with internal variables", "use of a tag is strongly encouraged");
+
   if (match_column && strlen(match_column)) {
     if (use_row!=-1) {
       printf("Error: you asked to match a column and also gave use_row.\n");
