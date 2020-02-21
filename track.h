@@ -157,6 +157,18 @@ typedef struct {
   long points, periodic, initialized, persistent;
 } APERTURE_DATA;
 
+typedef struct {
+  double *Z, *X;
+  long points;
+} OBSTRUCTION_DATASET;
+
+typedef struct {
+  short periodic, initialized;
+  long superperiodicity;
+  OBSTRUCTION_DATASET *data;
+  long nDataSets;
+} OBSTRUCTION_DATASETS;
+
 /* Variable-order transport matrix structure */
 
 typedef struct {
@@ -250,6 +262,7 @@ typedef struct {
 
 typedef struct element_list {
     double end_pos, end_theta;
+    double floorCoord[3], floorAngle[3]; /* (X, Y, Z), (theta, phi, psi) at exit */
     char *name, *group;
     char *definition_text;
     char *p_elem;        /* pointer to the element structure */
@@ -4644,6 +4657,11 @@ extern void printWarningForTracking(char *text, char *detail);
 extern void printWarningWithContext(char *context1, char  *context2, char *text,  char *detail);
 extern void setWarningFilePointer(FILE *fp);
 extern void summarizeWarnings();
+
+extern void resetObstructionData(OBSTRUCTION_DATASETS *obsData);
+extern void readObstructionInput(NAMELIST_TEXT *nltext, RUN *run);
+extern long filterParticlesWithObstructions(double **coord, long np, double **accepted, double z, double P_central);
+extern long insideObstruction(double *part, long segment, long nSegments);
 
 #ifdef __cplusplus
 }

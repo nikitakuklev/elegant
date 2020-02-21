@@ -133,15 +133,17 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   
   if (magnet_centers && vertices_only)
     bombElegant("you can simultaneously request magnet centers and vertices only output", NULL);
-  if (filename)
-    filename = compose_filename(filename, run->rootname);
-  else
-    bombElegant("filename must be given for floor coordinates", NULL);
+  if (isMaster) {
+    if (filename)
+      filename = compose_filename(filename, run->rootname);
+    else
+      bombElegant("filename must be given for floor coordinates", NULL);
   
-  SDDS_ElegantOutputSetup(&SDDS_floor, filename, SDDS_BINARY, 1, "floor coordinates", 
-                          run->runfile, run->lattice, NULL, 0,
-                          column_definition, N_COLUMNS, "floor coordinates", 
-                          SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    SDDS_ElegantOutputSetup(&SDDS_floor, filename, SDDS_BINARY, 1, "floor coordinates", 
+                            run->runfile, run->lattice, NULL, 0,
+                            column_definition, N_COLUMNS, "floor coordinates", 
+                            SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+  }
 
   n_points = beamline->n_elems+1;
   if (vertices_only)
@@ -171,7 +173,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     }
   }
 
-  if (!SDDS_StartTable(&SDDS_floor, 2*n_points)) {
+  if (isMaster && !SDDS_StartTable(&SDDS_floor, 2*n_points)) {
     SDDS_SetError("Unable to start SDDS table (output_floor_coordinates)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -191,7 +193,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   elem = &(beamline->elem);
 
   row_index = 0;
-  if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+  if (isMaster && !SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
                          IC_S, (double)0.0, IC_DS, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
                          IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
                          IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", 
@@ -201,13 +203,14 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 #ifdef INCLUDE_WIJ
-  for (iw=0; iw<3; iw++) 
-    for (jw=0; jw<3; jw++) 
-      if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
-			     IC_W11+iw*3+jw, W0->a[iw][jw], -1)) {
-	SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0a)");
-	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
+  if (isMaster)
+    for (iw=0; iw<3; iw++) 
+      for (jw=0; jw<3; jw++) 
+        if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index,
+                               IC_W11+iw*3+jw, W0->a[iw][jw], -1)) {
+          SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.0a)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
 #endif
   row_index++;
 
@@ -232,15 +235,17 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     }
     elem = elem->succ;
   }
-  if (!SDDS_WriteTable(&SDDS_floor)) {
-    SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-  if (!inhibitFileSync)
-    SDDS_DoFSync(&SDDS_floor);
-  if (!SDDS_Terminate(&SDDS_floor)) {
-    SDDS_SetError("Unable to terminate SDDS file (output_floor_coordinates)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (isMaster) {
+    if (!SDDS_WriteTable(&SDDS_floor)) {
+      SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!inhibitFileSync)
+      SDDS_DoFSync(&SDDS_floor);
+    if (!SDDS_Terminate(&SDDS_floor)) {
+      SDDS_SetError("Unable to terminate SDDS file (output_floor_coordinates)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
   }
   m_free(&V0);
   m_free(&V1);
@@ -267,7 +272,10 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 #ifdef INCLUDE_WIJ
   long iw, jw;
 #endif
-  
+
+  if (!isMaster)
+    SDDS_floor = NULL;
+
   if (!matricesAllocated) {
     matricesAllocated = 1;
     m_alloc(&temp33, 3, 3);
@@ -588,6 +596,10 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     }
     strcpy_ss(label, elem->name);
     setupSurveyAngleMatrix(W1, fep->angle[0], fep->angle[1], fep->angle[2]);
+  }
+  for (i=0; i<3; i++) {
+    elem->floorCoord[i] = coord[i];
+    elem->floorAngle[i] = sangle[i];
   }
   if (SDDS_floor &&
       (!vertices_only || (!last_elem || elem==last_elem))) {

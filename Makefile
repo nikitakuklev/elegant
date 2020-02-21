@@ -315,6 +315,11 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp -suppressSummaryVariables ../fitTraces.nl fitTraces.h
 
+obstructionData$(OBJ): obstructionData.h
+
+obstructionData.h: ../obstructionData.nl
+	nlpp -suppressSummaryVariables ../obstructionData.nl obstructionData.h
+
 elegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/elegant elegant)
 PelegantLocation = $(wildcard ../../bin/$(EPICS_HOST_ARCH)/Pelegant Pelegant)
 
@@ -408,7 +413,7 @@ clean:
 else
 clean::
 endif
-	$(RM) fitTraces.h vary.h twiss.h tune.h tuneFootprint.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h ignoreElements.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h ramp.h chaosMap.h ionEffects.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h tuneFootprint.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h ignoreElements.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h replace_elements.h modulate.h ramp.h chaosMap.h ionEffects.h obstructionData.h
 
 
 

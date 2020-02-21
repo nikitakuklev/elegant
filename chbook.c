@@ -15,6 +15,7 @@
 
 void exitElegant(long status);
 void bombElegant(char *error, char *usage);
+void printWarning(char *s1, char *s2);
 
 void findBit (long value, long *Bit, long inc, long length);
 
@@ -293,7 +294,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
     } else {
       if (x[i+offset]>bName->xmax[i]) {
         if (verbose) {      
-          sprintf(warningBuffer, 16384, 
+          snprintf(warningBuffer, 16384, 
                   "quantity is %s, xmax=%g, x=%g", 
                   bName->vname[i], bName->xmax[i], x[i+offset]);
           printWarning("interpolate_bookn: value is outside upper boundary", warningBuffer);
@@ -308,7 +309,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset,
       }
       if (x[i+offset]<bName->xmin[i]) {
         if (verbose) {         
-          sprintf(warningBuffer, 16384, 
+          snprintf(warningBuffer, 16384, 
                   "quantity is %s, xmin=%g, x=%g", 
                   bName->vname[i], bName->xmin[i], x[i+offset]);
           printWarning("interpolate_bookn: value is outside lower boundary", warningBuffer);

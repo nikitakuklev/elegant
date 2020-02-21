@@ -181,7 +181,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define INELASTIC_SCATTERING 67
 #define IGNORE_ELEMENTS 68
 #define SET_REFERENCE_PARTICLE_OUTPUT 69
-#define N_COMMANDS      70
+#define OBSTRUCTION_DATA 70
+#define N_COMMANDS      71
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -197,7 +198,7 @@ char *command[N_COMMANDS] = {
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
     "aperture_data", "modulate_elements", "parallel_optimization_setup", "ramp_elements", "rf_setup", "chaos_map",
     "tune_footprint", "ion_effects", "elastic_scattering", "inelastic_scattering", "ignore_elements",
-    "set_reference_particle_output",
+    "set_reference_particle_output", "obstruction_data",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -270,7 +271,8 @@ char *description[N_COMMANDS] = {
     "elastic_scattering               determine x', y' aperture from tracking as a function of position in the ring",
     "inelastic_scattering             determine inelastic scattering aperture from tracking as a function of position in the ring",
     "ignore_elements                  declare that elements with certain names and types should be ignored in tracking",
-    "set_reference_particle_output    set reference particle coordinates to be matched via optimization"
+    "set_reference_particle_output    set reference particle coordinates to be matched via optimization",
+    "obstruction_data                 set (Z,X) contours of obstructions in the vertical midplane"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -355,7 +357,7 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
-  long do_rf_setup = 0;
+  long do_rf_setup = 0, do_floor_coordinates = 0;
   long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, twiss_computed = 0;
@@ -702,7 +704,7 @@ char **argv;
       run_setuped = run_controled = error_controled = correction_setuped = ionEffectsSeen = 0;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
-        fl_do_tune_correction = 0;
+        fl_do_tune_correction = do_floor_coordinates = 0;
       do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = do_rf_setup = 0;
       linear_chromatic_tracking_setup_done = 0;
 
@@ -1716,8 +1718,8 @@ char **argv;
     case FLOOR_COORDINATES:
       if (!run_setuped)
         bombElegant("run_setup must precede floor_coordinates namelist", NULL);
-      if (isMaster)
-        output_floor_coordinates(&namelist_text, &run_conditions, beamline);
+      output_floor_coordinates(&namelist_text, &run_conditions, beamline);
+      do_floor_coordinates = 1;
       break;
     case CORRECTION_MATRIX_OUTPUT:
       if (!run_setuped)
@@ -1838,6 +1840,13 @@ char **argv;
     case APERTURE_INPUT:
     case APERTURE_DATAX:
       readApertureInput(&namelist_text, &run_conditions);
+      break;
+    case OBSTRUCTION_DATA:
+      if (!run_setuped)
+        bombElegant("run_setup must precede obstruction_data namelist", NULL);
+      if (!do_floor_coordinates)
+        bombElegant("floor_coordinate command required for obstruction_data to work", NULL);
+      readObstructionInput(&namelist_text, &run_conditions);
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
       if (do_twiss_output)

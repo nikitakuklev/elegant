@@ -616,7 +616,8 @@ elegant_SRCS = 	pointInsideContour.c ignoreElements.c alpha_data.c alpha_matrix.
                 replace_elements.c modulate.c ramp.c fringe.c apple.c chaosMap.c lrwake.c iirFilter.c exactCorrector.c \
                 makeInitialParticleEnsemble.c computeMatricesFromTracking.c transformBeamWithScript.c sdds_support_common.c bratSubroutines.c \
                 magneticFieldFromGeneralizedGradient.c ionEffects.cc slicePoint.c pressureData.c elasticScattering.c \
-                inelasticScattering.c magneticFieldOffAxisExpansion.c lorentzian.c shrfdf.c trimApertureSearchResult.c warnings.c context.c
+                inelasticScattering.c magneticFieldOffAxisExpansion.c lorentzian.c shrfdf.c trimApertureSearchResult.c \
+                warnings.c context.c obstructionData.c
                    
 Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c genetic.c swarm.c
 
