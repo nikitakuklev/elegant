@@ -346,8 +346,10 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp -suppressSummaryVariables ../fitTraces.nl fitTraces.h
 
+obstructionData$(OBJ): obstructionData.h
 
-
+obstructionData.h: ../obstructionData.nl
+	nlpp -suppressSummaryVariables ../obstructionData.nl obstructionData.h
 
 ifdef BASE_3_15
 clean:
